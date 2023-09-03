@@ -24,13 +24,6 @@ Mesh _cubeMeshXFront;
 Mesh _cubeMeshXBack;
 Mesh _cubeMeshYTop;
 Mesh _cubeMeshYBottom;
-Mesh _groundMesh;
-Mesh _ceilingMesh;
-Mesh _wallMesh;
-Mesh _cuboidMesh;
-Texture _tilesTexture;
-Texture _plasterTexture;
-Texture _numgridTexture;
 GBuffer _gBuffer;
 
 unsigned int _pointLineVAO ;
@@ -72,32 +65,7 @@ void Renderer::Init() {
     _testShader.Load("test.vert", "test.frag");
     _solidColorShader.Load("solid_color.vert", "solid_color.frag");
 
-    _tilesTexture = Texture("res/textures/tiles.png");
-    _plasterTexture = Texture("res/textures/plaster.png");
-    _numgridTexture = Texture("res/textures/numgrid.png");
-
-
-
-
-    
-
-    {
-        std::vector<Vertex> vertices;
-        std::vector<unsigned int> indices;
-        vertices.push_back({ glm::vec3(0.5f, 0.5f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec2(1.0f, 1.0f) });
-        vertices.push_back({ glm::vec3(0.5f, 1.5f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec2(1.0f, 0.0f) });
-        vertices.push_back({ glm::vec3(-0.5f, 1.5f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec2(0.0f, 0.0f) });
-        vertices.push_back({ glm::vec3(-0.5f, 0.5f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec2(0.0f, 1.0f) });
-        indices.push_back(0);
-        indices.push_back(1);
-        indices.push_back(3);
-        indices.push_back(1);
-        indices.push_back(2);
-        indices.push_back(3);
-        
-    }
     _cubeMesh = MeshUtil::CreateCube(1.0f, 1.0f, true);
-
     _cubeMeshZFront = MeshUtil::CreateCubeFaceZFront(1.0f);
     _cubeMeshZBack = MeshUtil::CreateCubeFaceZBack(1.0f);
     _cubeMeshXFront = MeshUtil::CreateCubeFaceXFront(1.0f);
@@ -105,19 +73,7 @@ void Renderer::Init() {
     _cubeMeshYTop = MeshUtil::CreateCubeFaceYTop(1.0f);
     _cubeMeshYBottom = MeshUtil::CreateCubeFaceYBottom(1.0f);
 
-
-    _wallMesh = MeshUtil::CreateCube(6.0f, 7.2f, false);
-    _groundMesh = MeshUtil::CreateUpFacingPlane(-100.0f, 100.0f, -100.0f, 100.0f, 0.0f);
-    _ceilingMesh = MeshUtil::CreateDownFacingPlane(-100.0f, 100.0f, -100.0f, 100.0f, 2.4f);
-
-    _cuboidMesh = MeshUtil::CreateCuboid(0.1f, 2.4f, 3.6f, 1.2f);
-    _wallMesh = MeshUtil::CreateCuboid(7.2f, 2.4f, 6.0f, 1.2f, false);
-
     _gBuffer.Configure(_renderWidth, _renderHeight);
-
-   
-
-    
 }
 
 void Renderer::RenderFrame() {
@@ -141,8 +97,6 @@ void Renderer::RenderFrame() {
     _testShader.SetMat4("projection", projection);
     _testShader.SetMat4("view", Player::GetViewMatrix());
     _testShader.SetVec3("viewPos", Player::GetViewPos());
-
-    _plasterTexture.Bind(GL_TEXTURE0);
 
     if (Input::KeyPressed(HELL_KEY_L)) {
         _drawLights = !_drawLights;
@@ -224,11 +178,6 @@ void Renderer::RenderFrame() {
             _cubeMesh.Draw();
         }
     }
-
-    // Testing...
-    //for (Voxel& voxel : VoxelWorld::GetZFrontFacingVoxels()) {
-    //    QueuePointForDrawing(Point(glm::vec3(voxel.x, voxel.y, voxel.z) * VoxelWorld::GetVoxelSize(), RED));
-    //}
 
     // Prep for points/lines
     _solidColorShader.SetMat4("model", glm::mat4(1));
