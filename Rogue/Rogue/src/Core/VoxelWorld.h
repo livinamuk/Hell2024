@@ -5,20 +5,30 @@
 namespace VoxelWorld {
 
     void InitMap();
+    void InitMap2();
     void GenerateTriangleOccluders();
-    void CalculateLighting();
+    void CalculateDirectLighting();
     Light& GetLightByIndex(int index);
     float GetVoxelSize();
     float GetVoxelHalfSize();
     void ToggleDebugView();
+    void GeneratePropogrationGrid();
+    void PropogateLight();
+    void Update();
 
-    std::vector<Voxel>& GetXFrontFacingVoxels();
-    std::vector<Voxel>& GetXBackFacingVoxels();
-    std::vector<Voxel>& GetZFrontFacingVoxels();
-    std::vector<Voxel>& GetZBackFacingVoxels();
-    std::vector<Voxel>& GetYTopVoxels();
-    std::vector<Voxel>& GetYBottomVoxels();
+    std::vector<VoxelFace>& GetXFrontFacingVoxels();
+    std::vector<VoxelFace>& GetXBackFacingVoxels();
+    std::vector<VoxelFace>& GetZFrontFacingVoxels();
+    std::vector<VoxelFace>& GetZBackFacingVoxels();
+    std::vector<VoxelFace>& GetYTopVoxels();
+    std::vector<VoxelFace>& GetYBottomVoxels();
     std::vector<Triangle>& GetAllTriangleOcculders();
     std::vector<Light>& GetLights();
-
+    //std::vector<PropogatedLight>& GetPropogatedLightValues();
+    std::vector<Line>& GetTestRays();
+    GridProbe& GetProbeByGridIndex(int x, int y, int z);
+    int GetPropogationGridWidth();
+    int GetPropogationGridHeight();
+    int GetPropogationGridDepth();
+    glm::vec3 GetVoxelFaceWorldPos(VoxelFace& voxelFace);
 }

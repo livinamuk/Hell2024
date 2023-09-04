@@ -80,7 +80,7 @@ void main()
     FragColor = vec4(Normal * 0.5 + 0.5, 1.0f);
     FragColor = vec4(lighting, 1.0f);
     FragColor = vec4(baseColor * lightingColor, 1.0f);
-    FragColor = vec4(lightingColor, 1.0f);
+    //FragColor = vec4(lightingColor, 1.0f);
    // FragColor = vec4(Normal * 0.5 + 0.5, 1.0f);
     //FragColor = vec4(Normal, 1.0);
     //FragColor = vec4(vec3(ndotl), 1.0f);

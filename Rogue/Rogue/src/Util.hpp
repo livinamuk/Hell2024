@@ -6,8 +6,26 @@
 #include <glm/glm.hpp>
 #include "Common.h"
 #include "glm/gtx/intersect.hpp"
+#include <random>
 
 namespace Util {
+
+    /*inline std::string Vec3ToString(glm::vec3 vec) {
+        std::string str = "(";
+        str += vec.x;
+        str += ", ";
+        str += vec.y;
+        str += ", ";
+        str += vec.z;
+        str += ")";
+    }*/
+
+    inline int RandomInt(int min, int max) {
+        static std::random_device dev;
+        static std::mt19937 rng(dev());
+        std::uniform_int_distribution<std::mt19937::result_type> dist6(min, max);
+        return dist6(rng);
+    }
 
     inline std::string ReadTextFromFile(std::string path) {
         std::ifstream file(path);
@@ -28,7 +46,7 @@ namespace Util {
         return (stat(name.c_str(), &buffer) == 0);
     }
 
-    inline glm::mat4 GetVoxelModelMatrix(Voxel& voxel, float voxelSize) {
+    inline glm::mat4 GetVoxelModelMatrix(VoxelFace& voxel, float voxelSize) {
         float x = voxel.x * voxelSize;
         float y = voxel.y * voxelSize;
         float z = voxel.z * voxelSize;

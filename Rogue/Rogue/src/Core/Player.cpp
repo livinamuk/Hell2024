@@ -9,6 +9,7 @@ namespace Player {
 	glm::vec3 _rotation = glm::vec3(0, 0, 0);
 	float _viewHeightStanding = 1.65f;
 	float _viewHeightCrouching = 1.15f;
+	//float _viewHeightCrouching = 3.15f;// hovery
 	float _crouchDownSpeed = 17.5f;
 	float _currentViewHeight = _viewHeightStanding;
 	float _walkingSpeed = 4;

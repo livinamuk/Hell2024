@@ -1,5 +1,6 @@
 #include "VoxelWorld.h"
 #include "../Util.hpp"
+#include "../Core/Input.h"
 
 VoxelCell _voxelGrid[MAP_WIDTH][MAP_HEIGHT][MAP_DEPTH];
 bool _voxelAccountedForInTriMesh_ZFront[MAP_WIDTH][MAP_HEIGHT][MAP_DEPTH];
@@ -9,25 +10,124 @@ bool _voxelAccountedForInTriMesh_XBack[MAP_WIDTH][MAP_HEIGHT][MAP_DEPTH];
 bool _voxelAccountedForInTriMesh_YTop[MAP_WIDTH][MAP_HEIGHT][MAP_DEPTH];
 bool _voxelAccountedForInTriMesh_YBottom[MAP_WIDTH][MAP_HEIGHT][MAP_DEPTH];
 
+#define PROPOGATION_SPACING 2
+#define PROPOGATION_WIDTH (MAP_WIDTH / PROPOGATION_SPACING)
+#define PROPOGATION_HEIGHT (MAP_HEIGHT / PROPOGATION_SPACING)
+#define PROPOGATION_DEPTH (MAP_DEPTH / PROPOGATION_SPACING)
+
+GridProbe _propogrationGrid[PROPOGATION_WIDTH][PROPOGATION_HEIGHT][PROPOGATION_DEPTH];
+
+std::vector<Line> _testRays;
+
+
 std::vector<Triangle> _staticWorldTriangles;
 std::vector<Triangle> _triangles;
-std::vector<Voxel> _voxelsInWorld;
+//std::vector<Voxel> _voxelsInWorld;
 std::vector<Light> _lights;
 
 float _voxelSize = 0.2f;
 float _voxelHalfSize = _voxelSize * 0.5f;
 
-std::vector<Voxel> _voxelsZFront;
-std::vector<Voxel> _voxelsZBack;
-std::vector<Voxel> _voxelsXFront;
-std::vector<Voxel> _voxelsXBack;
-std::vector<Voxel> _voxelsYTop;
-std::vector<Voxel> _voxelsYBottom;
+std::vector<VoxelFace> _voxelFacesXForward;
+std::vector<VoxelFace> _voxelFacesXBack;
+std::vector<VoxelFace> _voxelFacesYUp;
+std::vector<VoxelFace> _voxelFacesYDown;
+std::vector<VoxelFace> _voxelFacesZForward;
+std::vector<VoxelFace> _voxelFacesZBack;
 
-bool _optimizeHack = true;
+bool _optimizeHack = false;
 bool _debugView = false;
 
 void VoxelWorld::InitMap() {
+
+    int fakeCeilingHeight = 13;
+    // Walls
+    for (int x = 0; x < MAP_WIDTH; x++) {
+        for (int y = 0; y < fakeCeilingHeight; y++) {
+            _voxelGrid[x][y][0] = { true, RED };
+            _voxelGrid[x][y][MAP_DEPTH - 1] = { true, GREEN };
+            _voxelGrid[x][y][0] = { true, WHITE };
+            _voxelGrid[x][y][MAP_DEPTH - 1] = { true, WHITE };
+        }
+    }
+    for (int z = 0; z < MAP_DEPTH; z++) {
+        for (int y = 0; y < fakeCeilingHeight; y++) {
+            _voxelGrid[0][y][z] = { true, WHITE };
+            _voxelGrid[MAP_WIDTH - 1][y][z] = { true, WHITE };
+        }
+    }
+    for (int x = 0; x < MAP_WIDTH; x++) {
+        for (int z = 0; z < MAP_DEPTH; z++) {
+            _voxelGrid[x][0][z] = { true, WHITE };      // floor
+            _voxelGrid[x][13][z] = { true, WHITE };     // ceiling
+        }
+    }
+    // Wall
+    for (int z = 0; z < 10; z++) {
+        for (int y = 0; y < fakeCeilingHeight; y++) {
+            _voxelGrid[10][y][z] = { true, WHITE };
+        }
+    }
+
+    int cubeX = 18;
+    int cubeZ = 9;
+    for (int x = cubeX; x < cubeX + 6; x++) {
+        for (int y = 1; y < 7; y++) {
+            for (int z = cubeZ; z < cubeZ + 6; z++) {
+                _voxelGrid[x][y][z] = { true, WHITE };
+            }
+        }
+    }
+    cubeX = 18;
+    cubeZ = 22;
+    for (int x = cubeX; x < cubeX + 6; x++) {
+        for (int y = 1; y < 7; y++) {
+            for (int z = cubeZ; z < cubeZ + 6; z++) {
+                _voxelGrid[x][y][z] = { true, WHITE };
+            }
+        }
+    }
+    // Cornell hole
+    for (int x = 19; x < 24; x++) {
+            for (int z = 16; z < 21; z++) {
+                _voxelGrid[x][13][z] = { false, WHITE };
+            }
+    }
+
+    // Lights
+    static Light lightA;
+    lightA.x =  27;// 3;
+    lightA.y = 9;
+    lightA.z = 3;
+    lightA.strength = 1.0f;
+    static Light lightB;
+    lightB.x = 13;
+    lightB.y = 3;
+    lightB.z = 3;
+    lightB.strength = 1.0f;
+    lightB.color = RED;
+    static Light lightC;
+    lightC.x = 5;
+    lightC.y = 3;
+    lightC.z = 30;
+    lightC.radius = 3.0f;
+    lightC.strength = 0.75f;
+    lightC.color = LIGHT_BLUE;
+    static Light lightD;
+    lightD.x = 21;
+    lightD.y = 21;
+    lightD.z = 18;
+    lightD.radius = 3.0f;
+    lightD.strength = 1.0f;
+    lightD.radius = 10;
+
+    _lights.push_back(lightA);
+    _lights.push_back(lightB);
+    _lights.push_back(lightC);
+    _lights.push_back(lightD);
+}
+
+void VoxelWorld::InitMap2() {
 
     // Lights
     static Light lightA;
@@ -181,6 +281,34 @@ void VoxelWorld::InitMap() {
         _voxelGrid[18][y][29].solid = true;
     }
 }
+
+/*glm::vec3 GetVoxelWorldPosition(Voxel& voxel) {
+    return glm::vec3(voxel.x, voxel.y, voxel.z) * _voxelSize;
+}*/
+
+glm::vec3 VoxelWorld::GetVoxelFaceWorldPos(VoxelFace& voxelFace) {
+    return glm::vec3(voxelFace.x, voxelFace.y, voxelFace.z) * _voxelSize + (voxelFace.normal * _voxelHalfSize);
+}
+
+/*
+glm::vec3 GetVoxelWorldPositionXFrontCenter(VoxelFace& voxel) {
+    return glm::vec3(voxel.x + 0.5f, voxel.y, voxel.z) * _voxelSize;
+}
+glm::vec3 GetVoxelWorldPositionXBackCenter(Voxel& voxel) {
+    return glm::vec3(voxel.x - 0.5f, voxel.y, voxel.z) * _voxelSize;
+}
+glm::vec3 GetVoxelWorldPositionYTopFaceCenter(Voxel& voxel) {
+    return glm::vec3(voxel.x, voxel.y + 0.5f, voxel.z) * _voxelSize;
+}
+glm::vec3 GetVoxelWorldPositionYBottomFaceCenter(Voxel& voxel) {
+    return glm::vec3(voxel.x, voxel.y - 0.5f, voxel.z) * _voxelSize;
+}
+glm::vec3 GetVoxelWorldPositionZFrontCenter(Voxel& voxel) {
+    return glm::vec3(voxel.x, voxel.y, voxel.z + 0.5f) * _voxelSize;
+}
+glm::vec3 GetVoxelWorldPositionZBackCenter(Voxel& voxel) {
+    return glm::vec3(voxel.x, voxel.y, voxel.z - 0.5f) * _voxelSize;
+}*/
 
 bool CellIsSolid(int x, int y, int z) {
     if (x < 0 || y < 0 || z < 0)
@@ -342,7 +470,6 @@ void BeginNewFrontFacingZSearch(int xStart, int yStart, int z) {
     _staticWorldTriangles.push_back(tri);
     _staticWorldTriangles.push_back(tri2);
 }
-
 
 void BeginNewFrontFacingXSearch(int x, int yStart, int zStart) {
 
@@ -558,7 +685,6 @@ void BeginNewYTopSearch(int xStart, int y, int zStart) {
     _staticWorldTriangles.push_back(tri2);
 }
 
-
 void VoxelWorld::GenerateTriangleOccluders() {
     // Reset accounted for voxels
     for (int x = 0; x < MAP_WIDTH; x++) {
@@ -608,178 +734,84 @@ void VoxelWorld::GenerateTriangleOccluders() {
     }
 }
 
-void VoxelWorld::CalculateLighting()
-{
-    // Get all voxels in the grid
-    _voxelsInWorld.clear();
+void VoxelWorld::CalculateDirectLighting()  {
+
+    // Get all visible faces
+    _voxelFacesZForward.clear();
+    _voxelFacesZBack.clear();
+    _voxelFacesXForward.clear();
+    _voxelFacesXBack.clear();
+    _voxelFacesYUp.clear();
+    _voxelFacesYDown.clear();
     for (int x = 0; x < MAP_WIDTH; x++) {
         for (int y = 0; y < MAP_HEIGHT; y++) {
             for (int z = 0; z < MAP_DEPTH; z++) {
-                if (_voxelGrid[x][y][z].solid) {
-                    _voxelsInWorld.push_back(Voxel(x, y, z, _voxelGrid[x][y][z].color));
+                if (CellIsSolid(x,y,z)) {
+                    VoxelCell& voxel = _voxelGrid[x][y][z];
+                    if (CellIsEmpty(x + 1, y, z ))
+                        _voxelFacesXForward.push_back(VoxelFace(x, y, z, voxel.color, NRM_X_FORWARD));
+                    if (CellIsEmpty(x - 1, y, z))
+                        _voxelFacesXBack.push_back(VoxelFace(x, y, z, voxel.color, NRM_X_BACK));
+                    if (CellIsEmpty(x, y + 1, z ))
+                        _voxelFacesYUp.push_back(VoxelFace(x, y, z, voxel.color, NRM_Y_UP));
+                    if (CellIsEmpty(x, y - 1, z))
+                        _voxelFacesYDown.push_back(VoxelFace(x, y, z, voxel.color, NRM_Y_DOWN));
+                    if (CellIsEmpty(x, y, z + 1))
+                        _voxelFacesZForward.push_back(VoxelFace(x, y, z, voxel.color, NRM_Z_FORWARD));
+                    if (CellIsEmpty(x, y, z - 1))
+                        _voxelFacesZBack.push_back(VoxelFace(x, y, z, voxel.color, NRM_Z_BACK));
                 }
             }
         }
     }
 
-    // Now get all the unique faces
-    _voxelsZFront.clear();
-    _voxelsZBack.clear();
-    _voxelsXFront.clear();
-    _voxelsXBack.clear();
-    _voxelsYTop.clear();
-    _voxelsYBottom.clear();
+    // put pointers in a temp vector for convienence
+    int total = 0;
+    total += _voxelFacesXForward.size();
+    total += _voxelFacesXBack.size();
+    total += _voxelFacesYUp.size();
+    total += _voxelFacesYDown.size();
+    total += _voxelFacesZForward.size();
+    total += _voxelFacesZBack.size();
+    std::vector<VoxelFace*> allVoxelFaces;
+    allVoxelFaces.reserve(total);
 
-    // Find Z Front
-    for (Voxel& voxel : _voxelsInWorld) {
-        if (voxel.z + 1 < MAP_DEPTH && !_voxelGrid[voxel.x][voxel.y][voxel.z + 1].solid)
-            _voxelsZFront.push_back(voxel);
-    }
-    // Find Z Back
-    for (Voxel& voxel : _voxelsInWorld) {
-        if (voxel.z - 1 >= 0 && !_voxelGrid[voxel.x][voxel.y][voxel.z - 1].solid)
-            _voxelsZBack.push_back(voxel);
-    }
-    // Find X Front
-    for (Voxel& voxel : _voxelsInWorld) {
-        if (voxel.x + 1 < MAP_WIDTH && !_voxelGrid[voxel.x + 1][voxel.y][voxel.z].solid)
-            _voxelsXFront.push_back(voxel);
-    }
-    // Find X Back
-    for (Voxel& voxel : _voxelsInWorld) {
-        if (voxel.x - 1 >= 0 && !_voxelGrid[voxel.x - 1][voxel.y][voxel.z].solid)
-            _voxelsXBack.push_back(voxel);
-    }
-    // Find Y Top
-    for (Voxel& voxel : _voxelsInWorld) {
-        if (voxel.y + 1 < MAP_HEIGHT && !_voxelGrid[voxel.x][voxel.y + 1][voxel.z].solid)
-            _voxelsYTop.push_back(voxel);
-    }
-    // Find Y Bottom
-    for (Voxel& voxel : _voxelsInWorld) {
-        if (voxel.y - 1 >= 0 && !_voxelGrid[voxel.x][voxel.y - 1][voxel.z].solid)
-            _voxelsYBottom.push_back(voxel);
-    }
+    for (VoxelFace& voxelFace : _voxelFacesXForward)
+        allVoxelFaces.push_back(&voxelFace);
+    for (VoxelFace& voxelFace : _voxelFacesXBack)
+        allVoxelFaces.push_back(&voxelFace);
+    for (VoxelFace& voxelFace : _voxelFacesYUp)
+        allVoxelFaces.push_back(&voxelFace);
+    for (VoxelFace& voxelFace : _voxelFacesYDown)
+        allVoxelFaces.push_back(&voxelFace);
+    for (VoxelFace& voxelFace : _voxelFacesZForward)
+        allVoxelFaces.push_back(&voxelFace);
+    for (VoxelFace& voxelFace : _voxelFacesZBack)
+        allVoxelFaces.push_back(&voxelFace);
+        
 
     // Direct light the voxels
     for (Light& light : _lights) {
 
         glm::vec3 lightCenter = glm::vec3(light.x * _voxelSize, light.y * _voxelSize, light.z * _voxelSize) + glm::vec3(0.01f);
 
-        // Z Front
-        for (Voxel& voxel : _voxelsZFront) {
-            glm::vec3 voxelFaceCenter = glm::vec3(voxel.x * _voxelSize, voxel.y * _voxelSize, voxel.z * _voxelSize + _voxelSize * 0.5f);
-            glm::vec3 voxelNormal = glm::vec3(0, 0, 1);
-            float distanceToLight = glm::distance(lightCenter, voxelFaceCenter);
-            glm::vec3 origin = voxelFaceCenter;
-            glm::vec3 rayDirection = glm::normalize(lightCenter - voxelFaceCenter);
-            // If no hit was found, light the voxel
-            if (!Util::RayTracing::AnyHit(_triangles, origin, rayDirection, MIN_RAY_DIST, distanceToLight)) {
-                voxel.accumulatedDirectLighting += Util::GetDirectLightAtAPoint(light, voxelFaceCenter, voxelNormal, _voxelSize);
-            }
-        }
+        for (VoxelFace* voxelFace : allVoxelFaces) {
 
-        // Draw Z Back
-        for (Voxel& voxel : _voxelsZBack) {
-            glm::vec3 voxelFaceCenter = glm::vec3(voxel.x * _voxelSize, voxel.y * _voxelSize, voxel.z * _voxelSize - _voxelSize * 0.5f);
-            glm::vec3 voxelNormal = glm::vec3(0, 0, -1);
-            float distanceToLight = glm::distance(lightCenter, voxelFaceCenter);
-            glm::vec3 origin = voxelFaceCenter;
-            glm::vec3 rayDirection = glm::normalize(lightCenter - voxelFaceCenter);
-            // If no hit was found, light the voxel
-            if (!Util::RayTracing::AnyHit(_triangles, origin, rayDirection, MIN_RAY_DIST, distanceToLight)) {
-                voxel.accumulatedDirectLighting += Util::GetDirectLightAtAPoint(light, voxelFaceCenter, voxelNormal, _voxelSize);
-                //QueueLineForDrawing(Line(origin, origin + rayDirection * distanceToLight, light.color));
-            }
-        }
+            glm::vec3 origin = GetVoxelFaceWorldPos(*voxelFace);
+            glm::vec3 rayDirection = glm::normalize(lightCenter - origin);
+            float distanceToLight = glm::distance(lightCenter, origin);
 
-        // Draw X Front
-        for (Voxel& voxel : _voxelsXFront) {
-            glm::vec3 voxelFaceCenter = glm::vec3(voxel.x * _voxelSize + _voxelSize * 0.5f, voxel.y * _voxelSize, voxel.z * _voxelSize);
-            glm::vec3 voxelNormal = glm::vec3(1, 0, 0);
-            float distanceToLight = glm::distance(lightCenter, voxelFaceCenter);
-            glm::vec3 origin = voxelFaceCenter;
-            glm::vec3 rayDirection = glm::normalize(lightCenter - voxelFaceCenter);
             // If no hit was found, light the voxel
             if (!Util::RayTracing::AnyHit(_triangles, origin, rayDirection, MIN_RAY_DIST, distanceToLight)) {
-                voxel.accumulatedDirectLighting += Util::GetDirectLightAtAPoint(light, voxelFaceCenter, voxelNormal, _voxelSize);
-            }
-        }
-
-        // Draw X Back
-        for (Voxel& voxel : _voxelsXBack) {
-            glm::vec3 voxelFaceCenter = glm::vec3(voxel.x * _voxelSize - _voxelSize * 0.5f, voxel.y * _voxelSize, voxel.z * _voxelSize);
-            glm::vec3 voxelNormal = glm::vec3(-1, 0, 0);
-            float distanceToLight = glm::distance(lightCenter, voxelFaceCenter);
-            glm::vec3 origin = voxelFaceCenter;
-            glm::vec3 rayDirection = glm::normalize(lightCenter - voxelFaceCenter);
-            // If no hit was found, light the voxel
-            if (!Util::RayTracing::AnyHit(_triangles, origin, rayDirection, MIN_RAY_DIST, distanceToLight)) {
-                voxel.accumulatedDirectLighting += Util::GetDirectLightAtAPoint(light, voxelFaceCenter, voxelNormal, _voxelSize);
-            }
-        }
-
-        // Draw Y Top
-        for (Voxel& voxel : _voxelsYTop) {
-            glm::vec3 voxelFaceCenter = glm::vec3(voxel.x * _voxelSize, voxel.y * _voxelSize + _voxelSize * 0.5f, voxel.z * _voxelSize);
-            glm::vec3 voxelNormal = glm::vec3(0, 1, 0);
-            float distanceToLight = glm::distance(lightCenter, voxelFaceCenter);
-            glm::vec3 origin = voxelFaceCenter;
-            glm::vec3 rayDirection = glm::normalize(lightCenter - voxelFaceCenter);
-            // If no hit was found, light the voxel
-            if (!Util::RayTracing::AnyHit(_triangles, origin, rayDirection, MIN_RAY_DIST, distanceToLight)) {
-                voxel.accumulatedDirectLighting += Util::GetDirectLightAtAPoint(light, voxelFaceCenter, voxelNormal, _voxelSize);
-            }
-        }
-
-        // Draw Y Bottom
-        for (Voxel& voxel : _voxelsYBottom) {
-            glm::vec3 voxelFaceCenter = glm::vec3(voxel.x * _voxelSize, voxel.y * _voxelSize - _voxelSize * 0.5f, voxel.z * _voxelSize);
-            glm::vec3 voxelNormal = glm::vec3(0, -1, 0);
-            float distanceToLight = glm::distance(lightCenter, voxelFaceCenter);
-            glm::vec3 origin = voxelFaceCenter;
-            glm::vec3 rayDirection = glm::normalize(lightCenter - voxelFaceCenter);
-            // If no hit was found, light the voxel
-            if (!Util::RayTracing::AnyHit(_triangles, origin, rayDirection, MIN_RAY_DIST, distanceToLight)) {
-                voxel.accumulatedDirectLighting += Util::GetDirectLightAtAPoint(light, voxelFaceCenter, voxelNormal, _voxelSize);
+                voxelFace->accumulatedDirectLighting += Util::GetDirectLightAtAPoint(light, origin, voxelFace->normal, _voxelSize);
             }
         }
     }
 
-    /*int total = 0;
-    total += _voxelsXFront.size();
-    total += _voxelsXBack.size();
-    total += _voxelsYTop.size();
-    total += _voxelsYBottom.size();
-    total += _voxelsZFront.size();
-    total += _voxelsZBack.size();
-    std::cout << total << "\n";*/
-
     // Debug shit
     if (_debugView) {
-        for (Voxel& voxel : _voxelsXFront) {
-            if (_voxelAccountedForInTriMesh_XFront[voxel.x][voxel.y][voxel.z])
-                voxel.accumulatedDirectLighting = glm::vec3(RED * 0.5f + 0.5f);
-        }
-        for (Voxel& voxel : _voxelsXBack) {
-            if (_voxelAccountedForInTriMesh_XBack[voxel.x][voxel.y][voxel.z])
-                voxel.accumulatedDirectLighting = glm::vec3(RED * -0.5f + 0.5f);
-        }
-        for (Voxel& voxel : _voxelsYTop) {
-            if (_voxelAccountedForInTriMesh_YTop[voxel.x][voxel.y][voxel.z])
-                voxel.accumulatedDirectLighting = glm::vec3(GREEN * 0.5f + 0.5f);
-        }
-        for (Voxel& voxel : _voxelsYBottom) {
-            if (_voxelAccountedForInTriMesh_YBottom[voxel.x][voxel.y][voxel.z])
-                voxel.accumulatedDirectLighting = glm::vec3(GREEN * -0.5f + 0.5f);
-        }
-        for (Voxel& voxel : _voxelsZFront) {
-            if (_voxelAccountedForInTriMesh_ZFront[voxel.x][voxel.y][voxel.z])
-                voxel.accumulatedDirectLighting = glm::vec3(BLUE * 0.5f + 0.5f);
-        }
-        for (Voxel& voxel : _voxelsZBack) {
-            if (_voxelAccountedForInTriMesh_ZBack[voxel.x][voxel.y][voxel.z])
-                voxel.accumulatedDirectLighting = glm::vec3(BLUE * -0.5f + 0.5f);
+        for (VoxelFace* voxel : allVoxelFaces) {
+                voxel->accumulatedDirectLighting = voxel->normal * 0.5f + 0.5f;
         }
     }
 }
@@ -805,23 +837,243 @@ void VoxelWorld::ToggleDebugView() {
     _debugView = !_debugView;
 }
 
-std::vector<Voxel>& VoxelWorld::GetXFrontFacingVoxels() {
-    return _voxelsXFront;
+bool ProbeIsOutsideMapBounds(GridProbe& probe) {
+    int fakeCeilingHeight = 13;
+    if (probe.worldPositon.x > (MAP_WIDTH - 1) * _voxelSize || probe.worldPositon.y > fakeCeilingHeight * _voxelSize || probe.worldPositon.z > (MAP_DEPTH - 1) * _voxelSize)
+        return true;
+    else
+        return false;
 }
-std::vector<Voxel>& VoxelWorld::GetXBackFacingVoxels() {
-    return _voxelsXBack;
+
+bool ProbeIsInsideGeometry(GridProbe& probe) {
+    if (CellIsSolid(probe.worldPositon.x / _voxelSize, probe.worldPositon.y / _voxelSize, probe.worldPositon.z / _voxelSize))
+        return true;
+    else
+        return false;
 }
-std::vector<Voxel>& VoxelWorld::GetZFrontFacingVoxels() {
-    return _voxelsZFront;
+
+void VoxelWorld::GeneratePropogrationGrid(){
+
+    // Reset grid
+    for (int x = 0; x < PROPOGATION_WIDTH; x++) {
+        for (int y = 0; y < PROPOGATION_HEIGHT; y++) {
+            for (int z = 0; z < PROPOGATION_DEPTH; z++) {
+
+                GridProbe& probe = _propogrationGrid[x][y][z];
+                probe.color = BLACK;
+                probe.samplesRecieved = 0;
+
+                int spawnOffset = PROPOGATION_SPACING / 2;
+                probe.worldPositon.x = (x + spawnOffset) * (float)PROPOGATION_SPACING * _voxelSize;
+                probe.worldPositon.y = (y + spawnOffset) * (float)PROPOGATION_SPACING * _voxelSize;
+                probe.worldPositon.z = (z + spawnOffset) * (float)PROPOGATION_SPACING * _voxelSize;
+
+                // Skip if outside map bounds or inside geometry
+                if (ProbeIsOutsideMapBounds(probe) || ProbeIsInsideGeometry(probe))
+                    probe.ignore = true;
+            }
+        }
+    }
 }
-std::vector<Voxel>& VoxelWorld::GetZBackFacingVoxels() {
-    return _voxelsZBack;
+
+void ApplyLightToProbe(VoxelFace& voxelFace, GridProbe& probe) {
+
+    float coneLimit = 0.5f;
+    float maxTravelRadius = 1.0f;
+
+    glm::vec3 origin = VoxelWorld::GetVoxelFaceWorldPos(voxelFace);
+    glm::vec3 rayDirection = glm::normalize(probe.worldPositon - origin);
+    float distanceToProbe = glm::distance(probe.worldPositon, origin);
+
+    // Skip if outside cone radius
+    float ndotl = glm::dot(voxelFace.normal, rayDirection);
+    if (ndotl < coneLimit)
+        return;
+
+    // skip if the probe is too far
+    if (distanceToProbe > maxTravelRadius)
+        return;
+
+    float att = glm::smoothstep(maxTravelRadius, 0.0f, distanceToProbe);
+
+    // If no hit was found, light the probe
+    if (!Util::RayTracing::AnyHit(_triangles, origin, rayDirection, MIN_RAY_DIST, distanceToProbe)) {
+        probe.color += voxelFace.accumulatedDirectLighting * att;// * voxel.baseColor
+
+      //  glm::vec3 mixedColor = glm::mix(probe.color, voxelFace.accumulatedDirectLighting, att);
+        //probe.color = glm::mix(probe.color, voxelFace.accumulatedDirectLighting, att);
+
+        probe.samplesRecieved++;
+       // probe.color += mixedColor;
+    }
+
+    _testRays.push_back(Line(origin, probe.worldPositon, WHITE));
 }
-std::vector<Voxel>& VoxelWorld::GetYTopVoxels() {
-    return _voxelsYTop;
+
+GridProbe& GetRandomGridProbe() {
+    int x = Util::RandomInt(0, PROPOGATION_WIDTH - 1);
+    int y = Util::RandomInt(0, PROPOGATION_HEIGHT - 1);
+    int z = Util::RandomInt(0, PROPOGATION_DEPTH - 1);
+    return _propogrationGrid[x][y][z];
 }
-std::vector<Voxel>& VoxelWorld::GetYBottomVoxels() {
-    return _voxelsYBottom;
+
+VoxelFace& GetRandomVoxelFaceXForward() {
+    int i = Util::RandomInt(0, _voxelFacesXForward.size() - 1);
+    return _voxelFacesXForward[i];
+}
+
+VoxelFace& GetRandomVoxelFaceXBack() {
+    int i = Util::RandomInt(0, _voxelFacesXBack.size() - 1);
+    return _voxelFacesXBack[i];
+}
+
+VoxelFace& GetRandomVoxelFaceYUp() {
+    int i = Util::RandomInt(0, _voxelFacesYUp.size() - 1);
+    return _voxelFacesYUp[i];
+}
+
+VoxelFace& GetRandomVoxelFaceYDown() {
+    int i = Util::RandomInt(0, _voxelFacesYDown.size() - 1);
+    return _voxelFacesYDown[i];
+}
+
+VoxelFace& GetRandomVoxelFaceZForward() {
+    int i = Util::RandomInt(0, _voxelFacesZForward.size() - 1);
+    return _voxelFacesZForward[i];
+}
+
+VoxelFace& GetRandomVoxelFaceZBack() {
+    int i = Util::RandomInt(0, _voxelFacesZBack.size() - 1);
+    return _voxelFacesZBack[i];
+}
+
+void VoxelWorld::PropogateLight() {
+
+    static int i = 241;
+
+    if (Input::KeyPressed(HELL_KEY_R)) {
+        //_testRays.clear();
+        GeneratePropogrationGrid();
+    }
+    /*if (Input::KeyPressed(HELL_KEY_SPACE)) {
+        i = Util::RandomInt(0, _voxelsZFront.size() - 1);
+        std::cout << i << "\n";
+    }*/
+
+    if (Input::KeyDown(HELL_KEY_SPACE)) {
+
+        // Select random voxel
+
+        // Front X
+        bool found = false;
+       while (!found) {
+            // Get random voxel and probe
+            VoxelFace& voxelFace = GetRandomVoxelFaceXForward();
+            GridProbe& probe = GetRandomGridProbe();
+
+            // skip if probe is behind voxel
+            if (probe.worldPositon.x < GetVoxelFaceWorldPos(voxelFace).x)
+                continue;
+
+            // Othewwise, cast a ray towards probe
+            ApplyLightToProbe(voxelFace, probe);
+            found = true;
+        }
+        // Back X
+        found = false;
+        while (!found) {
+            // Get random voxel and probe
+            VoxelFace& voxelFace = GetRandomVoxelFaceXBack();
+            GridProbe& probe = GetRandomGridProbe();
+
+            // skip if probe is behind voxel
+            if (probe.worldPositon.x > GetVoxelFaceWorldPos(voxelFace).x)
+                continue;
+
+            // Othewwise, cast a ray towards probe
+            ApplyLightToProbe(voxelFace, probe);
+            found = true;
+        }
+        // Y Up
+        found = false;
+        while (!found) {
+            // Get random voxel and probe
+            VoxelFace& voxelFace = GetRandomVoxelFaceYUp();
+            GridProbe& probe = GetRandomGridProbe();
+
+            // skip if probe is behind voxel
+            if (probe.worldPositon.y < GetVoxelFaceWorldPos(voxelFace).y)
+                continue;
+
+            // Othewwise, cast a ray towards probe
+            ApplyLightToProbe(voxelFace, probe);
+            found = true;
+        }
+        // Y Down
+        found = false;
+        while (!found) {
+            // Get random voxel and probe
+            VoxelFace& voxelFace = GetRandomVoxelFaceYDown();
+            GridProbe& probe = GetRandomGridProbe();
+
+            // skip if probe is behind voxel
+            if (probe.worldPositon.y > GetVoxelFaceWorldPos(voxelFace).y)
+                continue;
+
+            // Othewwise, cast a ray towards probe
+            ApplyLightToProbe(voxelFace, probe);
+            found = true;
+        }
+        // Front Z
+        found = false;
+        while (!found) {
+            // Get random voxel and probe
+            VoxelFace& voxelFace = GetRandomVoxelFaceZForward();
+            GridProbe& probe = GetRandomGridProbe();
+
+            // skip if probe is behind voxel
+            if (probe.worldPositon.z < GetVoxelFaceWorldPos(voxelFace).z)
+                continue;
+
+            // Othewwise, cast a ray towards probe
+            ApplyLightToProbe(voxelFace, probe);
+            found = true;
+        }
+        // Back Z
+        found = false;
+        while (!found) {
+            // Get random voxel and probe
+            VoxelFace& voxelFace = GetRandomVoxelFaceZBack();
+            GridProbe& probe = GetRandomGridProbe();
+
+            // skip if probe is behind voxel
+            if (probe.worldPositon.z > GetVoxelFaceWorldPos(voxelFace).z)
+                continue;
+
+            // Othewwise, cast a ray towards probe
+            ApplyLightToProbe(voxelFace, probe);
+            found = true;
+        }
+    }
+}
+
+std::vector<VoxelFace>& VoxelWorld::GetXFrontFacingVoxels() {
+    return _voxelFacesXForward;
+}
+std::vector<VoxelFace>& VoxelWorld::GetXBackFacingVoxels() {
+    return _voxelFacesXBack;
+}
+std::vector<VoxelFace>& VoxelWorld::GetZFrontFacingVoxels() {
+    return _voxelFacesZForward;
+}
+std::vector<VoxelFace>& VoxelWorld::GetZBackFacingVoxels() {
+    return _voxelFacesZBack;
+}
+std::vector<VoxelFace>& VoxelWorld::GetYTopVoxels() {
+    return _voxelFacesYUp;
+}
+std::vector<VoxelFace>& VoxelWorld::GetYBottomVoxels() {
+    return _voxelFacesYDown;
 }
 std::vector<Triangle>& VoxelWorld::GetAllTriangleOcculders() {
     return _triangles;
@@ -829,4 +1081,72 @@ std::vector<Triangle>& VoxelWorld::GetAllTriangleOcculders() {
 
 std::vector<Light>& VoxelWorld::GetLights() {
     return _lights;
+}
+
+/*std::vector<PropogatedLight>& VoxelWorld::GetPropogatedLightValues() {
+    return _propogatedLightValues;
+}*/
+
+std::vector<Line>& VoxelWorld::GetTestRays() {
+    return _testRays;
+}
+
+GridProbe& VoxelWorld::GetProbeByGridIndex(int x, int y, int z) {
+    return _propogrationGrid[x][y][z];
+}
+
+int VoxelWorld::GetPropogationGridWidth() {
+    return PROPOGATION_WIDTH;
+}
+
+int VoxelWorld::GetPropogationGridHeight() {
+    return PROPOGATION_HEIGHT;
+}
+
+int VoxelWorld::GetPropogationGridDepth() {
+    return PROPOGATION_DEPTH;
+}
+
+void VoxelWorld::Update() {
+
+    if (Input::KeyPressed(HELL_KEY_G)) {
+        _testRays.clear();
+        GeneratePropogrationGrid();
+    }
+
+    return;
+    /*static int INDEX = 0;
+    if (Input::KeyPressed(HELL_KEY_G)) {
+        INDEX = Util::RandomInt(0, _voxelsZFront.size() - 1);
+        GeneratePropogrationGrid();
+
+    }
+    Voxel& voxel = _voxelsZFront[INDEX];
+    voxel.accumulatedDirectLighting = BLUE;
+
+    glm::vec3 worldPosTest = glm::vec3(3.1f, 1, 2.1f);
+
+    int x = GetVoxelWorldPositionZFrontCenter(voxel).x / _voxelSize;
+    int y = GetVoxelWorldPositionZFrontCenter(voxel).y / _voxelSize;
+    int z = GetVoxelWorldPositionZFrontCenter(voxel).z / _voxelSize;
+
+    int XprobeIndex = x / PROPOGATION_SPACING;
+    int YprobeIndex = y / PROPOGATION_SPACING;
+    int ZprobeIndex = z / PROPOGATION_SPACING;
+
+    if (_propogrationGridProbeIndices[XprobeIndex][YprobeIndex][ZprobeIndex] != -1) {
+        int index = _propogrationGridProbeIndices[XprobeIndex][YprobeIndex][ZprobeIndex];
+        _propogatedLightValues[index].color = RED;
+        _propogatedLightValues[index].samplesRecieved = 1;
+    }
+
+    XprobeIndex = ( x-1) / PROPOGATION_SPACING;
+    YprobeIndex = y / PROPOGATION_SPACING;
+    ZprobeIndex = z / PROPOGATION_SPACING; ;// std::max((z - 1) / PROPOGATION_SPACING, 0);
+
+    if (_propogrationGridProbeIndices[XprobeIndex][YprobeIndex][ZprobeIndex] != -1) {
+        int index = _propogrationGridProbeIndices[XprobeIndex][YprobeIndex][ZprobeIndex];
+        _propogatedLightValues[index].color = RED;
+        _propogatedLightValues[index].samplesRecieved = 1;
+    }*/
 }

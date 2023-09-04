@@ -35,8 +35,10 @@ void Engine::Init() {
     Player::Init(glm::vec3(0, 0, 2));
 
     Renderer::Init();
+
     VoxelWorld::InitMap();
     VoxelWorld::GenerateTriangleOccluders();
+    VoxelWorld::GeneratePropogrationGrid();
 
     Audio::Init();
 }
@@ -72,5 +74,11 @@ void Engine::Update(float deltaTime) {
         VoxelWorld::ToggleDebugView();
     }
 
-    VoxelWorld::CalculateLighting();
+    VoxelWorld::CalculateDirectLighting();
+
+    for (int i = 0; i < 5000; i++) {
+        VoxelWorld::PropogateLight();
+    }
+
+    VoxelWorld::Update();
 }

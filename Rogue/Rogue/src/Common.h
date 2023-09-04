@@ -7,7 +7,7 @@
 #include <glm/gtc/type_ptr.hpp>
 
 #define MAP_WIDTH   32//24//48//24
-#define MAP_HEIGHT  13
+#define MAP_HEIGHT  15
 #define MAP_DEPTH   36
 
 #define BLACK   glm::vec3(0,0,0)
@@ -23,6 +23,13 @@
 #define SMALL_NUMBER		(float)9.99999993922529e-9
 #define KINDA_SMALL_NUMBER	(float)0.00001
 #define MIN_RAY_DIST        (float)0.01f
+
+#define NRM_X_FORWARD glm::vec3(1,0,0)
+#define NRM_X_BACK glm::vec3(-1,0,0)
+#define NRM_Y_UP glm::vec3(0,1,0)
+#define NRM_Y_DOWN glm::vec3(0,-1,0)
+#define NRM_Z_FORWARD glm::vec3(0,0,1)
+#define NRM_Z_BACK glm::vec3(0,0,-1)
 
 struct Transform {
 	glm::vec3 position = glm::vec3(0);
@@ -64,17 +71,21 @@ struct Line {
     }
 };
 
-struct Voxel {
+struct VoxelFace {
+
     int x = 0;
     int y = 0;
     int z = 0;
     glm::vec3 baseColor;
+    glm::vec3 normal;
     glm::vec3 accumulatedDirectLighting = { glm::vec3(0) };
-    Voxel(int x, int y, int z, glm::vec3 baseColor) {
+
+    VoxelFace(int x, int y, int z, glm::vec3 baseColor, glm::vec3 normal) {
         this->x = x;
         this->y = y;
         this->z = z;
         this->baseColor = baseColor;
+        this->normal = normal;
     }
 };
 
@@ -105,4 +116,11 @@ struct IntersectionResult {
     float distance = 0;
     float dot = 0;
     glm::vec2 baryPosition = glm::vec2(0);
+};
+
+struct GridProbe {
+    glm::vec3 worldPositon;
+    glm::vec3 color = BLACK;
+    int samplesRecieved = 0;
+    bool ignore = false; // either blocked by geometry, or out of map range
 };

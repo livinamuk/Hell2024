@@ -108,42 +108,42 @@ void Renderer::RenderFrame() {
     }
 
     // Draw Z Front
-    for (Voxel& voxel : VoxelWorld::GetZFrontFacingVoxels()) {
+    for (VoxelFace& voxel : VoxelWorld::GetZFrontFacingVoxels()) {
         _testShader.SetMat4("model", Util::GetVoxelModelMatrix(voxel, VoxelWorld::GetVoxelSize()));
         _testShader.SetVec3("lightingColor", voxel.accumulatedDirectLighting);
         _testShader.SetVec3("baseColor", voxel.baseColor);
         _cubeMeshZFront.Draw();
     }
     // Draw Z Back
-    for (Voxel& voxel : VoxelWorld::GetZBackFacingVoxels()) {
+    for (VoxelFace& voxel : VoxelWorld::GetZBackFacingVoxels()) {
         _testShader.SetMat4("model", Util::GetVoxelModelMatrix(voxel, VoxelWorld::GetVoxelSize()));
         _testShader.SetVec3("lightingColor", voxel.accumulatedDirectLighting);
         _testShader.SetVec3("baseColor", voxel.baseColor);
         _cubeMeshZBack.Draw();
     }
     // Draw X Front
-    for (Voxel& voxel : VoxelWorld::GetXFrontFacingVoxels()) {
+    for (VoxelFace& voxel : VoxelWorld::GetXFrontFacingVoxels()) {
         _testShader.SetMat4("model", Util::GetVoxelModelMatrix(voxel, VoxelWorld::GetVoxelSize()));
         _testShader.SetVec3("lightingColor", voxel.accumulatedDirectLighting);
         _testShader.SetVec3("baseColor", voxel.baseColor);
         _cubeMeshXFront.Draw();
     }
     // Draw X Back
-    for (Voxel& voxel : VoxelWorld::GetXBackFacingVoxels()) {
+    for (VoxelFace& voxel : VoxelWorld::GetXBackFacingVoxels()) {
         _testShader.SetMat4("model", Util::GetVoxelModelMatrix(voxel, VoxelWorld::GetVoxelSize()));
         _testShader.SetVec3("lightingColor", voxel.accumulatedDirectLighting);
         _testShader.SetVec3("baseColor", voxel.baseColor);
         _cubeMeshXBack.Draw();
     }
     // Draw Y Top
-    for (Voxel& voxel : VoxelWorld::GetYTopVoxels()) {
+    for (VoxelFace& voxel : VoxelWorld::GetYTopVoxels()) {
         _testShader.SetMat4("model", Util::GetVoxelModelMatrix(voxel, VoxelWorld::GetVoxelSize()));
         _testShader.SetVec3("lightingColor", voxel.accumulatedDirectLighting);
         _testShader.SetVec3("baseColor", voxel.baseColor);
         _cubeMeshYTop.Draw();
     }
     // Draw Y Bottom
-    for (Voxel& voxel : VoxelWorld::GetYBottomVoxels()) {
+    for (VoxelFace& voxel : VoxelWorld::GetYBottomVoxels()) {
         _testShader.SetMat4("model", Util::GetVoxelModelMatrix(voxel, VoxelWorld::GetVoxelSize()));
         _testShader.SetVec3("lightingColor", voxel.accumulatedDirectLighting);
         _testShader.SetVec3("baseColor", voxel.baseColor);
@@ -165,6 +165,15 @@ void Renderer::RenderFrame() {
         }
     }
 
+    //_drawLines = true;
+    for (Line& line : VoxelWorld::GetTestRays()) {
+        QueueLineForDrawing(line);
+    }
+
+
+   // glm::vec3 worldPosTest = glm::vec3(3.1f, 1, 2.1f);
+   // QueuePointForDrawing(Point(worldPosTest, YELLOW));
+
     // Draw lights
     if (_drawLights) {
         for (Light& light : VoxelWorld::GetLights()) {
@@ -176,6 +185,29 @@ void Renderer::RenderFrame() {
             _solidColorShader.SetVec3("color", WHITE);
             _solidColorShader.SetBool("uniformColor", true);
             _cubeMesh.Draw();
+        }
+    }
+
+    // Draw propogated light values
+    for (int x = 0; x < VoxelWorld::GetPropogationGridWidth(); x++) {
+        for (int y = 0; y < VoxelWorld::GetPropogationGridHeight(); y++) {
+            for (int z = 0; z < VoxelWorld::GetPropogationGridDepth(); z++) {
+
+                GridProbe& probe = VoxelWorld::GetProbeByGridIndex(x, y, z);
+                if (probe.color == BLACK || probe.ignore)
+                    continue;
+
+                // draw
+                Transform t;
+                t.scale = glm::vec3(0.05f);
+                t.position = probe.worldPositon;
+                _solidColorShader.SetMat4("model", t.to_mat4());
+                _solidColorShader.SetVec3("color", probe.color / (float)probe.samplesRecieved);
+                //_solidColorShader.SetVec3("color", probe.color);
+                _solidColorShader.SetBool("uniformColor", true);
+                _cubeMesh.Draw();
+
+        }
         }
     }
 
