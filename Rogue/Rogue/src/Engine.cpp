@@ -73,12 +73,24 @@ void Engine::Update(float deltaTime) {
         Audio::PlayAudio("RE_Beep.wav", 0.25f);
         VoxelWorld::ToggleDebugView();
     }
+    if (Input::KeyPressed(GLFW_KEY_SPACE)) {
+        Audio::PlayAudio("RE_Beep.wav", 0.25f);
+    }
 
     VoxelWorld::CalculateDirectLighting();
+    VoxelWorld::CalculateIndirectLighting();
+    VoxelWorld::FillIndirectLightingTexture(Renderer::GetIndirectLightingTexture());
 
-    for (int i = 0; i < 5000; i++) {
-        VoxelWorld::PropogateLight();
+    if (Input::KeyDown(HELL_KEY_TAB)) {
+        for (int i = 0; i < 10000; i++) {
+            VoxelWorld::PropogateLight();
+        }
     }
+   /* if (Input::KeyPressed(HELL_KEY_TAB)) {
+        for (int i = 0; i < 100000; i++) {
+            VoxelWorld::PropogateLight();
+        }
+    }*/
 
     VoxelWorld::Update();
 }

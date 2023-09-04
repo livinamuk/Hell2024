@@ -1,5 +1,6 @@
 #include "VoxelWorld.h"
 #include "../Util.hpp"
+#include "../Core/Audio.h"
 #include "../Core/Input.h"
 
 VoxelCell _voxelGrid[MAP_WIDTH][MAP_HEIGHT][MAP_DEPTH];
@@ -37,6 +38,51 @@ std::vector<VoxelFace> _voxelFacesZBack;
 
 bool _optimizeHack = false;
 bool _debugView = false;
+
+void LoadLightSetupA() {
+    _lights.clear();
+    Light lightD;
+    lightD.x = 21;
+    lightD.y = 21;
+    lightD.z = 18;
+    lightD.radius = 3.0f;
+    lightD.strength = 1.0f;
+    lightD.radius = 10;
+    _lights.push_back(lightD);
+}
+
+void LoadLightSetupB() {
+    _lights.clear();
+    Light lightA;
+    lightA.x = 27;// 3;
+    lightA.y = 9;
+    lightA.z = 3;
+    lightA.strength = 0.5f;
+    Light lightB;
+    lightB.x = 13;
+    lightB.y = 3;
+    lightB.z = 3;
+    lightB.strength = 0.5f;
+    lightB.color = RED;
+    Light lightC;
+    lightC.x = 5;
+    lightC.y = 3;
+    lightC.z = 30;
+    lightC.radius = 3.0f;
+    lightC.strength = 0.75f;
+    lightC.color = LIGHT_BLUE;
+    Light lightD;
+    lightD.x = 21;
+    lightD.y = 21;
+    lightD.z = 18;
+    lightD.radius = 3.0f;
+    lightD.strength = 1.0f;
+    lightD.radius = 10;
+    _lights.push_back(lightA);
+    _lights.push_back(lightB);
+    _lights.push_back(lightC);
+    _lights.push_back(lightD);
+}
 
 void VoxelWorld::InitMap() {
 
@@ -89,42 +135,12 @@ void VoxelWorld::InitMap() {
     }
     // Cornell hole
     for (int x = 19; x < 24; x++) {
-            for (int z = 16; z < 21; z++) {
-                _voxelGrid[x][13][z] = { false, WHITE };
-            }
+        for (int z = 16; z < 21; z++) {
+            _voxelGrid[x][13][z] = { false, WHITE };
+        }
     }
 
-    // Lights
-    static Light lightA;
-    lightA.x =  27;// 3;
-    lightA.y = 9;
-    lightA.z = 3;
-    lightA.strength = 1.0f;
-    static Light lightB;
-    lightB.x = 13;
-    lightB.y = 3;
-    lightB.z = 3;
-    lightB.strength = 1.0f;
-    lightB.color = RED;
-    static Light lightC;
-    lightC.x = 5;
-    lightC.y = 3;
-    lightC.z = 30;
-    lightC.radius = 3.0f;
-    lightC.strength = 0.75f;
-    lightC.color = LIGHT_BLUE;
-    static Light lightD;
-    lightD.x = 21;
-    lightD.y = 21;
-    lightD.z = 18;
-    lightD.radius = 3.0f;
-    lightD.strength = 1.0f;
-    lightD.radius = 10;
-
-    _lights.push_back(lightA);
-    _lights.push_back(lightB);
-    _lights.push_back(lightC);
-    _lights.push_back(lightD);
+    LoadLightSetupA();
 }
 
 void VoxelWorld::InitMap2() {
@@ -734,7 +750,7 @@ void VoxelWorld::GenerateTriangleOccluders() {
     }
 }
 
-void VoxelWorld::CalculateDirectLighting()  {
+void VoxelWorld::CalculateDirectLighting() {
 
     // Get all visible faces
     _voxelFacesZForward.clear();
@@ -746,13 +762,13 @@ void VoxelWorld::CalculateDirectLighting()  {
     for (int x = 0; x < MAP_WIDTH; x++) {
         for (int y = 0; y < MAP_HEIGHT; y++) {
             for (int z = 0; z < MAP_DEPTH; z++) {
-                if (CellIsSolid(x,y,z)) {
+                if (CellIsSolid(x, y, z)) {
                     VoxelCell& voxel = _voxelGrid[x][y][z];
-                    if (CellIsEmpty(x + 1, y, z ))
+                    if (CellIsEmpty(x + 1, y, z))
                         _voxelFacesXForward.push_back(VoxelFace(x, y, z, voxel.color, NRM_X_FORWARD));
                     if (CellIsEmpty(x - 1, y, z))
                         _voxelFacesXBack.push_back(VoxelFace(x, y, z, voxel.color, NRM_X_BACK));
-                    if (CellIsEmpty(x, y + 1, z ))
+                    if (CellIsEmpty(x, y + 1, z))
                         _voxelFacesYUp.push_back(VoxelFace(x, y, z, voxel.color, NRM_Y_UP));
                     if (CellIsEmpty(x, y - 1, z))
                         _voxelFacesYDown.push_back(VoxelFace(x, y, z, voxel.color, NRM_Y_DOWN));
@@ -788,7 +804,7 @@ void VoxelWorld::CalculateDirectLighting()  {
         allVoxelFaces.push_back(&voxelFace);
     for (VoxelFace& voxelFace : _voxelFacesZBack)
         allVoxelFaces.push_back(&voxelFace);
-        
+
 
     // Direct light the voxels
     for (Light& light : _lights) {
@@ -811,8 +827,69 @@ void VoxelWorld::CalculateDirectLighting()  {
     // Debug shit
     if (_debugView) {
         for (VoxelFace* voxel : allVoxelFaces) {
-                voxel->accumulatedDirectLighting = voxel->normal * 0.5f + 0.5f;
+            voxel->accumulatedDirectLighting = voxel->normal * 0.5f + 0.5f;
         }
+    }
+}
+
+void VoxelWorld::CalculateIndirectLighting() {
+
+    // Get all voxel facess
+    int total = 0;
+    total += _voxelFacesXForward.size();
+    total += _voxelFacesXBack.size();
+    total += _voxelFacesYUp.size();
+    total += _voxelFacesYDown.size();
+    total += _voxelFacesZForward.size();
+    total += _voxelFacesZBack.size();
+    std::vector<VoxelFace*> allVoxelFaces;
+    allVoxelFaces.reserve(total);
+
+    for (VoxelFace& voxelFace : _voxelFacesXForward)
+        allVoxelFaces.push_back(&voxelFace);
+    for (VoxelFace& voxelFace : _voxelFacesXBack)
+        allVoxelFaces.push_back(&voxelFace);
+    for (VoxelFace& voxelFace : _voxelFacesYUp)
+        allVoxelFaces.push_back(&voxelFace);
+    for (VoxelFace& voxelFace : _voxelFacesYDown)
+        allVoxelFaces.push_back(&voxelFace);
+    for (VoxelFace& voxelFace : _voxelFacesZForward)
+        allVoxelFaces.push_back(&voxelFace);
+    for (VoxelFace& voxelFace : _voxelFacesZBack)
+        allVoxelFaces.push_back(&voxelFace);
+
+    // Find it
+    for (VoxelFace* voxelFace : allVoxelFaces) {
+
+        int xPos = voxelFace->x / PROPOGATION_SPACING;
+        int yPos = voxelFace->y / PROPOGATION_SPACING;
+        int zPos = voxelFace->z / PROPOGATION_SPACING;
+
+        voxelFace->indirectLighting = glm::vec3(0);
+        int sampleCount = 0;
+
+        for (int x = -1; x < 2; x++) {
+            for (int y = -1; y < 2; y++) {
+                for (int z = -1; z < 2; z++) {
+
+        /*for (int x = -1; x < 0; x++) {
+            for (int y = -1; y < 0; y++) {
+                for (int z = -1; z < 0; z++) {*/
+
+                    // skip if sample coords are outside of the grid
+                    if (xPos + x < 0 || yPos + y < 0 || zPos + z < 0 || xPos + x > PROPOGATION_WIDTH - 2 || yPos + y > PROPOGATION_HEIGHT - 2 || zPos + z > PROPOGATION_DEPTH - 2)
+                        continue;
+
+                    GridProbe& probe = _propogrationGrid[xPos + x][yPos + y][zPos + z];
+
+                    if (!probe.ignore) {
+                        voxelFace->indirectLighting += probe.color / (float)probe.samplesRecieved;
+                        sampleCount++;
+                    }
+                }
+            }
+        }
+       voxelFace->indirectLighting = voxelFace->indirectLighting / (float)sampleCount;
     }
 }
 
@@ -839,6 +916,7 @@ void VoxelWorld::ToggleDebugView() {
 
 bool ProbeIsOutsideMapBounds(GridProbe& probe) {
     int fakeCeilingHeight = 13;
+
     if (probe.worldPositon.x > (MAP_WIDTH - 1) * _voxelSize || probe.worldPositon.y > fakeCeilingHeight * _voxelSize || probe.worldPositon.z > (MAP_DEPTH - 1) * _voxelSize)
         return true;
     else
@@ -852,7 +930,7 @@ bool ProbeIsInsideGeometry(GridProbe& probe) {
         return false;
 }
 
-void VoxelWorld::GeneratePropogrationGrid(){
+void VoxelWorld::GeneratePropogrationGrid() {
 
     // Reset grid
     for (int x = 0; x < PROPOGATION_WIDTH; x++) {
@@ -863,7 +941,7 @@ void VoxelWorld::GeneratePropogrationGrid(){
                 probe.color = BLACK;
                 probe.samplesRecieved = 0;
 
-                int spawnOffset = PROPOGATION_SPACING / 2;
+                float spawnOffset = PROPOGATION_SPACING / 2;
                 probe.worldPositon.x = (x + spawnOffset) * (float)PROPOGATION_SPACING * _voxelSize;
                 probe.worldPositon.y = (y + spawnOffset) * (float)PROPOGATION_SPACING * _voxelSize;
                 probe.worldPositon.z = (z + spawnOffset) * (float)PROPOGATION_SPACING * _voxelSize;
@@ -878,8 +956,8 @@ void VoxelWorld::GeneratePropogrationGrid(){
 
 void ApplyLightToProbe(VoxelFace& voxelFace, GridProbe& probe) {
 
-    float coneLimit = 0.5f;
-    float maxTravelRadius = 1.0f;
+    float coneLimit = 0.15f;
+    float maxTravelRadius = 3.0f;
 
     glm::vec3 origin = VoxelWorld::GetVoxelFaceWorldPos(voxelFace);
     glm::vec3 rayDirection = glm::normalize(probe.worldPositon - origin);
@@ -894,20 +972,20 @@ void ApplyLightToProbe(VoxelFace& voxelFace, GridProbe& probe) {
     if (distanceToProbe > maxTravelRadius)
         return;
 
-    float att = glm::smoothstep(maxTravelRadius, 0.0f, distanceToProbe);
-
     // If no hit was found, light the probe
     if (!Util::RayTracing::AnyHit(_triangles, origin, rayDirection, MIN_RAY_DIST, distanceToProbe)) {
-        probe.color += voxelFace.accumulatedDirectLighting * att;// * voxel.baseColor
-
-      //  glm::vec3 mixedColor = glm::mix(probe.color, voxelFace.accumulatedDirectLighting, att);
-        //probe.color = glm::mix(probe.color, voxelFace.accumulatedDirectLighting, att);
-
+        probe.color += voxelFace.accumulatedDirectLighting;
         probe.samplesRecieved++;
-       // probe.color += mixedColor;
+
+        // Prevent giant color value
+        float maxSampleCount = 2000;
+        if (probe.samplesRecieved == maxSampleCount) {
+            probe.samplesRecieved = maxSampleCount * 0.5f;
+            probe.color *= 0.5f;
+        }
     }
 
-    _testRays.push_back(Line(origin, probe.worldPositon, WHITE));
+    //_testRays.push_back(Line(origin, probe.worldPositon, WHITE));
 }
 
 GridProbe& GetRandomGridProbe() {
@@ -960,13 +1038,15 @@ void VoxelWorld::PropogateLight() {
         std::cout << i << "\n";
     }*/
 
-    if (Input::KeyDown(HELL_KEY_SPACE)) {
+  //  if (Input::KeyDown(HELL_KEY_SPACE)) 
+    
+    {
 
         // Select random voxel
 
         // Front X
         bool found = false;
-       while (!found) {
+        while (!found) {
             // Get random voxel and probe
             VoxelFace& voxelFace = GetRandomVoxelFaceXForward();
             GridProbe& probe = GetRandomGridProbe();
@@ -1057,6 +1137,7 @@ void VoxelWorld::PropogateLight() {
     }
 }
 
+
 std::vector<VoxelFace>& VoxelWorld::GetXFrontFacingVoxels() {
     return _voxelFacesXForward;
 }
@@ -1114,6 +1195,15 @@ void VoxelWorld::Update() {
         GeneratePropogrationGrid();
     }
 
+    if (Input::KeyPressed(HELL_KEY_2)) {
+        LoadLightSetupA();
+        Audio::PlayAudio("RE_Beep.wav", 0.25f);
+    }
+    if (Input::KeyPressed(HELL_KEY_1)) {
+        LoadLightSetupB();
+        Audio::PlayAudio("RE_Beep.wav", 0.25f);
+    }
+
     return;
     /*static int INDEX = 0;
     if (Input::KeyPressed(HELL_KEY_G)) {
@@ -1149,4 +1239,29 @@ void VoxelWorld::Update() {
         _propogatedLightValues[index].color = RED;
         _propogatedLightValues[index].samplesRecieved = 1;
     }*/
+}
+
+void VoxelWorld::FillIndirectLightingTexture(Texture3D& texture) {
+
+    int width = texture.GetWidth();
+    int height = texture.GetHeight();
+    int depth = texture.GetDepth();
+
+    std::vector<glm::vec4> data;
+
+    for (int z = 0; z < depth; z++) {
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+
+                float alpha = 1.0f;
+                if (_propogrationGrid[x][y][z].ignore)
+                    alpha = 0.0f;
+
+                glm::vec4 color = glm::vec4(_propogrationGrid[x][y][z].color / (float) _propogrationGrid[x][y][z].samplesRecieved, alpha);
+                data.push_back(color);
+            }
+        }
+    }
+    glActiveTexture(GL_TEXTURE0);
+    glTexSubImage3D(GL_TEXTURE_3D, 0, 0, 0, 0, width, height, depth, GL_RGBA, GL_FLOAT, data.data());
 }

@@ -57,6 +57,12 @@
     <ClCompile Include="src\Core\VoxelWorld.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\Renderer\Texture3D.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Renderer\ShadowMap.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\Core\GL.h">
@@ -104,11 +110,20 @@
     <ClInclude Include="src\Core\VoxelWorld.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\Renderer\Texture3D.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Renderer\ShadowMap.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="res\shaders\test.frag" />
     <None Include="res\shaders\test.vert" />
     <None Include="res\shaders\solid_color.frag" />
     <None Include="res\shaders\solid_color.vert" />
+    <None Include="res\shaders\shadowmap.geom" />
+    <None Include="res\shaders\shadowmap.vert" />
+    <None Include="res\shaders\shadowmap.frag" />
   </ItemGroup>
 </Project>

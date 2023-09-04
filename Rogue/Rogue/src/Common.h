@@ -79,6 +79,7 @@ struct VoxelFace {
     glm::vec3 baseColor;
     glm::vec3 normal;
     glm::vec3 accumulatedDirectLighting = { glm::vec3(0) };
+    glm::vec3 indirectLighting = { glm::vec3(0) };
 
     VoxelFace(int x, int y, int z, glm::vec3 baseColor, glm::vec3 normal) {
         this->x = x;

@@ -1,10 +1,10 @@
 #pragma once
+#include "Texture3D.h"
 
 namespace Renderer {
 
 	void Init();
 	void RenderFrame();
 	void HotloadShaders();
-	void GenereateMap();
-	void GenerateTriangleOccluders();
+	Texture3D& GetIndirectLightingTexture();
 }

@@ -1,5 +1,6 @@
 #pragma once
 #include "../Common.h"
+#include "../Renderer/Texture3D.h"
 #include <vector>
 
 namespace VoxelWorld {
@@ -8,6 +9,7 @@ namespace VoxelWorld {
     void InitMap2();
     void GenerateTriangleOccluders();
     void CalculateDirectLighting();
+    void CalculateIndirectLighting();
     Light& GetLightByIndex(int index);
     float GetVoxelSize();
     float GetVoxelHalfSize();
@@ -15,6 +17,7 @@ namespace VoxelWorld {
     void GeneratePropogrationGrid();
     void PropogateLight();
     void Update();
+    void FillIndirectLightingTexture(Texture3D& texture);
 
     std::vector<VoxelFace>& GetXFrontFacingVoxels();
     std::vector<VoxelFace>& GetXBackFacingVoxels();

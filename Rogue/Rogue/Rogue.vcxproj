@@ -102,7 +102,9 @@
     <ClCompile Include="src\Renderer\Mesh.cpp" />
     <ClCompile Include="src\Renderer\Renderer.cpp" />
     <ClCompile Include="src\Renderer\Shader.cpp" />
+    <ClCompile Include="src\Renderer\ShadowMap.cpp" />
     <ClCompile Include="src\Renderer\Texture.cpp" />
+    <ClCompile Include="src\Renderer\Texture3D.cpp" />
     <ClCompile Include="vendor\glad\src\glad.c" />
     <ClCompile Include="vendor\stb_image\stb_image.cpp" />
   </ItemGroup>
@@ -120,10 +122,15 @@
     <ClInclude Include="src\Renderer\MeshUtil.hpp" />
     <ClInclude Include="src\Renderer\Renderer.h" />
     <ClInclude Include="src\Renderer\Shader.h" />
+    <ClInclude Include="src\Renderer\ShadowMap.h" />
     <ClInclude Include="src\Renderer\Texture.h" />
+    <ClInclude Include="src\Renderer\Texture3D.h" />
     <ClInclude Include="src\Util.hpp" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="res\shaders\shadowmap.frag" />
+    <None Include="res\shaders\shadowmap.geom" />
+    <None Include="res\shaders\shadowmap.vert" />
     <None Include="res\shaders\solid_color.frag" />
     <None Include="res\shaders\solid_color.vert" />
     <None Include="res\shaders\test.frag" />
