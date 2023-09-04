@@ -29,6 +29,9 @@ Mesh _cubeMeshYTop;
 Mesh _cubeMeshYBottom;
 GBuffer _gBuffer;
 
+Texture _floorBoardsTexture;
+Texture _wallpaperTexture;
+
 unsigned int _pointLineVAO;
 unsigned int _pointLineVBO;
 int _renderWidth = 512 * 2;
@@ -74,7 +77,9 @@ void Renderer::Init() {
     _solidColorShader.Load("solid_color.vert", "solid_color.frag");
     _shadowMapShader.Load("shadowmap.vert", "shadowmap.frag", "shadowmap.geom");
 
-
+    _floorBoardsTexture = Texture("res/textures/floorboards.png");
+    _wallpaperTexture = Texture("res/textures/wallpaper.png");
+    
     _cubeMesh = MeshUtil::CreateCube(1.0f, 1.0f, true);
     _cubeMeshZFront = MeshUtil::CreateCubeFaceZFront(1.0f);
     _cubeMeshZBack = MeshUtil::CreateCubeFaceZBack(1.0f);
@@ -186,7 +191,7 @@ void Renderer::RenderFrame() {
         _testShader.SetVec3("lightingColor", voxel.accumulatedDirectLighting);
         _testShader.SetVec3("indirectLightingColor", voxel.indirectLighting);
         _testShader.SetVec3("baseColor", voxel.baseColor);
-        _cubeMeshZFront.Draw();
+       // _cubeMeshZFront.Draw();
     }
     // Draw Z Back
     for (VoxelFace& voxel : VoxelWorld::GetZBackFacingVoxels()) {
@@ -194,7 +199,7 @@ void Renderer::RenderFrame() {
         _testShader.SetVec3("lightingColor", voxel.accumulatedDirectLighting);
         _testShader.SetVec3("indirectLightingColor", voxel.indirectLighting);
         _testShader.SetVec3("baseColor", voxel.baseColor);
-        _cubeMeshZBack.Draw();
+       // _cubeMeshZBack.Draw();
     }
     // Draw X Front
     for (VoxelFace& voxel : VoxelWorld::GetXFrontFacingVoxels()) {
@@ -202,7 +207,7 @@ void Renderer::RenderFrame() {
         _testShader.SetVec3("lightingColor", voxel.accumulatedDirectLighting);
         _testShader.SetVec3("indirectLightingColor", voxel.indirectLighting);
         _testShader.SetVec3("baseColor", voxel.baseColor);
-        _cubeMeshXFront.Draw();
+        //_cubeMeshXFront.Draw();
     }
     // Draw X Back
     for (VoxelFace& voxel : VoxelWorld::GetXBackFacingVoxels()) {
@@ -210,7 +215,7 @@ void Renderer::RenderFrame() {
         _testShader.SetVec3("lightingColor", voxel.accumulatedDirectLighting);
         _testShader.SetVec3("indirectLightingColor", voxel.indirectLighting);
         _testShader.SetVec3("baseColor", voxel.baseColor);
-        _cubeMeshXBack.Draw();
+        //_cubeMeshXBack.Draw();
     }
     // Draw Y Top
     for (VoxelFace& voxel : VoxelWorld::GetYTopVoxels()) {
@@ -218,7 +223,7 @@ void Renderer::RenderFrame() {
         _testShader.SetVec3("lightingColor", voxel.accumulatedDirectLighting);
         _testShader.SetVec3("indirectLightingColor", voxel.indirectLighting);
         _testShader.SetVec3("baseColor", voxel.baseColor);
-        _cubeMeshYTop.Draw();
+        //_cubeMeshYTop.Draw();
     }
     // Draw Y Bottom
     for (VoxelFace& voxel : VoxelWorld::GetYBottomVoxels()) {
@@ -228,6 +233,76 @@ void Renderer::RenderFrame() {
         _testShader.SetVec3("baseColor", voxel.baseColor);
         _cubeMeshYBottom.Draw();
     }
+
+
+
+
+    // Draw lines
+    _solidTrianglePoints.clear();
+    for (Triangle& tri : VoxelWorld::GetTriangleOcculdersYUp()) {
+        _solidTrianglePoints.push_back(Point(tri.p1, WHITE));
+        _solidTrianglePoints.push_back(Point(tri.p2, WHITE));
+        _solidTrianglePoints.push_back(Point(tri.p3, WHITE));
+    }
+    glBindVertexArray(_pointLineVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, _pointLineVBO);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Point), (void*)0);
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Point), (void*)offsetof(Point, color));
+    glBufferData(GL_ARRAY_BUFFER, _solidTrianglePoints.size() * sizeof(Point), _solidTrianglePoints.data(), GL_STATIC_DRAW);
+    _testShader.SetInt("tex_flag", 1);
+    _testShader.SetMat4("model", glm::mat4(1));
+
+    glActiveTexture(GL_TEXTURE5);
+    glBindTexture(GL_TEXTURE_2D, _floorBoardsTexture.GetID());
+    glDrawArrays(GL_TRIANGLES, 0, _solidTrianglePoints.size());
+
+
+    _solidTrianglePoints.clear();
+    for (Triangle& tri : VoxelWorld::GetTriangleOcculdersXFacing()) {
+        _solidTrianglePoints.push_back(Point(tri.p1, WHITE));
+        _solidTrianglePoints.push_back(Point(tri.p2, WHITE));
+        _solidTrianglePoints.push_back(Point(tri.p3, WHITE));
+    }
+    glBindVertexArray(_pointLineVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, _pointLineVBO);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Point), (void*)0);
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Point), (void*)offsetof(Point, color));
+    glBufferData(GL_ARRAY_BUFFER, _solidTrianglePoints.size() * sizeof(Point), _solidTrianglePoints.data(), GL_STATIC_DRAW);
+    _testShader.SetInt("tex_flag", 2);
+    _testShader.SetMat4("model", glm::mat4(1));
+
+    glActiveTexture(GL_TEXTURE5);
+    glBindTexture(GL_TEXTURE_2D, _wallpaperTexture.GetID());
+    glDrawArrays(GL_TRIANGLES, 0, _solidTrianglePoints.size());
+
+    _solidTrianglePoints.clear();
+    for (Triangle& tri : VoxelWorld::GetTriangleOcculdersZFacing()) {
+        _solidTrianglePoints.push_back(Point(tri.p1, WHITE));
+        _solidTrianglePoints.push_back(Point(tri.p2, WHITE));
+        _solidTrianglePoints.push_back(Point(tri.p3, WHITE));
+    }
+    glBindVertexArray(_pointLineVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, _pointLineVBO);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Point), (void*)0);
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Point), (void*)offsetof(Point, color));
+    glBufferData(GL_ARRAY_BUFFER, _solidTrianglePoints.size() * sizeof(Point), _solidTrianglePoints.data(), GL_STATIC_DRAW);
+    _testShader.SetInt("tex_flag", 3);
+    _testShader.SetMat4("model", glm::mat4(1));
+
+    glActiveTexture(GL_TEXTURE5);
+    glBindTexture(GL_TEXTURE_2D, _wallpaperTexture.GetID());
+    glDrawArrays(GL_TRIANGLES, 0, _solidTrianglePoints.size());
+
+
+    _solidTrianglePoints.clear();
+    _testShader.SetInt("tex_flag", 0);
+
 
     _testShader.SetVec3("color", WHITE);
 

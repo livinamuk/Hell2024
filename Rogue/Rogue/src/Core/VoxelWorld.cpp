@@ -23,6 +23,10 @@ std::vector<Line> _testRays;
 
 std::vector<Triangle> _staticWorldTriangles;
 std::vector<Triangle> _triangles;
+std::vector<Triangle> _YUptriangles;
+std::vector<Triangle> _YDowntriangles;
+std::vector<Triangle> _ZAlignedtriangles;
+std::vector<Triangle> _XAlignedtriangles;
 //std::vector<Voxel> _voxelsInWorld;
 std::vector<Light> _lights;
 
@@ -413,6 +417,9 @@ void BeginNewBackFacingZSearch(int xStart, int yStart, int z) {
     _staticWorldTriangles.push_back(tri);
     _staticWorldTriangles.push_back(tri2);
 
+    _ZAlignedtriangles.push_back(tri);
+    _ZAlignedtriangles.push_back(tri2);
+
 }
 
 void BeginNewFrontFacingZSearch(int xStart, int yStart, int z) {
@@ -485,6 +492,9 @@ void BeginNewFrontFacingZSearch(int xStart, int yStart, int z) {
     tri2.p3 = glm::vec3(xMax, yMin, zConstant);
     _staticWorldTriangles.push_back(tri);
     _staticWorldTriangles.push_back(tri2);
+
+    _ZAlignedtriangles.push_back(tri);
+    _ZAlignedtriangles.push_back(tri2);
 }
 
 void BeginNewFrontFacingXSearch(int x, int yStart, int zStart) {
@@ -557,6 +567,8 @@ void BeginNewFrontFacingXSearch(int x, int yStart, int zStart) {
     tri2.p1 = glm::vec3(xConstant, yMin, zMax);
     _staticWorldTriangles.push_back(tri);
     _staticWorldTriangles.push_back(tri2);
+    _XAlignedtriangles.push_back(tri);
+    _XAlignedtriangles.push_back(tri2);
 }
 
 void BeginNewBackFacingXSearch(int x, int yStart, int zStart) {
@@ -627,6 +639,9 @@ void BeginNewBackFacingXSearch(int x, int yStart, int zStart) {
     tri2.p3 = glm::vec3(xConstant, yMin, zMax);
     _staticWorldTriangles.push_back(tri);
     _staticWorldTriangles.push_back(tri2);
+
+    _XAlignedtriangles.push_back(tri);
+    _XAlignedtriangles.push_back(tri2);
 }
 
 void BeginNewYTopSearch(int xStart, int y, int zStart) {
@@ -699,9 +714,18 @@ void BeginNewYTopSearch(int xStart, int y, int zStart) {
     tri2.p3 = glm::vec3(xMin, yConstant, zMax);
     _staticWorldTriangles.push_back(tri);
     _staticWorldTriangles.push_back(tri2);
+    _YUptriangles.push_back(tri);
+    _YUptriangles.push_back(tri2);
 }
 
 void VoxelWorld::GenerateTriangleOccluders() {
+
+    _triangles.clear();
+    _YUptriangles.clear();
+    _YDowntriangles.clear();
+    _ZAlignedtriangles.clear();
+    _XAlignedtriangles.clear();
+
     // Reset accounted for voxels
     for (int x = 0; x < MAP_WIDTH; x++) {
         for (int y = 0; y < MAP_HEIGHT; y++) {
@@ -729,7 +753,6 @@ void VoxelWorld::GenerateTriangleOccluders() {
     }
 
     // Put this somewhere better later. And include tris from dynamic voxels
-    _triangles.clear();
     for (Triangle& tri : _staticWorldTriangles) {
         if (_optimizeHack) {
             if (Util::GetMaxXPointOfTri(tri) <= _voxelSize ||
@@ -1264,4 +1287,15 @@ void VoxelWorld::FillIndirectLightingTexture(Texture3D& texture) {
     }
     glActiveTexture(GL_TEXTURE0);
     glTexSubImage3D(GL_TEXTURE_3D, 0, 0, 0, 0, width, height, depth, GL_RGBA, GL_FLOAT, data.data());
+}
+
+
+std::vector<Triangle>& VoxelWorld::GetTriangleOcculdersXFacing() {
+    return _XAlignedtriangles;
+}
+std::vector<Triangle>& VoxelWorld::GetTriangleOcculdersZFacing() {
+    return _ZAlignedtriangles;
+}
+std::vector<Triangle>& VoxelWorld::GetTriangleOcculdersYUp() {
+    return _YUptriangles;
 }

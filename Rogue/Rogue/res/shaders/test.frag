@@ -6,6 +6,7 @@ layout (binding = 1) uniform samplerCube shadowMap0;
 layout (binding = 2) uniform samplerCube shadowMap1;
 layout (binding = 3) uniform samplerCube shadowMap2;
 layout (binding = 4) uniform samplerCube shadowMap3;
+layout (binding = 5) uniform sampler2D basecolorTexture;
 
 uniform vec3 lightPosition[4];
 uniform vec3 lightColor[4];
@@ -28,6 +29,8 @@ uniform vec3 baseColor;
 #define MAP_DEPTH   36
 #define VOXEL_SIZE  0.2
 #define PROPOGATION_SPACING 2.0
+
+uniform int tex_flag;
 
 float calculateDoomFactor(vec3 fragPos, vec3 camPos, float beginDistance, float scale)
 {
@@ -73,10 +76,10 @@ float ShadowCalculation(samplerCube depthTex, vec3 lightPos, vec3 fragPos, vec3 
     float far_plane = 20.0;
 
     float shadow = 0.0;
-    float bias = 0.01;
+    float bias = 0.0075;
     int samples = 20;
     float viewDistance = length(viewPos - fragPos);
-    float diskRadius = (1.0 + (viewDistance / far_plane)) / 5000.0;
+    float diskRadius = (1.0 + (viewDistance / far_plane)) / 4000.0;
     for(int i = 0; i < samples; ++i)
     {
         float closestDepth = texture(depthTex, fragToLight + gridSamplingDisk[i] * diskRadius).r;
@@ -142,18 +145,29 @@ void main()
      vec3 ligthting3 = GetDirectLighting(lightPosition[3], lightColor[3], lightRadius[3], lightStrength[3]);
      
      FragColor.rgb = vec3(0);
-      FragColor.rgb = shadow0 * ligthting0;
+
+
+      FragColor.rgb += shadow0 * ligthting0;
     FragColor.rgb += shadow1 * ligthting1;
      FragColor.rgb += shadow2 * ligthting2;
     FragColor.rgb += shadow3 * ligthting3;
     
     FragColor.rgb += indirectLighting;
-
-
-
+    
+       if (tex_flag == 1 ) {
+        FragColor.rgb *= texture2D(basecolorTexture, TexCoord).rgb; 
+    }
+    
+       if (tex_flag == 2 && WorldPos.y < 2.5) {
+        FragColor.rgb *= texture2D(basecolorTexture, TexCoord).rgb; 
+    }
+       if (tex_flag == 3 && WorldPos.y < 2.5) {
+      //  FragColor.rgb *= texture2D(basecolorTexture, TexCoord).rgb; 
+    }
+  
 
     
-
+    
 
  
     // Apply fog
@@ -181,4 +195,5 @@ void main()
 
     // Include fog 
    // FragColor.rgb = mix(FragColor.rgb, fogColor, doom);
+
 }

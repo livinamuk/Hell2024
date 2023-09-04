@@ -34,4 +34,7 @@ namespace VoxelWorld {
     int GetPropogationGridHeight();
     int GetPropogationGridDepth();
     glm::vec3 GetVoxelFaceWorldPos(VoxelFace& voxelFace);
+    std::vector<Triangle>& GetTriangleOcculdersYUp();
+    std::vector<Triangle>& GetTriangleOcculdersXFacing();
+    std::vector<Triangle>& GetTriangleOcculdersZFacing();
 }
