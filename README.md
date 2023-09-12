@@ -1,5 +1,10 @@
 # Voxel Based Global Illumination 
 
+## September 12 2023
+Things are looking promising. I really need to move to Vulkan so I can do visiblity checks for each pixel against any probe that may contribute indirect light to it. Gonna see how far I can push this in GL first though. All direct and indirect light is still calculated on the CPU, would be nice to move to compute but there's really no point if I'm moving to VK soon. I'll work on voxelizing regular mesh next I think.
+
+![Image](https://www.principiaprogrammatica.com/dump/vxgi2.jpg)
+
 #### September 10 2023
 Indirect light is working. It's all done with ray-triangle intersection tests at this point, need to look into faster methods for geometry visiblity checks and light propogation.
 
@@ -7,6 +12,6 @@ Indirect light is working. It's all done with ray-triangle intersection tests at
 
 #### September 4 2023
 
-Direct lighting only. Will finish light propogation on the cpu, then move it all to compute if it looks any good. Rendered in OpenGL. Will likely eventually port to Vulkan and let them evaluate the raycasts for me, don't really see myself writing something faster, gonna have a crack in GL compute first tho.
+I started a new project today, to explore using voxels to calculate and render indirect diffuse light at realtime speeds. So far direct lighting only. Will finish light propogation on the cpu, then move it all to compute if it looks any good. Rendered in OpenGL. Will likely eventually port to Vulkan and let them evaluate the raycasts for me, don't really see myself writing something faster, gonna have a crack in GL compute first tho.
 
 ![Image](https://www.principiaprogrammatica.com/dump/Voxel.jpg)
