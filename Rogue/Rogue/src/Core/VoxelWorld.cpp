@@ -1173,7 +1173,7 @@ void VoxelWorld::PropogateLight() {
     }
         
 
-    int samplesPerFrame = 400;
+    int samplesPerFrame = 300;
     static int lastProbeIndex = 0;
     lastProbeIndex = (lastProbeIndex + samplesPerFrame) % probeCount;
     

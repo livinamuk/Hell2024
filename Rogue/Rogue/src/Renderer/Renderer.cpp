@@ -16,6 +16,7 @@
 #include "../Core/AssetManager.h"
 #include "../Core/TextBlitter.h"
 #include "../Core/Editor.h"
+#include "Model.h"
 
 #include <vector>
 #include <cstdlib>
@@ -26,6 +27,8 @@ Shader _solidColorShader;
 Shader _shadowMapShader;
 Shader _UIShader;
 Shader _editorSolidColorShader;
+Shader _voxelizeShader;
+
 Mesh _cubeMesh;
 Mesh _cubeMeshZFront;
 Mesh _cubeMeshZBack;
@@ -33,6 +36,9 @@ Mesh _cubeMeshXFront;
 Mesh _cubeMeshXBack;
 Mesh _cubeMeshYTop;
 Mesh _cubeMeshYBottom;
+
+Model _keyModel;
+
 GBuffer _gBuffer;
 GBuffer _gBufferFinalSize;
 
@@ -68,6 +74,69 @@ void QueueLineForDrawing(Line line);
 void QueuePointForDrawing(Point point);
 void QueueTriangleForLineRendering(Triangle& triangle);
 void QueueTriangleForSolidRendering(Triangle& triangle);
+void DrawScene(Shader& shader);
+
+unsigned int _voxelTexture = { 0 };
+unsigned int _voxelTextureWidth = { 0 };
+unsigned int _voxelTextureHeight = { 0 };
+
+void Voxelize() {
+
+    static bool run = true;
+    if (!run)
+        return;
+    run = !run;
+
+    std::cout << "hello faggots\n";
+
+    unsigned int id = { 0 };
+    
+    float voxelSize = 0.2f;
+    _voxelTextureWidth = MAP_WIDTH;
+    _voxelTextureHeight = MAP_HEIGHT;
+
+    glGenFramebuffers(1, &id);
+    glGenTextures(1, &_voxelTexture);
+    glBindFramebuffer(GL_FRAMEBUFFER, id);
+
+    glBindTexture(GL_TEXTURE_2D, _voxelTexture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, _voxelTextureWidth, _voxelTextureHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, _voxelTexture, 0);
+
+    glViewport(0, 0, _voxelTextureWidth, _voxelTextureHeight);
+    glClearColor(1, 0, 0, 1);
+    glClear(GL_COLOR_BUFFER_BIT);
+
+    glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)GL::GetWindowWidth() / (float)GL::GetWindowHeight(), 0.1f, 100.0f);
+    
+    glm::mat4 view = Player::GetViewMatrix();
+
+    glm::vec3 eye = glm::vec3(_voxelTextureWidth / 2 * voxelSize, _voxelTextureHeight / 2 * voxelSize, 0);
+    glm::vec3 center = eye + glm::vec3(0, 0, 1);
+    glm::vec3 upVector = glm::vec3(0, 1, 0);
+    glm::vec3 zAxis = glm::normalize(eye - center);
+    glm::vec3 xAxis = glm::normalize(glm::cross(upVector, zAxis));
+    glm::vec3 yAxis = glm::cross(zAxis, xAxis);
+    glm::mat4 cameraMatrix = glm::mat4(
+        glm::vec4(xAxis, 0),
+        glm::vec4(yAxis, 0),
+        glm::vec4(zAxis, 0),
+        glm::vec4(eye, 1.0f));
+
+    view = glm::lookAt(glm::vec3(3, 1.0, 0), glm::vec3(3.0, 1.0, 1.0), glm::vec3(0.0, 1.0, 0.0));
+
+    _voxelizeShader.Use();
+    _voxelizeShader.SetMat4("projection", projection);
+    _voxelizeShader.SetMat4("view", cameraMatrix);
+    _voxelizeShader.SetMat4("view", view);
+    _voxelizeShader.SetVec3("viewPos", Player::GetViewPos());
+
+    DrawScene(_voxelizeShader);
+
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
 
 void Renderer::Init() {
 
@@ -75,11 +144,14 @@ void Renderer::Init() {
     glGenBuffers(1, &_pointLineVBO);
     glPointSize(4);
 
+    _keyModel.Load("res/models/SmallKey.obj");
+
     _testShader.Load("test.vert", "test.frag");
     _solidColorShader.Load("solid_color.vert", "solid_color.frag");
     _shadowMapShader.Load("shadowmap.vert", "shadowmap.frag", "shadowmap.geom");    
     _UIShader.Load("ui.vert", "ui.frag");
     _editorSolidColorShader.Load("editor_solid_color.vert", "editor_solid_color.frag");
+    _voxelizeShader.Load("voxelize.vert", "voxelize.frag");
 
     _floorBoardsTexture = Texture("res/textures/floorboards.png");
     _wallpaperTexture = Texture("res/textures/wallpaper.png");
@@ -108,6 +180,21 @@ void Renderer::Init() {
     for (ShadowMap& shadowMap : _shadowMaps) {
         shadowMap.Init();
     }
+
+}
+
+void DrawScene(Shader& shader) {
+
+    static float rot = 0;
+   // rot += 0.01f;
+
+    Transform transform;
+    transform.position = glm::vec3(2.8f, 1.0f, 3.6f);
+   // transform.rotation = glm::vec3(0, HELL_PI * -0.5f, 0);
+    transform.scale = glm::vec3(10.0f);
+    shader.SetMat4("model", transform.to_mat4());
+    _keyModel.Draw();
+
 }
 
 void RenderImmediate() {
@@ -140,6 +227,15 @@ void RenderImmediate() {
 }
 
 void Renderer::RenderFrame() {
+
+    Voxelize();
+    UIRenderInfo info;
+    info.textureName = "VOXELIZER";
+    info.modelMatrix = glm::mat4(1);
+    info.screenX = 0;
+    info.screenY = _gBufferFinalSize.GetHeight() - _voxelTextureHeight;
+    info.centered = false;
+    QueueUIForRendering(info);
 
     _gBuffer.Bind();
     _gBuffer.EnableAllDrawBuffers();
@@ -386,7 +482,7 @@ void Renderer::RenderFrame() {
         _testShader.SetInt("tex_flag", 0);
     }
 
-    
+    DrawScene(_testShader);
     
     glDisable(GL_DEPTH_TEST);
 
@@ -411,6 +507,7 @@ void Renderer::RenderFrame() {
     }
 
 
+
     // glm::vec3 worldPosTest = glm::vec3(3.1f, 1, 2.1f);
     // QueuePointForDrawing(Point(worldPosTest, YELLOW));
 
@@ -428,6 +525,7 @@ void Renderer::RenderFrame() {
         }
     }
 
+    glEnable(GL_DEPTH_TEST);
     if (_toggles.drawProbes) {
         // Draw propogated light values
         for (int x = 0; x < VoxelWorld::GetPropogationGridWidth(); x++) {
@@ -435,7 +533,7 @@ void Renderer::RenderFrame() {
                 for (int z = 0; z < VoxelWorld::GetPropogationGridDepth(); z++) {
 
                     GridProbe& probe = VoxelWorld::GetProbeByGridIndex(x, y, z);
-                    if (probe.color == BLACK)// || probe.ignore)
+                    if (probe.color == BLACK || probe.ignore)
                         continue;
 
                     // draw
@@ -650,41 +748,34 @@ void Renderer::RenderFrame() {
         _shadowMapShader.SetMat4("shadowMatrices[4]", projectionTransforms[4]);
         _shadowMapShader.SetMat4("shadowMatrices[5]", projectionTransforms[5]);
         _shadowMapShader.SetVec3("lightPosition", position);
-        glDrawArrays(GL_TRIANGLES, 0, _solidTrianglePoints.size());
-    }
-  //  std::cout << "there were  " << _solidTrianglePoints.size() << "tris\n";
-   // return;
 
+        _shadowMapShader.SetMat4("model", glm::mat4(1));
+        glDrawArrays(GL_TRIANGLES, 0, _solidTrianglePoints.size());
+
+        DrawScene(_shadowMapShader);
+    }
     _solidTrianglePoints.clear();
 
 
 
 
-
-
-    // Blit image back to frame buffer
-   // glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    // Blit image back to a smaller FBO
     glBindFramebuffer(GL_READ_FRAMEBUFFER, _gBuffer.GetID());
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, _gBufferFinalSize.GetID());
     glBlitFramebuffer(0, 0, _gBuffer.GetWidth(), _gBuffer.GetHeight(), 0, 0, _gBufferFinalSize.GetWidth(), _gBufferFinalSize.GetHeight(), GL_COLOR_BUFFER_BIT, GL_LINEAR);
 
-
-    QueueUIForRendering("CrosshairDot", _renderWidth / 2, _renderHeight / 2, true);
-
+    // Render UI
+    QueueUIForRendering("CrosshairDot", _gBufferFinalSize.GetWidth() / 2, _gBufferFinalSize.GetHeight() / 2, true);
     glBindFramebuffer(GL_FRAMEBUFFER, _gBufferFinalSize.GetID());
     glViewport(0, 0, _gBufferFinalSize.GetWidth(), _gBufferFinalSize.GetHeight());
     glDisable(GL_DEPTH_TEST);
     glDisable(GL_CULL_FACE);
     Renderer::RenderUI();
 
-
+    // Blit that smaller FBO into the main frame buffer
     glBindFramebuffer(GL_READ_FRAMEBUFFER, _gBufferFinalSize.GetID());
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
     glBlitFramebuffer(0, 0, _gBufferFinalSize.GetWidth(), _gBufferFinalSize.GetHeight(), 0, 0, GL::GetWindowWidth(), GL::GetWindowHeight(), GL_COLOR_BUFFER_BIT, GL_NEAREST);
-
-
-
-
 }
 
 void Renderer::HotloadShaders() {
@@ -693,13 +784,12 @@ void Renderer::HotloadShaders() {
     _solidColorShader.Load("solid_color.vert", "solid_color.frag");
     _UIShader.Load("ui.vert", "ui.frag");
     _editorSolidColorShader.Load("editor_solid_color.vert", "editor_solid_color.frag");
+    _voxelizeShader.Load("voxelize.vert", "voxelize.frag");
 }
 
 Texture3D& Renderer::GetIndirectLightingTexture() {
     return _indirectLightingTexture;
 }
-
-
 
 void QueueEditorGridSquareForDrawing(int x, int z, glm::vec3 color) {
     Triangle triA;
@@ -801,7 +891,7 @@ void Renderer::RenderEditorFrame() {
     RenderImmediate();
 
 
-    QueueUIForRendering("CrosshairDot", Editor::GetMouseScreenX(), Editor::GetMouseScreenZ(), true);
+    //QueueUIForRendering("CrosshairDot", Editor::GetMouseScreenX(), Editor::GetMouseScreenZ(), true);
     TextBlitter::_debugTextToBilt = "Mouse: " + std::to_string(Editor::GetMouseScreenX()) + ", " + std::to_string(Editor::GetMouseScreenZ()) + "\n";
     TextBlitter::_debugTextToBilt += "World: " + std::format("{:.2f}", (Editor::GetMouseWorldX()))+ ", " + std::format("{:.2f}", Editor::GetMouseWorldZ()) + "\n";
     TextBlitter::_debugTextToBilt += "Grid: " + std::to_string(Editor::GetMouseGridX()) + ", " + std::to_string(Editor::GetMouseGridZ()) + "\n";
@@ -839,15 +929,15 @@ void Renderer::ToggleRenderingAsVoxelDirectLighting() {
 
 static Mesh _quadMesh;
 
-inline void DrawQuad(const std::string& textureName, int xPosition, int yPosition, bool centered = false, int xSize = -1, int ySize = -1, int xClipMin = -1, int xClipMax = -1, int yClipMin = -1, int yClipMax = -1, float scale = 0.5f) {
+inline void DrawQuad(int textureWidth, int textureHeight, int xPosition, int yPosition, bool centered = false, int xSize = -1, int ySize = -1, int xClipMin = -1, int xClipMax = -1, int yClipMin = -1, int yClipMax = -1, float scale = 0.5f) {
 
     float quadWidth = xSize;
     float quadHeight = ySize;
     if (xSize == -1) {
-        quadWidth = AssetManager::GetTexture(textureName).GetWidth();
+        quadWidth = textureWidth;
     }
     if (ySize == -1) {
-        quadHeight = AssetManager::GetTexture(textureName).GetHeight();
+        quadHeight = textureHeight;
     }
     if (centered) {
         xPosition -= quadWidth / 2;
@@ -864,14 +954,8 @@ inline void DrawQuad(const std::string& textureName, int xPosition, int yPositio
     transform.position.x = ndcX;
     transform.position.y = ndcY * -1;
     transform.scale = glm::vec3(width, height * -1, 1);
-
-   // glDisable(GL_CULL_FACE);
-
+    
     _UIShader.SetMat4("model", transform.to_mat4());
-    //int meshIndex = AssetManager::GetModel("blitter_quad")->_meshIndices[0];
-    //int textureIndex = AssetManager::GetTextureIndex(textureName);
-    //SubmitUI(meshIndex, textureIndex, 0, transform.to_mat4(), destination, xClipMin, xClipMax, yClipMin, yClipMax);
-
     _quadMesh.Draw();
 }
 
@@ -910,14 +994,21 @@ void Renderer::RenderUI() {
         vertices.push_back(vertC);
         vertices.push_back(vertD);
         std::vector<uint32_t> indices = { 0, 1, 2, 0, 2, 3 };
-        _quadMesh = Mesh(vertices, indices);
+        _quadMesh = Mesh(vertices, indices, "QuadMesh");
     }
 
-    //QueueUIForRendering("CrosshairDot", _renderWidth / 2, _renderHeight / 2, true);
-
     for (UIRenderInfo& uiRenderInfo : _UIRenderInfos) {
-        AssetManager::GetTexture(uiRenderInfo.textureName).Bind(0);
-        DrawQuad(uiRenderInfo.textureName, uiRenderInfo.screenX, uiRenderInfo.screenY, uiRenderInfo.centered);
+
+        if (uiRenderInfo.textureName == "VOXELIZER") {
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, _voxelTexture);
+            DrawQuad(_voxelTextureWidth, _voxelTextureHeight, uiRenderInfo.screenX, uiRenderInfo.screenY, uiRenderInfo.centered);
+        }
+        else {
+            AssetManager::GetTexture(uiRenderInfo.textureName).Bind(0);
+            Texture& texture = AssetManager::GetTexture(uiRenderInfo.textureName);
+            DrawQuad(texture.GetWidth(), texture.GetHeight(), uiRenderInfo.screenX, uiRenderInfo.screenY, uiRenderInfo.centered);
+        }
     }
 
     _UIRenderInfos.clear();

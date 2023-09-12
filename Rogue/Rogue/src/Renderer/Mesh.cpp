@@ -3,8 +3,9 @@
 Mesh::Mesh() {
 }
 
-Mesh::Mesh(std::vector<Vertex> vertices, std::vector<unsigned int> indices) {
+Mesh::Mesh(std::vector<Vertex> vertices, std::vector<unsigned int> indices, std::string name) {
 
+    _name = name;
     _indexCount = indices.size();
 
     glGenVertexArrays(1, &_VAO);

@@ -76,7 +76,9 @@ float ShadowCalculation(samplerCube depthTex, vec3 lightPos, vec3 fragPos, vec3 
     float far_plane = 20.0;
 
     float shadow = 0.0;
-    float bias = 0.0075;
+    //float bias = 0.0075;
+    vec3 lightDir = fragPos - lightPos;
+    float bias = max(0.0125 * (1.0 - dot(Normal, lightDir)), 0.00125);
     int samples = 20;
     float viewDistance = length(viewPos - fragPos);
     float diskRadius = (1.0 + (viewDistance / far_plane)) / 2000.0;

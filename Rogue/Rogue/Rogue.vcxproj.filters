@@ -72,6 +72,9 @@
     <ClCompile Include="src\Core\Voxel.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\Renderer\Model.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\Core\GL.h">
@@ -143,6 +146,9 @@
     <ClInclude Include="src\Timer.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\Renderer\Model.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="res\shaders\test.frag" />
@@ -156,5 +162,7 @@
     <None Include="res\shaders\ui.frag" />
     <None Include="res\shaders\editor_solid_color.frag" />
     <None Include="res\shaders\editor_solid_color.vert" />
+    <None Include="res\shaders\voxelize.frag" />
+    <None Include="res\shaders\voxelize.vert" />
   </ItemGroup>
 </Project>
