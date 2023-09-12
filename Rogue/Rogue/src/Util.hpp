@@ -3,10 +3,11 @@
 #include <iostream>
 #include <string>
 #include <vector>
-#include <glm/glm.hpp>
+//#include <glm/glm.hpp>
 #include "Common.h"
 #include "glm/gtx/intersect.hpp"
 #include <random>
+#include <format>
 
 namespace Util {
 
@@ -38,7 +39,22 @@ namespace Util {
     }
 
     inline std::string Vec3ToString(glm::vec3 v) {
-        return std::string("(" + std::to_string(v.x) + ", " + std::to_string(v.y) + ", " + std::to_string(v.z) + ")");
+        return std::string("(" + std::format("{:.2f}", v.x) + ", " + std::format("{:.2f}", v.y) + ", " + std::format("{:.2f}", v.z) + ")");
+    }
+
+
+    inline std::string Mat4ToString(glm::mat4 m) {
+        std::string result;
+       /* result += std::format("{:.2f}", m[0][0]) + ", " + std::format("{:.2f}", m[1][0]) + ", " + std::format("{:.2f}", m[2][0]) + ", " + std::format("{:.2f}", m[3][0]) + "\n";
+        result += std::format("{:.2f}", m[0][1]) + ", " + std::format("{:.2f}", m[1][1]) + ", " + std::format("{:.2f}", m[2][1]) + ", " + std::format("{:.2f}", m[3][1]) + "\n";
+        result += std::format("{:.2f}", m[0][2]) + ", " + std::format("{:.2f}", m[1][2]) + ", " + std::format("{:.2f}", m[2][2]) + ", " + std::format("{:.2f}", m[3][2]) + "\n";
+        result += std::format("{:.2f}", m[0][3]) + ", " + std::format("{:.2f}", m[1][3]) + ", " + std::format("{:.2f}", m[2][3]) + ", " + std::format("{:.2f}", m[3][3]);
+       */ 
+        result += std::format("{:.2f}", m[0][0]) + ", " + std::format("{:.2f}", m[1][0]) + ", " + std::format("{:.2f}", m[2][0]) + ", " + std::format("{:.2f}", m[3][0]) + "\n";
+        result += std::format("{:.2f}", m[0][1]) + ", " + std::format("{:.2f}", m[1][1]) + ", " + std::format("{:.2f}", m[2][1]) + ", " + std::format("{:.2f}", m[3][1]) + "\n";
+        result += std::format("{:.2f}", m[0][2]) + ", " + std::format("{:.2f}", m[1][2]) + ", " + std::format("{:.2f}", m[2][2]) + ", " + std::format("{:.2f}", m[3][2]) + "\n";
+        result += std::format("{:.2f}", m[0][3]) + ", " + std::format("{:.2f}", m[1][3]) + ", " + std::format("{:.2f}", m[2][3]) + ", " + std::format("{:.2f}", m[3][3]);
+        return result;
     }
 
     inline bool FileExists(const std::string& name) {
@@ -55,6 +71,14 @@ namespace Util {
         transform.position = glm::vec3(x, y, z);
         return transform.to_mat4();
     }
+
+    inline glm::mat4 GetVoxelModelMatrix(int x, int y, int z, float voxelSize) {
+        Transform transform;
+        transform.scale = glm::vec3(voxelSize);
+        transform.position = glm::vec3(x, y, z) * voxelSize;
+        return transform.to_mat4();
+    }
+
 
     inline float FInterpTo(float current, float target, float deltaTime, float interpSpeed) {
         // If no interp speed, jump to target value
@@ -140,4 +164,13 @@ namespace Util {
         }
     }
 
+    inline float MapRange(float inValue, float minInRange, float maxInRange, float minOutRange, float maxOutRange) {
+        float x = (inValue - minInRange) / (maxInRange - minInRange);
+        return minOutRange + (maxOutRange - minOutRange) * x;
+    }
+
+    inline int MapRange(int inValue, int minInRange, int maxInRange, int minOutRange, int maxOutRange) {
+        float x = (inValue - minInRange) / (float)(maxInRange - minInRange);
+        return minOutRange + (maxOutRange - minOutRange) * x;
+    }
 }

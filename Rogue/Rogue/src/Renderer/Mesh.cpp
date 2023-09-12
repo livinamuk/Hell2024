@@ -22,7 +22,7 @@ Mesh::Mesh(std::vector<Vertex> vertices, std::vector<unsigned int> indices) {
     glEnableVertexAttribArray(1);
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, normal));
     glEnableVertexAttribArray(2);
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, texCoord));
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, uv));
 
     glEnableVertexAttribArray(0);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
@@ -32,4 +32,8 @@ Mesh::Mesh(std::vector<Vertex> vertices, std::vector<unsigned int> indices) {
 void Mesh::Draw() {
     glBindVertexArray(_VAO);
     glDrawElements(GL_TRIANGLES, _indexCount, GL_UNSIGNED_INT, 0);
+}
+
+int Mesh::GetIndexCount() {
+    return _indexCount;
 }

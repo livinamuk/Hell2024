@@ -11,5 +11,12 @@ namespace GL {
 	int GetWindowHeight();
 	int GetCursorX();
 	int GetCursorY();
+	void DisableCursor();
+	void HideCursor();
 	GLFWwindow* GetWindowPtr();
+	int GetCursorScreenX();
+	int GetCursorScreenY();
+	bool WindowHasFocus();
+	bool WindowHasNotBeenForceClosed();
+	void ForceCloseWindow();
 }

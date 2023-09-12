@@ -1,13 +1,18 @@
 #pragma once
+#define GLM_FORCE_SILENT_WARNINGS
+#define GLM_ENABLE_EXPERIMENTAL
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <iostream>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include "Math.h"
+
+#define HELL_PI 3.141592653589793f
 
 #define MAP_WIDTH   32//24//48//24
-#define MAP_HEIGHT  15
+#define MAP_HEIGHT  22
 #define MAP_DEPTH   36
 
 #define BLACK   glm::vec3(0,0,0)
@@ -19,6 +24,7 @@
 #define PURPLE  glm::vec3(1,0,1)
 #define GREY    glm::vec3(0.25f)
 #define LIGHT_BLUE    glm::vec3(0,1,1)
+#define GRID_COLOR    glm::vec3(0.509, 0.333, 0.490) * 0.5f
 
 #define SMALL_NUMBER		(float)9.99999993922529e-9
 #define KINDA_SMALL_NUMBER	(float)0.00001
@@ -46,12 +52,12 @@ struct Transform {
 struct Vertex {
 	glm::vec3 position;
 	glm::vec3 normal;
-	glm::vec2 texCoord;
+	glm::vec2 uv;
 };
 
 struct Point {
-    glm::vec3 pos;
-    glm::vec3 color;
+    glm::vec3 pos = { glm::vec3(0) };
+    glm::vec3 color = { glm::vec3(0) };
     Point() {};
     Point(glm::vec3 pos, glm::vec3 color) {
         this->pos = pos;
@@ -90,10 +96,7 @@ struct VoxelFace {
     }
 };
 
-struct VoxelCell {
-    bool solid = false;
-    glm::vec3 color;
-};
+
 
 struct Light {
     int x = 0;
@@ -109,6 +112,7 @@ struct Triangle {
     glm::vec3 p2;
     glm::vec3 p3;
     glm::vec3 normal;
+    glm::vec3 color;
     //void* parent = nullptr;
 };
 
@@ -124,4 +128,17 @@ struct GridProbe {
     glm::vec3 color = BLACK;
     int samplesRecieved = 0;
     bool ignore = false; // either blocked by geometry, or out of map range
+};
+
+struct Extent2Di {
+    int width;
+    int height;
+};
+
+struct UIRenderInfo {
+    std::string textureName;
+    int screenX;
+    int screenY;
+    glm::mat4 modelMatrix;
+    bool centered = false;
 };

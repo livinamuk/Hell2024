@@ -5,8 +5,8 @@ bool _keyDown[372];
 bool _keyDownLastFrame[372];
 double _mouseX = 0;
 double _mouseY = 0;
-double _mouseOffsetX;
-double _mouseOffsetY;
+double _mouseOffsetX = 0;
+double _mouseOffsetY = 0;
 int _mouseWheelValue = 0;
 int _sensitivity = 100;
 bool _mouseWheelUp = false;
@@ -19,9 +19,13 @@ bool _leftMouseDownLastFrame = false;
 bool _rightMouseDownLastFrame = false;
 bool _preventRightMouseHoldTillNextClick = false;
 
-void Input::Init(int initialCursorX, int initalCursorY) {
-    _mouseX = initialCursorX;
-    _mouseY = initalCursorY;
+void Input::Init(GLFWwindow* window) {
+    double x, y;
+    glfwGetCursorPos(window, &x, &y);
+    _mouseOffsetX = x;
+    _mouseOffsetY = y;
+    _mouseX = x;
+    _mouseY = y;
 }
 
 void Input::Update(GLFWwindow* window) {
@@ -122,4 +126,12 @@ bool Input::MouseWheelUp() {
 
 void Input::PreventRightMouseHold() {
     _preventRightMouseHoldTillNextClick = true;
+}
+
+int Input::GetMouseX() {
+    return _mouseX;
+}
+
+int Input::GetMouseY() {
+    return _mouseY;
 }

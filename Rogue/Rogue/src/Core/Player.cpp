@@ -1,12 +1,13 @@
 #include "Player.h"
-#include "../Core/Audio.h"
+#include "../Core/Audio.hpp"
 #include "../Core/Input.h"
+#include "../Core/GL.h"
 #include "../Common.h"
 #include "../Util.hpp"
 
 namespace Player {
-	glm::vec3 _position = glm::vec3(0, 0, 0);
-	glm::vec3 _rotation = glm::vec3(0, 0, 0);
+	glm::vec3 _position = glm::vec3(0);
+	glm::vec3 _rotation = glm::vec3(-0.1f, -HELL_PI * 0.5f, 0);
 	float _viewHeightStanding = 1.65f;
 	float _viewHeightCrouching = 1.15f;
 	//float _viewHeightCrouching = 3.15f; hovery
@@ -34,11 +35,18 @@ void Player::Init(glm::vec3 position) {
 void Player::Update(float deltaTime) {
 	
 	// Mouselook
-	float mouseSensitivity = 0.002f;
-	_rotation.x += -Input::GetMouseOffsetY() * mouseSensitivity;
-	_rotation.y += -Input::GetMouseOffsetX() * mouseSensitivity;
-	_rotation.x = std::min(_rotation.x, 1.5f);
-	_rotation.x = std::max(_rotation.x, -1.5f);
+	if (GL::WindowHasFocus()) {
+		float mouseSensitivity = 0.002f;
+		static float targetXRot = _rotation.x;
+		static float targetYRot = _rotation.y;
+		targetXRot += -Input::GetMouseOffsetY() * mouseSensitivity;
+		targetYRot += -Input::GetMouseOffsetX() * mouseSensitivity;
+		float cameraRotateSpeed = 50;
+		_rotation.x = Util::FInterpTo(_rotation.x, targetXRot, deltaTime, cameraRotateSpeed);
+		_rotation.y = Util::FInterpTo(_rotation.y, targetYRot, deltaTime, cameraRotateSpeed);
+		_rotation.x = std::min(_rotation.x, 1.5f);
+		_rotation.x = std::max(_rotation.x, -1.5f);
+	}
 
 	// Crouching
 	bool crouching = false;
@@ -49,27 +57,6 @@ void Player::Update(float deltaTime) {
 	// Speed
 	float speed = crouching ? _crouchingSpeed : _walkingSpeed;
 	speed *= deltaTime;
-
-	// WSAD movement
-	glm::vec3 displacement(0);
-	bool moving = false;
-	if (Input::KeyDown(HELL_KEY_W)) {
-		displacement += _forward * speed;
-		moving = true;
-	}
-	if (Input::KeyDown(HELL_KEY_S)) {
-		displacement -= _forward * speed;
-		moving = true;
-	}
-	if (Input::KeyDown(HELL_KEY_A)) {
-		displacement -= _right * speed;
-		moving = true;
-	}
-	if (Input::KeyDown(HELL_KEY_D)) {
-		displacement += _right * speed;
-		moving = true;
-	}
-	_position += displacement;
 
 	// View height
 	float viewHeightTarget = crouching ? _viewHeightCrouching : _viewHeightStanding;
@@ -84,6 +71,7 @@ void Player::Update(float deltaTime) {
 
 	// Head bob
 	Transform headBobTransform;
+	static bool moving = false;
 	if (moving) {
 		headBobTransform.position.x = cos(totalTime * _headBobFrequency) * _headBobAmplitude * 1;
 		headBobTransform.position.y = sin(totalTime * _headBobFrequency) * _headBobAmplitude * 2;
@@ -97,9 +85,30 @@ void Player::Update(float deltaTime) {
 	_inverseViewMatrix = glm::inverse(_viewMatrix);
 	_right = glm::vec3(_inverseViewMatrix[0]);
 	_up = glm::vec3(_inverseViewMatrix[1]);
-	_front = glm::vec3(_inverseViewMatrix[2]) * glm::vec3(-1, -1, -1);
+	_front = glm::vec3(_inverseViewMatrix[2]);// *glm::vec3(-1, -1, -1);
 	_forward = glm::normalize(glm::vec3(_front.x, 0, _front.z));
 	_viewPos = _inverseViewMatrix[3];
+
+	// WSAD movement
+	glm::vec3 displacement(0); 
+	moving = false;
+	if (Input::KeyDown(HELL_KEY_W)) {
+		displacement -= _forward * speed;
+		moving = true;
+	}
+	if (Input::KeyDown(HELL_KEY_S)) {
+		displacement += _forward * speed;
+		moving = true;
+	}
+	if (Input::KeyDown(HELL_KEY_A)) {
+		displacement -= _right * speed;
+		moving = true;
+	}
+	if (Input::KeyDown(HELL_KEY_D)) {
+		displacement += _right * speed;
+		moving = true;
+	}
+	_position += displacement;
 
 	// Footstep audio
 	static float m_footstepAudioTimer = 0;
@@ -126,6 +135,31 @@ glm::mat4 Player::GetViewMatrix() {
 	return _viewMatrix;
 }
 
+glm::mat4 Player::GetInverseViewMatrix() {
+	return _inverseViewMatrix;
+}
+
 glm::vec3 Player::GetViewPos() {
 	return _viewPos;
+}
+
+glm::vec3 Player::GetViewRotation() {
+	return _rotation;
+}
+
+
+glm::vec3 Player::GetFeetPosition() {
+	return _position;
+}
+
+glm::vec3 Player::GetCameraRight() {
+	return _right;
+}
+
+glm::vec3 Player::GetCameraFront() {
+	return _front;
+}
+
+glm::vec3 Player::GetCameraUp() {
+	return _up;
 }

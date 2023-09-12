@@ -51,9 +51,6 @@
     <ClCompile Include="src\Renderer\GBuffer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\Core\Audio.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\Core\VoxelWorld.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -61,6 +58,18 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\Renderer\ShadowMap.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Core\AssetManager.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Core\TextBlitting.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Core\Editor.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Core\Voxel.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -104,7 +113,7 @@
     <ClInclude Include="src\Renderer\GBuffer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\Core\Audio.h">
+    <ClInclude Include="src\Core\Audio.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\Core\VoxelWorld.h">
@@ -116,6 +125,24 @@
     <ClInclude Include="src\Renderer\ShadowMap.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\Core\AssetManager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Core\TextBlitter.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Core\Editor.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Math.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Core\Voxel.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Timer.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="res\shaders\test.frag" />
@@ -125,5 +152,9 @@
     <None Include="res\shaders\shadowmap.geom" />
     <None Include="res\shaders\shadowmap.vert" />
     <None Include="res\shaders\shadowmap.frag" />
+    <None Include="res\shaders\ui.vert" />
+    <None Include="res\shaders\ui.frag" />
+    <None Include="res\shaders\editor_solid_color.frag" />
+    <None Include="res\shaders\editor_solid_color.vert" />
   </ItemGroup>
 </Project>

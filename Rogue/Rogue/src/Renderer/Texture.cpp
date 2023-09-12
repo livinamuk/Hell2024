@@ -26,6 +26,7 @@ Texture::Texture(std::string filepath)
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	GLint format = GL_RGB;
 	if (_NumOfChannels == 4)
 		format = GL_RGBA;
@@ -52,4 +53,16 @@ unsigned int Texture::GetID() {
 void Texture::Bind(unsigned int slot) {
 	glActiveTexture(GL_TEXTURE0 + slot);
 	glBindTexture(GL_TEXTURE_2D, _ID);
+}
+
+int Texture::GetWidth() {
+	return _width;
+}
+
+int Texture::GetHeight() {
+	return _height;
+}
+
+std::string& Texture::GetFilename() {
+	return _filename;
 }

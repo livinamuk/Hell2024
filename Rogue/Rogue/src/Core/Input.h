@@ -4,7 +4,7 @@
 
 namespace Input
 {
-	void Init(int initialCursorX, int initalCursorY);
+	void Init(GLFWwindow* window);
 	void Update(GLFWwindow* window);
 	bool KeyPressed(unsigned int keycode);
 	bool KeyDown(unsigned int keycode);
@@ -17,4 +17,6 @@ namespace Input
 	bool MouseWheelUp();
 	bool MouseWheelDown();
 	void PreventRightMouseHold();
+	int GetMouseX();
+	int GetMouseY();
 }

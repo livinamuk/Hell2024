@@ -1,13 +1,20 @@
 #include "GL.h"
+#include <iostream>
 
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow* window);
+void cursor_position_callback(GLFWwindow* window, double xpos, double ypos);
+void window_focus_callback(GLFWwindow* window, int focused);
 
 namespace GL {
-    static GLFWwindow* _window;
-    static int _width = 0;
-    static int _height = 0;
+    inline GLFWwindow* _window;
+    inline int _width = 0;
+    inline int _height = 0;
+    inline int _mouseScreenX = 0;
+    inline int _mouseScreenY = 0;
+    inline int _windowHasFocus = true;
+    inline bool _forceCloseWindow = false;
 }
 
 void GL::Init(int width, int height) {
@@ -43,7 +50,9 @@ void GL::Init(int width, int height) {
     }
     glfwMakeContextCurrent(_window);
     glfwSetFramebufferSizeCallback(_window, framebuffer_size_callback);
-    glfwSetKeyCallback(_window, key_callback);
+    glfwSetKeyCallback(_window, key_callback); 
+    glfwSetCursorPosCallback(_window, cursor_position_callback);
+    glfwSetWindowFocusCallback(_window, window_focus_callback);
 
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
         std::cout << "Failed to initialize GLAD" << std::endl;
@@ -81,17 +90,45 @@ int GL::GetWindowHeight() {
 int GL::GetCursorX() {
     double xpos, ypos;
     glfwGetCursorPos(_window, &xpos, &ypos);
-    return xpos;
+    return int(xpos);
 }
 
 int GL::GetCursorY() {
     double xpos, ypos;
     glfwGetCursorPos(_window, &xpos, &ypos);
-    return ypos;
+    return int(ypos);
+}
+
+void GL::DisableCursor() {
+    glfwSetInputMode(_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+}
+
+void GL::HideCursor() {
+    glfwSetInputMode(_window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
 }
 
 GLFWwindow* GL::GetWindowPtr() {
     return _window;
+}
+
+int GL::GetCursorScreenX() {
+    return _mouseScreenX;
+}
+
+int GL::GetCursorScreenY() {
+    return _mouseScreenY;
+}
+
+bool GL::WindowHasFocus() {
+    return _windowHasFocus;
+}
+
+bool GL::WindowHasNotBeenForceClosed() {
+    return !_forceCloseWindow;
+}
+
+void GL::ForceCloseWindow() {
+    _forceCloseWindow = true;
 }
 
 // Callbacks
@@ -110,4 +147,39 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
     /*if (key == GLFW_KEY_H) {
         std::cout << "test\n";
     }*/
+}
+
+void cursor_position_callback(GLFWwindow* window, double xpos, double ypos)
+{
+    //std::cout << xpos << "\n";
+    /*
+    // these three lines were default at event.c code
+    Slot* slot = static_cast<Slot*>(glfwGetWindowUserPointer(window));
+    printf("%08x to %i at %0.3f: Cursor position: %f %f\n",
+        counter++, slot->number, glfwGetTime(), xpos, ypos);
+
+    // these code copied from "cursorPosCallback" default optix sample function, commented above
+    Params* params = static_cast<Params*>(glfwGetWindowUserPointer(window));
+
+    if (mouse_button == GLFW_MOUSE_BUTTON_LEFT)
+    {
+        trackball.setViewMode(sutil::Trackball::LookAtFixed);
+        trackball.updateTracking(static_cast<int>(xpos), static_cast<int>(ypos), params->width, params->height);
+        camera_changed = true;
+    }
+    else if (mouse_button == GLFW_MOUSE_BUTTON_RIGHT)
+    {
+        trackball.setViewMode(sutil::Trackball::EyeFixed);
+        trackball.updateTracking(static_cast<int>(xpos), static_cast<int>(ypos), params->width, params->height);
+        camera_changed = true;
+    }*/
+}
+
+void window_focus_callback(GLFWwindow* window, int focused) {
+    if (focused){
+        GL::_windowHasFocus = true;
+    }
+    else{
+        GL::_windowHasFocus = false;
+    }
 }

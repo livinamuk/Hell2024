@@ -12,11 +12,11 @@ public:
 	unsigned int GetHeight();
 
 private:
-	unsigned int _ID = 0;
-	unsigned int _gAlbedoTexture;
-	unsigned int _gNormalTexture;
-	unsigned int _gDepthTexture;
-	int _width;
-	int _height;
+	unsigned int _ID = { 0 };
+	unsigned int _gAlbedoTexture = { 0 };
+	unsigned int _gNormalTexture = { 0 };
+	unsigned int _gDepthTexture = { 0 };
+	int _width = { 0 };
+	int _height = { 0 };;
 
 };

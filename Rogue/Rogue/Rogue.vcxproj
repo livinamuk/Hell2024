@@ -20,7 +20,7 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
-    <UseDebugLibraries>true</UseDebugLibraries>
+    <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
@@ -46,39 +46,46 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <OutDir>$(SolutionDir)\$(ProjectName)\Build\Debug\</OutDir>
     <IntDir>$(SolutionDir)\$(ProjectName)\Build\Intermediate\Debug\</IntDir>
+    <CopyLocalDeploymentContent>false</CopyLocalDeploymentContent>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <OutDir>$(SolutionDir)\$(ProjectName)\Build\Release\</OutDir>
     <IntDir>$(SolutionDir)\$(ProjectName)\Build\Intermediate\Release\</IntDir>
+    <CopyLocalDeploymentContent>false</CopyLocalDeploymentContent>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
-      <WarningLevel>Level3</WarningLevel>
+      <WarningLevel>TurnOffAllWarnings</WarningLevel>
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>vendor\GLFW\include;vendor\glm;vendor\glm\;vendor\glad\include;%(AdditionalIncludeDirectories);vendor\stb_image;vendor\fmod\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>vendor\GLFW\include;vendor\glm;vendor\glad\include;vendor\stb_image;vendor\fmod\include</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>vendor\GLFW\lib\Release;vendor\fmod\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>glfw3.lib;fmod_vc.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <TreatLinkerWarningAsErrors>true</TreatLinkerWarningAsErrors>
+      <TreatLinkerWarningAsErrors>false</TreatLinkerWarningAsErrors>
     </Link>
+    <PostBuildEvent>
+      <Command>copy /Y "$(ProjectDir)vendor\dll\fmod.dll" "$(TargetDir)fmod.dll"</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
-      <WarningLevel>Level3</WarningLevel>
+      <WarningLevel>TurnOffAllWarnings</WarningLevel>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>vendor\GLFW\include;vendor\glm;vendor\glad\include;%(AdditionalIncludeDirectories);vendor\stb_image;vendor\fmod\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>vendor\GLFW\include;vendor\glm;vendor\glad\include;vendor\stb_image;vendor\fmod\include</AdditionalIncludeDirectories>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
+      <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -89,12 +96,18 @@
       <AdditionalDependencies>glfw3.lib;fmod_vc.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <TreatLinkerWarningAsErrors>true</TreatLinkerWarningAsErrors>
     </Link>
+    <PostBuildEvent>
+      <Command>copy /Y "$(ProjectDir)vendor\dll\fmod.dll" "$(TargetDir)fmod.dll"</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="src\Core\Audio.cpp" />
+    <ClCompile Include="src\Core\AssetManager.cpp" />
+    <ClCompile Include="src\Core\Editor.cpp" />
     <ClCompile Include="src\Core\GL.cpp" />
     <ClCompile Include="src\Core\Input.cpp" />
     <ClCompile Include="src\Core\Player.cpp" />
+    <ClCompile Include="src\Core\TextBlitting.cpp" />
+    <ClCompile Include="src\Core\Voxel.cpp" />
     <ClCompile Include="src\Core\VoxelWorld.cpp" />
     <ClCompile Include="src\Engine.cpp" />
     <ClCompile Include="src\Main.cpp" />
@@ -110,13 +123,18 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\Common.h" />
-    <ClInclude Include="src\Core\Audio.h" />
+    <ClInclude Include="src\Core\AssetManager.h" />
+    <ClInclude Include="src\Core\Audio.hpp" />
+    <ClInclude Include="src\Core\Editor.h" />
     <ClInclude Include="src\Core\GL.h" />
     <ClInclude Include="src\Core\Input.h" />
     <ClInclude Include="src\Core\keycodes.h" />
     <ClInclude Include="src\Core\Player.h" />
+    <ClInclude Include="src\Core\TextBlitter.h" />
+    <ClInclude Include="src\Core\Voxel.h" />
     <ClInclude Include="src\Core\VoxelWorld.h" />
     <ClInclude Include="src\Engine.h" />
+    <ClInclude Include="src\Math.h" />
     <ClInclude Include="src\Renderer\GBuffer.h" />
     <ClInclude Include="src\Renderer\Mesh.h" />
     <ClInclude Include="src\Renderer\MeshUtil.hpp" />
@@ -125,9 +143,12 @@
     <ClInclude Include="src\Renderer\ShadowMap.h" />
     <ClInclude Include="src\Renderer\Texture.h" />
     <ClInclude Include="src\Renderer\Texture3D.h" />
+    <ClInclude Include="src\Timer.hpp" />
     <ClInclude Include="src\Util.hpp" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="res\shaders\editor_solid_color.frag" />
+    <None Include="res\shaders\editor_solid_color.vert" />
     <None Include="res\shaders\shadowmap.frag" />
     <None Include="res\shaders\shadowmap.geom" />
     <None Include="res\shaders\shadowmap.vert" />
@@ -135,6 +156,8 @@
     <None Include="res\shaders\solid_color.vert" />
     <None Include="res\shaders\test.frag" />
     <None Include="res\shaders\test.vert" />
+    <None Include="res\shaders\ui.frag" />
+    <None Include="res\shaders\ui.vert" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

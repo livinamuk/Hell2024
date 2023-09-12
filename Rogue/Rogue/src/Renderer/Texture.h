@@ -9,6 +9,9 @@ public: // Methods
 	Texture(std::string filepath);
 	void Bind(unsigned int slot);
 	unsigned int GetID();
+	int GetWidth();
+	int GetHeight();
+	std::string& GetFilename();
 
 private:
 	unsigned int _ID = 0;

@@ -18,17 +18,17 @@ in vec2 TexCoord;
 in vec3 WorldPos;
 
 out vec4 FragColor;
-
 uniform vec3 viewPos;
+uniform vec3 camForward;
 uniform vec3 lightingColor;
 uniform vec3 indirectLightingColor;
 uniform vec3 baseColor;
 
 #define MAP_WIDTH   32
-#define MAP_HEIGHT  15
+#define MAP_HEIGHT  22
 #define MAP_DEPTH   36
 #define VOXEL_SIZE  0.2
-#define PROPOGATION_SPACING 2.0
+#define PROPOGATION_SPACING 1.0
 
 uniform int tex_flag;
 
@@ -79,7 +79,7 @@ float ShadowCalculation(samplerCube depthTex, vec3 lightPos, vec3 fragPos, vec3 
     float bias = 0.0075;
     int samples = 20;
     float viewDistance = length(viewPos - fragPos);
-    float diskRadius = (1.0 + (viewDistance / far_plane)) / 4000.0;
+    float diskRadius = (1.0 + (viewDistance / far_plane)) / 2000.0;
     for(int i = 0; i < samples; ++i)
     {
         float closestDepth = texture(depthTex, fragToLight + gridSamplingDisk[i] * diskRadius).r;
@@ -98,85 +98,85 @@ vec3 GetDirectLighting(vec3 lightPos, vec3 lightColor, float radius, float stren
     vec3 n = normalize(Normal);
     vec3 l = normalize(lightPos - WorldPos);
     float ndotl = clamp(dot(n, l), 0.0f, 1.0f);
-    return vec3(lightColor) * att * strength * ndotl;
+    return vec3(lightColor) * att * strength * ndotl * 2    ;
 }
+
+
 
 void main()
 {
-    //vec3 baseColor = texture(tex, TexCoord).rgb; 
-
     float doom = calculateDoomFactor(WorldPos, viewPos, 4, 1);
-
     doom = getFogFactor(WorldPos, viewPos);
     
-    //vec3 lightPos = vec3(0,2.2,0);
-    
-
-
     // uniform color
     FragColor = vec4(Normal * 0.5 + 0.5, 1.0f);
     FragColor = vec4(baseColor * lightingColor, 1.0f);
     //FragColor.rgb += clamp(indirectLightingColor * 1.0, 0, 1);
 
-    // Apply fog
-   // vec3 fogColor = vec3(0.00);
-    //FragColor.rgb = mix(FragColor.rgb, fogColor, doom);
-
-
     float worldSpaceMapWidth = MAP_WIDTH * VOXEL_SIZE;
     float worldSpaceMapHeight = MAP_HEIGHT * VOXEL_SIZE;
     float worldSpaceMapDepth = MAP_DEPTH * VOXEL_SIZE;
 
-    float propogrationGridOffset = VOXEL_SIZE * PROPOGATION_SPACING ;/// 2.0;
-    vec3 texCoords = (WorldPos - vec3(propogrationGridOffset)) / vec3(worldSpaceMapWidth, worldSpaceMapHeight, worldSpaceMapDepth);
+    vec3 propogrationGridOffset = vec3(-0.1);//VOXEL_SIZE * PROPOGATION_SPACING ;/// 2.0;
+    vec3 texCoords = (WorldPos - propogrationGridOffset) / vec3(worldSpaceMapWidth, worldSpaceMapHeight, worldSpaceMapDepth);
 
     vec3 indirectLighting = texture(tex, texCoords).rgb; 
-  //   FragColor.rgb  += test;
-    // FragColor.rgb  = test;
 
-    
-     float shadow0 = ShadowCalculation(shadowMap0, lightPosition[0], WorldPos, viewPos);
-     vec3 ligthting0 = GetDirectLighting(lightPosition[0], lightColor[0], lightRadius[0], lightStrength[0]);
-     float shadow1 = ShadowCalculation(shadowMap1, lightPosition[1], WorldPos, viewPos);
-     vec3 ligthting1 = GetDirectLighting(lightPosition[1], lightColor[1], lightRadius[1], lightStrength[1]);
-     float shadow2 = ShadowCalculation(shadowMap2, lightPosition[2], WorldPos, viewPos);
-     vec3 ligthting2 = GetDirectLighting(lightPosition[2], lightColor[2], lightRadius[2], lightStrength[2]);
-     float shadow3 = ShadowCalculation(shadowMap3, lightPosition[3], WorldPos, viewPos);
-     vec3 ligthting3 = GetDirectLighting(lightPosition[3], lightColor[3], lightRadius[3], lightStrength[3]);
+    float shadow0 = ShadowCalculation(shadowMap0, lightPosition[0], WorldPos, viewPos);
+    vec3 ligthting0 = GetDirectLighting(lightPosition[0], lightColor[0], lightRadius[0], lightStrength[0]);
+    float shadow1 = ShadowCalculation(shadowMap1, lightPosition[1], WorldPos, viewPos);
+    vec3 ligthting1 = GetDirectLighting(lightPosition[1], lightColor[1], lightRadius[1], lightStrength[1]);
+    float shadow2 = ShadowCalculation(shadowMap2, lightPosition[2], WorldPos, viewPos);
+    vec3 ligthting2 = GetDirectLighting(lightPosition[2], lightColor[2], lightRadius[2], lightStrength[2]);
+    float shadow3 = ShadowCalculation(shadowMap3, lightPosition[3], WorldPos, viewPos);
+    vec3 ligthting3 = GetDirectLighting(lightPosition[3], lightColor[3], lightRadius[3], lightStrength[3]);
      
-     FragColor.rgb = vec3(0);
+    FragColor.rgb = vec3(0);
 
-
-      FragColor.rgb += shadow0 * ligthting0;
+    FragColor.rgb += shadow0 * ligthting0;
     FragColor.rgb += shadow1 * ligthting1;
-     FragColor.rgb += shadow2 * ligthting2;
+    FragColor.rgb += shadow2 * ligthting2;
     FragColor.rgb += shadow3 * ligthting3;
     
-    FragColor.rgb += indirectLighting;
-    
-       if (tex_flag == 1 ) {
-        FragColor.rgb *= texture2D(basecolorTexture, TexCoord).rgb; 
-    }
-    
-       if (tex_flag == 2 && WorldPos.y < 2.5) {
-        FragColor.rgb *= texture2D(basecolorTexture, TexCoord).rgb; 
-    }
-       if (tex_flag == 3 && WorldPos.y < 2.5) {
-      //  FragColor.rgb *= texture2D(basecolorTexture, TexCoord).rgb; 
-    }
-  
+    FragColor.rgb += indirectLighting * 2;
 
+    vec3 baseColor =  texture2D(basecolorTexture, TexCoord).rgb;
+  //  baseColor = vec3(1);
     
+    if (tex_flag == 1 ) {
+        FragColor.rgb *= baseColor;
+    }
     
-
- 
+    if (tex_flag == 2 && WorldPos.y < 2.5) {
+        FragColor.rgb *= baseColor;
+    }
+    if (tex_flag == 3 && WorldPos.y < 2.5) {
+    FragColor.rgb *= baseColor;
+    }
+    
     // Apply fog
-    vec3 fogColor = vec3(0.00);
+    vec3 fogColor = vec3(0.050);
     FragColor.rgb = mix(FragColor.rgb, fogColor, doom);
 
-    
-  // FragColor = vec4(baseColor * lightingColor, 1.0f);
+    //   FragColor.rgb = lightingColor;
+   //  FragColor.rgb = indirectLighting;
+    //FragColor.rgb = baseColor;
+//FragColor.rgb = vec3(TexCoord, 0);
 
+
+
+
+
+
+
+
+
+
+  //   FragColor.rgb = texture2D(lightingColor, TexCoord).rgb;
+
+//    FragColor.rgb = WorldPos;
+// FragColor = vec4(indirectLighting, 1.0f);
+ // FragColor.rgb = Normal;
 
   //  FragColor.rgb = indirectLighting;
 
@@ -191,9 +191,15 @@ void main()
     //FragColor = vec4(lightingColor, 1.0f);
    // FragColor = vec4(Normal * 0.5 + 0.5, 1.0f);
     //FragColor = vec4(Normal, 1.0);
-    //FragColor = vec4(vec3(ndotl), 1.0f);
+    
+        vec3 n = normalize(Normal);
+    vec3 l = normalize( camForward);
+    float ndotl = clamp(dot(n, l), 0.0f, 1.0f);
+   // FragColor = vec4(vec3(ndotl), 1.0f);
 
     // Include fog 
    // FragColor.rgb = mix(FragColor.rgb, fogColor, doom);
+
+
 
 }

@@ -30,3 +30,11 @@ void ShadowMap::CleanUp()
 	glDeleteTextures(1, &_depthTexture);
 	glDeleteFramebuffers(1, &_ID);
 }
+
+void ShadowMap::Clear() {
+	glViewport(0, 0, SHADOW_MAP_SIZE, SHADOW_MAP_SIZE);
+	glBindFramebuffer(GL_FRAMEBUFFER, _ID);
+	glEnable(GL_DEPTH_TEST);
+	glClear(GL_DEPTH_BUFFER_BIT);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
