@@ -1,6 +1,6 @@
 # Voxel Based Global Illumination 
 
-## September 12 2023
+#### September 12 2023
 Things are looking promising. I really need to move to Vulkan so I can do visiblity checks for each pixel against any probe that may contribute indirect light to it. Gonna see how far I can push this in GL first though. All direct and indirect light is still calculated on the CPU, would be nice to move to compute but there's really no point if I'm moving to VK soon. I'll work on voxelizing regular mesh next I think.
 
 ![Image](https://www.principiaprogrammatica.com/dump/vxgi2.jpg)
