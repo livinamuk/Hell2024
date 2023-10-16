@@ -48,9 +48,9 @@ void Shader::Load(std::string vertexPath, std::string fragmentPath)
     glAttachShader(tempID, fragment);
     glLinkProgram(tempID);
     
-    //if (checkCompileErrors(tempID, "PROGRAM")) {
+    if (checkCompileErrors(tempID, "PROGRAM")) {
         _ID = tempID;
-   // }
+    }
 
     glDeleteShader(vertex);
     glDeleteShader(fragment);

@@ -19,4 +19,9 @@ namespace GL {
 	bool WindowHasFocus();
 	bool WindowHasNotBeenForceClosed();
 	void ForceCloseWindow();
+
+	enum WindowMode {WINDOWED, FULLSCREEN};
+	void CreateWindow(WindowMode windowMode);
+	void SetWindowMode(WindowMode windowMode);
+	void ToggleFullscreen();
 }

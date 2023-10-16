@@ -12,9 +12,10 @@
 
 #define HELL_PI 3.141592653589793f
 
-#define MAP_WIDTH   32//24//48//24
+#define MAP_WIDTH   32
 #define MAP_HEIGHT  22
 #define MAP_DEPTH   36
+#define VOXEL_SIZE  0.2f
 
 #define BLACK   glm::vec3(0,0,0)
 #define WHITE   glm::vec3(1,1,1)
@@ -47,7 +48,7 @@ struct Transform {
 		m *= glm::mat4_cast(glm::quat(rotation));
 		m = glm::scale(m, scale);
 		return m;
-	};
+	}; 
 };
 
 struct Vertex {
@@ -156,4 +157,5 @@ struct UIRenderInfo {
     int screenY;
     glm::mat4 modelMatrix;
     bool centered = false;
+    GLuint target = GL_TEXTURE_2D;
 };

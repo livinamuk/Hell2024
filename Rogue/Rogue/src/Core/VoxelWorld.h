@@ -30,6 +30,9 @@ namespace VoxelWorld {
     bool CellIsSolid(int x, int y, int z); 
     bool CellIsEmpty(int x, int y, int z);
 
+    void SetDynamicSolidVoxelState(int x, int y, int z, bool state);
+    void ClearAllDynamicSolidVoxels();
+
     VoxelCell& GetVoxel(int x, int y, int z);
     glm::vec3 GetVoxelXForwardFaceCenterInGridSpace(int x, int y, int z);
 
@@ -50,6 +53,7 @@ namespace VoxelWorld {
     int GetPropogationGridDepth();
     glm::vec3 GetVoxelFaceWorldPos(VoxelFace& voxelFace);
     std::vector<Triangle>& GetTriangleOcculdersYUp();
+    std::vector<Triangle>& GetTriangleOcculdersYDown();
     std::vector<Triangle>& GetTriangleOcculdersXFacing();
     std::vector<Triangle>& GetTriangleOcculdersZFacing();
 

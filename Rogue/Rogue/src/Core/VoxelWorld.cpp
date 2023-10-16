@@ -12,6 +12,30 @@ VoxelCell _voxelFaces[MAP_WIDTH][MAP_HEIGHT][MAP_DEPTH];
 //bool _solidVoxels [MAP_WIDTH] [MAP_HEIGHT] [MAP_DEPTH];
 bool _searchedVoxelArea[MAP_WIDTH][MAP_HEIGHT][MAP_DEPTH];
 
+bool _dynamicSolidVoxels[MAP_WIDTH][MAP_HEIGHT][MAP_DEPTH];
+
+
+/*void VoxelWorld::SetDynamicSolidVoxelToSolid(int index1D) {
+    int z = index1D / (MAP_WIDTH * MAP_HEIGHT);
+    index1D -= (z * MAP_WIDTH * MAP_HEIGHT);
+    int y = index1D / MAP_WIDTH;
+    int x = index1D % MAP_WIDTH;
+}*/                                                         // DOES NOT WORK
+
+void VoxelWorld::SetDynamicSolidVoxelState(int x, int y, int z, bool value) {
+    _dynamicSolidVoxels[x][y][z] = value;
+}
+
+void VoxelWorld::ClearAllDynamicSolidVoxels() {
+    for (int x = 0; x < MAP_WIDTH; x++) {
+        for (int y = 0; y < MAP_HEIGHT; y++) {
+            for (int z = 0; z < MAP_DEPTH; z++) {
+                _dynamicSolidVoxels[x][y][z] = false;
+            }
+        }
+    }
+}
+
 std::vector<bool> _solidVoxels(MAP_WIDTH* MAP_HEIGHT* MAP_DEPTH);
 //std::bitset<MAP_WIDTH* MAP_HEIGHT* MAP_DEPTH> _solidVoxels;
 
@@ -24,8 +48,8 @@ bool _voxelAccountedForInTriMesh_ZFront[MAP_WIDTH][MAP_HEIGHT][MAP_DEPTH];
 bool _voxelAccountedForInTriMesh_ZBack[MAP_WIDTH][MAP_HEIGHT][MAP_DEPTH];
 bool _voxelAccountedForInTriMesh_XFront[MAP_WIDTH][MAP_HEIGHT][MAP_DEPTH];
 bool _voxelAccountedForInTriMesh_XBack[MAP_WIDTH][MAP_HEIGHT][MAP_DEPTH];
-bool _voxelAccountedForInTriMesh_YTop[MAP_WIDTH][MAP_HEIGHT][MAP_DEPTH];
-bool _voxelAccountedForInTriMesh_YBottom[MAP_WIDTH][MAP_HEIGHT][MAP_DEPTH];
+bool _voxelAccountedForInTriMesh_YUp[MAP_WIDTH][MAP_HEIGHT][MAP_DEPTH];
+bool _voxelAccountedForInTriMesh_YDown[MAP_WIDTH][MAP_HEIGHT][MAP_DEPTH];
 
 #define PROPOGATION_SPACING 1
 #define PROPOGATION_WIDTH (MAP_WIDTH / PROPOGATION_SPACING)
@@ -218,7 +242,8 @@ bool VoxelWorld::CellIsSolid(int x, int y, int z) {
         return false;
     if (x >= MAP_WIDTH || y >= MAP_HEIGHT || z >= MAP_DEPTH)
         return false;
-    return (_solidVoxels[index1D(x,y,z)]);
+
+    return (_solidVoxels[index1D(x, y, z)] || _dynamicSolidVoxels[x][y][z]);
 }
 
 bool VoxelWorld::CellIsEmpty(int x, int y, int z) {
@@ -226,7 +251,7 @@ bool VoxelWorld::CellIsEmpty(int x, int y, int z) {
         return false;
     if (x >= MAP_WIDTH || y >= MAP_HEIGHT || z >= MAP_DEPTH)
         return false;
-    return (!_solidVoxels[index1D(x,y,z)]);
+    return (!_solidVoxels[index1D(x,y,z)] && !_dynamicSolidVoxels[x][y][z]);
 }
 
 bool CellIsSolid(int x, int y, int z) {
@@ -543,7 +568,7 @@ void BeginNewBackFacingXSearch(int x, int yStart, int zStart) {
     _XAlignedtriangles.push_back(tri2);
 }
 
-void BeginNewYTopSearch(int xStart, int y, int zStart) {
+void BeginNewYUpSearch(int xStart, int y, int zStart) {
 
     // Keep within map bounds
     if (y >= MAP_HEIGHT - 1)
@@ -552,7 +577,7 @@ void BeginNewYTopSearch(int xStart, int y, int zStart) {
     if (_solidVoxels[index1D(xStart,y + 1,zStart)])
         return;
     // Abandon if the voxel in accounted for
-    if (_voxelAccountedForInTriMesh_YTop[xStart][y][zStart])
+    if (_voxelAccountedForInTriMesh_YUp[xStart][y][zStart])
         return;
     // Abandon if the voxel in not solid
     if (!_solidVoxels[index1D(xStart, y, zStart)])
@@ -567,7 +592,7 @@ void BeginNewYTopSearch(int xStart, int y, int zStart) {
     // FIND END. Traverse "across" in z until a hole, or accounted for, or the end is reached
     for (int z = zStart; z < MAP_DEPTH; z++) {
         if (!_solidVoxels[index1D(xStart, y, z)]                        // hole found
-            || _voxelAccountedForInTriMesh_YTop[xStart][y][z]) { // voxel is already accounted for
+            || _voxelAccountedForInTriMesh_YUp[xStart][y][z]) { // voxel is already accounted for
             zMax = z;
             break;
         }
@@ -582,7 +607,7 @@ void BeginNewYTopSearch(int xStart, int y, int zStart) {
     for (int x = xStart + 1; x < MAP_WIDTH && !xMaxFound; x++) {
         for (int z = zStart; z < zMax; z++) {
             if (CellIsEmpty(x, y, z)                             // hole found
-                || _voxelAccountedForInTriMesh_YTop[x][y][z]   // voxel is already accounted for
+                || _voxelAccountedForInTriMesh_YUp[x][y][z]   // voxel is already accounted for
                 || (CellIsSolid(x, y + 1, z) && CellIsEmpty(x - 1, y + 1, z))
                 ) {
                 xMax = x;
@@ -594,7 +619,7 @@ void BeginNewYTopSearch(int xStart, int y, int zStart) {
     // Mark accounted for voxels as so
     for (int z = zMin; z < zMax; z++) {
         for (int x = xMin; x < xMax; x++) {
-            _voxelAccountedForInTriMesh_YTop[x][y][z] = true;
+            _voxelAccountedForInTriMesh_YUp[x][y][z] = true;
         }
     }
     // Create tris
@@ -619,6 +644,82 @@ void BeginNewYTopSearch(int xStart, int y, int zStart) {
     _YUptriangles.push_back(tri2);
 }
 
+void BeginNewYDownSearch(int xStart, int y, int zStart) {
+
+    // Keep within map bounds
+    if (y - 1 <= 0)
+        return;
+    // Abandon if the voxel in front is solid
+    if (_solidVoxels[index1D(xStart, y - 1, zStart)])
+        return;
+    // Abandon if the voxel in accounted for
+    if (_voxelAccountedForInTriMesh_YDown[xStart][y][zStart])
+        return;
+    // Abandon if the voxel in not solid
+    if (!_solidVoxels[index1D(xStart, y, zStart)])
+        return;
+    // Defaults
+    float zMin = zStart;
+    float xMin = xStart;
+    float yConstant = y;
+    float zMax = MAP_DEPTH;     // default max, can bew modified below
+    float xMax = MAP_WIDTH;    // default max, can bew modified below
+
+    // FIND END. Traverse "across" in z until a hole, or accounted for, or the end is reached
+    for (int z = zStart; z < MAP_DEPTH; z++) {
+        if (!_solidVoxels[index1D(xStart, y, z)]                        // hole found
+            || _voxelAccountedForInTriMesh_YDown[xStart][y][z]) { // voxel is already accounted for
+            zMax = z;
+            break;
+        }
+        if (CellIsEmpty(xStart, y - 1, z) && CellIsSolid(xStart, y - 1, z + 1)) {
+            zMax = z + 1;
+            break;
+        }
+    }
+
+    // FIND MAX X: Traverse upwards until a hole, or accounted for, or the end is reached
+    bool xMaxFound = false;
+    for (int x = xStart + 1; x < MAP_WIDTH && !xMaxFound; x++) {
+        for (int z = zStart; z < zMax; z++) {
+            if (CellIsEmpty(x, y, z)                             // hole found
+                || _voxelAccountedForInTriMesh_YDown[x][y][z]   // voxel is already accounted for
+                || (CellIsSolid(x, y - 1, z) && CellIsEmpty(x - 1, y - 1, z))
+                ) {
+                xMax = x;
+                xMaxFound = true;
+                break;
+            }
+        }
+    }
+    // Mark accounted for voxels as so
+    for (int z = zMin; z < zMax; z++) {
+        for (int x = xMin; x < xMax; x++) {
+            _voxelAccountedForInTriMesh_YDown[x][y][z] = true;
+        }
+    }
+    // Create tris
+    zMin = zMin * _voxelSize - _voxelHalfSize;
+    xMin = xMin * _voxelSize - _voxelHalfSize;
+    zMax = zMax * _voxelSize - _voxelHalfSize;
+    xMax = xMax * _voxelSize - _voxelHalfSize;
+    yConstant = yConstant * _voxelSize - _voxelHalfSize;
+    Triangle tri;
+    tri.p3 = glm::vec3(xMax, yConstant, zMax);
+    tri.p2 = glm::vec3(xMax, yConstant, zMin);
+    tri.p1 = glm::vec3(xMin, yConstant, zMin);
+    Triangle tri2;
+    tri2.p3 = glm::vec3(xMax, yConstant, zMax);
+    tri2.p2 = glm::vec3(xMin, yConstant, zMin);
+    tri2.p1 = glm::vec3(xMin, yConstant, zMax);
+    tri.color = NRM_Y_DOWN;
+    tri2.color = NRM_Y_DOWN;
+    _staticWorldTriangles.push_back(tri);
+    _staticWorldTriangles.push_back(tri2);
+    _YDowntriangles.push_back(tri);
+    _YDowntriangles.push_back(tri2);
+}
+
 void VoxelWorld::GenerateTriangleOccluders() {
 
     _staticWorldTriangles.clear();
@@ -636,8 +737,8 @@ void VoxelWorld::GenerateTriangleOccluders() {
                 _voxelAccountedForInTriMesh_ZBack[x][y][z] = false;
                 _voxelAccountedForInTriMesh_XBack[x][y][z] = false;
                 _voxelAccountedForInTriMesh_XFront[x][y][z] = false;
-                _voxelAccountedForInTriMesh_YTop[x][y][z] = false;
-                _voxelAccountedForInTriMesh_YBottom[x][y][z] = false;
+                _voxelAccountedForInTriMesh_YUp[x][y][z] = false;
+                _voxelAccountedForInTriMesh_YDown[x][y][z] = false;
             }
         }
     }
@@ -649,7 +750,8 @@ void VoxelWorld::GenerateTriangleOccluders() {
                 BeginNewBackFacingZSearch(x, y, z);
                 BeginNewFrontFacingXSearch(x, y, z);
                 BeginNewBackFacingXSearch(x, y, z);
-                BeginNewYTopSearch(x, y, z);
+                BeginNewYUpSearch(x, y, z);
+                BeginNewYDownSearch(x, y, z);
             }
         }
     }
@@ -727,7 +829,8 @@ HitData VoxelWorld::ClosestHit(glm::vec3 origin, glm::vec3 destination, glm::vec
         y = y + dy;
         z = z + dz;
        // std::cout << x << ", " << y << ", " << z << '\n';
-        if (_solidVoxels[index1D(roundToGridCoord(x), roundToGridCoord(y), roundToGridCoord(z))]) {
+        if (CellIsSolid(roundToGridCoord(x), roundToGridCoord(y), roundToGridCoord(z))) {
+        //if (_solidVoxels[index1D(roundToGridCoord(x), roundToGridCoord(y), roundToGridCoord(z))]) {
             hitData.hitFound = true;
             hitData.hitPos = glm::vec3(x, y, z);
             return hitData;
@@ -1048,7 +1151,6 @@ void VoxelWorld::GeneratePropogrationGrid() {
                 probe.worldPositon.y = (y + spawnOffset) * (float)PROPOGATION_SPACING * _voxelSize;
                 probe.worldPositon.z = (z + spawnOffset) * (float)PROPOGATION_SPACING * _voxelSize;
 
-                // Skip if outside map bounds or inside geometry
                 if (ProbeIsOutsideMapBounds(probe) || ProbeIsInsideGeometry(probe))
                     probe.ignore = true;
                 else
@@ -1056,8 +1158,9 @@ void VoxelWorld::GeneratePropogrationGrid() {
             }
         }
     }
-
 }
+
+
 
 void ApplyLightToProbe(VoxelFace& voxelFace, GridProbe& probe) {
 
@@ -1173,7 +1276,7 @@ void VoxelWorld::PropogateLight() {
     }
         
 
-    int samplesPerFrame = 300;
+    int samplesPerFrame = 500;
     static int lastProbeIndex = 0;
     lastProbeIndex = (lastProbeIndex + samplesPerFrame) % probeCount;
     
@@ -1196,7 +1299,7 @@ void VoxelWorld::PropogateLight() {
         int probeGridY = probeY * PROPOGATION_SPACING;
         int probeGridZ = probeZ * PROPOGATION_SPACING;
 
-        int searchSize = 13;
+        int searchSize = 12;
         int xMin = std::max(0, probeGridX - searchSize);
         int yMin = std::max(0, probeGridY - searchSize);
         int zMin = std::max(0, probeGridZ - searchSize);
@@ -1214,7 +1317,7 @@ void VoxelWorld::PropogateLight() {
                     if (ManhattanDistance(x, y, z, probeGridX, probeGridY, probeGridZ) > searchSize)
                         continue;
 
-                    if (_solidVoxels[index1D(x,y,z)]) {
+                    if (CellIsSolid(x,y,z)) {
 
                         // If the face is not facing away from the probe AND if the face is actually visible
                         // then add the faces direct light to the probe
@@ -1267,115 +1370,6 @@ void VoxelWorld::PropogateLight() {
         probeColor = probeColor / (float)sampleCount;
         _propogrationGrid[probeX][probeY][probeZ].color = probeColor;
         _propogrationGrid[probeX][probeY][probeZ].samplesRecieved = 1;
-    }
-
-
-
-
-    return;
-    static int i = 241;
-
-    /*if (Input::KeyPressed(HELL_KEY_SPACE)) {
-        i = Util::RandomInt(0, _voxelsZFront.size() - 1);
-        std::cout << i << "\n";
-    }*/
-
-  //  if (Input::KeyDown(HELL_KEY_SPACE)) 
-    
-    {
-
-        // Select random voxel
-
-        // Front X
-        bool found = false;
-        while (!found) {
-            // Get random voxel and probe
-            VoxelFace& voxelFace = GetRandomVoxelFaceXForward();
-            GridProbe& probe = GetRandomGridProbe();
-
-            // skip if probe is behind voxel
-            if (probe.worldPositon.x < GetVoxelFaceWorldPos(voxelFace).x)
-                continue;
-
-            // Othewwise, cast a ray towards probe
-            ApplyLightToProbe(voxelFace, probe);
-            found = true;
-        }
-        // Back X
-        found = false;
-        while (!found) {
-            // Get random voxel and probe
-            VoxelFace& voxelFace = GetRandomVoxelFaceXBack();
-            GridProbe& probe = GetRandomGridProbe();
-
-            // skip if probe is behind voxel
-            if (probe.worldPositon.x > GetVoxelFaceWorldPos(voxelFace).x)
-                continue;
-
-            // Othewwise, cast a ray towards probe
-            ApplyLightToProbe(voxelFace, probe);
-            found = true;
-        }
-        // Y Up
-        found = false;
-        while (!found) {
-            // Get random voxel and probe
-            VoxelFace& voxelFace = GetRandomVoxelFaceYUp();
-            GridProbe& probe = GetRandomGridProbe();
-
-            // skip if probe is behind voxel
-            if (probe.worldPositon.y < GetVoxelFaceWorldPos(voxelFace).y)
-                continue;
-
-            // Othewwise, cast a ray towards probe
-            ApplyLightToProbe(voxelFace, probe);
-            found = true;
-        }
-        // Y Down
-        found = false;
-        while (!found) {
-            // Get random voxel and probe
-            VoxelFace& voxelFace = GetRandomVoxelFaceYDown();
-            GridProbe& probe = GetRandomGridProbe();
-
-            // skip if probe is behind voxel
-            if (probe.worldPositon.y > GetVoxelFaceWorldPos(voxelFace).y)
-                continue;
-
-            // Othewwise, cast a ray towards probe
-            ApplyLightToProbe(voxelFace, probe);
-            found = true;
-        }
-        // Front Z
-        found = false;
-        while (!found) {
-            // Get random voxel and probe
-            VoxelFace& voxelFace = GetRandomVoxelFaceZForward();
-            GridProbe& probe = GetRandomGridProbe();
-
-            // skip if probe is behind voxel
-            if (probe.worldPositon.z < GetVoxelFaceWorldPos(voxelFace).z)
-                continue;
-
-            // Othewwise, cast a ray towards probe
-            ApplyLightToProbe(voxelFace, probe);
-            found = true;
-        }
-        // Back Z
-        found = false;
-        while (!found) {
-            // Get random voxel and probe
-            VoxelFace& voxelFace = GetRandomVoxelFaceZBack();
-            GridProbe& probe = GetRandomGridProbe();
-
-            // skip if probe is behind voxel
-            if (probe.worldPositon.z > GetVoxelFaceWorldPos(voxelFace).z)
-                continue;
-
-            // Othewwise, cast a ray towards probe
-            ApplyLightToProbe(voxelFace, probe);
-            found = true;
-        }
     }
 }
 
@@ -1437,8 +1431,20 @@ int VoxelWorld::GetPropogationGridDepth() {
 }
 
 void VoxelWorld::Update() {
-    //std::cout << "ClosetHit() count: " << _closestHitCounter << "\n";
-    //_closestHitCounter = 0;
+
+    for (int x = 0; x < PROPOGATION_WIDTH; x++) {
+        for (int y = 0; y < PROPOGATION_HEIGHT; y++) {
+            for (int z = 0; z < PROPOGATION_DEPTH; z++) {
+
+                GridProbe& probe = _propogrationGrid[x][y][z];
+                // Skip if outside map bounds or inside geometry
+                if (ProbeIsOutsideMapBounds(probe) || ProbeIsInsideGeometry(probe))
+                    probe.ignore = true;
+                else
+                    probe.ignore = false;
+            }
+        }
+    }
 }
 
 void VoxelWorld::FillIndirectLightingTexture(Texture3D& texture) {
@@ -1476,4 +1482,7 @@ std::vector<Triangle>& VoxelWorld::GetTriangleOcculdersZFacing() {
 }
 std::vector<Triangle>& VoxelWorld::GetTriangleOcculdersYUp() {
     return _YUptriangles;
+}
+std::vector<Triangle>& VoxelWorld::GetTriangleOcculdersYDown() {
+    return _YDowntriangles;
 }

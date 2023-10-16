@@ -21,4 +21,6 @@ namespace Renderer {
 	int GetRenderWidth();
 	int GetRenderHeight();
 	void NextMode();
+	void PreviousMode();
+	void RecreateFrameBuffers();
 }

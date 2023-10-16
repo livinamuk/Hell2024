@@ -48,6 +48,14 @@ void Player::Update(float deltaTime) {
 		_rotation.x = std::max(_rotation.x, -1.5f);
 	}
 
+	float amt = 0.02f;
+	if (Input::KeyDown(HELL_KEY_Z)) {
+		_viewHeightStanding -= amt;
+	}
+	if (Input::KeyDown(HELL_KEY_X)) {
+		_viewHeightStanding += amt;
+	}
+
 	// Crouching
 	bool crouching = false;
 	if (Input::KeyDown(HELL_KEY_LEFT_CONTROL_GLFW)) {

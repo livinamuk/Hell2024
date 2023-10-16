@@ -28,9 +28,20 @@ void Editor::Init() {
     }
 
     for (int z = 0; z < 10; z++) {
-        _walls[10][z] = true;
+    //    _walls[10][z] = true;
 
     }
+
+   /* _walls[4][3] = true;
+    _walls[4][5] = true;
+    _walls[4][7] = true;
+    _walls[4][9] = true;
+    _walls[4][11] = true;
+
+    _walls[4][17] = true;
+    _walls[4][20] = true;
+    _walls[4][23] = true;
+    _walls[4][26] = true;*/
 
     for (int x = 0; x < WORLD_WIDTH; x++) {
         _walls[x][0] = true;

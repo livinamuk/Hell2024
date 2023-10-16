@@ -10,35 +10,36 @@
 #include "Util.hpp"
 #include "Renderer/Renderer.h"
 
+#define TracyGpuCollect
+
+#include "tracy/Tracy.hpp"
+#include "tracy/TracyOpenGL.hpp"
+
 enum class EngineMode {Game, Editor} _engineMode;
 
 void Engine::Run() {
 
     Init();
+    TracyGpuContext;
 
     while (GL::WindowIsOpen() && GL::WindowHasNotBeenForceClosed()) {
 
         GL::ProcessInput();
 
-      //  std::cout << "hi\n";
-        glm::vec3 origin = glm::vec3(2, 2, 2);
-        glm::vec3 dest = glm::vec3(12, 2, 2);
-      //  auto hitData = VoxelWorld::ClosestHit(origin, dest);
-        //std::cout << hitData.hitFound << "\n";
-        //std::cout << "bye\n";
-       // GL::ForceCloseWindow();
-    //    return;
-
-        
         float deltaTime = 1.0f / 60.0f;
         Update(deltaTime);
 
         if (_engineMode == EngineMode::Game) {
+
+            TracyGpuZone("RenderFrame");
             Renderer::RenderFrame();
         }
         if (_engineMode == EngineMode::Editor) {
             Renderer::RenderEditorFrame();
         }
+
+        FrameMark;
+        TracyGpuCollect;
 
         GL::SwapBuffersPollEvents();
     }
@@ -85,16 +86,21 @@ void LazyKeyPresses() {
         VoxelWorld::GetLightByIndex(0).x -= 2;
         Audio::PlayAudio("RE_Beep.wav", 0.25f);
     }
-    if (Input::KeyPressed(GLFW_KEY_Q)) {
+    if (Input::KeyPressed(GLFW_KEY_E)) {
         Renderer::NextMode();
+        Audio::PlayAudio("RE_Beep.wav", 0.25f);
+    }
+    if (Input::KeyPressed(GLFW_KEY_Q)) {
+        Renderer::PreviousMode();
         Audio::PlayAudio("RE_Beep.wav", 0.25f);
     }
     if (Input::KeyPressed(GLFW_KEY_H)) {
         Renderer::HotloadShaders();
     }
     if (Input::KeyPressed(GLFW_KEY_F)) {
+        GL::ToggleFullscreen();
+        Renderer::RecreateFrameBuffers();
         Audio::PlayAudio("RE_Beep.wav", 0.25f);
-        VoxelWorld::ToggleDebugView();
     }
     if (Input::KeyPressed(GLFW_KEY_SPACE)) {
         Audio::PlayAudio("RE_Beep.wav", 0.25f);
