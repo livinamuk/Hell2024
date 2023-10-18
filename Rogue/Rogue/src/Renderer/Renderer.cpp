@@ -303,6 +303,8 @@ void Renderer::RecreateFrameBuffers() {
 
 void DrawScene(Shader& shader) {
 
+    return;
+
     static float rot = 0;
     //rot += 0.01f;
     Transform transform;
@@ -660,8 +662,8 @@ void Renderer::RenderFrame() {
                 for (int z = 0; z < VoxelWorld::GetPropogationGridDepth(); z++) {
 
                     GridProbe& probe = VoxelWorld::GetProbeByGridIndex(x, y, z);
-                    if (probe.color == BLACK || probe.ignore)
-                        continue;
+                    //if (probe.color == BLACK || probe.ignore)
+                    //    continue;
 
                     // draw
                     Transform t;

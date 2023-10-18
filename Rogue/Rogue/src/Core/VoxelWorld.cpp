@@ -1292,8 +1292,13 @@ void VoxelWorld::PropogateLight() {
       //  probeZ = 9;
 
         // skip probes inside geometry, or those marked to be skipped
-        if (_propogrationGrid[probeX][probeY][probeZ].ignore)
+        GridProbe& probe = _propogrationGrid[probeX][probeY][probeZ];
+        if (probe.ignore) {
+            probe.color = glm::vec3(-1);
+            probe.samplesRecieved = 1;
             continue;
+        }
+           
 
         int probeGridX = probeX * PROPOGATION_SPACING;
         int probeGridY = probeY * PROPOGATION_SPACING;
