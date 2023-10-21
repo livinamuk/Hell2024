@@ -140,9 +140,8 @@ struct IntersectionResult {
 };
 
 struct GridProbe {
-    //glm::vec3 worldPositon;
     glm::vec3 color = BLACK;
-    int samplesRecieved = 0;
+    //int samplesRecieved = 0;
     bool ignore = true; // either blocked by geometry, or out of map range
 };
 

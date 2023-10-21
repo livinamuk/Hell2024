@@ -281,7 +281,7 @@ void Scene::CalculateProbeLighting() {
 
                 glm::vec3 probeWorldPos = glm::vec3(worldX, worldY, worldZ);
                 glm::vec3 probeColor = glm::vec3(0);
-                int count = 0;
+                int sampleCount = 0;
 
                 // Get visible cloud points 
                 for (CloudPoint& cloudPoint : Scene::_cloudPoints) {
@@ -301,23 +301,17 @@ void Scene::CalculateProbeLighting() {
                         Util::EvaluateRaycasts(cloudPoint.position, v, distance, Scene::_triangleWorld, RaycastObjectType::NONE, glm::mat4(1), result, true);
 
                         if (!result.found) {
-                            count++;
+                            sampleCount++;
                             probeColor += cloudPoint.directLighting;
-
-                            Point p;
-                            p.pos = cloudPoint.position;
-                            p.color = glm::vec3(0, 0, 1);
-                            p.color = cloudPoint.directLighting;
 
                             if (cloudPoint.directLighting.x + cloudPoint.directLighting.y + cloudPoint.directLighting.z > 0.01) {
                                 probe.ignore = false;
                             }
-                            //QueuePointForDrawing(p);
                         }
                         rayCount += result.rayCount;
                     }
                 }
-                probe.color = probeColor / float(count);
+                probe.color = probeColor / float(sampleCount);
             }
         }
     }
