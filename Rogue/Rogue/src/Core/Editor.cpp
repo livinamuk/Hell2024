@@ -2,7 +2,7 @@
 #include "Input.h"
 #include "GL.h"
 #include "../Util.hpp"
-#include "VoxelWorld.h"
+//#include "VoxelWorld.h"
 
 float _map_width_in_worldspace = WORLD_WIDTH * WORLD_GRID_SPACING;
 float _map_depth_in_worldspace = WORLD_DEPTH * WORLD_GRID_SPACING;
@@ -83,15 +83,15 @@ void Editor::Update(int viewportWidth, int viewportHeight) {
 
         if (Input::LeftMouseDown()) {
             _walls[_mouseGridX][_mouseGridZ] = true;
-            VoxelWorld::InitMap();
-            VoxelWorld::GenerateTriangleOccluders();
-            VoxelWorld::GeneratePropogrationGrid();
+            //VoxelWorld::InitMap();
+            //VoxelWorld::GenerateTriangleOccluders();
+            //VoxelWorld::GeneratePropogrationGrid();
         }
         if (Input::RightMouseDown()) {
             _walls[_mouseGridX][_mouseGridZ] = false;
-            VoxelWorld::InitMap();
-            VoxelWorld::GenerateTriangleOccluders();
-            VoxelWorld::GeneratePropogrationGrid();
+            //VoxelWorld::InitMap();
+            //VoxelWorld::GenerateTriangleOccluders();
+            //VoxelWorld::GeneratePropogrationGrid();
         }
     }
     

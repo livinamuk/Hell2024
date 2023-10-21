@@ -140,10 +140,10 @@ struct IntersectionResult {
 };
 
 struct GridProbe {
-    glm::vec3 worldPositon;
+    //glm::vec3 worldPositon;
     glm::vec3 color = BLACK;
     int samplesRecieved = 0;
-    bool ignore = false; // either blocked by geometry, or out of map range
+    bool ignore = true; // either blocked by geometry, or out of map range
 };
 
 struct Extent2Di {
@@ -158,4 +158,35 @@ struct UIRenderInfo {
     glm::mat4 modelMatrix;
     bool centered = false;
     GLuint target = GL_TEXTURE_2D;
+};
+
+enum class RaycastObjectType { NONE, FLOOR, WALLS, ENEMY };
+
+struct RayCastResult {
+    bool found = false;
+    float distanceToHit = 99999;
+    void* parent = nullptr;
+    Triangle triangle;
+    RaycastObjectType raycastObjectType = RaycastObjectType::NONE;
+    glm::mat4 triangeleModelMatrix = glm::mat4(1);
+    glm::vec3 intersectionPoint = glm::vec3(0);
+    glm::vec2 baryPosition = glm::vec2(0);
+    glm::vec3 closestPointOnBoundingBox = glm::vec3(0, 0, 0);
+    unsigned int rayCount = 0;
+};
+
+struct FileInfo {
+    std::string fullpath;
+    std::string directory;
+    std::string filename;
+    std::string filetype;
+    std::string materialType;
+};
+
+struct Material {
+    Material() {}
+    std::string _name = "undefined";
+    int _basecolor = 0;
+    int _normal = 0;
+    int _rma = 0;
 };

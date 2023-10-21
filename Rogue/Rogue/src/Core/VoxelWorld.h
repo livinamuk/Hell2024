@@ -1,4 +1,4 @@
-#pragma once
+/*#pragma once
 #include "../Common.h"
 #include "../Renderer/Texture3D.h"
 #include <vector>
@@ -24,7 +24,6 @@ namespace VoxelWorld {
     void ToggleDebugView();
     void GeneratePropogrationGrid();
     void PropogateLight();
-    void Update();
     void FillIndirectLightingTexture(Texture3D& texture);
   
     bool CellIsSolid(int x, int y, int z); 
@@ -61,4 +60,4 @@ namespace VoxelWorld {
     void TogglePropogation();
 
     HitData ClosestHit(glm::vec3 origin, glm::vec3 destination, glm::vec3 initalOffset = glm::vec3(0.5f));
-}
+}*/

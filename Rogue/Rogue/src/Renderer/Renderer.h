@@ -6,7 +6,7 @@ namespace Renderer {
 
 	void Init();
 	void RenderFrame();
-	void RenderEditorFrame();
+	//void RenderEditorFrame();
 	void RenderUI();
 	void HotloadShaders();
 	void WipeShadowMaps();
@@ -15,7 +15,6 @@ namespace Renderer {
 	void ToggleDrawingLights();
 	void ToggleDrawingProbes();
 	void ToggleDrawingLines();
-	void ToggleRenderingAsVoxelDirectLighting();
 
 	Texture3D& GetIndirectLightingTexture();
 	int GetRenderWidth();

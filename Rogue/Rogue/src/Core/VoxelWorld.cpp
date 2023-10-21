@@ -1,4 +1,4 @@
-#include "VoxelWorld.h"
+/*#include "VoxelWorld.h"
 #include "../Util.hpp"
 #include "../Core/Audio.hpp"
 #include "../Core/Editor.h"
@@ -15,12 +15,7 @@ bool _searchedVoxelArea[MAP_WIDTH][MAP_HEIGHT][MAP_DEPTH];
 bool _dynamicSolidVoxels[MAP_WIDTH][MAP_HEIGHT][MAP_DEPTH];
 
 
-/*void VoxelWorld::SetDynamicSolidVoxelToSolid(int index1D) {
-    int z = index1D / (MAP_WIDTH * MAP_HEIGHT);
-    index1D -= (z * MAP_WIDTH * MAP_HEIGHT);
-    int y = index1D / MAP_WIDTH;
-    int x = index1D % MAP_WIDTH;
-}*/                                                         // DOES NOT WORK
+                                                     // DOES NOT WORK
 
 void VoxelWorld::SetDynamicSolidVoxelState(int x, int y, int z, bool value) {
     _dynamicSolidVoxels[x][y][z] = value;
@@ -215,7 +210,7 @@ void VoxelWorld::InitMap() {
    // _voxelGrid[20][4][18] = { true, WHITE };
    // _voxelGrid[21][4][5] = { true, WHITE };
     
-    LoadLightSetup(0);
+    LoadLightSetup(1);
 }
 
 
@@ -898,23 +893,6 @@ void VoxelWorld::CalculateDirectLighting() {
         allVoxelFaces.push_back(&voxelFace);
 
 
-    // Direct light the voxels
-   /* for (Light& light : _lights) {
-
-        glm::vec3 lightCenter = glm::vec3(light.x * _voxelSize, light.y * _voxelSize, light.z * _voxelSize) + glm::vec3(0.01f);
-
-        for (VoxelFace* voxelFace : allVoxelFaces) {
-
-            glm::vec3 origin = GetVoxelFaceWorldPos(*voxelFace);
-            glm::vec3 rayDirection = glm::normalize(lightCenter - origin);
-            float distanceToLight = glm::distance(lightCenter, origin);
-
-            // If no hit was found, light the voxel
-            if (!Util::RayTracing::AnyHit(_triangles, origin, rayDirection, MIN_RAY_DIST, distanceToLight)) {
-                voxelFace->accumulatedDirectLighting += Util::GetDirectLightAtAPoint(light, origin, voxelFace->normal, _voxelSize);
-            }
-        }
-    }*/
 
     // Debug shit
     if (_debugView) {
@@ -996,33 +974,6 @@ void VoxelWorld::CalculateDirectLighting() {
             }
         }
     }
-
-   /* for (Light& light : _lights) {
-
-        glm::vec3 destination = glm::vec3(light.x, light.y, light.z);
-
-        for (VoxelFace* voxelFace : allVoxelFaces) {
-
-            glm::vec3 origin = GetVoxelFaceWorldPos(*voxelFace);
-
-
-
-            // Skip back facing
-            //if (glm::dot(rayDir, tri.normal) < 0) {
-            //    continue;
-            //}
-
-            if (ClosestHit(origin, destination).hitFound) {
-                voxelFace->accumulatedDirectLighting += Util::GetDirectLightAtAPoint(light, origin, voxelFace->normal, _voxelSize);
-            }
-        }
-    }*/
-        
-
-            
-
-
-    
 }
 
 int VoxelWorld::GetTotalVoxelFaceCount() {
@@ -1077,9 +1028,7 @@ void VoxelWorld::CalculateIndirectLighting() {
             for (int y = -1; y < 2; y++) {
                 for (int z = -1; z < 2; z++) {
 
-        /*for (int x = -1; x < 0; x++) {
-            for (int y = -1; y < 0; y++) {
-                for (int z = -1; z < 0; z++) {*/
+        
 
                     // skip if sample coords are outside of the grid
                     if (xPos + x < 0 || yPos + y < 0 || zPos + z < 0 || xPos + x > PROPOGATION_WIDTH - 2 || yPos + y > PROPOGATION_HEIGHT - 2 || zPos + z > PROPOGATION_DEPTH - 2)
@@ -1136,6 +1085,7 @@ bool ProbeIsInsideGeometry(GridProbe& probe) {
 }
 
 void VoxelWorld::GeneratePropogrationGrid() {
+
     std::cout << "Regenereated LVP\n";
    // Reset grid
    for (int x = 0; x < PROPOGATION_WIDTH; x++) {
@@ -1144,17 +1094,13 @@ void VoxelWorld::GeneratePropogrationGrid() {
 
                 GridProbe& probe = _propogrationGrid[x][y][z];
                 probe.color = BLACK;
-                probe.samplesRecieved = 0;
+                probe.samplesRecieved = 1;
+                probe.ignore = false;
 
                 float spawnOffset = 0;// PROPOGATION_SPACING / 2;
                 probe.worldPositon.x = (x + spawnOffset) * (float)PROPOGATION_SPACING * _voxelSize;
                 probe.worldPositon.y = (y + spawnOffset) * (float)PROPOGATION_SPACING * _voxelSize;
                 probe.worldPositon.z = (z + spawnOffset) * (float)PROPOGATION_SPACING * _voxelSize;
-
-                if (ProbeIsOutsideMapBounds(probe) || ProbeIsInsideGeometry(probe))
-                    probe.ignore = true;
-                else
-                    probe.ignore = false;
             }
         }
     }
@@ -1435,23 +1381,6 @@ int VoxelWorld::GetPropogationGridDepth() {
     return PROPOGATION_DEPTH;
 }
 
-void VoxelWorld::Update() {
-
-    for (int x = 0; x < PROPOGATION_WIDTH; x++) {
-        for (int y = 0; y < PROPOGATION_HEIGHT; y++) {
-            for (int z = 0; z < PROPOGATION_DEPTH; z++) {
-
-                GridProbe& probe = _propogrationGrid[x][y][z];
-                // Skip if outside map bounds or inside geometry
-                if (ProbeIsOutsideMapBounds(probe) || ProbeIsInsideGeometry(probe))
-                    probe.ignore = true;
-                else
-                    probe.ignore = false;
-            }
-        }
-    }
-}
-
 void VoxelWorld::FillIndirectLightingTexture(Texture3D& texture) {
 
     int width = texture.GetWidth();
@@ -1465,8 +1394,10 @@ void VoxelWorld::FillIndirectLightingTexture(Texture3D& texture) {
             for (int x = 0; x < width; x++) {
 
                 float alpha = 1.0f;
-                if (_propogrationGrid[x][y][z].ignore)
+                if (_propogrationGrid[x][y][z].ignore) {
+                    _propogrationGrid[x][y][z].color = glm::vec3(-1);
                     alpha = 0.0f;
+                }
 
                // glm::vec4 color = glm::vec4(_propogrationGrid[x][y][z].color / (float)_propogrationGrid[x][y][z].samplesRecieved, alpha);
                 glm::vec4 color = glm::vec4(_propogrationGrid[x][y][z].color, alpha);
@@ -1490,4 +1421,4 @@ std::vector<Triangle>& VoxelWorld::GetTriangleOcculdersYUp() {
 }
 std::vector<Triangle>& VoxelWorld::GetTriangleOcculdersYDown() {
     return _YDowntriangles;
-}
+}*/

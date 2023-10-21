@@ -106,6 +106,7 @@
     <ClCompile Include="src\Core\GL.cpp" />
     <ClCompile Include="src\Core\Input.cpp" />
     <ClCompile Include="src\Core\Player.cpp" />
+    <ClCompile Include="src\Core\Scene.cpp" />
     <ClCompile Include="src\Core\TextBlitting.cpp" />
     <ClCompile Include="src\Core\Voxel.cpp" />
     <ClCompile Include="src\Core\VoxelWorld.cpp" />
@@ -132,6 +133,7 @@
     <ClInclude Include="src\Core\Input.h" />
     <ClInclude Include="src\Core\keycodes.h" />
     <ClInclude Include="src\Core\Player.h" />
+    <ClInclude Include="src\Core\Scene.h" />
     <ClInclude Include="src\Core\TextBlitter.h" />
     <ClInclude Include="src\Core\Voxel.h" />
     <ClInclude Include="src\Core\VoxelWorld.h" />

@@ -8,18 +8,9 @@
 #include "glm/gtx/intersect.hpp"
 #include <random>
 #include <format>
+#include <filesystem>
 
 namespace Util {
-
-    /*inline std::string Vec3ToString(glm::vec3 vec) {
-        std::string str = "(";
-        str += vec.x;
-        str += ", ";
-        str += vec.y;
-        str += ", ";
-        str += vec.z;
-        str += ")";
-    }*/
 
     inline int RandomInt(int min, int max) {
         static std::random_device dev;
@@ -172,5 +163,92 @@ namespace Util {
     inline int MapRange(int inValue, int minInRange, int maxInRange, int minOutRange, int maxOutRange) {
         float x = (inValue - minInRange) / (float)(maxInRange - minInRange);
         return minOutRange + (maxOutRange - minOutRange) * x;
+    }
+
+    inline void EvaluateRaycasts(glm::vec3 rayOrigin, glm::vec3 rayDirection, float maxDistance, std::vector<Triangle>& triangles, RaycastObjectType parentType, glm::mat4 parentMatrix, RayCastResult& out, bool ignoreBackFacing = true) {
+        glm::mat4 inverseTransform = glm::inverse(parentMatrix);
+
+        glm::vec3 origin = inverseTransform * glm::vec4(rayOrigin, 1);
+        glm::vec3 direction = inverseTransform * glm::vec4(rayDirection, 0);
+
+        for (Triangle& triangle : triangles) {
+
+            // Skip if triangle is facing away from light direction
+            float vdotn = dot(rayDirection, triangle.normal);
+            if (ignoreBackFacing && vdotn > 0) {
+                continue;
+            }
+
+            IntersectionResult result = RayTriangleIntersectTest(triangle.p1, triangle.p2, triangle.p3, origin, direction);
+            float minDist = 0.01f;
+            if (result.found && result.distance > minDist && result.distance < maxDistance) {
+                if (result.distance < out.distanceToHit) {
+                    out.triangle = triangle;
+                    out.distanceToHit = result.distance;
+                    out.raycastObjectType = parentType;
+                    out.triangeleModelMatrix = parentMatrix;
+                    out.baryPosition = result.baryPosition;
+                    out.found = true;
+                }
+            }
+            out.rayCount++;
+        }
+    }
+
+    inline FileInfo GetFileInfo(std::string filepath) {
+        // isolate name
+        std::string filename = filepath.substr(filepath.rfind("/") + 1);
+        filename = filename.substr(0, filename.length() - 4);
+        // isolate filetype
+        std::string filetype = filepath.substr(filepath.length() - 3);
+        // isolate direcetory
+        std::string directory = filepath.substr(0, filepath.rfind("/") + 1);
+        // material name
+        std::string materialType = "NONE";
+        if (filename.length() > 5) {
+            std::string query = filename.substr(filename.length() - 3);
+            if (query == "ALB" || query == "RMA" || query == "NRM")
+                materialType = query;
+        }
+        // RETURN IT
+        FileInfo info;
+        info.fullpath = filepath;
+        info.filename = filename;
+        info.filetype = filetype;
+        info.directory = directory;
+        info.materialType = materialType;
+        return info;
+    }
+
+    inline FileInfo GetFileInfo(const std::filesystem::directory_entry filepath)
+    {
+        std::stringstream ss;
+        ss << filepath.path();
+        std::string fullpath = ss.str();
+        // remove quotes at beginning and end
+        fullpath = fullpath.substr(1);
+        fullpath = fullpath.substr(0, fullpath.length() - 1);
+        // isolate name
+        std::string filename = fullpath.substr(fullpath.rfind("/") + 1);
+        filename = filename.substr(0, filename.length() - 4);
+        // isolate filetype
+        std::string filetype = fullpath.substr(fullpath.length() - 3);
+        // isolate direcetory
+        std::string directory = fullpath.substr(0, fullpath.rfind("/") + 1);
+        // material name
+        std::string materialType = "NONE";
+        if (filename.length() > 5) {
+            std::string query = filename.substr(filename.length() - 3);
+            if (query == "ALB" || query == "RMA" || query == "NRM")
+                materialType = query;
+        }
+        // RETURN IT
+        FileInfo info;
+        info.fullpath = fullpath;
+        info.filename = filename;
+        info.filetype = filetype;
+        info.directory = directory;
+        info.materialType = materialType;
+        return info;
     }
 }
