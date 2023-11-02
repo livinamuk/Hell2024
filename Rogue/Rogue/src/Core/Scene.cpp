@@ -1,6 +1,44 @@
 #include "Scene.h"
 #include "../Util.hpp"
 #include "AssetManager.h"
+#include "../Renderer/Renderer.h"
+#include "Input.h"
+#include "Player.h"
+
+void Scene::Update(float deltaTime) {
+
+    for (AnimatedGameObject& animatedGameObject : _animatedGameObjects) {
+        animatedGameObject.Update(deltaTime);
+    }
+
+    // AK
+    auto aks74u = GetAnimatedGameObjectByName("AKS74U");    
+    aks74u->SetScale(0.01f);
+    aks74u->SetPosition(glm::vec3(2, 1.5, 3));
+    // First person display
+    bool renderWeaponFromFirstPersonPerspective = false;
+    if (renderWeaponFromFirstPersonPerspective) {
+        aks74u->SetRotationX(Player::GetViewRotation().x);
+        aks74u->SetRotationY(Player::GetViewRotation().y);
+        //aks74u->SetPosition(Player::GetViewPos());
+        aks74u->SetPosition(Player::GetViewPos() + (Player::GetCameraFront() * glm::vec3(3)));
+    }
+
+    // Running Guy
+    auto enemy = GetAnimatedGameObjectByName("Enemy");
+    enemy->PlayAndLoopAnimation("UnisexGuyRun", 0.75f);
+    enemy->SetScale(0.01f);
+    enemy->SetPosition(glm::vec3(1.3f, 0.1, 3.5f));
+    enemy->SetRotationX(HELL_PI / 2);
+
+    // Lazy key presses
+    if (Input::KeyPressed(HELL_KEY_T)) {
+        enemy->ToggleAnimationPause();
+    }
+    if (Input::KeyPressed(HELL_KEY_R)) {
+        aks74u->PlayAnimation("AKS74U_DebugTest", 0.5f);
+    }
+}
 
 void Scene::Init() {
 
@@ -45,13 +83,172 @@ void Scene::Init() {
     _ceilings.emplace_back(Ceiling(0.1f, 3.1f, 3.7f, 4.1f, 2.5f, AssetManager::GetMaterialIndex("Ceiling")));;
     _ceilings.emplace_back(Ceiling(4.7f, 3.1f, 6.1f, 4.1f, 2.5f, AssetManager::GetMaterialIndex("Ceiling")));
 
-    LoadLightSetup(1);
-    CalculatePointCloudDirectLighting();
-    CalculateProbeLighting();
+    LoadLightSetup(2);
+    //CalculatePointCloudDirectLighting();
+    //CalculateProbeLighting(Renderer::_method);
+    
+
+  /*  for (int x = 0; x < MAP_WIDTH; x++) {
+        for (int y = 0; y < MAP_HEIGHT; y++) {
+            for (int z = 0; z < MAP_DEPTH; z++) {
+
+                GridProbe& probe = Scene::_propogrationGrid[x][y][z];
+                probe.color = glm::vec3(0);
+            }
+        }
+    }*/
+
+
+    /*GameObject& fan = _gameObjects.emplace_back(GameObject());
+    fan.SetPosition(1.3f, 1.2f, 3.5f);
+    //fan.SetRotationY(HELL_PI / 2);
+    fan.SetScale(0.15f);
+    fan.SetModel("fan");
+    fan.SetMeshMaterial("NumGrid");
+    fan.SetName("Fan");*/
+
+
+    GameObject& doorFrame = _gameObjects.emplace_back(GameObject());
+    doorFrame.SetPosition(0.05f, 0, 3.5f);
+    doorFrame.SetModel("DoorFrame");
+    doorFrame.SetMeshMaterial("Door");
+    doorFrame.SetName("DoorFrame0");
+
+    GameObject& door0 = _gameObjects.emplace_back(GameObject());
+    door0.SetModel("Door");
+    door0.SetName("Door");
+    door0.SetMeshMaterial("Door");
+    door0.SetParentName("DoorFrame0");
+    door0.SetPosition(+0.058520, 0, 0.39550f);
+    door0.SetScriptName("OpenableDoor");
+    door0.SetOpenState(OpenState::CLOSED, 5.208f, NOOSE_HALF_PI, NOOSE_HALF_PI - 1.9f);
+    //door0.SetAudioOnOpen("Door_Open.wav", DOOR_VOLUME);
+    //door0.SetAudioOnClose("Door_Open.wav", DOOR_VOLUME);
+    door0.SetOpenAxis(OpenAxis::ROTATION_NEG_Y);
+
+
+    GameObject& smallChestOfDrawers = _gameObjects.emplace_back(GameObject());
+    smallChestOfDrawers.SetModel("SmallChestOfDrawersFrame");
+    smallChestOfDrawers.SetMeshMaterial("Drawers");
+    smallChestOfDrawers.SetName("SmallDrawersHis");
+    smallChestOfDrawers.SetPosition(0.1, 0, 4.45f);
+    smallChestOfDrawers.SetRotationY(NOOSE_PI / 2);
+    smallChestOfDrawers.SetBoundingBoxFromMesh(0);
+    smallChestOfDrawers.EnableCollision();
+
+    GameObject& lamp = _gameObjects.emplace_back(GameObject());
+    lamp.SetModel("Lamp");
+    lamp.SetMeshMaterial("Lamp");
+    lamp.SetPosition(-.05f, 0.88, 0.25f);
+    lamp.SetParentName("SmallDrawersHis");
+    lamp.SetScriptName("OpenableDrawer");
+
+    GameObject& smallChestOfDrawer_1 = _gameObjects.emplace_back(GameObject());
+    smallChestOfDrawer_1.SetModel("SmallDrawerTop");
+    smallChestOfDrawer_1.SetMeshMaterial("Drawers");
+    smallChestOfDrawer_1.SetParentName("SmallDrawersHis");
+    smallChestOfDrawer_1.SetScriptName("OpenableDrawer");
+    smallChestOfDrawer_1.SetOpenState(OpenState::CLOSED, 2.183f, 0, 0.2f);
+    //smallChestOfDrawer_1.SetAudioOnOpen("DrawerOpen.wav", DRAWER_VOLUME);
+    //smallChestOfDrawer_1.SetAudioOnClose("DrawerOpen.wav", DRAWER_VOLUME);
+    smallChestOfDrawer_1.SetOpenAxis(OpenAxis::TRANSLATE_Z);
+
+    GameObject& smallChestOfDrawer_2 = _gameObjects.emplace_back(GameObject());
+    smallChestOfDrawer_2.SetModel("SmallDrawerSecond");
+    smallChestOfDrawer_2.SetMeshMaterial("Drawers");
+    smallChestOfDrawer_2.SetParentName("SmallDrawersHis");
+    smallChestOfDrawer_2.SetScriptName("OpenableDrawer");
+    smallChestOfDrawer_2.SetOpenState(OpenState::CLOSED, 2.183f, 0, 0.2f);
+    //smallChestOfDrawer_2.SetAudioOnOpen("DrawerOpen.wav", DRAWER_VOLUME);
+    //smallChestOfDrawer_2.SetAudioOnClose("DrawerOpen.wav", DRAWER_VOLUME);
+    smallChestOfDrawer_2.SetOpenAxis(OpenAxis::TRANSLATE_Z);
+
+    GameObject& smallChestOfDrawer_3 = _gameObjects.emplace_back(GameObject());
+    smallChestOfDrawer_3.SetModel("SmallDrawerThird");
+    smallChestOfDrawer_3.SetMeshMaterial("Drawers");
+    smallChestOfDrawer_3.SetParentName("SmallDrawersHis");
+    smallChestOfDrawer_3.SetScriptName("OpenableDrawer");
+    smallChestOfDrawer_3.SetOpenState(OpenState::CLOSED, 2.183f, 0, 0.2f);
+   // smallChestOfDrawer_3.SetAudioOnOpen("DrawerOpen.wav", DRAWER_VOLUME);
+   // smallChestOfDrawer_3.SetAudioOnClose("DrawerOpen.wav", DRAWER_VOLUME);
+    smallChestOfDrawer_3.SetOpenAxis(OpenAxis::TRANSLATE_Z);
+
+    GameObject& smallChestOfDrawer_4 = _gameObjects.emplace_back(GameObject());
+    smallChestOfDrawer_4.SetModel("SmallDrawerFourth");
+    smallChestOfDrawer_4.SetMeshMaterial("Drawers");
+    smallChestOfDrawer_4.SetParentName("SmallDrawersHis");
+    smallChestOfDrawer_4.SetScriptName("OpenableDrawer");
+    smallChestOfDrawer_4.SetOpenState(OpenState::CLOSED, 2.183f, 0, 0.2f);
+   // smallChestOfDrawer_4.SetAudioOnOpen("DrawerOpen.wav", DRAWER_VOLUME);
+   // smallChestOfDrawer_4.SetAudioOnClose("DrawerOpen.wav", DRAWER_VOLUME);
+    smallChestOfDrawer_4.SetOpenAxis(OpenAxis::TRANSLATE_Z);
+
+    /*
+    GameObject& smallChestOfDrawers2 = _gameObjects.emplace_back(GameObject());
+    smallChestOfDrawers2.SetModel("SmallChestOfDrawersFrame");
+    smallChestOfDrawers2.SetMeshMaterial("Drawers");
+    smallChestOfDrawers2.SetName("SmallDrawersHers");
+    smallChestOfDrawers2.SetPosition(0.1, 0, 2.55f);
+    smallChestOfDrawers2.SetRotationY(NOOSE_PI / 2);
+    smallChestOfDrawers2.SetBoundingBoxFromMesh(0);
+    smallChestOfDrawers2.EnableCollision();
+
+
+    GameObject& smallChestOfDrawer2_1 = _gameObjects.emplace_back(GameObject());
+    smallChestOfDrawer2_1.SetModel("SmallDrawerTop");
+    smallChestOfDrawer2_1.SetMeshMaterial("Drawers");
+    smallChestOfDrawer2_1.SetParentName("SmallDrawersHers");
+    smallChestOfDrawer2_1.SetScriptName("OpenableDrawer");
+    smallChestOfDrawer2_1.SetOpenState(OpenState::CLOSED, 2.183f, 0, 0.2f);
+    //smallChestOfDrawer2_1.SetAudioOnOpen("DrawerOpen.wav", DRAWER_VOLUME);
+    //smallChestOfDrawer2_1.SetAudioOnClose("DrawerOpen.wav", DRAWER_VOLUME);
+    smallChestOfDrawer2_1.SetOpenAxis(OpenAxis::TRANSLATE_Z);
+
+    GameObject& smallChestOfDrawer2_2 = _gameObjects.emplace_back(GameObject());
+    smallChestOfDrawer2_2.SetModel("SmallDrawerSecond");
+    smallChestOfDrawer2_2.SetMeshMaterial("Drawers");
+    smallChestOfDrawer2_2.SetParentName("SmallDrawersHers");
+    smallChestOfDrawer2_2.SetScriptName("OpenableDrawer");
+    smallChestOfDrawer2_2.SetOpenState(OpenState::CLOSED, 2.183f, 0, 0.2f);
+    //smallChestOfDrawer2_2.SetAudioOnOpen("DrawerOpen.wav", DRAWER_VOLUME);
+    //smallChestOfDrawer2_2.SetAudioOnClose("DrawerOpen.wav", DRAWER_VOLUME);
+    smallChestOfDrawer2_2.SetOpenAxis(OpenAxis::TRANSLATE_Z);
+
+    GameObject& smallChestOfDrawer2_3 = _gameObjects.emplace_back(GameObject());
+    smallChestOfDrawer2_3.SetModel("SmallDrawerThird");
+    smallChestOfDrawer2_3.SetMeshMaterial("Drawers");
+    smallChestOfDrawer2_3.SetParentName("SmallDrawersHers");
+    smallChestOfDrawer2_3.SetScriptName("OpenableDrawer");
+    smallChestOfDrawer2_3.SetOpenState(OpenState::CLOSED, 2.183f, 0, 0.2f);
+    // smallChestOfDrawer2_3.SetAudioOnOpen("DrawerOpen.wav", DRAWER_VOLUME);
+    // smallChestOfDrawer2_3.SetAudioOnClose("DrawerOpen.wav", DRAWER_VOLUME);
+    smallChestOfDrawer2_3.SetOpenAxis(OpenAxis::TRANSLATE_Z);
+
+    GameObject& smallChestOfDrawer2_4 = _gameObjects.emplace_back(GameObject());
+    smallChestOfDrawer2_4.SetModel("SmallDrawerFourth");
+    smallChestOfDrawer2_4.SetMeshMaterial("Drawers");
+    smallChestOfDrawer2_4.SetParentName("SmallDrawersHers");
+    smallChestOfDrawer2_4.SetScriptName("OpenableDrawer");
+    smallChestOfDrawer2_4.SetOpenState(OpenState::CLOSED, 2.183f, 0, 0.2f);
+    // smallChestOfDrawer2_4.SetAudioOnOpen("DrawerOpen.wav", DRAWER_VOLUME);
+    // smallChestOfDrawer2_4.SetAudioOnClose("DrawerOpen.wav", DRAWER_VOLUME);
+    smallChestOfDrawer2_4.SetOpenAxis(OpenAxis::TRANSLATE_Z);*/
+
+
+    AnimatedGameObject& enemy = _animatedGameObjects.emplace_back(AnimatedGameObject());
+    enemy.SetName("Enemy");
+    enemy.SetSkinnedModel("MaxExportTest");
+    enemy.EnableMotionBlur();
+
+    AnimatedGameObject& aks74u = _animatedGameObjects.emplace_back(AnimatedGameObject());
+    aks74u.SetName("AKS74U");
+    aks74u.SetSkinnedModel("AKS74U"); 
+    aks74u.PlayAnimation("AKS74U_DebugTest", 0.5f);
+    aks74u.PauseAnimation();
 }
 
 void Scene::CalculatePointCloudDirectLighting() {
-    
+
     float yCutOff = 2.7f;
 
     _cloudPoints.clear();
@@ -258,7 +455,9 @@ void Scene::CalculatePointCloudDirectLighting() {
     std::cout << "Direct lighting ray count: " << rayCount << "\n";
 }
 
-void Scene::CalculateProbeLighting() {
+void Scene::CalculateProbeLighting(int method) {
+
+    Renderer::_method = method;
 
     int rayCount = 0;
 
@@ -298,11 +497,35 @@ void Scene::CalculateProbeLighting() {
                         }
 
                         RayCastResult result;
-                        Util::EvaluateRaycasts(cloudPoint.position, v, distance, Scene::_triangleWorld, RaycastObjectType::NONE, glm::mat4(1), result, true);
+                        Util::AnyHit(cloudPoint.position, v, distance, Scene::_triangleWorld, result, true);
 
                         if (!result.found) {
                             sampleCount++;
-                            probeColor += cloudPoint.directLighting;
+
+                            switch (method) {
+                            case 0:
+                                probeColor += cloudPoint.directLighting;
+                                break;
+                            case 1:
+                                probeColor += cloudPoint.directLighting * (maxDistance - distance) / maxDistance;
+                                break;
+                            case 2:
+                                probeColor += vdotn * cloudPoint.directLighting * (maxDistance - distance) / maxDistance;
+                                break;
+                            case 3:
+                                probeColor += cloudPoint.directLighting * (maxDistance - distance) * (maxDistance - distance) / maxDistance;
+                                break;
+                            case 4:
+                                probeColor += vdotn * cloudPoint.directLighting * (maxDistance - distance) * (maxDistance - distance) / maxDistance;
+                                break;
+                            case 5:
+                                probeColor += vdotn * cloudPoint.directLighting;
+                                break;
+                            case 6:
+                                probeColor += cloudPoint.directLighting / distance;
+                                break;
+                            }
+
 
                             if (cloudPoint.directLighting.x + cloudPoint.directLighting.y + cloudPoint.directLighting.z > 0.01) {
                                 probe.ignore = false;
@@ -311,7 +534,18 @@ void Scene::CalculateProbeLighting() {
                         rayCount += result.rayCount;
                     }
                 }
-                probe.color = probeColor / float(sampleCount);
+
+                float scale = 2 / VOXEL_SIZE / VOXEL_SIZE;
+
+                switch (method) {
+                case 0:
+                    probe.color = probeColor / float(sampleCount);
+                    break;
+                default:
+                    probe.color = probeColor / scale;
+                    break;
+                }
+
             }
         }
     }
@@ -324,6 +558,18 @@ void Scene::LoadLightSetup(int index) {
         Light lightD;
         lightD.x = 21;
         lightD.y = 21;
+        lightD.z = 18;
+        lightD.radius = 3.0f;
+        lightD.strength = 10.0f;
+        lightD.radius = 10;
+        _lights.push_back(lightD);
+    }
+
+    if (index == 2) {
+        _lights.clear();
+        Light lightD;
+        lightD.x = 2.8f / 0.2f;
+        lightD.y = 2.2f / 0.2f;
         lightD.z = 18;
         lightD.radius = 3.0f;
         lightD.strength = 1.0f;
@@ -363,4 +609,30 @@ void Scene::LoadLightSetup(int index) {
         _lights.push_back(lightC);
         _lights.push_back(lightD);
     }
+}
+
+GameObject* Scene::GetGameObjectByName(std::string name) {
+    if (name == "undefined") {
+        return nullptr;
+    }
+    for (GameObject& gameObject : _gameObjects) {
+        if (gameObject.GetName() == name) {
+            return &gameObject;
+        }
+    }
+    std::cout << "Scene::GetGameObjectByName() failed, no object with name \"" << name << "\"\n";
+    return nullptr;
+}
+
+AnimatedGameObject* Scene::GetAnimatedGameObjectByName(std::string name) {
+    if (name == "undefined") {
+        return nullptr;
+    }
+    for (AnimatedGameObject& gameObject : _animatedGameObjects) {
+        if (gameObject.GetName() == name) {
+            return &gameObject;
+        }
+    }
+    std::cout << "Scene::GetAnimatedGameObjectByName() failed, no object with name \"" << name << "\"\n";
+    return nullptr;
 }

@@ -17,6 +17,8 @@ public:
 public:
 	std::vector<Mesh> _meshes; 
 	std::vector<Triangle> _triangles;;
+	//std::vector<int> _meshIndices;
+	std::vector<std::string> _meshNames;
 
 public:
 	std::string _name;

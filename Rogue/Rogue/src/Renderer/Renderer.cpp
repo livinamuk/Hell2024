@@ -22,16 +22,17 @@
 #include <cstdlib>
 #include <format>
 
+#include "../Core/AnimatedGameObject.h"
+
 Shader _testShader;
 Shader _solidColorShader;
 Shader _shadowMapShader;
 Shader _UIShader;
 Shader _editorSolidColorShader;
+Shader _compositeShader;
+Shader _velocityMapShader;
 
 Mesh _cubeMesh;
-
-Model _keyModel;
-Model _sphereModel;
 
 GBuffer _gBuffer;
 GBuffer _gBufferFinalSize;
@@ -55,19 +56,25 @@ Texture3D _indirectLightingTexture;
 
 std::vector<ShadowMap> _shadowMaps;
 
+//AnimatedGameObject _enemy;
+//AnimatedGameObject _ak47;
+//Enemy _glock2;
+
 struct Toggles {
     bool drawLights = false;
     bool drawProbes = false;
     bool drawLines = false;
 } _toggles;
 
-enum RenderMode { COMPOSITE = 0, POINT_CLOUD, DIRECT_LIGHT, INDIRECT_LIGHT, MODE_COUNT} _mode;
+enum RenderMode { COMPOSITE = 0, DIRECT_LIGHT, INDIRECT_LIGHT, POINT_CLOUD,  MODE_COUNT} _mode;
 
 void QueueLineForDrawing(Line line);
 void QueuePointForDrawing(Point point);
 void QueueTriangleForLineRendering(Triangle& triangle);
 void QueueTriangleForSolidRendering(Triangle& triangle);
 void DrawScene(Shader& shader);
+void DrawAnimatedScene(Shader& shader);
+void DrawFullscreenQuad();
 
 int _voxelTextureWidth = { 0 };
 int _voxelTextureHeight = { 0 };
@@ -82,16 +89,15 @@ void Renderer::Init() {
 
     glGenVertexArrays(1, &_pointLineVAO);
     glGenBuffers(1, &_pointLineVBO);
-    glPointSize(4);
-
-    _keyModel.Load("res/models/SmallKey.obj");
-    _sphereModel.Load("res/models/Sphere.obj");
-
+    glPointSize(8);
+        
     _testShader.Load("test.vert", "test.frag");
     _solidColorShader.Load("solid_color.vert", "solid_color.frag");
     _shadowMapShader.Load("shadowmap.vert", "shadowmap.frag", "shadowmap.geom");    
     _UIShader.Load("ui.vert", "ui.frag");
     _editorSolidColorShader.Load("editor_solid_color.vert", "editor_solid_color.frag");
+    _compositeShader.Load("composite.vert", "composite.frag"); 
+    _velocityMapShader.Load("velocity_map.vert", "velocity_map.frag");
 
     _floorBoardsTexture = Texture("res/textures/floorboards.png");
     _wallpaperTexture = Texture("res/textures/wallpaper.png");
@@ -133,6 +139,215 @@ void DrawScene(Shader& shader) {
         AssetManager::BindMaterialByIndex(ceiling.materialIndex);
         ceiling.Draw();
     }
+
+    for (Wall& wall : Scene::_walls) {
+
+        if (wall.height != WALL_HEIGHT)
+            continue;
+
+        static int trimMaterialIndex = AssetManager::GetMaterialIndex("Trims");
+        AssetManager::BindMaterialByIndex(trimMaterialIndex);
+        Transform t;
+        t.position = wall.begin;
+        t.rotation.y = Util::YRotationBetweenTwoPoints(wall.begin, wall.end);
+        t.scale.x = glm::distance(wall.end, wall.begin);
+        shader.SetMat4("model", t.to_mat4());
+        AssetManager::GetModel("TrimCeiling").Draw();
+        
+    }
+
+    for (GameObject& gameObject : Scene::_gameObjects) {
+        shader.SetMat4("model", gameObject.GetModelMatrix());
+        for (int i = 0; i < gameObject._meshMaterialIndices.size(); i++) {
+            AssetManager::BindMaterialByIndex(gameObject._meshMaterialIndices[i]);
+            gameObject._model->_meshes[i].Draw();
+        }
+    }
+}
+
+void DrawAnimatedObject(Shader& shader, AnimatedGameObject* animatedGameObject) {
+
+    if (!animatedGameObject) {
+        std::cout << "You tried to draw an nullptr AnimatedGameObject\n";
+        return;
+    }
+    if (!animatedGameObject->_skinnedModel) {
+        std::cout << "You tried to draw an AnimatedGameObject with a nullptr skinned model\n";
+        return;
+    }
+
+    shader.SetMat4("model", animatedGameObject->GetModelMatrix());
+
+    std::vector<glm::mat4> tempSkinningMats;
+    for (unsigned int i = 0; i < animatedGameObject->_animatedTransforms.local.size(); i++) {
+
+        glm::mat4 matrix = animatedGameObject->_animatedTransforms.local[i];
+        shader.SetMat4("skinningMats[" + std::to_string(i) + "]", matrix);
+
+        matrix = animatedGameObject->_animatedTransformsPrevious.local[i];
+        shader.SetMat4("skinningMatsPrevious[" + std::to_string(i) + "]", matrix);
+
+        tempSkinningMats.push_back(matrix);
+    }
+    shader.SetMat4("model", animatedGameObject->GetModelMatrix());
+
+    SkinnedModel& skinnedModel = *animatedGameObject->_skinnedModel;
+
+    glBindVertexArray(skinnedModel.m_VAO);
+
+    for (auto bone : animatedGameObject->_animatedTransforms.worldspace) {
+        glm::mat4 m = animatedGameObject->GetModelMatrix() * bone;
+        float x = m[3][0];
+        float y = m[3][1];
+        float z = m[3][2];
+        //Point p(glm::vec3(x, y, z), YELLOW);
+        Point p2(glm::vec3(x, y, z), RED);
+   //     QueuePointForDrawing(p2);
+    }
+
+    std::vector<Triangle> enemyTris;
+
+    for (int i = 0; i < skinnedModel.m_meshEntries.size(); i++) {
+
+
+        if (skinnedModel.m_meshEntries[i].Name == "manniquen1_2.001" || 
+            skinnedModel.m_meshEntries[i].Name == "manniquen1_2") {
+            AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("Hands"));
+            //continue;
+        }
+        else if (skinnedModel.m_meshEntries[i].Name == "Shotgun Mesh") {
+            AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("Shotgun"));
+          
+        }
+        else if (skinnedModel.m_meshEntries[i].Name == "SK_FPSArms_Female.001" || 
+            skinnedModel.m_meshEntries[i].Name == "SK_FPSArms_Female") {
+            continue;
+            AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("NumGrid"));
+            AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("FemaleArms"));
+        }
+        else {
+            AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("Glock"));
+            //AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("NumGrid"));
+        }
+        
+        
+        if (i == 0) {
+            //_skinBodyTexture.Bind(5);
+        }
+        else if (i == 1) {
+            //_skinHeadTexture.Bind(5);
+        }
+        else if (i == 2) {
+            //_skinBodyTexture.Bind(5);
+        }
+        else if (i == 3) {
+            //_skinBodyTexture.Bind(5);
+        }
+        else if (i == 4) {
+            //_skinBodyTexture.Bind(5);
+        }
+        else if (i == 5) {
+            //_eyesTexture.Bind(5);
+        }
+        else if (i == 6) {
+            // _eyesTexture.Bind(5);
+        }
+        else if (i == 7) {
+            // _jeansTexture.Bind(5);
+        }
+
+        glDrawElementsBaseVertex(GL_TRIANGLES, skinnedModel.m_meshEntries[i].NumIndices, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int) * skinnedModel.m_meshEntries[i].BaseIndex), skinnedModel.m_meshEntries[i].BaseVertex);
+
+        /*int eyeMeshIndex = 5;
+        int eyeMeshIndex2 = 6;
+
+        if (i != eyeMeshIndex && i != eyeMeshIndex2)
+        {
+            int baseIndex = skinnedModel.m_meshEntries[i].BaseIndex;
+            int BaseVertex = skinnedModel.m_meshEntries[i].BaseVertex;
+
+            for (int j = 0; j < skinnedModel.m_meshEntries[i].NumIndices; j += 3) {
+
+                int index0 = skinnedModel.Indices[j + 0 + baseIndex];
+                int index1 = skinnedModel.Indices[j + 1 + baseIndex];
+                int index2 = skinnedModel.Indices[j + 2 + baseIndex];
+                glm::vec3 p1 = skinnedModel.Positions[index0 + BaseVertex];
+                glm::vec3 p2 = skinnedModel.Positions[index1 + BaseVertex];
+                glm::vec3 p3 = skinnedModel.Positions[index2 + BaseVertex];
+                VertexBoneData vert1BoneData = skinnedModel.Bones[index0 + BaseVertex];
+                VertexBoneData vert2BoneData = skinnedModel.Bones[index1 + BaseVertex];
+                VertexBoneData vert3BoneData = skinnedModel.Bones[index2 + BaseVertex];
+
+                {
+                    glm::vec4 totalLocalPos = glm::vec4(0);
+                    glm::vec4 vertexPosition = glm::vec4(p1, 1.0);
+
+
+                    for (int k = 0; k < 4; k++) {
+                        glm::mat4 jointTransform = tempSkinningMats[int(vert1BoneData.IDs[k])];
+                        glm::vec4 posePosition = jointTransform * vertexPosition * vert1BoneData.Weights[k];
+                        totalLocalPos += posePosition;
+                    }
+                    p1 = totalLocalPos;
+                }
+                {
+                    glm::vec4 totalLocalPos = glm::vec4(0);
+                    glm::vec4 vertexPosition = glm::vec4(p2, 1.0);
+
+                    for (int k = 0; k < 4; k++) {
+                        glm::mat4 jointTransform = tempSkinningMats[int(vert2BoneData.IDs[k])];
+                        glm::vec4 posePosition = jointTransform * vertexPosition * vert2BoneData.Weights[k];
+                        totalLocalPos += posePosition;
+                    }
+                    p2 = totalLocalPos;
+                }
+                {
+                    glm::vec4 totalLocalPos = glm::vec4(0);
+                    glm::vec4 vertexPosition = glm::vec4(p3, 1.0);
+
+                    for (int k = 0; k < 4; k++) {
+                        glm::mat4 jointTransform = tempSkinningMats[int(vert3BoneData.IDs[k])];
+                        glm::vec4 posePosition = jointTransform * vertexPosition * vert3BoneData.Weights[k];
+                        totalLocalPos += posePosition;
+                    }
+                    p3 = totalLocalPos;
+                }
+
+                Line lineA, lineB, lineC;
+                lineA.p1 = Point(p1, YELLOW);
+                lineA.p2 = Point(p2, YELLOW);
+                lineB.p1 = Point(p2, YELLOW);
+                lineB.p2 = Point(p3, YELLOW);
+                lineC.p1 = Point(p3, YELLOW);
+                lineC.p2 = Point(p1, YELLOW);
+
+                // QueueLineForDrawing(lineA);
+              //   QueueLineForDrawing(lineB);
+               //  QueueLineForDrawing(lineC);
+
+                Triangle tri;
+                tri.p1 = p1;
+                tri.p2 = p2;
+                tri.p3 = p3;
+                enemyTris.push_back(tri);
+            }
+        }*/
+    }
+}
+
+void DrawAnimatedScene(Shader& shader) {
+
+    shader.Use();
+    shader.SetBool("isAnimated", true);
+
+    DrawAnimatedObject(shader, Scene::GetAnimatedGameObjectByName("Enemy"));
+
+    glm::mat4 projection = glm::perspective(1.0f, (float)GL::GetWindowWidth() / (float)GL::GetWindowHeight(), 0.01f, 100.0f);
+    shader.SetMat4("projection", projection);
+
+    DrawAnimatedObject(shader, Scene::GetAnimatedGameObjectByName("AKS74U"));
+
+    shader.SetBool("isAnimated", false);
 }
 
 
@@ -187,9 +402,39 @@ void Renderer::RenderFrame() {
         _testShader.SetInt("mode", 3);
     }
 
-    _gBuffer.Bind();
-    _gBuffer.EnableAllDrawBuffers();
+    glm::mat4 projection = glm::perspective(0.9f, (float)GL::GetWindowWidth() / (float)GL::GetWindowHeight(), 0.01f, 100.0f);
+   
+  //  Transform cameraRotationCorrection;
+  //  cameraRotationCorrection.rotation.x = HELL_PI / 2;
+  //  cameraRotationCorrection.rotation.y = HELL_PI;
 
+    AnimatedGameObject* aks74u = Scene::GetAnimatedGameObjectByName("AKS74U");
+    glm::mat4 view = glm::mat4(glm::mat3(aks74u->_cameraMatrix)) * Player::GetViewMatrix();
+   // glm::mat4 view =  Player::GetViewMatrix();
+   // std::cout << Util::Mat4ToString(_ak47._cameraMatrix) << "\n";
+
+    // Previous Frame
+    _gBuffer.Bind();
+    glViewport(0, 0, _gBuffer.GetWidth(), _gBuffer.GetHeight());
+    glEnable(GL_DEPTH_TEST);
+    glEnable(GL_CULL_FACE);
+    glDrawBuffer(GL_COLOR_ATTACHMENT3);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    _velocityMapShader.Use();
+    _velocityMapShader.SetMat4("projection", projection);
+    _velocityMapShader.SetMat4("view", view);
+    _velocityMapShader.SetMat4("model", glm::mat4(1));
+    DrawScene(_velocityMapShader);
+    DrawAnimatedScene(_velocityMapShader);
+
+
+
+    // Current frame
+
+
+    _gBuffer.Bind();
+    unsigned int attachments[2] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 };
+    glDrawBuffers(2, attachments);
     glViewport(0, 0, _gBuffer.GetWidth(), _gBuffer.GetHeight());
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -197,8 +442,19 @@ void Renderer::RenderFrame() {
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
 
-    glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)GL::GetWindowWidth() / (float)GL::GetWindowHeight(), 0.1f, 100.0f);
-    glm::mat4 view = Player::GetViewMatrix();
+
+    glActiveTexture(GL_TEXTURE8);
+    glBindTexture(GL_TEXTURE_2D, _gBuffer._gVelocityMapTexture);
+
+    //projection = glm::perspective(0.9f, (float)GL::GetWindowWidth() / (float)GL::GetWindowHeight(), 0.1f, 100.0f);
+
+    //Transform cameraRotationCorrection;
+    //cameraRotationCorrection.rotation.x = HELL_PI / 2;
+    //cameraRotationCorrection.rotation.z = HELL_PI;
+
+    //glm::mat4 view = glm::mat4(glm::mat3(_glock2._cameraMatrix)) * cameraRotationCorrection.to_mat4() * Player::GetViewMatrix();
+
+    //glm::mat4 view = Player::GetViewMatrix();// *_glock2._cameraMatrix;
 
     _testShader.Use();
     _testShader.SetMat4("projection", projection);
@@ -245,8 +501,23 @@ void Renderer::RenderFrame() {
     glActiveTexture(GL_TEXTURE0);
     glTexSubImage3D(GL_TEXTURE_3D, 0, 0, 0, 0, width, height, depth, GL_RGBA, GL_FLOAT, data.data());
 
+    static float time = 0;
+    time += 0.01;
     _testShader.SetMat4("model", glm::mat4(1));
+    _testShader.SetFloat("time", time);
+    _testShader.SetFloat("screenWidth", GetRenderWidth());
+    _testShader.SetFloat("screenHeight", GetRenderHeight());
+
     DrawScene(_testShader);
+    DrawAnimatedScene(_testShader);
+
+
+
+
+
+    //glViewport(0, 0, _gBuffer.GetWidth(), _gBuffer.GetHeight());
+   // glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+   // glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     glDisable(GL_DEPTH_TEST);
 
@@ -325,8 +596,9 @@ void Renderer::RenderFrame() {
         i++;
     }
             
-    glEnable(GL_DEPTH_TEST);
-
+  //  glEnable(GL_DEPTH_TEST);
+    glDisable(GL_DEPTH_TEST);
+    _solidColorShader.Use();
     _solidColorShader.SetMat4("model", glm::mat4(1));
     _solidColorShader.SetBool("uniformColor", false);
     RenderImmediate();
@@ -335,7 +607,11 @@ void Renderer::RenderFrame() {
  
     if (_toggles.drawLines) {
         for (Line& line : Scene::_worldLines) {
-            QueueLineForDrawing(line);
+            //QueueLineForDrawing(line);
+        }
+        for (Triangle& tri : Scene::_triangleWorld) {
+            tri.color = YELLOW;
+            //QueueTriangleForLineRendering(tri);
         }
     }
 
@@ -351,16 +627,21 @@ void Renderer::RenderFrame() {
         }
     }
 
-    RayCastResult cameraRayData;
-    glm::vec3 rayOrigin = Player::GetViewPos();
-    glm::vec3 rayDirection = Player::GetCameraFront() * glm::vec3(-1);
-    Util::EvaluateRaycasts(rayOrigin, rayDirection, 9999, Scene::_triangleWorld, RaycastObjectType::FLOOR, glm::mat4(1), cameraRayData);
-   // if (cameraRayData.found)
-   //     QueueTriangleForSolidRendering(cameraRayData.triangle);
+    if (_toggles.drawLines) {
+        RayCastResult cameraRayData;
+        glm::vec3 rayOrigin = Player::GetViewPos();
+        glm::vec3 rayDirection = Player::GetCameraFront() * glm::vec3(-1);
+        Util::EvaluateRaycasts(rayOrigin, rayDirection, 9999, Scene::_triangleWorld, RaycastObjectType::FLOOR, glm::mat4(1), cameraRayData);
+        if (cameraRayData.found) {
+            cameraRayData.triangle.color = YELLOW;
+            glDisable(GL_DEPTH_TEST);
+            QueueTriangleForLineRendering(cameraRayData.triangle);
+        }
 
-  //  std::cout << cameraRayData.rayCount << "\n";
-
-    RenderImmediate();
+       //  std::cout << cameraRayData.rayCount << "\n";
+    }
+        RenderImmediate();
+   
 
 
     if (_toggles.drawLines) {
@@ -425,11 +706,26 @@ void Renderer::RenderFrame() {
         _shadowMapShader.SetVec3("lightPosition", position);
         _shadowMapShader.SetMat4("model", glm::mat4(1));
         DrawScene(_shadowMapShader);
+        //DrawAnimatedScene(_shadowMapShader);
     }
+
+    // Composite pass
+    _gBuffer.Bind();
+    glDrawBuffer(GL_COLOR_ATTACHMENT2);
+    glDisable(GL_DEPTH_TEST);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, _gBuffer._gAlbedoTexture);
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, _gBuffer._gVelocityMapTexture);
+    glActiveTexture(GL_TEXTURE2);
+    glViewport(0, 0, _gBuffer.GetWidth(), _gBuffer.GetHeight());
+    _compositeShader.Use();
+    DrawFullscreenQuad();
 
     // Blit image back to a smaller FBO
     glBindFramebuffer(GL_READ_FRAMEBUFFER, _gBuffer.GetID());
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, _gBufferFinalSize.GetID());
+    glReadBuffer(GL_COLOR_ATTACHMENT2);
     glBlitFramebuffer(0, 0, _gBuffer.GetWidth(), _gBuffer.GetHeight(), 0, 0, _gBufferFinalSize.GetWidth(), _gBufferFinalSize.GetHeight(), GL_COLOR_BUFFER_BIT, GL_LINEAR);
 
     // Render UI
@@ -487,6 +783,8 @@ void Renderer::HotloadShaders() {
     _solidColorShader.Load("solid_color.vert", "solid_color.frag");
     _UIShader.Load("ui.vert", "ui.frag");
     _editorSolidColorShader.Load("editor_solid_color.vert", "editor_solid_color.frag");
+    _compositeShader.Load("composite.vert", "composite.frag");
+    _velocityMapShader.Load("velocity_map.vert", "velocity_map.frag");
 }
 
 Texture3D& Renderer::GetIndirectLightingTexture() {
@@ -710,4 +1008,30 @@ void QueueTriangleForSolidRendering(Triangle& triangle) {
     _solidTrianglePoints.push_back(Point(triangle.p1, triangle.color));
     _solidTrianglePoints.push_back(Point(triangle.p2, triangle.color));
     _solidTrianglePoints.push_back(Point(triangle.p3, triangle.color));
+}
+
+void DrawFullscreenQuad() {
+    static GLuint vao = 0;
+    if (vao == 0) {
+        float vertices[] = {
+            // positions         texcoords
+            -1.0f,  1.0f, 0.0f,  0.0f, 1.0f,
+            -1.0f, -1.0f, 0.0f,  0.0f, 0.0f,
+             1.0f,  1.0f, 0.0f,  1.0f, 1.0f,
+             1.0f, -1.0f, 0.0f,  1.0f, 0.0f,
+        };
+        unsigned int vbo;
+        glGenVertexArrays(1, &vao);
+        glGenBuffers(1, &vbo);
+        glBindVertexArray(vao);
+        glBindBuffer(GL_ARRAY_BUFFER, vbo);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), &vertices, GL_STATIC_DRAW);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+        glEnableVertexAttribArray(1);
+    }
+    glBindVertexArray(vao);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    glBindVertexArray(0);
 }

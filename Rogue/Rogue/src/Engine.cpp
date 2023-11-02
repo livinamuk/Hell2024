@@ -16,7 +16,8 @@
 #include "tracy/Tracy.hpp"
 #include "tracy/TracyOpenGL.hpp"
 
-enum class EngineMode {Game, Editor} _engineMode;
+enum class EngineMode { Game, Editor } _engineMode;
+float _deltaTime = 0;
 
 void Engine::Run() {
 
@@ -27,12 +28,27 @@ void Engine::Run() {
 
         GL::ProcessInput();
 
-        float deltaTime = 1.0f / 60.0f;
-        Update(deltaTime);
+        float accumulator = 0;
+        static float lastTime = (float)glfwGetTime();
+        float currenttime = glfwGetTime();
+        _deltaTime = currenttime - lastTime;
+        lastTime = currenttime;
+        if (_deltaTime > 0.25) {
+            _deltaTime = 0.25;
+        }
+        float dt = 0.01;
+        accumulator += _deltaTime;
+        while (accumulator >= dt) {
+            accumulator -= dt;
+        }
+        accumulator += _deltaTime;
+
+        Update(_deltaTime);
 
         if (_engineMode == EngineMode::Game) {
 
             //TracyGpuZone("RenderFrame");
+            Scene::Update(_deltaTime);
             Renderer::RenderFrame();
         }
         if (_engineMode == EngineMode::Editor) {
@@ -54,10 +70,11 @@ void Engine::Init() {
     std::cout << "We are all alone on life's journey, held captive by the limitations of human conciousness.\n";
 
     GL::Init(1920, 1080);
-    
-    Input::Init(GL::GetWindowPtr());
-    Player::Init(glm::vec3(0, 0, 3.6f));
 
+    Input::Init(GL::GetWindowPtr());
+   // Player::Init(glm::vec3(0, 0, 3.6f));
+    Player::Init(glm::vec3(4.0f, 0, 3.6f));
+    Player::SetRotation(glm::vec3(-0.17, 1.54f, 0)); 
 
     Editor::Init();
 
@@ -134,23 +151,59 @@ void LazyKeyPresses() {
         Renderer::WipeShadowMaps();
         Scene::LoadLightSetup(1);
         Scene::CalculatePointCloudDirectLighting();
-        Scene::CalculateProbeLighting();
+        Scene::CalculateProbeLighting(Renderer::_method);
         Audio::PlayAudio("RE_Beep.wav", 0.25f);
     }
     if (Input::KeyPressed(HELL_KEY_2)) {
         Renderer::WipeShadowMaps();
         Scene::LoadLightSetup(0);
         Scene::CalculatePointCloudDirectLighting();
-        Scene::CalculateProbeLighting();
+        Scene::CalculateProbeLighting(Renderer::_method);
+        Audio::PlayAudio("RE_Beep.wav", 0.25f);
+    }
+    if (Input::KeyPressed(HELL_KEY_3)) {
+        Renderer::WipeShadowMaps();
+        Scene::LoadLightSetup(2);
+        Scene::CalculatePointCloudDirectLighting();
+        Scene::CalculateProbeLighting(Renderer::_method);
         Audio::PlayAudio("RE_Beep.wav", 0.25f);
     }
     if (Input::KeyPressed(HELL_KEY_P)) {
-        Scene::CalculateProbeLighting();
+        Scene::CalculateProbeLighting(Renderer::_method);
+    }
+
+    if (Input::KeyPressed(HELL_KEY_4)) {
+        Scene::CalculateProbeLighting(0);
+        Audio::PlayAudio("RE_Beep.wav", 0.25f);
+    }
+    if (Input::KeyPressed(HELL_KEY_5)) {
+        Scene::CalculateProbeLighting(1);
+        Audio::PlayAudio("RE_Beep.wav", 0.25f);
+    }
+    if (Input::KeyPressed(HELL_KEY_6)) {
+        Scene::CalculateProbeLighting(2);
+        Audio::PlayAudio("RE_Beep.wav", 0.25f);
+    }
+    if (Input::KeyPressed(HELL_KEY_7)) {
+        Scene::CalculateProbeLighting(3);
+        Audio::PlayAudio("RE_Beep.wav", 0.25f);
+    }
+    if (Input::KeyPressed(HELL_KEY_8)) {
+        Scene::CalculateProbeLighting(4);
+        Audio::PlayAudio("RE_Beep.wav", 0.25f);
+    }
+    if (Input::KeyPressed(HELL_KEY_9)) {
+        Scene::CalculateProbeLighting(5);
+        Audio::PlayAudio("RE_Beep.wav", 0.25f);
+    }
+    if (Input::KeyPressed(HELL_KEY_0)) {
+        Scene::CalculateProbeLighting(6);
+        Audio::PlayAudio("RE_Beep.wav", 0.25f);
     }
 }
 
 void Engine::Update(float deltaTime) {
-    
+
     Input::Update(GL::GetWindowPtr());
     Audio::Update();
     TextBlitter::Update(1.0f / 60);

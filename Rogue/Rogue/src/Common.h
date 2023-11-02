@@ -10,12 +10,20 @@
 #include "glm/gtx/hash.hpp"
 #include "Math.h"
 
+#define NOOSE_PI 3.14159265359f
+#define NOOSE_HALF_PI 1.57079632679f
 #define HELL_PI 3.141592653589793f
 
 #define MAP_WIDTH   32
 #define MAP_HEIGHT  22
 #define MAP_DEPTH   36
 #define VOXEL_SIZE  0.2f
+
+#define ZERO_MEM(a) memset(a, 0, sizeof(a))
+#define ARRAY_SIZE_IN_ELEMENTS(a) (sizeof(a)/sizeof(a[0]))
+#define SAFE_DELETE(p) if (p) { delete p; p = NULL; }
+#define ToRadian(x) (float)(((x) * HELL_PI / 180.0f))
+#define ToDegree(x) (float)(((x) * 180.0f / HELL_PI)) 
 
 #define BLACK   glm::vec3(0,0,0)
 #define WHITE   glm::vec3(1,1,1)
@@ -39,6 +47,25 @@
 #define NRM_Z_FORWARD glm::vec3(0,0,1)
 #define NRM_Z_BACK glm::vec3(0,0,-1)
 
+#define POSITION_LOCATION    0
+#define NORMAL_LOCATION		 1
+#define TEX_COORD_LOCATION   2
+#define TANGENT_LOCATION     3
+#define BITANGENT_LOCATION   4
+#define BONE_ID_LOCATION     5
+#define BONE_WEIGHT_LOCATION 6
+
+enum VB_TYPES {
+    INDEX_BUFFER,
+    POS_VB,
+    NORMAL_VB,
+    TEXCOORD_VB,
+    TANGENT_VB,
+    BITANGENT_VB,
+    BONE_VB,
+    NUM_VBs
+};
+
 struct Transform {
 	glm::vec3 position = glm::vec3(0);
 	glm::vec3 rotation = glm::vec3(0);
@@ -57,6 +84,9 @@ struct Vertex {
     glm::vec2 uv;
     glm::vec3 tangent;
     glm::vec3 bitangent;
+
+    glm::vec4 weight;
+    glm::ivec4 boneID;
 
     bool operator==(const Vertex& other) const {
         return position == other.position && normal == other.normal && uv == other.uv;

@@ -15,7 +15,7 @@ namespace GL {
     inline int _mouseScreenY = 0;
     inline int _windowHasFocus = true;
     inline bool _forceCloseWindow = false;
-    inline WindowMode _windowMode = FULLSCREEN;
+    inline WindowMode _windowMode = WINDOWED;// FULLSCREEN;
 }
 
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
@@ -184,6 +184,9 @@ void GL::Init(int width, int height) {
 
     
     glfwSetInputMode(_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+
+    // Cap to 60fps
+    //glfwSwapInterval(1);
 }
 
 void GL::ProcessInput() {

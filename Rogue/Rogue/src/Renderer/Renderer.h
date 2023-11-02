@@ -22,4 +22,6 @@ namespace Renderer {
 	void NextMode();
 	void PreviousMode();
 	void RecreateFrameBuffers();
+
+	inline int _method = 1;
 }

@@ -1,5 +1,7 @@
 #pragma once
 #include "../Common.h"
+#include "GameObject.h"
+#include "AnimatedGameObject.h"
 
 #define WALL_HEIGHT 2.4f
 
@@ -58,7 +60,7 @@ struct Wall {
     int materialIndex = 0;
 
     float wallHeight = 2.4f;
-    
+
     Wall(glm::vec3 begin, glm::vec3 end, float height, int materialIndex) {
         this->materialIndex = materialIndex;
         this->begin = begin;
@@ -127,7 +129,7 @@ struct Floor {
     std::vector<Vertex> vertices;
     std::vector<unsigned int> indices = { 0, 1, 2, 2, 3, 0 };
     int materialIndex = 0;
-    
+
     Floor(float x1, float z1, float x2, float z2, float height, int materialIndex) {
         this->materialIndex = materialIndex;
         this->x1 = x1;
@@ -194,7 +196,7 @@ struct Ceiling {
     std::vector<Vertex> vertices;
     std::vector<unsigned int> indices = { 2, 1, 0, 0, 3, 2 };
     int materialIndex = 0;
-    
+
     Ceiling(float x1, float z1, float x2, float z2, float height, int materialIndex) {
         this->materialIndex = materialIndex;
         this->x1 = x1;
@@ -265,11 +267,16 @@ namespace Scene {
     inline std::vector<CloudPoint> _cloudPoints;
     inline std::vector<Triangle> _triangleWorld;
     inline std::vector<Line> _worldLines;
+    inline std::vector<GameObject> _gameObjects;
+    inline std::vector<AnimatedGameObject> _animatedGameObjects;
     inline std::vector<Light> _lights;
     inline GridProbe _propogrationGrid[PROPOGATION_WIDTH][PROPOGATION_HEIGHT][PROPOGATION_DEPTH];
 
     void Init();
+    void Update(float deltaTime);
     void CalculatePointCloudDirectLighting();
-    void CalculateProbeLighting();
+    void CalculateProbeLighting(int method);
     void LoadLightSetup(int index);
+    GameObject* GetGameObjectByName(std::string);
+    AnimatedGameObject* GetAnimatedGameObjectByName(std::string);
 }

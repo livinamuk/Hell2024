@@ -9,6 +9,8 @@
 #include <random>
 #include <format>
 #include <filesystem>
+#include <assimp/matrix3x3.h>
+#include <assimp/matrix4x4.h>
 
 namespace Util {
 
@@ -165,6 +167,33 @@ namespace Util {
         return minOutRange + (maxOutRange - minOutRange) * x;
     }
 
+    inline void AnyHit(glm::vec3 rayOrigin, glm::vec3 rayDirection, float maxDistance, std::vector<Triangle>& triangles, RayCastResult& out, bool ignoreBackFacing = true) {
+
+        for (Triangle& triangle : triangles) {
+
+            // Skip if triangle is facing away from light direction
+            float vdotn = dot(rayDirection, triangle.normal);
+            if (ignoreBackFacing && vdotn > 0) {
+                continue;
+            }
+
+            IntersectionResult result = RayTriangleIntersectTest(triangle.p1, triangle.p2, triangle.p3, rayOrigin, rayDirection);
+            float minDist = 0.01f;
+            if (result.found && result.distance > minDist && result.distance < maxDistance) {
+                if (result.distance < out.distanceToHit) {
+                    out.triangle = triangle;
+                    out.distanceToHit = result.distance;
+                    out.baryPosition = result.baryPosition;
+                    out.found = true;
+                    out.rayCount++;
+                    return;
+                }
+            }
+            out.rayCount++;
+        }
+    }
+
+
     inline void EvaluateRaycasts(glm::vec3 rayOrigin, glm::vec3 rayDirection, float maxDistance, std::vector<Triangle>& triangles, RaycastObjectType parentType, glm::mat4 parentMatrix, RayCastResult& out, bool ignoreBackFacing = true) {
         glm::mat4 inverseTransform = glm::inverse(parentMatrix);
 
@@ -250,5 +279,124 @@ namespace Util {
         info.directory = directory;
         info.materialType = materialType;
         return info;
+    }
+
+    inline float YRotationBetweenTwoPoints(glm::vec3 a, glm::vec3 b) {
+        float delta_x = b.x - a.x;
+        float delta_y = b.z - a.z;
+        float theta_radians = atan2(delta_y, delta_x);
+        return -theta_radians;
+    }
+
+    inline glm::vec3 GetTranslationFromMatrix(glm::mat4 matrix) {
+        return glm::vec3(matrix[3][0], matrix[3][1], matrix[3][2]);
+    }
+
+    inline void InterpolateQuaternion(glm::quat& Out, const glm::quat& Start, const glm::quat& End, float pFactor) {
+        // calc cosine theta
+        float cosom = Start.x * End.x + Start.y * End.y + Start.z * End.z + Start.w * End.w;
+        // adjust signs (if necessary)
+        glm::quat end = End;
+        if (cosom < static_cast<float>(0.0)) {
+            cosom = -cosom;
+            end.x = -end.x;   // Reverse all signs
+            end.y = -end.y;
+            end.z = -end.z;
+            end.w = -end.w;
+        }
+        // Calculate coefficients
+        float sclp, sclq;
+        if ((static_cast<float>(1.0) - cosom) > static_cast<float>(0.0001)) // 0.0001 -> some epsillon
+        {
+            // Standard case (slerp)
+            float omega, sinom;
+            omega = std::acos(cosom); // extract theta from dot product's cos theta
+            sinom = std::sin(omega);
+            sclp = std::sin((static_cast<float>(1.0) - pFactor) * omega) / sinom;
+            sclq = std::sin(pFactor * omega) / sinom;
+        }
+        else {
+            // Very close, do linear interp (because it's faster)
+            sclp = static_cast<float>(1.0) - pFactor;
+            sclq = pFactor;
+        }
+        Out.x = sclp * Start.x + sclq * end.x;
+        Out.y = sclp * Start.y + sclq * end.y;
+        Out.z = sclp * Start.z + sclq * end.z;
+        Out.w = sclp * Start.w + sclq * end.w;
+    }
+
+    inline glm::mat4 Mat4InitScaleTransform(float ScaleX, float ScaleY, float ScaleZ) {
+        /*	glm::mat4 m = glm::mat4(1);
+            m[0][0] = ScaleX; m[0][1] = 0.0f;   m[0][2] = 0.0f;   m[0][3] = 0.0f;
+            m[1][0] = 0.0f;   m[1][1] = ScaleY; m[1][2] = 0.0f;   m[1][3] = 0.0f;
+            m[2][0] = 0.0f;   m[2][1] = 0.0f;   m[2][2] = ScaleZ; m[2][3] = 0.0f;
+            m[3][0] = 0.0f;   m[3][1] = 0.0f;   m[3][2] = 0.0f;   m[3][3] = 1.0f;
+            return m;*/
+
+        return glm::scale(glm::mat4(1.0), glm::vec3(ScaleX, ScaleY, ScaleZ));
+    }
+
+    inline glm::mat4 Mat4InitRotateTransform(float RotateX, float RotateY, float RotateZ) {
+        glm::mat4 rx = glm::mat4(1);
+        glm::mat4 ry = glm::mat4(1);
+        glm::mat4 rz = glm::mat4(1);
+
+        const float x = ToRadian(RotateX);
+        const float y = ToRadian(RotateY);
+        const float z = ToRadian(RotateZ);
+
+        rx[0][0] = 1.0f; rx[0][1] = 0.0f; rx[0][2] = 0.0f; rx[0][3] = 0.0f;
+        rx[1][0] = 0.0f; rx[1][1] = cosf(x); rx[1][2] = -sinf(x); rx[1][3] = 0.0f;
+        rx[2][0] = 0.0f; rx[2][1] = sinf(x); rx[2][2] = cosf(x); rx[2][3] = 0.0f;
+        rx[3][0] = 0.0f; rx[3][1] = 0.0f; rx[3][2] = 0.0f; rx[3][3] = 1.0f;
+
+        ry[0][0] = cosf(y); ry[0][1] = 0.0f; ry[0][2] = -sinf(y); ry[0][3] = 0.0f;
+        ry[1][0] = 0.0f; ry[1][1] = 1.0f; ry[1][2] = 0.0f; ry[1][3] = 0.0f;
+        ry[2][0] = sinf(y); ry[2][1] = 0.0f; ry[2][2] = cosf(y); ry[2][3] = 0.0f;
+        ry[3][0] = 0.0f; ry[3][1] = 0.0f; ry[3][2] = 0.0f; ry[3][3] = 1.0f;
+
+        rz[0][0] = cosf(z); rz[0][1] = -sinf(z); rz[0][2] = 0.0f; rz[0][3] = 0.0f;
+        rz[1][0] = sinf(z); rz[1][1] = cosf(z); rz[1][2] = 0.0f; rz[1][3] = 0.0f;
+        rz[2][0] = 0.0f; rz[2][1] = 0.0f; rz[2][2] = 1.0f; rz[2][3] = 0.0f;
+        rz[3][0] = 0.0f; rz[3][1] = 0.0f; rz[3][2] = 0.0f; rz[3][3] = 1.0f;
+
+        return rz * ry * rx;
+    }
+
+    inline glm::mat4 Mat4InitTranslationTransform(float x, float y, float z) {
+        return  glm::translate(glm::mat4(1.0f), glm::vec3(x, y, z));
+    }
+
+    inline glm::mat4 aiMatrix4x4ToGlm(const aiMatrix4x4& from) {
+        glm::mat4 to;
+        //the a,b,c,d in assimp is the row ; the 1,2,3,4 is the column
+        to[0][0] = from.a1; to[1][0] = from.a2; to[2][0] = from.a3; to[3][0] = from.a4;
+        to[0][1] = from.b1; to[1][1] = from.b2; to[2][1] = from.b3; to[3][1] = from.b4;
+        to[0][2] = from.c1; to[1][2] = from.c2; to[2][2] = from.c3; to[3][2] = from.c4;
+        to[0][3] = from.d1; to[1][3] = from.d2; to[2][3] = from.d3; to[3][3] = from.d4;
+        return to;
+    }
+
+    inline glm::mat4 aiMatrix3x3ToGlm(const aiMatrix3x3& from) {
+        glm::mat4 to;
+        to[0][0] = from.a1; to[1][0] = from.a2; to[2][0] = from.a3; to[3][0] = 0.0;
+        to[0][1] = from.b1; to[1][1] = from.b2; to[2][1] = from.b3; to[3][1] = 0.0;
+        to[0][2] = from.c1; to[1][2] = from.c2; to[2][2] = from.c3; to[3][2] = 0.0;
+        to[0][3] = 0.0; to[1][3] = 0.0; to[2][3] = 0.0; to[3][3] = 1.0;
+        return to;
+    }
+
+    inline bool StrCmp(const char* queryA, const char* queryB) {
+        if (strcmp(queryA, queryB) == 0)
+            return true;
+        else
+            return false;
+    }
+
+    inline const char* CopyConstChar(const char* text) {
+        char* b = new char[strlen(text) + 1] {};
+        std::copy(text, text + strlen(text), b);
+        return b;
     }
 }

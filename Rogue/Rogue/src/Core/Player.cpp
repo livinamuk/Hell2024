@@ -26,10 +26,17 @@ namespace Player {
 	float _breatheFrequency = 8;
 	float _headBobAmplitude = 0.00505f;
 	float _headBobFrequency = 25.0f;
+
+	Weapon _currentWeapon;
 }
 
 void Player::Init(glm::vec3 position) {
 	_position = position;
+	SetWeapon(Weapon::AKS74U);
+}
+
+void Player::SetWeapon(Weapon weapon) {
+	_currentWeapon = weapon;
 }
 
 void Player::Update(float deltaTime) {
@@ -46,6 +53,8 @@ void Player::Update(float deltaTime) {
 		_rotation.y = Util::FInterpTo(_rotation.y, targetYRot, deltaTime, cameraRotateSpeed);
 		_rotation.x = std::min(_rotation.x, 1.5f);
 		_rotation.x = std::max(_rotation.x, -1.5f);
+		targetXRot = std::min(targetXRot, 1.5f);
+		targetXRot = std::max(targetXRot, -1.5f);
 	}
 
 	float amt = 0.02f;
@@ -84,6 +93,9 @@ void Player::Update(float deltaTime) {
 		headBobTransform.position.x = cos(totalTime * _headBobFrequency) * _headBobAmplitude * 1;
 		headBobTransform.position.y = sin(totalTime * _headBobFrequency) * _headBobAmplitude * 2;
 	}
+
+	//headBobTransform = Transform();
+	//breatheTransform = Transform();
 
 	// View matrix
 	Transform camTransform;
@@ -170,4 +182,8 @@ glm::vec3 Player::GetCameraFront() {
 
 glm::vec3 Player::GetCameraUp() {
 	return _up;
+}
+
+void Player::SetRotation(glm::vec3 rotation) {
+	_rotation = rotation;
 }

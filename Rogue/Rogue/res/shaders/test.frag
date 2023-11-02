@@ -1,5 +1,9 @@
 #version 420 core
 
+layout (location = 0) out vec4 FragColor;
+layout (location = 1) out vec4 NormalsOut;
+layout (location = 2) out vec4 VelocityOut;
+
 //layout (binding = 0) uniform sampler2D tex;
 layout (binding = 0) uniform sampler3D tex;
 layout (binding = 1) uniform samplerCube shadowMap0;
@@ -9,6 +13,7 @@ layout (binding = 4) uniform samplerCube shadowMap3;
 layout (binding = 5) uniform sampler2D basecolorTexture;
 layout (binding = 6) uniform sampler2D normalTexture;
 layout (binding = 7) uniform sampler2D rmaTexture;
+layout (binding = 8) uniform sampler2D testTexture;
 
 uniform vec3 lightPosition[4];
 uniform vec3 lightColor[4];
@@ -18,7 +23,6 @@ uniform float lightRadius[4];
 in vec2 TexCoord;
 in vec3 WorldPos;
 
-out vec4 FragColor;
 uniform vec3 viewPos;
 uniform vec3 camForward;
 uniform vec3 lightingColor;
@@ -37,6 +41,10 @@ uniform mat4 view;
 in vec3 attrNormal;
 in vec3 attrTangent;
 in vec3 attrBiTangent;
+
+uniform float time;
+uniform float screenWidth;
+uniform float screenHeight;
 
 vec3 filmic(vec3 x) {
   vec3 X = max(vec3(0.0), x - 0.004);
@@ -109,7 +117,7 @@ float ShadowCalculation(samplerCube depthTex, vec3 lightPos, vec3 fragPos, vec3 
     float bias = max(0.0125 * (1.0 - dot(Normal, lightDir)), 0.00125);
     int samples = 20;
     float viewDistance = length(viewPos - fragPos);
-    float diskRadius = (1.0 + (viewDistance / far_plane)) / 2000.0;
+    float diskRadius = (1.0 + (viewDistance / far_plane)) / 200.0;
     for(int i = 0; i < samples; ++i)
     {
         float closestDepth = texture(depthTex, fragToLight + gridSamplingDisk[i] * diskRadius).r;
@@ -164,7 +172,7 @@ vec3 fresnelSchlick(float cosTheta, vec3 F0)
     return F0 + (1.0 - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
 }
 
-vec3 GetDirectLighting(vec3 lightPos, vec3 lightColor, float radius, float strength, vec3 Normal) {
+vec3 GetDirectLighting2(vec3 lightPos, vec3 lightColor, float radius, float strength, vec3 Normal) {
     float dist = distance(WorldPos, lightPos);
     //float att = 1.0 / (1.0 + 0.1 * dist + 0.01 * dist * dist);
     float att = smoothstep(radius, 0.0, length(lightPos - WorldPos));
@@ -305,7 +313,7 @@ vec3 microfacetBRDF(in vec3 L, in vec3 V, in vec3 N, in vec3 baseColor, in float
 }
 
 
-vec3 GetDirectLighting2(vec3 lightPos, vec3 lightColor, float radius, float strength, vec3 Normal) {
+vec3 GetDirectLighting(vec3 lightPos, vec3 lightColor, float radius, float strength, vec3 Normal) {
 //vec3 CalculatePBR (vec3 baseColor, vec3 normal, float roughness, float metallic, float ao, vec3 worldPos, vec3 camPos, Light light, int materialType) {
 	
 	// compute direct light	  
@@ -315,7 +323,7 @@ vec3 GetDirectLighting2(vec3 lightPos, vec3 lightColor, float radius, float stre
     vec3 lightDir = normalize(lightPos - WorldPos);           // they use something more sophisticated with a sphere
 	float lightDist = max(length(lightPos - WorldPos), 0.1);
 	float lightAttenuation = 1.0 / (lightDist*lightDist);
-	//lightAttenuation = clamp(lightAttenuation, 0.0, 1.0);					// THIS IS WRONG, but does stop super bright region around light source and doesn't seem to affect anything else...
+	lightAttenuation = clamp(lightAttenuation, 0.0, 1.0);					// THIS IS WRONG, but does stop super bright region around light source and doesn't seem to affect anything else...
 	float irradiance = max(dot(lightDir, Normal), 0.0) ;
 	irradiance *= lightAttenuation * lightRadiance ;
 		
@@ -346,6 +354,27 @@ vec3 GetDirectLighting2(vec3 lightPos, vec3 lightColor, float radius, float stre
 }
 
 
+// Valid from 1000 to 40000 K (and additionally 0 for pure full white)
+vec3 colorTemperatureToRGB(const in float temperature){
+  // Values from: http://blenderartists.org/forum/showthread.php?270332-OSL-Goodness&p=2268693&viewfull=1#post2268693   
+  mat3 m = (temperature <= 6500.0) ? mat3(vec3(0.0, -2902.1955373783176, -8257.7997278925690),
+	                                      vec3(0.0, 1669.5803561666639, 2575.2827530017594),
+	                                      vec3(1.0, 1.3302673723350029, 1.8993753891711275)) : 
+	 								 mat3(vec3(1745.0425298314172, 1216.6168361476490, -8257.7997278925690),
+   	                                      vec3(-2666.3474220535695, -2173.1012343082230, 2575.2827530017594),
+	                                      vec3(0.55995389139931482, 0.70381203140554553, 1.8993753891711275)); 
+  return mix(clamp(vec3(m[0] / (vec3(clamp(temperature, 1000.0, 40000.0)) + m[1]) + m[2]), vec3(0.0), vec3(1.0)), vec3(1.0), smoothstep(1000.0, 0.0, temperature));
+}
+
+vec3 filmPixel(vec2 uv) {
+    mat2x3 uvs = mat2x3(uv.xxx, uv.yyy) + mat2x3(vec3(0, 0.1, 0.2), vec3(0, 0.3, 0.4));
+    return fract(sin(uvs * vec2(12.9898, 78.233) * time) * 43758.5453);
+}
+
+float rand(vec2 co){
+    return fract(sin(dot(co, vec2(12.9898, 78.233))) * 43758.5453);
+}
+
 
 void main()
 {
@@ -353,20 +382,24 @@ void main()
     vec3 baseColor =  pow(texture(basecolorTexture, TexCoord).rgb, vec3(2.2));
     baseColor =  texture(basecolorTexture, TexCoord).rgb;
     vec3 normalMap =  texture2D(normalTexture, TexCoord).rgb;
-    //vec3 rma =  texture2D(rmaTexture, TexCoord).rgb;
+    vec3 rma =  texture2D(rmaTexture, TexCoord).rgb;
     //vec3 albedo = baseColor;
-    //float roughness = rma.r;
-    //float metallic = rma.g;
-    //float ao = rma.b;
+    float roughness = rma.r;
+    float metallic = rma.g;
+    float ao = rma.b;
    	mat3 tbn = mat3(normalize(attrTangent), normalize(attrBiTangent), normalize(attrNormal));	
 	vec3 normal = (tbn * normalize(normalMap.rgb * 2.0 - 1.0));
 	normal =  normalize(normal.rgb);
     
+   // if (length(attrBiTangent) < 0.5)
+      //  normal = attrNormal;
+
+    if (WorldPos.y > 2.49) {
+        //normal = mix(normal, attrNormal, 0.75);
+       // normal = attrNormal;
+    }
  
 
-
-    float doom = calculateDoomFactor(WorldPos, viewPos, 4, 1);
-    doom = getFogFactor(WorldPos, viewPos);
     
     // uniform color
     //FragColor = vec4(Normal * 0.5 + 0.5, 1.0f);
@@ -435,22 +468,28 @@ void main()
     directLighting += shadow1 * ligthting1;
     directLighting += shadow2 * ligthting2;
     directLighting += shadow3 * ligthting3;
-        
-    indirectLighting *= (0.1); 
+        //roughness = 1;
+    indirectLighting *= (0.01) * vec3(roughness); 
 
     // Composite
-    vec3 composite = directLighting + indirectLighting * 1;
-    
+    vec3 composite = directLighting  + (indirectLighting * baseColor);
+   //  composite = directLighting;
 
+   
+
+    float doom = calculateDoomFactor(WorldPos, viewPos, 4, 1);
+    doom = getFogFactor(WorldPos, viewPos);
 
     // Fog
-    //vec3 fogColor = vec3(0.050);
+    //vec3 fogColor = vec3(0.0050);
     //composite = mix(composite, fogColor, doom);
+  //  doom = clamp(doom, 0 , 1);
+   // composite *=  1 - doom;
     
     // Final color
     if (mode == 0) {
-        FragColor.rgb = directLighting + (indirectLighting * baseColor);
-      //  FragColor.rgb = directLighting ;
+        FragColor.rgb = composite;
+        FragColor.rgb = directLighting ;
         FragColor.a = 1;
     }
     if (mode == 1) {
@@ -472,5 +511,68 @@ void main()
     	// Filmic tonemapping
 //	FragColor.rgb = mix(FragColor.rgb, filmic(FragColor.rgb), 0.5);
 
-    //    FragColor.rgb = normal;
+        //FragColor.rgb = attrBiTangent;
+
+    //FragColor.rgb = vec3(1,0,0);
+
+    // Brightness and contrast
+	float contrast = 1.3;
+	float brightness = -0.03;
+    vec3 finalColor = FragColor.rgb;
+	finalColor = finalColor * contrast;
+	finalColor = finalColor + vec3(brightness);
+	
+	// Temperature
+	float temperature = 225; // mix(1000.0, 15000.0, (sin(iTime * (PI2 / 10.0)) * 0.5) + 0.5);
+	float temperatureStrength = 0.25;
+	//finalColor = mix(finalColor, finalColor * colorTemperatureToRGB(temperature), temperatureStrength); 
+	
+	// Filmic tonemapping
+	finalColor = mix(finalColor, filmic(finalColor), 1.0);
+
+    FragColor.rgb = finalColor;
+
+
+
+
+    // Noise
+
+   vec2 uv = gl_FragCoord.xy / vec2(screenWidth, screenHeight);
+
+        vec2 filmRes = vec2(screenWidth, screenHeight);
+    vec2 coord = gl_FragCoord.xy;
+     vec2 rest = modf(uv * filmRes, coord);
+
+        // Calculate noise
+    vec3 noise00 = filmPixel(coord / filmRes);
+    vec3 noise01 = filmPixel((coord + vec2(0, 1)) / filmRes);
+    vec3 noise10 = filmPixel((coord + vec2(1, 0)) / filmRes);
+    vec3 noise11 = filmPixel((coord + vec2(1, 1)) / filmRes);
+    
+    // bilinear
+    vec3 noise = mix(mix(noise00, noise01, rest.y), mix(noise10, noise11, rest.y), rest.x) * vec3(0.7, 0.6, 0.8);
+    
+        float x = rand(uv + rand(vec2(time, -time)));
+  
+       // FragColor.rgb = vec3(0);
+		FragColor.rgb = FragColor.rgb + (x * -0.04) + 0.02;
+
+      //  FragColor.rgb = attrBiTangent.rgb;
+
+
+  //  float renderWidth = 512  * 1.25 * 2;
+  //  float renderHeight = 288 * 1.25 * 2;
+
+  //    vec2 uv = gl_FragCoord.xy / vec2(renderWidth, renderHeight);
+
+  
+  
+    // vignette         
+    uv = gl_FragCoord.xy / vec2(screenWidth * 2, screenHeight * 2);
+    uv *=  1.0 - uv.yx;           
+    float vig = uv.x*uv.y * 15.0; // multiply with sth for intensity    
+    vig = pow(vig, 0.1); // change pow for modifying the extend of the  vignette    
+    FragColor.rgb *= vec3(vig);
+
+    //FragColor.rgb = vec3(WorldPos);
 }
