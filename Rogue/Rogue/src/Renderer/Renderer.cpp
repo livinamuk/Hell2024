@@ -225,9 +225,11 @@ void DrawAnimatedObject(Shader& shader, AnimatedGameObject* animatedGameObject) 
             AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("NumGrid"));
             AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("FemaleArms"));
         }
+        else if (skinnedModel._filename == "MaxExportTest") {
+            AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("NumGrid"));
+        }
         else {
             AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("Glock"));
-            //AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("NumGrid"));
         }
         
         
@@ -385,6 +387,9 @@ void Renderer::RenderFrame() {
 
     // Viewing mode
     _testShader.Use();
+
+    // Debug Text
+    TextBlitter::_debugTextToBilt = "";
     if (_mode == RenderMode::COMPOSITE) {
         TextBlitter::_debugTextToBilt = "Mode: COMPOSITE\n";
         _testShader.SetInt("mode", 0);
@@ -403,17 +408,11 @@ void Renderer::RenderFrame() {
     }
 
     glm::mat4 projection = glm::perspective(0.9f, (float)GL::GetWindowWidth() / (float)GL::GetWindowHeight(), 0.01f, 100.0f);
-   
-  //  Transform cameraRotationCorrection;
-  //  cameraRotationCorrection.rotation.x = HELL_PI / 2;
-  //  cameraRotationCorrection.rotation.y = HELL_PI;
-
     AnimatedGameObject* aks74u = Scene::GetAnimatedGameObjectByName("AKS74U");
     glm::mat4 view = glm::mat4(glm::mat3(aks74u->_cameraMatrix)) * Player::GetViewMatrix();
-   // glm::mat4 view =  Player::GetViewMatrix();
-   // std::cout << Util::Mat4ToString(_ak47._cameraMatrix) << "\n";
 
-    // Previous Frame
+
+    // Render velocity map with the previous frames bone transforms (this is used for motion blur)
     _gBuffer.Bind();
     glViewport(0, 0, _gBuffer.GetWidth(), _gBuffer.GetHeight());
     glEnable(GL_DEPTH_TEST);
@@ -718,6 +717,8 @@ void Renderer::RenderFrame() {
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D, _gBuffer._gVelocityMapTexture);
     glActiveTexture(GL_TEXTURE2);
+    glBindTexture(GL_TEXTURE_2D, _gBuffer._gDepthTexture);
+
     glViewport(0, 0, _gBuffer.GetWidth(), _gBuffer.GetHeight());
     _compositeShader.Use();
     DrawFullscreenQuad();

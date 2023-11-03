@@ -14,7 +14,7 @@ void Scene::Update(float deltaTime) {
 
     // AK
     auto aks74u = GetAnimatedGameObjectByName("AKS74U");    
-    aks74u->SetScale(0.01f);
+    aks74u->SetScale(0.001f);
     aks74u->SetPosition(glm::vec3(2, 1.5, 3));
     // First person display
     bool renderWeaponFromFirstPersonPerspective = true;
@@ -27,7 +27,7 @@ void Scene::Update(float deltaTime) {
 
     // Running Guy
     auto enemy = GetAnimatedGameObjectByName("Enemy");
-    enemy->PlayAndLoopAnimation("UnisexGuyRun", 0.75f);
+    enemy->PlayAndLoopAnimation("UnisexGuyRun", 1.0f);
     enemy->SetScale(0.01f);
     enemy->SetPosition(glm::vec3(1.3f, 0.1, 3.5f));
     enemy->SetRotationX(HELL_PI / 2);
@@ -42,7 +42,11 @@ void Scene::Update(float deltaTime) {
 
     // Fire
     if (Input::LeftMouseDown()) {
-        if (weaponAction != FIRE || weaponAction == FIRE && aks74u->AnimationIsPastPercentage(25.0f)) {
+
+        if (weaponAction == IDLE ||
+            weaponAction == FIRE && aks74u->AnimationIsPastPercentage(25.0f) ||
+            weaponAction == RELOAD && aks74u->AnimationIsPastPercentage(80.0f)) {  
+
             weaponAction = FIRE;
             int random_number = std::rand() % 3 + 1;
             std::string aninName = "AKS74U_Fire" + std::to_string(random_number);
@@ -60,19 +64,14 @@ void Scene::Update(float deltaTime) {
     }
 
     // Return to idle
-    if (aks74u->IsAnimationComplete()) {
-        if (weaponAction == FIRE) {
+    if (aks74u->IsAnimationComplete() && weaponAction == RELOAD) {
             weaponAction = IDLE;
-        }
-        if (weaponAction == RELOAD) {
-            weaponAction = IDLE;
-        }
     }
-    // Actually,return from FIRE animation more quickly than that
     if (weaponAction == FIRE && aks74u->AnimationIsPastPercentage(50.0f)) {
         weaponAction = IDLE;
     }
 
+    // When idle, play idle anim if stationary, and walk if moving
     if (weaponAction == IDLE) {
 
         if (Player::IsMoving()) {
@@ -288,6 +287,7 @@ void Scene::Init() {
     aks74u.SetName("AKS74U");
     aks74u.SetSkinnedModel("AKS74U"); 
     aks74u.PlayAnimation("AKS74U_Idle", 0.5f);
+    //aks74u.EnableMotionBlur();
     //aks74u.PauseAnimation();
 }
 

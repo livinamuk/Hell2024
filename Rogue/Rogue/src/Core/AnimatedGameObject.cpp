@@ -28,6 +28,7 @@ void AnimatedGameObject::PlayAndLoopAnimation(std::string animationName, float s
             Animation* animation = _skinnedModel->m_animations[i];
             if (_currentAnimation != animation) {
                 _currentAnimationTime = 0;
+                _animationPaused = false;
             }
             // Update the current animation with this one
             _currentAnimation = animation;
@@ -35,7 +36,6 @@ void AnimatedGameObject::PlayAndLoopAnimation(std::string animationName, float s
             // Reset flags
             _loopAnimation = true;
             _animationIsComplete = false;
-            _animationPaused = false;
 
             // Update the speed
             _animationSpeed = speed;
@@ -109,7 +109,11 @@ void AnimatedGameObject::CalculateBoneTransforms() {
 glm::mat4 AnimatedGameObject::GetModelMatrix() {
 
     Transform correction;
-    correction.rotation.y = HELL_PI;
+    
+    if (_skinnedModel->_filename == "AKS74U") {
+        correction.rotation.y = HELL_PI;
+    }
+
     // THIS IS A HAAAAAAACK TO FIX THE MODELS BEING BACKWARDS 180 degrees. 
     // Make it toggleable so not all animated models are flipped
     return _transform.to_mat4() * correction.to_mat4();

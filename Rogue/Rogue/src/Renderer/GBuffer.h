@@ -14,6 +14,7 @@ public:
 	unsigned int _gDepthTexture = { 0 };
 	unsigned int _gCompositeTexture = { 0 };
 	unsigned int _gVelocityMapTexture = { 0 };
+	//unsigned int _gPositionTexture = { 0 };
 
 private:
 	unsigned int _ID = { 0 };

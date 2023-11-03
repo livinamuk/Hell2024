@@ -45,8 +45,8 @@ void Engine::Run() {
         }
 
         if (_engineMode == EngineMode::Game) {
-
             //TracyGpuZone("RenderFrame");
+            TextBlitter::Update(_deltaTime);
             Renderer::RenderFrame();
         }
         if (_engineMode == EngineMode::Editor) {
@@ -204,7 +204,7 @@ void Engine::Update(float deltaTime) {
 
     Input::Update(GL::GetWindowPtr());
     Audio::Update();
-    TextBlitter::Update(deltaTime);
+    
 
     if (_engineMode == EngineMode::Game) {
         Player::Update(deltaTime);

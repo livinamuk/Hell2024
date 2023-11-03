@@ -10,8 +10,8 @@ layout (location = 0) out vec4 FragColor;
 
 //uniform sampler2D u_tColorTex; // In MotionBlurShader
 layout (binding = 0) uniform sampler2D tex;
-layout (binding = 1) uniform sampler2D previousFrameTex;
-layout (binding = 2) uniform sampler2D velocityMapTex;
+layout (binding = 1) uniform sampler2D velocityMapTex;
+layout (binding = 2) uniform sampler2D depthTexture;
 
 in vec2 TexCoords;
 
@@ -54,34 +54,65 @@ void main() {
 
    
    vec4 pos = texture(tex, TexCoords);
-   vec4 previousFrame = texture(previousFrameTex, TexCoords);
-   vec4 velocityMap = texture(velocityMapTex, TexCoords);
+   float fragmentDepth = texture(depthTexture, TexCoords).r;
+   vec3 velocityMap = texture(velocityMapTex, TexCoords).rgb;
  
     FragColor.rgb = vec3(1,0,0);
     FragColor.rgb = vec3(pos.rgb);
     //FragColor.rgb = vec3(TexCoords, 0);
 
-
     
     vec2 scale = vec2(0.005);
-    vec3 screenSpaceVelocity = gaussianBlur(previousFrameTex, TexCoords, scale).rgb * 3;
+    vec3 screenSpaceVelocity = gaussianBlur(velocityMapTex, TexCoords, scale).rgb * 1;
+ //   screenSpaceVelocity = velocityMap * 3;
 
-    float weight = 0.0;
+    //float weight = 0.0;
     vec3 sum = vec3(0.0, 0.0, 0.0);
     float sampleCount = 32.0;
+    float count = 0;
 
     for(int k = 0; k < sampleCount; ++k) {
         float offset = float(k) / (sampleCount - 1.0);
-        vec4 vSample = texture(tex, TexCoords + (screenSpaceVelocity.xy * offset));
-        sum += (vSample.rgb * vSample.a);
-        weight += vSample.a;
+        vec2 sampleTexCoords = TexCoords + (screenSpaceVelocity.xy * offset);
+        float sampleDepth = texture(depthTexture, sampleTexCoords).r;
+
+        // vec4 vSample = texture(tex, sampleTexCoords);
+         //   weight += vSample.a;
+        //    sum += (vSample.rgb * vSample.a);
+
+        
+        //if (sampleDepth > fragmentDepth) {
+        
+       // if (abs(sampleDepth - fragmentDepth) < 0.0001) {
+           
+             sum += texture(tex, sampleTexCoords).rgb;
+             count++;
+      // }
     }
-     
-    if (weight > 0.0) {
-        sum /= weight;
+
+    
+    vec4 input = texture(tex, TexCoords);
+
+    if (count > 0.0) {
+        sum /= count;
+    }
+    else {
+       // sum = input.rgb;
+    }
+
+    if (velocityMap == vec3(0)) {    
+        sum = input.rgb;
     }
             
-    vec4 input = texture(tex, TexCoords);
+     
+  //  if (weight > 0.0) {
+  //      sum /= weight;
+ //   }
+            
     FragColor.rgb = mix(sum, input.rgb, 0.35);
     FragColor.a = 1;
+
+
+  //  FragColor.rgb = vec3(velocityMap);
+   
 }

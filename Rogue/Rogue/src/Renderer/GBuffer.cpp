@@ -10,7 +10,8 @@ void GBuffer::Configure(int width, int height) {
 		glGenTextures(1, &_gDepthTexture);
 		glGenTextures(1, &_gCompositeTexture);
 		glGenTextures(1, &_gVelocityMapTexture);
-		_width = width;
+		//glGenTextures(1, &_gPositionTexture);
+		_width = width; 
 		_height = height;
 	}
 	glBindFramebuffer(GL_FRAMEBUFFER, _ID);
