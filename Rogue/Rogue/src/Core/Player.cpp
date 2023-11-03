@@ -26,6 +26,7 @@ namespace Player {
 	float _breatheFrequency = 8;
 	float _headBobAmplitude = 0.00505f;
 	float _headBobFrequency = 25.0f;
+	bool _isMoving = false;
 
 	Weapon _currentWeapon;
 }
@@ -88,8 +89,7 @@ void Player::Update(float deltaTime) {
 
 	// Head bob
 	Transform headBobTransform;
-	static bool moving = false;
-	if (moving) {
+	if (_isMoving) {
 		headBobTransform.position.x = cos(totalTime * _headBobFrequency) * _headBobAmplitude * 1;
 		headBobTransform.position.y = sin(totalTime * _headBobFrequency) * _headBobAmplitude * 2;
 	}
@@ -111,22 +111,22 @@ void Player::Update(float deltaTime) {
 
 	// WSAD movement
 	glm::vec3 displacement(0); 
-	moving = false;
+	_isMoving = false;
 	if (Input::KeyDown(HELL_KEY_W)) {
 		displacement -= _forward * speed;
-		moving = true;
+		_isMoving = true;
 	}
 	if (Input::KeyDown(HELL_KEY_S)) {
 		displacement += _forward * speed;
-		moving = true;
+		_isMoving = true;
 	}
 	if (Input::KeyDown(HELL_KEY_A)) {
 		displacement -= _right * speed;
-		moving = true;
+		_isMoving = true;
 	}
 	if (Input::KeyDown(HELL_KEY_D)) {
 		displacement += _right * speed;
-		moving = true;
+		_isMoving = true;
 	}
 	_position += displacement;
 
@@ -134,11 +134,11 @@ void Player::Update(float deltaTime) {
 	static float m_footstepAudioTimer = 0;
 	static float footstepAudioLoopLength = 0.5;
 
-	if (!moving)
+	if (!_isMoving)
 		m_footstepAudioTimer = 0;
 	else
 	{
-		if (moving && m_footstepAudioTimer == 0) {
+		if (_isMoving && m_footstepAudioTimer == 0) {
 			int random_number = std::rand() % 4 + 1;
 			std::string file = "player_step_" + std::to_string(random_number) + ".wav";
 			Audio::PlayAudio(file.c_str(), 0.5f);
@@ -182,6 +182,10 @@ glm::vec3 Player::GetCameraFront() {
 
 glm::vec3 Player::GetCameraUp() {
 	return _up;
+}
+
+bool Player::IsMoving() {
+	return _isMoving;
 }
 
 void Player::SetRotation(glm::vec3 rotation) {

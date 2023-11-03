@@ -4,6 +4,7 @@
 #include "../Renderer/Renderer.h"
 #include "Input.h"
 #include "Player.h"
+#include "Audio.hpp"
 
 void Scene::Update(float deltaTime) {
 
@@ -16,12 +17,12 @@ void Scene::Update(float deltaTime) {
     aks74u->SetScale(0.01f);
     aks74u->SetPosition(glm::vec3(2, 1.5, 3));
     // First person display
-    bool renderWeaponFromFirstPersonPerspective = false;
+    bool renderWeaponFromFirstPersonPerspective = true;
     if (renderWeaponFromFirstPersonPerspective) {
-        aks74u->SetRotationX(Player::GetViewRotation().x);
+        aks74u->SetRotationX(Player::GetViewRotation().x );
         aks74u->SetRotationY(Player::GetViewRotation().y);
         //aks74u->SetPosition(Player::GetViewPos());
-        aks74u->SetPosition(Player::GetViewPos() + (Player::GetCameraFront() * glm::vec3(3)));
+        aks74u->SetPosition(Player::GetViewPos() - (Player::GetCameraFront() * glm::vec3(0)));
     }
 
     // Running Guy
@@ -35,8 +36,51 @@ void Scene::Update(float deltaTime) {
     if (Input::KeyPressed(HELL_KEY_T)) {
         enemy->ToggleAnimationPause();
     }
+
+    enum WeaponAction {IDLE, FIRE, RELOAD};
+    static WeaponAction weaponAction = IDLE;
+
+    // Fire
+    if (Input::LeftMouseDown()) {
+        if (weaponAction != FIRE || weaponAction == FIRE && aks74u->AnimationIsPastPercentage(25.0f)) {
+            weaponAction = FIRE;
+            int random_number = std::rand() % 3 + 1;
+            std::string aninName = "AKS74U_Fire" + std::to_string(random_number);
+            std::string audioName = "AK47_Fire" + std::to_string(random_number) + ".wav";
+            aks74u->PlayAnimation(aninName, 1.5f);
+            Audio::PlayAudio(audioName, 1.0f);
+        }
+    }
+
+    // Reload
     if (Input::KeyPressed(HELL_KEY_R)) {
-        aks74u->PlayAnimation("AKS74U_DebugTest", 0.5f);
+        weaponAction = RELOAD;
+        aks74u->PlayAnimation("AKS74U_Reload", 1.0f);
+        Audio::PlayAudio("AK47_Reload.wav", 1.0f);
+    }
+
+    // Return to idle
+    if (aks74u->IsAnimationComplete()) {
+        if (weaponAction == FIRE) {
+            weaponAction = IDLE;
+        }
+        if (weaponAction == RELOAD) {
+            weaponAction = IDLE;
+        }
+    }
+    // Actually,return from FIRE animation more quickly than that
+    if (weaponAction == FIRE && aks74u->AnimationIsPastPercentage(50.0f)) {
+        weaponAction = IDLE;
+    }
+
+    if (weaponAction == IDLE) {
+
+        if (Player::IsMoving()) {
+            aks74u->PlayAndLoopAnimation("AKS74U_Walk", 1.0f);
+        }
+        else {
+            aks74u->PlayAndLoopAnimation("AKS74U_Idle", 1.0f);
+        }
     }
 }
 
@@ -243,8 +287,8 @@ void Scene::Init() {
     AnimatedGameObject& aks74u = _animatedGameObjects.emplace_back(AnimatedGameObject());
     aks74u.SetName("AKS74U");
     aks74u.SetSkinnedModel("AKS74U"); 
-    aks74u.PlayAnimation("AKS74U_DebugTest", 0.5f);
-    aks74u.PauseAnimation();
+    aks74u.PlayAnimation("AKS74U_Idle", 0.5f);
+    //aks74u.PauseAnimation();
 }
 
 void Scene::CalculatePointCloudDirectLighting() {

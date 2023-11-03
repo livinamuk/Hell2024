@@ -74,8 +74,13 @@ void AssetManager::LoadEverythingElse() {
 
 	SkinnedModel& aks74u = _skinnedModels.emplace_back(SkinnedModel());
 	FbxImporter::LoadSkinnedModel("models/AKS74U.fbx", aks74u);
-	//FbxImporter::LoadAnimation(aks74u, "animations/AKS74U_ReloadEmpty.fbx");
 	FbxImporter::LoadAnimation(aks74u, "animations/AKS74U_DebugTest.fbx");
+	FbxImporter::LoadAnimation(aks74u, "animations/AKS74U_Fire1.fbx");
+	FbxImporter::LoadAnimation(aks74u, "animations/AKS74U_Fire2.fbx");
+	FbxImporter::LoadAnimation(aks74u, "animations/AKS74U_Fire3.fbx");
+	FbxImporter::LoadAnimation(aks74u, "animations/AKS74U_Idle.fbx");
+	FbxImporter::LoadAnimation(aks74u, "animations/AKS74U_Walk.fbx");
+	FbxImporter::LoadAnimation(aks74u, "animations/AKS74U_Reload.fbx");
 }
 
 Texture& AssetManager::GetTexture(const std::string& filename) {

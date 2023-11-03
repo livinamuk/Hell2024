@@ -22,6 +22,8 @@ public:
 
 	std::string GetName();
 	glm::mat4 GetModelMatrix();
+	bool IsAnimationComplete(); 
+	bool AnimationIsPastPercentage(float percent);
 
 	SkinnedModel* _skinnedModel;
 	Transform _transform;
@@ -42,4 +44,5 @@ private:
 	float _animationSpeed = 1.0f;
 	std::string _name;
 	bool _motionBlur = false;
+	bool _animationIsComplete = true;
 };

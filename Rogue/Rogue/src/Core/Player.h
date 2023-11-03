@@ -21,4 +21,6 @@ namespace Player {
 	glm::vec3 GetCameraFront();
 	glm::vec3 GetCameraUp();
 
+	bool IsMoving();
+
 }

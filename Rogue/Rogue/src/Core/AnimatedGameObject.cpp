@@ -32,8 +32,10 @@ void AnimatedGameObject::PlayAndLoopAnimation(std::string animationName, float s
             // Update the current animation with this one
             _currentAnimation = animation;
 
-            // Enable loop flag
+            // Reset flags
             _loopAnimation = true;
+            _animationIsComplete = false;
+            _animationPaused = false;
 
             // Update the speed
             _animationSpeed = speed;
@@ -65,6 +67,7 @@ void AnimatedGameObject::PlayAnimation(std::string animationName, float speed) {
             _loopAnimation = false;
             _animationSpeed = speed;
             _animationPaused = false;
+            _animationIsComplete = false;
             return;
         }
     }
@@ -86,6 +89,7 @@ void AnimatedGameObject::UpdateAnimation(float deltaTime) {
         _currentAnimationTime = 0;
         if (!_loopAnimation) {
             _animationPaused = true;
+            _animationIsComplete = true;
         }
     }
 }
@@ -103,7 +107,16 @@ void AnimatedGameObject::CalculateBoneTransforms() {
 }
 
 glm::mat4 AnimatedGameObject::GetModelMatrix() {
-    return _transform.to_mat4();
+
+    Transform correction;
+    correction.rotation.y = HELL_PI;
+    // THIS IS A HAAAAAAACK TO FIX THE MODELS BEING BACKWARDS 180 degrees. 
+    // Make it toggleable so not all animated models are flipped
+    return _transform.to_mat4() * correction.to_mat4();
+}
+
+bool AnimatedGameObject::IsAnimationComplete() {
+    return _animationIsComplete;
 }
 
 std::string AnimatedGameObject::GetName() {
@@ -141,4 +154,11 @@ void AnimatedGameObject::SetRotationY(float rotation) {
 
 void AnimatedGameObject::SetRotationZ(float rotation) {
     _transform.rotation.z = rotation;
+}
+
+bool AnimatedGameObject::AnimationIsPastPercentage(float percent) {
+    if (_currentAnimationTime * _currentAnimation->GetTicksPerSecond() > _currentAnimation->m_duration * (percent / 100.0))
+        return true;
+    else
+        return false;
 }

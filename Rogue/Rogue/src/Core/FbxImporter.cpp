@@ -368,7 +368,7 @@ void FbxImporter::LoadAnimation(SkinnedModel& skinnedModel, const std::string& f
         animation->m_animatedNodes.push_back(animatedNode);
     }
 
-   //std::cout << animation->filename << " " << animation->m_duration << "\n";
+    std::cout << "Loaded animation: " << animation->_filename << "\n;";// << " " << animation->m_duration << "\n";
 
     // Store it
     skinnedModel.m_animations.emplace_back(animation);

@@ -184,107 +184,24 @@ void SkinnedModel::UpdateBoneTransformsFromAnimation(float animTime, Animation* 
         glm::mat4 ParentTransformation = (parentIndex == -1) ? glm::mat4(1) : m_joints[parentIndex].m_currentFinalTransform;
         glm::mat4 GlobalTransformation = ParentTransformation * NodeTransformation;
 
-
-/*
-
-    AK
-
-    camera
-    -1.00, -0.00,  0.00,  0.00
-     0.00,  0.00,  1.00,  2.42
-    -0.00,  1.00, -0.00,  82.57
-     0.00,  0.00,  0.00,  1.00
-
-    Camera_$AssimpFbx$_PostRotation
-    -0.00, -0.00, -1.00,  0.00
-    -1.00,  0.00,  0.00,  2.42
-     0.00,  1.00, -0.00,  82.57
-    -0.00,  0.00,  0.00,  1.00
-
-
-*/     
         if (Util::StrCmp("camera", NodeName) ||
             Util::StrCmp("camera_end", NodeName) ||
             Util::StrCmp("Camera_$AssimpFbx$_PostRotation", NodeName) ||
             Util::StrCmp("Camera", NodeName)) {
-
             //std::cout << i << ": " << NodeName << "\n";
             //std::cout << Util::Mat4ToString(GlobalTransformation) << "\n\n";
 
         }
-
-
-//  std::cout << "camera\n";
-//  outCameraMatrix = GlobalTransformation;
-//  std::cout << i << " " << Util::Mat4ToString(GlobalTransformation) << "\n\n";
-
-            
-            
-            
-
-
-
-            //camera
-            //Camera_$AssimpFbx$_PostRotation
-            //Camera
-            //camera.001
-
-    //    static glm::mat4 postRotation = glm::mat4(1);
-
-        if (Util::StrCmp("camera", NodeName)) {
-          //  std::cout << "camera\n";
-          //  outCameraMatrix = GlobalTransformation;
-          //  std::cout << i << " " << Util::Mat4ToString(GlobalTransformation) << "\n\n";
-        }
         if (Util::StrCmp("Camera", NodeName)) {
-         //   std::cout << "Camera_$AssimpFbx$_PostRotation\n";
-
-
-            Transform correction;
-           // correction.rotation.z = HELL_PI / 2;
-           // correction.rotation.y = HELL_PI / 2;
-
-           // if (m_BoneMapping.find(NodeName) != m_BoneMapping.end()) {
-           //     unsigned int BoneIndex = m_BoneMapping[NodeName];
                 outCameraMatrix = GlobalTransformation;
-           // }
-       //     outCameraMatrix = GlobalTransformation * correction.to_mat4();
-        //    std::cout << i << " " << Util::Mat4ToString(GlobalTransformation) << "\n\n";
+                outCameraMatrix[0][2] *= -1.0f; // yaw
+                outCameraMatrix[2][0] *= -1.0f; // yaw
+                outCameraMatrix[0][1] *= -1.0f; // roll
+                outCameraMatrix[1][0] *= -1.0f; // roll
         }
-        if (Util::StrCmp("Camera", NodeName)) {
-           // std::cout << _filename << "\n";
-           // std::cout << "Camera\n";
-          //  std::cout << Util::Mat4ToString(m_joints[i].m_inverseBindTransform) << "\n\n";
-        }
-        if (Util::StrCmp("camera.001", NodeName)) {
-        //    std::cout << _filename << "\n";
-         //   std::cout << Util::Mat4ToString(m_joints[i].m_inverseBindTransform) << "\n\n";
-
-     //       std::cout << "camera.001\n";
-        //    outCameraMatrix = GlobalTransformation;
-       //     std::cout << Util::Mat4ToString(GlobalTransformation) << "\n\n";
-        }
-
-        const char* pelvis = "camera";
-        if (Util::StrCmp(pelvis, NodeName) && false) {
-
-
-         //   std::cout << "camera\n";
-            //std::cout << Util::Mat4ToString(m_joints[i].m_inverseBindTransform) << "\n\n";
-          // std::cout << Util::Mat4ToString(NodeTransformation) << "\n\n";
-         //   std::cout << "Camera\n";
-          //  outCameraMatrix = GlobalTransformation; 
-           // std::cout << Util::Mat4ToString(GlobalTransformation) << "\n\n";
-         //   Transform t;
-         //   t.position.x = 1000;
-         //   GlobalTransformation = t.to_mat4();
-          //  GlobalTransformation = glm::mat4(1);
-        }
-
+     
         // Store the current transformation, so child nodes can access it
         m_joints[i].m_currentFinalTransform = GlobalTransformation;
-
-      //  std::cout << i << " " << NodeName << "\n";
 
         if (m_BoneMapping.find(NodeName) != m_BoneMapping.end()) {
             unsigned int BoneIndex = m_BoneMapping[NodeName];

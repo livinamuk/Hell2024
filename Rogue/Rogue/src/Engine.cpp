@@ -17,9 +17,13 @@
 #include "tracy/TracyOpenGL.hpp"
 
 enum class EngineMode { Game, Editor } _engineMode;
-float _deltaTime = 0;
 
 void Engine::Run() {
+
+    double _deltaTime, currentTime = 0.0;
+    double lastTime = glfwGetTime();
+    double accumulator = 0.0;
+    double limitUpdates = 1.0 / 60.0;
 
     Init();
     //TracyGpuContext;
@@ -28,27 +32,21 @@ void Engine::Run() {
 
         GL::ProcessInput();
 
-        float accumulator = 0;
-        static float lastTime = (float)glfwGetTime();
-        float currenttime = glfwGetTime();
-        _deltaTime = currenttime - lastTime;
-        lastTime = currenttime;
-        if (_deltaTime > 0.25) {
-            _deltaTime = 0.25;
-        }
-        float dt = 0.01;
+        currentTime = glfwGetTime();
+        _deltaTime = currentTime - lastTime;
+        lastTime = currentTime;
         accumulator += _deltaTime;
-        while (accumulator >= dt) {
-            accumulator -= dt;
+        while (accumulator >= limitUpdates) {
+            accumulator -= limitUpdates;
+            Update(limitUpdates);
+            if (_engineMode == EngineMode::Game) {
+                Scene::Update(limitUpdates);
+            }
         }
-        accumulator += _deltaTime;
-
-        Update(_deltaTime);
 
         if (_engineMode == EngineMode::Game) {
 
             //TracyGpuZone("RenderFrame");
-            Scene::Update(_deltaTime);
             Renderer::RenderFrame();
         }
         if (_engineMode == EngineMode::Editor) {
@@ -72,9 +70,9 @@ void Engine::Init() {
     GL::Init(1920, 1080);
 
     Input::Init(GL::GetWindowPtr());
-   // Player::Init(glm::vec3(0, 0, 3.6f));
+    // Player::Init(glm::vec3(0, 0, 3.6f));
     Player::Init(glm::vec3(4.0f, 0, 3.6f));
-    Player::SetRotation(glm::vec3(-0.17, 1.54f, 0)); 
+    Player::SetRotation(glm::vec3(-0.17, 1.54f, 0));
 
     Editor::Init();
 
@@ -206,7 +204,7 @@ void Engine::Update(float deltaTime) {
 
     Input::Update(GL::GetWindowPtr());
     Audio::Update();
-    TextBlitter::Update(1.0f / 60);
+    TextBlitter::Update(deltaTime);
 
     if (_engineMode == EngineMode::Game) {
         Player::Update(deltaTime);
