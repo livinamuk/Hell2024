@@ -10,6 +10,9 @@
 #include "glm/gtx/hash.hpp"
 #include "Math.h"
 
+#define NEAR_PLANE 0.005f
+#define FAR_PLANE 50.0f
+
 #define NOOSE_PI 3.14159265359f
 #define NOOSE_HALF_PI 1.57079632679f
 #define HELL_PI 3.141592653589793f
@@ -54,6 +57,7 @@
 #define BITANGENT_LOCATION   4
 #define BONE_ID_LOCATION     5
 #define BONE_WEIGHT_LOCATION 6
+#define SMOOTH_NORMAL_LOCATION 7
 
 enum VB_TYPES {
     INDEX_BUFFER,
@@ -63,6 +67,7 @@ enum VB_TYPES {
     TANGENT_VB,
     BITANGENT_VB,
     BONE_VB,
+    SMOOTH_NORMAL_VB,
     NUM_VBs
 };
 
@@ -87,6 +92,8 @@ struct Vertex {
 
     glm::vec4 weight;
     glm::ivec4 boneID;
+
+   // glm::vec3 smoothNormal;
 
     bool operator==(const Vertex& other) const {
         return position == other.position && normal == other.normal && uv == other.uv;
@@ -145,9 +152,7 @@ struct VoxelFace {
 
 
 struct Light {
-    int x = 0;
-    int y = 0;
-    int z = 0;
+    glm::vec3 position;
     float strength = 1.0f;
     float radius = 6.0f;
     glm::vec3 color = glm::vec3(1, 0.7799999713897705, 0.5289999842643738);

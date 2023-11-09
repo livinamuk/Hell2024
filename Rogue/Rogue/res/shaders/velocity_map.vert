@@ -22,6 +22,8 @@ out vec4 v_vCorrectedPosScreenSpace;
 out vec4 v_vCurrentPosScreenSpace;
 out vec4 v_vPreviousPosScreenSpace;
 
+//out vec3 Normal;
+
 void main() {
 
 	if (isAnimated) {	
@@ -58,9 +60,13 @@ void main() {
 		// DO THIS ON CPU
 		mat4 u_mNormalMat = transpose(inverse(model));
 		vec3 a_vNormal = totalNormal.xyz;
+
+		
     
 		vec3 vMotionVecWorldSpace =  vCurrPosWorldSpace.xyz - vPrevPosWorldSpace.xyz;
 		vec3 vNormalVecWorldSpace = normalize(mat3(u_mNormalMat) * a_vNormal);
+		
+		//Normal = vNormalVecWorldSpace;
 
 		float u_fStretchScale = 2;
 
@@ -83,5 +89,10 @@ void main() {
 
 		v_vCurrentPosScreenSpace = projection * view * vec4(WorldPos, 1);
 		v_vPreviousPosScreenSpace = projection * view * vec4(WorldPos, 1);
+
+
+		//mat4 u_mNormalMat = transpose(inverse(model));
+		//vec3 vNormalVecWorldSpace = normalize(mat3(u_mNormalMat) * aNormal);
+		//Normal = vNormalVecWorldSpace;
 	}
 }

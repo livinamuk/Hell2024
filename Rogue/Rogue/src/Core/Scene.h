@@ -83,6 +83,10 @@ struct Wall {
         float uv_y_low = begin.y / WALL_HEIGHT;
         float uv_y_high = (begin.y + height) / WALL_HEIGHT;
         float offsetY = 0.05f;
+
+        uv_x_high *= 2;
+        uv_y_high *= 2;
+
         uv_y_low -= offsetY;
         uv_y_high -= offsetY;
         v1.uv = glm::vec2(uv_x_low, uv_y_low);
@@ -274,9 +278,9 @@ namespace Scene {
 
     void Init();
     void Update(float deltaTime);
-    void CalculatePointCloudDirectLighting();
-    void CalculateProbeLighting(int method);
     void LoadLightSetup(int index);
     GameObject* GetGameObjectByName(std::string);
     AnimatedGameObject* GetAnimatedGameObjectByName(std::string);
+    std::vector<AnimatedGameObject>& GetAnimatedGameObjects();
+    void CreatePointCloud();
 }

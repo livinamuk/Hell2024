@@ -12,74 +12,41 @@ void Scene::Update(float deltaTime) {
         animatedGameObject.Update(deltaTime);
     }
 
-    // AK
-    auto aks74u = GetAnimatedGameObjectByName("AKS74U");    
-    aks74u->SetScale(0.001f);
-    aks74u->SetPosition(glm::vec3(2, 1.5, 3));
-    // First person display
-    bool renderWeaponFromFirstPersonPerspective = true;
-    if (renderWeaponFromFirstPersonPerspective) {
-        aks74u->SetRotationX(Player::GetViewRotation().x );
-        aks74u->SetRotationY(Player::GetViewRotation().y);
-        //aks74u->SetPosition(Player::GetViewPos());
-        aks74u->SetPosition(Player::GetViewPos() - (Player::GetCameraFront() * glm::vec3(0)));
-    }
+    // Move light
+    glm::vec3 lightPos = glm::vec3(2.8, 2.2, 3.6);
+    Light& light = _lights[0];
+    
+    static float time = 0;
+    time += (deltaTime / 2);
+
+    glm::vec3 newPos = lightPos;
+    lightPos.x = lightPos.x + (cos(time)) * 2;
+    lightPos.y = lightPos.y;
+    lightPos.z = lightPos.z + (sin(2 * time) / 2) * 2;
+
+    light.position = lightPos;
+
+
 
     // Running Guy
     auto enemy = GetAnimatedGameObjectByName("Enemy");
-    enemy->PlayAndLoopAnimation("UnisexGuyRun", 1.0f);
-    enemy->SetScale(0.01f);
+    enemy->PlayAndLoopAnimation("UnisexGuyIdle", 1.0f);
+    enemy->SetScale(0.00975f);
+    enemy->SetScale(0.00f);
     enemy->SetPosition(glm::vec3(1.3f, 0.1, 3.5f));
     enemy->SetRotationX(HELL_PI / 2);
+    enemy->SetRotationY(HELL_PI / 2);
+
+
+    auto glock = GetAnimatedGameObjectByName("Shotgun");
+    glock->SetScale(0.01f);
+    glock->SetScale(0.00f);
+    glock->SetPosition(glm::vec3(1.3f, 1.1, 3.5f));
+  //  glock->SetRotationX(HELL_PI / 2);
 
     // Lazy key presses
     if (Input::KeyPressed(HELL_KEY_T)) {
         enemy->ToggleAnimationPause();
-    }
-
-    enum WeaponAction {IDLE, FIRE, RELOAD};
-    static WeaponAction weaponAction = IDLE;
-
-    // Fire
-    if (Input::LeftMouseDown()) {
-
-        if (weaponAction == IDLE ||
-            weaponAction == FIRE && aks74u->AnimationIsPastPercentage(25.0f) ||
-            weaponAction == RELOAD && aks74u->AnimationIsPastPercentage(80.0f)) {  
-
-            weaponAction = FIRE;
-            int random_number = std::rand() % 3 + 1;
-            std::string aninName = "AKS74U_Fire" + std::to_string(random_number);
-            std::string audioName = "AK47_Fire" + std::to_string(random_number) + ".wav";
-            aks74u->PlayAnimation(aninName, 1.5f);
-            Audio::PlayAudio(audioName, 1.0f);
-        }
-    }
-
-    // Reload
-    if (Input::KeyPressed(HELL_KEY_R)) {
-        weaponAction = RELOAD;
-        aks74u->PlayAnimation("AKS74U_Reload", 1.0f);
-        Audio::PlayAudio("AK47_Reload.wav", 1.0f);
-    }
-
-    // Return to idle
-    if (aks74u->IsAnimationComplete() && weaponAction == RELOAD) {
-            weaponAction = IDLE;
-    }
-    if (weaponAction == FIRE && aks74u->AnimationIsPastPercentage(50.0f)) {
-        weaponAction = IDLE;
-    }
-
-    // When idle, play idle anim if stationary, and walk if moving
-    if (weaponAction == IDLE) {
-
-        if (Player::IsMoving()) {
-            aks74u->PlayAndLoopAnimation("AKS74U_Walk", 1.0f);
-        }
-        else {
-            aks74u->PlayAndLoopAnimation("AKS74U_Idle", 1.0f);
-        }
     }
 }
 
@@ -150,6 +117,12 @@ void Scene::Init() {
     fan.SetMeshMaterial("NumGrid");
     fan.SetName("Fan");*/
 
+    GameObject& pictureFrame = _gameObjects.emplace_back(GameObject());
+    pictureFrame.SetPosition(0.1f, 1.5f, 2.5f);
+    pictureFrame.SetScale(0.01f);
+    pictureFrame.SetRotationY(HELL_PI / 2);
+    pictureFrame.SetModel("PictureFrame_1");
+    pictureFrame.SetMeshMaterial("LongFrame");
 
     GameObject& doorFrame = _gameObjects.emplace_back(GameObject());
     doorFrame.SetPosition(0.05f, 0, 3.5f);
@@ -280,18 +253,32 @@ void Scene::Init() {
 
     AnimatedGameObject& enemy = _animatedGameObjects.emplace_back(AnimatedGameObject());
     enemy.SetName("Enemy");
-    enemy.SetSkinnedModel("MaxExportTest");
+    enemy.SetSkinnedModel("UniSexGuy");
     enemy.EnableMotionBlur();
+    enemy.SetMeshMaterial("CC_Base_Body", "UniSexGuyBody");
+    enemy.SetMeshMaterial("CC_Base_Eye", "UniSexGuyBody");
+    enemy.SetMeshMaterial("Biker_Jeans", "UniSexGuyJeans");
+    enemy.SetMeshMaterial("CC_Base_Eye", "UniSexGuyEyes");
+    enemy.SetMeshMaterialByIndex(1, "UniSexGuyHead");
+
+
+    /*
 
     AnimatedGameObject& aks74u = _animatedGameObjects.emplace_back(AnimatedGameObject());
     aks74u.SetName("AKS74U");
     aks74u.SetSkinnedModel("AKS74U"); 
     aks74u.PlayAnimation("AKS74U_Idle", 0.5f);
-    //aks74u.EnableMotionBlur();
-    //aks74u.PauseAnimation();
+
+    */
+    AnimatedGameObject& glock = _animatedGameObjects.emplace_back(AnimatedGameObject());
+    glock.SetName("Shotgun");
+    glock.SetSkinnedModel("Shotgun");
+    glock.PlayAndLoopAnimation("Shotgun_Walk", 1.0f);
 }
 
-void Scene::CalculatePointCloudDirectLighting() {
+void Scene::CreatePointCloud() {
+
+    Renderer::_shadowMapsAreDirty = true;
 
     float yCutOff = 2.7f;
 
@@ -472,139 +459,17 @@ void Scene::CalculatePointCloudDirectLighting() {
         _triangleWorld.push_back(triA);
         _triangleWorld.push_back(triB);
     }
-
-    for (auto& cloudPoint : _cloudPoints) {
-        Point p;
-        p.pos = cloudPoint.position;
-        for (Light& light : _lights) {
-            float _voxelSize = 0.2f;
-            glm::vec3 lightCenter = glm::vec3(light.x * _voxelSize, light.y * _voxelSize, light.z * _voxelSize);
-            float dist = glm::distance(cloudPoint.position, lightCenter);
-            float att = glm::smoothstep(light.radius, 0.0f, glm::length(lightCenter - cloudPoint.position));
-            glm::vec3 n = cloudPoint.normal;
-            glm::vec3 l = glm::normalize(lightCenter - cloudPoint.position);
-            float ndotl = glm::clamp(glm::dot(n, l), 0.0f, 1.0f);
-            p.color = glm::vec3(light.color) * att * light.strength * ndotl;
-            glm::vec3 rayOrigin = cloudPoint.position + (cloudPoint.normal * glm::vec3(0.01f));
-            glm::vec3 rayDirection = l;
-            RayCastResult result;
-            Util::EvaluateRaycasts(rayOrigin, rayDirection, dist, _triangleWorld, RaycastObjectType::NONE, glm::mat4(1), result, false);
-            if (!result.found) {
-                cloudPoint.directLighting += glm::vec3(light.color) * att * light.strength * ndotl;
-            }
-
-            rayCount += result.rayCount;
-        }
-    }
-    std::cout << "Direct lighting ray count: " << rayCount << "\n";
-}
-
-void Scene::CalculateProbeLighting(int method) {
-
-    Renderer::_method = method;
-
-    int rayCount = 0;
-
-    for (int x = 0; x < MAP_WIDTH; x++) {
-        for (int y = 0; y < MAP_HEIGHT; y++) {
-            for (int z = 0; z < MAP_DEPTH; z++) {
-
-                GridProbe& probe = Scene::_propogrationGrid[x][y][z];
-
-                //if (probe.ignore) {
-                //    continue;
-                //}
-
-                float worldX = x * VOXEL_SIZE;
-                float worldY = y * VOXEL_SIZE;
-                float worldZ = z * VOXEL_SIZE;
-
-                if (worldY > 3.1f)
-                    continue;
-
-                glm::vec3 probeWorldPos = glm::vec3(worldX, worldY, worldZ);
-                glm::vec3 probeColor = glm::vec3(0);
-                int sampleCount = 0;
-
-                // Get visible cloud points 
-                for (CloudPoint& cloudPoint : Scene::_cloudPoints) {
-                    float maxDistance = 2.6f;
-                    float distance = glm::distance(cloudPoint.position, probeWorldPos);
-
-                    if (distance < maxDistance) {
-
-                        // Skip cloud points facing away from probe
-                        glm::vec3 v = glm::normalize(probeWorldPos - cloudPoint.position);
-                        float vdotn = dot(cloudPoint.normal, v);
-                        if (vdotn < 0) {
-                            continue;
-                        }
-
-                        RayCastResult result;
-                        Util::AnyHit(cloudPoint.position, v, distance, Scene::_triangleWorld, result, true);
-
-                        if (!result.found) {
-                            sampleCount++;
-
-                            switch (method) {
-                            case 0:
-                                probeColor += cloudPoint.directLighting;
-                                break;
-                            case 1:
-                                probeColor += cloudPoint.directLighting * (maxDistance - distance) / maxDistance;
-                                break;
-                            case 2:
-                                probeColor += vdotn * cloudPoint.directLighting * (maxDistance - distance) / maxDistance;
-                                break;
-                            case 3:
-                                probeColor += cloudPoint.directLighting * (maxDistance - distance) * (maxDistance - distance) / maxDistance;
-                                break;
-                            case 4:
-                                probeColor += vdotn * cloudPoint.directLighting * (maxDistance - distance) * (maxDistance - distance) / maxDistance;
-                                break;
-                            case 5:
-                                probeColor += vdotn * cloudPoint.directLighting;
-                                break;
-                            case 6:
-                                probeColor += cloudPoint.directLighting / distance;
-                                break;
-                            }
-
-
-                            if (cloudPoint.directLighting.x + cloudPoint.directLighting.y + cloudPoint.directLighting.z > 0.01) {
-                                probe.ignore = false;
-                            }
-                        }
-                        rayCount += result.rayCount;
-                    }
-                }
-
-                float scale = 2 / VOXEL_SIZE / VOXEL_SIZE;
-
-                switch (method) {
-                case 0:
-                    probe.color = probeColor / float(sampleCount);
-                    break;
-                default:
-                    probe.color = probeColor / scale;
-                    break;
-                }
-
-            }
-        }
-    }
-    std::cout << "Probe lighting ray count: " << rayCount << "\n";
 }
 
 void Scene::LoadLightSetup(int index) {
     if (index == 1) {
         _lights.clear();
         Light lightD;
-        lightD.x = 21;
-        lightD.y = 21;
-        lightD.z = 18;
+        //lightD.x = 21;
+        //lightD.y = 21;
+        //lightD.z = 18;
         lightD.radius = 3.0f;
-        lightD.strength = 10.0f;
+        lightD.strength = 5.0f;
         lightD.radius = 10;
         _lights.push_back(lightD);
     }
@@ -612,9 +477,7 @@ void Scene::LoadLightSetup(int index) {
     if (index == 2) {
         _lights.clear();
         Light lightD;
-        lightD.x = 2.8f / 0.2f;
-        lightD.y = 2.2f / 0.2f;
-        lightD.z = 18;
+        lightD.position = glm::vec3(2.8, 2.2, 3.6);
         lightD.radius = 3.0f;
         lightD.strength = 1.0f;
         lightD.radius = 10;
@@ -624,27 +487,27 @@ void Scene::LoadLightSetup(int index) {
     if (index == 0) {
         _lights.clear();
         Light lightA;
-        lightA.x = 22;// 3;// 27;// 3;
-        lightA.y = 9;
-        lightA.z = 3;
+       // lightA.x = 22;// 3;// 27;// 3;
+      //  lightA.y = 9;
+       // lightA.z = 3;
         lightA.strength = 0.5f;
         Light lightB;
-        lightB.x = 13;
-        lightB.y = 3;
-        lightB.z = 3;
+     //   lightB.x = 13;
+    //    lightB.y = 3;
+    //    lightB.z = 3;
         lightB.strength = 0.5f;
         lightB.color = RED;
         Light lightC;
-        lightC.x = 5;
-        lightC.y = 3;
-        lightC.z = 30;
+     //   lightC.x = 5;
+     //   lightC.y = 3;
+     //   lightC.z = 30;
         lightC.radius = 3.0f;
         lightC.strength = 0.75f;
         lightC.color = LIGHT_BLUE;
         Light lightD;
-        lightD.x = 21;
-        lightD.y = 21;
-        lightD.z = 18;
+    //    lightD.x = 21;
+   //     lightD.y = 21;
+   //     lightD.z = 18;
         lightD.radius = 3.0f;
         lightD.strength = 1.0f;
         lightD.radius = 10;
@@ -679,4 +542,8 @@ AnimatedGameObject* Scene::GetAnimatedGameObjectByName(std::string name) {
     }
     std::cout << "Scene::GetAnimatedGameObjectByName() failed, no object with name \"" << name << "\"\n";
     return nullptr;
+}
+
+std::vector<AnimatedGameObject>& Scene::GetAnimatedGameObjects() {
+    return _animatedGameObjects;
 }

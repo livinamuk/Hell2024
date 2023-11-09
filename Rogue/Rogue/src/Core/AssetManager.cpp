@@ -60,17 +60,38 @@ void AssetManager::LoadEverythingElse() {
 		if (texture.GetFilename().substr(texture.GetFilename().length() - 3) == "ALB") {
 			Material& material = _materials.emplace_back(Material());
 			material._name = texture.GetFilename().substr(0, texture.GetFilename().length() - 4);
-			material._basecolor = GetTextureIndex(material._name + "_ALB");
-			material._normal = GetTextureIndex(material._name + "_NRM");
-			material._rma = GetTextureIndex(material._name + "_RMA");
+
+			int basecolorIndex = GetTextureIndex(material._name + "_ALB");
+			int normalIndex = GetTextureIndex(material._name + "_NRM");
+			int rmaIndex = GetTextureIndex(material._name + "_RMA");
+
+			if (basecolorIndex != -1) {
+				material._basecolor = basecolorIndex;
+			}
+			else {
+				material._basecolor = GetTextureIndex("Empty_NRMRMA");
+			}
+			if (normalIndex != -1) {
+				material._normal = normalIndex;
+			}
+			else {
+				material._normal = GetTextureIndex("Empty_NRMRMA");
+			}
+			if (rmaIndex != -1) {
+				material._rma = rmaIndex;
+			}
+			else {
+				material._rma = GetTextureIndex("Empty_NRMRMA");
+			}
 		}
 	}
 	// Everything is loaded
 	//return false;
 
 	SkinnedModel& stabbingGuy = _skinnedModels.emplace_back(SkinnedModel());
-	FbxImporter::LoadSkinnedModel("models/MaxExportTest.fbx", stabbingGuy);
-	FbxImporter::LoadAnimation(stabbingGuy, "animations/UnisexGuyRun.fbx");
+	FbxImporter::LoadSkinnedModel("models/UniSexGuy.fbx", stabbingGuy);
+	FbxImporter::LoadAnimation(stabbingGuy, "animations/UnisexGuyIdle.fbx");
+	FbxImporter::LoadAnimation(stabbingGuy, "animations/UnisexGuyRun.fbx"); 
 
 	SkinnedModel& aks74u = _skinnedModels.emplace_back(SkinnedModel());
 	FbxImporter::LoadSkinnedModel("models/AKS74U.fbx", aks74u);
@@ -81,6 +102,38 @@ void AssetManager::LoadEverythingElse() {
 	FbxImporter::LoadAnimation(aks74u, "animations/AKS74U_Idle.fbx");
 	FbxImporter::LoadAnimation(aks74u, "animations/AKS74U_Walk.fbx");
 	FbxImporter::LoadAnimation(aks74u, "animations/AKS74U_Reload.fbx");
+	FbxImporter::LoadAnimation(aks74u, "animations/AKS74U_Draw.fbx");
+
+	SkinnedModel& glock = _skinnedModels.emplace_back(SkinnedModel());
+	FbxImporter::LoadSkinnedModel("models/Glock.fbx", glock);
+	FbxImporter::LoadAnimation(glock, "animations/Glock_Idle.fbx");
+	FbxImporter::LoadAnimation(glock, "animations/Glock_Walk.fbx");
+	FbxImporter::LoadAnimation(glock, "animations/Glock_Draw.fbx");
+	FbxImporter::LoadAnimation(glock, "animations/Glock_Spawn.fbx");
+	FbxImporter::LoadAnimation(glock, "animations/Glock_Fire1.fbx");
+	FbxImporter::LoadAnimation(glock, "animations/Glock_Fire2.fbx");
+	FbxImporter::LoadAnimation(glock, "animations/Glock_Fire3.fbx");
+	FbxImporter::LoadAnimation(glock, "animations/Glock_Reload.fbx");
+	FbxImporter::LoadAnimation(glock, "animations/Glock_ReloadEmpty.fbx");
+
+	SkinnedModel& knife = _skinnedModels.emplace_back(SkinnedModel());
+	FbxImporter::LoadSkinnedModel("models/Knife.fbx", knife);
+	FbxImporter::LoadAnimation(knife, "animations/Knife_Idle.fbx");
+	FbxImporter::LoadAnimation(knife, "animations/Knife_Walk.fbx");
+	FbxImporter::LoadAnimation(knife, "animations/Knife_Draw.fbx");
+	FbxImporter::LoadAnimation(knife, "animations/Knife_Swing1.fbx");
+	FbxImporter::LoadAnimation(knife, "animations/Knife_Swing2.fbx");
+	FbxImporter::LoadAnimation(knife, "animations/Knife_Swing3.fbx");
+
+
+	SkinnedModel& shotgun = _skinnedModels.emplace_back(SkinnedModel());
+	FbxImporter::LoadSkinnedModel("models/Shotgun.fbx", shotgun);
+	FbxImporter::LoadAnimation(shotgun, "animations/Shotgun_Idle.fbx");
+	FbxImporter::LoadAnimation(shotgun, "animations/Shotgun_Walk.fbx");
+	FbxImporter::LoadAnimation(shotgun, "animations/Shotgun_Draw.fbx");
+	FbxImporter::LoadAnimation(shotgun, "animations/Shotgun_Fire1.fbx");
+	FbxImporter::LoadAnimation(shotgun, "animations/Shotgun_Fire2.fbx");
+	FbxImporter::LoadAnimation(shotgun, "animations/Shotgun_Fire3.fbx");
 }
 
 Texture& AssetManager::GetTexture(const std::string& filename) {

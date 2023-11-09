@@ -103,11 +103,11 @@ void LazyKeyPresses() {
         VoxelWorld::GetLightByIndex(0).x -= 2;
         Audio::PlayAudio("RE_Beep.wav", 0.25f);
     }*/
-    if (Input::KeyPressed(GLFW_KEY_E)) {
+    if (Input::KeyPressed(GLFW_KEY_V)) {
         Renderer::NextMode();
         Audio::PlayAudio("RE_Beep.wav", 0.25f);
     }
-    if (Input::KeyPressed(GLFW_KEY_Q)) {
+    if (Input::KeyPressed(GLFW_KEY_C)) {
         Renderer::PreviousMode();
         Audio::PlayAudio("RE_Beep.wav", 0.25f);
     }
@@ -148,54 +148,19 @@ void LazyKeyPresses() {
     if (Input::KeyPressed(HELL_KEY_1)) {
         Renderer::WipeShadowMaps();
         Scene::LoadLightSetup(1);
-        Scene::CalculatePointCloudDirectLighting();
-        Scene::CalculateProbeLighting(Renderer::_method);
+        Scene::CreatePointCloud();
         Audio::PlayAudio("RE_Beep.wav", 0.25f);
     }
     if (Input::KeyPressed(HELL_KEY_2)) {
         Renderer::WipeShadowMaps();
         Scene::LoadLightSetup(0);
-        Scene::CalculatePointCloudDirectLighting();
-        Scene::CalculateProbeLighting(Renderer::_method);
+        Scene::CreatePointCloud();
         Audio::PlayAudio("RE_Beep.wav", 0.25f);
     }
     if (Input::KeyPressed(HELL_KEY_3)) {
         Renderer::WipeShadowMaps();
         Scene::LoadLightSetup(2);
-        Scene::CalculatePointCloudDirectLighting();
-        Scene::CalculateProbeLighting(Renderer::_method);
-        Audio::PlayAudio("RE_Beep.wav", 0.25f);
-    }
-    if (Input::KeyPressed(HELL_KEY_P)) {
-        Scene::CalculateProbeLighting(Renderer::_method);
-    }
-
-    if (Input::KeyPressed(HELL_KEY_4)) {
-        Scene::CalculateProbeLighting(0);
-        Audio::PlayAudio("RE_Beep.wav", 0.25f);
-    }
-    if (Input::KeyPressed(HELL_KEY_5)) {
-        Scene::CalculateProbeLighting(1);
-        Audio::PlayAudio("RE_Beep.wav", 0.25f);
-    }
-    if (Input::KeyPressed(HELL_KEY_6)) {
-        Scene::CalculateProbeLighting(2);
-        Audio::PlayAudio("RE_Beep.wav", 0.25f);
-    }
-    if (Input::KeyPressed(HELL_KEY_7)) {
-        Scene::CalculateProbeLighting(3);
-        Audio::PlayAudio("RE_Beep.wav", 0.25f);
-    }
-    if (Input::KeyPressed(HELL_KEY_8)) {
-        Scene::CalculateProbeLighting(4);
-        Audio::PlayAudio("RE_Beep.wav", 0.25f);
-    }
-    if (Input::KeyPressed(HELL_KEY_9)) {
-        Scene::CalculateProbeLighting(5);
-        Audio::PlayAudio("RE_Beep.wav", 0.25f);
-    }
-    if (Input::KeyPressed(HELL_KEY_0)) {
-        Scene::CalculateProbeLighting(6);
+        Scene::CreatePointCloud();
         Audio::PlayAudio("RE_Beep.wav", 0.25f);
     }
 }

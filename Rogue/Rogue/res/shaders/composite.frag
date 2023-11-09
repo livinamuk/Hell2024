@@ -101,7 +101,7 @@ void main() {
     }
 
     if (velocityMap == vec3(0)) {    
-        sum = input.rgb;
+       // sum = input.rgb;
     }
             
      
@@ -113,6 +113,6 @@ void main() {
     FragColor.a = 1;
 
 
-  //  FragColor.rgb = vec3(velocityMap);
+    FragColor.rgb = vec3(input);
    
 }

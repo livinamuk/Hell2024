@@ -16,7 +16,6 @@ namespace Renderer {
 	void ToggleDrawingProbes();
 	void ToggleDrawingLines();
 
-	Texture3D& GetIndirectLightingTexture();
 	int GetRenderWidth();
 	int GetRenderHeight();
 	void NextMode();
@@ -24,4 +23,5 @@ namespace Renderer {
 	void RecreateFrameBuffers();
 
 	inline int _method = 1;
+	inline bool _shadowMapsAreDirty = true;
 }

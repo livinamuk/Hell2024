@@ -21,4 +21,7 @@ void main() {
     }
 
     FragColor = textureColor;
+ //  FragColor.rgb = vec3(TexCoords, 0);
+ //   FragColor.a = 1;
+//    FragColor = vec4(1,0,0,1);
 }

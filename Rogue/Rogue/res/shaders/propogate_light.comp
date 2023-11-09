@@ -1,0 +1,149 @@
+#version 430 core
+
+layout(local_size_x = 4, local_size_y = 4, local_size_z = 4) in;
+
+layout(rgba32f, binding = 1) uniform image3D imgOutput;
+
+struct CloudPoint {
+    vec4 position;
+    vec4 normal;
+    vec4 color;
+};
+
+layout(std430, binding = 0) readonly buffer input_layout {
+    CloudPoint PointCloud[];
+};
+
+layout(std430, binding = 2) readonly buffer vertices {
+    vec4 Vertices[];
+};
+
+layout (location = 0) uniform int pointCloudSize;
+layout (location = 1) uniform int vertexCount;
+layout (location = 2) uniform bool test;
+layout (location = 3) uniform bool test2;
+
+struct Hit {
+	bool found;
+};
+
+Hit TriIntersect(vec3 origin, vec3 direction, float rayMin, float rayMax, vec3 v0, vec3 v1, vec3 v2) {
+
+	vec3 a = v0 - v1;
+	vec3 b = v2 - v0;
+	vec3 p = v0 - origin;
+	vec3 n = cross(b, a);
+	float r = dot(direction, n); 
+
+	Hit hit;
+	hit.found = false;
+
+    //ignore back face
+    if (r > 0) 
+		return hit;    
+
+	// some other early out
+	if (abs(r) < 0.00001) 
+		return hit;
+
+	vec3 q = cross( p, direction );
+	r = 1.0 / r;
+	float u = dot( q, b )*r;
+	float v = dot( q, a )*r;
+	float t = dot( n, p )*r;
+
+	if( u<0.0 || v<0.0 || (u+v)>1.0 ) 
+		t = -1.0;
+
+	if (t > rayMin && t < rayMax) {
+		hit.found = true;
+	}
+	return hit;
+}
+
+bool AnyHit(vec3 origin, vec3 direction, float rayMin, float rayMax) {
+	for (int i = 0; i < vertexCount; i+=3) {	
+		vec3 v0 = Vertices[i + 0].xyz;
+		vec3 v1 = Vertices[i + 1].xyz;
+		vec3 v2 = Vertices[i + 2].xyz;
+		Hit hit = TriIntersect(origin, direction, rayMin, rayMax, v0, v1, v2);
+		if (hit.found) { 
+			return true;
+		}
+	}
+	return false;
+}
+
+
+void main() {
+
+    const uint x = gl_GlobalInvocationID.x;
+    const uint y = gl_GlobalInvocationID.y;
+    const uint z = gl_GlobalInvocationID.z;
+
+	const float probeSpacing = 0.2;
+	vec3 probePosition = vec3(x,y,z) * vec3(probeSpacing);
+	const float maxDistance = 2.6;//2.6;
+
+	vec3 color = vec3(0);
+
+	// Ignores probes above 2.9 metres
+	// If this is running slow while you're working on it, lower this height
+
+	bool even = false;
+	if (mod(x, 2) == 0.0) {
+		even = true;
+	}
+	
+	bool even2 = false;
+	if (mod(z, 2) == 0.0) {
+		even2 = true;
+	}
+
+	if (probePosition.y < 2.9 && even == test && even2 == !test2) {
+
+		 // Iterate every point in the cloud
+		 for (int i = 0; i < pointCloudSize; i++) {
+	 
+			CloudPoint point = PointCloud[i];
+
+			// If the cloud point is not in darkness...
+			if (point.color.rgb != vec3(0,0,0)) {
+		
+				// If the probe is within the max distance...
+				float distanceFromPointToProbe = distance(point.position.xyz, probePosition);
+				if (distanceFromPointToProbe < maxDistance) {
+
+					// If the point is not facing away from the probe...
+					vec3 v = normalize(probePosition - point.position.xyz);
+					float vdotn = dot(point.normal.xyz, v);
+
+					// I don't know why the check below is broken
+					// It worked on the cpu. I think...
+					if (vdotn < 0) {
+						 continue;
+					}
+					
+					// If the point has line of sight to the probe...
+					if (!AnyHit(point.position.xyz, v, 0.000001, distanceFromPointToProbe)) {
+						
+						//color += point.color.rgb * (maxDistance - distanceFromPointToProbe) / maxDistance;
+						//color += vdotn * point.color.rgb * (maxDistance - distanceFromPointToProbe) / maxDistance;
+						
+						//color += point.color.rgb * (maxDistance - distanceFromPointToProbe) * (maxDistance - distanceFromPointToProbe) / maxDistance;
+						//color += vdotn * point.color.rgb * (maxDistance - distanceFromPointToProbe) * (maxDistance - distanceFromPointToProbe) / maxDistance;
+
+						color += point.color.rgb / distanceFromPointToProbe;
+						//color += vdotn * point.color.rgb;
+					} 
+				 
+				}
+
+			}
+		 }
+		float scale = 40;
+		color = color / float(scale);
+		imageStore(imgOutput, ivec3(x, y, z), vec4(color, 1));
+	 }
+
+}

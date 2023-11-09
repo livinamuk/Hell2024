@@ -13,7 +13,6 @@ layout (binding = 4) uniform samplerCube shadowMap3;
 layout (binding = 5) uniform sampler2D basecolorTexture;
 layout (binding = 6) uniform sampler2D normalTexture;
 layout (binding = 7) uniform sampler2D rmaTexture;
-layout (binding = 8) uniform sampler2D testTexture;
 
 uniform vec3 lightPosition[4];
 uniform vec3 lightColor[4];
@@ -172,6 +171,24 @@ vec3 fresnelSchlick(float cosTheta, vec3 F0)
     return F0 + (1.0 - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
 }
 
+// Converts a color from linear light gamma to sRGB gamma
+vec4 fromLinear(vec4 linearRGB) {
+    bvec3 cutoff = lessThan(linearRGB.rgb, vec3(0.0031308));
+    vec3 higher = vec3(1.055)*pow(linearRGB.rgb, vec3(1.0/2.4)) - vec3(0.055);
+    vec3 lower = linearRGB.rgb * vec3(12.92);
+
+    return vec4(mix(higher, lower, cutoff), linearRGB.a);
+}
+
+// Converts a color from sRGB gamma to linear light gamma
+vec4 toLinear(vec4 sRGB) {
+    bvec3 cutoff = lessThan(sRGB.rgb, vec3(0.04045));
+    vec3 higher = pow((sRGB.rgb + vec3(0.055))/vec3(1.055), vec3(2.4));
+    vec3 lower = sRGB.rgb/vec3(12.92);
+
+    return vec4(mix(higher, lower, cutoff), sRGB.a);
+}
+
 vec3 GetDirectLighting2(vec3 lightPos, vec3 lightColor, float radius, float strength, vec3 Normal) {
     float dist = distance(WorldPos, lightPos);
     //float att = 1.0 / (1.0 + 0.1 * dist + 0.01 * dist * dist);
@@ -294,6 +311,7 @@ vec3 microfacetBRDF(in vec3 L, in vec3 V, in vec3 N, in vec3 baseColor, in float
   // F0 for dielectics in range [0.0, 0.16] 
   // default FO is (0.16 * 0.5^2) = 0.04
   vec3 f0 = vec3(0.16 * (fresnelReflect * fresnelReflect)); 
+ // f0 = vec3(0.125);
   // in case of metals, baseColor contains F0
   f0 = mix(f0, baseColor, metallicness);
 
@@ -308,6 +326,7 @@ vec3 microfacetBRDF(in vec3 L, in vec3 V, in vec3 N, in vec3 baseColor, in float
   notSpec *= 1.0 - metallicness; // no diffuse for metals
   vec3 diff = notSpec * baseColor / PI; 
   
+
   specularContribution = spec;
   return diff + spec;
 }
@@ -317,21 +336,23 @@ vec3 GetDirectLighting(vec3 lightPos, vec3 lightColor, float radius, float stren
 //vec3 CalculatePBR (vec3 baseColor, vec3 normal, float roughness, float metallic, float ao, vec3 worldPos, vec3 camPos, Light light, int materialType) {
 	
 	// compute direct light	  
-	float fresnelReflect = 1.0;											// this is what they used for box, 1.0 for demon
+	float fresnelReflect = 1.0;//250;											// this is what they used for box, 1.0 for demon
 	vec3 viewDir = normalize(viewPos - WorldPos);    
-	float lightRadiance = strength;
+	float lightRadiance = strength * 1.5;
     vec3 lightDir = normalize(lightPos - WorldPos);           // they use something more sophisticated with a sphere
 	float lightDist = max(length(lightPos - WorldPos), 0.1);
 	float lightAttenuation = 1.0 / (lightDist*lightDist);
 	lightAttenuation = clamp(lightAttenuation, 0.0, 1.0);					// THIS IS WRONG, but does stop super bright region around light source and doesn't seem to affect anything else...
 	float irradiance = max(dot(lightDir, Normal), 0.0) ;
-	irradiance *= lightAttenuation * lightRadiance ;
+	irradiance *= lightAttenuation * lightRadiance * 1.5;
 		
 	vec3 radiance = vec3(0.0);
 	vec3 specularContribution = vec3(0);
 
     // Texturing
     vec3 baseColor =  pow(texture(basecolorTexture, TexCoord).rgb, vec3(2.2));
+   // baseColor.rgb = fromLinear(vec4(baseColor, 1.0)).rgb;
+
    //  baseColor =  texture(basecolorTexture, TexCoord).rgb;
     vec3 normalMap =  texture2D(normalTexture, TexCoord).rgb;
     vec3 rma =  texture2D(rmaTexture, TexCoord).rgb;
@@ -347,7 +368,7 @@ vec3 GetDirectLighting(vec3 lightPos, vec3 lightColor, float radius, float stren
 	// if receives light
 	if(irradiance > 0.0) { 
 		vec3 brdf = microfacetBRDF(lightDir, viewDir, Normal, baseColor, metallic, fresnelReflect, roughness, specularContribution);
-		radiance += brdf * irradiance * lightColor; // diffuse shading
+		radiance += brdf * irradiance * clamp(lightColor + vec3(0.1), 0, 1); // diffuse shading
 	}
 	
 	return radiance;
@@ -376,11 +397,31 @@ float rand(vec2 co){
 }
 
 
+
+vec3 OECF_sRGBFast(const vec3 linear) {
+    return pow(linear, vec3(1.0 / 2.2));
+}
+
+float saturate(float value) {
+	return clamp(value, 0.0, 1.0);
+}
+
+float getFogFactor(float d) {
+    const float FogMax = 25.0;
+    const float FogMin = 1.0;
+
+    if (d>=FogMax) return 1;
+    if (d<=FogMin) return 0;
+
+    return 1 - (FogMax - d) / (FogMax - FogMin);
+}
+
 void main()
 {
     // Texturing
     vec3 baseColor =  pow(texture(basecolorTexture, TexCoord).rgb, vec3(2.2));
-    baseColor =  texture(basecolorTexture, TexCoord).rgb;
+//baseColor.rgb = fromLinear(vec4(baseColor, 1.0)).rgb;
+
     vec3 normalMap =  texture2D(normalTexture, TexCoord).rgb;
     vec3 rma =  texture2D(rmaTexture, TexCoord).rgb;
     //vec3 albedo = baseColor;
@@ -391,14 +432,7 @@ void main()
 	vec3 normal = (tbn * normalize(normalMap.rgb * 2.0 - 1.0));
 	normal =  normalize(normal.rgb);
     
-   // if (length(attrBiTangent) < 0.5)
-      //  normal = attrNormal;
 
-    if (WorldPos.y > 2.49) {
-        //normal = mix(normal, attrNormal, 0.75);
-       // normal = attrNormal;
-    }
- 
 
     
     // uniform color
@@ -448,16 +482,22 @@ void main()
 
     indirectLighting /= sumW;
 
+    vec3 temp = indirectLighting;
+
     // Direct lightihng
     float shadow0 = ShadowCalculation(shadowMap0, lightPosition[0], WorldPos, viewPos, normal);
-    vec3 ligthting0 = GetDirectLighting(lightPosition[0], lightColor[0], lightRadius[0], lightStrength[0], normal);
-    float shadow1 = ShadowCalculation(shadowMap1, lightPosition[1], WorldPos, viewPos, normal);
-    vec3 ligthting1 = GetDirectLighting(lightPosition[1], lightColor[1], lightRadius[1], lightStrength[1], normal);
-    float shadow2 = ShadowCalculation(shadowMap2, lightPosition[2], WorldPos, viewPos, normal);
-    vec3 ligthting2 = GetDirectLighting(lightPosition[2], lightColor[2], lightRadius[2], lightStrength[2], normal);
-    float shadow3 = ShadowCalculation(shadowMap3, lightPosition[3], WorldPos, viewPos, normal);
-    vec3 ligthting3 = GetDirectLighting(lightPosition[3], lightColor[3], lightRadius[3], lightStrength[3], normal);     
+    vec3 ligthting0 = GetDirectLighting(lightPosition[0], lightColor[0], lightRadius[0], lightStrength[0] * 0.55, normal);
+    vec3 ligthting0B = GetDirectLighting2(lightPosition[0], lightColor[0], lightRadius[0], lightStrength[0] * 0.55, normal);
+    //float shadow1 = ShadowCalculation(shadowMap1, lightPosition[1], WorldPos, viewPos, normal);
+    //vec3 ligthting1 = GetDirectLighting(lightPosition[1], lightColor[1], lightRadius[1], lightStrength[1], normal);
+    //float shadow2 = ShadowCalculation(shadowMap2, lightPosition[2], WorldPos, viewPos, normal);
+    //vec3 ligthting2 = GetDirectLighting(lightPosition[2], lightColor[2], lightRadius[2], lightStrength[2], normal);
+    //float shadow3 = ShadowCalculation(shadowMap3, lightPosition[3], WorldPos, viewPos, normal);
+    //vec3 ligthting3 = GetDirectLighting(lightPosition[3], lightColor[3], lightRadius[3], lightStrength[3], normal);     
     vec3 directLighting = vec3(0);
+
+    ligthting0 = mix(ligthting0, ligthting0B, 0.25);
+
     
     //shadow0 = 1;
     //shadow1 = 1;
@@ -465,31 +505,24 @@ void main()
     //shadow3 = 1;
 
     directLighting += shadow0 * ligthting0;
-    directLighting += shadow1 * ligthting1;
-    directLighting += shadow2 * ligthting2;
-    directLighting += shadow3 * ligthting3;
+   // directLighting += shadow1 * ligthting1;
+    //directLighting += shadow2 * ligthting2;
+    //directLighting += shadow3 * ligthting3;
         //roughness = 1;
-    indirectLighting *= (0.01) * vec3(roughness); 
+    //indirectLighting *= (0.01) * vec3(roughness); 
+    float factor = min(1, roughness * 1.5);
+    indirectLighting *= (0.01) * vec3(factor); 
+    indirectLighting = max(indirectLighting, vec3(0));
 
     // Composite
     vec3 composite = directLighting  + (indirectLighting * baseColor);
-   //  composite = directLighting;
 
    
 
-    float doom = calculateDoomFactor(WorldPos, viewPos, 4, 1);
-    doom = getFogFactor(WorldPos, viewPos);
-
-    // Fog
-    //vec3 fogColor = vec3(0.0050);
-    //composite = mix(composite, fogColor, doom);
-  //  doom = clamp(doom, 0 , 1);
-   // composite *=  1 - doom;
-    
     // Final color
     if (mode == 0) {
         FragColor.rgb = composite;
-        FragColor.rgb = directLighting ;
+   //     FragColor.rgb = directLighting ;
         FragColor.a = 1;
     }
     if (mode == 1) {
@@ -503,76 +536,57 @@ void main()
         FragColor.rgb = indirectLighting;
         FragColor.a = 1;
     }
-    
+
+    // Fog
+    float d = distance(viewPos, WorldPos);
+    float alpha = getFogFactor(d);
+    vec3 FogColor = vec3(0.0);
+    FragColor.rgb = mix(FragColor.rgb, FogColor, alpha);
+
     // Tonemap
 	FragColor.rgb = pow(FragColor.rgb, vec3(1.0/2.2)); 
-	FragColor.rgb = Tonemap_ACES(FragColor.rgb);
-    
-    	// Filmic tonemapping
-//	FragColor.rgb = mix(FragColor.rgb, filmic(FragColor.rgb), 0.5);
-
-        //FragColor.rgb = attrBiTangent;
-
-    //FragColor.rgb = vec3(1,0,0);
-
-    // Brightness and contrast
-	float contrast = 1.3;
-	float brightness = -0.03;
-    vec3 finalColor = FragColor.rgb;
-	finalColor = finalColor * contrast;
-	finalColor = finalColor + vec3(brightness);
-	
+    FragColor.rgb = mix(FragColor.rgb, Tonemap_ACES(FragColor.rgb), 1.0);
+    	
 	// Temperature
-	float temperature = 225; // mix(1000.0, 15000.0, (sin(iTime * (PI2 / 10.0)) * 0.5) + 0.5);
-	float temperatureStrength = 0.25;
+	//float temperature = 15200; 
+	//float temperatureStrength = 1.0;
 	//finalColor = mix(finalColor, finalColor * colorTemperatureToRGB(temperature), temperatureStrength); 
 	
 	// Filmic tonemapping
-	finalColor = mix(finalColor, filmic(finalColor), 1.0);
-
-    FragColor.rgb = finalColor;
-
-
-
+	FragColor.rgb = mix(FragColor.rgb, filmic(FragColor.rgb), 0.95);
 
     // Noise
-
-   vec2 uv = gl_FragCoord.xy / vec2(screenWidth, screenHeight);
-
-        vec2 filmRes = vec2(screenWidth, screenHeight);
+    vec2 uv = gl_FragCoord.xy / vec2(screenWidth, screenHeight);
+    vec2 filmRes = vec2(screenWidth, screenHeight);
     vec2 coord = gl_FragCoord.xy;
-     vec2 rest = modf(uv * filmRes, coord);
-
-        // Calculate noise
+    vec2 rest = modf(uv * filmRes, coord);
     vec3 noise00 = filmPixel(coord / filmRes);
     vec3 noise01 = filmPixel((coord + vec2(0, 1)) / filmRes);
     vec3 noise10 = filmPixel((coord + vec2(1, 0)) / filmRes);
     vec3 noise11 = filmPixel((coord + vec2(1, 1)) / filmRes);
-    
-    // bilinear
     vec3 noise = mix(mix(noise00, noise01, rest.y), mix(noise10, noise11, rest.y), rest.x) * vec3(0.7, 0.6, 0.8);
-    
-        float x = rand(uv + rand(vec2(time, -time)));
-  
-       // FragColor.rgb = vec3(0);
-		FragColor.rgb = FragColor.rgb + (x * -0.04) + 0.02;
+    float noiseSpeed = 30.0;
+    float x = rand(uv + rand(vec2(int(time * noiseSpeed), int(-time * noiseSpeed))));
+    float noiseFactor = 0.049;
+    FragColor.rgb = FragColor.rgb + (x * -noiseFactor) + (noiseFactor / 2);
 
-      //  FragColor.rgb = attrBiTangent.rgb;
-
-
-  //  float renderWidth = 512  * 1.25 * 2;
-  //  float renderHeight = 288 * 1.25 * 2;
-
-  //    vec2 uv = gl_FragCoord.xy / vec2(renderWidth, renderHeight);
-
-  
-  
     // vignette         
-    uv = gl_FragCoord.xy / vec2(screenWidth * 2, screenHeight * 2);
+    uv = gl_FragCoord.xy / vec2(screenWidth * 1, screenHeight * 1);
     uv *=  1.0 - uv.yx;           
     float vig = uv.x*uv.y * 15.0; // multiply with sth for intensity    
-    vig = pow(vig, 0.1); // change pow for modifying the extend of the  vignette    
+    vig = pow(vig, 0.05); // change pow for modifying the extend of the  vignette    
     FragColor.rgb *= vec3(vig);
+        
+    // Brightness and contrast
+	float contrast = 1.3;
+	float brightness = -0.097;
+    vec3 finalColor = FragColor.rgb;
+	FragColor.rgb = FragColor.rgb * contrast;
+	FragColor.rgb = FragColor.rgb + vec3(brightness);
+    FragColor.g += 0.0025;
+    
+ //   FragColor.rgb = temp;
+ //   FragColor.rgb = normal;
+  //  FragColor.rgb = baseColor;
 
-    //FragColor.rgb = vec3(WorldPos);
 }

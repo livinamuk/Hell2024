@@ -14,6 +14,10 @@
 
 namespace Util {
 
+    inline float RandomFloat(float min, float max) {
+        return min + static_cast <float> (rand()) / (static_cast <float> (RAND_MAX / (max - min)));
+    }
+
     inline int RandomInt(int min, int max) {
         static std::random_device dev;
         static std::mt19937 rng(dev());
@@ -88,7 +92,7 @@ namespace Util {
     }
 
     inline glm::vec3 GetDirectLightAtAPoint(Light& light, glm::vec3 voxelFaceCenter, glm::vec3 voxelNormal, float _voxelSize) {
-        glm::vec3 lightCenter = glm::vec3(light.x * _voxelSize, light.y * _voxelSize, light.z * _voxelSize);
+        glm::vec3 lightCenter = light.position;
         float dist = glm::distance(voxelFaceCenter, lightCenter);
         //float att = 1.0 / (1.0 + 0.1 * dist + 0.01 * dist * dist);
         float att = glm::smoothstep(light.radius, 0.0f, glm::length(lightCenter - voxelFaceCenter));

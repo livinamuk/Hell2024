@@ -105,6 +105,24 @@ bool FbxImporter::InitFromScene(SkinnedModel& skinnedModel, const aiScene* pScen
     ///////////
     // Extract all the vertex data from the flat arrays above and store it more sanely
 
+    /*std::vector<glm::vec3> smoothNormals;
+    smoothNormals.resize(skinnedModel.Normals.size());
+
+    for (auto& n : smoothNormals) {
+        n = glm::vec3(0, 0, 0);
+    }
+
+    for (int i = 0; i < NumVertices; i++) {
+        int count = 0;
+        for (int j = 0; j < NumVertices; j++) {
+            if (skinnedModel.Positions[j] == skinnedModel.Positions[i]) {
+                smoothNormals[i] += skinnedModel.Normals[j];
+                count++;
+            }
+        }
+        smoothNormals[i] = smoothNormals[i] / float(count);
+    }*/
+
     for (int i = 0; i < NumVertices; i++) {
 
         Vertex vert;
@@ -119,6 +137,21 @@ bool FbxImporter::InitFromScene(SkinnedModel& skinnedModel, const aiScene* pScen
         vert.weight[1] = skinnedModel.Bones[i].Weights[1];
         vert.weight[2] = skinnedModel.Bones[i].Weights[2];
         vert.weight[3] = skinnedModel.Bones[i].Weights[3];
+
+
+        /*int count = 0;
+        for (int j = 0; j < NumVertices; j++) {
+            if (skinnedModel.Positions[j] == vert.position) {
+                smoothNormals[i] += skinnedModel.Normals[j];
+                count++;
+            }
+        }
+        smoothNormals[i] = smoothNormals[i] / float(count);
+        
+        
+        vert.smoothNormal = smoothNormals[i];*/
+
+
 
         skinnedModel._vertices.push_back(vert);
         /*std::cout << i << " " << Util::Vec3ToString(vert.position) << " ";
@@ -173,6 +206,11 @@ bool FbxImporter::InitFromScene(SkinnedModel& skinnedModel, const aiScene* pScen
     glEnableVertexAttribArray(BONE_WEIGHT_LOCATION);
     glVertexAttribPointer(BONE_WEIGHT_LOCATION, 4, GL_FLOAT, GL_FALSE, sizeof(VertexBoneData), (const GLvoid*)16);
 
+   /* glBindBuffer(GL_ARRAY_BUFFER, skinnedModel.m_Buffers[SMOOTH_NORMAL_VB]);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(smoothNormals[0]) * smoothNormals.size(), &smoothNormals[0], GL_STATIC_DRAW);
+    glEnableVertexAttribArray(SMOOTH_NORMAL_LOCATION);
+    glVertexAttribPointer(SMOOTH_NORMAL_LOCATION, 3, GL_FLOAT, GL_FALSE, 0, 0);
+    */
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, skinnedModel.m_Buffers[INDEX_BUFFER]);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(skinnedModel.Indices[0]) * skinnedModel.Indices.size(), &skinnedModel.Indices[0], GL_STATIC_DRAW);
 
@@ -224,8 +262,12 @@ void FbxImporter::InitMesh(SkinnedModel& skinnedModel, unsigned int MeshIndex,
 
   //  std::cout << Util::Vec3ToString(Tangents[0]) + " " + Util::Vec3ToString(Bitangents[0]) + "\n";
 
-    std::cout << paiMesh->mName.C_Str() << ": " << "Index count: " << Indices.size() << "   tri count: " << (Indices.size() / 3.0f) << "\n";
+   // std::cout << paiMesh->mName.C_Str() << ": " << "Index count: " << Indices.size() << "   tri count: " << (Indices.size() / 3.0f) << "\n";
 
+
+    std::cout << MeshIndex << ": " <<  paiMesh->mName.C_Str() << "\n";
+
+    
 
     LoadBones(skinnedModel, MeshIndex, paiMesh, Bones);
 
@@ -244,6 +286,7 @@ void FbxImporter::LoadBones(SkinnedModel& skinnedModel, unsigned int MeshIndex, 
     for (unsigned int i = 0; i < pMesh->mNumBones; i++) {
         unsigned int BoneIndex = 0;
         std::string BoneName(pMesh->mBones[i]->mName.data);
+        //std::cout << i << " " << BoneName << "\n";
 
         if (skinnedModel.m_BoneMapping.find(BoneName) == skinnedModel.m_BoneMapping.end()) {
             // Allocate an index for a new bone

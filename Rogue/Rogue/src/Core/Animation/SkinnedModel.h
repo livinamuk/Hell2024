@@ -101,7 +101,7 @@ public:
     std::string _filename = "undefined";
     std::vector<Animation*> m_animations;
     GLuint m_VAO;
-    GLuint m_Buffers[10];
+    GLuint m_Buffers[NUM_VBs];
     std::vector<MeshEntry> m_meshEntries;
     std::map<std::string, unsigned int> m_BoneMapping; // maps a bone name to its index
     unsigned int m_NumBones;

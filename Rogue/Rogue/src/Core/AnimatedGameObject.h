@@ -19,6 +19,9 @@ public:
 	void PauseAnimation();
 	void EnableMotionBlur();
 	void DisableMotionBlur();
+	void SetMeshMaterial(std::string meshName, std::string materialName);
+	void SetMeshMaterialByIndex(int meshIndex, std::string materialName);
+	void SetMaterial(std::string materialName);
 
 	std::string GetName();
 	glm::mat4 GetModelMatrix();
@@ -32,6 +35,13 @@ public:
 	float _currentAnimationTime = 0;
 	float _currentAnimationTimePrevious = 0;	
 	glm::mat4 _cameraMatrix = glm::mat4(1);
+	std::vector<int> _materialIndices;
+
+	// Hacky shit
+	glm::vec3 GetGlockBarrelPostion();
+	glm::vec3 GetAKS74UBarrelPostion();
+	glm::vec3 GetShotgunBarrelPostion();
+
 
 private:
 
@@ -45,4 +55,6 @@ private:
 	std::string _name;
 	bool _motionBlur = false;
 	bool _animationIsComplete = true;
+
+
 };

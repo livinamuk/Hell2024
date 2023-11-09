@@ -60,9 +60,9 @@ void main() {
 		//WorldPos = aPos;
 		//WorldPos.y += 1;
 		
-		attrNormal = normalize(totalNormal.xyz);
-		attrTangent = normalize(totalTangent.xyz);
-		attrBiTangent = normalize(totalBiTangent.xyz);
+		attrNormal =  (model * vec4(normalize(totalNormal.xyz), 0)).xyz;
+		attrTangent =  (model * vec4(normalize(totalTangent.xyz), 0)).xyz;
+		attrBiTangent =  (model * vec4(normalize(totalBiTangent.xyz), 0)).xyz;
 
 		attrBiTangent = normalize(cross(attrNormal,attrTangent));
 		
@@ -72,10 +72,11 @@ void main() {
 	// NOT ANIMATED
 	else {	
 		attrNormal = (model * vec4(aNormal, 0)).xyz;
+		//attrNormal = (model * vec4(smoothNormal, 0)).xyz;
 		attrTangent = (model * vec4(aTangent, 0.0)).xyz;
 		attrBiTangent = (model * vec4(aBitangent, 0.0)).xyz;
 
-		TexCoord = aTexCoord;
+		TexCoord = vec2(aTexCoord.x, aTexCoord.y);
 		WorldPos = (model * vec4(aPos.x, aPos.y, aPos.z, 1.0)).xyz;
 				
 		gl_Position = projection * view * vec4(WorldPos, 1.0);

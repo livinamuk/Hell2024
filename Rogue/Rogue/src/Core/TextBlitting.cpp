@@ -12,6 +12,7 @@ namespace TextBlitter {
 	int _charSpacing = 0;
 	int _spaceWidth = 6;
 	std::string _charSheet = "•!\"#$%&\'••*+,-./0123456789:;<=>?_ABCDEFGHIJKLMNOPQRSTUVWXYZ\\^_`abcdefghijklmnopqrstuvwxyz";
+//	std::string _numSheet = "1234567890/";
 	std::string _textToBilt = "";
 	int _charCursorIndex = 0;
 	float _textTime = 0;

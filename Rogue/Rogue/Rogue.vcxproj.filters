@@ -96,6 +96,15 @@
     <ClCompile Include="src\Core\Animation\SkinnedModel.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\Renderer\PresentFrameBuffer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Effects\MuzzleFlash.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Renderer\NumberBlitter.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\Core\GL.h">
@@ -188,6 +197,15 @@
     <ClInclude Include="src\Core\Animation\SkinnedModel.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\Renderer\PresentFrameBuffer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Effects\MuzzleFlash.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Renderer\NumberBlitter.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="res\shaders\test.frag" />
@@ -203,5 +221,7 @@
     <None Include="res\shaders\editor_solid_color.vert" />
     <None Include="res\shaders\voxelize.frag" />
     <None Include="res\shaders\voxelize.vert" />
+    <None Include="res\shaders\animated_quad.frag" />
+    <None Include="res\shaders\animated_quad.vert" />
   </ItemGroup>
 </Project>
