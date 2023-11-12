@@ -32,7 +32,7 @@ uniform mat4 view;
 
 #define MAP_WIDTH   32
 #define MAP_HEIGHT  22
-#define MAP_DEPTH   36
+#define MAP_DEPTH   50
 #define VOXEL_SIZE  0.2
 #define PROPOGATION_SPACING 1.0
 #define PROBE_SPACING  VOXEL_SIZE * PROPOGATION_SPACING
@@ -488,8 +488,8 @@ void main()
     float shadow0 = ShadowCalculation(shadowMap0, lightPosition[0], WorldPos, viewPos, normal);
     vec3 ligthting0 = GetDirectLighting(lightPosition[0], lightColor[0], lightRadius[0], lightStrength[0] * 0.55, normal);
     vec3 ligthting0B = GetDirectLighting2(lightPosition[0], lightColor[0], lightRadius[0], lightStrength[0] * 0.55, normal);
-    //float shadow1 = ShadowCalculation(shadowMap1, lightPosition[1], WorldPos, viewPos, normal);
-    //vec3 ligthting1 = GetDirectLighting(lightPosition[1], lightColor[1], lightRadius[1], lightStrength[1], normal);
+    float shadow1 = ShadowCalculation(shadowMap1, lightPosition[1], WorldPos, viewPos, normal);
+    vec3 ligthting1 = GetDirectLighting2(lightPosition[1], lightColor[1], lightRadius[1], lightStrength[1], normal);
     //float shadow2 = ShadowCalculation(shadowMap2, lightPosition[2], WorldPos, viewPos, normal);
     //vec3 ligthting2 = GetDirectLighting(lightPosition[2], lightColor[2], lightRadius[2], lightStrength[2], normal);
     //float shadow3 = ShadowCalculation(shadowMap3, lightPosition[3], WorldPos, viewPos, normal);
@@ -497,7 +497,7 @@ void main()
     vec3 directLighting = vec3(0);
 
     ligthting0 = mix(ligthting0, ligthting0B, 0.25);
-
+   // ligthting0 = ligthting0B;
     
     //shadow0 = 1;
     //shadow1 = 1;
@@ -505,7 +505,7 @@ void main()
     //shadow3 = 1;
 
     directLighting += shadow0 * ligthting0;
-   // directLighting += shadow1 * ligthting1;
+    directLighting += shadow1 * ligthting1;
     //directLighting += shadow2 * ligthting2;
     //directLighting += shadow3 * ligthting3;
         //roughness = 1;

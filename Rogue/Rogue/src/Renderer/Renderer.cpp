@@ -38,6 +38,7 @@ struct Shaders {
     Shader fxaa;
     Shader animatedQuad;
     Shader depthOfField;
+    Shader debugViewPointCloud;
     ComputeShader compute;
     ComputeShader pointCloud;
     ComputeShader propogateLight;
@@ -48,35 +49,32 @@ struct SSBOs {
     GLuint pointCloud = 0;;
 } _ssbos;
 
-GLuint _progogationGridTexture = 0;
-
-unsigned int _texture;
-const unsigned int TEXTURE_WIDTH = 512, TEXTURE_HEIGHT = 288;
-
-Mesh _cubeMesh;
-
-GBuffer _gBuffer;
-PresentFrameBuffer _presentFrameBuffer;
-
-unsigned int _pointLineVAO;
-unsigned int _pointLineVBO;
-int _renderWidth = 512  * 1.5f;
-int _renderHeight = 288 * 1.5f;
-
-std::vector<Point> _points;
-std::vector<Point> _solidTrianglePoints;
-std::vector<Line> _lines;
-
-std::vector<UIRenderInfo> _UIRenderInfos;
-std::vector<ShadowMap> _shadowMaps;
-
 struct Toggles {
     bool drawLights = false;
     bool drawProbes = false;
     bool drawLines = false;
 } _toggles;
 
-enum RenderMode { COMPOSITE = 0, DIRECT_LIGHT, INDIRECT_LIGHT, POINT_CLOUD,  MODE_COUNT} _mode;
+GLuint _progogationGridTexture = 0;
+unsigned int _texture;
+const unsigned int TEXTURE_WIDTH = 512, TEXTURE_HEIGHT = 288;
+Mesh _cubeMesh;
+GBuffer _gBuffer;
+PresentFrameBuffer _presentFrameBuffer;
+unsigned int _pointLineVAO;
+unsigned int _pointLineVBO;
+int _renderWidth = 512  * 1.5f;
+int _renderHeight = 288 * 1.5f;
+std::vector<Point> _points;
+std::vector<Point> _solidTrianglePoints;
+std::vector<Line> _lines;
+std::vector<UIRenderInfo> _UIRenderInfos;
+std::vector<ShadowMap> _shadowMaps;
+GLuint _imageStoreTexture = { 0 };
+bool _depthOfFieldScene = 0.9f;
+bool _depthOfFieldWeapon = 1.0f;
+
+enum RenderMode { COMPOSITE, DIRECT_LIGHT, INDIRECT_LIGHT, POINT_CLOUD,  MODE_COUNT} _mode;
 
 void QueueLineForDrawing(Line line);
 void QueuePointForDrawing(Point point);
@@ -91,13 +89,8 @@ void ComputePass();
 void RenderShadowMaps();
 void UpdatePointCloud();
 void UpdatePropogationgGrid();
+void DrawPointCloud();
 
-int _voxelTextureWidth = { 0 };
-int _voxelTextureHeight = { 0 };
-int _voxelTextureDepth = { 0 };
-float _voxelSize2 = 0.2f;
-
-GLuint _imageStoreTexture = { 0 };
 
 void Renderer::Init() {
 
@@ -117,6 +110,7 @@ void Renderer::Init() {
     _shaders.fxaa.Load("fxaa.vert", "fxaa.frag");
     _shaders.animatedQuad.Load("animated_quad.vert", "animated_quad.frag");
     _shaders.depthOfField.Load("depth_of_field.vert", "depth_of_field.frag");
+    _shaders.debugViewPointCloud.Load("debug_view_point_cloud.vert", "debug_view_point_cloud.frag");
     
     _cubeMesh = MeshUtil::CreateCube(1.0f, 1.0f, true);
 
@@ -151,9 +145,8 @@ void DrawScene(Shader& shader) {
         wall.Draw();
     }
 
-    AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("FloorBoards"));
     for (Floor& floor : Scene::_floors) {
-        //AssetManager::BindMaterialByIndex(floor.materialIndex);
+        AssetManager::BindMaterialByIndex(floor.materialIndex);
         floor.Draw();
     }
 
@@ -169,10 +162,11 @@ void DrawScene(Shader& shader) {
     // Ceiling trims
     AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("Ceiling2"));
     for (Wall& wall : Scene::_walls) {
-        if (wall.height != WALL_HEIGHT)
+        if (!wall.hasTopTrim)
             continue;
         Transform t;
         t.position = wall.begin;
+        t.position.y = wall.topTrimBottom;
         t.rotation.y = Util::YRotationBetweenTwoPoints(wall.begin, wall.end);
         t.scale.x = glm::distance(wall.end, wall.begin);
         shader.SetMat4("model", t.to_mat4());
@@ -181,7 +175,7 @@ void DrawScene(Shader& shader) {
     // Floor trims
     AssetManager::BindMaterialByIndex(trimFloorMaterialIndex);
     for (Wall& wall : Scene::_walls) {
-        if (wall.height != WALL_HEIGHT)
+        if (!wall.hasBottomTrim)
             continue;
         Transform t;
         t.position = wall.begin;
@@ -253,14 +247,26 @@ void DrawAnimatedObject(Shader& shader, AnimatedGameObject* animatedGameObject) 
 
     std::vector<Triangle> enemyTris;
 
+    static bool maleHands = true;
+    if (Input::KeyPressed(HELL_KEY_U)) {
+        maleHands = !maleHands;
+    }
+
     for (int i = 0; i < skinnedModel.m_meshEntries.size(); i++) {
 
         AssetManager::BindMaterialByIndex(animatedGameObject->_materialIndices[i]);
 
-        if (skinnedModel.m_meshEntries[i].Name == "SK_FPSArms_Female.001" ||
-            skinnedModel.m_meshEntries[i].Name == "SK_FPSArms_Female") {
-            AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("FemaleArms"));
-            continue;
+        if (maleHands) {
+            if (skinnedModel.m_meshEntries[i].Name == "SK_FPSArms_Female.001" ||
+                skinnedModel.m_meshEntries[i].Name == "SK_FPSArms_Female") {
+                continue;
+            }
+        }
+        else {
+            if (skinnedModel.m_meshEntries[i].Name == "manniquen1_2.001" ||
+                skinnedModel.m_meshEntries[i].Name == "manniquen1_2") {
+                continue;
+            }
         }
 
         glDrawElementsBaseVertex(GL_TRIANGLES, skinnedModel.m_meshEntries[i].NumIndices, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int) * skinnedModel.m_meshEntries[i].BaseIndex), skinnedModel.m_meshEntries[i].BaseVertex);
@@ -351,8 +357,10 @@ void DrawAnimatedScene(Shader& shader) {
         //DrawAnimatedObject(shader, &animatedObject);
     }   
 
-    shader.SetMat4("projection", Player::GetProjectionMatrix(1.0f)); // 1.0 for weapon, 0.9 for scene.
+    glDisable(GL_CULL_FACE);
+    shader.SetMat4("projection", Player::GetProjectionMatrix(_depthOfFieldWeapon)); // 1.0 for weapon, 0.9 for scene.
     DrawAnimatedObject(shader, &Player::GetFirstPersonWeapon());
+    glEnable(GL_CULL_FACE);
 
     shader.SetBool("isAnimated", false);
 }
@@ -390,7 +398,6 @@ void RenderImmediate() {
 
 void Renderer::RenderFrame() {
 
-
     RenderShadowMaps();
 
     // Viewing mode
@@ -415,7 +422,7 @@ void Renderer::RenderFrame() {
         _shaders.test.SetInt("mode", 3);
     }
 
-    glm::mat4 projection = Player::GetProjectionMatrix(0.9f); // 1.0 for weapon, 0.9 for scene.
+    glm::mat4 projection = Player::GetProjectionMatrix(_depthOfFieldScene); // 1.0 for weapon, 0.9 for scene.
     glm::mat4 view = Player::GetViewMatrix();
 
     _gBuffer.Bind();
@@ -461,30 +468,22 @@ void Renderer::RenderFrame() {
 
     DrawScene(_shaders.test);
     DrawAnimatedScene(_shaders.test);
-
     DrawMuzzleFlashes();
 
-
-
-    //glViewport(0, 0, _gBuffer.GetWidth(), _gBuffer.GetHeight());
-   // glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-   // glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
+    // Debug stuff
     glDisable(GL_DEPTH_TEST);
-
     _shaders.solidColor.Use();
     _shaders.solidColor.SetMat4("projection", projection);
     _shaders.solidColor.SetMat4("view", Player::GetViewMatrix());
     _shaders.solidColor.SetVec3("viewPos", Player::GetViewPos());
     _shaders.solidColor.SetVec3("color", glm::vec3(1, 1, 0));
     _shaders.solidColor.SetMat4("model", glm::mat4(1));
-
      // Draw lights
     if (_toggles.drawLights) {
         for (Light& light : Scene::_lights) {
             glm::vec3 lightCenter = light.position;
             Transform lightTransform;
-            lightTransform.scale = glm::vec3(_voxelSize2);
+            lightTransform.scale = glm::vec3(0.2f);
             lightTransform.position = lightCenter;
             _shaders.solidColor.SetMat4("model", lightTransform.to_mat4());
             _shaders.solidColor.SetVec3("color", WHITE);
@@ -492,7 +491,6 @@ void Renderer::RenderFrame() {
             _cubeMesh.Draw();
         }
     }
-
     // Draw probes
     glEnable(GL_DEPTH_TEST);
     if (_toggles.drawProbes) {
@@ -548,18 +546,6 @@ void Renderer::RenderFrame() {
         }
     }
 
-    if (_mode == RenderMode::POINT_CLOUD) {
-        // Draw all relevant cloud points
-        for (auto& cloudPoint : Scene::_cloudPoints) {
-            if (glm::length(cloudPoint.directLighting) > 0.01) {
-                Point p;
-                p.pos = cloudPoint.position;
-                p.color = cloudPoint.directLighting;
-                QueuePointForDrawing(p);
-            }
-        }
-    }
-    
 
     ComputePass();
 
@@ -667,6 +653,12 @@ void Renderer::RenderFrame() {
     glDrawBuffer(GL_COLOR_ATTACHMENT0);
     glBlitFramebuffer(0, 0, _gBuffer.GetWidth(), _gBuffer.GetHeight(), 0, 0, _presentFrameBuffer.GetWidth(), _presentFrameBuffer.GetHeight(), GL_COLOR_BUFFER_BIT, GL_LINEAR);   
 
+    // Debug view
+    if (_mode == RenderMode::POINT_CLOUD) {
+        glViewport(0, 0, _presentFrameBuffer.GetWidth(), _presentFrameBuffer.GetHeight());
+        DrawPointCloud();
+    }
+
     // Render UI
     glDrawBuffer(GL_COLOR_ATTACHMENT0);
     QueueUIForRendering("CrosshairDot", _presentFrameBuffer.GetWidth() / 2, _presentFrameBuffer.GetHeight() / 2, true);
@@ -730,39 +722,6 @@ void Renderer::RenderFrame() {
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
     glReadBuffer(GL_COLOR_ATTACHMENT0);
     glBlitFramebuffer(0, 0, _presentFrameBuffer.GetWidth(), _presentFrameBuffer.GetHeight(), 0, 0, GL::GetWindowWidth(), GL::GetWindowHeight(), GL_COLOR_BUFFER_BIT, GL_NEAREST);
-
-
-    const int bufferSize = MAP_WIDTH * MAP_HEIGHT * MAP_DEPTH * sizeof(float) * 4;
-    static float buffer[bufferSize];
-
-    static GLuint pboID = 0;
-    if (pboID == 0) {
-        glGenBuffers(1, &pboID);
-        glBindBuffer(GL_PIXEL_PACK_BUFFER, pboID);
-        glBufferData(GL_PIXEL_PACK_BUFFER, bufferSize, NULL, GL_STREAM_READ);
-
-    };
-
-    if (Input::KeyPressed(HELL_KEY_Z) || true) {
-        glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-        glPixelStorei(GL_PACK_ALIGNMENT, 1);
-
-        glBindBuffer(GL_PIXEL_PACK_BUFFER, pboID);
-        glBindTexture(GL_TEXTURE_3D, _imageStoreTexture);
-        glGetTexImage(GL_TEXTURE_3D, 0, GL_RGBA, GL_FLOAT, 0);
-
-        GLsync sync = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
-        glClientWaitSync(sync, 0, GL_TIMEOUT_IGNORED);
-        glDeleteSync(sync);
-
-        GLfloat* ptr = (GLfloat*)glMapBufferRange(GL_PIXEL_PACK_BUFFER, 0, bufferSize, GL_MAP_READ_BIT);
-
-        //float* buffer = new float[bufferSize];
-        memcpy(&buffer, ptr, bufferSize);
-
-        glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
-        glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);       
-    }
 }
 
 void Renderer::HotloadShaders() {
@@ -776,6 +735,7 @@ void Renderer::HotloadShaders() {
     _shaders.fxaa.Load("fxaa.vert", "fxaa.frag");
     _shaders.animatedQuad.Load("animated_quad.vert", "animated_quad.frag");
     _shaders.depthOfField.Load("depth_of_field.vert", "depth_of_field.frag");
+    _shaders.debugViewPointCloud.Load("debug_view_point_cloud.vert", "debug_view_point_cloud.frag");
 
     _shaders.compute.Load("res/shaders/compute.comp");
     _shaders.pointCloud.Load("res/shaders/point_cloud.comp");
@@ -1079,7 +1039,7 @@ void DrawMuzzleFlashes() {
     glDisable(GL_CULL_FACE);
 
     /// this is sketchy. add this to player class.
-    glm::mat4 projection = Player::GetProjectionMatrix(1.0f); // 1.0 for weapon, 0.9 for scene.
+    glm::mat4 projection = Player::GetProjectionMatrix(_depthOfFieldWeapon); // 1.0 for weapon, 0.9 for scene.
     glm::mat4 view = Player::GetViewMatrix();
     glm::vec3 viewPos = Player::GetViewPos();
 
@@ -1149,7 +1109,63 @@ void RenderShadowMaps() {
 
 }
 
+struct PointCloud {
+    GLuint VAO { 0 };
+    GLuint VBO { 0 };
+    int vertexCount { 0 };
+} _pointCloud;
+
+void UpdatePointCloudBuffer() {
+
+    if (_pointCloud.VAO == 0) {
+        _pointCloud.vertexCount = Scene::_cloudPoints.size();
+        glGenVertexArrays(1, &_pointCloud.VAO);
+        glGenBuffers(1, &_pointCloud.VBO);
+        glBindVertexArray(_pointCloud.VAO);
+        glBindBuffer(GL_ARRAY_BUFFER, _pointCloud.VBO);
+        glBufferData(GL_ARRAY_BUFFER, _pointCloud.vertexCount * sizeof(CloudPoint), &Scene::_cloudPoints[0], GL_STATIC_DRAW);
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(CloudPoint), (void*)0);
+        glEnableVertexAttribArray(1);
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(CloudPoint), (void*)offsetof(CloudPoint, normal));
+        glEnableVertexAttribArray(2);
+        glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(CloudPoint), (void*)offsetof(CloudPoint, directLighting));
+    }
+}
+
+void DrawPointCloud() {
+
+    _shaders.debugViewPointCloud.Use();
+    _shaders.debugViewPointCloud.SetMat4("projection", Player::GetProjectionMatrix(_depthOfFieldScene));
+    _shaders.debugViewPointCloud.SetMat4("view", Player::GetViewMatrix());
+
+    /*
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, _ssbos.pointCloud);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, _ssbos.pointCloud);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, _ssbos.simpleSceneVertices);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, _ssbos.simpleSceneVertices);
+
+    glBindBuffer(GL_ARRAY_BUFFER, _pointCloud.VBO);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, _pointCloud.VBO);
+    */
+
+
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, _ssbos.pointCloud);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, _ssbos.pointCloud);
+
+    glDisable(GL_DEPTH_TEST);
+    glBindVertexArray(_pointCloud.VAO);
+    //glBindVertexArray(_ssbos.pointCloud);
+    glDrawArrays(GL_POINTS, 0, _pointCloud.vertexCount);
+    glBindVertexArray(0);
+
+    // std::cout << _pointCloud.vertexCount << "\n";
+
+    std::cout << "cloud vertexCount: " << _pointCloud.vertexCount << "\n";
+}
+
 void InitCompute() {
+
 
     // query limitations
     int max_compute_work_group_count[3];
@@ -1213,7 +1229,7 @@ void ComputePass() {
         _ssbos.simpleSceneVertices = 0;
     }
 
-    glm::mat4 projection = Player::GetProjectionMatrix(0.9f); // 1.0 for weapon, 0.9 for scene.
+    glm::mat4 projection = Player::GetProjectionMatrix(_depthOfFieldScene); // 1.0 for weapon, 0.9 for scene.
     glm::mat4 view = Player::GetViewMatrix();
 
     _shaders.compute.Use();
@@ -1222,7 +1238,10 @@ void ComputePass() {
       
     if (_ssbos.simpleSceneVertices == 0) {
 
+
         Scene::CreatePointCloud();
+        UpdatePointCloudBuffer();
+
         int len = Scene::_triangleWorld.size() * 3;
         _shaders.compute.SetInt("vertexCount", len);
         glm::vec4* test_buffer = new glm::vec4[len];
@@ -1255,7 +1274,6 @@ void ComputePass() {
 
 
     
-    
     UpdatePointCloud();
     UpdatePropogationgGrid();
 }
@@ -1274,8 +1292,8 @@ void UpdatePointCloud() {
     // Populate buffer
     for (size_t i = 0; i < bufferLength; i++) {
         CloudPoint cloudPoint;
-        cloudPoint.position = glm::vec4(Scene::_cloudPoints[i].position, 0);
-        cloudPoint.normal = glm::vec4(Scene::_cloudPoints[i].normal, 0);
+        cloudPoint.position = Scene::_cloudPoints[i].position;
+        cloudPoint.normal = Scene::_cloudPoints[i].normal;
         pointCloudBuffer[i] = cloudPoint;
     }
 
@@ -1292,14 +1310,16 @@ void UpdatePointCloud() {
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, _ssbos.simpleSceneVertices);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, _ssbos.simpleSceneVertices);
 
+    glBindBuffer(GL_ARRAY_BUFFER, _pointCloud.VBO);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, _pointCloud.VBO);
+
+
     _shaders.pointCloud.Use();
     _shaders.pointCloud.SetInt("vertexCount", Scene::_triangleWorld.size() * 3);
-    _shaders.pointCloud.SetMat4("projInverse", glm::inverse(Player::GetProjectionMatrix(0.9)));
-    _shaders.pointCloud.SetMat4("viewInverse", glm::inverse(Player::GetViewMatrix()));
     _shaders.pointCloud.SetVec3("lightPosition", Scene::_lights[0].position);
 
     glDispatchCompute(bufferLength, 1, 1);
-    //glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
+    glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
 
     /*
     CloudPoint* pointCloudMappedBuffer = nullptr;
@@ -1340,19 +1360,29 @@ void UpdatePropogationgGrid() {
     _shaders.propogateLight.SetInt("pointCloudSize", Scene::_cloudPoints.size());
     _shaders.propogateLight.SetInt("vertexCount", Scene::_triangleWorld.size() * 3);
 
-    static bool test = false;
-    test = !test;
-    static bool test2 = false;
-
-    static int test3 = 0;
-    test3++;
-    if (test3 == 3) {
-        test3 = 0;
-        test2 = !test2;
+    // This aboomination limits the light propogation compute calculations 
+    // by skipping even/odd X grid co-ordinates every second frame, Y co-ordinates 
+    // every fourth frame and z co-ordinates very third frame.
+    static bool skipEvenX = false;
+    static bool skipEvenY = false;
+    static bool skipEvenZ = false;
+    static int yCounter = 0;
+    static int zCounter = 0;
+    skipEvenX = !skipEvenX;
+    yCounter++;
+    zCounter++;
+    if (yCounter == 4) {
+        yCounter = 0;
+        skipEvenY = !skipEvenY;
     }
-
-    _shaders.propogateLight.SetBool("test", test);
-    _shaders.propogateLight.SetBool("test2", test2);
+    if (zCounter == 3) {
+        zCounter = 0;
+        skipEvenZ = !skipEvenZ;
+    }
+    _shaders.propogateLight.SetBool("skipEvenX", skipEvenX);
+    _shaders.propogateLight.SetBool("skipEvenY", skipEvenY);
+    _shaders.propogateLight.SetBool("skipEvenZ", skipEvenZ);
+    //
 
     glDispatchCompute(MAP_WIDTH, MAP_HEIGHT, MAP_DEPTH);
     //glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);

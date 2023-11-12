@@ -19,7 +19,7 @@
 
 #define MAP_WIDTH   32
 #define MAP_HEIGHT  22
-#define MAP_DEPTH   36
+#define MAP_DEPTH   50
 #define VOXEL_SIZE  0.2f
 
 #define ZERO_MEM(a) memset(a, 0, sizeof(a))

@@ -1,11 +1,10 @@
 #pragma once
-#include <GLFW/glfw3.h>
 #include "keycodes.h"
 
 namespace Input
 {
-	void Init(GLFWwindow* window);
-	void Update(GLFWwindow* window);
+	void Init();
+	void Update();
 	bool KeyPressed(unsigned int keycode);
 	bool KeyDown(unsigned int keycode);
 	float GetMouseOffsetX();

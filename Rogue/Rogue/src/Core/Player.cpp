@@ -69,10 +69,10 @@ void Player::Update(float deltaTime) {
 	}
 
 	float amt = 0.02f;
-	if (Input::KeyDown(HELL_KEY_Z)) {
+	if (Input::KeyDown(HELL_KEY_MINUS)) {
 		_viewHeightStanding -= amt;
 	}
-	if (Input::KeyDown(HELL_KEY_X)) {
+	if (Input::KeyDown(HELL_KEY_EQUAL)) {
 		_viewHeightStanding += amt;
 	}
 

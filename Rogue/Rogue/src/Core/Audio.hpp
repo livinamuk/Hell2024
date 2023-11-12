@@ -10,6 +10,11 @@ struct AudioHandle {
 	FMOD::Channel* channel = nullptr;
 };
 
+struct AudioEffectInfo {
+	std::string filename = "";
+	float volume = 0.0f;
+};
+
 namespace Audio {
 
 	inline std::unordered_map<std::string, FMOD::Sound*> _loadedAudio;

@@ -51,9 +51,6 @@
     <ClCompile Include="src\Renderer\GBuffer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\Core\VoxelWorld.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\Renderer\Texture3D.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -67,9 +64,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\Core\Editor.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\Core\Voxel.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\Renderer\Model.cpp">
@@ -149,9 +143,6 @@
     <ClInclude Include="src\Core\Audio.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\Core\VoxelWorld.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="src\Renderer\Texture3D.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -168,9 +159,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\Math.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\Core\Voxel.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\Timer.hpp">
@@ -223,5 +211,7 @@
     <None Include="res\shaders\voxelize.vert" />
     <None Include="res\shaders\animated_quad.frag" />
     <None Include="res\shaders\animated_quad.vert" />
+    <None Include="res\shaders\debug_view_point_cloud.frag" />
+    <None Include="res\shaders\debug_view_point_cloud.vert" />
   </ItemGroup>
 </Project>

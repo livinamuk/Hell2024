@@ -3,7 +3,7 @@
 //#include <glm/glm.hpp>
 #include "../Common.h"
 
-#define SHADOW_MAP_SIZE 4096
+#define SHADOW_MAP_SIZE 2048
 #define SHADOW_NEAR_PLANE 0.1f
 #define SHADOW_FAR_PLANE 20.0f	// change this to be the lights radius
 

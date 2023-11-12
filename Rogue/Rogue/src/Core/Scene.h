@@ -43,15 +43,18 @@ inline void SetNormalsAndTangentsFromVertices(Vertex* vert0, Vertex* vert1, Vert
 #define PROPOGATION_DEPTH (MAP_DEPTH / PROPOGATION_SPACING)
 
 struct CloudPoint {
-    glm::vec3 position;
-    glm::vec3 normal;
-    glm::vec3 directLighting = glm::vec3(0);
+    glm::vec4 position;
+    glm::vec4 normal;
+    glm::vec4 directLighting = glm::vec4(0);
 };
 
 struct Wall {
     glm::vec3 begin;
     glm::vec3 end;
     float height;
+    bool hasTopTrim;
+    bool hasBottomTrim;
+    float topTrimBottom;
     GLuint VAO = 0;
     GLuint VBO = 0;
     GLuint EBO = 0;
@@ -61,16 +64,19 @@ struct Wall {
 
     float wallHeight = 2.4f;
 
-    Wall(glm::vec3 begin, glm::vec3 end, float height, int materialIndex) {
+    Wall(glm::vec3 begin, glm::vec3 end, float height, int materialIndex, bool hasTopTrim, bool hasBottomTrim) {
         this->materialIndex = materialIndex;
         this->begin = begin;
         this->end = end;
         this->height = height;
+        this->hasTopTrim = hasTopTrim;
+        this->hasBottomTrim = hasBottomTrim;
         Vertex v1, v2, v3, v4;
         v1.position = begin;
         v2.position = end + glm::vec3(0, height, 0);
         v3.position = begin + glm::vec3(0, height, 0);
         v4.position = end;
+        this->topTrimBottom = v3.position.y - WALL_HEIGHT;
         glm::vec3 normal = NormalFromThreePoints(v1.position, v2.position, v3.position);
         v1.normal = normal;
         v2.normal = normal;
@@ -134,7 +140,7 @@ struct Floor {
     std::vector<unsigned int> indices = { 0, 1, 2, 2, 3, 0 };
     int materialIndex = 0;
 
-    Floor(float x1, float z1, float x2, float z2, float height, int materialIndex) {
+    Floor(float x1, float z1, float x2, float z2, float height, int materialIndex, float texScale = 1.0f) {
         this->materialIndex = materialIndex;
         this->x1 = x1;
         this->z1 = z1;
@@ -151,11 +157,10 @@ struct Floor {
         v2.normal = normal;
         v3.normal = normal;
         v4.normal = normal;
-        float scale = 2.0f;
-        float uv_x_low = x1 / scale;
-        float uv_x_high = x2 / scale;
-        float uv_y_low = z1 / scale;
-        float uv_y_high = z2 / scale;
+        float uv_x_low = x1 / texScale;
+        float uv_x_high = x2 / texScale;
+        float uv_y_low = z1 / texScale;
+        float uv_y_high = z2 / texScale;
         v1.uv = glm::vec2(uv_x_low, uv_y_low);
         v2.uv = glm::vec2(uv_x_low, uv_y_high);
         v3.uv = glm::vec2(uv_x_high, uv_y_high);

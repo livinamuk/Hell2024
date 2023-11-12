@@ -20,8 +20,9 @@ layout(std430, binding = 2) readonly buffer vertices {
 
 layout (location = 0) uniform int pointCloudSize;
 layout (location = 1) uniform int vertexCount;
-layout (location = 2) uniform bool test;
-layout (location = 3) uniform bool test2;
+layout (location = 2) uniform bool skipEvenX;
+layout (location = 3) uniform bool skipEvenY;
+layout (location = 4) uniform bool skipEvenZ;
 
 struct Hit {
 	bool found;
@@ -74,6 +75,10 @@ bool AnyHit(vec3 origin, vec3 direction, float rayMin, float rayMax) {
 	return false;
 }
 
+float distSquared( vec3 A, vec3 B ) {
+    vec3 C = A - B;
+    return dot( C, C );
+}
 
 void main() {
 
@@ -86,59 +91,70 @@ void main() {
 	const float maxDistance = 2.6;//2.6;
 
 	vec3 color = vec3(0);
-
-	// Ignores probes above 2.9 metres
-	// If this is running slow while you're working on it, lower this height
-
-	bool even = false;
-	if (mod(x, 2) == 0.0) {
-		even = true;
-	}
 	
-	bool even2 = false;
+	// This aboomination limits the light propogation compute calculations 
+    // by skipping even/odd X grid co-ordinates every second frame, Y co-ordinates 
+    // every fourth frame and z co-ordinates very third frame.
+	bool xIsEven = false;
+	bool yIsEven = false;
+	bool zIsEven = false;
+	if (mod(x, 2) == 0.0) {
+		xIsEven = true;
+	}	
+	if (mod(y, 2) == 0.0) {
+		yIsEven = true;
+	}	
 	if (mod(z, 2) == 0.0) {
-		even2 = true;
+		zIsEven = true;
 	}
+	bool skip = false;
+	if (xIsEven && skipEvenX || 
+		skipEvenY == yIsEven || 
+		skipEvenZ == zIsEven ||
+		probePosition.y > 2.9) {
 
-	if (probePosition.y < 2.9 && even == test && even2 == !test2) {
+		skip = true;
+	}
+	///////////////////////////////////
+
+	if (!skip) {
+		
+		float maxDistanceSquared = maxDistance * maxDistance;
 
 		 // Iterate every point in the cloud
 		 for (int i = 0; i < pointCloudSize; i++) {
 	 
 			CloudPoint point = PointCloud[i];
+			
+			// Skip ray test if probe is further than max allowed distance from point
+			float distanceToProbeSquared = distSquared(point.position.xyz, probePosition);
+			if (distanceToProbeSquared > maxDistanceSquared) {
+				continue;
+			}
 
 			// If the cloud point is not in darkness...
 			if (point.color.rgb != vec3(0,0,0)) {
-		
-				// If the probe is within the max distance...
-				float distanceFromPointToProbe = distance(point.position.xyz, probePosition);
-				if (distanceFromPointToProbe < maxDistance) {
-
-					// If the point is not facing away from the probe...
-					vec3 v = normalize(probePosition - point.position.xyz);
-					float vdotn = dot(point.normal.xyz, v);
-
-					// I don't know why the check below is broken
-					// It worked on the cpu. I think...
-					if (vdotn < 0) {
-						 continue;
-					}
 					
-					// If the point has line of sight to the probe...
-					if (!AnyHit(point.position.xyz, v, 0.000001, distanceFromPointToProbe)) {
-						
-						//color += point.color.rgb * (maxDistance - distanceFromPointToProbe) / maxDistance;
-						//color += vdotn * point.color.rgb * (maxDistance - distanceFromPointToProbe) / maxDistance;
-						
-						//color += point.color.rgb * (maxDistance - distanceFromPointToProbe) * (maxDistance - distanceFromPointToProbe) / maxDistance;
-						//color += vdotn * point.color.rgb * (maxDistance - distanceFromPointToProbe) * (maxDistance - distanceFromPointToProbe) / maxDistance;
+				// If the probe is within the max distance...
+				float distanceFromPointToProbe = sqrt(distanceToProbeSquared);
 
-						color += point.color.rgb / distanceFromPointToProbe;
-						//color += vdotn * point.color.rgb;
-					} 
-				 
+				// If the point is not facing away from the probe...
+				vec3 v = normalize(probePosition - point.position.xyz);
+				float vdotn = dot(point.normal.xyz, v);
+
+				if (vdotn < 0) {
+					continue;
 				}
-
+					
+				// If the point has line of sight to the probe...
+				if (!AnyHit(point.position.xyz, v, 0.000001, distanceFromPointToProbe)) {		
+					//color += point.color.rgb * (maxDistance - distanceFromPointToProbe) / maxDistance;
+					//color += vdotn * point.color.rgb * (maxDistance - distanceFromPointToProbe) / maxDistance;
+					//color += point.color.rgb * (maxDistance - distanceFromPointToProbe) * (maxDistance - distanceFromPointToProbe) / maxDistance;
+					//color += vdotn * point.color.rgb * (maxDistance - distanceFromPointToProbe) * (maxDistance - distanceFromPointToProbe) / maxDistance;
+					color += point.color.rgb / distanceFromPointToProbe;
+					//color += vdotn * point.color.rgb;
+				} 
 			}
 		 }
 		float scale = 40;

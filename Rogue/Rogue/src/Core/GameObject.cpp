@@ -95,7 +95,7 @@ glm::mat4 GameObject::GetModelMatrix() {
 		//	return parent->GetModelMatrix() * _modelMatrixTransformOverride;
 		//}
 		//else {
-			return parent->GetModelMatrix() * _transform.to_mat4();
+			return parent->GetModelMatrix() * _transform.to_mat4() * _openTransform.to_mat4();
 		//}
 	}
 	//if (_overrideTransformWithMatrix) {
@@ -147,13 +147,14 @@ bool GameObject::IsInteractable() {
 void GameObject::Interact() {
 	// Open
 	if (_openState == OpenState::CLOSED) {
-		_openState = OpenState::OPENING; 
-		//Audio::PlayAudio(_audio.onOpen);
+		_openState = OpenState::OPENING;
+		Audio::PlayAudio(_audio.onOpen.filename, _audio.onOpen.volume);
+		std::cout << "cunt";
 	}
 	// Close
 	else if (_openState == OpenState::OPEN) {
 		_openState = OpenState::CLOSING;
-		//Audio::PlayAudio(_audio.onClose);
+		Audio::PlayAudio(_audio.onClose.filename, _audio.onClose.volume);
 	}
 	// Interact text
 	/*else if (_interactType == InteractType::TEXT) {
@@ -193,21 +194,21 @@ void GameObject::Update(float deltaTime) {
 		// Rotation
 		if (_openAxis == OpenAxis::ROTATION_NEG_Y) {
 			if (_openState == OpenState::OPENING) {
-				_transform.rotation.y -= _openSpeed * deltaTime;
+				_openTransform.rotation.y -= _openSpeed * deltaTime;
 			}
 			if (_openState == OpenState::CLOSING) {
-				_transform.rotation.y += _openSpeed * deltaTime;
+				_openTransform.rotation.y += _openSpeed * deltaTime;
 			}
-			if (_transform.rotation.y < _maxOpenAmount) {
-				_transform.rotation.y = _maxOpenAmount;
+			if (_openTransform.rotation.y < _maxOpenAmount) {
+				_openTransform.rotation.y = _maxOpenAmount;
 				_openState = OpenState::OPEN;
 			}
-			if (_transform.rotation.y > _minOpenAmount) {
-				_transform.rotation.y = _minOpenAmount;
+			if (_openTransform.rotation.y > _minOpenAmount) {
+				_openTransform.rotation.y = _minOpenAmount;
 				_openState = OpenState::CLOSED;
 			}
 		}
-		if (_openAxis == OpenAxis::ROTATION_POS_Y) {
+		/*if (_openAxis == OpenAxis::ROTATION_POS_Y) {
 			if (_openState == OpenState::OPENING) {
 				_transform.rotation.y += _openSpeed * deltaTime;
 			}
@@ -273,7 +274,7 @@ void GameObject::Update(float deltaTime) {
 				_transform.position.z = 0;
 				_openState = OpenState::CLOSED;
 			}
-		}
+		}*/
 	}
 
 	
@@ -313,15 +314,15 @@ void GameObject::Update(float deltaTime) {
 }
 
 void GameObject::SetAudioOnOpen(std::string filename, float volume) {
-	//_audio.onOpen = { filename, volume };
+	_audio.onOpen = { filename, volume };
 }
 
 void GameObject::SetAudioOnClose(std::string filename, float volume) {
-	//_audio.onClose = { filename, volume };
+	_audio.onClose = { filename, volume };
 }
 
 void GameObject::SetAudioOnInteract(std::string filename, float volume) {
-	//_audio.onInteract = { filename, volume };
+	_audio.onInteract = { filename, volume };
 }
 
 

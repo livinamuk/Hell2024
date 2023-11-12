@@ -12,8 +12,24 @@ layout(std430, binding = 0) buffer input_layout {
     CloudPoint PointCloud[];
 };
 
+
+struct CloudPoint2 {
+    vec4 position;
+    vec4 normal;
+    vec4 directLighting;
+};
+
+layout (std430, binding = 2) buffer CloudPointVertexBuffer {
+   CloudPoint2 PointCloud2 [];
+};
+
 layout(std430, binding = 1) readonly buffer vertices {
     vec4 Vertices[];
+};
+
+
+layout(std430, binding = 3) buffer input_layout2 {
+    CloudPoint PointCloud3[];
 };
 
 layout (location = 0) uniform mat4 projInverse;
@@ -106,25 +122,51 @@ void main() {
 
     const uint i = gl_GlobalInvocationID.x;
     
-	vec3 origin = PointCloud[i].position.xyz;
-	vec3 normal = PointCloud[i].normal.xyz;
+	vec3 origin = PointCloud2[i].position.xyz;
+	vec3 normal = PointCloud2[i].normal.xyz;
 
-	vec3 lightPos = lightPosition;//vec3(2.8, 2.2, 3.6);
-	vec3 lightColor = vec3(1, 0.8, 0.55);
-	float lightRadius = 10;
-	float lightStrength = 1.0;
-	float distToLight = distance(lightPos, origin);
-	float att = smoothstep(lightRadius, 0.0, length(lightPos - origin));
-	vec3 n = normalize(normal);
-	vec3 l = normalize(lightPos - origin);
-	float ndotl = clamp(dot(n, l), 0.0f, 1.0f);  
-	vec3 radiance = vec3(lightColor) * att * lightStrength * ndotl * 1.0;
+	PointCloud[i].color.xyz = vec3(0,0,0);
 
-	if (!AnyHit(origin, l, 0.000001, distToLight)) {
-		PointCloud[i].color.xyz = radiance;
-		PointCloud[i].color.xyz = radiance;
-	} 
-	else {
-		PointCloud[i].color.xyz = vec3(0,0,0);
+//	PointCloud2[i].normal.xyz = vec3(0,0,1);
+
+//	PointCloud3[i].normal.xyz = vec3(0,1,0);
+
+	{
+		vec3 lightPos = lightPosition;//vec3(2.8, 2.2, 3.6);
+		vec3 lightColor = vec3(1, 0.8, 0.55);
+		float lightRadius = 10;
+		float lightStrength = 1.0;
+		float distToLight = distance(lightPos, origin);
+		float att = smoothstep(lightRadius, 0.0, length(lightPos - origin));
+		vec3 n = normalize(normal);
+		vec3 l = normalize(lightPos - origin);
+		float ndotl = clamp(dot(n, l), 0.0f, 1.0f);  
+		vec3 radiance = vec3(lightColor) * att * lightStrength * ndotl * 1.0;
+
+		if (!AnyHit(origin, l, 0.000001, distToLight)) {
+			PointCloud[i].color.xyz = radiance;
+		} 
+		else {
+			
+		}
+	}
+		{
+		vec3 lightPos = vec3(2.05, 2, 9.0);
+		vec3 lightColor = vec3(1, 0, 0);
+		float lightRadius = 10;
+		float lightStrength = 1.0;
+		float distToLight = distance(lightPos, origin);
+		float att = smoothstep(lightRadius, 0.0, length(lightPos - origin));
+		vec3 n = normalize(normal);
+		vec3 l = normalize(lightPos - origin);
+		float ndotl = clamp(dot(n, l), 0.0f, 1.0f);  
+		vec3 radiance = vec3(lightColor) * att * lightStrength * ndotl * 1.0;
+
+		if (!AnyHit(origin, l, 0.000001, distToLight)) {
+			PointCloud[i].color.xyz += radiance;
+		} 
+		else {
+			//PointCloud[i].color.xyz = vec3(0,0,0);
+		}
 	}
 }

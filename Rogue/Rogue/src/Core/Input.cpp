@@ -1,4 +1,5 @@
 #include "Input.h"
+#include "GL.h"
 
 bool _keyPressed[372];
 bool _keyDown[372];
@@ -19,8 +20,9 @@ bool _leftMouseDownLastFrame = false;
 bool _rightMouseDownLastFrame = false;
 bool _preventRightMouseHoldTillNextClick = false;
 
-void Input::Init(GLFWwindow* window) {
+void Input::Init() {
     double x, y;
+    GLFWwindow* window = GL::GetWindowPtr();
     glfwGetCursorPos(window, &x, &y);
     _mouseOffsetX = x;
     _mouseOffsetY = y;
@@ -28,7 +30,10 @@ void Input::Init(GLFWwindow* window) {
     _mouseY = y;
 }
 
-void Input::Update(GLFWwindow* window) {
+void Input::Update() {
+
+    GLFWwindow* window = GL::GetWindowPtr();
+
     // Wheel
     _mouseWheelUp = false;
     _mouseWheelDown = false;

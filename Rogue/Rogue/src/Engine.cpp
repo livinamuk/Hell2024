@@ -1,18 +1,16 @@
 #include "Engine.h"
+#include "Util.hpp"
+#include "Renderer/Renderer.h"
 #include "Core/GL.h"
 #include "Core/Player.h"
 #include "Core/Input.h"
 #include "Core/AssetManager.h"
 #include "Core/Audio.hpp"
-//#include "Core/VoxelWorld.h"
 #include "Core/Editor.h"
 #include "Core/TextBlitter.h"
 #include "Core/Scene.h"
-#include "Util.hpp"
-#include "Renderer/Renderer.h"
-
+// Profiling stuff
 #define TracyGpuCollect
-
 #include "tracy/Tracy.hpp"
 #include "tracy/TracyOpenGL.hpp"
 
@@ -26,7 +24,6 @@ void Engine::Run() {
     double limitUpdates = 1.0 / 60.0;
 
     Init();
-    //TracyGpuContext;
 
     while (GL::WindowIsOpen() && GL::WindowHasNotBeenForceClosed()) {
 
@@ -36,25 +33,35 @@ void Engine::Run() {
         _deltaTime = currentTime - lastTime;
         lastTime = currentTime;
         accumulator += _deltaTime;
+
         while (accumulator >= limitUpdates) {
-            accumulator -= limitUpdates;
-            Update(limitUpdates);
+            accumulator -= limitUpdates;                        
+
+            LazyKeyPresses();
+
+            // Update
             if (_engineMode == EngineMode::Game) {
                 Scene::Update(limitUpdates);
+                Input::Update();
+                Audio::Update();
+                Player::Update(limitUpdates);
+            }
+            // Map editor currently broken
+            else if (_engineMode == EngineMode::Editor) {
+                //Input::Update();
+                //Audio::Update();
+                //Editor::Update(Renderer::GetRenderWidth(), Renderer::GetRenderHeight());
             }
         }
 
+        // Render
         if (_engineMode == EngineMode::Game) {
-            //TracyGpuZone("RenderFrame");
             TextBlitter::Update(_deltaTime);
             Renderer::RenderFrame();
         }
-        if (_engineMode == EngineMode::Editor) {
+        else if (_engineMode == EngineMode::Editor) {
             //Renderer::RenderEditorFrame();
         }
-
-        //FrameMark;
-        //TracyGpuCollect;
 
         GL::SwapBuffersPollEvents();
     }
@@ -68,46 +75,23 @@ void Engine::Init() {
     std::cout << "We are all alone on life's journey, held captive by the limitations of human conciousness.\n";
 
     GL::Init(1920, 1080);
-
-    Input::Init(GL::GetWindowPtr());
-    // Player::Init(glm::vec3(0, 0, 3.6f));
+    Input::Init();
     Player::Init(glm::vec3(4.0f, 0, 3.6f));
     Player::SetRotation(glm::vec3(-0.17, 1.54f, 0));
-
     Editor::Init();
-
-    //VoxelWorld::InitMap();
-    //VoxelWorld::GenerateTriangleOccluders();
-    //VoxelWorld::GeneratePropogrationGrid();
-
     Audio::Init();
-
     AssetManager::LoadFont();
     AssetManager::LoadEverythingElse();
-
-    Renderer::Init();
-
-    _engineMode = EngineMode::Game;
-
-
-
+    Renderer::Init();    
 }
 
-void LazyKeyPresses() {
+void Engine::LazyKeyPresses() {
 
-    /*if (Input::KeyPressed(HELL_KEY_RIGHT_BRACKET)) {
-        VoxelWorld::GetLightByIndex(0).x += 2;
-        Audio::PlayAudio("RE_Beep.wav", 0.25f);
-    }
-    if (Input::KeyPressed(HELL_KEY_LEFT_BRACKET)) {
-        VoxelWorld::GetLightByIndex(0).x -= 2;
-        Audio::PlayAudio("RE_Beep.wav", 0.25f);
-    }*/
-    if (Input::KeyPressed(GLFW_KEY_V)) {
+    if (Input::KeyPressed(GLFW_KEY_X)) {
         Renderer::NextMode();
         Audio::PlayAudio("RE_Beep.wav", 0.25f);
     }
-    if (Input::KeyPressed(GLFW_KEY_C)) {
+    if (Input::KeyPressed(GLFW_KEY_Z)) {
         Renderer::PreviousMode();
         Audio::PlayAudio("RE_Beep.wav", 0.25f);
     }
@@ -163,29 +147,4 @@ void LazyKeyPresses() {
         Scene::CreatePointCloud();
         Audio::PlayAudio("RE_Beep.wav", 0.25f);
     }
-}
-
-void Engine::Update(float deltaTime) {
-
-    Input::Update(GL::GetWindowPtr());
-    Audio::Update();
-    
-
-    if (_engineMode == EngineMode::Game) {
-        Player::Update(deltaTime);
-    }
-    else if (_engineMode == EngineMode::Editor) {
-        Editor::Update(Renderer::GetRenderWidth(), Renderer::GetRenderHeight());
-    }
-
-    if (Scene::_lights.size() > 2) {
-        //Flicker light 2
-        static float totalTime = 0;
-        float frequency = 20;
-        float amplitude = 0.02;
-        totalTime += 1.0f / 60;
-        Scene::_lights[2].strength = 0.3f + sin(totalTime * frequency) * amplitude;
-    }
-
-    LazyKeyPresses();
 }

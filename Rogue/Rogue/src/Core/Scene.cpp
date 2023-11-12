@@ -6,27 +6,44 @@
 #include "Player.h"
 #include "Audio.hpp"
 
+#define DOOR_VOLUME 1.0f
+float door2X = 2.05f;
+
 void Scene::Update(float deltaTime) {
 
     for (AnimatedGameObject& animatedGameObject : _animatedGameObjects) {
         animatedGameObject.Update(deltaTime);
     }
 
-    // Move light
+    for (GameObject& gameObject : _gameObjects) {
+        gameObject.Update(deltaTime);
+    }
+
+    //Flicker light 2
+    if (_lights.size() > 2) {
+        static float totalTime = 0;
+        float frequency = 20;
+        float amplitude = 0.02;
+        totalTime += 1.0f / 60;
+        Scene::_lights[2].strength = 0.3f + sin(totalTime * frequency) * amplitude;
+    }
+
+    // Move light 0 in a figure 8
     glm::vec3 lightPos = glm::vec3(2.8, 2.2, 3.6);
-    Light& light = _lights[0];
-    
+    Light& light = _lights[0];    
     static float time = 0;
     time += (deltaTime / 2);
-
     glm::vec3 newPos = lightPos;
     lightPos.x = lightPos.x + (cos(time)) * 2;
     lightPos.y = lightPos.y;
     lightPos.z = lightPos.z + (sin(2 * time) / 2) * 2;
-
     light.position = lightPos;
 
-
+    // Pressing E opens/closeds Door 2
+    if (Input::KeyPressed(HELL_KEY_E)) {
+        auto door = GetGameObjectByName("Door2");
+        door->Interact();
+    }
 
     // Running Guy
     auto enemy = GetAnimatedGameObjectByName("Enemy");
@@ -36,7 +53,6 @@ void Scene::Update(float deltaTime) {
     enemy->SetPosition(glm::vec3(1.3f, 0.1, 3.5f));
     enemy->SetRotationX(HELL_PI / 2);
     enemy->SetRotationY(HELL_PI / 2);
-
 
     auto glock = GetAnimatedGameObjectByName("Shotgun");
     glock->SetScale(0.01f);
@@ -53,39 +69,59 @@ void Scene::Update(float deltaTime) {
 void Scene::Init() {
 
     // Outer walls
-    _walls.emplace_back(Wall(glm::vec3(0.1f, 0.1f, 0.1f), glm::vec3(6.1f, 0.1f, 0.1f), 2.4f, AssetManager::GetMaterialIndex("WallPaper")));
-    _walls.emplace_back(Wall(glm::vec3(6.1f, 0.1f, 6.9f), glm::vec3(0.1f, 0.1f, 6.9f), 2.4f, AssetManager::GetMaterialIndex("WallPaper")));
-    _walls.emplace_back(Wall(glm::vec3(0.1f, 0.1f, 6.9f), glm::vec3(0.1f, 0.1f, 0.1f), 2.4f, AssetManager::GetMaterialIndex("WallPaper")));
-    _walls.emplace_back(Wall(glm::vec3(6.1f, 0.1f, 0.1f), glm::vec3(6.1f, 0.1f, 6.9f), 2.4f, AssetManager::GetMaterialIndex("WallPaper")));
+    _walls.emplace_back(Wall(glm::vec3(0.1f, 0.1f, 0.1f), glm::vec3(6.1f, 0.1f, 0.1f), 2.4f, AssetManager::GetMaterialIndex("WallPaper"), true, true));
+    _walls.emplace_back(Wall(glm::vec3(0.1f, 0.1f, 6.9f), glm::vec3(0.1f, 0.1f, 0.1f), 2.4f, AssetManager::GetMaterialIndex("WallPaper"), true, true));
+    _walls.emplace_back(Wall(glm::vec3(6.1f, 0.1f, 0.1f), glm::vec3(6.1f, 0.1f, 6.9f), 2.4f, AssetManager::GetMaterialIndex("WallPaper"), true, true));
+
+
+    _walls.emplace_back(Wall(glm::vec3(door2X - 0.4, 0.1f, 6.9f), glm::vec3(0.1f, 0.1f, 6.9f), 2.4f, AssetManager::GetMaterialIndex("WallPaper"), true, true));
+    _walls.emplace_back(Wall(glm::vec3(6.1f, 0.1f, 6.9f), glm::vec3(door2X + 0.4, 0.1f, 6.9f), 2.4f, AssetManager::GetMaterialIndex("WallPaper"), true, true));
+    _walls.emplace_back(Wall(glm::vec3(door2X + 0.4, 2.1f, 6.9f), glm::vec3(door2X - 0.4, 2.1f, 6.9f), 0.4f, AssetManager::GetMaterialIndex("WallPaper"), true, false));
+
+    _walls.emplace_back(Wall(glm::vec3(door2X - 0.4, 2.1f, 7.0f), glm::vec3(door2X + 0.4, 2.1f, 7.0f), 0.4f, AssetManager::GetMaterialIndex("WallPaper"), true, false));
+    //_walls.emplace_back(Wall(glm::vec3(door2X + 0.4, 0.1f, 6.9f), glm::vec3(0.1f, 0.1f, 6.9f), 2.4f, AssetManager::GetMaterialIndex("WallPaper")));
+    //_walls.emplace_back(Wall(glm::vec3(6.1f, 0.1f, 6.9f), glm::vec3(0.1f, 0.1f, 6.9f), 2.4f, AssetManager::GetMaterialIndex("WallPaper")));
 
     // First cube
-    _walls.emplace_back(Wall(glm::vec3(4.7f, 0.1f, 1.7f), glm::vec3(3.5f, 0.1f, 1.7f), 1.2f, AssetManager::GetMaterialIndex("WallPaper")));
-    _walls.emplace_back(Wall(glm::vec3(3.5f, 0.1f, 2.9f), glm::vec3(4.7f, 0.1f, 2.9f), 1.2f, AssetManager::GetMaterialIndex("WallPaper")));
-    _walls.emplace_back(Wall(glm::vec3(3.5f, 0.1f, 1.7f), glm::vec3(3.5f, 0.1f, 2.9f), 1.2f, AssetManager::GetMaterialIndex("WallPaper")));
-    _walls.emplace_back(Wall(glm::vec3(4.7f, 0.1f, 2.9f), glm::vec3(4.7f, 0.1f, 1.7f), 1.2f, AssetManager::GetMaterialIndex("WallPaper")));
+    _walls.emplace_back(Wall(glm::vec3(4.7f, 0.1f, 1.7f), glm::vec3(3.5f, 0.1f, 1.7f), 1.2f, AssetManager::GetMaterialIndex("WallPaper"), false, false));
+    _walls.emplace_back(Wall(glm::vec3(3.5f, 0.1f, 2.9f), glm::vec3(4.7f, 0.1f, 2.9f), 1.2f, AssetManager::GetMaterialIndex("WallPaper"), false, false));
+    _walls.emplace_back(Wall(glm::vec3(3.5f, 0.1f, 1.7f), glm::vec3(3.5f, 0.1f, 2.9f), 1.2f, AssetManager::GetMaterialIndex("WallPaper"), false, false));
+    _walls.emplace_back(Wall(glm::vec3(4.7f, 0.1f, 2.9f), glm::vec3(4.7f, 0.1f, 1.7f), 1.2f, AssetManager::GetMaterialIndex("WallPaper"), false, false));
 
     // Second cube
-    _walls.emplace_back(Wall(glm::vec3(4.7f, 0.1f, 4.3f), glm::vec3(3.5f, 0.1f, 4.3f), 1.2f, AssetManager::GetMaterialIndex("WallPaper")));
-    _walls.emplace_back(Wall(glm::vec3(3.5f, 0.1f, 5.5f), glm::vec3(4.7f, 0.1f, 5.5f), 1.2f, AssetManager::GetMaterialIndex("WallPaper")));
-    _walls.emplace_back(Wall(glm::vec3(3.5f, 0.1f, 4.3f), glm::vec3(3.5f, 0.1f, 5.5f), 1.2f, AssetManager::GetMaterialIndex("WallPaper")));
-    _walls.emplace_back(Wall(glm::vec3(4.7f, 0.1f, 5.5f), glm::vec3(4.7f, 0.1f, 4.3f), 1.2f, AssetManager::GetMaterialIndex("WallPaper")));
+    _walls.emplace_back(Wall(glm::vec3(4.7f, 0.1f, 4.3f), glm::vec3(3.5f, 0.1f, 4.3f), 1.2f, AssetManager::GetMaterialIndex("WallPaper"), false, false));
+    _walls.emplace_back(Wall(glm::vec3(3.5f, 0.1f, 5.5f), glm::vec3(4.7f, 0.1f, 5.5f), 1.2f, AssetManager::GetMaterialIndex("WallPaper"), false, false));
+    _walls.emplace_back(Wall(glm::vec3(3.5f, 0.1f, 4.3f), glm::vec3(3.5f, 0.1f, 5.5f), 1.2f, AssetManager::GetMaterialIndex("WallPaper"), false, false));
+    _walls.emplace_back(Wall(glm::vec3(4.7f, 0.1f, 5.5f), glm::vec3(4.7f, 0.1f, 4.3f), 1.2f, AssetManager::GetMaterialIndex("WallPaper"), false, false));
 
     // Hole walls
-    _walls.emplace_back(Wall(glm::vec3(3.7f, 2.5f, 3.1f), glm::vec3(4.7f, 2.5f, 3.1f), 0.2f, AssetManager::GetMaterialIndex("Ceiling")));
-    _walls.emplace_back(Wall(glm::vec3(4.7f, 2.5f, 4.1f), glm::vec3(3.7f, 2.5f, 4.1f), 0.2f, AssetManager::GetMaterialIndex("Ceiling")));
-    _walls.emplace_back(Wall(glm::vec3(4.7f, 2.5f, 3.1f), glm::vec3(4.7f, 2.5f, 4.1f), 0.2f, AssetManager::GetMaterialIndex("Ceiling")));
-    _walls.emplace_back(Wall(glm::vec3(3.7f, 2.5f, 4.1f), glm::vec3(3.7f, 2.5f, 3.1f), 0.2f, AssetManager::GetMaterialIndex("Ceiling")));
+    _walls.emplace_back(Wall(glm::vec3(3.7f, 2.5f, 3.1f), glm::vec3(4.7f, 2.5f, 3.1f), 0.2f, AssetManager::GetMaterialIndex("Ceiling"), false, false));
+    _walls.emplace_back(Wall(glm::vec3(4.7f, 2.5f, 4.1f), glm::vec3(3.7f, 2.5f, 4.1f), 0.2f, AssetManager::GetMaterialIndex("Ceiling"), false, false));
+    _walls.emplace_back(Wall(glm::vec3(4.7f, 2.5f, 3.1f), glm::vec3(4.7f, 2.5f, 4.1f), 0.2f, AssetManager::GetMaterialIndex("Ceiling"), false, false));
+    _walls.emplace_back(Wall(glm::vec3(3.7f, 2.5f, 4.1f), glm::vec3(3.7f, 2.5f, 3.1f), 0.2f, AssetManager::GetMaterialIndex("Ceiling"), false, false));
 
     // floors
-    _floors.emplace_back(Floor(0.1f, 0.1f, 6.1f, 6.9f, 0.1f, AssetManager::GetMaterialIndex("FloorBoards")));
-    _floors.emplace_back(Floor(3.5f, 1.7f, 4.7f, 2.9f, 1.3f, AssetManager::GetMaterialIndex("FloorBoards")));
-    _floors.emplace_back(Floor(3.5f, 4.3f, 4.7f, 5.5f, 1.3f, AssetManager::GetMaterialIndex("FloorBoards")));
+    _floors.emplace_back(Floor(0.1f, 0.1f, 6.1f, 6.9f, 0.1f, AssetManager::GetMaterialIndex("FloorBoards"), 2.0f));
+    _floors.emplace_back(Floor(3.5f, 1.7f, 4.7f, 2.9f, 1.3f, AssetManager::GetMaterialIndex("FloorBoards"), 2.0f));
+    _floors.emplace_back(Floor(3.5f, 4.3f, 4.7f, 5.5f, 1.3f, AssetManager::GetMaterialIndex("FloorBoards"), 2.0f));
+
+
+    _floors.emplace_back(Floor(door2X - 0.4f, 6.9f, door2X + 0.4f, 7.0, 0.1f, AssetManager::GetMaterialIndex("FloorBoards"), 2.0f));
+
+    // bathroom
+    Floor& bathroomFloor = _floors.emplace_back(Floor(door2X - 0.8f, 7.0f, door2X + 0.8f, 9.95f, 0.1f, AssetManager::GetMaterialIndex("BathroomFloor")));
+    _walls.emplace_back(Wall(glm::vec3(bathroomFloor.x2, 0.1f, bathroomFloor.z1), glm::vec3(bathroomFloor.x2, 0.1f, bathroomFloor.z2), 2.4f, AssetManager::GetMaterialIndex("WallPaper"), true, true));
+    _walls.emplace_back(Wall(glm::vec3(bathroomFloor.x1, 0.1f, bathroomFloor.z2), glm::vec3(bathroomFloor.x1, 0.1f, bathroomFloor.z1), 2.4f, AssetManager::GetMaterialIndex("WallPaper"), true, true));
+    _walls.emplace_back(Wall(glm::vec3(bathroomFloor.x2, 0.1f, bathroomFloor.z2), glm::vec3(bathroomFloor.x1, 0.1f, bathroomFloor.z2), 2.4f, AssetManager::GetMaterialIndex("WallPaper"), true, true));
+    _walls.emplace_back(Wall(glm::vec3(bathroomFloor.x1, 0.1f, bathroomFloor.z1), glm::vec3(door2X - 0.4f, 0.1f, bathroomFloor.z1), 2.4f, AssetManager::GetMaterialIndex("WallPaper"), true, true));
+    _walls.emplace_back(Wall(glm::vec3(door2X + 0.4f, 0.1f, bathroomFloor.z1), glm::vec3(bathroomFloor.x2, 0.1f, bathroomFloor.z1), 2.4f, AssetManager::GetMaterialIndex("WallPaper"), true, true));
+    _ceilings.emplace_back(Ceiling(bathroomFloor.x1, bathroomFloor.z1, bathroomFloor.x2, bathroomFloor.z2, 2.5f, AssetManager::GetMaterialIndex("Ceiling")));
 
     // top level floor
-    _floors.emplace_back(Floor(0.1f, 0.1f, 6.1f, 3.1f, 2.7f, AssetManager::GetMaterialIndex("FloorBoards")));
-    _floors.emplace_back(Floor(0.1f, 4.1f, 6.1f, 6.9f, 2.7f, AssetManager::GetMaterialIndex("FloorBoards")));
-    _floors.emplace_back(Floor(0.1f, 3.1f, 3.7f, 4.1f, 2.7f, AssetManager::GetMaterialIndex("FloorBoards")));
-    _floors.emplace_back(Floor(4.7f, 3.1f, 6.1f, 4.1f, 2.7f, AssetManager::GetMaterialIndex("FloorBoards")));
+    _floors.emplace_back(Floor(0.1f, 0.1f, 6.1f, 3.1f, 2.7f, AssetManager::GetMaterialIndex("FloorBoards"), 2.0f));
+    _floors.emplace_back(Floor(0.1f, 4.1f, 6.1f, 6.9f, 2.7f, AssetManager::GetMaterialIndex("FloorBoards"), 2.0f));
+    _floors.emplace_back(Floor(0.1f, 3.1f, 3.7f, 4.1f, 2.7f, AssetManager::GetMaterialIndex("FloorBoards"), 2.0f));
+    _floors.emplace_back(Floor(4.7f, 3.1f, 6.1f, 4.1f, 2.7f, AssetManager::GetMaterialIndex("FloorBoards"), 2.0f));
 
     // ceilings
     _ceilings.emplace_back(Ceiling(0.1f, 0.1f, 6.1f, 3.1f, 2.5f, AssetManager::GetMaterialIndex("Ceiling")));
@@ -143,6 +179,26 @@ void Scene::Init() {
     door0.SetOpenAxis(OpenAxis::ROTATION_NEG_Y);
 
 
+    GameObject& doorFrame2 = _gameObjects.emplace_back(GameObject());
+    doorFrame2.SetPosition(door2X, 0, 6.95f);
+    doorFrame2.SetRotationY(-HELL_PI / 2);
+    doorFrame2.SetModel("DoorFrame");
+    doorFrame2.SetMeshMaterial("Door");
+    doorFrame2.SetName("DoorFrame2");
+
+    GameObject& door2 = _gameObjects.emplace_back(GameObject());
+    door2.SetModel("Door");
+    door2.SetName("Door2");
+    door2.SetMeshMaterial("Door");
+    door2.SetParentName("DoorFrame2");
+    door2.SetPosition(+0.058520, 0, 0.39550f);
+    door2.SetScriptName("OpenableDoor");
+    door2.SetOpenState(OpenState::CLOSED, 5.208f, 0, -1.9f);
+    door2.SetAudioOnOpen("Door_Open.wav", DOOR_VOLUME);
+    door2.SetAudioOnClose("Door_Open.wav", DOOR_VOLUME);
+    door2.SetOpenAxis(OpenAxis::ROTATION_NEG_Y);
+
+
     GameObject& smallChestOfDrawers = _gameObjects.emplace_back(GameObject());
     smallChestOfDrawers.SetModel("SmallChestOfDrawersFrame");
     smallChestOfDrawers.SetMeshMaterial("Drawers");
@@ -155,9 +211,8 @@ void Scene::Init() {
     GameObject& lamp = _gameObjects.emplace_back(GameObject());
     lamp.SetModel("Lamp");
     lamp.SetMeshMaterial("Lamp");
-    lamp.SetPosition(-.05f, 0.88, 0.25f);
+    lamp.SetPosition(-.105f, 0.88, 0.25f);
     lamp.SetParentName("SmallDrawersHis");
-    lamp.SetScriptName("OpenableDrawer");
 
     GameObject& smallChestOfDrawer_1 = _gameObjects.emplace_back(GameObject());
     smallChestOfDrawer_1.SetModel("SmallDrawerTop");
@@ -312,10 +367,10 @@ void Scene::CreatePointCloud() {
             glm::vec3 pos = wall.begin + (dir * x);
             for (float y = pointSpacing * 0.5f; y < wall.height; y += pointSpacing) {
                 CloudPoint cloudPoint;
-                cloudPoint.position = pos;
+                cloudPoint.position = glm::vec4(pos, 0);
                 cloudPoint.position.y = wall.begin.y + y;
                 glm::vec3 wallVector = glm::normalize(wall.end - wall.begin);
-                cloudPoint.normal = glm::vec3(-wallVector.z, 0, wallVector.x);
+                cloudPoint.normal = glm::vec4(-wallVector.z, 0, wallVector.x, 0);
                 if (cloudPoint.position.y < yCutOff) {
                     _cloudPoints.push_back(cloudPoint);
                 }
@@ -373,8 +428,8 @@ void Scene::CreatePointCloud() {
         for (float x = pointSpacing * 0.5f; x < floorWidth; x += pointSpacing) {
             for (float z = pointSpacing * 0.5f; z < floorDepth; z += pointSpacing) {
                 CloudPoint cloudPoint;
-                cloudPoint.position = glm::vec3(floor.x1 + x, floor.height, floor.z1 + z);
-                cloudPoint.normal = NRM_Y_UP;
+                cloudPoint.position = glm::vec4(floor.x1 + x, floor.height, floor.z1 + z, 0);
+                cloudPoint.normal = glm::vec4(NRM_Y_UP, 0);
                 if (cloudPoint.position.y < yCutOff) {
                     _cloudPoints.push_back(cloudPoint);
                 }
@@ -427,8 +482,8 @@ void Scene::CreatePointCloud() {
         for (float x = pointSpacing * 0.5f; x < ceilingWidth; x += pointSpacing) {
             for (float z = pointSpacing * 0.5f; z < ceilingDepth; z += pointSpacing) {
                 CloudPoint cloudPoint;
-                cloudPoint.position = glm::vec3(ceiling.x1 + x, ceiling.height, ceiling.z1 + z);
-                cloudPoint.normal = NRM_Y_DOWN;
+                cloudPoint.position = glm::vec4(ceiling.x1 + x, ceiling.height, ceiling.z1 + z, 0);
+                cloudPoint.normal = glm::vec4(NRM_Y_DOWN, 0);
                 _cloudPoints.push_back(cloudPoint);
             }
         }
@@ -478,10 +533,16 @@ void Scene::LoadLightSetup(int index) {
         _lights.clear();
         Light lightD;
         lightD.position = glm::vec3(2.8, 2.2, 3.6);
-        lightD.radius = 3.0f;
         lightD.strength = 1.0f;
         lightD.radius = 10;
         _lights.push_back(lightD);
+
+        Light lightA;
+        lightA.position = glm::vec3(door2X, 2.0, 9.0);
+        lightA.strength = 1.0f;
+        lightA.radius = 4;
+        lightA.color = glm::vec3(1, 0, 0);
+        _lights.push_back(lightA);
     }
 
     if (index == 0) {

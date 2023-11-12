@@ -117,8 +117,6 @@ xcopy "$(ProjectDir)res\shaders" "$(TargetDir)res\shaders" /e /y /i /r</Command>
     <ClCompile Include="src\Core\Player.cpp" />
     <ClCompile Include="src\Core\Scene.cpp" />
     <ClCompile Include="src\Core\TextBlitting.cpp" />
-    <ClCompile Include="src\Core\Voxel.cpp" />
-    <ClCompile Include="src\Core\VoxelWorld.cpp" />
     <ClCompile Include="src\Effects\MuzzleFlash.cpp" />
     <ClCompile Include="src\Engine.cpp" />
     <ClCompile Include="src\Main.cpp" />
@@ -152,8 +150,6 @@ xcopy "$(ProjectDir)res\shaders" "$(TargetDir)res\shaders" /e /y /i /r</Command>
     <ClInclude Include="src\Core\Player.h" />
     <ClInclude Include="src\Core\Scene.h" />
     <ClInclude Include="src\Core\TextBlitter.h" />
-    <ClInclude Include="src\Core\Voxel.h" />
-    <ClInclude Include="src\Core\VoxelWorld.h" />
     <ClInclude Include="src\Effects\MuzzleFlash.h" />
     <ClInclude Include="src\Engine.h" />
     <ClInclude Include="src\Math.h" />
@@ -174,6 +170,8 @@ xcopy "$(ProjectDir)res\shaders" "$(TargetDir)res\shaders" /e /y /i /r</Command>
   <ItemGroup>
     <None Include="res\shaders\animated_quad.frag" />
     <None Include="res\shaders\animated_quad.vert" />
+    <None Include="res\shaders\debug_view_point_cloud.frag" />
+    <None Include="res\shaders\debug_view_point_cloud.vert" />
     <None Include="res\shaders\editor_solid_color.frag" />
     <None Include="res\shaders\editor_solid_color.vert" />
     <None Include="res\shaders\shadowmap.frag" />

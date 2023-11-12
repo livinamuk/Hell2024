@@ -1,5 +1,6 @@
 #pragma once
 #include "AssetManager.h"
+#include "Audio.hpp"
 
 enum class OpenState { NONE, CLOSED, CLOSING, OPEN, OPENING };
 enum class OpenAxis { NONE, TRANSLATE_X, TRANSLATE_Y, TRANSLATE_Z, ROTATION_POS_X, ROTATION_POS_Y, ROTATION_POS_Z, ROTATION_NEG_X, ROTATION_NEG_Y, ROTATION_NEG_Z };
@@ -35,6 +36,7 @@ private:
 	glm::mat4 _modelMatrixTransformOverride = glm::mat4(1);
 	OpenState _openState = OpenState::NONE;
 	OpenAxis _openAxis = OpenAxis::NONE;
+	Transform _openTransform;
 	float _maxOpenAmount = 0;
 	float _minOpenAmount = 0;
 	float _openSpeed = 0;
@@ -45,9 +47,9 @@ private:
 	//MaterialType _materialType = MaterialType::DEFAULT;
 		
 	struct AudioEffects {
-	//	AudioEffectInfo onOpen;
-	//	AudioEffectInfo onClose;
-	//	AudioEffectInfo onInteract;
+		AudioEffectInfo onOpen;
+		AudioEffectInfo onClose;
+		AudioEffectInfo onInteract;
 	} _audio;
 
 
