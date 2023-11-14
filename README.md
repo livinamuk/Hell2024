@@ -1,4 +1,9 @@
-# Voxel Based Global Illumination 
+# OpenGL Compute Global Illumination 
+
+#### November 12 2023
+Huge improvements since entries below. I scrapped the voxel thing entirely because it was causing lighting artefacts for geometry that didn't fit nicely into the voxel grid, most importantly swinging doors. It now calculates direct lighting for an approximation point cloud of the scene which is in turn used to propogate light through a 3D gird to simulate bounced light, both these passes are performed with raytracing in custom compute shaders. I've got skeletal animation too now and we're running realtime baby.     
+
+![Image](https://www.principiaprogrammatica.com/dump/SHITT.jpg)
 
 #### September 12 2023
 Things are looking promising. I really need to move to Vulkan so I can do visiblity checks for each pixel against any probe that may contribute indirect light to it. Gonna see how far I can push this in GL first though. All direct and indirect light is still calculated on the CPU, would be nice to move to compute but there's really no point if I'm moving to VK soon. I'll work on voxelizing regular mesh next I think.
