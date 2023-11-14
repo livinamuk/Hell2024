@@ -1,6 +1,6 @@
 # OpenGL Compute Global Illumination 
 
-#### November 12 2023
+#### November 14 2023
 Huge improvements since the entries below. I scrapped the voxel thing entirely because it was causing lighting artefacts for geometry that didn't fit nicely into the voxel grid, most importantly swinging doors. It now calculates direct lighting for an approximated point cloud of the scene which is in turn used to propogate light through a 3D grid to simulate bounced light, both these passes are performed with raytracing in custom compute shaders. I've got skeletal animation too now and we're running realtime baby.     
 
 ![Image](https://www.principiaprogrammatica.com/dump/SHITT2.jpg)
