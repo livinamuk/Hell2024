@@ -88,6 +88,7 @@ void QueueTriangleForLineRendering(Triangle& triangle);
 void QueueTriangleForSolidRendering(Triangle& triangle);
 void DrawScene(Shader& shader);
 void DrawAnimatedScene(Shader& shader);
+void DrawShadowMapScene(Shader& shader);
 void DrawFullscreenQuad();
 void DrawMuzzleFlashes();
 void InitCompute();
@@ -158,7 +159,6 @@ void Renderer::RenderFrame() {
         int count = MAP_WIDTH * MAP_HEIGHT * MAP_DEPTH;
         glEnable(GL_CULL_FACE);
         glEnable(GL_DEPTH_TEST);
-        //glClear(GL_DEPTH_BUFFER_BIT);
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_3D, _progogationGridTexture);
         glBindVertexArray(_cubeMesh.GetVAO());
@@ -362,7 +362,6 @@ void DebugPass() {
 void Renderer::RecreateFrameBuffers() {
     _gBuffer.Configure(_renderWidth * 4, _renderHeight * 4);
     _presentFrameBuffer.Configure(_renderWidth, _renderHeight);
-
     std::cout << "Render Size: " << _gBuffer.GetWidth() << " x " << _gBuffer.GetHeight() << "\n";
     std::cout << "Present Size: " << _presentFrameBuffer.GetWidth() << " x " << _presentFrameBuffer.GetHeight() << "\n";
 }
@@ -507,6 +506,25 @@ void DrawAnimatedScene(Shader& shader) {
     shader.SetBool("isAnimated", false);
 }
 
+void DrawShadowMapScene(Shader& shader) {
+
+    shader.SetMat4("model", glm::mat4(1));
+    for (Wall& wall : Scene::_walls) {
+        wall.Draw();
+    }
+    for (Floor& floor : Scene::_floors) {
+        floor.Draw();
+    }
+    for (Ceiling& ceiling : Scene::_ceilings) {
+        ceiling.Draw();
+    }
+    for (GameObject& gameObject : Scene::_gameObjects) {
+        shader.SetMat4("model", gameObject.GetModelMatrix());
+        for (int i = 0; i < gameObject._meshMaterialIndices.size(); i++) {
+            gameObject._model->_meshes[i].Draw();
+        }
+    }
+}
 
 void RenderImmediate() {
     glBindVertexArray(_pointLineVAO);
@@ -898,7 +916,7 @@ void RenderShadowMaps() {
         _shaders.shadowMap.SetMat4("shadowMatrices[5]", projectionTransforms[5]);
         _shaders.shadowMap.SetVec3("lightPosition", position);
         _shaders.shadowMap.SetMat4("model", glm::mat4(1));
-        DrawScene(_shaders.shadowMap);
+        DrawShadowMapScene(_shaders.shadowMap);
     }
     //Renderer::_shadowMapsAreDirty = false;
 }

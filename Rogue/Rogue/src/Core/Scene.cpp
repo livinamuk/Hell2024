@@ -120,10 +120,10 @@ void Scene::Init() {
     _ceilings.emplace_back(Ceiling(bathroomFloor.x1, bathroomFloor.z1, bathroomFloor.x2, bathroomFloor.z2, 2.5f, AssetManager::GetMaterialIndex("Ceiling")));
 
     // top level floor
-    _floors.emplace_back(Floor(0.1f, 0.1f, 6.1f, 3.1f, 2.7f, AssetManager::GetMaterialIndex("FloorBoards"), 2.0f));
-    _floors.emplace_back(Floor(0.1f, 4.1f, 6.1f, 6.9f, 2.7f, AssetManager::GetMaterialIndex("FloorBoards"), 2.0f));
-    _floors.emplace_back(Floor(0.1f, 3.1f, 3.7f, 4.1f, 2.7f, AssetManager::GetMaterialIndex("FloorBoards"), 2.0f));
-    _floors.emplace_back(Floor(4.7f, 3.1f, 6.1f, 4.1f, 2.7f, AssetManager::GetMaterialIndex("FloorBoards"), 2.0f));
+    //_floors.emplace_back(Floor(0.1f, 0.1f, 6.1f, 3.1f, 2.7f, AssetManager::GetMaterialIndex("FloorBoards"), 2.0f));
+    //_floors.emplace_back(Floor(0.1f, 4.1f, 6.1f, 6.9f, 2.7f, AssetManager::GetMaterialIndex("FloorBoards"), 2.0f));
+    //_floors.emplace_back(Floor(0.1f, 3.1f, 3.7f, 4.1f, 2.7f, AssetManager::GetMaterialIndex("FloorBoards"), 2.0f));
+    //_floors.emplace_back(Floor(4.7f, 3.1f, 6.1f, 4.1f, 2.7f, AssetManager::GetMaterialIndex("FloorBoards"), 2.0f));
 
     // ceilings
     _ceilings.emplace_back(Ceiling(0.1f, 0.1f, 6.1f, 3.1f, 2.5f, AssetManager::GetMaterialIndex("Ceiling")));
