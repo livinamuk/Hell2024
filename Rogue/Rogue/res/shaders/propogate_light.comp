@@ -117,7 +117,7 @@ void main() {
 				vec3 v = normalize(probePosition - point.position.xyz);
 				float vdotn = dot(point.normal.xyz, v);
 				if (vdotn < 0) {
-					//continue;
+					continue;
 				}
 
 				float distanceFromPointToProbe = sqrt(distanceToProbeSquared);
