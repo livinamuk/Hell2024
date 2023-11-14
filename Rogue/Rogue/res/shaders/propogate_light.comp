@@ -137,5 +137,11 @@ void main() {
 	}
 	float scale = 400;
 	color = color / float(scale);
+
+	// Mark probes as -1 if they have no light, that way they aren't interpolated in the lighting shader
+	if (length(color) < 0.01) {
+		color = vec3(-1);
+	}
+
 	imageStore(imgOutput, ivec3(x, y, z), vec4(color, 1));
 }
