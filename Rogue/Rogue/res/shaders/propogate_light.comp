@@ -100,70 +100,42 @@ void main() {
 	const float maxDistance = 2.6;
 
 	vec3 color = vec3(0);
-	/*
-	// This aboomination limits the light propogation compute calculations 
-    // by skipping even/odd X grid co-ordinates every second frame, Y co-ordinates 
-    // every fourth frame and z co-ordinates very third frame.
-	bool xIsEven = false;
-	bool yIsEven = false;
-	bool zIsEven = false;
-	if (mod(x, 2) == 0.0) {
-		xIsEven = true;
-	}	
-	if (mod(y, 2) == 0.0) {
-		yIsEven = true;
-	}	
-	if (mod(z, 2) == 0.0) {
-		zIsEven = true;
-	}
-	bool skip = false;
-	if (xIsEven && skipEvenX || 
-		skipEvenY == yIsEven || 
-		skipEvenZ == zIsEven ||
-		probePosition.y > 2.9) {
 
-		skip = true;
-	}
-	///////////////////////////////////
-	*/
-	if (true ) {
-
-		 // Iterate every point in the cloud
-		 for (int i = 0; i < pointCloudSize; i++) {
+	// Iterate every point in the cloud
+	for (int i = 0; i < pointCloudSize; i++) {
 	 
-			CloudPoint point = PointCloud[i];
+		CloudPoint point = PointCloud[i];
 
-			// If the cloud point is not in darkness...
-			if (point.color.rgb != vec3(0,0,0)) {
+		// If the cloud point is not in darkness...
+		if (point.color.rgb != vec3(0,0,0)) {
 		
-				// If the probe is within the max distance...
-				float distanceToProbeSquared = distanceSquared(point.position.xyz, probePosition);
-				if (distanceToProbeSquared < maxDistance * maxDistance) {	
+			// If the probe is within the max distance...
+			float distanceToProbeSquared = distanceSquared(point.position.xyz, probePosition);
+			if (distanceToProbeSquared < maxDistance * maxDistance) {	
 
-					// If the point is not facing away from the probe...
-					vec3 v = normalize(probePosition - point.position.xyz);
-					float vdotn = dot(point.normal.xyz, v);
-					if (vdotn < 0) {
-						 continue;
-					}
-
-					float distanceFromPointToProbe = sqrt(distanceToProbeSquared);
-
-					// If the point has line of sight to the probe...
-					if (!AnyHit(point.position.xyz, v, 0.000001, distanceFromPointToProbe)) {
-						//color += point.color.rgb * (maxDistance - distanceFromPointToProbe) / maxDistance;
-						//color += vdotn * point.color.rgb * (maxDistance - distanceFromPointToProbe) / maxDistance;
-						//color += point.color.rgb * (maxDistance - distanceFromPointToProbe) * (maxDistance - distanceFromPointToProbe) / maxDistance;
-						//color += vdotn * point.color.rgb * (maxDistance - distanceFromPointToProbe) * (maxDistance - distanceFromPointToProbe) / maxDistance;
-						color += point.color.rgb / distanceFromPointToProbe;
-						//color += vdotn * point.color.rgb;
-					} 				 
+				// If the point is not facing away from the probe...
+				vec3 v = normalize(probePosition - point.position.xyz);
+				float vdotn = dot(point.normal.xyz, v);
+				if (vdotn < 0) {
+					//continue;
 				}
-			}
-		 }
-		float scale = 400;
-		color = color / float(scale);
-		imageStore(imgOutput, ivec3(x, y, z), vec4(color, 1));
-	 }
 
+				float distanceFromPointToProbe = sqrt(distanceToProbeSquared);
+
+				// If the point has line of sight to the probe...
+				if (!AnyHit(point.position.xyz, v, 0.000001, distanceFromPointToProbe)) {
+					//color += point.color.rgb * (maxDistance - distanceFromPointToProbe) / maxDistance;
+					//color += vdotn * point.color.rgb * (maxDistance - distanceFromPointToProbe) / maxDistance;
+					//color += point.color.rgb * (maxDistance - distanceFromPointToProbe) * (maxDistance - distanceFromPointToProbe) / maxDistance;
+					//color += vdotn * point.color.rgb * (maxDistance - distanceFromPointToProbe) * (maxDistance - distanceFromPointToProbe) / maxDistance;
+					color += point.color.rgb / distanceFromPointToProbe;
+					//color += vdotn * point.color.rgb;
+				} 				 
+			}
+		}
+		
+	}
+	float scale = 400;
+	color = color / float(scale);
+	imageStore(imgOutput, ivec3(x, y, z), vec4(color, 1));
 }

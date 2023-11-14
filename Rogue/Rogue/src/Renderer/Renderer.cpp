@@ -58,7 +58,7 @@ struct PointCloud {
 } _pointCloud;
 
 struct Toggles {
-    bool drawLights = false;
+    bool drawLights = true;
     bool drawProbes = false;
     bool drawLines = false;
 } _toggles;

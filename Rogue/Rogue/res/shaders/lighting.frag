@@ -318,7 +318,6 @@ void main() {
     // Tonemap
 	FragColor.rgb = pow(FragColor.rgb, vec3(1.0/2.2)); 
     FragColor.rgb = mix(FragColor.rgb, Tonemap_ACES(FragColor.rgb), 1.0);
-    FragColor.rgb = mix(FragColor.rgb, Tonemap_ACES(FragColor.rgb), 0.125);
     	
 	// Temperature
 	//float temperature = 15200; 
@@ -326,7 +325,7 @@ void main() {
 	//finalColor = mix(finalColor, finalColor * colorTemperatureToRGB(temperature), temperatureStrength); 
 	
 	// Filmic tonemapping
-	FragColor.rgb = mix(FragColor.rgb, filmic(FragColor.rgb), 0.95);
+	FragColor.rgb = mix(FragColor.rgb, filmic(FragColor.rgb), 0.5);
 
     // Noise
     vec2 uv = gl_FragCoord.xy / vec2(screenWidth, screenHeight);
