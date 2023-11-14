@@ -8,34 +8,17 @@ struct CloudPoint {
     vec4 color;
 };
 
-layout(std430, binding = 0) buffer input_layout {
-    CloudPoint PointCloud[];
-};
-
-
-struct CloudPoint2 {
-    vec4 position;
-    vec4 normal;
-    vec4 directLighting;
-};
-
-layout (std430, binding = 2) buffer CloudPointVertexBuffer {
-   CloudPoint2 PointCloud2 [];
-};
-
 layout(std430, binding = 1) readonly buffer vertices {
     vec4 Vertices[];
 };
 
-
-layout(std430, binding = 3) buffer input_layout2 {
-    CloudPoint PointCloud3[];
+layout(std430, binding = 2) buffer pointCloudvertices {
+    CloudPoint PointCloud[];
 };
 
-layout (location = 0) uniform mat4 projInverse;
-layout (location = 1) uniform mat4 viewInverse;
 layout (location = 2) uniform int vertexCount;
 layout (location = 3) uniform vec3 lightPosition;
+layout (location = 4) uniform mat4 doorMatrix;
 
 struct Hit {
 	bool found;
@@ -87,9 +70,18 @@ Hit TriIntersect(vec3 origin, vec3 direction, float rayMin, float rayMax, vec3 v
 
 bool AnyHit(vec3 origin, vec3 direction, float rayMin, float rayMax) {
 	for (int i = 0; i < vertexCount; i+=3) {	
+
 		vec3 v0 = Vertices[i + 0].xyz;
 		vec3 v1 = Vertices[i + 1].xyz;
 		vec3 v2 = Vertices[i + 2].xyz;
+
+		// If the vertex belongs to the door, apply the door model matrix
+		if (Vertices[i + 0].a == 1) {
+			v0 = (doorMatrix * vec4(v0, 1.0)).xyz;
+			v1 = (doorMatrix * vec4(v1, 1.0)).xyz;
+			v2 = (doorMatrix * vec4(v2, 1.0)).xyz;
+		}
+
 		Hit hit = TriIntersect(origin, direction, rayMin, rayMax, v0, v1, v2);
 		if (hit.found) { 
 			return true;
@@ -98,63 +90,38 @@ bool AnyHit(vec3 origin, vec3 direction, float rayMin, float rayMax) {
 	return false;
 }
 
-Hit ClosestHit(vec3 origin, vec3 direction, float rayMin, float rayMax) {
-
-	Hit closestHit;
-	closestHit.found = false;
-	float distanceToClosestHit = 9999;
-
-	for (int i = 0; i < vertexCount; i+=3) {	
-		vec3 v0 = Vertices[i + 0].xyz;
-		vec3 v1 = Vertices[i + 1].xyz;
-		vec3 v2 = Vertices[i + 2].xyz;
-
-		Hit hit = TriIntersect(origin.xyz, direction.xyz, 0.000001, 100, v0, v1, v2);	
-		
-		if (hit.found && hit.dist < distanceToClosestHit) { 
-			closestHit = hit;
-			distanceToClosestHit = closestHit.dist;
-		}
-	}
-	return closestHit;
-}
 void main() {
 
-    const uint i = gl_GlobalInvocationID.x;
+    const uint i = (gl_WorkGroupID.x * 64) + gl_LocalInvocationID.x;
     
-	vec3 origin = PointCloud2[i].position.xyz;
-	vec3 normal = PointCloud2[i].normal.xyz;
-
+	vec3 origin = PointCloud[i].position.xyz;
+	vec3 normal = PointCloud[i].normal.xyz;
+	
 	PointCloud[i].color.xyz = vec3(0,0,0);
 
-//	PointCloud2[i].normal.xyz = vec3(0,0,1);
+	vec3 lightPos = lightPosition;//vec3(2.8, 2.2, 3.6);
+	vec3 lightColor = vec3(1, 0.8, 0.55);
+	float lightRadius = 10;
+	float lightStrength = 1.0;
+	float distToLight = distance(lightPos, origin);
+	float att = smoothstep(lightRadius, 0.0, length(lightPos - origin));
+	vec3 n = normalize(normal);
+	vec3 l = normalize(lightPos - origin);
+	float ndotl = clamp(dot(n, l), 0.0f, 1.0f);  
+	vec3 radiance = vec3(lightColor) * att * lightStrength * ndotl * 1.0;
 
-//	PointCloud3[i].normal.xyz = vec3(0,1,0);
-
-	{
-		vec3 lightPos = lightPosition;//vec3(2.8, 2.2, 3.6);
-		vec3 lightColor = vec3(1, 0.8, 0.55);
-		float lightRadius = 10;
-		float lightStrength = 1.0;
-		float distToLight = distance(lightPos, origin);
-		float att = smoothstep(lightRadius, 0.0, length(lightPos - origin));
-		vec3 n = normalize(normal);
-		vec3 l = normalize(lightPos - origin);
-		float ndotl = clamp(dot(n, l), 0.0f, 1.0f);  
-		vec3 radiance = vec3(lightColor) * att * lightStrength * ndotl * 1.0;
-
-		if (!AnyHit(origin, l, 0.000001, distToLight)) {
-			PointCloud[i].color.xyz = radiance;
-		} 
-		else {
-			
-		}
+	if (!AnyHit(origin, l, 0.000001, distToLight)) {
+			PointCloud[i].color.xyz += radiance;
+	} 
+	else {
+		//PointCloud[i].color.xyz = vec3(0,0,0);
 	}
+
 		{
 		vec3 lightPos = vec3(2.05, 2, 9.0);
 		vec3 lightColor = vec3(1, 0, 0);
 		float lightRadius = 10;
-		float lightStrength = 1.0;
+		float lightStrength = 2.0;
 		float distToLight = distance(lightPos, origin);
 		float att = smoothstep(lightRadius, 0.0, length(lightPos - origin));
 		vec3 n = normalize(normal);
@@ -166,7 +133,7 @@ void main() {
 			PointCloud[i].color.xyz += radiance;
 		} 
 		else {
-			//PointCloud[i].color.xyz = vec3(0,0,0);
+
 		}
 	}
 }

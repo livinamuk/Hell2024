@@ -18,7 +18,7 @@
 #define HELL_PI 3.141592653589793f
 
 #define MAP_WIDTH   32
-#define MAP_HEIGHT  22
+#define MAP_HEIGHT  16
 #define MAP_DEPTH   50
 #define VOXEL_SIZE  0.2f
 

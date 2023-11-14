@@ -1,9 +1,7 @@
 #version 420
 
 layout (location = 0) out vec4 FragColor;
-
 layout (binding = 0) uniform sampler2D inputTexture;
-layout (binding = 1) uniform sampler2D computeTest;
 
 uniform float viewportWidth;
 uniform float viewportHeight;
@@ -20,6 +18,11 @@ vec3 Fxaa(sampler2D tex) {
 	float fxaaSpanMax = 8.0f;
 	float fxaaReduceMin = 1.0f/128.0f;
 	float fxaaReduceMul = 1.0f/8.0f;
+
+	float scale = 0.075;
+	fxaaSpanMax *= scale;
+	fxaaReduceMin *= scale;
+	fxaaReduceMul *= scale;
 
 	vec3 luma = vec3(0.299, 0.587, 0.114);	
 	float lumaTL = dot(luma, texture2D(tex, offsetTL).xyz);
@@ -58,15 +61,6 @@ vec3 Fxaa(sampler2D tex) {
 
 void main() {
 	vec3 result = Fxaa(inputTexture);
-	FragColor = vec4(result, 1.0);
-	//result = texture2D(inputTexture, TexCoords).xyz;
-
-	vec3 test =  texture(computeTest, TexCoords).rgb;
-	FragColor.rgb = mix(result, test, 0.5);
-	
-	FragColor.rgb = result + test;
-	//FragColor.rgb = test;
-	//FragColor.rgb = vec3(TexCoords, 1);
-	
+	//vec3 result = texture2D(inputTexture, TexCoords).xyz;
 	FragColor = vec4(result, 1.0);
 }

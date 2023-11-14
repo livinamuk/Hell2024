@@ -59,16 +59,18 @@ float GameObject::GetRotationZ() {
 	return _transform.rotation.z;
 }
 
-glm::vec3 GameObject::GetPosition() {
-	return _transform.position;
-}
+// these below are broken
+
+//glm::vec3 GameObject::GetPosition() {
+//	return _transform.position;
+//}
 
 
-glm::mat4 GameObject::GetRotationMatrix() {
+/*glm::mat4 GameObject::GetRotationMatrix() {
 	Transform transform;
 	transform.rotation = _transform.rotation;
 	return transform.to_mat4();
-}
+}*/
 
 void GameObject::SetScale(glm::vec3 scale) {
 	_transform.scale = glm::vec3(scale);
@@ -149,7 +151,6 @@ void GameObject::Interact() {
 	if (_openState == OpenState::CLOSED) {
 		_openState = OpenState::OPENING;
 		Audio::PlayAudio(_audio.onOpen.filename, _audio.onOpen.volume);
-		std::cout << "cunt";
 	}
 	// Close
 	else if (_openState == OpenState::OPEN) {
@@ -491,4 +492,56 @@ void GameObject::SetMeshMaterialByMeshName(std::string meshName, std::string mat
 			}
 		}
 	}*/
+}
+
+std::vector<Triangle> GameObject::GetTris() {
+
+	const float doorWidth = -0.794f;
+	const float doorDepth = -0.0379f;
+	const float doorHeight = 2.0f;
+
+	// Front
+	glm::vec3 pos0 = glm::vec3(0, 0, 0);
+	glm::vec3 pos1 = glm::vec3(0.0, 0, doorWidth);
+	// Back
+	glm::vec3 pos2 = glm::vec3(doorDepth, 0, 0);
+	glm::vec3 pos3 = glm::vec3(doorDepth, 0, doorWidth);
+
+	/*
+	pos0 = (GetModelMatrix() * glm::vec4(pos0, 1.0));
+	pos1 = (GetModelMatrix() * glm::vec4(pos1, 1.0));
+	pos2 = (GetModelMatrix() * glm::vec4(pos2, 1.0));
+	pos3 = (GetModelMatrix() * glm::vec4(pos3, 1.0));*/
+	
+	// FRONT
+	Triangle triA;
+	triA.p1 = pos0;
+	triA.p2 = pos1;
+	triA.p3 = pos1 + glm::vec3(0, doorHeight, 0);
+	triA.color = YELLOW;
+	Triangle triB;
+	triB.p1 = pos1 + glm::vec3(0, doorHeight, 0);
+	triB.p2 = pos0 + glm::vec3(0, doorHeight, 0);
+	triB.p3 = pos0;
+	triB.color = YELLOW;
+
+	// BACK
+	Triangle triC;
+	triC.p3 = pos2;
+	triC.p2 = pos3;
+	triC.p1 = pos3 + glm::vec3(0, doorHeight, 0);
+	triC.color = YELLOW;
+	Triangle triD;
+	triD.p3 = pos3 + glm::vec3(0, doorHeight, 0);
+	triD.p2 = pos2 + glm::vec3(0, doorHeight, 0);
+	triD.p1 = pos2;
+	triD.color = YELLOW;
+
+	std::vector<Triangle> result;
+	result.push_back(triA);
+	result.push_back(triB);
+	result.push_back(triC);
+	result.push_back(triD);
+
+	return result;
 }

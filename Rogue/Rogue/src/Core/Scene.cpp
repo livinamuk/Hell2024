@@ -80,7 +80,9 @@ void Scene::Init() {
 
     _walls.emplace_back(Wall(glm::vec3(door2X - 0.4, 2.1f, 7.0f), glm::vec3(door2X + 0.4, 2.1f, 7.0f), 0.4f, AssetManager::GetMaterialIndex("WallPaper"), true, false));
     //_walls.emplace_back(Wall(glm::vec3(door2X + 0.4, 0.1f, 6.9f), glm::vec3(0.1f, 0.1f, 6.9f), 2.4f, AssetManager::GetMaterialIndex("WallPaper")));
-    //_walls.emplace_back(Wall(glm::vec3(6.1f, 0.1f, 6.9f), glm::vec3(0.1f, 0.1f, 6.9f), 2.4f, AssetManager::GetMaterialIndex("WallPaper")));
+   
+    // full back wall with door 2
+    //_walls.emplace_back(Wall(glm::vec3(6.1f, 0.1f, 6.9f), glm::vec3(0.1f, 0.1f, 6.9f), 2.4f, AssetManager::GetMaterialIndex("WallPaper"), true, true));
 
     // First cube
     _walls.emplace_back(Wall(glm::vec3(4.7f, 0.1f, 1.7f), glm::vec3(3.5f, 0.1f, 1.7f), 1.2f, AssetManager::GetMaterialIndex("WallPaper"), false, false));

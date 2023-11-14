@@ -2,7 +2,7 @@
 
 layout(local_size_x = 4, local_size_y = 4, local_size_z = 4) in;
 
-layout(rgba32f, binding = 1) uniform image3D imgOutput;
+layout(rgba16f, binding = 1) uniform image3D imgOutput;
 
 struct CloudPoint {
     vec4 position;
@@ -10,12 +10,12 @@ struct CloudPoint {
     vec4 color;
 };
 
-layout(std430, binding = 0) readonly buffer input_layout {
-    CloudPoint PointCloud[];
+layout(std430, binding = 1) readonly buffer vertices {
+    vec4 Vertices[];
 };
 
-layout(std430, binding = 2) readonly buffer vertices {
-    vec4 Vertices[];
+layout(std430, binding = 2) buffer pointCloudvertices {
+    CloudPoint PointCloud[];
 };
 
 layout (location = 0) uniform int pointCloudSize;
@@ -23,6 +23,7 @@ layout (location = 1) uniform int vertexCount;
 layout (location = 2) uniform bool skipEvenX;
 layout (location = 3) uniform bool skipEvenY;
 layout (location = 4) uniform bool skipEvenZ;
+layout (location = 5) uniform mat4 doorMatrix;
 
 struct Hit {
 	bool found;
@@ -67,6 +68,14 @@ bool AnyHit(vec3 origin, vec3 direction, float rayMin, float rayMax) {
 		vec3 v0 = Vertices[i + 0].xyz;
 		vec3 v1 = Vertices[i + 1].xyz;
 		vec3 v2 = Vertices[i + 2].xyz;
+				
+		// If the vertex belongs to the door, apply the door model matrix
+		if (Vertices[i + 0].a == 1) {
+			v0 = (doorMatrix * vec4(v0, 1.0)).xyz;
+			v1 = (doorMatrix * vec4(v1, 1.0)).xyz;
+			v2 = (doorMatrix * vec4(v2, 1.0)).xyz;
+		}
+
 		Hit hit = TriIntersect(origin, direction, rayMin, rayMax, v0, v1, v2);
 		if (hit.found) { 
 			return true;
@@ -75,23 +84,23 @@ bool AnyHit(vec3 origin, vec3 direction, float rayMin, float rayMax) {
 	return false;
 }
 
-float distSquared( vec3 A, vec3 B ) {
+float distanceSquared( vec3 A, vec3 B ) {
     vec3 C = A - B;
     return dot( C, C );
 }
 
 void main() {
 
-    const uint x = gl_GlobalInvocationID.x;
-    const uint y = gl_GlobalInvocationID.y;
-    const uint z = gl_GlobalInvocationID.z;
+    const uint x = (gl_WorkGroupID.x * 4) + gl_LocalInvocationID.x;
+    const uint y = (gl_WorkGroupID.y * 4) + gl_LocalInvocationID.y;
+    const uint z = (gl_WorkGroupID.z * 4) + gl_LocalInvocationID.z;
 
 	const float probeSpacing = 0.2;
 	vec3 probePosition = vec3(x,y,z) * vec3(probeSpacing);
-	const float maxDistance = 2.6;//2.6;
+	const float maxDistance = 2.6;
 
 	vec3 color = vec3(0);
-	
+	/*
 	// This aboomination limits the light propogation compute calculations 
     // by skipping even/odd X grid co-ordinates every second frame, Y co-ordinates 
     // every fourth frame and z co-ordinates very third frame.
@@ -116,48 +125,43 @@ void main() {
 		skip = true;
 	}
 	///////////////////////////////////
-
-	if (!skip) {
-		
-		float maxDistanceSquared = maxDistance * maxDistance;
+	*/
+	if (true ) {
 
 		 // Iterate every point in the cloud
 		 for (int i = 0; i < pointCloudSize; i++) {
 	 
 			CloudPoint point = PointCloud[i];
-			
-			// Skip ray test if probe is further than max allowed distance from point
-			float distanceToProbeSquared = distSquared(point.position.xyz, probePosition);
-			if (distanceToProbeSquared > maxDistanceSquared) {
-				continue;
-			}
 
 			// If the cloud point is not in darkness...
 			if (point.color.rgb != vec3(0,0,0)) {
-					
+		
 				// If the probe is within the max distance...
-				float distanceFromPointToProbe = sqrt(distanceToProbeSquared);
+				float distanceToProbeSquared = distanceSquared(point.position.xyz, probePosition);
+				if (distanceToProbeSquared < maxDistance * maxDistance) {	
 
-				// If the point is not facing away from the probe...
-				vec3 v = normalize(probePosition - point.position.xyz);
-				float vdotn = dot(point.normal.xyz, v);
+					// If the point is not facing away from the probe...
+					vec3 v = normalize(probePosition - point.position.xyz);
+					float vdotn = dot(point.normal.xyz, v);
+					if (vdotn < 0) {
+						 continue;
+					}
 
-				if (vdotn < 0) {
-					continue;
+					float distanceFromPointToProbe = sqrt(distanceToProbeSquared);
+
+					// If the point has line of sight to the probe...
+					if (!AnyHit(point.position.xyz, v, 0.000001, distanceFromPointToProbe)) {
+						//color += point.color.rgb * (maxDistance - distanceFromPointToProbe) / maxDistance;
+						//color += vdotn * point.color.rgb * (maxDistance - distanceFromPointToProbe) / maxDistance;
+						//color += point.color.rgb * (maxDistance - distanceFromPointToProbe) * (maxDistance - distanceFromPointToProbe) / maxDistance;
+						//color += vdotn * point.color.rgb * (maxDistance - distanceFromPointToProbe) * (maxDistance - distanceFromPointToProbe) / maxDistance;
+						color += point.color.rgb / distanceFromPointToProbe;
+						//color += vdotn * point.color.rgb;
+					} 				 
 				}
-					
-				// If the point has line of sight to the probe...
-				if (!AnyHit(point.position.xyz, v, 0.000001, distanceFromPointToProbe)) {		
-					//color += point.color.rgb * (maxDistance - distanceFromPointToProbe) / maxDistance;
-					//color += vdotn * point.color.rgb * (maxDistance - distanceFromPointToProbe) / maxDistance;
-					//color += point.color.rgb * (maxDistance - distanceFromPointToProbe) * (maxDistance - distanceFromPointToProbe) / maxDistance;
-					//color += vdotn * point.color.rgb * (maxDistance - distanceFromPointToProbe) * (maxDistance - distanceFromPointToProbe) / maxDistance;
-					color += point.color.rgb / distanceFromPointToProbe;
-					//color += vdotn * point.color.rgb;
-				} 
 			}
 		 }
-		float scale = 40;
+		float scale = 400;
 		color = color / float(scale);
 		imageStore(imgOutput, ivec3(x, y, z), vec4(color, 1));
 	 }

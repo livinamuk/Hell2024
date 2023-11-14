@@ -48,3 +48,7 @@ void Mesh::Draw() {
 int Mesh::GetIndexCount() {
     return _indexCount;
 }
+
+int Mesh::GetVAO() {
+    return _VAO;
+}

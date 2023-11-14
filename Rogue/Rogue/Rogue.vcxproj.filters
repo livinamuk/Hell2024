@@ -196,8 +196,6 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="res\shaders\test.frag" />
-    <None Include="res\shaders\test.vert" />
     <None Include="res\shaders\solid_color.frag" />
     <None Include="res\shaders\solid_color.vert" />
     <None Include="res\shaders\shadowmap.geom" />
@@ -213,5 +211,11 @@
     <None Include="res\shaders\animated_quad.vert" />
     <None Include="res\shaders\debug_view_point_cloud.frag" />
     <None Include="res\shaders\debug_view_point_cloud.vert" />
+    <None Include="res\shaders\geometry.frag" />
+    <None Include="res\shaders\geometry.vert" />
+    <None Include="res\shaders\lighting.vert" />
+    <None Include="res\shaders\lighting.frag" />
+    <None Include="res\shaders\debug_view_propogation_grid.vert" />
+    <None Include="res\shaders\debug_view_propogation_grid.frag" />
   </ItemGroup>
 </Project>

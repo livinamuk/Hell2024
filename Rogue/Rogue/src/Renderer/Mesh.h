@@ -9,6 +9,7 @@ class Mesh {
 		Mesh (std::vector<Vertex> vertices, std::vector<unsigned int> indices, std::string name);
 		void Draw();
 		int GetIndexCount();
+		int GetVAO();
 
 	private:
 		unsigned int _VBO = 0;

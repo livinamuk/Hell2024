@@ -43,8 +43,8 @@ inline void SetNormalsAndTangentsFromVertices(Vertex* vert0, Vertex* vert1, Vert
 #define PROPOGATION_DEPTH (MAP_DEPTH / PROPOGATION_SPACING)
 
 struct CloudPoint {
-    glm::vec4 position;
-    glm::vec4 normal;
+    glm::vec4 position = glm::vec4(0);
+    glm::vec4 normal = glm::vec4(0);
     glm::vec4 directLighting = glm::vec4(0);
 };
 
@@ -64,7 +64,7 @@ struct Wall {
 
     float wallHeight = 2.4f;
 
-    Wall(glm::vec3 begin, glm::vec3 end, float height, int materialIndex, bool hasTopTrim, bool hasBottomTrim) {
+    Wall(glm::vec3 begin, glm::vec3 end, float height, int materialIndex, bool hasTopTrim = false, bool hasBottomTrim = false) {
         this->materialIndex = materialIndex;
         this->begin = begin;
         this->end = end;

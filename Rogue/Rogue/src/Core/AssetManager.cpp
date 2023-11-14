@@ -162,9 +162,9 @@ void AssetManager::BindMaterialByIndex(int index) {
 		return;
 	}
 	else {
-		_textures[_materials[index]._basecolor].Bind(5);
-		_textures[_materials[index]._normal].Bind(6);
-		_textures[_materials[index]._rma].Bind(7);
+		_textures[_materials[index]._basecolor].Bind(0);
+		_textures[_materials[index]._normal].Bind(1);
+		_textures[_materials[index]._rma].Bind(2);
 	}
 }
 

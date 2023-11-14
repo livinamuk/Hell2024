@@ -52,26 +52,12 @@ void MuzzleFlash::CreateFlash(glm::vec3 worldPosition) {
 	m_CurrentTime = 0;
 }
 
-/*void MuzzleFlash::Update(float deltaTime)
-{
-	auto dt = AnimationSeconds / static_cast<float>(CountRaw * CountColumn - 1);
-
-	m_FrameIndex = std::floorf(m_CurrentTime / dt);
-	m_Interpolate = (m_CurrentTime - m_FrameIndex * dt) / dt;
-	m_CurrentTime += deltaTime * 10;// 7.5f;
-}*/
-
-void MuzzleFlash::Draw(Shader* shader, Transform& global, float rotation)
-{
+void MuzzleFlash::Draw(Shader* shader, Transform& global, float rotation) {
 	if (m_VAO == 0)
 		this->Init();
 
 	if (m_CurrentTime >= AnimationSeconds * 0.5)
 		return;
-
-	glDepthMask(false);
-	glEnable(GL_BLEND);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 	shader->Use();
 	shader->SetInt("u_FrameIndex", m_FrameIndex);
@@ -79,18 +65,11 @@ void MuzzleFlash::Draw(Shader* shader, Transform& global, float rotation)
 	shader->SetInt("u_CountColumn", CountColumn);
 	shader->SetFloat("u_TimeLerp", m_Interpolate);
 
-	//Transform rot;
-	//rot.rotation.y = HELL_PI / 2;
-	//rot.rotation.x = -HELL_PI / 2;
-
 	Transform scale;
 	scale.rotation.z = rotation;
 	scale.scale = glm::vec3(0.25f, 0.125f, 1);
 	scale.scale.x *= 0.75;
 	scale.scale.y *= 0.75;
-
-	//Transform rotTrans;
-	//rotTrans.rotation.z = Util::RandomFloat(0, 3.14f);
 
 	shader->SetMat4("u_MatrixWorld", global.to_mat4() * scale.to_mat4() );
 

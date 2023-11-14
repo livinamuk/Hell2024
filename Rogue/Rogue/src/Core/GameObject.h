@@ -77,8 +77,8 @@ public:
 	float GetRotationX();
 	float GetRotationY();
 	float GetRotationZ();
-	glm::vec3 GetPosition();
-	glm::mat4 GetRotationMatrix();
+	//glm::vec3 GetPosition();
+	//glm::mat4 GetRotationMatrix();
 	void SetScale(glm::vec3 scale);
 	void SetScale(float scale);
 	void SetScaleX(float scale);
@@ -108,4 +108,6 @@ public:
 	void SetTransform(Transform& transform);
 	void SetInteractToAffectAnotherObject(std::string objectName);
 	void SetMeshMaterialByMeshName(std::string meshName, std::string materialName);
+
+	std::vector<Triangle> GetTris();
 };

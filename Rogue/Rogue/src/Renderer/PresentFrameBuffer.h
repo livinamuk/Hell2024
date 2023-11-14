@@ -11,7 +11,7 @@ public:
 	unsigned int GetHeight();
 	unsigned int _inputTexture = { 0 };
 	unsigned int _fxaaTexture = { 0 };
-	//unsigned int _depthTexture = { 0 };
+	unsigned int _depthTexture = { 0 };
 
 private:
 	unsigned int _ID = { 0 };
