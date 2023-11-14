@@ -57,7 +57,8 @@ Hit TriIntersect(vec3 origin, vec3 direction, float rayMin, float rayMax, vec3 v
 	if( u<0.0 || v<0.0 || (u+v)>1.0 ) 
 		t = -1.0;
 
-	if (t > rayMin && t < rayMax) {
+	// Ray max is squared to save on square root
+	if (t > rayMin && t * t < rayMax) {
 		hit.found = true;
 	}
 	return hit;
@@ -106,32 +107,29 @@ void main() {
 	 
 		CloudPoint point = PointCloud[i];
 
-		// If the cloud point is not in darkness...
-		if (point.color.rgb != vec3(0,0,0)) {
-		
-			// If the probe is within the max distance...
-			float distanceToProbeSquared = distanceSquared(point.position.xyz, probePosition);
-			if (distanceToProbeSquared < maxDistance * maxDistance) {	
+		// If the probe is within the max distance...
+		float distanceToProbeSquared = distanceSquared(point.position.xyz, probePosition);
 
-				// If the point is not facing away from the probe...
-				vec3 v = normalize(probePosition - point.position.xyz);
-				float vdotn = dot(point.normal.xyz, v);
-				if (vdotn < 0) {
-					continue;
-				}
+		if (distanceToProbeSquared < maxDistance * maxDistance) {	
+
+			// If the point is not facing away from the probe...
+			vec3 v = normalize(probePosition - point.position.xyz);
+			float vdotn = dot(point.normal.xyz, v);
+			if (vdotn < 0) {
+				continue;
+			}
+
+			// If the point has line of sight to the probe...
+			if (!AnyHit(point.position.xyz, v, 0.000001, distanceToProbeSquared)) {
 
 				float distanceFromPointToProbe = sqrt(distanceToProbeSquared);
-
-				// If the point has line of sight to the probe...
-				if (!AnyHit(point.position.xyz, v, 0.000001, distanceFromPointToProbe)) {
-					//color += point.color.rgb * (maxDistance - distanceFromPointToProbe) / maxDistance;
-					//color += vdotn * point.color.rgb * (maxDistance - distanceFromPointToProbe) / maxDistance;
-					//color += point.color.rgb * (maxDistance - distanceFromPointToProbe) * (maxDistance - distanceFromPointToProbe) / maxDistance;
-					//color += vdotn * point.color.rgb * (maxDistance - distanceFromPointToProbe) * (maxDistance - distanceFromPointToProbe) / maxDistance;
-					color += point.color.rgb / distanceFromPointToProbe;
-					//color += vdotn * point.color.rgb;
-				} 				 
-			}
+				//color += point.color.rgb * (maxDistance - distanceFromPointToProbe) / maxDistance;
+				//color += vdotn * point.color.rgb * (maxDistance - distanceFromPointToProbe) / maxDistance;
+				//color += point.color.rgb * (maxDistance - distanceFromPointToProbe) * (maxDistance - distanceFromPointToProbe) / maxDistance;
+				//color += vdotn * point.color.rgb * (maxDistance - distanceFromPointToProbe) * (maxDistance - distanceFromPointToProbe) / maxDistance;
+				color += point.color.rgb / distanceFromPointToProbe;
+				//color += vdotn * point.color.rgb;
+			} 				 
 		}
 		
 	}

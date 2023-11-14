@@ -20,16 +20,7 @@ layout (location = 2) uniform int vertexCount;
 layout (location = 3) uniform vec3 lightPosition;
 layout (location = 4) uniform mat4 doorMatrix;
 
-struct Hit {
-	bool found;
-	float dist;
-	vec2 attribs;
-	vec3 baryCentrics;
-	vec3 position;
-	vec3 normal;
-};
-
-Hit TriIntersect(vec3 origin, vec3 direction, float rayMin, float rayMax, vec3 v0, vec3 v1, vec3 v2) {
+bool TriIntersect(vec3 origin, vec3 direction, float rayMin, float rayMax, vec3 v0, vec3 v1, vec3 v2) {
 
 	vec3 a = v0 - v1;
 	vec3 b = v2 - v0;
@@ -37,16 +28,13 @@ Hit TriIntersect(vec3 origin, vec3 direction, float rayMin, float rayMax, vec3 v
 	vec3 n = cross(b, a);
 	float r = dot(direction, n); 
 
-	Hit hit;
-	hit.found = false;
-
     //ignore back face
     //if (r > 0) 
 	//	return hit;    
 
 	// some other early out
 	if (abs(r) < 0.00001) 
-		return hit;
+		return false;
 
 	vec3 q = cross( p, direction );
 	r = 1.0 / r;
@@ -58,14 +46,9 @@ Hit TriIntersect(vec3 origin, vec3 direction, float rayMin, float rayMax, vec3 v
 		t = -1.0;
 
 	if (t > rayMin && t < rayMax) {
-		hit.found = true;
-		hit.dist = t;
-		hit.attribs = vec2(u, v);
-		hit.baryCentrics = vec3(1.0 - u - v, u, v);
-		hit.position = vec3(v0 * hit.baryCentrics.x + v1 * hit.baryCentrics.y + v2 * hit.baryCentrics.z);
-		hit.normal = n;
+		return true;
 	}
-	return hit;
+	return false;
 }
 
 bool AnyHit(vec3 origin, vec3 direction, float rayMin, float rayMax) {
@@ -82,8 +65,8 @@ bool AnyHit(vec3 origin, vec3 direction, float rayMin, float rayMax) {
 			v2 = (doorMatrix * vec4(v2, 1.0)).xyz;
 		}
 
-		Hit hit = TriIntersect(origin, direction, rayMin, rayMax, v0, v1, v2);
-		if (hit.found) { 
+		bool hit = TriIntersect(origin, direction, rayMin, rayMax, v0, v1, v2);
+		if (hit) { 
 			return true;
 		}
 	}
