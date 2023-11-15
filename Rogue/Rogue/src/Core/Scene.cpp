@@ -336,7 +336,7 @@ void Scene::Init() {
 void Scene::CreatePointCloud() {
 
     Renderer::_shadowMapsAreDirty = true;
-
+    float pointSpacing = Renderer::GetPointCloudSpacing();;
     float yCutOff = 2.7f;
 
     _cloudPoints.clear();
@@ -364,7 +364,6 @@ void Scene::CreatePointCloud() {
         _worldLines.push_back(line4);
         glm::vec3 dir = glm::normalize(wall.end - wall.begin);
         float wallLength = distance(wall.begin, wall.end);
-        float pointSpacing = 0.3f;
         for (float x = pointSpacing * 0.5f; x < wallLength; x += pointSpacing) {
             glm::vec3 pos = wall.begin + (dir * x);
             for (float y = pointSpacing * 0.5f; y < wall.height; y += pointSpacing) {
@@ -426,7 +425,6 @@ void Scene::CreatePointCloud() {
 
         float floorWidth = floor.x2 - floor.x1;
         float floorDepth = floor.z2 - floor.z1;
-        float pointSpacing = 0.3f;
         for (float x = pointSpacing * 0.5f; x < floorWidth; x += pointSpacing) {
             for (float z = pointSpacing * 0.5f; z < floorDepth; z += pointSpacing) {
                 CloudPoint cloudPoint;
@@ -480,7 +478,6 @@ void Scene::CreatePointCloud() {
         line4.p2 = Point(glm::vec3(ceiling.x1, ceiling.height, ceiling.z2), YELLOW);
         float ceilingWidth = ceiling.x2 - ceiling.x1;
         float ceilingDepth = ceiling.z2 - ceiling.z1;
-        float pointSpacing = 0.3f;
         for (float x = pointSpacing * 0.5f; x < ceilingWidth; x += pointSpacing) {
             for (float z = pointSpacing * 0.5f; z < ceilingDepth; z += pointSpacing) {
                 CloudPoint cloudPoint;

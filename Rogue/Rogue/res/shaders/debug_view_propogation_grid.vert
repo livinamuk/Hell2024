@@ -8,13 +8,13 @@ uniform mat4 view;
 uniform mat4 model;
 uniform vec3 color;
 uniform bool uniformColor;
+uniform float propogationGridSpacing;
 
 out vec3 Color;
 
 #define MAP_WIDTH   32
 #define MAP_HEIGHT  16
 #define MAP_DEPTH   50
-#define GRID_SPACING 0.2
 
 flat out int x;
 flat out int y;
@@ -27,7 +27,7 @@ void main() {
 	x = gl_InstanceID  / (MAP_HEIGHT * MAP_DEPTH); 
 
 	vec4 worldPos = model * vec4(aPos, 1.0);
-	worldPos.xyz += vec3(x, y, z) * GRID_SPACING;
+	worldPos.xyz += vec3(x, y, z) * propogationGridSpacing;
 
 	gl_Position = projection * view * worldPos;
 

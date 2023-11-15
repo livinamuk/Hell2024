@@ -79,6 +79,8 @@ std::vector<ShadowMap> _shadowMaps;
 GLuint _imageStoreTexture = { 0 };
 bool _depthOfFieldScene = 0.9f;
 bool _depthOfFieldWeapon = 1.0f;
+float _propogationGridSpacing = 0.4;
+float  _pointCloudSpacing = 0.4;
 
 enum RenderMode { COMPOSITE, DIRECT_LIGHT, INDIRECT_LIGHT, POINT_CLOUD,  MODE_COUNT} _mode;
 
@@ -156,6 +158,7 @@ void Renderer::RenderFrame() {
         _shaders.debugViewPropgationGrid.SetMat4("projection", Player::GetProjectionMatrix(_depthOfFieldScene));
         _shaders.debugViewPropgationGrid.SetMat4("view", Player::GetViewMatrix());
         _shaders.debugViewPropgationGrid.SetMat4("model", cubeTransform.to_mat4());
+        _shaders.debugViewPropgationGrid.SetFloat("propogationGridSpacing", _propogationGridSpacing);
         int count = MAP_WIDTH * MAP_HEIGHT * MAP_DEPTH;
         glEnable(GL_CULL_FACE);
         glEnable(GL_DEPTH_TEST);
@@ -294,6 +297,7 @@ void LightingPass() {
     _shaders.lighting.SetMat4("view", Player::GetViewMatrix());
     _shaders.lighting.SetMat4("inverseView", glm::inverse(Player::GetViewMatrix()));
     _shaders.lighting.SetVec3("viewPos", Player::GetViewPos());
+    _shaders.lighting.SetFloat("propogationGridSpacing", _propogationGridSpacing);
 
     DrawFullscreenQuad();
 }
@@ -756,6 +760,10 @@ int Renderer::GetRenderHeight() {
     return _renderHeight;
 }
 
+float Renderer::GetPointCloudSpacing() {
+    return _pointCloudSpacing;
+}
+
 void Renderer::NextMode() {
     _mode = (RenderMode)(int(_mode) + 1);
     if (_mode == MODE_COUNT)
@@ -1011,6 +1019,8 @@ void InitCompute() {
     glBufferStorage(GL_SHADER_STORAGE_BUFFER, vertices.size() * sizeof(glm::vec4), &vertices[0], GL_DYNAMIC_STORAGE_BIT | GL_MAP_READ_BIT);
     glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
     std::cout << "You are raytracing against " << (vertices.size() / 3) << " tris\n";
+    std::cout << "Point cloud has: " << Scene::_cloudPoints.size() << " points\n";
+    std::cout << "Propogation grid has : " << (MAP_WIDTH * MAP_HEIGHT * MAP_DEPTH * _propogationGridSpacing) << " cells\n";
 }
 
 void ComputePass() {
@@ -1039,6 +1049,7 @@ void UpdatePropogationgGrid() {
     _shaders.propogateLight.SetInt("pointCloudSize", Scene::_cloudPoints.size());
     _shaders.propogateLight.SetInt("vertexCount", _ssbos.vertexCount);
     _shaders.propogateLight.SetMat4("doorMatrix", Scene::GetGameObjectByName("Door2")->GetModelMatrix());
+    _shaders.propogateLight.SetFloat("propogationGridSpacing", _propogationGridSpacing);
     int xSize = std::ceil(MAP_WIDTH / 4.0f);
     int ySize = std::ceil(MAP_HEIGHT / 4.0f);
     int zSize = std::ceil(MAP_DEPTH / 4.0f);

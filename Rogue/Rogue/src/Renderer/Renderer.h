@@ -18,6 +18,7 @@ namespace Renderer {
 
 	int GetRenderWidth();
 	int GetRenderHeight();
+	float GetPointCloudSpacing();
 	void NextMode();
 	void PreviousMode();
 	void RecreateFrameBuffers();

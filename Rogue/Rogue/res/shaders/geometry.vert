@@ -27,19 +27,17 @@ uniform mat4 skinningMats[85];
 
 void main() {
 
+	TexCoord = aTexCoord;
+
 	if (isAnimated) {
 
-		TexCoord = aTexCoord;	
-		//vec4 worldPos;
 		vec4 totalLocalPos = vec4(0.0);
 		vec4 totalNormal = vec4(0.0);
 		vec4 totalTangent = vec4(0.0);
-		vec4 totalBiTangent = vec4(0.0);
 			
 		vec4 vertexPosition =  vec4(aPos, 1.0);
 		vec4 vertexNormal = vec4(aNormal, 0.0);
 		vec4 vertexTangent = vec4(aTangent, 0.0);
-		vec4 vertexBiTangent = vec4(aBitangent, 0.0);
 
 		for(int i=0;i<4;i++)  {
 			mat4 jointTransform = skinningMats[int(aBoneID[i])];
@@ -47,37 +45,26 @@ void main() {
 			
 			vec4 worldNormal = jointTransform * vertexNormal * aBoneWeight[i];
 			vec4 worldTangent = jointTransform * vertexTangent * aBoneWeight[i];
-			vec4 worldBiTangent = jointTransform * vertexBiTangent * aBoneWeight[i];
 
 			totalLocalPos += posePosition;		
 			totalNormal += worldNormal;	
 			totalTangent += worldTangent;	
-			totalBiTangent += worldBiTangent;
 		}
 	
 		WorldPos = (model * vec4(totalLocalPos.xyz, 1)).xyz;
-		//WorldPos = aPos;
-		//WorldPos.y += 1;
 		
 		attrNormal =  (model * vec4(normalize(totalNormal.xyz), 0)).xyz;
 		attrTangent =  (model * vec4(normalize(totalTangent.xyz), 0)).xyz;
-		attrBiTangent =  (model * vec4(normalize(totalBiTangent.xyz), 0)).xyz;
-
 		attrBiTangent = normalize(cross(attrNormal,attrTangent));
-		
-		gl_Position = projection * view * vec4(WorldPos, 1.0);
 	}
 
 	// NOT ANIMATED
 	else {	
 		attrNormal = (model * vec4(aNormal, 0)).xyz;
-		//attrNormal = (model * vec4(smoothNormal, 0)).xyz;
 		attrTangent = (model * vec4(aTangent, 0.0)).xyz;
-		attrBiTangent = (model * vec4(aBitangent, 0.0)).xyz;
-
-		TexCoord = vec2(aTexCoord.x, aTexCoord.y);
-		WorldPos = (model * vec4(aPos.x, aPos.y, aPos.z, 1.0)).xyz;
-				
-		gl_Position = projection * view * vec4(WorldPos, 1.0);
+		attrBiTangent = normalize(cross(attrNormal,attrTangent));
+		WorldPos = (model * vec4(aPos.x, aPos.y, aPos.z, 1.0)).xyz;	
 	}
+		
+	gl_Position = projection * view * vec4(WorldPos, 1.0);
 }

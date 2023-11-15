@@ -28,8 +28,13 @@ uniform float screenWidth;
 uniform float screenHeight;
 uniform float time;
 uniform int mode;
+uniform float propogationGridSpacing;
 
 const float PI = 3.14159265359;
+
+#define MAP_WIDTH   32
+#define MAP_HEIGHT  16
+#define MAP_DEPTH   50
 
 ////////////////////////
 //                    //
@@ -192,18 +197,14 @@ vec3 GetDirectLighting(vec3 lightPos, vec3 lightColor, float radius, float stren
 //                       //
 //   Indirect Lighting   //
 
-#define MAP_WIDTH   32
-#define MAP_HEIGHT  16
-#define MAP_DEPTH   50
-#define GRID_SPACING 0.2
-
 vec3 GetProbe(vec3 fragWorldPos, ivec3 offset, out float weight, vec3 Normal) {
-    vec3 gridCoords = fragWorldPos / GRID_SPACING;
+    vec3 gridCoords = fragWorldPos / propogationGridSpacing;
     ivec3 base = ivec3(floor(gridCoords));
     vec3 a = gridCoords - base;
     vec3 probe_color = texelFetch(propgationGridTexture, base + offset, 0).rgb;
-    vec3 probe_worldPos = (base + offset) * GRID_SPACING;
-    vec3 v = normalize(probe_worldPos - fragWorldPos); // TODO: no need to normalize if only checking sign
+    vec3 probe_worldPos = (base + offset) * propogationGridSpacing;
+    //vec3 v = normalize(probe_worldPos - fragWorldPos); // TODO: no need to normalize if only checking sign
+    vec3 v = (probe_worldPos - fragWorldPos);
     float vdotn = dot(v, Normal);
     vec3 weights = mix(1. - a, a, offset);    
     if(vdotn > 0 && probe_color != vec3(-1))

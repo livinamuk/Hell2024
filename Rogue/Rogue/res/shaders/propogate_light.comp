@@ -24,12 +24,9 @@ layout (location = 2) uniform bool skipEvenX;
 layout (location = 3) uniform bool skipEvenY;
 layout (location = 4) uniform bool skipEvenZ;
 layout (location = 5) uniform mat4 doorMatrix;
+layout (location = 6) uniform float propogationGridSpacing;
 
-struct Hit {
-	bool found;
-};
-
-Hit TriIntersect(vec3 origin, vec3 direction, float rayMin, float rayMax, vec3 v0, vec3 v1, vec3 v2) {
+bool TriIntersect(vec3 origin, vec3 direction, float rayMin, float rayMax, vec3 v0, vec3 v1, vec3 v2) {
 
 	vec3 a = v0 - v1;
 	vec3 b = v2 - v0;
@@ -37,16 +34,13 @@ Hit TriIntersect(vec3 origin, vec3 direction, float rayMin, float rayMax, vec3 v
 	vec3 n = cross(b, a);
 	float r = dot(direction, n); 
 
-	Hit hit;
-	hit.found = false;
-
     //ignore back face
     if (r > 0) 
-		return hit;    
+		return false;    
 
 	// some other early out
 	if (abs(r) < 0.00001) 
-		return hit;
+		return false;
 
 	vec3 q = cross( p, direction );
 	r = 1.0 / r;
@@ -59,9 +53,9 @@ Hit TriIntersect(vec3 origin, vec3 direction, float rayMin, float rayMax, vec3 v
 
 	// Ray max is squared to save on square root
 	if (t > rayMin && t * t < rayMax) {
-		hit.found = true;
+		return true;
 	}
-	return hit;
+	return false;
 }
 
 bool AnyHit(vec3 origin, vec3 direction, float rayMin, float rayMax) {
@@ -77,8 +71,8 @@ bool AnyHit(vec3 origin, vec3 direction, float rayMin, float rayMax) {
 			v2 = (doorMatrix * vec4(v2, 1.0)).xyz;
 		}
 
-		Hit hit = TriIntersect(origin, direction, rayMin, rayMax, v0, v1, v2);
-		if (hit.found) { 
+		bool hit = TriIntersect(origin, direction, rayMin, rayMax, v0, v1, v2);
+		if (hit) { 
 			return true;
 		}
 	}
@@ -96,8 +90,8 @@ void main() {
     const uint y = (gl_WorkGroupID.y * 4) + gl_LocalInvocationID.y;
     const uint z = (gl_WorkGroupID.z * 4) + gl_LocalInvocationID.z;
 
-	const float probeSpacing = 0.2;
-	vec3 probePosition = vec3(x,y,z) * vec3(probeSpacing);
+	//const float probeSpacing = 0.2;
+	vec3 probePosition = vec3(x,y,z) * vec3(propogationGridSpacing);
 	const float maxDistance = 2.6;
 
 	vec3 color = vec3(0);
