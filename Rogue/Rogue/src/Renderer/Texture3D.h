@@ -18,5 +18,5 @@ private:
 	int _NumOfChannels = 0;
 	int _width = 0;
 	int _height = 0;
-	int _depth = 0;
+	int _depth = 0; 
 };

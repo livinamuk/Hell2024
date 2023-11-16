@@ -31,9 +31,8 @@ void main()
     vec3 normalMap = texture2D(normalTexture, TexCoord).rgb;
     vec3 rma =  texture2D(rmaTexture, TexCoord).rgb;
    	mat3 tbn = mat3(normalize(attrTangent), normalize(attrBiTangent), normalize(attrNormal));	
-	vec3 normal = (tbn * normalize(normalMap.rgb * 2.0 - 1.0));
-	normal =  normalize(normal.rgb);
-    
+	vec3 normal = normalize(tbn * (normalMap.rgb * 2.0 - 1.0));
+
     BaseColorOut = baseColor;
     NormalsOut = vec4(normal, 1.0);;
     RMAOut = vec4(rma, projectionMatrixIndex);

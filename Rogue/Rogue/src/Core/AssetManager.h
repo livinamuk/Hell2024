@@ -10,7 +10,7 @@ namespace AssetManager {
 	void LoadFont();
 	void LoadEverythingElse();
 	Texture& GetTexture(const std::string& filename);
-	int GetTextureIndex(const std::string& filename);
+	int GetTextureIndex(const std::string& filename, bool ignoreWarning = false);
 	int GetMaterialIndex(const std::string& _name);
 	void BindMaterialByIndex(int index);
 	Model& GetModel(const std::string& name);

@@ -362,5 +362,6 @@ void main() {
 	FragColor.rgb = FragColor.rgb + vec3(brightness);
     FragColor.g += 0.0025;
     FragColor.a = 1;
-//FragColor.rgb = vec3(0);
+    //FragColor.rgb = vec3(0);
+   // FragColor.rgb = normal;
 }

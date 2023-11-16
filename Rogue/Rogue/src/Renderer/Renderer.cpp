@@ -885,7 +885,7 @@ void DrawMuzzleFlashes() {
     _shaders.animatedQuad.SetVec3("u_ViewPos", viewPos);
 
     glActiveTexture(GL_TEXTURE0);
-    AssetManager::GetTexture("MuzzleFlash").Bind(0);
+    AssetManager::GetTexture("MuzzleFlash_ALB").Bind(0);
 
     muzzleFlash.Draw(&_shaders.animatedQuad, t, Player::GetMuzzleFlashRotation());
     glDisable(GL_BLEND);
@@ -1030,8 +1030,8 @@ void InitCompute() {
     glBufferStorage(GL_SHADER_STORAGE_BUFFER, vertices.size() * sizeof(glm::vec4), &vertices[0], GL_DYNAMIC_STORAGE_BIT | GL_MAP_READ_BIT);
     glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
     std::cout << "You are raytracing against " << (vertices.size() / 3) << " tris\n";
-    std::cout << "Point cloud has: " << Scene::_cloudPoints.size() << " points\n";
-    std::cout << "Propogation grid has : " << (_mapWidth * _mapHeight * _mapDepth / _propogationGridSpacing) << " cells\n";
+    std::cout << "Point cloud has " << Scene::_cloudPoints.size() << " points\n";
+    std::cout << "Propogation grid has " << (_mapWidth * _mapHeight * _mapDepth / _propogationGridSpacing) << " cells\n";
 }
 
 void ComputePass() {

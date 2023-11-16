@@ -24,13 +24,13 @@ void AssetManager::LoadFont() {
 
 #include <filesystem>
 
-int AssetManager::GetTextureIndex(const std::string& filename) {
+int AssetManager::GetTextureIndex(const std::string& filename, bool ignoreWarning) {
 	for (int i = 0; i < _textures.size(); i++) {
 		if (_textures[i].GetFilename() == filename) {
 			return i;
 		}
 	}
-	if (filename != "Macbook3_RMA" && filename != "Macbook3_NRM")
+	if (!ignoreWarning)
 		std::cout << "Could not get texture with name \"" << filename << "\", it does not exist\n";
 	return -1;
 }
@@ -61,9 +61,9 @@ void AssetManager::LoadEverythingElse() {
 			Material& material = _materials.emplace_back(Material());
 			material._name = texture.GetFilename().substr(0, texture.GetFilename().length() - 4);
 
-			int basecolorIndex = GetTextureIndex(material._name + "_ALB");
-			int normalIndex = GetTextureIndex(material._name + "_NRM");
-			int rmaIndex = GetTextureIndex(material._name + "_RMA");
+			int basecolorIndex = GetTextureIndex(material._name + "_ALB", true);
+			int normalIndex = GetTextureIndex(material._name + "_NRM", true);
+			int rmaIndex = GetTextureIndex(material._name + "_RMA", true);
 
 			if (basecolorIndex != -1) {
 				material._basecolor = basecolorIndex;

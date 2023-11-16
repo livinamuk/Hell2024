@@ -279,7 +279,6 @@ namespace Scene {
     inline std::vector<GameObject> _gameObjects;
     inline std::vector<AnimatedGameObject> _animatedGameObjects;
     inline std::vector<Light> _lights;
-    //inline GridProbe _propogrationGrid[PROPOGATION_WIDTH][PROPOGATION_HEIGHT][PROPOGATION_DEPTH];
 
     void Init();
     void Update(float deltaTime);

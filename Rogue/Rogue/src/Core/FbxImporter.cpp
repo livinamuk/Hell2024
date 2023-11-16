@@ -48,7 +48,7 @@ void FbxImporter::LoadSkinnedModel(std::string filename, SkinnedModel& skinnedMo
 
     GrabSkeleton(skinnedModel, m_pScene->mRootNode, -1);
 
-     std::cout << "Loaded model " << skinnedModel._filename << " ("  << skinnedModel.m_BoneInfo.size() << " bones)\n";
+     //std::cout << "Loaded model " << skinnedModel._filename << " ("  << skinnedModel.m_BoneInfo.size() << " bones)\n";
      
      for (auto b : skinnedModel.m_BoneInfo) {
          //std::cout << "-" << b.BoneName << "\n";
@@ -265,7 +265,7 @@ void FbxImporter::InitMesh(SkinnedModel& skinnedModel, unsigned int MeshIndex,
    // std::cout << paiMesh->mName.C_Str() << ": " << "Index count: " << Indices.size() << "   tri count: " << (Indices.size() / 3.0f) << "\n";
 
 
-    std::cout << MeshIndex << ": " <<  paiMesh->mName.C_Str() << "\n";
+   // std::cout << MeshIndex << ": " <<  paiMesh->mName.C_Str() << "\n";
 
     
 
@@ -411,7 +411,7 @@ void FbxImporter::LoadAnimation(SkinnedModel& skinnedModel, const std::string& f
         animation->m_animatedNodes.push_back(animatedNode);
     }
 
-    std::cout << "Loaded animation: " << animation->_filename << "\n;";// << " " << animation->m_duration << "\n";
+    //std::cout << "Loaded animation: " << animation->_filename << "\n";// << " " << animation->m_duration << "\n";
 
     // Store it
     skinnedModel.m_animations.emplace_back(animation);

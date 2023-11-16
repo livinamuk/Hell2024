@@ -36,6 +36,18 @@ inline void SetNormalsAndTangentsFromVertices(Vertex* vert0, Vertex* vert1, Vert
 	vert2->bitangent = bitangent;
 }
 
+inline void TangentFromUVs(Vertex* v0, Vertex* v1, Vertex* v2) {
+	glm::vec3 deltaPos1 = v1->position - v0->position;
+	glm::vec3 deltaPos2 = v2->position - v0->position;
+	glm::vec2 deltaUV1 = v1->uv - v0->uv;
+	glm::vec2 deltaUV2 = v2->uv - v0->uv;
+	float r = 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV1.y * deltaUV2.x);
+	glm::vec3 tangent = (deltaPos1 * deltaUV2.y - deltaPos2 * deltaUV1.y) * r;
+	v0->tangent = tangent;
+	v1->tangent = tangent;
+	v2->tangent = tangent;
+}
+
 
 void Model::Load(std::string filepath) {
 
