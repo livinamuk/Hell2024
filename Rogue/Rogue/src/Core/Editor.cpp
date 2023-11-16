@@ -4,6 +4,7 @@
 #include "../Util.hpp"
 //#include "VoxelWorld.h"
 
+/*
 float _map_width_in_worldspace = WORLD_WIDTH * WORLD_GRID_SPACING;
 float _map_depth_in_worldspace = WORLD_DEPTH * WORLD_GRID_SPACING;
 int _cameraX = 0;
@@ -32,16 +33,6 @@ void Editor::Init() {
 
     }
 
-   /* _walls[4][3] = true;
-    _walls[4][5] = true;
-    _walls[4][7] = true;
-    _walls[4][9] = true;
-    _walls[4][11] = true;
-
-    _walls[4][17] = true;
-    _walls[4][20] = true;
-    _walls[4][23] = true;
-    _walls[4][26] = true;*/
 
     for (int x = 0; x < WORLD_WIDTH; x++) {
         _walls[x][0] = true;
@@ -150,3 +141,4 @@ bool Editor::CooridnateIsWall(int gridX, int gridZ)
     else
         return false;
 }
+*/

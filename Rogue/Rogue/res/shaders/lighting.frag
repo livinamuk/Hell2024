@@ -32,9 +32,13 @@ uniform float propogationGridSpacing;
 
 const float PI = 3.14159265359;
 
-#define MAP_WIDTH   32
-#define MAP_HEIGHT  16
-#define MAP_DEPTH   50
+//uniform int propogationTextureWidth;
+//uniform int propogationTextureHeight;
+//uniform int propogationTextureDepth;
+
+//#define MAP_WIDTH   32
+//#define MAP_HEIGHT  16
+//#define MAP_DEPTH   50
 
 ////////////////////////
 //                    //
@@ -358,4 +362,5 @@ void main() {
 	FragColor.rgb = FragColor.rgb + vec3(brightness);
     FragColor.g += 0.0025;
     FragColor.a = 1;
+//FragColor.rgb = vec3(0);
 }

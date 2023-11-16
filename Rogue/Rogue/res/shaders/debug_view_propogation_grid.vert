@@ -12,9 +12,9 @@ uniform float propogationGridSpacing;
 
 out vec3 Color;
 
-#define MAP_WIDTH   32
-#define MAP_HEIGHT  16
-#define MAP_DEPTH   50
+uniform int propogationTextureWidth;
+uniform int propogationTextureHeight;
+uniform int propogationTextureDepth;
 
 flat out int x;
 flat out int y;
@@ -22,9 +22,9 @@ flat out int z;
 
 void main() {
 
-	z = gl_InstanceID  % MAP_DEPTH;
-	y = (gl_InstanceID  / MAP_DEPTH) % MAP_HEIGHT;
-	x = gl_InstanceID  / (MAP_HEIGHT * MAP_DEPTH); 
+	z = gl_InstanceID  % propogationTextureDepth;
+	y = (gl_InstanceID  / propogationTextureDepth) % propogationTextureHeight;
+	x = gl_InstanceID  / (propogationTextureHeight * propogationTextureDepth); 
 
 	vec4 worldPos = model * vec4(aPos, 1.0);
 	worldPos.xyz += vec3(x, y, z) * propogationGridSpacing;

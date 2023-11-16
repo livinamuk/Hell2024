@@ -17,10 +17,9 @@
 #define NOOSE_HALF_PI 1.57079632679f
 #define HELL_PI 3.141592653589793f
 
-#define MAP_WIDTH   32
-#define MAP_HEIGHT  16
-#define MAP_DEPTH   50
-#define VOXEL_SIZE  0.2f
+//#define MAP_WIDTH   32
+//#define MAP_HEIGHT  16
+//#define MAP_DEPTH   50
 
 #define ZERO_MEM(a) memset(a, 0, sizeof(a))
 #define ARRAY_SIZE_IN_ELEMENTS(a) (sizeof(a)/sizeof(a[0]))

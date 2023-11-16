@@ -6,7 +6,7 @@ namespace Renderer {
 
 	void Init();
 	void RenderFrame();
-	//void RenderEditorFrame();
+	void RenderEditorFrame();
 	void RenderUI();
 	void HotloadShaders();
 	void WipeShadowMaps();

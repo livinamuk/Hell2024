@@ -19,7 +19,7 @@ vec3 Fxaa(sampler2D tex) {
 	float fxaaReduceMin = 1.0f/128.0f;
 	float fxaaReduceMul = 1.0f/8.0f;
 
-	float scale = 0.075;
+	float scale = 0.05;
 	fxaaSpanMax *= scale;
 	fxaaReduceMin *= scale;
 	fxaaReduceMul *= scale;

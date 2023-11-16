@@ -69,8 +69,9 @@ GBuffer _gBuffer;
 PresentFrameBuffer _presentFrameBuffer;
 unsigned int _pointLineVAO;
 unsigned int _pointLineVBO;
-int _renderWidth = 512  * 1.5f;
-int _renderHeight = 288 * 1.5f;
+int _renderWidth = 768;// 512 * 1.5f;
+int _renderHeight = 432;// 288 * 1.5f;
+
 std::vector<Point> _points;
 std::vector<Point> _solidTrianglePoints;
 std::vector<Line> _lines;
@@ -81,6 +82,9 @@ bool _depthOfFieldScene = 0.9f;
 bool _depthOfFieldWeapon = 1.0f;
 float _propogationGridSpacing = 0.4;
 float  _pointCloudSpacing = 0.4;
+float _mapWidth = 24;
+float _mapHeight = 8;
+float _mapDepth = 24;
 
 enum RenderMode { COMPOSITE, DIRECT_LIGHT, INDIRECT_LIGHT, POINT_CLOUD,  MODE_COUNT} _mode;
 
@@ -159,7 +163,10 @@ void Renderer::RenderFrame() {
         _shaders.debugViewPropgationGrid.SetMat4("view", Player::GetViewMatrix());
         _shaders.debugViewPropgationGrid.SetMat4("model", cubeTransform.to_mat4());
         _shaders.debugViewPropgationGrid.SetFloat("propogationGridSpacing", _propogationGridSpacing);
-        int count = MAP_WIDTH * MAP_HEIGHT * MAP_DEPTH;
+        _shaders.debugViewPropgationGrid.SetInt("propogationTextureWidth", _mapWidth / _propogationGridSpacing);
+        _shaders.debugViewPropgationGrid.SetInt("propogationTextureHeight", _mapHeight / _propogationGridSpacing);
+        _shaders.debugViewPropgationGrid.SetInt("propogationTextureDepth", _mapDepth / _propogationGridSpacing);
+        int count = _mapWidth * _mapHeight * _mapDepth / _propogationGridSpacing / _propogationGridSpacing / _propogationGridSpacing;
         glEnable(GL_CULL_FACE);
         glEnable(GL_DEPTH_TEST);
         glActiveTexture(GL_TEXTURE0);
@@ -364,7 +371,7 @@ void DebugPass() {
 }
 
 void Renderer::RecreateFrameBuffers() {
-    _gBuffer.Configure(_renderWidth * 4, _renderHeight * 4);
+    _gBuffer.Configure(_renderWidth * 2, _renderHeight * 2);
     _presentFrameBuffer.Configure(_renderWidth, _renderHeight);
     std::cout << "Render Size: " << _gBuffer.GetWidth() << " x " << _gBuffer.GetHeight() << "\n";
     std::cout << "Present Size: " << _presentFrameBuffer.GetWidth() << " x " << _presentFrameBuffer.GetHeight() << "\n";
@@ -575,7 +582,7 @@ void Renderer::HotloadShaders() {
 }
 
 void QueueEditorGridSquareForDrawing(int x, int z, glm::vec3 color) {
-    Triangle triA;
+   /* Triangle triA;
     Triangle triB;
     triA.p3 = Editor::GetEditorWorldPosFromCoord(x, z);;
     triA.p2 = Editor::GetEditorWorldPosFromCoord(x + 1, z);
@@ -586,13 +593,13 @@ void QueueEditorGridSquareForDrawing(int x, int z, glm::vec3 color) {
     triA.color = color;
     triB.color = color;
     QueueTriangleForSolidRendering(triA);
-    QueueTriangleForSolidRendering(triB);
+    QueueTriangleForSolidRendering(triB);*/
 }
 
-/*void Renderer::RenderEditorFrame() {
+void Renderer::RenderEditorFrame() {
 
-    _gBuffer.Bind();
-    _gBuffer.EnableAllDrawBuffers();
+    /*_gBuffer.Bind();
+    
     
     glViewport(0, 0, _renderWidth, _renderHeight);
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
@@ -651,7 +658,10 @@ void QueueEditorGridSquareForDrawing(int x, int z, glm::vec3 color) {
     glBindFramebuffer(GL_READ_FRAMEBUFFER, _gBuffer.GetID());
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
     glBlitFramebuffer(0, 0, _gBuffer.GetWidth(), _gBuffer.GetHeight(), 0, 0, GL::GetWindowWidth(), GL::GetWindowHeight(), GL_COLOR_BUFFER_BIT, GL_NEAREST);
-}*/
+    */
+
+ //   _mapWidth* _mapHeight* _mapDepth / _propogationGridSpacing
+}
 
 void Renderer::WipeShadowMaps() {
 
@@ -976,9 +986,10 @@ void InitCompute() {
     std::cout << "maximum size of a work group in Z dimension " << max_compute_work_group_size[2] << std::endl;
     std::cout << "Number of invocations in a single local work group that may be dispatched to a compute shader " << max_compute_work_group_invocations << std::endl;
     */
-    int width = MAP_WIDTH;
-    int height = MAP_HEIGHT;
-    int depth = MAP_DEPTH;
+
+    int width = _mapWidth / _propogationGridSpacing;
+    int height = _mapHeight / _propogationGridSpacing;
+    int depth = _mapDepth / _propogationGridSpacing;
     glGenTextures(1, &_progogationGridTexture);
     glBindTexture(GL_TEXTURE_3D, _progogationGridTexture);
     glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -1020,7 +1031,7 @@ void InitCompute() {
     glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
     std::cout << "You are raytracing against " << (vertices.size() / 3) << " tris\n";
     std::cout << "Point cloud has: " << Scene::_cloudPoints.size() << " points\n";
-    std::cout << "Propogation grid has : " << (MAP_WIDTH * MAP_HEIGHT * MAP_DEPTH * _propogationGridSpacing) << " cells\n";
+    std::cout << "Propogation grid has : " << (_mapWidth * _mapHeight * _mapDepth / _propogationGridSpacing) << " cells\n";
 }
 
 void ComputePass() {
@@ -1050,9 +1061,14 @@ void UpdatePropogationgGrid() {
     _shaders.propogateLight.SetInt("vertexCount", _ssbos.vertexCount);
     _shaders.propogateLight.SetMat4("doorMatrix", Scene::GetGameObjectByName("Door2")->GetModelMatrix());
     _shaders.propogateLight.SetFloat("propogationGridSpacing", _propogationGridSpacing);
-    int xSize = std::ceil(MAP_WIDTH / 4.0f);
-    int ySize = std::ceil(MAP_HEIGHT / 4.0f);
-    int zSize = std::ceil(MAP_DEPTH / 4.0f);
+
+    int textureWidth = _mapWidth / _propogationGridSpacing;
+    int textureHeight = _mapHeight / _propogationGridSpacing;
+    int textureDepth = _mapDepth / _propogationGridSpacing;
+
+    int xSize = std::ceil(textureWidth / 4.0f);
+    int ySize = std::ceil(textureHeight / 4.0f);
+    int zSize = std::ceil(textureDepth / 4.0f);
     glDispatchCompute(xSize, ySize, zSize);
     //glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
 }

@@ -127,7 +127,7 @@ void main() {
 		}
 		
 	}
-	float scale = 400;
+	float scale = 300;
 	color = color / float(scale);
 
 	// Mark probes as -1 if they have no light, that way they aren't interpolated in the lighting shader

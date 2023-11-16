@@ -48,8 +48,8 @@ void Engine::Run() {
             }
             // Map editor currently broken
             else if (_engineMode == EngineMode::Editor) {
-                //Input::Update();
-                //Audio::Update();
+                Input::Update();
+                Audio::Update();
                 //Editor::Update(Renderer::GetRenderWidth(), Renderer::GetRenderHeight());
             }
         }
@@ -60,7 +60,7 @@ void Engine::Run() {
             Renderer::RenderFrame();
         }
         else if (_engineMode == EngineMode::Editor) {
-            //Renderer::RenderEditorFrame();
+            Renderer::RenderEditorFrame();
         }
 
         GL::SwapBuffersPollEvents();
@@ -78,7 +78,7 @@ void Engine::Init() {
     Input::Init();
     Player::Init(glm::vec3(4.0f, 0, 3.6f));
     Player::SetRotation(glm::vec3(-0.17, 1.54f, 0));
-    Editor::Init();
+    //Editor::Init();
     Audio::Init();
     AssetManager::LoadFont();
     AssetManager::LoadEverythingElse();
