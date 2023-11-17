@@ -279,6 +279,7 @@ namespace TextBlitter {
 			}
 		}
 		blitXYs.clear();
+		_debugTextToBilt = "";
 	}
 
 	void TextBlitter::BlitAtPosition(std::string text, int x, int y, bool centered, float scale)
@@ -291,5 +292,4 @@ namespace TextBlitter {
 		blitXY.scale = scale;
 		blitXYs.push_back(blitXY);
 	}
-
 }

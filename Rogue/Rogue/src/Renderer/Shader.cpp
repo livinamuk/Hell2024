@@ -2,8 +2,7 @@
 #include "../Util.hpp"
 #include "../Common.h"
 
-int checkCompileErrors(unsigned int shader, std::string type)
-{
+int checkCompileErrors(unsigned int shader, std::string type) {
     int success;
     char infoLog[1024];
     if (type != "PROGRAM") {
@@ -49,6 +48,9 @@ void Shader::Load(std::string vertexPath, std::string fragmentPath)
     glLinkProgram(tempID);
     
     if (checkCompileErrors(tempID, "PROGRAM")) {
+        if (_ID != -1) {
+            glDeleteProgram(_ID);
+        }
         _ID = tempID;
     }
 

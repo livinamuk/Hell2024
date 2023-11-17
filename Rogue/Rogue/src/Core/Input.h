@@ -15,6 +15,7 @@ namespace Input
 	bool RightMousePressed();
 	bool MouseWheelUp();
 	bool MouseWheelDown();
+	int GetMouseWheelValue();
 	void PreventRightMouseHold();
 	int GetMouseX();
 	int GetMouseY();

@@ -16,50 +16,49 @@
 
 enum class EngineMode { Game, Editor } _engineMode;
 
+void ToggleEditor();
+void ToggleFullscreen();
+
 void Engine::Run() {
 
-    double _deltaTime, currentTime = 0.0;
+    Init();
+
     double lastTime = glfwGetTime();
     double accumulator = 0.0;
     double limitUpdates = 1.0 / 60.0;
-
-    Init();
 
     while (GL::WindowIsOpen() && GL::WindowHasNotBeenForceClosed()) {
 
         GL::ProcessInput();
 
-        currentTime = glfwGetTime();
-        _deltaTime = currentTime - lastTime;
-        lastTime = currentTime;
+        double _deltaTime = glfwGetTime() - lastTime;
+        lastTime = glfwGetTime();;
         accumulator += _deltaTime;
 
         while (accumulator >= limitUpdates) {
             accumulator -= limitUpdates;                        
 
-            LazyKeyPresses();
-
             // Update
+            Input::Update();
+            Audio::Update();
             if (_engineMode == EngineMode::Game) {
+                LazyKeyPresses();
                 Scene::Update(limitUpdates);
-                Input::Update();
-                Audio::Update();
                 Player::Update(limitUpdates);
             }
-            // Map editor currently broken
             else if (_engineMode == EngineMode::Editor) {
-                Input::Update();
-                Audio::Update();
-                //Editor::Update(Renderer::GetRenderWidth(), Renderer::GetRenderHeight());
+                LazyKeyPressesEditor();
+                Editor::Update(_deltaTime);
             }
         }
 
         // Render
+        TextBlitter::Update(_deltaTime);
         if (_engineMode == EngineMode::Game) {
-            TextBlitter::Update(_deltaTime);
             Renderer::RenderFrame();
         }
         else if (_engineMode == EngineMode::Editor) {
+            Editor::PrepareRenderFrame();
             Renderer::RenderEditorFrame();
         }
 
@@ -78,7 +77,7 @@ void Engine::Init() {
     Input::Init();
     Player::Init(glm::vec3(4.0f, 0, 3.6f));
     Player::SetRotation(glm::vec3(-0.17, 1.54f, 0));
-    //Editor::Init();
+    Editor::Init();
     Audio::Init();
     AssetManager::LoadFont();
     AssetManager::LoadEverythingElse();
@@ -99,23 +98,13 @@ void Engine::LazyKeyPresses() {
         Renderer::HotloadShaders();
     }
     if (Input::KeyPressed(GLFW_KEY_F)) {
-        GL::ToggleFullscreen();
-        Renderer::RecreateFrameBuffers();
-        Audio::PlayAudio("RE_Beep.wav", 0.25f);
+        ToggleFullscreen();
     }
     if (Input::KeyPressed(GLFW_KEY_SPACE)) {
         Audio::PlayAudio("RE_Beep.wav", 0.25f);
     }
     if (Input::KeyPressed(HELL_KEY_TAB)) {
-        if (_engineMode == EngineMode::Game) {
-            GL::HideCursor();
-            _engineMode = EngineMode::Editor;
-        }
-        else {
-            GL::DisableCursor();
-            _engineMode = EngineMode::Game;
-        }
-        Audio::PlayAudio("RE_Beep.wav", 0.25f);
+        ToggleEditor();
     }
     if (Input::KeyPressed(HELL_KEY_L)) {
         Renderer::ToggleDrawingLights();
@@ -147,4 +136,30 @@ void Engine::LazyKeyPresses() {
         Scene::CreatePointCloud();
         Audio::PlayAudio("RE_Beep.wav", 0.25f);
     }
+}
+
+void Engine::LazyKeyPressesEditor() {
+    if (Input::KeyPressed(GLFW_KEY_F)) {
+        ToggleFullscreen();
+    }
+    if (Input::KeyPressed(HELL_KEY_TAB)) {
+        ToggleEditor();
+    }
+}
+
+void ToggleEditor() {
+    if (_engineMode == EngineMode::Game) {
+        GL::ShowCursor();
+        _engineMode = EngineMode::Editor;
+    }
+    else {
+        GL::DisableCursor();
+        _engineMode = EngineMode::Game;
+    }
+    Audio::PlayAudio("RE_Beep.wav", 0.25f);
+}
+void ToggleFullscreen() {
+    GL::ToggleFullscreen();
+    Renderer::RecreateFrameBuffers();
+    Audio::PlayAudio("RE_Beep.wav", 0.25f);
 }

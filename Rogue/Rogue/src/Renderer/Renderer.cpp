@@ -88,10 +88,6 @@ float _mapDepth = 24;
 
 enum RenderMode { COMPOSITE, DIRECT_LIGHT, INDIRECT_LIGHT, POINT_CLOUD,  MODE_COUNT} _mode;
 
-void QueueLineForDrawing(Line line);
-void QueuePointForDrawing(Point point);
-void QueueTriangleForLineRendering(Triangle& triangle);
-void QueueTriangleForSolidRendering(Triangle& triangle);
 void DrawScene(Shader& shader);
 void DrawAnimatedScene(Shader& shader);
 void DrawShadowMapScene(Shader& shader);
@@ -350,7 +346,7 @@ void DebugPass() {
         _shaders.solidColor.SetMat4("model", glm::mat4(1));
         // The static triangle world
         for (int i = 0; i < Scene::_triangleWorld.size(); i++) {
-            QueueTriangleForLineRendering(Scene::_triangleWorld[i]);
+            Renderer::QueueTriangleForLineRendering(Scene::_triangleWorld[i]);
         }
         // The door that opens
         GameObject* gameObject = Scene::GetGameObjectByName("Door2");
@@ -361,7 +357,7 @@ void DebugPass() {
                 t.p2 = gameObject->GetModelMatrix() * glm::vec4(triangle.p2, 1.0);
                 t.p3 = gameObject->GetModelMatrix() * glm::vec4(triangle.p3, 1.0);
                 t.color = YELLOW;
-                QueueTriangleForLineRendering(t);
+                Renderer::QueueTriangleForLineRendering(t);
             }
         }
         glDisable(GL_DEPTH_TEST);
@@ -452,8 +448,6 @@ void DrawAnimatedObject(Shader& shader, AnimatedGameObject* animatedGameObject) 
     for (unsigned int i = 0; i < animatedGameObject->_animatedTransforms.local.size(); i++) {
         glm::mat4 matrix = animatedGameObject->_animatedTransforms.local[i];
         shader.SetMat4("skinningMats[" + std::to_string(i) + "]", matrix);
-        matrix = animatedGameObject->_animatedTransformsPrevious.local[i];
-        shader.SetMat4("skinningMatsPrevious[" + std::to_string(i) + "]", matrix);
         tempSkinningMats.push_back(matrix);
     }
     shader.SetMat4("model", animatedGameObject->GetModelMatrix());
@@ -598,69 +592,40 @@ void QueueEditorGridSquareForDrawing(int x, int z, glm::vec3 color) {
 
 void Renderer::RenderEditorFrame() {
 
-    /*_gBuffer.Bind();
-    
-    
-    glViewport(0, 0, _renderWidth, _renderHeight);
+    _presentFrameBuffer.Bind();
+
+    float renderWidth = _presentFrameBuffer.GetWidth();
+    float renderHeight = _presentFrameBuffer.GetHeight();
+    float screenWidth = GL::GetWindowWidth();
+    float screenHeight = GL::GetWindowHeight();
+
+    glViewport(0, 0, renderWidth, renderHeight);
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
-
-    float _zoom = 100.0f;
-    float width = (float) _renderWidth / _zoom;
-    float height = (float) _renderHeight / _zoom;
-    glm::mat4 projection = glm::ortho(-width/2, width/2, -height/2, height/2, 0.1f, 100.0f);
-      
-    // Draw grid
-    for (int x = 0; x <= WORLD_WIDTH; x++) {
-        QueueLineForDrawing(Line(glm::vec3(x * WORLD_GRID_SPACING, 0, 0), glm::vec3(x * WORLD_GRID_SPACING, 0, WORLD_DEPTH * WORLD_GRID_SPACING), GRID_COLOR));
-    }
-    for (int z = 0; z <= WORLD_DEPTH; z++) {
-        QueueLineForDrawing(Line(glm::vec3(0, 0, z * WORLD_GRID_SPACING), glm::vec3(WORLD_WIDTH * WORLD_GRID_SPACING, 0, z * WORLD_GRID_SPACING), GRID_COLOR));
-    }
-
-    for (int x = 0; x < WORLD_WIDTH; x++) {
-        for (int z = 0; z < WORLD_DEPTH; z++) {
-            if (Editor::CooridnateIsWall(x, z))
-                QueueEditorGridSquareForDrawing(x, z, WHITE);
-        }
-    }
-
- //   mouseGridX += _cameraX ;
-
-
-    //_mouseX -= (_cameraX / _zoom);
-   QueueEditorGridSquareForDrawing(Editor::GetMouseGridX(), Editor::GetMouseGridZ(), YELLOW);
-
+    glDisable(GL_DEPTH_TEST);
 
     _shaders.editorSolidColor.Use();
-    _shaders.editorSolidColor.SetMat4("projection", projection);
+    _shaders.editorSolidColor.SetMat4("projection", Editor::GetProjectionMatrix());
+    _shaders.editorSolidColor.SetMat4("view", Editor::GetViewMatrix());
     _shaders.editorSolidColor.SetBool("uniformColor", false);
-    _shaders.editorSolidColor.SetFloat("viewportWidth", _renderWidth);
-    _shaders.editorSolidColor.SetFloat("viewportHeight", _renderHeight);
-    _shaders.editorSolidColor.SetFloat("cameraX", Editor::GetCameraGridX());
-    _shaders.editorSolidColor.SetFloat("cameraZ", Editor::GetCameraGridZ());
-    glDisable(GL_DEPTH_TEST);
+
     RenderImmediate();
 
-
-    //QueueUIForRendering("CrosshairDot", Editor::GetMouseScreenX(), Editor::GetMouseScreenZ(), true);
-    TextBlitter::_debugTextToBilt = "Mouse: " + std::to_string(Editor::GetMouseScreenX()) + ", " + std::to_string(Editor::GetMouseScreenZ()) + "\n";
-    TextBlitter::_debugTextToBilt += "World: " + std::format("{:.2f}", (Editor::GetMouseWorldX()))+ ", " + std::format("{:.2f}", Editor::GetMouseWorldZ()) + "\n";
-    TextBlitter::_debugTextToBilt += "Grid: " + std::to_string(Editor::GetMouseGridX()) + ", " + std::to_string(Editor::GetMouseGridZ()) + "\n";
-    TextBlitter::_debugTextToBilt += "Cam: " + std::to_string(Editor::GetCameraGridX()) + ", " + std::to_string(Editor::GetCameraGridZ()) + "\n";
+    // Render UI
+    glBindFramebuffer(GL_FRAMEBUFFER, _presentFrameBuffer.GetID());
+    glViewport(0, 0, _presentFrameBuffer.GetWidth(), _presentFrameBuffer.GetHeight());
+    glDisable(GL_DEPTH_TEST);
+    glDisable(GL_CULL_FACE);
     Renderer::RenderUI();
 
     // Blit image back to frame buffer
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    glBindFramebuffer(GL_READ_FRAMEBUFFER, _gBuffer.GetID());
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, _presentFrameBuffer.GetID());
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-    glBlitFramebuffer(0, 0, _gBuffer.GetWidth(), _gBuffer.GetHeight(), 0, 0, GL::GetWindowWidth(), GL::GetWindowHeight(), GL_COLOR_BUFFER_BIT, GL_NEAREST);
-    */
-
- //   _mapWidth* _mapHeight* _mapDepth / _propogationGridSpacing
+    glBlitFramebuffer(0, 0, _presentFrameBuffer.GetWidth(), _presentFrameBuffer.GetHeight(), 0, 0, GL::GetWindowWidth(), GL::GetWindowHeight(), GL_COLOR_BUFFER_BIT, GL_NEAREST);
 }
 
 void Renderer::WipeShadowMaps() {
@@ -787,21 +752,21 @@ void Renderer::PreviousMode() {
         _mode = (RenderMode)(int(_mode) - 1);
 }
 
-void QueueLineForDrawing(Line line) {
+void Renderer::QueueLineForDrawing(Line line) {
     _lines.push_back(line);
 }
 
-void QueuePointForDrawing(Point point) {
+void Renderer::QueuePointForDrawing(Point point) {
     _points.push_back(point);
 }
 
-void QueueTriangleForLineRendering(Triangle& triangle) {
+void Renderer::QueueTriangleForLineRendering(Triangle& triangle) {
     _lines.push_back(Line(triangle.p1, triangle.p2, triangle.color));
     _lines.push_back(Line(triangle.p2, triangle.p3, triangle.color));
     _lines.push_back(Line(triangle.p3, triangle.p1, triangle.color));
 }
 
-void QueueTriangleForSolidRendering(Triangle& triangle) {
+void Renderer::QueueTriangleForSolidRendering(Triangle& triangle) {
     _solidTrianglePoints.push_back(Point(triangle.p1, triangle.color));
     _solidTrianglePoints.push_back(Point(triangle.p2, triangle.color));
     _solidTrianglePoints.push_back(Point(triangle.p3, triangle.color));

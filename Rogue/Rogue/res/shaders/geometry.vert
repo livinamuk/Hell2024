@@ -64,6 +64,9 @@ void main() {
 		attrTangent = (model * vec4(aTangent, 0.0)).xyz;
 		attrBiTangent = normalize(cross(attrNormal,attrTangent));
 		WorldPos = (model * vec4(aPos.x, aPos.y, aPos.z, 1.0)).xyz;	
+		//attrNormal = transpose(inverse(mat3(model))) * aNormal;
+		//attrTangent = transpose(inverse(mat3(model))) * aTangent;
+		//attrBiTangent = normalize(cross(attrNormal,attrTangent));		
 	}
 		
 	gl_Position = projection * view * vec4(WorldPos, 1.0);

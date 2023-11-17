@@ -37,13 +37,12 @@ void Input::Update() {
     // Wheel
     _mouseWheelUp = false;
     _mouseWheelDown = false;
-
+    _mouseWheelValue = GL::GetScrollWheelYOffset();
     if (_mouseWheelValue < 0)
         _mouseWheelDown = true;
     if (_mouseWheelValue > 0)
         _mouseWheelUp = true;
-
-    _mouseWheelValue = 0;
+    GL::ResetScrollWheelYOffset();
 
     // Keyboard
     for (int i = 30; i < 350; i++) {
@@ -123,6 +122,10 @@ bool Input::RightMousePressed() {
 
 bool Input::MouseWheelDown() {
     return _mouseWheelDown;
+}
+
+int Input::GetMouseWheelValue() {
+    return _mouseWheelValue;
 }
 
 bool Input::MouseWheelUp() {

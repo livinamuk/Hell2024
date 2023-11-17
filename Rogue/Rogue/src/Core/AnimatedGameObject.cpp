@@ -55,13 +55,6 @@ void AnimatedGameObject::PauseAnimation() {
     _animationPaused = true;
 }
 
-void AnimatedGameObject::EnableMotionBlur() {
-    _motionBlur = true;
-}
-void AnimatedGameObject::DisableMotionBlur() {
-    _motionBlur = false;
-}
-
 void AnimatedGameObject::SetMeshMaterial(std::string meshName, std::string materialName) {
     if (!_skinnedModel) {
         return;
@@ -118,29 +111,23 @@ void AnimatedGameObject::UpdateAnimation(float deltaTime) {
 
     // Increase the animtaion time
     if (!_animationPaused) {
-        _currentAnimationTimePrevious = _currentAnimationTime;
         _currentAnimationTime += deltaTime * _animationSpeed;
     }
     // Animation is complete?
     if (_currentAnimationTime > duration) {
-        _currentAnimationTime = 0;
         if (!_loopAnimation) {
+            _currentAnimationTime = duration;
             _animationPaused = true;
             _animationIsComplete = true;
+        }
+        else {
+            _currentAnimationTime = 0;
         }
     }
 }
 
 void AnimatedGameObject::CalculateBoneTransforms() {
-
-    if (_motionBlur) {
-        _skinnedModel->UpdateBoneTransformsFromAnimation(_currentAnimationTime, _currentAnimation, _animatedTransforms, _cameraMatrix);
-    }
-    else {
-        _skinnedModel->UpdateBoneTransformsFromAnimation(_currentAnimationTimePrevious, _currentAnimation, _animatedTransforms, _cameraMatrix);
-    }
-
-    _skinnedModel->UpdateBoneTransformsFromAnimation(_currentAnimationTimePrevious, _currentAnimation, _animatedTransformsPrevious, _cameraMatrix);
+    _skinnedModel->UpdateBoneTransformsFromAnimation(_currentAnimationTime, _currentAnimation, _animatedTransforms, _cameraMatrix);
 }
 
 glm::mat4 AnimatedGameObject::GetModelMatrix() {

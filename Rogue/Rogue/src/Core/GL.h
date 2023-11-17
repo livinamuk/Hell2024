@@ -13,6 +13,7 @@ namespace GL {
 	int GetCursorY();
 	void DisableCursor();
 	void HideCursor();
+	void ShowCursor();
 	GLFWwindow* GetWindowPtr();
 	int GetCursorScreenX();
 	int GetCursorScreenY();
@@ -24,4 +25,6 @@ namespace GL {
 	void CreateWindow(WindowMode windowMode);
 	void SetWindowMode(WindowMode windowMode);
 	void ToggleFullscreen();
+	int GetScrollWheelYOffset();
+	void ResetScrollWheelYOffset();
 }

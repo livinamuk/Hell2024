@@ -10,8 +10,14 @@ namespace Renderer {
 	void RenderUI();
 	void HotloadShaders();
 	void WipeShadowMaps();
+
+	void QueueLineForDrawing(Line line);
+	void QueuePointForDrawing(Point point);
+	void QueueTriangleForLineRendering(Triangle& triangle);
+	void QueueTriangleForSolidRendering(Triangle& triangle);
 	void QueueUIForRendering(std::string textureName, int screenX, int screenY, bool centered);
 	void QueueUIForRendering(UIRenderInfo renderInfo);
+
 	void ToggleDrawingLights();
 	void ToggleDrawingProbes();
 	void ToggleDrawingLines();

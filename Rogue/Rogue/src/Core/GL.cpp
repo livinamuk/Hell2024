@@ -15,6 +15,7 @@ namespace GL {
     inline int _mouseScreenY = 0;
     inline int _windowHasFocus = true;
     inline bool _forceCloseWindow = false;
+    inline int _scrollWheelYOffset = 0;
     inline WindowMode _windowMode = WINDOWED;// FULLSCREEN;
 }
 
@@ -23,6 +24,8 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow* window);
 void cursor_position_callback(GLFWwindow* window, double xpos, double ypos);
 void window_focus_callback(GLFWwindow* window, int focused);
+void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
+
 //void APIENTRY glDebugOutput(GLenum type, unsigned int id, GLenum severity, GLsizei length, const char* message, const void* userParam);
 
 GLenum glCheckError_(const char* file, int line)
@@ -95,6 +98,14 @@ void GL::ToggleFullscreen() {
         SetWindowMode(WINDOWED);
 }
 
+int GL::GetScrollWheelYOffset() {
+    return _scrollWheelYOffset;
+}
+
+void GL::ResetScrollWheelYOffset() {
+    _scrollWheelYOffset = 0;
+}
+
 void GL::CreateWindow(WindowMode windowMode) {
     if (windowMode == WINDOWED) {
         _currentWidth = _windowedtWidth;
@@ -164,6 +175,7 @@ void GL::Init(int width, int height) {
     glfwSetKeyCallback(_window, key_callback); 
     glfwSetCursorPosCallback(_window, cursor_position_callback);
     glfwSetWindowFocusCallback(_window, window_focus_callback); 
+    glfwSetScrollCallback(_window, scroll_callback);
 
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
         std::cout << "Failed to initialize GLAD" << std::endl;
@@ -233,6 +245,10 @@ void GL::DisableCursor() {
 
 void GL::HideCursor() {
     glfwSetInputMode(_window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
+}
+
+void GL::ShowCursor() {
+    glfwSetInputMode(_window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 }
 
 GLFWwindow* GL::GetWindowPtr() {
@@ -310,4 +326,8 @@ void window_focus_callback(GLFWwindow* window, int focused) {
     else{
         GL::_windowHasFocus = false;
     }
+}
+
+void scroll_callback(GLFWwindow* window, double xoffset, double yoffset) {
+    GL::_scrollWheelYOffset = yoffset;
 }

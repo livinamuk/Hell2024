@@ -8,9 +8,12 @@
 namespace Editor {
 
 	void Init();
-	void Update(int viewportWidth, int viewportHeight);
+	void Update(float deltaTime);
+	void PrepareRenderFrame();
+	glm::mat4 GetProjectionMatrix();	
+	glm::mat4 GetViewMatrix();
 
-	glm::vec3 GetEditorWorldPosFromCoord(int x, int z);
+	/*glm::vec3 GetEditorWorldPosFromCoord(int x, int z);
 	int GetMouseGridX();
 	int GetMouseGridZ();
 	int GetCameraGridX();
@@ -20,5 +23,6 @@ namespace Editor {
 	float GetMouseWorldX();
 	float GetMouseWorldZ();
 
-	bool CooridnateIsWall(int gridX, int gridZ);
+	bool CooridnateIsWall(int gridX, int gridZ);*/
+
 }

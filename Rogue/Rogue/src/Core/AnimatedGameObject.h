@@ -31,9 +31,7 @@ public:
 	SkinnedModel* _skinnedModel;
 	Transform _transform;
 	AnimatedTransforms _animatedTransforms;
-	AnimatedTransforms _animatedTransformsPrevious;
 	float _currentAnimationTime = 0;
-	float _currentAnimationTimePrevious = 0;	
 	glm::mat4 _cameraMatrix = glm::mat4(1);
 	std::vector<int> _materialIndices;
 
@@ -53,7 +51,6 @@ private:
 	bool _animationPaused = false;
 	float _animationSpeed = 1.0f;
 	std::string _name;
-	bool _motionBlur = false;
 	bool _animationIsComplete = true;
 
 

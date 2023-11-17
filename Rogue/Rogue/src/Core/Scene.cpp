@@ -311,7 +311,6 @@ void Scene::Init() {
     AnimatedGameObject& enemy = _animatedGameObjects.emplace_back(AnimatedGameObject());
     enemy.SetName("Enemy");
     enemy.SetSkinnedModel("UniSexGuy");
-    enemy.EnableMotionBlur();
     enemy.SetMeshMaterial("CC_Base_Body", "UniSexGuyBody");
     enemy.SetMeshMaterial("CC_Base_Eye", "UniSexGuyBody");
     enemy.SetMeshMaterial("Biker_Jeans", "UniSexGuyJeans");
