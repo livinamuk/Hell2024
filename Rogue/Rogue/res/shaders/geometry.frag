@@ -36,4 +36,9 @@ void main()
     BaseColorOut = baseColor;
     NormalsOut = vec4(normal, 1.0);;
     RMAOut = vec4(rma, projectionMatrixIndex);
+    
+    if (baseColor.a < 0.1) {
+        discard;
+    }
+
 }

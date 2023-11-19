@@ -202,7 +202,7 @@ namespace Util {
     }
 
 
-    inline void EvaluateRaycasts(glm::vec3 rayOrigin, glm::vec3 rayDirection, float maxDistance, std::vector<Triangle>& triangles, RaycastObjectType parentType, glm::mat4 parentMatrix, RayCastResult& out, bool ignoreBackFacing = true) {
+    inline void EvaluateRaycasts(glm::vec3 rayOrigin, glm::vec3 rayDirection, float maxDistance, std::vector<Triangle>& triangles, RaycastObjectType parentType, glm::mat4 parentMatrix, RayCastResult& out, void* parent, bool ignoreBackFacing = true) {
         glm::mat4 inverseTransform = glm::inverse(parentMatrix);
 
         glm::vec3 origin = inverseTransform * glm::vec4(rayOrigin, 1);
@@ -226,6 +226,7 @@ namespace Util {
                     out.triangeleModelMatrix = parentMatrix;
                     out.baryPosition = result.baryPosition;
                     out.found = true;
+                    out.parent = parent;
                 }
             }
             out.rayCount++;
@@ -407,4 +408,91 @@ namespace Util {
         std::copy(text, text + strlen(text), b);
         return b;
     }
+
+    inline bool LineIntersects(glm::vec2 begin_A, glm::vec2 end_A, glm::vec2 begin_B, glm::vec2 end_B, glm::vec2& result)
+    {
+        static const auto SameSign = [](float a, float b) -> bool {
+            return ((a * b) >= 0);
+        };
+        // a
+        float x1 = begin_A.x;
+        float y1 = begin_A.y;
+        float x2 = end_A.x;
+        float y2 = end_A.y;
+        // b
+        float x3 = begin_B.x;
+        float y3 = begin_B.y;
+        float x4 = end_B.x;
+        float y4 = end_B.y;
+        float a1, a2, b1, b2, c1, c2;
+        float r1, r2, r3, r4;
+        float denom;
+        a1 = y2 - y1;
+        b1 = x1 - x2;
+        c1 = (x2 * y1) - (x1 * y2);
+        r3 = ((a1 * x3) + (b1 * y3) + c1);
+        r4 = ((a1 * x4) + (b1 * y4) + c1);
+        if ((r3 != 0) && (r4 != 0) && SameSign(r3, r4))
+            return false;
+        a2 = y4 - y3; // Compute a2, b2, c2
+        b2 = x3 - x4;
+        c2 = (x4 * y3) - (x3 * y4);
+        r1 = (a2 * x1) + (b2 * y1) + c2; // Compute r1 and r2
+        r2 = (a2 * x2) + (b2 * y2) + c2;
+        if ((r1 != 0) && (r2 != 0) && (SameSign(r1, r2)))
+            return false;
+        denom = (a1 * b2) - (a2 * b1); //Line segments intersect: compute intersection point.
+        if (denom == 0)
+            return false;// COLLINEAR;
+        // FIND THAT INTERSECTION POINT ALREADY
+        {
+            // Line AB represented as a1x + b1y = c1
+            float a = y2 - y1;
+            float b = x1 - x2;
+            float c = a * (x1)+b * (y1);
+            // Line CD represented as a2x + b2y = c2
+            float a1 = y4 - y3;
+            float b1 = x3 - x4;
+            float c1 = a1 * (x3)+b1 * (y3);
+            float det = a * b1 - a1 * b;
+            if (det == 0) {
+
+                return false;
+            }
+            else {
+                float x = (b1 * c - b * c1) / det;
+                float y = (a * c1 - a1 * c) / det;
+                result.x = x;
+                result.y = y;
+                return true;
+            }
+            return false;
+        }
+    }
+
+    inline bool LineIntersects(glm::vec3 begin_A, glm::vec3 end_A, glm::vec3 begin_B, glm::vec3 end_B, glm::vec3& result) {
+        // wow this is ugly
+        glm::vec2 temp;
+        bool i = LineIntersects(glm::vec2(begin_A.x, begin_A.z), glm::vec2(end_A.x, end_A.z), glm::vec2(begin_B.x, begin_B.z), glm::vec2(end_B.x, end_B.z), temp);
+        result.x = temp.x;
+        result.y = begin_A.y;
+        result.z = temp.y;
+        return i;
+    }
+
+    inline float sign(glm::vec2 p1, glm::vec2 p2, glm::vec2 p3) {
+        return (p1.x - p3.x) * (p2.y - p3.y) - (p2.x - p3.x) * (p1.y - p3.y);
+    }
+
+    inline bool PointIn2DTriangle(glm::vec2 pt, glm::vec2 v1, glm::vec2 v2, glm::vec2 v3) {
+        float d1, d2, d3;
+        bool has_neg, has_pos;
+        d1 = sign(pt, v1, v2);
+        d2 = sign(pt, v2, v3);
+        d3 = sign(pt, v3, v1);
+        has_neg = (d1 < 0) || (d2 < 0) || (d3 < 0);
+        has_pos = (d1 > 0) || (d2 > 0) || (d3 > 0);
+        return !(has_neg && has_pos);
+    }
 }
+

@@ -33,7 +33,6 @@ struct Shaders {
     Shader UI;
     Shader editorSolidColor;
     Shader composite;
-    Shader velocityMap;
     Shader fxaa;
     Shader animatedQuad;
     Shader depthOfField;
@@ -47,8 +46,9 @@ struct Shaders {
 } _shaders;
 
 struct SSBOs {
-    GLuint staticVertices = 0;;
-    GLuint vertexCount = 0;;
+    GLuint rtVertices = 0;
+    GLuint rtMesh = 0;
+    GLuint rtInstances = 0;
 } _ssbos;
 
 struct PointCloud {
@@ -117,8 +117,7 @@ void Renderer::Init() {
     _shaders.UI.Load("ui.vert", "ui.frag");
     _shaders.editorSolidColor.Load("editor_solid_color.vert", "editor_solid_color.frag");
     _shaders.composite.Load("composite.vert", "composite.frag");
-    _shaders.velocityMap.Load("velocity_map.vert", "velocity_map.frag");
-    _shaders.fxaa.Load("fxaa.vert", "fxaa.frag");
+     _shaders.fxaa.Load("fxaa.vert", "fxaa.frag");
     _shaders.animatedQuad.Load("animated_quad.vert", "animated_quad.frag");
     _shaders.depthOfField.Load("depth_of_field.vert", "depth_of_field.frag");
     _shaders.debugViewPointCloud.Load("debug_view_point_cloud.vert", "debug_view_point_cloud.frag");
@@ -196,7 +195,24 @@ void Renderer::RenderFrame() {
     // Render UI
     _presentFrameBuffer.Bind();
     glDrawBuffer(GL_COLOR_ATTACHMENT1);
-    QueueUIForRendering("CrosshairDot", _presentFrameBuffer.GetWidth() / 2, _presentFrameBuffer.GetHeight() / 2, true);
+    std::string texture = "CrosshairDot";
+    if (Scene::CursorShouldBeInterect()) {
+        texture = "CrosshairSquare";
+    }
+    QueueUIForRendering(texture, _presentFrameBuffer.GetWidth() / 2, _presentFrameBuffer.GetHeight() / 2, true);
+
+    if (Scene::_cameraRayData.found) {
+        if (Scene::_cameraRayData.raycastObjectType == RaycastObjectType::WALLS) {
+            TextBlitter::_debugTextToBilt += "Ray hit: WALL\n";
+        }
+        if (Scene::_cameraRayData.raycastObjectType == RaycastObjectType::DOOR) {
+            TextBlitter::_debugTextToBilt += "Ray hit: DOOR\n";
+        }
+    }
+    else {
+        TextBlitter::_debugTextToBilt += "Ray hit: NONE\n";
+    }
+
     TextBlitter::_debugTextToBilt += "View pos: " + Util::Vec3ToString(Player::GetViewPos()) + "\n";
     TextBlitter::_debugTextToBilt += "View rot: " + Util::Vec3ToString(Player::GetViewRotation()) + "\n";
     glBindFramebuffer(GL_FRAMEBUFFER, _presentFrameBuffer.GetID());
@@ -344,22 +360,20 @@ void DebugPass() {
         _shaders.solidColor.SetBool("uniformColor", true);
         _shaders.solidColor.SetVec3("color", YELLOW);
         _shaders.solidColor.SetMat4("model", glm::mat4(1));
-        // The static triangle world
-        for (int i = 0; i < Scene::_triangleWorld.size(); i++) {
-            Renderer::QueueTriangleForLineRendering(Scene::_triangleWorld[i]);
-        }
-        // The door that opens
-        GameObject* gameObject = Scene::GetGameObjectByName("Door2");
-        if (gameObject) {
-            for (Triangle& triangle : gameObject->GetTris()) {
+
+        for (RTInstance& instance : Scene::_rtInstances) {
+            RTMesh& mesh = Scene::_rtMesh[instance.meshIndex];
+
+            for (int i = mesh.baseVertex; i < mesh.baseVertex + mesh.vertexCount; i+=3) {
                 Triangle t;
-                t.p1 = gameObject->GetModelMatrix() * glm::vec4(triangle.p1, 1.0);
-                t.p2 = gameObject->GetModelMatrix() * glm::vec4(triangle.p2, 1.0);
-                t.p3 = gameObject->GetModelMatrix() * glm::vec4(triangle.p3, 1.0);
+                t.p1 = instance.modelMatrix * glm::vec4(Scene::_rtVertices[i+0], 1.0);
+                t.p2 = instance.modelMatrix * glm::vec4(Scene::_rtVertices[i+1], 1.0);
+                t.p3 = instance.modelMatrix * glm::vec4(Scene::_rtVertices[i+2], 1.0);
                 t.color = YELLOW;
                 Renderer::QueueTriangleForLineRendering(t);
             }
         }
+
         glDisable(GL_DEPTH_TEST);
         glDisable(GL_CULL_FACE);
         RenderImmediate();
@@ -377,7 +391,7 @@ void DrawScene(Shader& shader) {
 
     shader.SetMat4("model", glm::mat4(1));
 
-    AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("Ceiling2"));
+    AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("Ceiling"));
     for (Wall& wall : Scene::_walls) {
         //AssetManager::BindMaterialByIndex(wall.materialIndex);
         wall.Draw();
@@ -398,7 +412,7 @@ void DrawScene(Shader& shader) {
     static int trimFloorMaterialIndex = AssetManager::GetMaterialIndex("Door");
 
     // Ceiling trims
-    AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("Ceiling2"));
+    /*AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("Ceiling"));
     for (Wall& wall : Scene::_walls) {
         if (!wall.hasTopTrim)
             continue;
@@ -421,7 +435,7 @@ void DrawScene(Shader& shader) {
         t.scale.x = glm::distance(wall.end, wall.begin) * 0.5f;
         shader.SetMat4("model", t.to_mat4());
         AssetManager::GetModel("TrimFloor").Draw();
-    }
+    }*/
 
     // Render game objects
     for (GameObject& gameObject : Scene::_gameObjects) {
@@ -430,6 +444,18 @@ void DrawScene(Shader& shader) {
             AssetManager::BindMaterialByIndex(gameObject._meshMaterialIndices[i]);
             gameObject._model->_meshes[i].Draw();
         }
+    }
+
+    for (Door& door : Scene::_doors) {
+
+        AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("Door"));
+        shader.SetMat4("model", door.GetFrameModelMatrix());
+        auto& doorFrameModel = AssetManager::GetModel("DoorFrame");
+        doorFrameModel.Draw();
+
+        shader.SetMat4("model", door.GetDoorModelMatrix());
+        auto& doorModel = AssetManager::GetModel("Door");
+        doorModel.Draw();
     }
 }
 
@@ -529,6 +555,15 @@ void DrawShadowMapScene(Shader& shader) {
             gameObject._model->_meshes[i].Draw();
         }
     }
+
+    for (Door& door : Scene::_doors) {
+        shader.SetMat4("model", door.GetFrameModelMatrix());
+        auto& doorFrameModel = AssetManager::GetModel("DoorFrame");
+        doorFrameModel.Draw();
+        shader.SetMat4("model", door.GetDoorModelMatrix());
+        auto& doorModel = AssetManager::GetModel("Door");
+        doorModel.Draw();
+    }
 }
 
 void RenderImmediate() {
@@ -562,7 +597,6 @@ void Renderer::HotloadShaders() {
     _shaders.UI.Load("ui.vert", "ui.frag");
     _shaders.editorSolidColor.Load("editor_solid_color.vert", "editor_solid_color.frag");
     _shaders.composite.Load("composite.vert", "composite.frag");
-    _shaders.velocityMap.Load("velocity_map.vert", "velocity_map.frag");
     _shaders.fxaa.Load("fxaa.vert", "fxaa.frag");
     _shaders.animatedQuad.Load("animated_quad.vert", "animated_quad.frag");
     _shaders.depthOfField.Load("depth_of_field.vert", "depth_of_field.frag");
@@ -605,7 +639,7 @@ void Renderer::RenderEditorFrame() {
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
-    glDisable(GL_DEPTH_TEST);
+    glEnable(GL_DEPTH_TEST);
 
     _shaders.editorSolidColor.Use();
     _shaders.editorSolidColor.SetMat4("projection", Editor::GetProjectionMatrix());
@@ -904,8 +938,12 @@ void RenderShadowMaps() {
     //Renderer::_shadowMapsAreDirty = false;
 }
 
-void CreatePointCloudBuffer() {
+void Renderer::CreatePointCloudBuffer() {
     _pointCloud.vertexCount = Scene::_cloudPoints.size();
+    if (_pointCloud.VAO != 0) {
+        glDeleteBuffers(1, &_pointCloud.VAO);
+        glDeleteVertexArrays(1, &_pointCloud.VAO);
+    }
     glGenVertexArrays(1, &_pointCloud.VAO);
     glGenBuffers(1, &_pointCloud.VBO);
     glBindVertexArray(_pointCloud.VAO);
@@ -933,25 +971,6 @@ void DrawPointCloud() {
 }
 
 void InitCompute() {
-    // query limitations
-    /*int max_compute_work_group_count[3];
-    int max_compute_work_group_size[3];
-    int max_compute_work_group_invocations;
-    for (int idx = 0; idx < 3; idx++) {
-        glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT, idx, &max_compute_work_group_count[idx]);
-        glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_SIZE, idx, &max_compute_work_group_size[idx]);
-    }
-    glGetIntegerv(GL_MAX_COMPUTE_WORK_GROUP_INVOCATIONS, &max_compute_work_group_invocations);
-    std::cout << "OpenGL Limitations: " << std::endl;
-    std::cout << "maximum number of work groups in X dimension " << max_compute_work_group_count[0] << std::endl;
-    std::cout << "maximum number of work groups in Y dimension " << max_compute_work_group_count[1] << std::endl;
-    std::cout << "maximum number of work groups in Z dimension " << max_compute_work_group_count[2] << std::endl;
-    std::cout << "maximum size of a work group in X dimension " << max_compute_work_group_size[0] << std::endl;
-    std::cout << "maximum size of a work group in Y dimension " << max_compute_work_group_size[1] << std::endl;
-    std::cout << "maximum size of a work group in Z dimension " << max_compute_work_group_size[2] << std::endl;
-    std::cout << "Number of invocations in a single local work group that may be dispatched to a compute shader " << max_compute_work_group_invocations << std::endl;
-    */
-
     int width = _mapWidth / _propogationGridSpacing;
     int height = _mapHeight / _propogationGridSpacing;
     int depth = _mapDepth / _propogationGridSpacing;
@@ -972,59 +991,81 @@ void InitCompute() {
     _shaders.propogateLight.Load("res/shaders/propogate_light.comp");
 
     Scene::CreatePointCloud();
-    CreatePointCloudBuffer();
+    Renderer::CreatePointCloudBuffer();
+    Renderer::CreateTriangleWorldVertexBuffer();
 
-    // Create vertices SSBO
-    std::vector<glm::vec4> vertices;
-    for (int i = 0; i < Scene::_triangleWorld.size(); i++) {
-        vertices.push_back(glm::vec4(Scene::_triangleWorld[i].p1, 0));
-        vertices.push_back(glm::vec4(Scene::_triangleWorld[i].p2, 0));
-        vertices.push_back(glm::vec4(Scene::_triangleWorld[i].p3, 0));
-    }
-    GameObject* gameObject = Scene::GetGameObjectByName("Door2");
-    if (gameObject) {
-        for (Triangle& tri : gameObject->GetTris()) {
-            vertices.push_back(glm::vec4(tri.p1, 1));
-            vertices.push_back(glm::vec4(tri.p2, 1));
-            vertices.push_back(glm::vec4(tri.p3, 1));
-        }
-    }
-    _ssbos.vertexCount = vertices.size();
-    glGenBuffers(1, &_ssbos.staticVertices);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, _ssbos.staticVertices);
-    glBufferStorage(GL_SHADER_STORAGE_BUFFER, vertices.size() * sizeof(glm::vec4), &vertices[0], GL_DYNAMIC_STORAGE_BIT | GL_MAP_READ_BIT);
-    glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
-    std::cout << "You are raytracing against " << (vertices.size() / 3) << " tris\n";
+
     std::cout << "Point cloud has " << Scene::_cloudPoints.size() << " points\n";
     std::cout << "Propogation grid has " << (_mapWidth * _mapHeight * _mapDepth / _propogationGridSpacing) << " cells\n";
 }
 
+void Renderer::CreateTriangleWorldVertexBuffer() {
+
+    // Vertices
+    if (_ssbos.rtVertices != 0) {
+        glDeleteBuffers(1, &_ssbos.rtVertices);
+    }
+    std::vector<glm::vec4> vertices;
+    for (glm::vec3 vertex : Scene::_rtVertices) {
+        vertices.push_back(glm::vec4(vertex, 0.0f));
+    }
+    glGenBuffers(1, &_ssbos.rtVertices);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, _ssbos.rtVertices);
+    glBufferStorage(GL_SHADER_STORAGE_BUFFER, vertices.size() * sizeof(glm::vec4), &vertices[0], GL_DYNAMIC_STORAGE_BIT);
+    glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
+
+    // Mesh
+    if (_ssbos.rtMesh != 0) {
+        glDeleteBuffers(1, &_ssbos.rtMesh);
+    }
+    glGenBuffers(1, &_ssbos.rtMesh);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, _ssbos.rtMesh);
+    glBufferStorage(GL_SHADER_STORAGE_BUFFER, Scene::_rtMesh.size() * sizeof(RTMesh), &Scene::_rtMesh[0], GL_DYNAMIC_STORAGE_BIT);
+    glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
+
+    std::cout << "You are raytracing against " << (vertices.size() / 3) << " tris\n";
+    std::cout << "You are raytracing " << Scene::_rtMesh.size() << " mesh\n";
+}
+
 void ComputePass() {
+
+    // Update RT Instances
+    if (_ssbos.rtInstances == 0) {
+        glGenBuffers(1, &_ssbos.rtInstances);
+    }
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, _ssbos.rtInstances);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, Scene::_rtInstances.size() * sizeof(RTInstance), &Scene::_rtInstances[0], GL_DYNAMIC_COPY);
+    glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
+
     UpdatePointCloudLighting();
     UpdatePropogationgGrid();
 }
 
 void UpdatePointCloudLighting() {
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, _ssbos.staticVertices);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, _ssbos.rtVertices);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, _pointCloud.VBO);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, _ssbos.rtMesh);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, _ssbos.rtInstances);
     _shaders.pointCloud.Use();
-    _shaders.pointCloud.SetInt("vertexCount", _ssbos.vertexCount);
+    _shaders.pointCloud.SetInt("meshCount", Scene::_rtMesh.size());
+    _shaders.pointCloud.SetInt("instanceCount", Scene::_rtInstances.size());
     _shaders.pointCloud.SetVec3("lightPosition", Scene::_lights[0].position);
-    _shaders.pointCloud.SetMat4("doorMatrix", Scene::GetGameObjectByName("Door2")->GetModelMatrix());
     int pointCloudSize = Scene::_cloudPoints.size();
     glDispatchCompute(std::ceil(pointCloudSize / 64.0f), 1, 1);
     glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 }
 
 void UpdatePropogationgGrid() {
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, _ssbos.staticVertices);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, _ssbos.rtVertices);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, _pointCloud.VBO);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, _ssbos.rtMesh);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, _ssbos.rtInstances);
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_3D, _progogationGridTexture);
     _shaders.propogateLight.Use();
     _shaders.propogateLight.SetInt("pointCloudSize", Scene::_cloudPoints.size());
-    _shaders.propogateLight.SetInt("vertexCount", _ssbos.vertexCount);
-    _shaders.propogateLight.SetMat4("doorMatrix", Scene::GetGameObjectByName("Door2")->GetModelMatrix());
+    _shaders.propogateLight.SetInt("meshCount", Scene::_rtMesh.size());
+    _shaders.propogateLight.SetInt("instanceCount", Scene::_rtInstances.size());
     _shaders.propogateLight.SetFloat("propogationGridSpacing", _propogationGridSpacing);
 
     int textureWidth = _mapWidth / _propogationGridSpacing;

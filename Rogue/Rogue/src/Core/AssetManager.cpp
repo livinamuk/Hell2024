@@ -11,7 +11,14 @@ std::vector<Material> _materials;
 std::vector<Model> _models;
 std::vector<SkinnedModel> _skinnedModels;
 
+void AssetManager::Init() {
+
+
+
+}
+
 void AssetManager::LoadFont() {
+
 	_charExtents.clear();
 	for (size_t i = 1; i <= 90; i++) {
 		std::string filepath = "res/textures/font/char_" + std::to_string(i) + ".png";
@@ -38,9 +45,17 @@ int AssetManager::GetTextureIndex(const std::string& filename, bool ignoreWarnin
 void AssetManager::LoadEverythingElse() {
 
 	static auto allTextures = std::filesystem::directory_iterator("res/textures/");
+	static auto uiTextures = std::filesystem::directory_iterator("res/textures/ui");
 	static auto allModels = std::filesystem::directory_iterator("res/models/");
 
 	for (const auto& entry : allTextures) {
+		FileInfo info = Util::GetFileInfo(entry);
+		if (info.filetype == "png" || info.filetype == "tga" || info.filetype == "jpg") {
+			_textures.emplace_back(Texture(info.fullpath.c_str()));
+		}
+	}
+
+	for (const auto& entry : uiTextures) {
 		FileInfo info = Util::GetFileInfo(entry);
 		if (info.filetype == "png" || info.filetype == "tga" || info.filetype == "jpg") {
 			_textures.emplace_back(Texture(info.fullpath.c_str()));
@@ -186,4 +201,8 @@ SkinnedModel* AssetManager::GetSkinnedModel(const std::string& name) {
 	}
 	std::cout << "Could not GetSkinnedModel(name) with name: \"" << name << "\", it does not exist\n";
 	return nullptr;
+}
+
+std::string AssetManager::GetMaterialNameByIndex(int index) {
+	return _materials[index]._name;
 }

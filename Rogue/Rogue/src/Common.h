@@ -17,6 +17,10 @@
 #define NOOSE_HALF_PI 1.57079632679f
 #define HELL_PI 3.141592653589793f
 
+#define DOOR_WIDTH 0.8f
+#define DOOR_HEIGHT 2.0f
+#define DOOR_EDITOR_DEPTH 0.05f
+
 //#define MAP_WIDTH   32
 //#define MAP_HEIGHT  16
 //#define MAP_DEPTH   50
@@ -112,6 +116,10 @@ struct Point {
         this->pos = pos;
         this->color = color;
     }
+    Point(float x, float y, float z, glm::vec3 color) {
+        this->pos = glm::vec3(x, y, z);
+        this->color = color;
+    }
 };
 
 struct Line {
@@ -187,9 +195,10 @@ struct UIRenderInfo {
     glm::mat4 modelMatrix;
     bool centered = false;
     GLuint target = GL_TEXTURE_2D;
+    void* parent = nullptr;
 };
 
-enum class RaycastObjectType { NONE, FLOOR, WALLS, ENEMY };
+enum class RaycastObjectType { NONE, FLOOR, WALLS, ENEMY, DOOR };
 
 struct RayCastResult {
     bool found = false;

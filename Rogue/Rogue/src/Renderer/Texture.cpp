@@ -39,7 +39,9 @@ Texture::Texture(std::string filepath)
 		return;
 	}
 
-	_filename = filepath.substr(filepath.rfind("/") + 1);
+	int pos = filepath.rfind("\\") + 1;
+	int pos2 = filepath.rfind("/") + 1;
+	_filename = filepath.substr(std::max(pos, pos2));
 	_filename = _filename.substr(0, _filename.length() - 4);
 	_filetype = filepath.substr(filepath.length() - 3);
 

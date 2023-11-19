@@ -7,6 +7,7 @@
 #include "Animation/SkinnedModel.h"
 
 namespace AssetManager {
+	void Init();
 	void LoadFont();
 	void LoadEverythingElse();
 	Texture& GetTexture(const std::string& filename);
@@ -15,6 +16,8 @@ namespace AssetManager {
 	void BindMaterialByIndex(int index);
 	Model& GetModel(const std::string& name);
 	SkinnedModel* GetSkinnedModel(const std::string& name);
+	std::string GetMaterialNameByIndex(int index);
 
 	inline std::vector<Extent2Di> _charExtents;
+	inline GLuint _textureArray;
 }

@@ -28,6 +28,8 @@ namespace Renderer {
 	void NextMode();
 	void PreviousMode();
 	void RecreateFrameBuffers();
+	void CreatePointCloudBuffer();
+	void CreateTriangleWorldVertexBuffer();
 
 	inline int _method = 1;
 	inline bool _shadowMapsAreDirty = true;

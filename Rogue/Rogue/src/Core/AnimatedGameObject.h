@@ -17,8 +17,6 @@ public:
 	void PlayAnimation(std::string animationName, float speed);
 	void PlayAndLoopAnimation(std::string animationName, float speed);
 	void PauseAnimation();
-	void EnableMotionBlur();
-	void DisableMotionBlur();
 	void SetMeshMaterial(std::string meshName, std::string materialName);
 	void SetMeshMaterialByIndex(int meshIndex, std::string materialName);
 	void SetMaterial(std::string materialName);
