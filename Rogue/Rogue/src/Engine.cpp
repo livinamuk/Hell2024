@@ -9,6 +9,7 @@
 #include "Core/Editor.h"
 #include "Core/TextBlitter.h"
 #include "Core/Scene.h"
+#include "Core/File.h"
 // Profiling stuff
 #define TracyGpuCollect
 #include "tracy/Tracy.hpp"
@@ -81,7 +82,12 @@ void Engine::Init() {
     Audio::Init();
     AssetManager::LoadFont();
     AssetManager::LoadEverythingElse();
-    Renderer::Init();    
+    File::LoadMap("map.txt");
+    Scene::RecreateDataStructures();
+
+    Renderer::Init();
+    Renderer::CreatePointCloudBuffer();
+    Renderer::CreateTriangleWorldVertexBuffer();
 }
 
 void Engine::LazyKeyPresses() {
@@ -144,6 +150,14 @@ void Engine::LazyKeyPressesEditor() {
     }
     if (Input::KeyPressed(HELL_KEY_TAB)) {
         ToggleEditor();
+    }
+    if (Input::KeyPressed(GLFW_KEY_X)) {
+        Editor::NextMode();
+        Audio::PlayAudio("RE_Beep.wav", 0.25f);
+    }
+    if (Input::KeyPressed(GLFW_KEY_Z)) {
+        Editor::PreviousMode();
+        Audio::PlayAudio("RE_Beep.wav", 0.25f);
     }
 }
 

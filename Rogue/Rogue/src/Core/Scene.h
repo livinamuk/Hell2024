@@ -68,16 +68,13 @@ struct Wall {
     glm::vec3 begin;
     glm::vec3 end;
     float height;
-    bool hasTopTrim;
-    bool hasBottomTrim;
-    float topTrimBottom;
     GLuint VAO = 0;
     GLuint VBO = 0;
     std::vector<Vertex> vertices;
     int materialIndex = 0;
     float wallHeight = 2.4f;
     void CreateMesh();
-    Wall(glm::vec3 begin, glm::vec3 end, float height, int materialIndex, bool hasTopTrim = false, bool hasBottomTrim = false);
+    Wall(glm::vec3 begin, glm::vec3 end, float height, int materialIndex);
     glm::vec3 GetNormal();
     glm::vec3 GetMidPoint();
     void Draw();
@@ -86,13 +83,17 @@ struct Wall {
 };
 
 struct Floor {
-    float x1, z1, x2, z2, height;
+    float x1, z1, x2, z2, height; // remove these. you are only using them to create the bathroom ceiling. 
+    Vertex v1, v2, v3, v4;
     GLuint VAO = 0;
     GLuint VBO = 0;
     std::vector<Vertex> vertices;
+    float textureScale = 1.0f;
     int materialIndex = 0;
-    Floor(float x1, float z1, float x2, float z2, float height, int materialIndex, float texScale = 1.0f);
+    Floor(float x1, float z1, float x2, float z2, float height, int materialIndex, float textureScale);
+    Floor(glm::vec3 pos1, glm::vec3 pos2, glm::vec3 pos3, glm::vec3 pos4, int materialIndex, float textureScale);
     void Draw();
+    void CreateMesh();
 };
 
 struct Ceiling {
@@ -108,16 +109,16 @@ struct Ceiling {
 struct RTMesh {
     GLuint baseVertex = 0;
     GLuint vertexCount = 0;
-    GLuint padding0;
-    GLuint padding1;
+    GLuint padding0 = 0;
+    GLuint padding1 = 0;
 };
 
 struct RTInstance {
     glm::mat4 modelMatrix = glm::mat4(1);
     GLuint meshIndex = 0;
-    GLuint padding0;
-    GLuint padding1;
-    GLuint padding2;
+    GLuint padding0 = 0;
+    GLuint padding1 = 0;
+    GLuint padding2 = 0;
 };
 
 namespace Scene {
@@ -145,7 +146,9 @@ namespace Scene {
     void CreatePointCloud();
     void CreateMeshData();
     void AddDoor(Door& door);
-    void AddWall(Wall& wall);    
+    void AddWall(Wall& wall);
+    void AddFloor(Floor& floor);
     void CreateRTInstanceData();
     bool CursorShouldBeInterect();
+    void RecreateDataStructures();
 }

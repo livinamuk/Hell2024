@@ -292,13 +292,18 @@ void main() {
     // Indirect lighthing
     vec3 WorldPos2 = WorldPos + (normal * 0.01);
     vec3 indirectLighting = GetIndirectLighting(WorldPos2, normal);
-    float factor = min(1, roughness * 1.5);
     //factor = roughness;
-    indirectLighting *= (0.125) * vec3(factor); 
-    indirectLighting = max(indirectLighting, vec3(0));
+    //indirectLighting *= (0.125) * vec3(factor); 
+    //indirectLighting = max(indirectLighting, vec3(0));
+
+    vec3 adjustedIndirectLighting = indirectLighting;
+    float factor = min(1, roughness * 1.5);
+    adjustedIndirectLighting *= (0.375) * vec3(factor); 
+    adjustedIndirectLighting = max(adjustedIndirectLighting, vec3(0));
+    adjustedIndirectLighting *= baseColor;
 
     // Composite
-    vec3 composite = directLighting  + (indirectLighting * baseColor);
+    vec3 composite = directLighting  + (adjustedIndirectLighting);
   //  vec3 composite = directLighting  + (indirectLighting * texture(basecolorTexture, TexCoords).rgb);
     FragColor.rgb = vec3(composite);
 
@@ -315,7 +320,7 @@ void main() {
         FragColor.a = 1;
     }
     else if (mode == 3) {
-        FragColor.rgb = indirectLighting;
+        FragColor.rgb = indirectLighting ;
         FragColor.a = 1;
     }
 

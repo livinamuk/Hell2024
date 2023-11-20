@@ -33,6 +33,71 @@ namespace File {
 
 void File::LoadMap(std::string mapName) {
 
+	Scene::Init();
+
+	FILE* filepoint;
+	errno_t err;
+	std::string fileName = "res/maps/" + mapName;
+	rapidjson::Document document;
+
+	if ((err = fopen_s(&filepoint, fileName.c_str(), "rb")) != 0) {
+		//fprintf(stderr, "cannot open file '%s': %s\n", fileName, strerror(err));
+		std::cout << "Failed to open " << fileName << "\n";
+		return; 
+	}
+	else {
+		char buffer[65536];
+		rapidjson::FileReadStream is(filepoint, buffer, sizeof(buffer));
+		document.ParseStream<0, rapidjson::UTF8<>, rapidjson::FileReadStream>(is);
+		if (document.HasParseError()) {
+			std::cout << "Error  : " << document.GetParseError() << '\n' << "Offset : " << document.GetErrorOffset() << '\n';
+		}
+		fclose(filepoint);
+	}
+
+	if (document.HasMember("Walls")) {
+		const rapidjson::Value& objects = document["Walls"];
+		for (rapidjson::SizeType i = 0; i < objects.Size(); i++) {
+			glm::vec3 begin = ReadVec3(objects[i], "begin");
+			glm::vec3 end = ReadVec3(objects[i], "end");
+			float height = ReadFloat(objects[i], "height");
+			std::string materialName = ReadString(objects[i], "materialName");
+			Wall wall(begin, end, height, AssetManager::GetMaterialIndex(materialName));
+			Scene::AddWall(wall);
+		}
+	}
+
+	if (document.HasMember("Doors")) {
+		const rapidjson::Value& objects = document["Doors"];
+		for (rapidjson::SizeType i = 0; i < objects.Size(); i++) {
+			glm::vec3 position = ReadVec3(objects[i], "position");
+			float rotation = ReadFloat(objects[i], "rotation");
+			Door door(position, rotation);
+			Scene::AddDoor(door);
+		}
+	}
+
+	if (document.HasMember("Floors")) {
+		const rapidjson::Value& objects = document["Floors"];
+		for (rapidjson::SizeType i = 0; i < objects.Size(); i++) {
+			glm::vec3 v1 = ReadVec3(objects[i], "v1");
+			glm::vec3 v2 = ReadVec3(objects[i], "v2");
+			glm::vec3 v3 = ReadVec3(objects[i], "v3");
+			glm::vec3 v4 = ReadVec3(objects[i], "v4");
+
+			float x1 = ReadFloat(objects[i], "x1");
+			float x2 = ReadFloat(objects[i], "x2");
+			float z1 = ReadFloat(objects[i], "z1");
+			float z2 = ReadFloat(objects[i], "z2");
+			float height = ReadFloat(objects[i], "height");
+
+			float textureScale = ReadFloat(objects[i], "textureScale");
+			int materialIndex = AssetManager::GetMaterialIndex(ReadString(objects[i], "materialName"));
+			//Floor floor(x1, z1, x2, z2, height, materialIndex, textureScale);
+			Floor floor(v1, v2, v3, v4, materialIndex, textureScale);
+			Scene::AddFloor(floor);
+		}
+	}
 }
 
 void File::SaveMap(std::string mapName) {
@@ -40,22 +105,48 @@ void File::SaveMap(std::string mapName) {
 	rapidjson::Document document;
 	rapidjson::Document::AllocatorType& allocator = document.GetAllocator();
 	rapidjson::Value walls(rapidjson::kArrayType);
-	rapidjson::Value lights(rapidjson::kArrayType);
+	rapidjson::Value doors(rapidjson::kArrayType);
+	rapidjson::Value floors(rapidjson::kArrayType);
 	rapidjson::Value gameObjects(rapidjson::kArrayType);
 	document.SetObject();
 
 	for (Wall& wall : Scene::_walls) {
 		rapidjson::Value object(rapidjson::kObjectType);
 		SaveVec3(&object, "begin", wall.begin, allocator);
-		SaveVec3(&object, "end", wall.begin, allocator);
+		SaveVec3(&object, "end", wall.end, allocator);
 		SaveFloat(&object, "height", wall.height, allocator);
-		SaveBool(&object, "hasTopTrim", wall.height, allocator);
-		SaveBool(&object, "hasBottomTrim", wall.height, allocator);
 		SaveString(&object, "materialName", AssetManager::GetMaterialNameByIndex(wall.materialIndex), allocator);
 		walls.PushBack(object, allocator);
 	}
 
+	for (Door& door : Scene::_doors) {
+		rapidjson::Value object(rapidjson::kObjectType);
+		SaveVec3(&object, "position", door.position, allocator);
+		SaveFloat(&object, "rotation", door.rotation, allocator);
+		doors.PushBack(object, allocator);
+	}
+
+	for (Floor& floor : Scene::_floors) {
+		rapidjson::Value object(rapidjson::kObjectType);
+		SaveVec3(&object, "v1", floor.v1.position, allocator);
+		SaveVec3(&object, "v2", floor.v2.position, allocator);
+		SaveVec3(&object, "v3", floor.v3.position, allocator);
+		SaveVec3(&object, "v4", floor.v4.position, allocator);
+		SaveFloat(&object, "textureScale", floor.textureScale, allocator);
+
+		SaveFloat(&object, "x1", floor.x1, allocator);
+		SaveFloat(&object, "x2", floor.x2, allocator);
+		SaveFloat(&object, "z1", floor.z1, allocator);
+		SaveFloat(&object, "z2", floor.z2, allocator);
+		SaveFloat(&object, "height", floor.height, allocator);
+
+		SaveString(&object, "materialName", AssetManager::GetMaterialNameByIndex(floor.materialIndex), allocator);
+		floors.PushBack(object, allocator);
+	}
+
 	document.AddMember("Walls", walls, allocator);
+	document.AddMember("Floors", floors, allocator);
+	document.AddMember("Doors", doors, allocator);
 
 	rapidjson::StringBuffer strbuf;
 	rapidjson::PrettyWriter<rapidjson::StringBuffer> writer(strbuf);
@@ -67,6 +158,8 @@ void File::SaveMap(std::string mapName) {
 	out.close();
 
 	std::cout << "Saved res/maps/" << mapName << "\n";
+
+	Scene::RecreateDataStructures();
 }
 
 void File::SaveVec3(rapidjson::Value* object, std::string elementName, glm::vec3 vector, rapidjson::Document::AllocatorType& allocator) {

@@ -53,8 +53,8 @@ bool TriIntersect(vec3 origin, vec3 direction, float rayMin, float rayMax, vec3 
 	float r = dot(direction, n); 
 
     //ignore back face
-    //if (r > 0) 
-	//	return false;    
+    if (r > 0) 
+		return false;    
 
 	// some other early out
 	if (abs(r) < 0.00001) 
@@ -108,10 +108,10 @@ void main() {
 	
 	PointCloud[i].color.xyz = vec3(0,0,0);
 
-	vec3 lightPos = lightPosition[0];//vec3(2.8, 2.2, 3.6);
+	vec3 lightPos = lightPosition[0];
 	vec3 lightColor = vec3(1, 0.8, 0.55);
-	float lightRadius = 50;
-	float lightStrength = lightStrength[0];
+	float lightRadius = 8;
+	float lightStrength = 1;//lightStrength[0];
 	float distToLight = distance(lightPos, origin);
 	vec3 l = normalize(lightPos - origin);
 
@@ -129,8 +129,8 @@ void main() {
 		{
 		vec3 lightPos = vec3(2.05, 2, 9.0);
 		vec3 lightColor = vec3(1, 0, 0);
-		float lightRadius = 10;
-		float lightStrength = 2.0;
+		float lightRadius = 5;
+		float lightStrength = 10.0;
 		float distToLight = distance(lightPos, origin);
 		vec3 l = normalize(lightPos - origin);
 
@@ -144,5 +144,27 @@ void main() {
 		else {
 
 		}
+
+		
+		{
+			vec3 lightPos = lightPosition[2];
+			vec3 lightColor = vec3(0, 1, 1);
+			float lightRadius = 5;
+			float lightStrength = 10.0;
+			float distToLight = distance(lightPos, origin);
+			vec3 l = normalize(lightPos - origin);
+
+			if (!AnyHit(origin, l, 0.000001, distToLight)) {
+				float att = smoothstep(lightRadius, 0.0, length(lightPos - origin));
+				vec3 n = normal;			
+				float ndotl = clamp(dot(n, l), 0.0f, 1.0f);  
+				vec3 radiance = vec3(lightColor) * att * lightStrength * ndotl * 1.0;
+				PointCloud[i].color.xyz += radiance;
+			} 
+			else {
+
+			}
+		}
+
 	}
 }

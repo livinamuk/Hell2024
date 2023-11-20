@@ -11,7 +11,9 @@ namespace Editor {
 	void Update(float deltaTime);
 	void PrepareRenderFrame();
 	glm::mat4 GetProjectionMatrix();	
-	glm::mat4 GetViewMatrix();
+	glm::mat4 GetViewMatrix();	
+	void NextMode();
+	void PreviousMode();
 
 	/*glm::vec3 GetEditorWorldPosFromCoord(int x, int z);
 	int GetMouseGridX();

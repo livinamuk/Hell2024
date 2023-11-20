@@ -32,6 +32,7 @@ struct Shaders {
     Shader shadowMap;
     Shader UI;
     Shader editorSolidColor;
+    Shader editorTextured;
     Shader composite;
     Shader fxaa;
     Shader animatedQuad;
@@ -106,8 +107,6 @@ void RenderImmediate();
 
 void Renderer::Init() {
 
-    Scene::Init();
-
     glGenVertexArrays(1, &_pointLineVAO);
     glGenBuffers(1, &_pointLineVBO);
     glPointSize(2);
@@ -124,6 +123,7 @@ void Renderer::Init() {
     _shaders.geometry.Load("geometry.vert", "geometry.frag");
     _shaders.lighting.Load("lighting.vert", "lighting.frag");
     _shaders.debugViewPropgationGrid.Load("debug_view_propogation_grid.vert", "debug_view_propogation_grid.frag");
+    _shaders.editorTextured.Load("editor_textured.vert", "editor_textured.frag");
     
     _cubeMesh = MeshUtil::CreateCube(1.0f, 1.0f, true);
 
@@ -400,6 +400,7 @@ void DrawScene(Shader& shader) {
 
     for (Floor& floor : Scene::_floors) {
         AssetManager::BindMaterialByIndex(floor.materialIndex);
+        //  AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("NumGrid"));
         floor.Draw();
     }
 
@@ -598,7 +599,8 @@ void Renderer::HotloadShaders() {
     _shaders.debugViewPropgationGrid.Load("debug_view_propogation_grid.vert", "debug_view_propogation_grid.frag");
     _shaders.compute.Load("res/shaders/compute.comp");
     _shaders.pointCloud.Load("res/shaders/point_cloud.comp");
-    _shaders.propogateLight.Load("res/shaders/propogate_light.comp");    
+    _shaders.propogateLight.Load("res/shaders/propogate_light.comp");
+    _shaders.editorTextured.Load("editor_textured.vert", "editor_textured.frag");
 }
 
 void QueueEditorGridSquareForDrawing(int x, int z, glm::vec3 color) {
@@ -633,6 +635,18 @@ void Renderer::RenderEditorFrame() {
     glCullFace(GL_BACK);
     glEnable(GL_DEPTH_TEST);
 
+    _shaders.editorTextured.Use();
+    _shaders.editorTextured.SetMat4("projection", Editor::GetProjectionMatrix());
+    _shaders.editorTextured.SetMat4("view", Editor::GetViewMatrix());
+    Transform t;
+    t.position.y = -3.5f;
+    _shaders.editorTextured.SetMat4("model", t.to_mat4());
+
+    for (Floor& floor : Scene::_floors) {
+        AssetManager::BindMaterialByIndex(floor.materialIndex);
+        floor.Draw();
+    }
+
     _shaders.editorSolidColor.Use();
     _shaders.editorSolidColor.SetMat4("projection", Editor::GetProjectionMatrix());
     _shaders.editorSolidColor.SetMat4("view", Editor::GetViewMatrix());
@@ -640,6 +654,7 @@ void Renderer::RenderEditorFrame() {
 
     RenderImmediate();
 
+   
     // Render UI
     glBindFramebuffer(GL_FRAMEBUFFER, _presentFrameBuffer.GetID());
     glViewport(0, 0, _presentFrameBuffer.GetWidth(), _presentFrameBuffer.GetHeight());
@@ -1041,7 +1056,7 @@ void UpdatePointCloudLighting() {
     _shaders.pointCloud.Use();
     _shaders.pointCloud.SetInt("meshCount", Scene::_rtMesh.size());
     _shaders.pointCloud.SetInt("instanceCount", Scene::_rtInstances.size());
-    //_shaders.pointCloud.SetVec3("lightPosition", Scene::_lights[0].position);
+    _shaders.pointCloud.SetInt("lightCount", Scene::_lights.size());
 
     auto& lights = Scene::_lights;
     for (int i = 0; i < lights.size(); i++) {

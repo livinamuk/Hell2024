@@ -17,11 +17,16 @@ namespace Editor {
     float _mouseZ = 0;
     float _gridX = 0;
     float _gridZ = 0;
+    float _gridXHalfSize = 0;
+    float _gridZHalfSize = 0;
     float _camX = 0;
     float _camZ = 0;
     float _zoom = 500;
     float _gridSpacing = 0.1f;
     bool _flipCreatingWallNormals = false;
+    Door* _draggedDoor;
+    glm::vec3 _creatingFloorBegin = glm::vec3(0);
+    glm::vec3 _creatingFloorEnd = glm::vec3(0);
 
     struct HoveredVertex {
         bool hoverFound = false;
@@ -32,16 +37,16 @@ namespace Editor {
         glm::vec3* position;
     } _selectedVertex;
 
-    enum Action {IDLE = 0, CREATING_WALL, FINISHED_WALL, DRAGGING_VERTEX} _action;
+    enum Action {IDLE = 0, CREATING_WALL, FINISHED_WALL, DRAGGING_WALL_VERTEX, DRAGGING_DOOR, CREATING_FLOOR, DRAGGING_FLOOR_VERTEX} _action;
     Line _createLine;
+
+    enum EditorMode {WALLS = 0, FLOOR, CEILING, MODE_COUNT } _mode;
+
+    void WallsModeUpdate();
+    void FloorModeUpdate();
+    void CeilingModeUpdate();
 }
 
-void RecreateDataStructures() {
-    Scene::CreateMeshData();
-    Scene::CreatePointCloud();
-    Renderer::CreatePointCloudBuffer();
-    Renderer::CreateTriangleWorldVertexBuffer();
-}
 
 glm::vec3 GetLineNormal(Line& line) {
     glm::vec3 vector = glm::normalize(line.p1.pos - line.p2.pos);
@@ -52,18 +57,33 @@ glm::vec3 GetLineMidPoint(Line& line) {
     return (line.p1.pos + line.p2.pos) * glm::vec3(0.5);
 }
 
+bool MouseOverDoor(Door& door) {
+    glm::vec2 p = { Editor::_mouseX, Editor::_mouseZ };
+    glm::vec2 p3 = { door.GetVertFrontLeft().x, door.GetVertFrontLeft().z };
+    glm::vec2 p2 = { door.GetVertFrontRight().x, door.GetVertFrontRight().z };
+    glm::vec2 p1 = { door.GetVertBackRight().x, door.GetVertBackRight().z };
+    glm::vec2 p4 = { door.GetVertBackLeft().x, door.GetVertBackLeft().z };
+    glm::vec2 p5 = { door.GetVertFrontRight().x, door.GetVertFrontRight().z };
+    glm::vec2 p6 = { door.GetVertBackRight().x, door.GetVertBackRight().z };
+    return Util::PointIn2DTriangle(p, p1, p2, p3) || Util::PointIn2DTriangle(p, p4, p5, p6);
+}
+
 void Editor::Init() {
 
 }
 
 void Editor::Update(float deltaTime) {
 
-    if (Input::KeyPressed(HELL_KEY_SPACE)) {
-        File::SaveMap("map.txt");
-    }
     if (Input::KeyPressed(HELL_KEY_N)) {
         Scene::NewScene();
-        RecreateDataStructures();
+        Scene::RecreateDataStructures();
+    }
+    if (Input::KeyPressed(HELL_KEY_O)) {
+        File::LoadMap("map.txt");
+        Scene::RecreateDataStructures();
+    }
+    if (Input::KeyPressed(HELL_KEY_P)) {
+        File::SaveMap("map.txt");
     }
 
     // Zoom
@@ -96,20 +116,53 @@ void Editor::Update(float deltaTime) {
     // Round mouse position to the nearest grid square
     _gridX = (int)std::round(_mouseX * 10) / 10.0f; // fix this 10 to be a factor of _gridSpacing
     _gridZ = (int)std::round(_mouseZ * 10) / 10.0f; // fix this 10 to be a factor of _gridSpacing
+    _gridXHalfSize = (int)std::round(_mouseX * 20) / 20.0f; // fix this 10 to be a factor of _gridSpacing
+    _gridZHalfSize = (int)std::round(_mouseZ * 20) / 20.0f; // fix this 10 to be a factor of _gridSpacing
 
     // Construct matrices
-    glm::vec3 viewPos = glm::vec3(_camX, 3, _camZ);
+    glm::vec3 viewPos = glm::vec3(_camX, 20, _camZ);
     float width = (float)screenWidth / _zoom;
     float height = (float)screenHeight / _zoom;
     _projection = glm::ortho(-width, width, -height, height, NEAR_PLANE, FAR_PLANE);
     _view = glm::lookAt(viewPos, viewPos + glm::vec3(0.0, -1.0, 0.0), glm::vec3(0.0, 0.0, -1.0));
 
+    if (_mode == WALLS) {
+        WallsModeUpdate();
+    }
+    else if (_mode == FLOOR) {
+        FloorModeUpdate();
+    }
+    else if (_mode == CEILING) {
+        CeilingModeUpdate();
+    }    
+}
+
+void Editor::WallsModeUpdate() {
 
     _hoveredVertex.hoverFound = false;
 
     // Stuff you can begin from idle
     if (_action == IDLE) {
-        
+
+        // Drag door
+        if (Input::LeftMousePressed()) {
+            for (Door& door : Scene::_doors) {
+                if (MouseOverDoor(door)) {
+                    _action = DRAGGING_DOOR;
+                    _draggedDoor = &door;
+                    goto break_out;
+                }
+            }
+        }
+
+        // Create Door
+        if (Input::KeyPressed(HELL_KEY_1)) {
+            glm::vec3 worldPos = glm::vec3(_gridX + 0.05, 0.1f, _gridZ + 0.05);
+            Door& door = Scene::_doors.emplace_back(Door(worldPos, 0));
+            Audio::PlayAudio("UI_Select.wav", 1.0f);
+            goto break_out;
+        }
+
         // Create wall
         if (Input::KeyPressed(HELL_KEY_SPACE)) {
             _action = CREATING_WALL;
@@ -136,25 +189,41 @@ void Editor::Update(float deltaTime) {
                 goto endOfHoveredVertexSearch;
             }
         }
-        endOfHoveredVertexSearch: {}
+    endOfHoveredVertexSearch: {}
 
         // Drag a vertex
         if (Input::LeftMousePressed() && _hoveredVertex.hoverFound) {
             _selectedVertex.position = _hoveredVertex.position;
             _hoveredVertex.hoverFound = false;
             Audio::PlayAudio("UI_Select.wav", 1.0f);
-            _action = DRAGGING_VERTEX;
+            _action = DRAGGING_WALL_VERTEX;
         }
     }
 
+    // Dragging a door  
+    if (_action == DRAGGING_DOOR) {
+        _draggedDoor->position.x = _gridXHalfSize + 0.05;
+        _draggedDoor->position.z = _gridZHalfSize + 0.05;
+
+        // Let go of it
+        if (!Input::LeftMouseDown()) {
+            Scene::RecreateDataStructures();
+            _action = IDLE;
+            Audio::PlayAudio("UI_Select.wav", 1.0f);
+            _draggedDoor = nullptr;
+            goto break_out;
+        }
+    }
+
+
     // Dragging a vertex
-    if (_action == DRAGGING_VERTEX) {
+    if (_action == DRAGGING_WALL_VERTEX) {
         _selectedVertex.position->x = _gridX;
         _selectedVertex.position->z = _gridZ;
 
         // Let go of it
         if (!Input::LeftMouseDown()) {
-            RecreateDataStructures();
+            Scene::RecreateDataStructures();
             _action = IDLE;
             Audio::PlayAudio("UI_Select.wav", 1.0f);
             _selectedVertex.position = nullptr;
@@ -195,9 +264,9 @@ void Editor::Update(float deltaTime) {
                 begin = { _createLine.p2.pos.x, wallBottom, _createLine.p2.pos.z };
             }
             int materialIndex = AssetManager::GetMaterialIndex("WallPaper");
-            Wall wall(begin, end, wallHeight, materialIndex, true, true);
+            Wall wall(begin, end, wallHeight, materialIndex);
             Scene::AddWall(wall);
-            RecreateDataStructures();
+            Scene::RecreateDataStructures();
             goto break_out;
         }
     }
@@ -205,75 +274,235 @@ void Editor::Update(float deltaTime) {
     break_out: {}
 }
 
+void Editor::FloorModeUpdate() {
+
+    _hoveredVertex.hoverFound = false;
+
+    // Stuff you can begin from idle
+    if (_action == IDLE) {
+
+        // Create Floor
+        if (Input::KeyPressed(HELL_KEY_SPACE)) {
+            _action = CREATING_FLOOR;
+            _creatingFloorBegin = glm::vec3(_gridX, 0.1f, _gridZ);
+            _creatingFloorEnd = glm::vec3(_gridX, 0.1f, _gridZ);
+            Audio::PlayAudio("UI_Select.wav", 1.0f);
+            goto floor_update_break_out;
+        }
+
+        // Find hovered vertex
+        float threshold = 0.05;
+        for (Floor& floor : Scene::_floors) {
+            if (abs(_mouseX - floor.v1.position.x) < threshold &&
+                abs(_mouseZ - floor.v1.position.z) < threshold) {
+                _hoveredVertex.hoverFound = true;
+                _hoveredVertex.position = &floor.v1.position;
+                goto floormode_endOfHoveredVertexSearch;
+            }
+            else if (abs(_mouseX - floor.v2.position.x) < threshold &&
+                abs(_mouseZ - floor.v2.position.z) < threshold) {
+                _hoveredVertex.hoverFound = true;
+                _hoveredVertex.position = &floor.v2.position;
+                goto floormode_endOfHoveredVertexSearch;
+            }
+            else if (abs(_mouseX - floor.v3.position.x) < threshold &&
+                abs(_mouseZ - floor.v3.position.z) < threshold) {
+                _hoveredVertex.hoverFound = true;
+                _hoveredVertex.position = &floor.v3.position;
+                goto floormode_endOfHoveredVertexSearch;
+            }
+            else if (abs(_mouseX - floor.v4.position.x) < threshold &&
+                abs(_mouseZ - floor.v4.position.z) < threshold) {
+                _hoveredVertex.hoverFound = true;
+                _hoveredVertex.position = &floor.v4.position;
+                goto floormode_endOfHoveredVertexSearch;
+            }
+        }
+        floormode_endOfHoveredVertexSearch: {}
+
+        // Drag a vertex
+        if (Input::LeftMousePressed() && _hoveredVertex.hoverFound) {
+            _selectedVertex.position = _hoveredVertex.position;
+            _hoveredVertex.hoverFound = false;
+            Audio::PlayAudio("UI_Select.wav", 1.0f);
+            _action = DRAGGING_FLOOR_VERTEX;
+        }
+
+    }
+
+    // Dragging a vertex
+    if (_action == DRAGGING_FLOOR_VERTEX) {
+        _selectedVertex.position->x = _gridX;
+        _selectedVertex.position->z = _gridZ;
+
+        // Let go of it
+        if (!Input::LeftMouseDown()) {
+            Scene::RecreateDataStructures();
+            _action = IDLE;
+            Audio::PlayAudio("UI_Select.wav", 1.0f);
+            _selectedVertex.position = nullptr;
+            goto floor_update_break_out;
+        }
+    }
+
+    if (_action == CREATING_FLOOR) {
+        _creatingFloorEnd = glm::vec3(_gridX, 0.1f, _gridZ);
+
+        if (Input::KeyPressed(HELL_KEY_SPACE) ) {
+
+            float x1 = std::min(_creatingFloorBegin.x, _creatingFloorEnd.x);
+            float z1 = std::min(_creatingFloorBegin.z, _creatingFloorEnd.z);
+            float x2 = std::max(_creatingFloorBegin.x, _creatingFloorEnd.x);
+            float z2 = std::max(_creatingFloorBegin.z, _creatingFloorEnd.z);
+            float height = 0.1f;
+            int materialIndex = AssetManager::GetMaterialIndex("FloorBoards");    
+            Floor floor(x1, z1, x2, z2, height, materialIndex, 2.0f);
+            Scene::AddFloor(floor);
+            Scene::RecreateDataStructures();
+            Audio::PlayAudio("UI_Select.wav", 1.0f);
+            _action = IDLE;
+            goto floor_update_break_out;
+        }
+    }
+
+    floor_update_break_out: {}
+}
+
+void Editor::CeilingModeUpdate() {
+
+    //break_out: {}
+}
+
 void Editor::PrepareRenderFrame() {
+
+    if (_mode == Editor::WALLS) {
+        TextBlitter::_debugTextToBilt = "Mode: WALLS\n";
+    }
+    if (_mode == Editor::FLOOR) {
+        TextBlitter::_debugTextToBilt = "Mode: FLOOR\n";
+    }
+    if (_mode == Editor::CEILING) {
+        TextBlitter::_debugTextToBilt = "Mode: CEILING\n";
+    }
 
     TextBlitter::_debugTextToBilt += "Mouse: " + std::to_string(_mouseX) + ", " + std::to_string(_mouseZ) + "\n";
     TextBlitter::_debugTextToBilt += "Grid: " + std::to_string(_gridX) + ", " + std::to_string(_gridZ) + "\n";
+
     TextBlitter::_debugTextToBilt += "Zoom: " + std::to_string(_zoom) + "\n";
+    TextBlitter::_debugTextToBilt += "GameObjects: " + std::to_string(Scene::_gameObjects.size()) + "\n";
+    TextBlitter::_debugTextToBilt += "AnimatedGameObjects: " + std::to_string(Scene::_animatedGameObjects.size()) + "\n";
+    TextBlitter::_debugTextToBilt += "Walls: " + std::to_string(Scene::_walls.size()) + "\n";
+    TextBlitter::_debugTextToBilt += "Lights: " + std::to_string(Scene::_lights.size()) + "\n";
+    TextBlitter::_debugTextToBilt += "Floors: " + std::to_string(Scene::_floors.size()) + "\n";
+    TextBlitter::_debugTextToBilt += "Ceilings: " + std::to_string(Scene::_ceilings.size()) + "\n";
+    TextBlitter::_debugTextToBilt += "Doors: " + std::to_string(Scene::_doors.size()) + "\n";
+    TextBlitter::_debugTextToBilt += "CloudPoints: " + std::to_string(Scene::_cloudPoints.size()) + "\n";
 
     // Draw grid
-    float gridY = -0.1f;
+    float gridY = -5.0f;
     for (float x = 0; x <= _mapWidth + _gridSpacing / 2; x += _gridSpacing) {
         Renderer::QueueLineForDrawing(Line(glm::vec3(x, gridY, 0), glm::vec3(x, gridY, _mapWidth), GRID_COLOR));
     }
     for (float z = 0; z <= _mapDepth + _gridSpacing / 2; z += _gridSpacing) {
         Renderer::QueueLineForDrawing(Line(glm::vec3(0, gridY, z), glm::vec3(_mapDepth, gridY, z), GRID_COLOR));
     }
+    
+    if (_mode == EditorMode::WALLS) {
 
-    // Walls
-    for (Wall& wall : Scene::_walls) {
-        Renderer::QueueLineForDrawing(Line(wall.begin, wall.end, WHITE));
-        Renderer::QueuePointForDrawing(Point(wall.begin, YELLOW));
-        Renderer::QueuePointForDrawing(Point(wall.end, YELLOW));
+        // Walls
+        for (Wall& wall : Scene::_walls) {
+            Renderer::QueueLineForDrawing(Line(wall.begin, wall.end, WHITE));
+            Renderer::QueuePointForDrawing(Point(wall.begin, YELLOW));
+            Renderer::QueuePointForDrawing(Point(wall.end, YELLOW));
 
-        // Normal
-        glm::vec3 normalBegin = wall.GetMidPoint();
-        glm::vec3 normalEnd = wall.GetMidPoint() +(wall.GetNormal() * glm::vec3(0.1f));
-        Renderer::QueueLineForDrawing(Line(normalBegin, normalEnd, WHITE));
-    }
-
-    if (_action == CREATING_WALL) {
-        Renderer::QueueLineForDrawing(_createLine);
-        Renderer::QueuePointForDrawing(Point(_createLine.p1.pos, YELLOW));
-        Renderer::QueuePointForDrawing(Point(_createLine.p2.pos, YELLOW));
-
-        // Normal
-        glm::vec3 lineNormal = GetLineNormal(_createLine);
-        glm::vec3 normalBegin = GetLineMidPoint(_createLine);
-        if (_flipCreatingWallNormals) {
-            lineNormal *= glm::vec3(-1);
+            // Normal
+            glm::vec3 normalBegin = wall.GetMidPoint();
+            glm::vec3 normalEnd = wall.GetMidPoint() + (wall.GetNormal() * glm::vec3(0.1f));
+            Renderer::QueueLineForDrawing(Line(normalBegin, normalEnd, WHITE));
         }
-        glm::vec3 normalEnd = GetLineMidPoint(_createLine) + (lineNormal * glm::vec3(0.1f));
-        Renderer::QueueLineForDrawing(Line(normalBegin, normalEnd, WHITE));
+
+        if (_action == CREATING_WALL) {
+            Renderer::QueueLineForDrawing(_createLine);
+            Renderer::QueuePointForDrawing(Point(_createLine.p1.pos, YELLOW));
+            Renderer::QueuePointForDrawing(Point(_createLine.p2.pos, YELLOW));
+
+            // Normal
+            glm::vec3 lineNormal = GetLineNormal(_createLine);
+            glm::vec3 normalBegin = GetLineMidPoint(_createLine);
+            if (_flipCreatingWallNormals) {
+                lineNormal *= glm::vec3(-1);
+            }
+            glm::vec3 normalEnd = GetLineMidPoint(_createLine) + (lineNormal * glm::vec3(0.1f));
+            Renderer::QueueLineForDrawing(Line(normalBegin, normalEnd, WHITE));
+        }
+
+        if (_hoveredVertex.hoverFound) {
+            Renderer::QueuePointForDrawing(Point(*_hoveredVertex.position + glm::vec3(0, 2, 0), RED));
+        }
     }
 
-    if (_hoveredVertex.hoverFound) {
-        Renderer::QueuePointForDrawing(Point(*_hoveredVertex.position, RED));
-    }
+    if (_mode == EditorMode::FLOOR) {
 
+        if (_action == CREATING_FLOOR) {
+            float x1 = std::min(_creatingFloorBegin.x, _creatingFloorEnd.x);
+            float z1 = std::min(_creatingFloorBegin.z, _creatingFloorEnd.z);
+            float x2 = std::max(_creatingFloorBegin.x, _creatingFloorEnd.x);
+            float z2 = std::max(_creatingFloorBegin.z, _creatingFloorEnd.z);
+            Renderer::QueuePointForDrawing(Point(glm::vec3(x1, 1, z1), YELLOW));
+            Renderer::QueuePointForDrawing(Point(glm::vec3(x1, 1, z2), YELLOW));
+            Renderer::QueuePointForDrawing(Point(glm::vec3(x2, 1, z1), YELLOW));
+            Renderer::QueuePointForDrawing(Point(glm::vec3(x2, 1, z2), YELLOW));
+            Renderer::QueueLineForDrawing(Line(glm::vec3(x1, 1, z1), glm::vec3(x1, 1, z2), WHITE));
+            Renderer::QueueLineForDrawing(Line(glm::vec3(x2, 1, z1), glm::vec3(x2, 1, z2), WHITE));
+            Renderer::QueueLineForDrawing(Line(glm::vec3(x1, 1, z1), glm::vec3(x2, 1, z1), WHITE));
+            Renderer::QueueLineForDrawing(Line(glm::vec3(x1, 1, z2), glm::vec3(x2, 1, z2), WHITE));
+        }
+
+        for (Floor& floor : Scene::_floors) {
+             Renderer::QueuePointForDrawing(Point(floor.v1.position, YELLOW));
+             Renderer::QueuePointForDrawing(Point(floor.v2.position, YELLOW));
+             Renderer::QueuePointForDrawing(Point(floor.v3.position, YELLOW));
+             Renderer::QueuePointForDrawing(Point(floor.v4.position, YELLOW));
+
+             Renderer::QueueLineForDrawing(Line(floor.v1.position, floor.v2.position, RED));
+             Renderer::QueueLineForDrawing(Line(floor.v1.position, floor.v4.position, RED));
+             Renderer::QueueLineForDrawing(Line(floor.v3.position, floor.v4.position, RED));
+             Renderer::QueueLineForDrawing(Line(floor.v3.position, floor.v2.position, RED));
+        }
+
+
+        if (_hoveredVertex.hoverFound) {
+            Renderer::QueuePointForDrawing(Point(*_hoveredVertex.position + glm::vec3(0, 2, 0), WHITE));
+        }
+    }
+    
+
+
+    // Doors
     for (Door& door : Scene::_doors) {
-        Renderer::QueuePointForDrawing(Point(door.GetVertFrontLeft(0.0f), LIGHT_BLUE));
-        Renderer::QueuePointForDrawing(Point(door.GetVertFrontRight(0.0f), LIGHT_BLUE));
-        Renderer::QueuePointForDrawing(Point(door.GetVertBackLeft(0.0f), LIGHT_BLUE));
-        Renderer::QueuePointForDrawing(Point(door.GetVertBackRight(0.0f), LIGHT_BLUE));
-
+        glm::vec3 color = LIGHT_BLUE;
+        if (_mode == EditorMode::WALLS) {
+            if (MouseOverDoor(door)) {
+                color = WHITE;
+            }
+            Renderer::QueuePointForDrawing(Point(door.GetVertFrontLeft(0.0f), LIGHT_BLUE));
+            Renderer::QueuePointForDrawing(Point(door.GetVertFrontRight(0.0f), LIGHT_BLUE));
+            Renderer::QueuePointForDrawing(Point(door.GetVertBackLeft(0.0f), LIGHT_BLUE));
+            Renderer::QueuePointForDrawing(Point(door.GetVertBackRight(0.0f), LIGHT_BLUE));
+        }
         Triangle triA;
-        triA.color = LIGHT_BLUE;
+        triA.color = color;
         triA.p3 = door.GetVertFrontLeft(0);
         triA.p2 = door.GetVertFrontRight(0);
         triA.p1 = door.GetVertBackRight(0);
         Triangle triB;
-        triB.color = LIGHT_BLUE;
+        triB.color = color;
         triB.p1 = door.GetVertBackLeft(0);
         triB.p2 = door.GetVertFrontRight(0);
         triB.p3 = door.GetVertBackRight(0);
         Renderer::QueueTriangleForSolidRendering(triA);
         Renderer::QueueTriangleForSolidRendering(triB);
     }
-
-    //Renderer::QueuePointForDrawing(Point(glm::vec3(0, 0, 0), YELLOW));
-   // Renderer::QueuePointForDrawing(Point(glm::vec3(1, 0, 1), YELLOW));
-    //Renderer::QueuePointForDrawing(Point(glm::vec3(1, 0, 2), YELLOW));
 }
 
 glm::mat4 Editor::GetProjectionMatrix() {
@@ -281,4 +510,19 @@ glm::mat4 Editor::GetProjectionMatrix() {
 }
 glm::mat4 Editor::GetViewMatrix() {
     return _view;
+}
+
+void Editor::NextMode() {
+    _mode = (EditorMode)(int(_mode) + 1);
+    if (_mode == MODE_COUNT)
+        _mode = (EditorMode)0;
+    _action = IDLE;
+}
+
+void Editor::PreviousMode() {
+    if (int(_mode) == 0)
+        _mode = EditorMode(int(MODE_COUNT) - 1);
+    else
+        _mode = (EditorMode)(int(_mode) - 1);
+    _action = IDLE;
 }

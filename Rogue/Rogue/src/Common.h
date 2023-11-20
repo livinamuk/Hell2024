@@ -190,9 +190,9 @@ struct Extent2Di {
 
 struct UIRenderInfo {
     std::string textureName;
-    int screenX;
-    int screenY;
-    glm::mat4 modelMatrix;
+    int screenX = 0;
+    int screenY = 0;
+    glm::mat4 modelMatrix = glm::mat4(1);
     bool centered = false;
     GLuint target = GL_TEXTURE_2D;
     void* parent = nullptr;
