@@ -81,6 +81,8 @@ struct Wall {
     glm::vec3 GetNormal();
     glm::vec3 GetMidPoint();
     void Draw();
+    std::vector<Transform> ceilingTrims;
+    std::vector<Transform> floorTrims;
 };
 
 struct Floor {

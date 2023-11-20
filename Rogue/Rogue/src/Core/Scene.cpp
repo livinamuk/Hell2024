@@ -38,7 +38,7 @@ void Scene::Update(float deltaTime) {
     lightPos.x = lightPos.x + (cos(time)) * 2;
     lightPos.y = lightPos.y;
     lightPos.z = lightPos.z + (sin(2 * time) / 2) * 2;
-    light.position = lightPos;
+    //light.position = lightPos;
 
 
     for (Door& door : _doors) {
@@ -182,7 +182,7 @@ void Scene::Init() {
     Door doorA(glm::vec3(2.05f, 0.1f, 6.95f), -HELL_PI / 2);
     AddDoor(doorA);
 
-    Door doorB(glm::vec3(0.05f, 0.1f, 3.55f), 0.0f);
+    Door doorB(glm::vec3(0.05f, 0.1f, 3.45f), 0.0f);
     AddDoor(doorB);
 
     //Door doorC(glm::vec3(0.05f, 0.1f, 1.5f), 0.0f);
@@ -453,13 +453,18 @@ void Scene::LoadLightSetup(int index) {
     if (index == 1) {
         _lights.clear();
         Light lightD;
-        //lightD.x = 21;
-        //lightD.y = 21;
-        //lightD.z = 18;
+        lightD.position = glm::vec3(4.2, 4.2, 3.6); 
         lightD.radius = 3.0f;
         lightD.strength = 5.0f;
         lightD.radius = 10;
         _lights.push_back(lightD);
+
+        Light lightA;
+        lightA.position = glm::vec3(door2X, 2.0, 9.0);
+        lightA.strength = 1.0f;
+        lightA.radius = 4;
+        lightA.color = glm::vec3(1, 0, 0);
+        _lights.push_back(lightA);
     }
 
     if (index == 2) {
@@ -655,8 +660,10 @@ Wall::Wall(glm::vec3 begin, glm::vec3 end, float height, int materialIndex, bool
 }
 
 void Wall::CreateMesh() {
-    
+
     vertices.clear();
+    ceilingTrims.clear();
+    floorTrims.clear();
 
     // Init shit
     bool finishedBuildingWall = false;
@@ -664,7 +671,11 @@ void Wall::CreateMesh() {
     glm::vec3 wallEnd = end;
     glm::vec3 cursor = wallStart;
     glm::vec3 wallDir = glm::normalize(wallEnd - cursor);
-    float texCoordScale = 2.0f;
+    float texScale = 2.0f;
+    float uvX1 = 0;
+    float uvX2 = 0;
+
+    bool hasTrims = (height == WALL_HEIGHT);
 
     int count = 0;
     while (!finishedBuildingWall || count > 1000) {
@@ -709,12 +720,13 @@ void Wall::CreateMesh() {
             v2.position = cursor + glm::vec3(0, height, 0);
             v3.position = intersectionPoint + glm::vec3(0, height, 0);
             v4.position = intersectionPoint;
-            float wallWidth = glm::length((v4.position - v1.position)) / height;
-            float wallHeight = glm::length((v2.position - v1.position)) / height;
-            v1.uv = glm::vec2(0, 0);
-            v2.uv = glm::vec2(0, wallHeight);
-            v3.uv = glm::vec2(wallWidth, wallHeight);
-            v4.uv = glm::vec2(wallWidth, 0);
+            float segmentWidth = abs(glm::length((v4.position - v1.position))) / WALL_HEIGHT;
+            float segmentHeight = glm::length((v2.position - v1.position)) / WALL_HEIGHT;
+            uvX2 = uvX1 + segmentWidth;
+            v1.uv = glm::vec2(uvX1, segmentHeight) * texScale;
+            v2.uv = glm::vec2(uvX1, 0) * texScale;
+            v3.uv = glm::vec2(uvX2, 0) * texScale;
+            v4.uv = glm::vec2(uvX2, segmentHeight) * texScale;
             SetNormalsAndTangentsFromVertices(&v3, &v2, &v1);
             SetNormalsAndTangentsFromVertices(&v3, &v1, &v4);
             vertices.push_back(v3);
@@ -724,18 +736,29 @@ void Wall::CreateMesh() {
             vertices.push_back(v1);
             vertices.push_back(v4);
 
+            if (hasTrims) {
+                Transform trimTransform;
+                trimTransform.position = cursor;
+                trimTransform.rotation.y = Util::YRotationBetweenTwoPoints(v4.position, v1.position) + HELL_PI;
+                trimTransform.scale.x = segmentWidth * WALL_HEIGHT;
+                ceilingTrims.push_back(trimTransform);
+                floorTrims.push_back(trimTransform);
+            }
+
             // Bit above the door
             Vertex v5, v6, v7, v8;
             v5.position = intersectionPoint + glm::vec3(0, DOOR_HEIGHT, 0);
             v6.position = intersectionPoint + glm::vec3(0, height, 0);
             v7.position = intersectionPoint + (wallDir * (DOOR_WIDTH + 0.005f)) + glm::vec3(0, height, 0);
             v8.position = intersectionPoint + (wallDir * (DOOR_WIDTH + 0.005f)) + glm::vec3(0, DOOR_HEIGHT, 0);
-            wallWidth = glm::length((v8.position - v5.position)) / WALL_HEIGHT;
-            wallHeight = glm::length((v6.position - v5.position)) / WALL_HEIGHT;
-            v5.uv = glm::vec2(0, 0);
-            v6.uv = glm::vec2(0, wallHeight);
-            v7.uv = glm::vec2(wallWidth, wallHeight);
-            v8.uv = glm::vec2(wallWidth, 0);
+            segmentWidth = abs(glm::length((v8.position - v5.position))) / WALL_HEIGHT;
+            segmentHeight = glm::length((v6.position - v5.position)) / WALL_HEIGHT;
+            uvX1 = uvX2;
+            uvX2 = uvX1 + segmentWidth;
+            v5.uv = glm::vec2(uvX1, segmentHeight) * texScale;
+            v6.uv = glm::vec2(uvX1, 0) * texScale;
+            v7.uv = glm::vec2(uvX2, 0) * texScale;
+            v8.uv = glm::vec2(uvX2, segmentHeight) * texScale;
             SetNormalsAndTangentsFromVertices(&v7, &v6, &v5);
             SetNormalsAndTangentsFromVertices(&v7, &v5, &v8);
             vertices.push_back(v7);
@@ -745,8 +768,19 @@ void Wall::CreateMesh() {
             vertices.push_back(v5);
             vertices.push_back(v8);
 
-            cursor = intersectionPoint + (wallDir * (DOOR_WIDTH + 0.005f)); // This 0.05 is so you don't get an intersection with the door itself
+            if (hasTrims) {
+                Transform trimTransform;
+                trimTransform.position = intersectionPoint;
+                trimTransform.rotation.y = Util::YRotationBetweenTwoPoints(v4.position, v1.position) + HELL_PI;
+                trimTransform.scale.x = segmentWidth * WALL_HEIGHT;
+                ceilingTrims.push_back(trimTransform);
+            }
 
+            cursor = intersectionPoint + (wallDir * (DOOR_WIDTH + 0.005f)); // This 0.05 is so you don't get an intersection with the door itself
+            uvX1 = uvX2;
+
+
+            //floorTrims.clear();
        }
         
         // You're on the final bit of wall then aren't ya
@@ -758,12 +792,14 @@ void Wall::CreateMesh() {
             v2.position = cursor + glm::vec3(0, height, 0);
             v3.position = wallEnd + glm::vec3(0, height, 0);
             v4.position = wallEnd;
-            float wallWidth = glm::length((v4.position - v1.position)) / height;
-            float wallHeight = glm::length((v2.position - v1.position)) / height;
-            v1.uv = glm::vec2(0, 0);
-            v2.uv = glm::vec2(0, wallHeight);
-            v3.uv = glm::vec2(wallWidth, wallHeight);
-            v4.uv = glm::vec2(wallWidth, 0);
+            float segmentWidth = abs(glm::length((v4.position - v1.position))) / WALL_HEIGHT;
+            float segmentHeight = glm::length((v2.position - v1.position)) / WALL_HEIGHT;            
+            uvX2 = uvX1 + segmentWidth;
+            v1.uv = glm::vec2(uvX1, segmentHeight) * texScale;
+            v2.uv = glm::vec2(uvX1, 0) * texScale;
+            v3.uv = glm::vec2(uvX2, 0) * texScale;
+            v4.uv = glm::vec2(uvX2, segmentHeight) * texScale;
+
             SetNormalsAndTangentsFromVertices(&v3, &v2, &v1);
             SetNormalsAndTangentsFromVertices(&v3, &v1, &v4);
             vertices.push_back(v3);
@@ -773,6 +809,15 @@ void Wall::CreateMesh() {
             vertices.push_back(v1);
             vertices.push_back(v4);     
             finishedBuildingWall = true;
+
+            if (hasTrims) {
+                Transform trimTransform;
+                trimTransform.position = cursor;
+                trimTransform.rotation.y = Util::YRotationBetweenTwoPoints(v4.position, v1.position) + HELL_PI;
+                trimTransform.scale.x = segmentWidth * WALL_HEIGHT;
+                ceilingTrims.push_back(trimTransform);
+                floorTrims.push_back(trimTransform);
+            }
         }
     }
        

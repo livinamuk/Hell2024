@@ -392,6 +392,7 @@ void DrawScene(Shader& shader) {
     shader.SetMat4("model", glm::mat4(1));
 
     AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("Ceiling"));
+    //AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("NumGrid"));
     for (Wall& wall : Scene::_walls) {
         //AssetManager::BindMaterialByIndex(wall.materialIndex);
         wall.Draw();
@@ -412,30 +413,21 @@ void DrawScene(Shader& shader) {
     static int trimFloorMaterialIndex = AssetManager::GetMaterialIndex("Door");
 
     // Ceiling trims
-    /*AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("Ceiling"));
+   AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("Ceiling"));
     for (Wall& wall : Scene::_walls) {
-        if (!wall.hasTopTrim)
-            continue;
-        Transform t;
-        t.position = wall.begin;
-        t.position.y = wall.topTrimBottom;
-        t.rotation.y = Util::YRotationBetweenTwoPoints(wall.begin, wall.end);
-        t.scale.x = glm::distance(wall.end, wall.begin);
-        shader.SetMat4("model", t.to_mat4());
-        AssetManager::GetModel("TrimCeiling").Draw();
-    }
+        for (auto& transform : wall.ceilingTrims) {
+            shader.SetMat4("model", transform.to_mat4());
+            AssetManager::GetModel("TrimCeiling").Draw();
+        }
+    } 
     // Floor trims
     AssetManager::BindMaterialByIndex(trimFloorMaterialIndex);
     for (Wall& wall : Scene::_walls) {
-        if (!wall.hasBottomTrim)
-            continue;
-        Transform t;
-        t.position = wall.begin;
-        t.rotation.y = Util::YRotationBetweenTwoPoints(wall.begin, wall.end);
-        t.scale.x = glm::distance(wall.end, wall.begin) * 0.5f;
-        shader.SetMat4("model", t.to_mat4());
-        AssetManager::GetModel("TrimFloor").Draw();
-    }*/
+        for (auto& transform : wall.floorTrims) {
+            shader.SetMat4("model", transform.to_mat4());
+            AssetManager::GetModel("TrimFloor").Draw();
+        }
+    }
 
     // Render game objects
     for (GameObject& gameObject : Scene::_gameObjects) {
@@ -1049,7 +1041,16 @@ void UpdatePointCloudLighting() {
     _shaders.pointCloud.Use();
     _shaders.pointCloud.SetInt("meshCount", Scene::_rtMesh.size());
     _shaders.pointCloud.SetInt("instanceCount", Scene::_rtInstances.size());
-    _shaders.pointCloud.SetVec3("lightPosition", Scene::_lights[0].position);
+    //_shaders.pointCloud.SetVec3("lightPosition", Scene::_lights[0].position);
+
+    auto& lights = Scene::_lights;
+    for (int i = 0; i < lights.size(); i++) {
+        _shaders.pointCloud.SetVec3("lightPosition[" + std::to_string(i) + "]", lights[i].position);
+        _shaders.pointCloud.SetVec3("lightColor[" + std::to_string(i) + "]", lights[i].color);
+        _shaders.pointCloud.SetFloat("lightRadius[" + std::to_string(i) + "]", lights[i].radius);
+        _shaders.pointCloud.SetFloat("lightStrength[" + std::to_string(i) + "]", lights[i].strength);
+    }
+
     int pointCloudSize = Scene::_cloudPoints.size();
     glDispatchCompute(std::ceil(pointCloudSize / 64.0f), 1, 1);
     glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);

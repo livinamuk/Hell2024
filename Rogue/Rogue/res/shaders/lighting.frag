@@ -287,6 +287,8 @@ void main() {
     directLighting += shadow0 * ligthting0;
     directLighting += shadow1 * ligthting1;
 
+    directLighting = clamp(directLighting, 0, 1);
+
     // Indirect lighthing
     vec3 WorldPos2 = WorldPos + (normal * 0.01);
     vec3 indirectLighting = GetIndirectLighting(WorldPos2, normal);
@@ -297,6 +299,7 @@ void main() {
 
     // Composite
     vec3 composite = directLighting  + (indirectLighting * baseColor);
+  //  vec3 composite = directLighting  + (indirectLighting * texture(basecolorTexture, TexCoords).rgb);
     FragColor.rgb = vec3(composite);
 
     // Final color
