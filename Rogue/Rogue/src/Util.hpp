@@ -14,6 +14,11 @@
 
 namespace Util {
 
+    inline float DistanceSquared(glm::vec3 A, glm::vec3 B) {
+        glm::vec3 C = A - B;
+        return glm::dot(C, C);
+    }
+
     inline glm::vec3 Translate(glm::mat4& translation, glm::vec3 position) {
         return translation * glm::vec4(position, 1.0);
     }

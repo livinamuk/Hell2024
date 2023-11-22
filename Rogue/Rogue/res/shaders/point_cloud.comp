@@ -17,10 +17,15 @@ struct RTMesh {
 
 struct RTInstance {
     mat4 modelMatrix;
+    mat4 inverseModelMatrix;
     int meshIndex;
     int padding0;
     int padding1;
     int padding2;
+};
+
+layout(std430, binding = 0) readonly buffer dirtyPointCloudIndices {
+    int DirtyPointCloudIndices[];
 };
 
 layout(std430, binding = 1) readonly buffer vertices {
@@ -39,10 +44,19 @@ layout(std430, binding = 4) readonly buffer instances {
     RTInstance Instances[];
 };
 
-layout (location = 0) uniform vec3 lightPosition[4];
-layout (location = 7) uniform float lightStrength[4];
-layout (location = 5) uniform int meshCount;
-layout (location = 6) uniform int instanceCount;
+struct Light {
+	vec3 position;
+	vec3 color;
+	float strength;
+	float radius;
+};
+
+layout (location = 0) uniform int meshCount;
+layout (location = 1) uniform int instanceCount;
+
+layout (location = 3) uniform int lightCount; // send lights count to here max 32 because i said so
+
+layout (location = 4) uniform Light lights[32];
 
 bool TriIntersect(vec3 origin, vec3 direction, float rayMin, float rayMax, vec3 v0, vec3 v1, vec3 v2) {
 
@@ -83,8 +97,8 @@ bool AnyHit(vec3 origin, vec3 direction, float rayMin, float rayMax) {
 		int baseVertex = mesh.baseVertex;
 		int vertexCount = mesh.vertexCount;
 
-		vec3 adjustedDirection = normalize(inverse(instance.modelMatrix) * vec4(direction, 0.0)).xyz;;
-		vec3 adjustedOrigin = (inverse(instance.modelMatrix) * vec4(origin, 1.0)).xyz;;
+		vec3 adjustedDirection = normalize(instance.inverseModelMatrix * vec4(direction, 0.0)).xyz;
+		vec3 adjustedOrigin = (instance.inverseModelMatrix * vec4(origin, 1.0)).xyz;
 
 		for (int j = baseVertex; j < vertexCount + baseVertex; j+=3) {	
 			vec3 v0 = Vertices[j + 0].xyz;
@@ -101,70 +115,33 @@ bool AnyHit(vec3 origin, vec3 direction, float rayMin, float rayMax) {
 
 void main() {
 
-    const uint i = (gl_WorkGroupID.x * 64) + gl_LocalInvocationID.x;
-    
+    const uint k = (gl_WorkGroupID.x * 64) + gl_LocalInvocationID.x;
+	const int i = DirtyPointCloudIndices[k];
+
 	vec3 origin = PointCloud[i].position.xyz;
 	vec3 normal = PointCloud[i].normal.xyz;
 	
 	PointCloud[i].color.xyz = vec3(0,0,0);
-
-	vec3 lightPos = lightPosition[0];
-	vec3 lightColor = vec3(1, 0.8, 0.55);
-	float lightRadius = 8;
-	float lightStrength = 1;//lightStrength[0];
-	float distToLight = distance(lightPos, origin);
-	vec3 l = normalize(lightPos - origin);
-
-	if (!AnyHit(origin, l, 0.000001, distToLight)) {
-		float att = smoothstep(lightRadius, 0.0, length(lightPos - origin));
-		vec3 n = normal;
-		float ndotl = clamp(dot(n, l), 0.0f, 1.0f);  
-		vec3 radiance = vec3(lightColor) * att * lightStrength * ndotl * 1.0;
-		PointCloud[i].color.xyz += radiance;
-	} 
-	else {
-		//PointCloud[i].color.xyz = vec3(0,0,0);
-	}
-
-		{
-		vec3 lightPos = vec3(2.05, 2, 9.0);
-		vec3 lightColor = vec3(1, 0, 0);
-		float lightRadius = 5;
-		float lightStrength = 10.0;
+	
+    for(int j = 0; j < lightCount; j++)
+	{
+		vec3 lightPos = lights[j].position;
+		vec3 lightColor = lights[j].color;
+		float lightRadius = lights[j].radius;
+		float lightStrength = lights[j].strength;
 		float distToLight = distance(lightPos, origin);
 		vec3 l = normalize(lightPos - origin);
 
 		if (!AnyHit(origin, l, 0.000001, distToLight)) {
 			float att = smoothstep(lightRadius, 0.0, length(lightPos - origin));
-			vec3 n = normal;			
+			vec3 n = normal;
 			float ndotl = clamp(dot(n, l), 0.0f, 1.0f);  
 			vec3 radiance = vec3(lightColor) * att * lightStrength * ndotl * 1.0;
 			PointCloud[i].color.xyz += radiance;
 		} 
 		else {
-
+			//PointCloud[i].color.xyz = vec3(0,0,0);
 		}
-
-		
-		{
-			vec3 lightPos = lightPosition[2];
-			vec3 lightColor = vec3(0, 1, 1);
-			float lightRadius = 5;
-			float lightStrength = 10.0;
-			float distToLight = distance(lightPos, origin);
-			vec3 l = normalize(lightPos - origin);
-
-			if (!AnyHit(origin, l, 0.000001, distToLight)) {
-				float att = smoothstep(lightRadius, 0.0, length(lightPos - origin));
-				vec3 n = normal;			
-				float ndotl = clamp(dot(n, l), 0.0f, 1.0f);  
-				vec3 radiance = vec3(lightColor) * att * lightStrength * ndotl * 1.0;
-				PointCloud[i].color.xyz += radiance;
-			} 
-			else {
-
-			}
-		}
-
+		// PointCloud[i].color.xyz = vec3(1,0,0);
 	}
 }

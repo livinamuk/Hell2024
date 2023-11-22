@@ -231,5 +231,7 @@
     <None Include="res\shaders\debug_view_propogation_grid.frag" />
     <None Include="res\shaders\editor_textured.frag" />
     <None Include="res\shaders\editor_textured.vert" />
+    <None Include="res\shaders\propogation_list.comp" />
+    <None Include="res\shaders\calculate_inidrect_dispatch_size.comp" />
   </ItemGroup>
 </Project>

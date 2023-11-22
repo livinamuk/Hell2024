@@ -186,10 +186,16 @@ vec3 microfacetBRDF(in vec3 L, in vec3 V, in vec3 N, in vec3 baseColor, in float
 vec3 GetDirectLighting(vec3 lightPos, vec3 lightColor, float radius, float strength, vec3 Normal, vec3 WorldPos, vec3 baseColor, float roughness, float metallic) {
 	float fresnelReflect = 1.0; // 0.5 is what they used for box, 1.0 for demon
 	vec3 viewDir = normalize(viewPos - WorldPos);    
-	float lightRadiance = strength * 1.25;
+	float lightRadiance = strength * 1;// * 1.25;
     vec3 lightDir = normalize(lightPos - WorldPos); 
-	float lightDist = length(lightPos - WorldPos);
-	float lightAttenuation = 1.0 / (lightDist*lightDist);
+//	float lightDist = length(lightPos - WorldPos);
+//	float lightAttenuation = 1.0 / (lightDist*lightDist);
+
+   float lightAttenuation = smoothstep(radius, 0, length(lightPos - WorldPos));
+    lightAttenuation *= 0.25;
+ //   float compression = 0.5;
+   // lightAttenuation = pow(smoothstep(radius * 2, 0, length(lightPos - WorldPos)), compression);
+
 	lightAttenuation = clamp(lightAttenuation, 0.0, 0.9); // THIS IS WRONG, but does stop super bright region around light source and doesn't seem to affect anything else...
 	float irradiance = max(dot(lightDir, Normal), 0.0) ;
 	irradiance *= lightAttenuation * lightRadiance;		
@@ -281,11 +287,14 @@ void main() {
      // Direct lightihng
     float shadow0 = ShadowCalculation(shadowMap0, lightPosition[0], WorldPos, viewPos, normal);
     float shadow1 = ShadowCalculation(shadowMap1, lightPosition[1], WorldPos, viewPos, normal);
+    float shadow2 = ShadowCalculation(shadowMap2, lightPosition[2], WorldPos, viewPos, normal);
     vec3 ligthting0 = GetDirectLighting(lightPosition[0], lightColor[0], lightRadius[0], lightStrength[0], normal, WorldPos, baseColor, roughness, metallic);
     vec3 ligthting1 = GetDirectLighting(lightPosition[1], lightColor[1], lightRadius[1], lightStrength[1], normal, WorldPos, baseColor, roughness, metallic);  
+    vec3 ligthting2 = GetDirectLighting(lightPosition[2], lightColor[2], lightRadius[2], lightStrength[2], normal, WorldPos, baseColor, roughness, metallic);  
     vec3 directLighting = vec3(0);
     directLighting += shadow0 * ligthting0;
     directLighting += shadow1 * ligthting1;
+    directLighting += shadow2 * ligthting2;
 
     directLighting = clamp(directLighting, 0, 1);
 
@@ -298,7 +307,7 @@ void main() {
 
     vec3 adjustedIndirectLighting = indirectLighting;
     float factor = min(1, roughness * 1.5);
-    adjustedIndirectLighting *= (0.375) * vec3(factor); 
+    adjustedIndirectLighting *= (0.4) * vec3(factor); 
     adjustedIndirectLighting = max(adjustedIndirectLighting, vec3(0));
     adjustedIndirectLighting *= baseColor;
 
@@ -383,4 +392,6 @@ void main() {
     //FragColor.rgb = vec3(baseColor);
     //FragColor.rgb = vec3(baseColor);
     //FragColor.rgb = pow(FragColor.rgb, vec3(1.0/2.2)); 
+
+  //  FragColor.rgb = vec3(normal);
 }

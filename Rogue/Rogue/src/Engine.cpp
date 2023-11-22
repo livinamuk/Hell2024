@@ -74,7 +74,7 @@ void Engine::Init() {
 
     std::cout << "We are all alone on life's journey, held captive by the limitations of human conciousness.\n";
 
-    GL::Init(1920, 1080);
+    GL::Init(1920 * 1.5f, 1080 * 1.5f);
     Input::Init();
     Player::Init(glm::vec3(4.0f, 0, 3.6f));
     Player::SetRotation(glm::vec3(-0.17, 1.54f, 0));

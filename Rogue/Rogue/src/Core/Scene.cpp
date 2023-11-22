@@ -8,9 +8,22 @@
 #include "TextBlitter.h"
 
 #define DOOR_VOLUME 1.0f
+#define INTERACT_DISTANCE 2.5f
 float door2X = 2.05f;
 
 void Scene::Update(float deltaTime) {
+
+    // Are lights dirty? occurs when a door opens within their radius
+    // Which triggers update of the point cloud, and then propogation grid
+    for (auto& light : _lights) {
+        for (auto& door : _doors) {
+            if (door.state == Door::State::OPENING || door.state == Door::State::CLOSING) {
+                if (Util::DistanceSquared(door.position, light.position) < (light.radius + DOOR_WIDTH) * (light.radius + DOOR_WIDTH)) {
+                    light.isDirty = true;
+                }
+            }
+        }
+    }
 
     for (AnimatedGameObject& animatedGameObject : _animatedGameObjects) {
         animatedGameObject.Update(deltaTime);
@@ -27,7 +40,7 @@ void Scene::Update(float deltaTime) {
         float amplitude = 0.02;
         totalTime += 1.0f / 60;
         Scene::_lights[2].strength = 0.3f + sin(totalTime * frequency) * amplitude;
-    }
+	 }
 
     // Move light 0 in a figure 8
     static bool figure8Light = true;
@@ -46,19 +59,30 @@ void Scene::Update(float deltaTime) {
         lightPos.x = lightPos.x + (cos(time)) * 2;
         lightPos.y = lightPos.y;
         lightPos.z = lightPos.z + (sin(2 * time) / 2) * 2;
+        light.isDirty = true;
     }
     light.position = lightPos;
-
 
     for (Door& door : _doors) {
         door.Update(deltaTime);
     }
-
     // Pressing E opens/closeds Door 2
     if (Input::KeyPressed(HELL_KEY_E)) {
-        if (_cameraRayData.raycastObjectType == RaycastObjectType::DOOR) {
-            Door* door = (Door*)(_cameraRayData.parent);
-            door->Interact();
+
+        switch(_cameraRayData.raycastObjectType) {
+
+            case RaycastObjectType::DOOR: {
+
+                Door* door = (Door*)(_cameraRayData.parent);
+
+                if(!door->IsInteractable()) {
+                    break;
+                }
+
+                door->Interact();
+            } break;
+            default:
+                break;
         }
     }
 
@@ -481,6 +505,7 @@ void Scene::AddFloor(Floor& floor) {
 void Scene::LoadLightSetup(int index) {
     if (index == 1) {
         _lights.clear();
+        return;
         Light lightD;
         lightD.position = glm::vec3(4.2, 4.2, 3.6); 
         lightD.radius = 3.0f;
@@ -495,33 +520,36 @@ void Scene::LoadLightSetup(int index) {
         lightA.color = glm::vec3(1, 0, 0);
         _lights.push_back(lightA);
 
-
-        _lights.clear();
-        Light lightB;
-        lightB.position = glm::vec3(4.2, 4.2, 3.6);
-        lightB.radius = 3.0f;
-        lightB.strength = 5.0f;
-        lightB.radius = 10;
-        _lights.push_back(lightB);
+        return;
     }
 
     if (index == 2) {
         _lights.clear();
         Light lightD;
         lightD.position = glm::vec3(2.8, 2.2, 3.6);
-        lightD.strength = 1.0f;
-        lightD.radius = 10;
+        lightD.strength = 1.0f;// *1.25f;
+        lightD.radius = 6;
         _lights.push_back(lightD);
+
+        Light lightB;
+        lightB.position = glm::vec3(2.05, 2, 9.0);;
+        lightB.radius = 3.0f;
+        lightB.strength = 5.0f;// *1.25f;
+        lightB.radius = 4;
+        lightB.color = RED;
+        _lights.push_back(lightB);
 
         Light lightA;
         lightA.position = glm::vec3(11, 2.0, 6.0);
-        lightA.strength = 1.0f;
+        lightA.strength = 1.0f;// *1.25f;
         lightA.radius = 4;
         lightA.color = LIGHT_BLUE;
         _lights.push_back(lightA);
     }
 
     if (index == 0) {
+
+        return;
         _lights.clear();
         Light lightA;
        // lightA.x = 22;// 3;// 27;// 3;
@@ -592,19 +620,27 @@ void Scene::CreateRTInstanceData() {
     RTInstance& houseInstance = _rtInstances.emplace_back(RTInstance());
     houseInstance.meshIndex = 0;
     houseInstance.modelMatrix = glm::mat4(1);
+    houseInstance.inverseModelMatrix = glm::inverse(glm::mat4(1));
 
     for (Door& door : _doors) {
         RTInstance& houseInstance = _rtInstances.emplace_back(RTInstance());
         houseInstance.meshIndex = 1;
         houseInstance.modelMatrix = door.GetDoorModelMatrix();
+        houseInstance.inverseModelMatrix = glm::inverse(houseInstance.modelMatrix);
     }
 }
 
 bool Scene::CursorShouldBeInterect() {
-    if (_cameraRayData.raycastObjectType == RaycastObjectType::DOOR) {
-        return true;
+
+    switch(_cameraRayData.raycastObjectType) {
+
+        case RaycastObjectType::DOOR: {
+			Door* door = (Door*)(_cameraRayData.parent);
+			return door->IsInteractable();
+        }
+        default:
+            return false;
     }
-    return false;
 }
 
 void Scene::RecreateDataStructures() {
@@ -968,6 +1004,11 @@ glm::vec3 Door::GetVertBackLeft(float padding) {
 
 glm::vec3 Door::GetVertBackRight(float padding) {
     return GetFrameModelMatrix() * glm::vec4(-DOOR_EDITOR_DEPTH- padding, 0, (-DOOR_WIDTH / 2), 1.0f);
+}
+
+bool Door::IsInteractable() {
+    float distSqrd = Util::DistanceSquared(position, Player::GetFeetPosition());
+    return distSqrd < (INTERACT_DISTANCE * INTERACT_DISTANCE);
 }
 
 

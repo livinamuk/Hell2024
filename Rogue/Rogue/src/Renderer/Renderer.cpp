@@ -44,12 +44,20 @@ struct Shaders {
     ComputeShader compute;
     ComputeShader pointCloud;
     ComputeShader propogateLight;
+    ComputeShader propogationList;
+    ComputeShader calculateIndirectDispatchSize;
 } _shaders;
 
 struct SSBOs {
     GLuint rtVertices = 0;
     GLuint rtMesh = 0;
     GLuint rtInstances = 0;
+    GLuint dirtyPointCloudIndices = 0;
+    //GLuint dirtyGridChunks = 0; // 4x4x4
+    GLuint atomicCounter = 0;
+    GLuint propogationList = 0; // contains coords of all dirty grid points
+    GLuint indirectDispatchSize = 0;
+    GLuint floorVertices = 0;
 } _ssbos;
 
 struct PointCloud {
@@ -81,11 +89,21 @@ std::vector<ShadowMap> _shadowMaps;
 GLuint _imageStoreTexture = { 0 };
 bool _depthOfFieldScene = 0.9f;
 bool _depthOfFieldWeapon = 1.0f;
-float _propogationGridSpacing = 0.4;
-float  _pointCloudSpacing = 0.4;
-float _mapWidth = 24;
+float _propogationGridSpacing = 0.4f;
+float _pointCloudSpacing = 0.4f;
+float _maxPropogationDistance = 2.6f;
+float _mapWidth = 16;
 float _mapHeight = 8;
-float _mapDepth = 24;
+float _mapDepth = 16; 
+std::vector<int> _dirtyPointCloudIndices;
+std::vector<glm::uvec4> _dirtyGridChunks;
+int _floorVertexCount;
+
+const int _gridTextureWidth = _mapWidth / _propogationGridSpacing;
+const int _gridTextureHeight = _mapHeight / _propogationGridSpacing;
+const int _gridTextureDepth = _mapDepth / _propogationGridSpacing;
+const int _gridTextureSize = _gridTextureWidth * _gridTextureHeight * _gridTextureDepth;
+
 
 enum RenderMode { COMPOSITE, DIRECT_LIGHT, INDIRECT_LIGHT, POINT_CLOUD,  MODE_COUNT} _mode;
 
@@ -116,7 +134,7 @@ void Renderer::Init() {
     _shaders.UI.Load("ui.vert", "ui.frag");
     _shaders.editorSolidColor.Load("editor_solid_color.vert", "editor_solid_color.frag");
     _shaders.composite.Load("composite.vert", "composite.frag");
-     _shaders.fxaa.Load("fxaa.vert", "fxaa.frag");
+    _shaders.fxaa.Load("fxaa.vert", "fxaa.frag");
     _shaders.animatedQuad.Load("animated_quad.vert", "animated_quad.frag");
     _shaders.depthOfField.Load("depth_of_field.vert", "depth_of_field.frag");
     _shaders.debugViewPointCloud.Load("debug_view_point_cloud.vert", "debug_view_point_cloud.frag");
@@ -125,6 +143,7 @@ void Renderer::Init() {
     _shaders.debugViewPropgationGrid.Load("debug_view_propogation_grid.vert", "debug_view_propogation_grid.frag");
     _shaders.editorTextured.Load("editor_textured.vert", "editor_textured.frag");
     
+
     _cubeMesh = MeshUtil::CreateCube(1.0f, 1.0f, true);
 
     RecreateFrameBuffers();
@@ -142,6 +161,87 @@ void Renderer::Init() {
 }
 
 void Renderer::RenderFrame() {
+
+    if (Input::KeyPressed(HELL_KEY_T)) {
+        for (Light& light : Scene::_lights) {
+            light.isDirty = true;
+        }
+    }   
+    if (Input::KeyPressed(HELL_KEY_C)) {
+        Scene::_lights[1].isDirty = true;
+    }
+
+
+
+
+    // If the area within the lights radius has been modified, queue all the relevant cloud points
+    for (auto& light : Scene::_lights) {
+        if (light.isDirty) {
+            for (int i = 0; i < Scene::_cloudPoints.size(); i++) {
+                CloudPoint& cloudPoint = Scene::_cloudPoints[i];
+                if (Util::DistanceSquared(cloudPoint.position, light.position) < light.radius * light.radius) {
+                    // If index doesn't exist, then add it
+                    bool found = false;
+                    for (int j = 0; j < _dirtyPointCloudIndices.size(); j++) {
+                        if (_dirtyPointCloudIndices[j] == i) {
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (!found) {
+                        _dirtyPointCloudIndices.push_back(i);
+                    }
+                }
+            }
+        }
+    }
+
+    // Find which probe co-orindates are within range of cloud points that just changed  
+
+    int textureWidth = _mapWidth / _propogationGridSpacing;
+    int textureHeight = _mapHeight / _propogationGridSpacing;
+    int textureDepth = _mapDepth / _propogationGridSpacing;
+
+    float texelsPerChunk = 4.0f;
+
+    int xChunksCount = textureWidth / texelsPerChunk;
+    int yChunksCount = textureHeight / texelsPerChunk;
+    int zChunksCount = textureDepth / texelsPerChunk;
+
+    glm::vec3 chunkHalfSize = glm::vec3(texelsPerChunk * _propogationGridSpacing * 0.5f);
+    float adjustedDistance = _maxPropogationDistance + chunkHalfSize.x; // your searching from the center of a chunk, so you add the half chunk distance
+    float maxDistSquared = adjustedDistance * adjustedDistance;
+
+    _dirtyGridChunks.clear();
+    _dirtyGridChunks.reserve(xChunksCount * yChunksCount * zChunksCount);
+
+    for (int x = 0; x < xChunksCount; x++) {
+        for (int y = 0; y < yChunksCount; y++) {
+            for (int z = 0; z < zChunksCount; z++) {
+                glm::vec3 chunkCenter = (glm::vec3(x, y, z) * texelsPerChunk * _propogationGridSpacing) + chunkHalfSize;
+                for (int& index : _dirtyPointCloudIndices) {
+                    glm::vec3 pointPosition = Scene::_cloudPoints[index].position;
+                    if (Util::DistanceSquared(pointPosition, chunkCenter) < maxDistSquared) {
+                        _dirtyGridChunks.push_back(glm::uvec4(x, y, z, 0));
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    // _dirtyPointCloudIndices.size(): 1654
+    // _dirtyGridChunks.size() : 471
+     //   total iterations over 3d tex : 500
+
+
+    /*if (_dirtyPointCloudIndices.size()) {
+        std::cout << "\n_dirtyPointCloudIndices.size(): " << _dirtyPointCloudIndices.size() << "\n";
+        std::cout << "_dirtyGridChunks.size(): " << _dirtyGridChunks.size() << "\n";
+        int iterationCount = xChunksCount * yChunksCount * zChunksCount;
+        std::cout << "total possible chunks: " << iterationCount << "\n";
+    }*/
+
 
     ComputePass(); // Fills the indirect lighting data structures
     RenderShadowMaps();
@@ -226,6 +326,12 @@ void Renderer::RenderFrame() {
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
     glReadBuffer(GL_COLOR_ATTACHMENT1);
     glBlitFramebuffer(0, 0, _presentFrameBuffer.GetWidth(), _presentFrameBuffer.GetHeight(), 0, 0, GL::GetWindowWidth(), GL::GetWindowHeight(), GL_COLOR_BUFFER_BIT, GL_NEAREST);
+
+
+    // Wipe all light dirty flags back to false
+    for (Light& light : Scene::_lights) {
+        light.isDirty = false;
+    }
 }
 
 void GeometryPass() {
@@ -342,13 +448,20 @@ void DebugPass() {
 
     // Lights
     if (_toggles.drawLights) {
+        //std::cout << Scene::_lights.size() << "\n";
         for (Light& light : Scene::_lights) {
             glm::vec3 lightCenter = light.position;
             Transform lightTransform;
             lightTransform.scale = glm::vec3(0.2f);
             lightTransform.position = lightCenter;
             _shaders.solidColor.SetMat4("model", lightTransform.to_mat4());
-            _shaders.solidColor.SetVec3("color", WHITE);
+
+            if (light.isDirty) {
+                _shaders.solidColor.SetVec3("color", YELLOW);
+            }
+            else {
+                _shaders.solidColor.SetVec3("color", WHITE);
+            }
             _shaders.solidColor.SetBool("uniformColor", true);
             _cubeMesh.Draw();
         }
@@ -585,7 +698,9 @@ void RenderImmediate() {
 }
 
 void Renderer::HotloadShaders() {
+
     std::cout << "Hotloaded shaders\n";
+
     _shaders.solidColor.Load("solid_color.vert", "solid_color.frag");
     _shaders.UI.Load("ui.vert", "ui.frag");
     _shaders.editorSolidColor.Load("editor_solid_color.vert", "editor_solid_color.frag");
@@ -597,10 +712,13 @@ void Renderer::HotloadShaders() {
     _shaders.geometry.Load("geometry.vert", "geometry.frag");
     _shaders.lighting.Load("lighting.vert", "lighting.frag");
     _shaders.debugViewPropgationGrid.Load("debug_view_propogation_grid.vert", "debug_view_propogation_grid.frag");
+    _shaders.editorTextured.Load("editor_textured.vert", "editor_textured.frag");
+
     _shaders.compute.Load("res/shaders/compute.comp");
     _shaders.pointCloud.Load("res/shaders/point_cloud.comp");
     _shaders.propogateLight.Load("res/shaders/propogate_light.comp");
-    _shaders.editorTextured.Load("editor_textured.vert", "editor_textured.frag");
+    _shaders.propogationList.Load("res/shaders/propogation_list.comp");
+    _shaders.calculateIndirectDispatchSize.Load("res/shaders/calculate_inidrect_dispatch_size.comp");
 }
 
 void QueueEditorGridSquareForDrawing(int x, int z, glm::vec3 color) {
@@ -963,6 +1081,23 @@ void Renderer::CreatePointCloudBuffer() {
     glEnableVertexAttribArray(2);
     glVertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, sizeof(CloudPoint), (void*)offsetof(CloudPoint, directLighting));
     glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
+
+    // Floor vertices
+    std::vector<glm::vec4> vertices;
+    for (Floor& floor : Scene::_floors) {
+        for (Vertex& vertex : floor.vertices) {
+            vertices.push_back(glm::vec4(vertex.position.x, vertex.position.y, vertex.position.z, 0));
+        }
+    }
+    if (_ssbos.floorVertices != 0) {
+        glDeleteBuffers(1, &_ssbos.floorVertices);
+    }
+    glGenBuffers(1, &_ssbos.floorVertices);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, _ssbos.floorVertices);
+    glBufferStorage(GL_SHADER_STORAGE_BUFFER, vertices.size() * sizeof(glm::vec4), &vertices[0], GL_DYNAMIC_STORAGE_BIT);
+    glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);  
+    _floorVertexCount = vertices.size();
+    std::cout << "You sent " << _floorVertexCount << " to the GPU\n";
 }
 
 void DrawPointCloud() {
@@ -996,14 +1131,27 @@ void InitCompute() {
     _shaders.compute.Load("res/shaders/compute.comp");
     _shaders.pointCloud.Load("res/shaders/point_cloud.comp");
     _shaders.propogateLight.Load("res/shaders/propogate_light.comp");
+    _shaders.propogationList.Load("res/shaders/propogation_list.comp");
+    _shaders.calculateIndirectDispatchSize.Load("res/shaders/calculate_inidrect_dispatch_size.comp");
 
+    
     Scene::CreatePointCloud();
     Renderer::CreatePointCloudBuffer();
     Renderer::CreateTriangleWorldVertexBuffer();
-
-
+    
     std::cout << "Point cloud has " << Scene::_cloudPoints.size() << " points\n";
     std::cout << "Propogation grid has " << (_mapWidth * _mapHeight * _mapDepth / _propogationGridSpacing) << " cells\n";
+
+    // Propogation List
+
+    if (_ssbos.propogationList != 0) {
+        glDeleteBuffers(1, &_ssbos.propogationList);
+    }
+    glGenBuffers(1, &_ssbos.propogationList);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, _ssbos.propogationList);
+    glBufferStorage(GL_SHADER_STORAGE_BUFFER, _gridTextureSize * sizeof(glm::uvec4), nullptr, GL_DYNAMIC_STORAGE_BIT);
+    glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
+    std::cout << "The propogation list has room for " << _gridTextureSize << " uvec4 elements\n";
 }
 
 void Renderer::CreateTriangleWorldVertexBuffer() {
@@ -1048,6 +1196,8 @@ void ComputePass() {
     UpdatePropogationgGrid();
 }
 
+
+
 void UpdatePointCloudLighting() {
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, _ssbos.rtVertices);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, _pointCloud.VBO);
@@ -1060,22 +1210,38 @@ void UpdatePointCloudLighting() {
 
     auto& lights = Scene::_lights;
     for (int i = 0; i < lights.size(); i++) {
-        _shaders.pointCloud.SetVec3("lightPosition[" + std::to_string(i) + "]", lights[i].position);
-        _shaders.pointCloud.SetVec3("lightColor[" + std::to_string(i) + "]", lights[i].color);
-        _shaders.pointCloud.SetFloat("lightRadius[" + std::to_string(i) + "]", lights[i].radius);
-        _shaders.pointCloud.SetFloat("lightStrength[" + std::to_string(i) + "]", lights[i].strength);
+        _shaders.pointCloud.SetVec3("lights[" + std::to_string(i) + "].position", lights[i].position);
+        _shaders.pointCloud.SetVec3("lights[" + std::to_string(i) + "].color", lights[i].color);
+        _shaders.pointCloud.SetFloat("lights[" + std::to_string(i) + "].radius", lights[i].radius);
+        _shaders.pointCloud.SetFloat("lights[" + std::to_string(i) + "].strength", lights[i].strength);
     }
+ 
 
-    int pointCloudSize = Scene::_cloudPoints.size();
-    glDispatchCompute(std::ceil(pointCloudSize / 64.0f), 1, 1);
-    glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+
+    // Cloud point indices buffer
+    if (_ssbos.dirtyPointCloudIndices == 0) {
+        glGenBuffers(1, &_ssbos.dirtyPointCloudIndices);
+    }
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, _ssbos.dirtyPointCloudIndices);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, _dirtyPointCloudIndices.size() * sizeof(int), &_dirtyPointCloudIndices[0], GL_DYNAMIC_COPY);
+    glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, _ssbos.dirtyPointCloudIndices);
+
+    if (_dirtyPointCloudIndices.size()) {
+        //std::cout << "_cloudPointIndices.size(): " << _cloudPointIndices.size() << "\n";
+        glDispatchCompute(std::ceil(_dirtyPointCloudIndices.size() / 64.0f), 1, 1);
+        glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+    }
 }
 
 void UpdatePropogationgGrid() {
+  
+    /*glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, _ssbos.dirtyPointCloudIndices);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, _ssbos.rtVertices);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, _pointCloud.VBO);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, _ssbos.rtMesh);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, _ssbos.rtInstances);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, _ssbos.atomicCounter);
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_3D, _progogationGridTexture);
     _shaders.propogateLight.Use();
@@ -1083,14 +1249,100 @@ void UpdatePropogationgGrid() {
     _shaders.propogateLight.SetInt("meshCount", Scene::_rtMesh.size());
     _shaders.propogateLight.SetInt("instanceCount", Scene::_rtInstances.size());
     _shaders.propogateLight.SetFloat("propogationGridSpacing", _propogationGridSpacing);
+    _shaders.propogateLight.SetFloat("maxDistance", _maxPropogationDistance);
+    _shaders.propogateLight.SetInt("dirtyPointCloudIndexCount", _dirtyPointCloudIndices.size());
 
     int textureWidth = _mapWidth / _propogationGridSpacing;
     int textureHeight = _mapHeight / _propogationGridSpacing;
     int textureDepth = _mapDepth / _propogationGridSpacing;
 
-    int xSize = std::ceil(textureWidth / 4.0f);
-    int ySize = std::ceil(textureHeight / 4.0f);
-    int zSize = std::ceil(textureDepth / 4.0f);
+    if (_dirtyPointCloudIndices.size()) {
+        int xSize = std::ceil(textureWidth / 4.0f);
+        int ySize = std::ceil(textureHeight / 4.0f);
+        int zSize = std::ceil(textureDepth / 4.0f);
+        glDispatchCompute(xSize, ySize, zSize);
+    }    */
+
+    
+    if (_ssbos.indirectDispatchSize == 0) {
+        glGenBuffers(1, &_ssbos.indirectDispatchSize);
+    }
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, _ssbos.indirectDispatchSize);
+    glMemoryBarrier(GL_BUFFER_UPDATE_BARRIER_BIT);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, 3 * sizeof(glm::uint), nullptr, GL_DYNAMIC_COPY);
+
+    // Reset list counter to 0
+    if (_ssbos.atomicCounter == 0) {
+        glGenBuffers(1, &_ssbos.atomicCounter);
+    }
+    const GLuint counter = 0;
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, _ssbos.atomicCounter);
+    glMemoryBarrier(GL_BUFFER_UPDATE_BARRIER_BIT);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(glm::uint), &counter, GL_DYNAMIC_COPY);
+     
+    // Build list of probes that need updating
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, _ssbos.atomicCounter);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, _ssbos.propogationList);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, _ssbos.dirtyPointCloudIndices);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, _pointCloud.VBO);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, _ssbos.floorVertices);
+
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_3D, _progogationGridTexture);
+
+    _shaders.propogationList.Use();
+    _shaders.propogationList.SetInt("dirtyPointCloudIndexCount", _dirtyPointCloudIndices.size());
+    _shaders.propogationList.SetFloat("propogationGridSpacing", _propogationGridSpacing);
+    _shaders.propogationList.SetFloat("maxDistanceSquared", _maxPropogationDistance * _maxPropogationDistance);
+    _shaders.propogationList.SetInt("floorVertexCount", _floorVertexCount);
+    int xSize = std::ceil(_gridTextureWidth / 4.0f);
+    int ySize = std::ceil(_gridTextureHeight / 4.0f);
+    int zSize = std::ceil(_gridTextureDepth / 4.0f);
     glDispatchCompute(xSize, ySize, zSize);
-    //glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
+    glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+
+    // Calculate indirect dispatch size
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, _ssbos.atomicCounter);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, _ssbos.indirectDispatchSize);
+    _shaders.calculateIndirectDispatchSize.Use();
+    glDispatchCompute(1, 1, 1);
+    glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+
+
+
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, _ssbos.dirtyPointCloudIndices);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, _ssbos.rtVertices);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, _pointCloud.VBO);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, _ssbos.rtMesh);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, _ssbos.rtInstances);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, _ssbos.atomicCounter);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 6, _ssbos.indirectDispatchSize);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 7, _ssbos.propogationList);
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_3D, _progogationGridTexture);
+    _shaders.propogateLight.Use();
+    _shaders.propogateLight.SetInt("pointCloudSize", Scene::_cloudPoints.size());
+    _shaders.propogateLight.SetInt("meshCount", Scene::_rtMesh.size());
+    _shaders.propogateLight.SetInt("instanceCount", Scene::_rtInstances.size());
+    _shaders.propogateLight.SetFloat("propogationGridSpacing", _propogationGridSpacing);
+    _shaders.propogateLight.SetFloat("maxDistance", _maxPropogationDistance);
+    _shaders.propogateLight.SetInt("dirtyPointCloudIndexCount", _dirtyPointCloudIndices.size());
+
+    /*int textureWidth = _mapWidth / _propogationGridSpacing;
+    int textureHeight = _mapHeight / _propogationGridSpacing;
+    int textureDepth = _mapDepth / _propogationGridSpacing;
+
+    if (_dirtyPointCloudIndices.size()) {
+        int xSize = std::ceil(textureWidth / 4.0f);
+        int ySize = std::ceil(textureHeight / 4.0f);
+        int zSize = std::ceil(textureDepth / 4.0f);
+        glDispatchCompute(xSize, ySize, zSize);
+    }*/
+
+    glBindBuffer(GL_DISPATCH_INDIRECT_BUFFER, _ssbos.indirectDispatchSize);
+    glDispatchComputeIndirect(0);
+
+    _dirtyPointCloudIndices.clear();
+    _dirtyGridChunks.clear();
+
 }
