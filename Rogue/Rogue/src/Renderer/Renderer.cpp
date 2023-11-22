@@ -1298,6 +1298,7 @@ void UpdatePropogationgGrid() {
                 }
             }
         }
+        std::cout << "There are " << allGridIndicesWithinRooms.size() << " probes within rooms\n";
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1306,41 +1307,43 @@ void UpdatePropogationgGrid() {
 
 
 
-
-        //Timer t("list");
+    {
+        Timer t("list gen");
 
         std::vector<glm::uvec4> gridIndices;
         const int maxDistanceSquared = _maxPropogationDistance * _maxPropogationDistance;
 
-        for (int x = 0; x < _gridTextureWidth; x++) {
-            for (int y = 0; y < _gridTextureHeight; y++) {
-                for (int z = 0; z < _gridTextureDepth; z++) {
+        for (int i = 0; i < allGridIndicesWithinRooms.size(); i++) {
 
-                    glm::vec3 probePosition = glm::vec3(x, y, z) * glm::vec3(_propogationGridSpacing);
+            float x = allGridIndicesWithinRooms[i].x;
+            float y = allGridIndicesWithinRooms[i].y;
+            float z = allGridIndicesWithinRooms[i].z;
 
-                    for (int& index : _dirtyPointCloudIndices) {
+            glm::vec3 probePosition = glm::vec3(x, y, z) * glm::vec3(_propogationGridSpacing);
 
-                        glm::vec3 cloudPointPosition = Scene::_cloudPoints[index].position;
-                        glm::vec3 cloudPointNormal = Scene::_cloudPoints[index].normal;
+            for (int& index : _dirtyPointCloudIndices) {
 
-                        // skip probe if cloud point faces away from probe                
-                        float r = dot(normalize(cloudPointPosition - probePosition), cloudPointNormal);
-                        if (r > 0.0) {
-                            continue;
-                        }
+                glm::vec3 cloudPointPosition = Scene::_cloudPoints[index].position;
+                glm::vec3 cloudPointNormal = Scene::_cloudPoints[index].normal;
+
+                // skip probe if cloud point faces away from probe                
+                float r = dot(normalize(cloudPointPosition - probePosition), cloudPointNormal);
+                if (r > 0.0) {
+                    continue;
+                }
 
 
-                        if (Util::DistanceSquared(cloudPointPosition, probePosition) < maxDistanceSquared) {
-                            gridIndices.push_back(glm::uvec4(x, y, z, 0));
-                            goto break_out;
-                        }
-                    }
+                if (Util::DistanceSquared(cloudPointPosition, probePosition) < maxDistanceSquared) {
+                    gridIndices.push_back(glm::uvec4(x, y, z, 0));
+                    break;
                 }
             }
         }
-        break_out: {}
-   // }
-    
+
+    }
+
+   
+
     if (_ssbos.indirectDispatchSize == 0) {
         glGenBuffers(1, &_ssbos.indirectDispatchSize);
     }
