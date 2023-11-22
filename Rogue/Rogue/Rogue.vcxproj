@@ -88,7 +88,7 @@ copy /Y /E "$(ProjectDir)res\shaders" "$(TargetDir)res\shaders"</Command>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
-      <Optimization>Disabled</Optimization>
+      <Optimization>MaxSpeed</Optimization>
       <WholeProgramOptimization>false</WholeProgramOptimization>
     </ClCompile>
     <Link>
@@ -180,6 +180,7 @@ xcopy "$(ProjectDir)res\shaders" "$(TargetDir)res\shaders" /e /y /i /r
   <ItemGroup>
     <None Include="res\shaders\animated_quad.frag" />
     <None Include="res\shaders\animated_quad.vert" />
+    <None Include="res\shaders\calculate_inidrect_dispatch_size.comp" />
     <None Include="res\shaders\debug_view_point_cloud.frag" />
     <None Include="res\shaders\debug_view_point_cloud.vert" />
     <None Include="res\shaders\debug_view_propogation_grid.frag" />
@@ -192,6 +193,7 @@ xcopy "$(ProjectDir)res\shaders" "$(TargetDir)res\shaders" /e /y /i /r
     <None Include="res\shaders\geometry.vert" />
     <None Include="res\shaders\lighting.frag" />
     <None Include="res\shaders\lighting.vert" />
+    <None Include="res\shaders\propogation_list.comp" />
     <None Include="res\shaders\shadowmap.frag" />
     <None Include="res\shaders\shadowmap.geom" />
     <None Include="res\shaders\shadowmap.vert" />
