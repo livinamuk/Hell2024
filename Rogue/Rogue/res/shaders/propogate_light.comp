@@ -172,7 +172,7 @@ void main() {
 			if (vdotn < 0.0) {
 				continue;
 			}
-			
+			// asking ai to optimize AnyHit and TriIntersection lol
 
 			// If the point has line of sight to the probe...
 			if (!AnyHit(point.position.xyz, v, 0.00001, distanceToProbeSquared)) {

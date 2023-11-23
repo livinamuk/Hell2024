@@ -20,18 +20,16 @@ void Scene::Update(float deltaTime) {
     // Are lights dirty? occurs when a door opens within their radius
     // Which triggers update of the point cloud, and then propogation grid
 
-    doorLightsDirtyPool.addTask([]() {
-        for (const auto& door : _doors) {
-            if (door.state != Door::State::OPENING && door.state != Door::State::CLOSING) continue;
+    for (const auto& door : _doors) {
+        if (door.state != Door::State::OPENING && door.state != Door::State::CLOSING) continue;
 
-            for (auto& light : _lights) {
-                if (light.isDirty) continue;
-                if (Util::DistanceSquared(door.position, light.position) < (light.radius + DOOR_WIDTH) * (light.radius + DOOR_WIDTH)) {
-                    light.isDirty = true;
-                }
+        for (auto& light : _lights) {
+            if (light.isDirty) continue;
+            if (Util::DistanceSquared(door.position, light.position) < (light.radius + DOOR_WIDTH) * (light.radius + DOOR_WIDTH)) {
+                light.isDirty = true;
             }
         }
-    });
+    }
 
     for (AnimatedGameObject& animatedGameObject : _animatedGameObjects) {
         animatedGameObject.Update(deltaTime);
@@ -543,7 +541,6 @@ void Scene::LoadLightSetup(int index) {
         lightD.position = glm::vec3(2.8, 2.2, 3.6);
         lightD.strength = 1.0f;// *1.25f;
         lightD.radius = 6;
-        lightD.color = BLUE;
         _lights.push_back(lightD);
 
         Light lightB;

@@ -13,8 +13,8 @@ public:
                     std::function<void()> task;
                     {
                         std::unique_lock<std::mutex> lock(mtx);
-                        cv.wait(lock, [this]() { return stop || !tasks.empty(); });
-                        if (stop && tasks.empty()) {
+                        cv.wait(lock, [this]() { return (stop || isPaused) || !tasks.empty(); });
+                        if ((stop || isPaused) && tasks.empty()) {
                             return;
                         }
                         task = std::move(tasks.front());
@@ -22,7 +22,7 @@ public:
                     }
                     task();
                 }
-                });
+            });
         }
     }
 
@@ -37,6 +37,10 @@ public:
         cv.notify_one();
     }
 
+    void pause();
+    void unpause();
+    void wait();
+
 private:
     int numThreads;
     std::vector<std::thread> threadPool;
@@ -44,4 +48,5 @@ private:
     std::mutex mtx;
     std::condition_variable cv;
     bool stop;
+    bool isPaused;
 };

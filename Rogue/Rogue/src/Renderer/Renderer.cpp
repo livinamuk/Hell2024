@@ -25,6 +25,7 @@
 #include <cstdlib>
 #include <format>
 #include <future>
+#include <algorithm>
 
 #include "../Core/AnimatedGameObject.h"
 #include "../Effects/MuzzleFlash.h"
@@ -46,8 +47,8 @@ struct Shaders {
     ComputeShader compute;
     ComputeShader pointCloud;
     ComputeShader propogateLight;
-    ComputeShader propogationList;
-    ComputeShader calculateIndirectDispatchSize;
+    //ComputeShader propogationList;
+    //ComputeShader calculateIndirectDispatchSize;
 } _shaders;
 
 struct SSBOs {
@@ -56,10 +57,10 @@ struct SSBOs {
     GLuint rtInstances = 0;
     GLuint dirtyPointCloudIndices = 0;
     //GLuint dirtyGridChunks = 0; // 4x4x4
-    GLuint atomicCounter = 0;
-    GLuint propogationList = 0; // contains coords of all dirty grid points
-    GLuint indirectDispatchSize = 0;
-    GLuint floorVertices = 0;
+   // GLuint atomicCounter = 0;
+    //GLuint propogationList = 0; // contains coords of all dirty grid points
+   // GLuint indirectDispatchSize = 0;
+   // GLuint floorVertices = 0;
     GLuint dirtyGridCoordinates = 0;
 } _ssbos;
 
@@ -109,12 +110,9 @@ const int _gridTextureSize = _gridTextureWidth * _gridTextureHeight * _gridTextu
 const int xSize = std::ceil(_gridTextureWidth * 0.25f);
 const int ySize = std::ceil(_gridTextureHeight * 0.25f);
 const int zSize = std::ceil(_gridTextureDepth * 0.25f);
-const float texelsPerChunk = 4.f;
-const int xChunksCount = _gridTextureWidth / texelsPerChunk;
-const int yChunksCount = _gridTextureHeight / texelsPerChunk;
-const int zChunksCount = _gridTextureDepth / texelsPerChunk;
 
 ThreadPool dirtyUpdatesPool(4);
+ThreadPool gridIndicesPool(1);
 
 std::vector<glm::uvec4> _gridIndices;
 std::vector<glm::uvec4> _newGridIndices;
@@ -186,38 +184,28 @@ void Renderer::Init() {
 }
 
 std::vector<int> Renderer::UpdateDirtyPointCloudIndices() {
+
     std::vector<int> result;
     result.reserve(Scene::_cloudPoints.size());
-    auto lights = Scene::_lights;
-    bool changed = false;
-    // If the area within the lights radius has been modified, queue all the relevant cloud points
-    for (auto& light : lights) {
-        if (light.isDirty) {
-            for (int j = 0; j < Scene::_cloudPoints.size(); j++) {
-                CloudPoint& cloudPoint = Scene::_cloudPoints[j];
-                bool found = false;
-                for (int k = 0; k < result.size(); k++)
-                    if (result[k] == j) {
-                        found = true;
-                        break;
-                    }
-                if(found)
-                    continue;
 
+    // If the area within the lights radius has been modified, queue all the relevant cloud points
+    for (int j = 0; j < Scene::_cloudPoints.size(); j++) {
+        CloudPoint& cloudPoint = Scene::_cloudPoints[j];
+        for (auto& light : Scene::_lights) {
+            if (light.isDirty) {
                 if (Util::DistanceSquared(cloudPoint.position, light.position) < light.radius * light.radius) {
                     result.push_back(j);
-                	changed = true;
+                    break;
                 }
             }
         }
     }
-    if (changed)
-        std::sort(result.begin(), result.end());
     return result;
 }
 
 
 void Renderer::RenderFrame() {
+
 
     //Timer t{ "RenderFrame" };
 
@@ -230,27 +218,39 @@ void Renderer::RenderFrame() {
         Scene::_lights[1].isDirty = true;
     }
 
+
+
+
+
     if(_dirtyPointCloudIndices.capacity() != Scene::_cloudPoints.size())
         _dirtyPointCloudIndices.reserve(Scene::_cloudPoints.size());
 
-    _dirtyPointCloudIndices = _newDirtyPointCloudIndices;
-    _gridIndices = _newGridIndices;
 
+    _dirtyPointCloudIndices = _newDirtyPointCloudIndices;
+    
 	dirtyUpdatesPool.addTask([]() {
 		_newDirtyPointCloudIndices = Renderer::UpdateDirtyPointCloudIndices();
-		_newGridIndices = GridIndicesUpdate(_probeCoordsWithinMapBounds);
 	});
 
-	
-	// !!!!!!! the point cloud needs to be updated first 100% always. then the grid coord list. ok then i will combine it into a single task
-    // nice
 
-    /*if (_dirtyPointCloudIndices.size()) {
-        std::cout << "\n_dirtyPointCloudIndices.size(): " << _dirtyPointCloudIndices.size() << "\n";
-        std::cout << "_dirtyGridChunks.size(): " << _dirtyGridChunks.size() << "\n";
-        int iterationCount = xChunksCount * yChunksCount * zChunksCount;
-        std::cout << "total possible chunks: " << iterationCount << "\n";
-    }*/
+    if (_newGridIndices.capacity() != _gridTextureSize)
+        _newGridIndices.reserve(_gridTextureSize);
+    if (_gridIndices.capacity() != _gridTextureSize)
+        _gridIndices.reserve(_gridTextureSize);
+
+    gridIndicesPool.pause();
+    _gridIndices = _newGridIndices;
+
+    gridIndicesPool.addTask([]() {
+        auto a = GridIndicesUpdate(_probeCoordsWithinMapBounds);
+        if (a.size() > 0)
+            _newGridIndices = a;
+    });
+
+    gridIndicesPool.unpause();
+
+
+
 
 
     ComputePass(); // Fills the indirect lighting data structures
@@ -725,8 +725,8 @@ void Renderer::HotloadShaders() {
     _shaders.compute.Load("res/shaders/compute.comp");
     _shaders.pointCloud.Load("res/shaders/point_cloud.comp");
     _shaders.propogateLight.Load("res/shaders/propogate_light.comp");
-    _shaders.propogationList.Load("res/shaders/propogation_list.comp");
-    _shaders.calculateIndirectDispatchSize.Load("res/shaders/calculate_inidrect_dispatch_size.comp");
+    //_shaders.propogationList.Load("res/shaders/propogation_list.comp");
+    //_shaders.calculateIndirectDispatchSize.Load("res/shaders/calculate_inidrect_dispatch_size.comp");
 }
 
 void QueueEditorGridSquareForDrawing(int x, int z, glm::vec3 color) {
@@ -1091,7 +1091,7 @@ void Renderer::CreatePointCloudBuffer() {
     glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
 
     // Floor vertices
-    std::vector<glm::vec4> vertices;
+   /* std::vector<glm::vec4> vertices;
     for (Floor& floor : Scene::_floors) {
         for (Vertex& vertex : floor.vertices) {
             vertices.push_back(glm::vec4(vertex.position.x, vertex.position.y, vertex.position.z, 0));
@@ -1105,7 +1105,7 @@ void Renderer::CreatePointCloudBuffer() {
     glBufferStorage(GL_SHADER_STORAGE_BUFFER, vertices.size() * sizeof(glm::vec4), &vertices[0], GL_DYNAMIC_STORAGE_BIT);
     glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);  
     _floorVertexCount = vertices.size();
-    std::cout << "You sent " << _floorVertexCount << " to the GPU\n";
+    std::cout << "You sent " << _floorVertexCount << " to the GPU\n";*/
 }
 
 void DrawPointCloud() {
@@ -1134,9 +1134,9 @@ void InitCompute() {
     glBindTexture(GL_TEXTURE_3D, _progogationGridTexture);
 
     // Create ssbos
-    glGenBuffers(1, &_ssbos.indirectDispatchSize);
-    glGenBuffers(1, &_ssbos.atomicCounter);
-    glDeleteBuffers(1, &_ssbos.propogationList);
+    //glGenBuffers(1, &_ssbos.indirectDispatchSize);
+    //glGenBuffers(1, &_ssbos.atomicCounter);
+    //glDeleteBuffers(1, &_ssbos.propogationList);
     glDeleteBuffers(1, &_ssbos.rtVertices);
     glDeleteBuffers(1, &_ssbos.rtMesh);
     glGenBuffers(1, &_ssbos.rtInstances);
@@ -1145,8 +1145,8 @@ void InitCompute() {
     _shaders.compute.Load("res/shaders/compute.comp");
     _shaders.pointCloud.Load("res/shaders/point_cloud.comp");
     _shaders.propogateLight.Load("res/shaders/propogate_light.comp");
-    _shaders.propogationList.Load("res/shaders/propogation_list.comp");
-    _shaders.calculateIndirectDispatchSize.Load("res/shaders/calculate_inidrect_dispatch_size.comp");
+    //_shaders.propogationList.Load("res/shaders/propogation_list.comp");
+   // _shaders.calculateIndirectDispatchSize.Load("res/shaders/calculate_inidrect_dispatch_size.comp");
 
     
     Scene::CreatePointCloud();
@@ -1157,11 +1157,11 @@ void InitCompute() {
     std::cout << "Propogation grid has " << (_mapWidth * _mapHeight * _mapDepth / _propogationGridSpacing) << " cells\n";
 
     // Propogation List
-    glGenBuffers(1, &_ssbos.propogationList);
+   /*glGenBuffers(1, &_ssbos.propogationList);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, _ssbos.propogationList);
     glBufferStorage(GL_SHADER_STORAGE_BUFFER, _gridTextureSize * sizeof(glm::uvec4), nullptr, GL_DYNAMIC_STORAGE_BIT);
     glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
-    std::cout << "The propogation list has room for " << _gridTextureSize << " uvec4 elements\n";
+    std::cout << "The propogation list has room for " << _gridTextureSize << " uvec4 elements\n";*/
 }
 
 void Renderer::CreateTriangleWorldVertexBuffer() {
@@ -1233,16 +1233,9 @@ void UpdatePointCloudLighting() {
 
 std::vector<glm::uvec4> GridIndicesUpdate(std::vector<glm::uvec4> allGridIndicesWithinRooms)
 {
+    std::vector<glm::uvec4> gridIndices;
+    gridIndices.reserve(_gridTextureSize);
 
-    // While you are here.
-    // Can you tell me if this function is guaranteed to finish in the frame that calls it?
-    // then that is a problem. its causing artefacts when the doors open, u can see it on the back of the red door when it closes.
-    // 
-    // 
-    // but like. i mean sure i can do sync await for this to finish on the same frame where it calls it but the keyword is "await". which means it will slow it down. i mean it will be a bit faster because its on separate thread but still.
-    // the lighting up of those red probes is because of the neighbour/moving light. ik they shouldnt be, its weird. it was happening before my garbage. it was happening on your last commit. 
-    // go download your old commit and see for yourself
-    std::vector<glm::uvec4> gridIndices; // can you display size of it in console before calling the compute and then test the size with moving turned off. (P)
     const float maxDistanceSquared = _maxPropogationDistance * _maxPropogationDistance;
 
     for (int i = 0; i < allGridIndicesWithinRooms.size(); i++) {
@@ -1250,12 +1243,10 @@ std::vector<glm::uvec4> GridIndicesUpdate(std::vector<glm::uvec4> allGridIndices
         float x = (float)allGridIndicesWithinRooms[i].x;
         float y = (float)allGridIndicesWithinRooms[i].y;
         float z = (float)allGridIndicesWithinRooms[i].z;
-
+        //gridIndices.emplace_back(x, y, z, 0);
         glm::vec3 probePosition = glm::vec3(x, y, z) * _propogationGridSpacing;
 
-        // maybe _newDirtyPointCloudIndices has duplicates? can you output it to console and then i copy it and search for duplicates 
-        // well then duplicates are in allGridIndicesWithinRooms
-        for (int& index : _newDirtyPointCloudIndices) {
+        for (int& index : _dirtyPointCloudIndices) {
 
             glm::vec3 cloudPointPosition = Scene::_cloudPoints[index].position;
             glm::vec3 cloudPointNormal = Scene::_cloudPoints[index].normal;
@@ -1265,7 +1256,6 @@ std::vector<glm::uvec4> GridIndicesUpdate(std::vector<glm::uvec4> allGridIndices
             if (r > 0.0) {
                 continue;
             }
-
 
             if (Util::DistanceSquared(cloudPointPosition, probePosition) < maxDistanceSquared) {
                 gridIndices.emplace_back(x, y, z, 0);
@@ -1301,9 +1291,10 @@ void FindProbeCoordsWithinMapBounds() {
         for (int y = 0; y < _gridTextureHeight; y++) {
             for (int z = 0; z < _gridTextureDepth; z++) {
 
-                _probeCoordsWithinMapBounds.emplace_back(x, y, z, 0);
+             
+                bool foundOne = false;
 
-                /*glm::vec3 probePosition = glm::vec3(x, y, z) * _propogationGridSpacing;
+                glm::vec3 probePosition = glm::vec3(x, y, z) * _propogationGridSpacing;
 
                 // Check floors
                 for (int j = 0; j < floorVertices.size(); j += 3) {
@@ -1311,14 +1302,18 @@ void FindProbeCoordsWithinMapBounds() {
                         continue;
                     }
                     glm::vec2 probePos = glm::vec2(probePosition.x, probePosition.z);
-                    glm::vec2 v1 = glm::vec2(floorVertices[j + 0].x, floorVertices[j + 0].z);
+                    glm::vec2 v1 = glm::vec2(floorVertices[j + 0].x, floorVertices[j + 0].z); // when you remove this gen code then it doesnt generate any gridIndices meaning no indirectLight
                     glm::vec2 v2 = glm::vec2(floorVertices[j + 1].x, floorVertices[j + 1].z);
                     glm::vec2 v3 = glm::vec2(floorVertices[j + 2].x, floorVertices[j + 2].z);
 
                     // If you are above one, check if you are also below a ceiling
                     if (Util::PointIn2DTriangle(probePos, v1, v2, v3)) {
 
-                        for (int j = 0; j < ceilingVertices.size(); j += 3) {
+                        if (probePosition.y < 2.6f) {
+                            _probeCoordsWithinMapBounds.emplace_back(x, y, z, 0);
+                        }
+
+                        /*for (int j = 0; j < ceilingVertices.size(); j += 3) {
                             if (probePosition.y > ceilingVertices[j].w) {
                                 continue;
                             }
@@ -1326,16 +1321,23 @@ void FindProbeCoordsWithinMapBounds() {
                             glm::vec2 v2c = glm::vec2(ceilingVertices[j + 1].x, ceilingVertices[j + 1].z);
                             glm::vec2 v3c = glm::vec2(ceilingVertices[j + 2].x, ceilingVertices[j + 2].z);
                             if (Util::PointIn2DTriangle(probePos, v1c, v2c, v3c)) {
-                                _probeCoordsWithinMapBounds.emplace_back(x, y, z, 0);
-                                goto hell;
+                                
+                                if (!foundOne) {
+                                    _probeCoordsWithinMapBounds.emplace_back(x, y, z, 0);
+                                    foundOne = true;
+                                }
+                                //goto hell;
                             }
-                        }
+                        }*/
                     }
-                }*/
-            hell: {}
+                }
+            //hell: {}
             }
         }
     }
+
+   // std::sort(_probeCoordsWithinMapBounds.begin(), _probeCoordsWithinMapBounds.end());
+    //_probeCoordsWithinMapBounds.erase(std::unique(_probeCoordsWithinMapBounds.begin(), _probeCoordsWithinMapBounds.end()), _probeCoordsWithinMapBounds.end());
 
     std::cout << "There are " << _probeCoordsWithinMapBounds.size() << " probes within rooms\n";
     
@@ -1344,21 +1346,32 @@ void FindProbeCoordsWithinMapBounds() {
 void UpdatePropogationgGrid() {
     
     
+    // _gridTextureSize is the max size possible
+
+    //dirtyUpdatesPool.wait(); // seems like thats shit
     
 
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, _ssbos.indirectDispatchSize);
+    // check ThreadPool.h and .cpp if you want
+
+    // how many frames behind do you think this is?
+    // 1-2 max
+    // wait i have an idea uhhh
+    // whats the biggest capacity can _gridIndices have.
+
+    // im asking AI how to fix lol
+  /*  glBindBuffer(GL_SHADER_STORAGE_BUFFER, _ssbos.indirectDispatchSize);
     glMemoryBarrier(GL_BUFFER_UPDATE_BARRIER_BIT);
     glBufferData(GL_SHADER_STORAGE_BUFFER, 3 * sizeof(glm::uint), nullptr, GL_DYNAMIC_COPY);
-
+    */
     // Reset list counter to 0
 
-    GLuint counter = 0;
+   /* GLuint counter = 0;
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, _ssbos.atomicCounter);
     glMemoryBarrier(GL_BUFFER_UPDATE_BARRIER_BIT);
     glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(glm::uint), &counter, GL_DYNAMIC_COPY);
-     
+     */
     // Build list of probes that need updating
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, _ssbos.atomicCounter);
+  /*  glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, _ssbos.atomicCounter);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, _ssbos.propogationList);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, _ssbos.dirtyPointCloudIndices);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, _pointCloud.VBO);
@@ -1381,7 +1394,7 @@ void UpdatePropogationgGrid() {
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, _ssbos.indirectDispatchSize);
     _shaders.calculateIndirectDispatchSize.Use();
     glDispatchCompute(1, 1, 1);
-    glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+    glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);*/
 
 
 
@@ -1390,9 +1403,9 @@ void UpdatePropogationgGrid() {
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, _pointCloud.VBO);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, _ssbos.rtMesh);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, _ssbos.rtInstances);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, _ssbos.atomicCounter);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 6, _ssbos.indirectDispatchSize);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 7, _ssbos.propogationList);
+  //  glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, _ssbos.atomicCounter);
+  //  glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 6, _ssbos.indirectDispatchSize);
+    //glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 7, _ssbos.propogationList);
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_3D, _progogationGridTexture);
     _shaders.propogateLight.Use();
@@ -1411,56 +1424,10 @@ void UpdatePropogationgGrid() {
     glBufferData(GL_SHADER_STORAGE_BUFFER, _gridIndices.size() * sizeof(glm::uvec4), &_gridIndices[0], GL_DYNAMIC_COPY);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 8, _ssbos.dirtyGridCoordinates);
 
-
-    //std::cout << "\n_gridIndices.size(): "<< _gridIndices.size() << "\n";
-
-    if (Input::KeyPressed(HELL_KEY_U)) {
-
-        std::cout << "\n_probeCoordsWithinMapBounds\n";
-        for (auto& coord : _probeCoordsWithinMapBounds) {
-			std::cout << coord.x << " " << coord.y << " " << coord.z << "\n";
-        }
-        
-        std::cout << "\n_dirtyPointCloudIndices\n";
-        for (auto& ind : _dirtyPointCloudIndices) { 
-            std::cout << ind << "\n";
-        }
-
-		// well there are technically no duplicates in the log you sent. the problem isnt about duplicates.
-        std::cout << "\n_gridIndices\n";
-        for (auto& coord : _gridIndices) {
-            std::cout << coord.x << " " << coord.y << " " << coord.z << "\n";
-        }
-    }
-
-
-
     if (_gridIndices.size() && _dirtyPointCloudIndices.size()) {
-
-
         int invocationCount = std::ceil(_gridIndices.size() / 64.0f);
-
-
-      //  std::cout << "\n_dirtyPointCloudIndices: " << _dirtyPointCloudIndices.size() << "\n"; // very slow lol
-   //    std::cout << "invocationCount: "  << invocationCount << "\n"; // very slow lol
-
-
         glDispatchCompute(invocationCount, 1, 1);
     }
-    // _dirtyPointCloudIndices is also threaded. its also "frame behind"
-    // this whole threading thing is completely async
-    // 
-    // recompile/restart.
-    // 
-    // completely removed threading now. its all sync. try now. but will be slow.
-
-    // are they from the same frame in the past? or can they complete out of sync?
-    // either way, i don't think it can work like this, its gonna expose too many problems that are hard to predict
-
-    // the _dirtyPointCloudIndices part was like lightning fast anyway was it?? when i moved it to threading the RenderFrame time changed from 15 to 2
-
-    // yep, lightning is an exxageration, i just mean it was like 0.3 ms or something,
-
     // i mean sure let me try removing it from threading rq.
     /*int textureWidth = _mapWidth / _propogationGridSpacing;
     int textureHeight = _mapHeight / _propogationGridSpacing;
@@ -1475,4 +1442,4 @@ void UpdatePropogationgGrid() {
     /*
     glBindBuffer(GL_DISPATCH_INDIRECT_BUFFER, _ssbos.indirectDispatchSize);
     glDispatchComputeIndirect(0);*/
-}
+} // this is skill issue idk why it does that lol

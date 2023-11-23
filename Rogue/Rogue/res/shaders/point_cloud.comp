@@ -123,8 +123,7 @@ void main() {
 	
 	PointCloud[i].color.rgb = vec3(0,0,0);
 	
-    for(int j = 0; j < lightCount; j++)
-	{
+    for(int j = 0; j < lightCount; j++) 	{
 		vec3 lightPos = lights[j].position;
 		vec3 lightColor = lights[j].color;
 		float lightRadius = lights[j].radius;
@@ -139,9 +138,5 @@ void main() {
 			vec3 radiance = vec3(lightColor) * att * lightStrength * ndotl * 1.0;
 			PointCloud[i].color.rgb += radiance;
 		} 
-		else {
-			//PointCloud[i].color.xyz = vec3(0,0,0);
-		}
-		// PointCloud[i].color.xyz = vec3(1,0,0);
 	}
 }

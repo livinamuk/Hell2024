@@ -138,7 +138,6 @@ namespace Scene {
     inline std::vector<RTMesh> _rtMesh;
     inline std::vector<RTInstance> _rtInstances;
     inline RayCastResult _cameraRayData;
-    inline ThreadPool doorLightsDirtyPool(1);
 
     void Init();
     void NewScene();
