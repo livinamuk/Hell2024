@@ -115,11 +115,10 @@ const int xChunksCount = _gridTextureWidth / texelsPerChunk;
 const int yChunksCount = _gridTextureHeight / texelsPerChunk;
 const int zChunksCount = _gridTextureDepth / texelsPerChunk;
 
-ThreadPool dirtyUpdatesPool(4);
+ThreadPool dirtyUpdatesPool(5);
 
 std::vector<glm::uvec4> _gridIndices;
 std::vector<glm::uvec4> _newGridIndices;
-ThreadPool gridIndicesUpdatePool(2);
 
 enum RenderMode { COMPOSITE, DIRECT_LIGHT, INDIRECT_LIGHT, POINT_CLOUD,  MODE_COUNT} _mode;
 
@@ -1272,7 +1271,6 @@ void UpdatePointCloudLighting() {
 std::vector<glm::uvec4> GridIndicesUpdate(std::vector<glm::uvec4> allGridIndicesWithinRooms)
 {
     std::vector<glm::uvec4> gridIndices;
-    gridIndices.reserve(allGridIndicesWithinRooms.size());
     const float maxDistanceSquared = _maxPropogationDistance * _maxPropogationDistance;
 
     for (int i = 0; i < allGridIndicesWithinRooms.size(); i++) {
@@ -1373,7 +1371,7 @@ void UpdatePropogationgGrid() {
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     _gridIndices = _newGridIndices;
-    gridIndicesUpdatePool.addTask([]() {
+    dirtyUpdatesPool.addTask([]() {
         _newGridIndices = GridIndicesUpdate(allGridIndicesWithinRooms);
     });
 
