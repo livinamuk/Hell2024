@@ -1444,26 +1444,14 @@ void UpdatePropogationgGrid() {
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 8, _ssbos.dirtyGridCoordinates);
 
 
-    //std::cout << "\n_gridIndices.size(): "<< _gridIndices.size() << "\n";
+    std::cout << "\n_gridIndices.size(): "<< _gridIndices.size() << "\n";
 
-    if (_gridIndices.size()) {
+    if (_gridIndices.size()) { // without fucking ! you dumbass
         int invocationCount = std::ceil(_gridIndices.size() / 64.0f);
-        //std::cout << "invocationCount: "  << invocationCount << "\n"; // very slow lol
+        std::cout << "invocationCount: "  << invocationCount << "\n";
         glDispatchCompute(invocationCount, 1, 1);
     }
-    // _dirtyPointCloudIndices is also threaded. its also "frame behind"
-    // this whole threading thing is completely async
-    // 
-    // 
-    // 
-    // are they from the same frame in the past? or can they complete out of sync?
-    // either way, i don't think it can work like this, its gonna expose too many problems that are hard to predict
 
-    // the _dirtyPointCloudIndices part was like lightning fast anyway was it?? when i moved it to threading the RenderFrame time changed from 15 to 2
-
-    // yep, lightning is an exxageration, i just mean it was like 0.3 ms or something,
-
-    // i mean sure let me try removing it from threading rq.
     /*int textureWidth = _mapWidth / _propogationGridSpacing;
     int textureHeight = _mapHeight / _propogationGridSpacing;
     int textureDepth = _mapDepth / _propogationGridSpacing;

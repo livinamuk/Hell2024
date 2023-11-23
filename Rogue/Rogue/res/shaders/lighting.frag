@@ -220,7 +220,7 @@ vec3 GetProbe(vec3 fragWorldPos, ivec3 offset, out float weight, vec3 Normal) {
     vec3 v = (probe_worldPos - fragWorldPos);
     float vdotn = dot(v, Normal);
     vec3 weights = mix(1. - a, a, offset);    
-    if(vdotn > 0 && probe_color != vec3(-1))
+    if(vdotn > 0 && probe_color != vec3(0))
         weight = weights.x * weights.y * weights.z;
     else
         weight = 0.;

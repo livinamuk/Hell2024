@@ -64,6 +64,10 @@ layout(std430, binding = 7) readonly buffer propogationList {
     uvec4 PropogationList[];
 };
 
+layout(std430, binding = 8) readonly buffer propogationListNew {
+    uvec4 PropogationListNew[];
+};
+
 layout (location = 0) uniform int pointCloudSize;
 layout (location = 1) uniform float propogationGridSpacing;
 layout (location = 2) uniform int meshCount;
@@ -138,9 +142,9 @@ void main() {
 
 	
     const uint index = (gl_WorkGroupID.x * 64) + gl_LocalInvocationID.x;
-    const uint x = PropogationList[index].x;
-    const uint y = PropogationList[index].y;
-    const uint z = PropogationList[index].z;
+    const uint x = PropogationListNew[index].x;
+    const uint y = PropogationListNew[index].y;
+    const uint z = PropogationListNew[index].z;
 
 
     //const uint x = (gl_WorkGroupID.x * 4) + gl_LocalInvocationID.x;
