@@ -100,8 +100,6 @@ float _mapHeight = 8;
 float _mapDepth = 16; 
 std::vector<int> _dirtyPointCloudIndices;
 std::vector<int> _newDirtyPointCloudIndices;
-std::vector<glm::uvec4> _dirtyGridChunks;
-std::vector<glm::uvec4> _newDirtyGridChunks;
 int _floorVertexCount;
 
 const int _gridTextureWidth = _mapWidth / _propogationGridSpacing;
@@ -116,7 +114,7 @@ const int xChunksCount = _gridTextureWidth / texelsPerChunk;
 const int yChunksCount = _gridTextureHeight / texelsPerChunk;
 const int zChunksCount = _gridTextureDepth / texelsPerChunk;
 
-ThreadPool dirtyUpdatesPool(5);
+ThreadPool dirtyUpdatesPool(4);
 
 std::vector<glm::uvec4> _gridIndices;
 std::vector<glm::uvec4> _newGridIndices;
@@ -218,43 +216,8 @@ std::vector<int> Renderer::UpdateDirtyPointCloudIndices() {
     return result;
 }
 
-std::vector<glm::uvec4> Renderer::UpdateDirtyGridChunks() {
-    
-    if (_dirtyPointCloudIndices.empty() || _dirtyPointCloudIndices.size() > Scene::_cloudPoints.size())
-        return _dirtyGridChunks;
-
-    std::vector<glm::uvec4> result;
-    result.reserve(xChunksCount * yChunksCount * zChunksCount);
-
-    const glm::vec3 chunkHalfSize = glm::vec3(_propogationGridSpacing * 0.5f * texelsPerChunk);
-    const float adjustedDistance = _maxPropogationDistance + chunkHalfSize.x; // your searching from the center of a chunk, so you add the half chunk distance
-    const float maxDistSquared = adjustedDistance * adjustedDistance;
-
-    for (int x = 0; x < xChunksCount; x++) {
-        for (int y = 0; y < yChunksCount; y++) {
-            for (int z = 0; z < zChunksCount; z++) {
-                glm::vec3 chunkCenter = glm::vec3(x, y, z) * texelsPerChunk * _propogationGridSpacing + chunkHalfSize;
-                for (int& index : _dirtyPointCloudIndices) {
-                    glm::vec3 pointPosition = Scene::_cloudPoints[index].position;
-                    if (Util::DistanceSquared(pointPosition, chunkCenter) < maxDistSquared) {
-                        result.emplace_back(x, y, z, 0);
-                        break;
-                    }
-                }
-            }
-        }
-    }
-
-    return result;
-}
 
 void Renderer::RenderFrame() {
-
-    _gridIndices = _newGridIndices;
-    dirtyUpdatesPool.addTask([]() {
-        _newGridIndices = GridIndicesUpdate(_probeCoordsWithinMapBounds);
-    });
-
 
     //Timer t{ "RenderFrame" };
 
@@ -271,20 +234,16 @@ void Renderer::RenderFrame() {
         _dirtyPointCloudIndices.reserve(Scene::_cloudPoints.size());
 
     _dirtyPointCloudIndices = _newDirtyPointCloudIndices;
-    _dirtyGridChunks = _newDirtyGridChunks;
+    _gridIndices = _newGridIndices;
 
-    dirtyUpdatesPool.addTask([]() {
-        _newDirtyPointCloudIndices = Renderer::UpdateDirtyPointCloudIndices();
-    });
+	dirtyUpdatesPool.addTask([]() {
+		_newDirtyPointCloudIndices = Renderer::UpdateDirtyPointCloudIndices();
+		_newGridIndices = GridIndicesUpdate(_probeCoordsWithinMapBounds);
+	});
 
-    dirtyUpdatesPool.addTask([]() {
-    	_newDirtyGridChunks = Renderer::UpdateDirtyGridChunks();
-    });
-
-    // _dirtyPointCloudIndices.size(): 1654
-    // _dirtyGridChunks.size() : 471
-     //   total iterations over 3d tex : 500
-
+	
+	// !!!!!!! the point cloud needs to be updated first 100% always. then the grid coord list. ok then i will combine it into a single task
+    // nice
 
     /*if (_dirtyPointCloudIndices.size()) {
         std::cout << "\n_dirtyPointCloudIndices.size(): " << _dirtyPointCloudIndices.size() << "\n";
@@ -1294,7 +1253,9 @@ std::vector<glm::uvec4> GridIndicesUpdate(std::vector<glm::uvec4> allGridIndices
 
         glm::vec3 probePosition = glm::vec3(x, y, z) * _propogationGridSpacing;
 
-        for (int& index : _dirtyPointCloudIndices) {
+        // maybe _newDirtyPointCloudIndices has duplicates? can you output it to console and then i copy it and search for duplicates 
+        // well then duplicates are in allGridIndicesWithinRooms
+        for (int& index : _newDirtyPointCloudIndices) {
 
             glm::vec3 cloudPointPosition = Scene::_cloudPoints[index].position;
             glm::vec3 cloudPointNormal = Scene::_cloudPoints[index].normal;
@@ -1340,7 +1301,9 @@ void FindProbeCoordsWithinMapBounds() {
         for (int y = 0; y < _gridTextureHeight; y++) {
             for (int z = 0; z < _gridTextureDepth; z++) {
 
-                glm::vec3 probePosition = glm::vec3(x, y, z) * _propogationGridSpacing;
+                _probeCoordsWithinMapBounds.emplace_back(x, y, z, 0);
+
+                /*glm::vec3 probePosition = glm::vec3(x, y, z) * _propogationGridSpacing;
 
                 // Check floors
                 for (int j = 0; j < floorVertices.size(); j += 3) {
@@ -1364,19 +1327,24 @@ void FindProbeCoordsWithinMapBounds() {
                             glm::vec2 v3c = glm::vec2(ceilingVertices[j + 2].x, ceilingVertices[j + 2].z);
                             if (Util::PointIn2DTriangle(probePos, v1c, v2c, v3c)) {
                                 _probeCoordsWithinMapBounds.emplace_back(x, y, z, 0);
+                                goto hell;
                             }
                         }
                     }
-                }
+                }*/
+            hell: {}
             }
         }
     }
+
     std::cout << "There are " << _probeCoordsWithinMapBounds.size() << " probes within rooms\n";
     
 }
 
 void UpdatePropogationgGrid() {
-  
+    
+    
+    
 
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, _ssbos.indirectDispatchSize);
     glMemoryBarrier(GL_BUFFER_UPDATE_BARRIER_BIT);
@@ -1446,16 +1414,46 @@ void UpdatePropogationgGrid() {
 
     //std::cout << "\n_gridIndices.size(): "<< _gridIndices.size() << "\n";
 
-    if (_gridIndices.size()) {
+    if (Input::KeyPressed(HELL_KEY_U)) {
+
+        std::cout << "\n_probeCoordsWithinMapBounds\n";
+        for (auto& coord : _probeCoordsWithinMapBounds) {
+			std::cout << coord.x << " " << coord.y << " " << coord.z << "\n";
+        }
+        
+        std::cout << "\n_dirtyPointCloudIndices\n";
+        for (auto& ind : _dirtyPointCloudIndices) { 
+            std::cout << ind << "\n";
+        }
+
+		// well there are technically no duplicates in the log you sent. the problem isnt about duplicates.
+        std::cout << "\n_gridIndices\n";
+        for (auto& coord : _gridIndices) {
+            std::cout << coord.x << " " << coord.y << " " << coord.z << "\n";
+        }
+    }
+
+
+
+    if (_gridIndices.size() && _dirtyPointCloudIndices.size()) {
+
+
         int invocationCount = std::ceil(_gridIndices.size() / 64.0f);
-        //std::cout << "invocationCount: "  << invocationCount << "\n"; // very slow lol
+
+
+      //  std::cout << "\n_dirtyPointCloudIndices: " << _dirtyPointCloudIndices.size() << "\n"; // very slow lol
+   //    std::cout << "invocationCount: "  << invocationCount << "\n"; // very slow lol
+
+
         glDispatchCompute(invocationCount, 1, 1);
     }
     // _dirtyPointCloudIndices is also threaded. its also "frame behind"
     // this whole threading thing is completely async
     // 
+    // recompile/restart.
     // 
-    // 
+    // completely removed threading now. its all sync. try now. but will be slow.
+
     // are they from the same frame in the past? or can they complete out of sync?
     // either way, i don't think it can work like this, its gonna expose too many problems that are hard to predict
 

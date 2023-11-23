@@ -543,6 +543,7 @@ void Scene::LoadLightSetup(int index) {
         lightD.position = glm::vec3(2.8, 2.2, 3.6);
         lightD.strength = 1.0f;// *1.25f;
         lightD.radius = 6;
+        lightD.color = BLUE;
         _lights.push_back(lightD);
 
         Light lightB;
