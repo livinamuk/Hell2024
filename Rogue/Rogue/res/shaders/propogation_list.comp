@@ -63,7 +63,7 @@ void main() {
     const uint y = (gl_WorkGroupID.y * 4) + gl_LocalInvocationID.y;
     const uint z = (gl_WorkGroupID.z * 4) + gl_LocalInvocationID.z;
 
-    vec3 probePosition = vec3(x,y,z) * vec3(propogationGridSpacing);
+    vec3 probePosition = vec3(x,y,z) * propogationGridSpacing;
 
     // Skip probes outside the map
     
@@ -91,7 +91,6 @@ void main() {
     }
 
     for(int i = 0; i < dirtyPointCloudIndexCount; i++) {
-
 	    vec3 cloudPointPosition = PointCloud[DirtyPointCloudIndices[i]].position.xyz;   
         vec3 cloudPointNormal = PointCloud[DirtyPointCloudIndices[i]].normal.xyz;
         

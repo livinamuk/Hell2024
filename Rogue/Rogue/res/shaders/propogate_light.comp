@@ -148,7 +148,7 @@ void main() {
     //const uint z = (gl_WorkGroupID.z * 4) + gl_LocalInvocationID.z;
 
 	//const float probeSpacing = 0.2;
-	vec3 probePosition = vec3(x,y,z) * vec3(propogationGridSpacing);
+	vec3 probePosition = vec3(x,y,z) * propogationGridSpacing;
 	
 	vec3 color = vec3(0);
 
@@ -171,7 +171,7 @@ void main() {
 			
 
 			// If the point has line of sight to the probe...
-			if (!AnyHit(point.position.xyz, v, 0.000001, distanceToProbeSquared)) {
+			if (!AnyHit(point.position.xyz, v, 0.00001, distanceToProbeSquared)) {
 
 				float distanceFromPointToProbe = sqrt(distanceToProbeSquared);
 				//color += point.color.rgb * (maxDistance - distanceFromPointToProbe) / maxDistance;

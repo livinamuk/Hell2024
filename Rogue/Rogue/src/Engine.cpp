@@ -33,7 +33,7 @@ void Engine::Run() {
         GL::ProcessInput();
 
         double _deltaTime = glfwGetTime() - lastTime;
-        lastTime = glfwGetTime();;
+        lastTime = glfwGetTime();
         accumulator += _deltaTime;
 
         while (accumulator >= limitUpdates) {

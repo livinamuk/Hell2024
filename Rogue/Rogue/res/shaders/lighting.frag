@@ -1,5 +1,12 @@
 #version 420
 
+struct Light {
+	vec3 position;
+	vec3 color;
+	float strength;
+	float radius;
+};
+
 layout (location = 0) out vec4 FragColor;
 in vec2 TexCoords;
 
@@ -8,10 +15,7 @@ layout (binding = 1) uniform sampler2D normalTexture;
 layout (binding = 2) uniform sampler2D rmaTexture;
 layout (binding = 3) uniform sampler2D depthTexture;
 layout (binding = 4) uniform sampler3D propgationGridTexture;
-layout (binding = 5) uniform samplerCube shadowMap0;
-layout (binding = 6) uniform samplerCube shadowMap1;
-layout (binding = 7) uniform samplerCube shadowMap2;
-layout (binding = 8) uniform samplerCube shadowMap3;
+layout (binding = 5) uniform samplerCube shadowMap[16];
 
 uniform mat4 projectionScene;
 uniform mat4 projectionWeapon;
@@ -20,10 +24,8 @@ uniform mat4 inverseProjectionWeapon;
 uniform mat4 view;
 uniform mat4 inverseView;
 uniform vec3 viewPos;
-uniform vec3 lightPosition[4];
-uniform vec3 lightColor[4];
-uniform float lightStrength[4];
-uniform float lightRadius[4];
+uniform Light lights[16];
+uniform int lightsCount;
 uniform float screenWidth;
 uniform float screenHeight;
 uniform float time;
@@ -284,18 +286,14 @@ void main() {
     float metallic = rma.g;
     float ao = rma.b;
 
-     // Direct lightihng
-    float shadow0 = ShadowCalculation(shadowMap0, lightPosition[0], WorldPos, viewPos, normal);
-    float shadow1 = ShadowCalculation(shadowMap1, lightPosition[1], WorldPos, viewPos, normal);
-    float shadow2 = ShadowCalculation(shadowMap2, lightPosition[2], WorldPos, viewPos, normal);
-    vec3 ligthting0 = GetDirectLighting(lightPosition[0], lightColor[0], lightRadius[0], lightStrength[0], normal, WorldPos, baseColor, roughness, metallic);
-    vec3 ligthting1 = GetDirectLighting(lightPosition[1], lightColor[1], lightRadius[1], lightStrength[1], normal, WorldPos, baseColor, roughness, metallic);  
-    vec3 ligthting2 = GetDirectLighting(lightPosition[2], lightColor[2], lightRadius[2], lightStrength[2], normal, WorldPos, baseColor, roughness, metallic);  
+    // Direct lighting
     vec3 directLighting = vec3(0);
-    directLighting += shadow0 * ligthting0;
-    directLighting += shadow1 * ligthting1;
-    directLighting += shadow2 * ligthting2;
-
+    for(int i = 0; i < lightsCount; i++) {
+        float shadow = ShadowCalculation(shadowMap[i], lights[i].position, WorldPos, viewPos, normal);
+        vec3 ligthting = GetDirectLighting(lights[i].position, lights[i].color, lights[i].radius, lights[i].strength, normal, WorldPos, baseColor, roughness, metallic);
+        directLighting += shadow * ligthting;
+    }
+    
     directLighting = clamp(directLighting, 0, 1);
 
     // Indirect lighthing
@@ -383,12 +381,16 @@ void main() {
     FragColor.a = 1;
     //FragColor.rgb = vec3(0);
 
-
-    vec3 lightDir = normalize(lightPosition[0] - WorldPos);     
-	float lightDist = length(lightPosition[0] - WorldPos);
-	float lightAttenuation = 1.0 / (lightDist*lightDist);
-	float ndotl = dot(lightDir, normal);
-    
+    // not used bruh
+    /*
+    for(int i = 0; i < lightsCount; i++)
+    {
+        vec3 lightDir = normalize(lights[i].position - WorldPos);     
+	    float lightDist = length(lights[i].position - WorldPos);
+	    float lightAttenuation = 1.0 / (lightDist*lightDist);
+	    float ndotl = dot(lightDir, normal);
+    }
+    */
     //FragColor.rgb = vec3(baseColor);
     //FragColor.rgb = vec3(baseColor);
     //FragColor.rgb = pow(FragColor.rgb, vec3(1.0/2.2)); 

@@ -31,6 +31,9 @@ namespace Renderer {
 	void CreatePointCloudBuffer();
 	void CreateTriangleWorldVertexBuffer();
 
+	std::vector<int> UpdateDirtyPointCloudIndices();
+	std::vector<glm::uvec4> UpdateDirtyGridChunks();
+
 	inline int _method = 1;
 	inline bool _shadowMapsAreDirty = true;
 }

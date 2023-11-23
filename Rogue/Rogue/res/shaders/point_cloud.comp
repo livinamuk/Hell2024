@@ -135,7 +135,7 @@ void main() {
 		if (!AnyHit(origin, l, 0.000001, distToLight)) {
 			float att = smoothstep(lightRadius, 0.0, length(lightPos - origin));
 			vec3 n = normal;
-			float ndotl = clamp(dot(n, l), 0.0f, 1.0f);  
+			float ndotl = clamp(dot(n, l), 0.0, 1.0);  
 			vec3 radiance = vec3(lightColor) * att * lightStrength * ndotl * 1.0;
 			PointCloud[i].color.xyz += radiance;
 		} 

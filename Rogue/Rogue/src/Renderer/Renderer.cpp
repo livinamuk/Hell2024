@@ -24,6 +24,7 @@
 #include <vector>
 #include <cstdlib>
 #include <format>
+#include <future>
 
 #include "../Core/AnimatedGameObject.h"
 #include "../Effects/MuzzleFlash.h"
@@ -97,14 +98,28 @@ float _mapWidth = 16;
 float _mapHeight = 8;
 float _mapDepth = 16; 
 std::vector<int> _dirtyPointCloudIndices;
+std::vector<int> _newDirtyPointCloudIndices;
 std::vector<glm::uvec4> _dirtyGridChunks;
+std::vector<glm::uvec4> _newDirtyGridChunks;
 int _floorVertexCount;
 
 const int _gridTextureWidth = _mapWidth / _propogationGridSpacing;
 const int _gridTextureHeight = _mapHeight / _propogationGridSpacing;
 const int _gridTextureDepth = _mapDepth / _propogationGridSpacing;
 const int _gridTextureSize = _gridTextureWidth * _gridTextureHeight * _gridTextureDepth;
+const int xSize = std::ceil(_gridTextureWidth * 0.25f);
+const int ySize = std::ceil(_gridTextureHeight * 0.25f);
+const int zSize = std::ceil(_gridTextureDepth * 0.25f);
+const float texelsPerChunk = 4.f;
+const int xChunksCount = _gridTextureWidth / texelsPerChunk;
+const int yChunksCount = _gridTextureHeight / texelsPerChunk;
+const int zChunksCount = _gridTextureDepth / texelsPerChunk;
 
+ThreadPool dirtyUpdatesPool(4);
+
+std::vector<glm::uvec4> _gridIndices;
+std::vector<glm::uvec4> _newGridIndices;
+ThreadPool gridIndicesUpdatePool(2);
 
 enum RenderMode { COMPOSITE, DIRECT_LIGHT, INDIRECT_LIGHT, POINT_CLOUD,  MODE_COUNT} _mode;
 
@@ -149,10 +164,16 @@ void Renderer::Init() {
 
     RecreateFrameBuffers();
 
+    /*
     _shadowMaps.push_back(ShadowMap());
     _shadowMaps.push_back(ShadowMap());
     _shadowMaps.push_back(ShadowMap());
     _shadowMaps.push_back(ShadowMap());
+    */
+
+    for(int i = 0; i < 16; i++) {
+        _shadowMaps.emplace_back();
+    }
 
     for (ShadowMap& shadowMap : _shadowMaps) {
         shadowMap.Init();
@@ -161,7 +182,70 @@ void Renderer::Init() {
     InitCompute();
 }
 
+std::vector<int> Renderer::UpdateDirtyPointCloudIndices() {
+    std::vector<int> result;
+    result.reserve(Scene::_cloudPoints.size());
+    auto lights = Scene::_lights;
+    bool changed = false;
+    // If the area within the lights radius has been modified, queue all the relevant cloud points
+    for (auto& light : lights) {
+        if (light.isDirty) {
+            for (int j = 0; j < Scene::_cloudPoints.size(); j++) {
+                CloudPoint& cloudPoint = Scene::_cloudPoints[j];
+                bool found = false;
+                for (int k = 0; k < result.size(); k++)
+                    if (result[k] == j) {
+                        found = true;
+                        break;
+                    }
+                if(found)
+                    continue;
+
+                if (Util::DistanceSquared(cloudPoint.position, light.position) < light.radius * light.radius) {
+                    result.push_back(j);
+                	changed = true;
+                }
+            }
+        }
+    }
+    if (changed)
+        std::sort(result.begin(), result.end());
+    return result;
+}
+
+std::vector<glm::uvec4> Renderer::UpdateDirtyGridChunks() {
+    
+    if (_dirtyPointCloudIndices.empty() || _dirtyPointCloudIndices.size() > Scene::_cloudPoints.size())
+        return _dirtyGridChunks;
+
+    std::vector<glm::uvec4> result;
+    result.reserve(xChunksCount * yChunksCount * zChunksCount);
+
+    const glm::vec3 chunkHalfSize = glm::vec3(_propogationGridSpacing * 0.5f * texelsPerChunk);
+    const float adjustedDistance = _maxPropogationDistance + chunkHalfSize.x; // your searching from the center of a chunk, so you add the half chunk distance
+    const float maxDistSquared = adjustedDistance * adjustedDistance;
+
+    for (int x = 0; x < xChunksCount; x++) {
+        for (int y = 0; y < yChunksCount; y++) {
+            for (int z = 0; z < zChunksCount; z++) {
+                glm::vec3 chunkCenter = glm::vec3(x, y, z) * texelsPerChunk * _propogationGridSpacing + chunkHalfSize;
+                for (int& index : _dirtyPointCloudIndices) {
+                    glm::vec3 pointPosition = Scene::_cloudPoints[index].position;
+                    if (Util::DistanceSquared(pointPosition, chunkCenter) < maxDistSquared) {
+                        result.emplace_back(x, y, z, 0);
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    return result;
+}
+
 void Renderer::RenderFrame() {
+
+    Timer t{ "RenderFrame" };
 
     if (Input::KeyPressed(HELL_KEY_T)) {
         for (Light& light : Scene::_lights) {
@@ -172,64 +256,19 @@ void Renderer::RenderFrame() {
         Scene::_lights[1].isDirty = true;
     }
 
+    if(_dirtyPointCloudIndices.capacity() != Scene::_cloudPoints.size())
+        _dirtyPointCloudIndices.reserve(Scene::_cloudPoints.size());
 
+    _dirtyPointCloudIndices = _newDirtyPointCloudIndices;
+    _dirtyGridChunks = _newDirtyGridChunks;
 
+    dirtyUpdatesPool.addTask([]() {
+        _newDirtyPointCloudIndices = Renderer::UpdateDirtyPointCloudIndices();
+    });
 
-    // If the area within the lights radius has been modified, queue all the relevant cloud points
-    for (auto& light : Scene::_lights) {
-        if (light.isDirty) {
-            for (int i = 0; i < Scene::_cloudPoints.size(); i++) {
-                CloudPoint& cloudPoint = Scene::_cloudPoints[i];
-                if (Util::DistanceSquared(cloudPoint.position, light.position) < light.radius * light.radius) {
-                    // If index doesn't exist, then add it
-                    bool found = false;
-                    for (int j = 0; j < _dirtyPointCloudIndices.size(); j++) {
-                        if (_dirtyPointCloudIndices[j] == i) {
-                            found = true;
-                            break;
-                        }
-                    }
-                    if (!found) {
-                        _dirtyPointCloudIndices.push_back(i);
-                    }
-                }
-            }
-        }
-    }
-
-    // Find which probe co-orindates are within range of cloud points that just changed  
-
-    int textureWidth = _mapWidth / _propogationGridSpacing;
-    int textureHeight = _mapHeight / _propogationGridSpacing;
-    int textureDepth = _mapDepth / _propogationGridSpacing;
-
-    float texelsPerChunk = 4.0f;
-
-    int xChunksCount = textureWidth / texelsPerChunk;
-    int yChunksCount = textureHeight / texelsPerChunk;
-    int zChunksCount = textureDepth / texelsPerChunk;
-
-    glm::vec3 chunkHalfSize = glm::vec3(texelsPerChunk * _propogationGridSpacing * 0.5f);
-    float adjustedDistance = _maxPropogationDistance + chunkHalfSize.x; // your searching from the center of a chunk, so you add the half chunk distance
-    float maxDistSquared = adjustedDistance * adjustedDistance;
-
-    _dirtyGridChunks.clear();
-    _dirtyGridChunks.reserve(xChunksCount * yChunksCount * zChunksCount);
-
-    for (int x = 0; x < xChunksCount; x++) {
-        for (int y = 0; y < yChunksCount; y++) {
-            for (int z = 0; z < zChunksCount; z++) {
-                glm::vec3 chunkCenter = (glm::vec3(x, y, z) * texelsPerChunk * _propogationGridSpacing) + chunkHalfSize;
-                for (int& index : _dirtyPointCloudIndices) {
-                    glm::vec3 pointPosition = Scene::_cloudPoints[index].position;
-                    if (Util::DistanceSquared(pointPosition, chunkCenter) < maxDistSquared) {
-                        _dirtyGridChunks.push_back(glm::uvec4(x, y, z, 0));
-                        break;
-                    }
-                }
-            }
-        }
-    }
+    dirtyUpdatesPool.addTask([]() {
+    	_newDirtyGridChunks = Renderer::UpdateDirtyGridChunks();
+    });
 
     // _dirtyPointCloudIndices.size(): 1654
     // _dirtyGridChunks.size() : 471
@@ -253,16 +292,16 @@ void Renderer::RenderFrame() {
     // Propgation Grid
     if (_toggles.drawProbes) {
         Transform cubeTransform;
-        cubeTransform.scale = glm::vec3(0.025);
+        cubeTransform.scale = glm::vec3(0.025f);
         _shaders.debugViewPropgationGrid.Use();
         _shaders.debugViewPropgationGrid.SetMat4("projection", Player::GetProjectionMatrix(_depthOfFieldScene));
         _shaders.debugViewPropgationGrid.SetMat4("view", Player::GetViewMatrix());
         _shaders.debugViewPropgationGrid.SetMat4("model", cubeTransform.to_mat4());
         _shaders.debugViewPropgationGrid.SetFloat("propogationGridSpacing", _propogationGridSpacing);
-        _shaders.debugViewPropgationGrid.SetInt("propogationTextureWidth", _mapWidth / _propogationGridSpacing);
-        _shaders.debugViewPropgationGrid.SetInt("propogationTextureHeight", _mapHeight / _propogationGridSpacing);
-        _shaders.debugViewPropgationGrid.SetInt("propogationTextureDepth", _mapDepth / _propogationGridSpacing);
-        int count = _mapWidth * _mapHeight * _mapDepth / _propogationGridSpacing / _propogationGridSpacing / _propogationGridSpacing;
+        _shaders.debugViewPropgationGrid.SetInt("propogationTextureWidth", _gridTextureWidth);
+        _shaders.debugViewPropgationGrid.SetInt("propogationTextureHeight", _gridTextureHeight);
+        _shaders.debugViewPropgationGrid.SetInt("propogationTextureDepth", _gridTextureDepth);
+        int count = _gridTextureWidth * _gridTextureHeight * _gridTextureDepth;
         glEnable(GL_CULL_FACE);
         glEnable(GL_DEPTH_TEST);
         glActiveTexture(GL_TEXTURE0);
@@ -395,23 +434,21 @@ void LightingPass() {
     glActiveTexture(GL_TEXTURE4);
     glBindTexture(GL_TEXTURE_3D, _progogationGridTexture);
 
-    // Set potential unused lights to black
-    for (int i = 0; i < 4; i++) {
-        _shaders.lighting.SetVec3("lightColor[" + std::to_string(i) + "]", BLACK);
-    }
-    // Update any actual lights
+    // Update lights
     auto& lights = Scene::_lights;
     for (int i = 0; i < lights.size(); i++) {
+        if (i >= 16) break;
         glActiveTexture(GL_TEXTURE5 + i);
         glBindTexture(GL_TEXTURE_CUBE_MAP, _shadowMaps[i]._depthTexture);
-        _shaders.lighting.SetVec3("lightPosition[" + std::to_string(i) + "]", lights[i].position);
-        _shaders.lighting.SetVec3("lightColor[" + std::to_string(i) + "]", lights[i].color);
-        _shaders.lighting.SetFloat("lightRadius[" + std::to_string(i) + "]", lights[i].radius);
-        _shaders.lighting.SetFloat("lightStrength[" + std::to_string(i) + "]", lights[i].strength);
+        _shaders.lighting.SetVec3("lights[" + std::to_string(i) + "].position", lights[i].position);
+        _shaders.lighting.SetVec3("lights[" + std::to_string(i) + "].color", lights[i].color);
+        _shaders.lighting.SetFloat("lights[" + std::to_string(i) + "].radius", lights[i].radius);
+        _shaders.lighting.SetFloat("lights[" + std::to_string(i) + "].strength", lights[i].strength);
     }
+    _shaders.lighting.SetInt("lightsCount", std::min((int)lights.size(), 16));
 
     static float time = 0;
-    time += 0.01;
+    time += 0.01f;
     _shaders.lighting.SetMat4("model", glm::mat4(1));
     _shaders.lighting.SetFloat("time", time);
     _shaders.lighting.SetFloat("screenWidth", _gBuffer.GetWidth());
@@ -1114,9 +1151,6 @@ void DrawPointCloud() {
 }
 
 void InitCompute() {
-    int width = _mapWidth / _propogationGridSpacing;
-    int height = _mapHeight / _propogationGridSpacing;
-    int depth = _mapDepth / _propogationGridSpacing;
     glGenTextures(1, &_progogationGridTexture);
     glBindTexture(GL_TEXTURE_3D, _progogationGridTexture);
     glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -1124,7 +1158,7 @@ void InitCompute() {
     glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexImage3D(GL_TEXTURE_3D, 0, GL_RGBA16F, width, height, depth, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    glTexImage3D(GL_TEXTURE_3D, 0, GL_RGBA16F, _gridTextureWidth, _gridTextureHeight, _gridTextureDepth, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
     glBindImageTexture(1, _progogationGridTexture, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA16F);
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_3D, _progogationGridTexture);
@@ -1207,7 +1241,7 @@ void UpdatePointCloudLighting() {
     _shaders.pointCloud.Use();
     _shaders.pointCloud.SetInt("meshCount", Scene::_rtMesh.size());
     _shaders.pointCloud.SetInt("instanceCount", Scene::_rtInstances.size());
-    _shaders.pointCloud.SetInt("lightCount", Scene::_lights.size());
+    _shaders.pointCloud.SetInt("lightCount", std::min((int)Scene::_lights.size(), 32));
 
     auto& lights = Scene::_lights;
     for (int i = 0; i < lights.size(); i++) {
@@ -1224,27 +1258,62 @@ void UpdatePointCloudLighting() {
         glGenBuffers(1, &_ssbos.dirtyPointCloudIndices);
     }
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, _ssbos.dirtyPointCloudIndices);
-    glBufferData(GL_SHADER_STORAGE_BUFFER, _dirtyPointCloudIndices.size() * sizeof(int), &_dirtyPointCloudIndices[0], GL_DYNAMIC_COPY);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, _dirtyPointCloudIndices.size() * sizeof(int), &_dirtyPointCloudIndices[0], GL_STATIC_COPY);
     glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, _ssbos.dirtyPointCloudIndices);
 
-    if (_dirtyPointCloudIndices.size()) {
+    if (!_dirtyPointCloudIndices.empty()) {
         //std::cout << "_cloudPointIndices.size(): " << _cloudPointIndices.size() << "\n";
         glDispatchCompute(std::ceil(_dirtyPointCloudIndices.size() / 64.0f), 1, 1);
         glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
     }
 }
 
+std::vector<glm::uvec4> GridIndicesUpdate(std::vector<glm::uvec4> allGridIndicesWithinRooms)
+{
+    std::vector<glm::uvec4> gridIndices;
+    gridIndices.reserve(allGridIndicesWithinRooms.size());
+    const float maxDistanceSquared = _maxPropogationDistance * _maxPropogationDistance;
+
+    for (int i = 0; i < allGridIndicesWithinRooms.size(); i++) {
+
+        float x = (float)allGridIndicesWithinRooms[i].x;
+        float y = (float)allGridIndicesWithinRooms[i].y;
+        float z = (float)allGridIndicesWithinRooms[i].z;
+
+        glm::vec3 probePosition = glm::vec3(x, y, z) * _propogationGridSpacing;
+
+        for (int& index : _dirtyPointCloudIndices) {
+
+            glm::vec3 cloudPointPosition = Scene::_cloudPoints[index].position;
+            glm::vec3 cloudPointNormal = Scene::_cloudPoints[index].normal;
+
+            // skip probe if cloud point faces away from probe                
+            float r = dot(normalize(cloudPointPosition - probePosition), cloudPointNormal);
+            if (r > 0.0) {
+                continue;
+            }
+
+
+            if (Util::DistanceSquared(cloudPointPosition, probePosition) < maxDistanceSquared) {
+                gridIndices.emplace_back(x, y, z, 0);
+                break;
+            }
+        }
+    }
+    return gridIndices;
+}
+
 void UpdatePropogationgGrid() {
   
-
+    //Timer t("UpdatePropogationgGrid");
 
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     static std::vector<glm::uvec4> allGridIndicesWithinRooms;
 
-    if (!allGridIndicesWithinRooms.size()) {
+    if (allGridIndicesWithinRooms.empty()) {
 
         Timer t("created list of relevant indices");
 
@@ -1253,12 +1322,12 @@ void UpdatePropogationgGrid() {
         std::vector<glm::vec4> ceilingVertices;
         for (Floor& floor : Scene::_floors) {
             for (Vertex& vertex : floor.vertices) {
-                floorVertices.push_back(glm::vec4(vertex.position.x, vertex.position.y, vertex.position.z, floor.height));
+                floorVertices.emplace_back(vertex.position.x, vertex.position.y, vertex.position.z, floor.height);
             }
         }
         for (Ceiling& ceiling : Scene::_ceilings) {
             for (Vertex& vertex : ceiling.vertices) {
-                ceilingVertices.push_back(glm::vec4(vertex.position.x, vertex.position.y, vertex.position.z, ceiling.height));
+                ceilingVertices.emplace_back(vertex.position.x, vertex.position.y, vertex.position.z, ceiling.height);
             }
         }
 
@@ -1267,7 +1336,7 @@ void UpdatePropogationgGrid() {
             for (int y = 0; y < _gridTextureHeight; y++) {
                 for (int z = 0; z < _gridTextureDepth; z++) {
 
-                    glm::vec3 probePosition = glm::vec3(x, y, z) * glm::vec3(_propogationGridSpacing);
+                    glm::vec3 probePosition = glm::vec3(x, y, z) * _propogationGridSpacing;
 
                     // Check floors
                     for (int j = 0; j < floorVertices.size(); j += 3) {
@@ -1286,11 +1355,11 @@ void UpdatePropogationgGrid() {
                                 if (probePosition.y > ceilingVertices[j].w) {
                                     continue;
                                 }
-                                glm::vec2 v1 = glm::vec2(ceilingVertices[j + 0].x, ceilingVertices[j + 0].z);
-                                glm::vec2 v2 = glm::vec2(ceilingVertices[j + 1].x, ceilingVertices[j + 1].z);
-                                glm::vec2 v3 = glm::vec2(ceilingVertices[j + 2].x, ceilingVertices[j + 2].z);
-                                if (Util::PointIn2DTriangle(probePos, v1, v2, v3)) {
-                                    allGridIndicesWithinRooms.push_back(glm::uvec4(x, y, z, 0));
+                                glm::vec2 v1c = glm::vec2(ceilingVertices[j + 0].x, ceilingVertices[j + 0].z);
+                                glm::vec2 v2c = glm::vec2(ceilingVertices[j + 1].x, ceilingVertices[j + 1].z);
+                                glm::vec2 v3c = glm::vec2(ceilingVertices[j + 2].x, ceilingVertices[j + 2].z);
+                                if (Util::PointIn2DTriangle(probePos, v1c, v2c, v3c)) {
+                                    allGridIndicesWithinRooms.emplace_back(x, y, z, 0);
                                 }
                             }
                         }
@@ -1303,46 +1372,10 @@ void UpdatePropogationgGrid() {
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-
-
-
-
-    {
-        Timer t("list gen");
-
-        std::vector<glm::uvec4> gridIndices;
-        const int maxDistanceSquared = _maxPropogationDistance * _maxPropogationDistance;
-
-        for (int i = 0; i < allGridIndicesWithinRooms.size(); i++) {
-
-            float x = allGridIndicesWithinRooms[i].x;
-            float y = allGridIndicesWithinRooms[i].y;
-            float z = allGridIndicesWithinRooms[i].z;
-
-            glm::vec3 probePosition = glm::vec3(x, y, z) * glm::vec3(_propogationGridSpacing);
-
-            for (int& index : _dirtyPointCloudIndices) {
-
-                glm::vec3 cloudPointPosition = Scene::_cloudPoints[index].position;
-                glm::vec3 cloudPointNormal = Scene::_cloudPoints[index].normal;
-
-                // skip probe if cloud point faces away from probe                
-                float r = dot(normalize(cloudPointPosition - probePosition), cloudPointNormal);
-                if (r > 0.0) {
-                    continue;
-                }
-
-
-                if (Util::DistanceSquared(cloudPointPosition, probePosition) < maxDistanceSquared) {
-                    gridIndices.push_back(glm::uvec4(x, y, z, 0));
-                    break;
-                }
-            }
-        }
-
-    }
-
-   
+    _gridIndices = _newGridIndices;
+    gridIndicesUpdatePool.addTask([]() {
+        _newGridIndices = GridIndicesUpdate(allGridIndicesWithinRooms);
+    });
 
     if (_ssbos.indirectDispatchSize == 0) {
         glGenBuffers(1, &_ssbos.indirectDispatchSize);
@@ -1355,7 +1388,7 @@ void UpdatePropogationgGrid() {
     if (_ssbos.atomicCounter == 0) {
         glGenBuffers(1, &_ssbos.atomicCounter);
     }
-    const GLuint counter = 0;
+    GLuint counter = 0;
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, _ssbos.atomicCounter);
     glMemoryBarrier(GL_BUFFER_UPDATE_BARRIER_BIT);
     glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(glm::uint), &counter, GL_DYNAMIC_COPY);
@@ -1375,9 +1408,7 @@ void UpdatePropogationgGrid() {
     _shaders.propogationList.SetFloat("propogationGridSpacing", _propogationGridSpacing);
     _shaders.propogationList.SetFloat("maxDistanceSquared", _maxPropogationDistance * _maxPropogationDistance);
     _shaders.propogationList.SetInt("floorVertexCount", _floorVertexCount);
-    int xSize = std::ceil(_gridTextureWidth / 4.0f);
-    int ySize = std::ceil(_gridTextureHeight / 4.0f);
-    int zSize = std::ceil(_gridTextureDepth / 4.0f);
+    
     glDispatchCompute(xSize, ySize, zSize);
     glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 
@@ -1421,8 +1452,4 @@ void UpdatePropogationgGrid() {
 
     glBindBuffer(GL_DISPATCH_INDIRECT_BUFFER, _ssbos.indirectDispatchSize);
     glDispatchComputeIndirect(0);
-
-    _dirtyPointCloudIndices.clear();
-    _dirtyGridChunks.clear();
-
 }

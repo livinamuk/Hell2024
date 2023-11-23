@@ -1,4 +1,8 @@
 #include "Scene.h"
+
+#include <future>
+#include <thread>
+
 #include "../Util.hpp"
 #include "AssetManager.h"
 #include "../Renderer/Renderer.h"
@@ -15,15 +19,19 @@ void Scene::Update(float deltaTime) {
 
     // Are lights dirty? occurs when a door opens within their radius
     // Which triggers update of the point cloud, and then propogation grid
-    for (auto& light : _lights) {
-        for (auto& door : _doors) {
-            if (door.state == Door::State::OPENING || door.state == Door::State::CLOSING) {
+
+    doorLightsDirtyPool.addTask([]() {
+        for (const auto& door : _doors) {
+            if (door.state != Door::State::OPENING && door.state != Door::State::CLOSING) continue;
+
+            for (auto& light : _lights) {
+                if (light.isDirty) continue;
                 if (Util::DistanceSquared(door.position, light.position) < (light.radius + DOOR_WIDTH) * (light.radius + DOOR_WIDTH)) {
                     light.isDirty = true;
                 }
             }
         }
-    }
+    });
 
     for (AnimatedGameObject& animatedGameObject : _animatedGameObjects) {
         animatedGameObject.Update(deltaTime);
@@ -36,10 +44,11 @@ void Scene::Update(float deltaTime) {
     //Flicker light 2
     if (_lights.size() > 2) {
         static float totalTime = 0;
-        float frequency = 20;
-        float amplitude = 0.02;
-        totalTime += 1.0f / 60;
-        Scene::_lights[2].strength = 0.3f + sin(totalTime * frequency) * amplitude;
+        float frequency = 20.f;
+        float amplitude = 0.5f;
+        totalTime += deltaTime;
+        Scene::_lights[2].strength = 1.0f + sin(totalTime * frequency) * amplitude;
+        //_lights[2].isDirty = true;
 	 }
 
     // Move light 0 in a figure 8
@@ -210,17 +219,17 @@ void Scene::Init() {
     //Floor bathroomFloor = Floor(door2X - 0.8f, 7.0f, door2X + 0.8f, 9.95f, 0.1f, AssetManager::GetMaterialIndex("BathroomFloor"), 1.0f);
 
 
-    _ceilings.emplace_back(Ceiling(door2X - 0.8f, 7.0f, door2X + 0.8f, 9.95f, 2.5f, AssetManager::GetMaterialIndex("Ceiling")));
-
-    // ceilings
-    _ceilings.emplace_back(Ceiling(0.1f, 0.1f, 6.1f, 3.1f, 2.5f, AssetManager::GetMaterialIndex("Ceiling")));
-    _ceilings.emplace_back(Ceiling(0.1f, 4.1f, 6.1f, 6.9f, 2.5f, AssetManager::GetMaterialIndex("Ceiling")));
-    _ceilings.emplace_back(Ceiling(0.1f, 3.1f, 3.7f, 4.1f, 2.5f, AssetManager::GetMaterialIndex("Ceiling")));;
-    _ceilings.emplace_back(Ceiling(4.7f, 3.1f, 6.1f, 4.1f, 2.5f, AssetManager::GetMaterialIndex("Ceiling")));
+    _ceilings.emplace_back(door2X - 0.8f, 7.0f, door2X + 0.8f, 9.95f, 2.5f, AssetManager::GetMaterialIndex("Ceiling"));
+                           
+    // ceilings            
+    _ceilings.emplace_back(0.1f, 0.1f, 6.1f, 3.1f, 2.5f, AssetManager::GetMaterialIndex("Ceiling"));
+    _ceilings.emplace_back(0.1f, 4.1f, 6.1f, 6.9f, 2.5f, AssetManager::GetMaterialIndex("Ceiling"));
+    _ceilings.emplace_back(0.1f, 3.1f, 3.7f, 4.1f, 2.5f, AssetManager::GetMaterialIndex("Ceiling"));
+    _ceilings.emplace_back(4.7f, 3.1f, 6.1f, 4.1f, 2.5f, AssetManager::GetMaterialIndex("Ceiling"));
 
     LoadLightSetup(2);
 
-    GameObject& pictureFrame = _gameObjects.emplace_back(GameObject());
+    GameObject& pictureFrame = _gameObjects.emplace_back();
     pictureFrame.SetPosition(0.1f, 1.5f, 2.5f);
     pictureFrame.SetScale(0.01f);
     pictureFrame.SetRotationY(HELL_PI / 2);
@@ -229,7 +238,7 @@ void Scene::Init() {
 
 
 
-    GameObject& smallChestOfDrawers = _gameObjects.emplace_back(GameObject());
+    GameObject& smallChestOfDrawers = _gameObjects.emplace_back();
     smallChestOfDrawers.SetModel("SmallChestOfDrawersFrame");
     smallChestOfDrawers.SetMeshMaterial("Drawers");
     smallChestOfDrawers.SetName("SmallDrawersHis");
@@ -238,13 +247,13 @@ void Scene::Init() {
     smallChestOfDrawers.SetBoundingBoxFromMesh(0);
     smallChestOfDrawers.EnableCollision();
 
-    GameObject& lamp = _gameObjects.emplace_back(GameObject());
+    GameObject& lamp = _gameObjects.emplace_back();
     lamp.SetModel("Lamp");
     lamp.SetMeshMaterial("Lamp");
     lamp.SetPosition(-.105f, 0.88, 0.25f);
     lamp.SetParentName("SmallDrawersHis");
 
-    GameObject& smallChestOfDrawer_1 = _gameObjects.emplace_back(GameObject());
+    GameObject& smallChestOfDrawer_1 = _gameObjects.emplace_back();
     smallChestOfDrawer_1.SetModel("SmallDrawerTop");
     smallChestOfDrawer_1.SetMeshMaterial("Drawers");
     smallChestOfDrawer_1.SetParentName("SmallDrawersHis");
@@ -254,7 +263,7 @@ void Scene::Init() {
     //smallChestOfDrawer_1.SetAudioOnClose("DrawerOpen.wav", DRAWER_VOLUME);
     smallChestOfDrawer_1.SetOpenAxis(OpenAxis::TRANSLATE_Z);
 
-    GameObject& smallChestOfDrawer_2 = _gameObjects.emplace_back(GameObject());
+    GameObject& smallChestOfDrawer_2 = _gameObjects.emplace_back();
     smallChestOfDrawer_2.SetModel("SmallDrawerSecond");
     smallChestOfDrawer_2.SetMeshMaterial("Drawers");
     smallChestOfDrawer_2.SetParentName("SmallDrawersHis");
@@ -264,7 +273,7 @@ void Scene::Init() {
     //smallChestOfDrawer_2.SetAudioOnClose("DrawerOpen.wav", DRAWER_VOLUME);
     smallChestOfDrawer_2.SetOpenAxis(OpenAxis::TRANSLATE_Z);
 
-    GameObject& smallChestOfDrawer_3 = _gameObjects.emplace_back(GameObject());
+    GameObject& smallChestOfDrawer_3 = _gameObjects.emplace_back();
     smallChestOfDrawer_3.SetModel("SmallDrawerThird");
     smallChestOfDrawer_3.SetMeshMaterial("Drawers");
     smallChestOfDrawer_3.SetParentName("SmallDrawersHis");
@@ -274,7 +283,7 @@ void Scene::Init() {
    // smallChestOfDrawer_3.SetAudioOnClose("DrawerOpen.wav", DRAWER_VOLUME);
     smallChestOfDrawer_3.SetOpenAxis(OpenAxis::TRANSLATE_Z);
 
-    GameObject& smallChestOfDrawer_4 = _gameObjects.emplace_back(GameObject());
+    GameObject& smallChestOfDrawer_4 = _gameObjects.emplace_back();
     smallChestOfDrawer_4.SetModel("SmallDrawerFourth");
     smallChestOfDrawer_4.SetMeshMaterial("Drawers");
     smallChestOfDrawer_4.SetParentName("SmallDrawersHis");
@@ -285,7 +294,7 @@ void Scene::Init() {
     smallChestOfDrawer_4.SetOpenAxis(OpenAxis::TRANSLATE_Z);
 
     /*
-    GameObject& smallChestOfDrawers2 = _gameObjects.emplace_back(GameObject());
+    GameObject& smallChestOfDrawers2 = _gameObjects.emplace_back();
     smallChestOfDrawers2.SetModel("SmallChestOfDrawersFrame");
     smallChestOfDrawers2.SetMeshMaterial("Drawers");
     smallChestOfDrawers2.SetName("SmallDrawersHers");
@@ -295,7 +304,7 @@ void Scene::Init() {
     smallChestOfDrawers2.EnableCollision();
 
 
-    GameObject& smallChestOfDrawer2_1 = _gameObjects.emplace_back(GameObject());
+    GameObject& smallChestOfDrawer2_1 = _gameObjects.emplace_back();
     smallChestOfDrawer2_1.SetModel("SmallDrawerTop");
     smallChestOfDrawer2_1.SetMeshMaterial("Drawers");
     smallChestOfDrawer2_1.SetParentName("SmallDrawersHers");
@@ -305,7 +314,7 @@ void Scene::Init() {
     //smallChestOfDrawer2_1.SetAudioOnClose("DrawerOpen.wav", DRAWER_VOLUME);
     smallChestOfDrawer2_1.SetOpenAxis(OpenAxis::TRANSLATE_Z);
 
-    GameObject& smallChestOfDrawer2_2 = _gameObjects.emplace_back(GameObject());
+    GameObject& smallChestOfDrawer2_2 = _gameObjects.emplace_back();
     smallChestOfDrawer2_2.SetModel("SmallDrawerSecond");
     smallChestOfDrawer2_2.SetMeshMaterial("Drawers");
     smallChestOfDrawer2_2.SetParentName("SmallDrawersHers");
@@ -315,7 +324,7 @@ void Scene::Init() {
     //smallChestOfDrawer2_2.SetAudioOnClose("DrawerOpen.wav", DRAWER_VOLUME);
     smallChestOfDrawer2_2.SetOpenAxis(OpenAxis::TRANSLATE_Z);
 
-    GameObject& smallChestOfDrawer2_3 = _gameObjects.emplace_back(GameObject());
+    GameObject& smallChestOfDrawer2_3 = _gameObjects.emplace_back();
     smallChestOfDrawer2_3.SetModel("SmallDrawerThird");
     smallChestOfDrawer2_3.SetMeshMaterial("Drawers");
     smallChestOfDrawer2_3.SetParentName("SmallDrawersHers");
@@ -325,7 +334,7 @@ void Scene::Init() {
     // smallChestOfDrawer2_3.SetAudioOnClose("DrawerOpen.wav", DRAWER_VOLUME);
     smallChestOfDrawer2_3.SetOpenAxis(OpenAxis::TRANSLATE_Z);
 
-    GameObject& smallChestOfDrawer2_4 = _gameObjects.emplace_back(GameObject());
+    GameObject& smallChestOfDrawer2_4 = _gameObjects.emplace_back();
     smallChestOfDrawer2_4.SetModel("SmallDrawerFourth");
     smallChestOfDrawer2_4.SetMeshMaterial("Drawers");
     smallChestOfDrawer2_4.SetParentName("SmallDrawersHers");
@@ -358,6 +367,10 @@ void Scene::Init() {
     glock.SetName("Shotgun");
     glock.SetSkinnedModel("Shotgun");
     glock.PlayAndLoopAnimation("Shotgun_Walk", 1.0f);
+
+    for (Light& light : Scene::_lights) {
+        light.isDirty = true;
+    }
     
 }
 
@@ -469,6 +482,7 @@ void Scene::CreatePointCloud() {
     }
 
     // Now remove any points that overlap doors
+    
     for (int i = 0; i < _cloudPoints.size(); i++) {
         glm::vec2 p = { _cloudPoints[i].position.x, _cloudPoints[i].position.z };
         for (Door& door : Scene::_doors) {
@@ -532,7 +546,7 @@ void Scene::LoadLightSetup(int index) {
         _lights.push_back(lightD);
 
         Light lightB;
-        lightB.position = glm::vec3(2.05, 2, 9.0);;
+        lightB.position = glm::vec3(2.05, 2, 9.0);
         lightB.radius = 3.0f;
         lightB.strength = 5.0f;// *1.25f;
         lightB.radius = 4;
@@ -542,7 +556,7 @@ void Scene::LoadLightSetup(int index) {
         Light lightA;
         lightA.position = glm::vec3(11, 2.0, 6.0);
         lightA.strength = 1.0f;// *1.25f;
-        lightA.radius = 4;
+        lightA.radius = 2;
         lightA.color = LIGHT_BLUE;
         _lights.push_back(lightA);
     }

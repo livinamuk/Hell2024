@@ -11,7 +11,7 @@ inline std::unordered_map<const char*, TimerResult> _timerResults;
 
 struct Timer {
 
-    std::chrono::time_point<std::chrono::steady_clock> _startTime;;
+    std::chrono::time_point<std::chrono::steady_clock> _startTime;
     const char* _name;
 
     Timer(const char* name) {

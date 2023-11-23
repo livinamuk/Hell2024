@@ -138,6 +138,7 @@ xcopy "$(ProjectDir)res\shaders" "$(TargetDir)res\shaders" /e /y /i /r
     <ClCompile Include="src\Renderer\ShadowMap.cpp" />
     <ClCompile Include="src\Renderer\Texture.cpp" />
     <ClCompile Include="src\Renderer\Texture3D.cpp" />
+    <ClCompile Include="src\ThreadPool.cpp" />
     <ClCompile Include="vendor\glad\src\glad.c" />
     <ClCompile Include="vendor\stb_image\stb_image.cpp" />
     <ClCompile Include="vendor\tracy\public\TracyClient.cpp" />
@@ -174,8 +175,10 @@ xcopy "$(ProjectDir)res\shaders" "$(TargetDir)res\shaders" /e /y /i /r
     <ClInclude Include="src\Renderer\ShadowMap.h" />
     <ClInclude Include="src\Renderer\Texture.h" />
     <ClInclude Include="src\Renderer\Texture3D.h" />
+    <ClInclude Include="src\Threading.h" />
     <ClInclude Include="src\Timer.hpp" />
     <ClInclude Include="src\Util.hpp" />
+    <ClInclude Include="src\ThreadPool.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="res\shaders\animated_quad.frag" />
