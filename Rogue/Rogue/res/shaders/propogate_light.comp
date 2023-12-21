@@ -190,17 +190,15 @@ void main() {
 	}
 	float scale = 900.0;
 
-	
-	//if (ListCounter < 10)
-	//	scale += 1;
-
-
 	color = color / scale;
 
 	// Mark probes as -1 if they have no light, that way they aren't interpolated in the lighting shader
-	if (length(color) < 0.001) {
+	float colorLength = length(color);
+	if (colorLength < 0.001) {
 		color = vec3(-1);
+	} 
+	// Otherwise, if they reieved at least some color, then write that to the 3d texture
+	else if (colorLength > 0) {
+		imageStore(imgOutput, ivec3(x, y, z), vec4(color, 1));
 	}
-	//color = vec3(0,0,1);
-	imageStore(imgOutput, ivec3(x, y, z), vec4(color, 1));
 }

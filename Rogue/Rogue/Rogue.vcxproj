@@ -47,11 +47,13 @@
     <OutDir>$(SolutionDir)\$(ProjectName)\Build\Debug\</OutDir>
     <IntDir>$(SolutionDir)\$(ProjectName)\Build\Intermediate\Debug\</IntDir>
     <CopyLocalDeploymentContent>false</CopyLocalDeploymentContent>
+    <TargetName>Unloved</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <OutDir>$(SolutionDir)\$(ProjectName)\Build\Release\</OutDir>
     <IntDir>$(SolutionDir)\$(ProjectName)\Build\Intermediate\Release\</IntDir>
     <CopyLocalDeploymentContent>false</CopyLocalDeploymentContent>
+    <TargetName>Unloved</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -59,7 +61,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>vendor\tracy\public;vendor\tinyobj;vendor\GLFW\include;vendor\glm;vendor\glad\include;vendor\stb_image;vendor\fmod\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>vendor\compressonator\include;vendor\tracy\public;vendor\tinyobj;vendor\GLFW\include;vendor\glm;vendor\glad\include;vendor\stb_image;vendor\fmod\include;vendor\assimp\include;vendor\rapidjson\include;vendor\physx\include</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
@@ -67,13 +69,23 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>vendor\GLFW\lib\Release;vendor\fmod\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>glfw3.lib;fmod_vc.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>vendor\GLFW\lib\Release;vendor\fmod\lib;vendor\physx\lib\Debug;vendor\assimp\lib;vendor\compressonator\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>glfw3.lib;fmod_vc.lib;assimp-vc142-mt.lib;Compressonator_MD_DLL.lib;PhysX_64.lib;PhysXCommon_64.lib;PhysXCooking_64.lib;PhysXExtensions_static_64.lib;PhysXFoundation_64.lib;PhysXTask_static_64.lib;PhysXPvdSDK_static_64.lib;PVDRuntime_64.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <TreatLinkerWarningAsErrors>false</TreatLinkerWarningAsErrors>
     </Link>
     <PostBuildEvent>
       <Command>copy /Y "$(ProjectDir)vendor\dll\fmod.dll" "$(TargetDir)fmod.dll"
-copy /Y /E "$(ProjectDir)res\shaders" "$(TargetDir)res\shaders"</Command>
+copy /Y "$(ProjectDir)vendor\dll\assimp-vc142-mt.dll" "$(TargetDir)assimp-vc142-mt.dll"
+copy /Y "$(ProjectDir)vendor\dll\fmod.dll" "$(TargetDir)fmod.dll"
+copy /Y "$(ProjectDir)vendor\dll\Compressonator_MD_DLL.dll" "$(TargetDir)Compressonator_MD_DLL.dll"
+xcopy "$(ProjectDir)res\shaders" "$(TargetDir)res\shaders" /e /y /i /r
+
+copy /Y "$(ProjectDir)vendor\dll_debug\PhysX_64.dll" "$(TargetDir)PhysX_64.dll"
+copy /Y "$(ProjectDir)vendor\dll_debug\PhysXCommon_64.dll" "$(TargetDir)PhysXCommon_64.dll"
+copy /Y "$(ProjectDir)vendor\dll_debug\PhysXCooking_64.dll" "$(TargetDir)PhysXCooking_64.dll"
+copy /Y "$(ProjectDir)vendor\dll_debug\PhysXFoundation_64.dll" "$(TargetDir)PhysXFoundation_64.dll"
+copy /Y "$(ProjectDir)vendor\dll_debug\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.dll"
+</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -84,21 +96,22 @@ copy /Y /E "$(ProjectDir)res\shaders" "$(TargetDir)res\shaders"</Command>
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;TRACY_ENABLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>vendor\compressonator\include;vendor\tracy\public;vendor\tinyobj;vendor\GLFW\include;vendor\glm;vendor\glad\include;vendor\stb_image;vendor\fmod\include;vendor\assimp\include;vendor\rapidjson\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>vendor\compressonator\include;vendor\tracy\public;vendor\tinyobj;vendor\GLFW\include;vendor\glm;vendor\glad\include;vendor\stb_image;vendor\fmod\include;vendor\assimp\include;vendor\rapidjson\include;vendor\physx\include</AdditionalIncludeDirectories>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
       <Optimization>MaxSpeed</Optimization>
       <WholeProgramOptimization>false</WholeProgramOptimization>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>false</EnableCOMDATFolding>
       <OptimizeReferences>false</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>vendor\compressonator\lib;vendor\GLFW\lib\Release;vendor\fmod\lib;vendor\assimp\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>glfw3.lib;fmod_vc.lib;assimp-vc142-mt.lib;Compressonator_MD_DLL.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <TreatLinkerWarningAsErrors>true</TreatLinkerWarningAsErrors>
+      <AdditionalLibraryDirectories>vendor\compressonator\lib;vendor\GLFW\lib\Release;vendor\fmod\lib;vendor\assimp\lib;vendor\physx\lib\Release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>glfw3.lib;fmod_vc.lib;assimp-vc142-mt.lib;Compressonator_MD_DLL.lib;PhysX_64.lib;PhysXCommon_64.lib;PhysXCooking_64.lib;PhysXFoundation_64.lib;PhysXTask_static_64.lib;PhysXPvdSDK_static_64.lib;PVDRuntime_64.lib;PhysXExtensions_static_64.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <TreatLinkerWarningAsErrors>false</TreatLinkerWarningAsErrors>
       <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
     </Link>
     <PostBuildEvent>
@@ -107,6 +120,12 @@ copy /Y "$(ProjectDir)vendor\dll\assimp-vc142-mt.dll" "$(TargetDir)assimp-vc142-
 copy /Y "$(ProjectDir)vendor\dll\fmod.dll" "$(TargetDir)fmod.dll"
 copy /Y "$(ProjectDir)vendor\dll\Compressonator_MD_DLL.dll" "$(TargetDir)Compressonator_MD_DLL.dll"
 xcopy "$(ProjectDir)res\shaders" "$(TargetDir)res\shaders" /e /y /i /r
+
+copy /Y "$(ProjectDir)vendor\dll\PhysX_64.dll" "$(TargetDir)PhysX_64.dll"
+copy /Y "$(ProjectDir)vendor\dll\PhysXCommon_64.dll" "$(TargetDir)PhysXCommon_64.dll"
+copy /Y "$(ProjectDir)vendor\dll\PhysXCooking_64.dll" "$(TargetDir)PhysXCooking_64.dll"
+copy /Y "$(ProjectDir)vendor\dll\PhysXFoundation_64.dll" "$(TargetDir)PhysXFoundation_64.dll"
+copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.dll"
 </Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
@@ -114,6 +133,7 @@ xcopy "$(ProjectDir)res\shaders" "$(TargetDir)res\shaders" /e /y /i /r
     <ClCompile Include="src\Core\Animation\Animation.cpp" />
     <ClCompile Include="src\Core\Animation\SkinnedModel.cpp" />
     <ClCompile Include="src\Core\AssetManager.cpp" />
+    <ClCompile Include="src\Core\Door.cpp" />
     <ClCompile Include="src\Core\Editor.cpp" />
     <ClCompile Include="src\Core\AnimatedGameObject.cpp" />
     <ClCompile Include="src\Core\FbxImporter.cpp" />
@@ -121,9 +141,12 @@ xcopy "$(ProjectDir)res\shaders" "$(TargetDir)res\shaders" /e /y /i /r
     <ClCompile Include="src\Core\GameObject.cpp" />
     <ClCompile Include="src\Core\GL.cpp" />
     <ClCompile Include="src\Core\Input.cpp" />
+    <ClCompile Include="src\Core\Physics.cpp" />
     <ClCompile Include="src\Core\Player.cpp" />
     <ClCompile Include="src\Core\Scene.cpp" />
     <ClCompile Include="src\Core\TextBlitting.cpp" />
+    <ClCompile Include="src\Effects\BulletCasing.cpp" />
+    <ClCompile Include="src\Effects\Decal.cpp" />
     <ClCompile Include="src\Effects\MuzzleFlash.cpp" />
     <ClCompile Include="src\Engine.cpp" />
     <ClCompile Include="src\Main.cpp" />
@@ -149,6 +172,7 @@ xcopy "$(ProjectDir)res\shaders" "$(TargetDir)res\shaders" /e /y /i /r
     <ClInclude Include="src\Core\Animation\SkinnedModel.h" />
     <ClInclude Include="src\Core\AssetManager.h" />
     <ClInclude Include="src\Core\Audio.hpp" />
+    <ClInclude Include="src\Core\Door.h" />
     <ClInclude Include="src\Core\Editor.h" />
     <ClInclude Include="src\Core\AnimatedGameObject.h" />
     <ClInclude Include="src\Core\FbxImporter.h" />
@@ -157,9 +181,12 @@ xcopy "$(ProjectDir)res\shaders" "$(TargetDir)res\shaders" /e /y /i /r
     <ClInclude Include="src\Core\GL.h" />
     <ClInclude Include="src\Core\Input.h" />
     <ClInclude Include="src\Core\keycodes.h" />
+    <ClInclude Include="src\Core\Physics.h" />
     <ClInclude Include="src\Core\Player.h" />
     <ClInclude Include="src\Core\Scene.h" />
     <ClInclude Include="src\Core\TextBlitter.h" />
+    <ClInclude Include="src\Effects\BulletCasing.h" />
+    <ClInclude Include="src\Effects\Decal.h" />
     <ClInclude Include="src\Effects\MuzzleFlash.h" />
     <ClInclude Include="src\Engine.h" />
     <ClInclude Include="src\Math.h" />
@@ -183,6 +210,8 @@ xcopy "$(ProjectDir)res\shaders" "$(TargetDir)res\shaders" /e /y /i /r
   <ItemGroup>
     <None Include="res\shaders\animated_quad.frag" />
     <None Include="res\shaders\animated_quad.vert" />
+    <None Include="res\shaders\bullet_decals.frag" />
+    <None Include="res\shaders\bullet_decals.vert" />
     <None Include="res\shaders\calculate_inidrect_dispatch_size.comp" />
     <None Include="res\shaders\debug_view_point_cloud.frag" />
     <None Include="res\shaders\debug_view_point_cloud.vert" />
@@ -194,6 +223,8 @@ xcopy "$(ProjectDir)res\shaders" "$(TargetDir)res\shaders" /e /y /i /r
     <None Include="res\shaders\editor_textured.vert" />
     <None Include="res\shaders\geometry.frag" />
     <None Include="res\shaders\geometry.vert" />
+    <None Include="res\shaders\geometry_instanced.frag" />
+    <None Include="res\shaders\geometry_instanced.vert" />
     <None Include="res\shaders\lighting.frag" />
     <None Include="res\shaders\lighting.vert" />
     <None Include="res\shaders\propogation_list.comp" />

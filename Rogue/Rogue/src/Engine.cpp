@@ -10,15 +10,19 @@
 #include "Core/TextBlitter.h"
 #include "Core/Scene.h"
 #include "Core/File.h"
+#include "Core/Physics.h"
 // Profiling stuff
 #define TracyGpuCollect
 #include "tracy/Tracy.hpp"
 #include "tracy/TracyOpenGL.hpp"
 
 enum class EngineMode { Game, Editor } _engineMode;
+int _currentPlayer = 0;
 
 void ToggleEditor();
 void ToggleFullscreen();
+void NextPlayer();
+void NextViewportMode();
 
 void Engine::Run() {
 
@@ -43,20 +47,37 @@ void Engine::Run() {
             Input::Update();
             Audio::Update();
             if (_engineMode == EngineMode::Game) {
+
                 LazyKeyPresses();
                 Scene::Update(limitUpdates);
-                Player::Update(limitUpdates);
+
+                for (Player& player : Scene::_players) {
+                    player.Update(limitUpdates);
+                }
+                Physics::StepPhysics(_deltaTime);
             }
             else if (_engineMode == EngineMode::Editor) {
+
                 LazyKeyPressesEditor();
                 Editor::Update(_deltaTime);
             }
         }
 
+        Player* player1 = &Scene::_players[0];
+
         // Render
         TextBlitter::Update(_deltaTime);
         if (_engineMode == EngineMode::Game) {
-            Renderer::RenderFrame();
+
+            if (Renderer::_viewportMode != FULLSCREEN) {
+                for (Player& player : Scene::_players) {
+                    Renderer::RenderFrame(&player);
+                }
+            }
+            else {
+                Renderer::RenderFrame(&Scene::_players[0]);
+            }
+
         }
         else if (_engineMode == EngineMode::Editor) {
             Editor::PrepareRenderFrame();
@@ -76,18 +97,22 @@ void Engine::Init() {
 
     GL::Init(1920 * 1.5f, 1080 * 1.5f);
     Input::Init();
-    Player::Init(glm::vec3(4.0f, 0, 3.6f));
-    Player::SetRotation(glm::vec3(-0.17, 1.54f, 0));
+    Physics::Init();
+
     Editor::Init();
     Audio::Init();
     AssetManager::LoadFont();
     AssetManager::LoadEverythingElse();
+    AssetManager::CreateTriangleMeshes();
+
     File::LoadMap("map.txt");
+
     Scene::RecreateDataStructures();
 
     Renderer::Init();
     Renderer::CreatePointCloudBuffer();
     Renderer::CreateTriangleWorldVertexBuffer();
+
 }
 
 void Engine::LazyKeyPresses() {
@@ -117,7 +142,11 @@ void Engine::LazyKeyPresses() {
         Audio::PlayAudio("RE_Beep.wav", 0.25f);
     }
     if (Input::KeyPressed(HELL_KEY_B)) {
-        Renderer::ToggleDrawingLines();
+        Renderer::NextDebugLineRenderMode();
+        Audio::PlayAudio("RE_Beep.wav", 0.25f);
+    }
+    if (Input::KeyPressed(HELL_KEY_V)) {
+        Renderer::ToggleCollisionWorld();
         Audio::PlayAudio("RE_Beep.wav", 0.25f);
     }
     if (Input::KeyPressed(HELL_KEY_SPACE)) {
@@ -141,6 +170,12 @@ void Engine::LazyKeyPresses() {
         Scene::LoadLightSetup(2);
         Scene::CreatePointCloud();
         Audio::PlayAudio("RE_Beep.wav", 0.25f);
+    }
+    if (Input::KeyPressed(GLFW_KEY_Y)) {
+        NextPlayer();
+    }
+    if (Input::KeyPressed(GLFW_KEY_N)) {
+        NextViewportMode();
     }
 }
 
@@ -176,4 +211,38 @@ void ToggleFullscreen() {
     GL::ToggleFullscreen();
     Renderer::RecreateFrameBuffers();
     Audio::PlayAudio("RE_Beep.wav", 0.25f);
+}
+
+void NextPlayer() {
+    _currentPlayer++;
+    if (_currentPlayer == Scene::_playerCount) {
+        _currentPlayer = 0;
+    }
+    for (int i = 0; i < Scene::_playerCount; i++) {
+        Scene::_players[i]._ignoreControl = (i != _currentPlayer);
+    }
+    Audio::PlayAudio("RE_Beep.wav", 0.25f);
+    std::cout << "Current player is: " << _currentPlayer << "\n";
+}
+
+void NextViewportMode() {
+    int currentViewportMode = Renderer::_viewportMode;
+    currentViewportMode++;
+    if (currentViewportMode == ViewportMode::VIEWPORTMODE_COUNT) {
+        currentViewportMode = 0;
+    }
+    Renderer::_viewportMode = (ViewportMode)currentViewportMode;
+    Audio::PlayAudio("RE_Beep.wav", 0.25f);
+
+    // Only first player 0 can every be fullscreen.
+    _currentPlayer = 0;
+
+    // So disable other player control (for now)
+    if (currentViewportMode == ViewportMode::FULLSCREEN) {
+        for (int i = 0; i < Scene::_playerCount; i++) {
+            Scene::_players[i]._ignoreControl = (i != 0);
+        }
+    }
+    Renderer::RecreateFrameBuffers();
+    std::cout << "Current player: " << _currentPlayer << "\n";
 }

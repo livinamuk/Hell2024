@@ -194,11 +194,11 @@ vec3 GetDirectLighting(vec3 lightPos, vec3 lightColor, float radius, float stren
 //	float lightAttenuation = 1.0 / (lightDist*lightDist);
 
    float lightAttenuation = smoothstep(radius, 0, length(lightPos - WorldPos));
-    lightAttenuation *= 0.25;
+  //  lightAttenuation *= 0.25;
  //   float compression = 0.5;
    // lightAttenuation = pow(smoothstep(radius * 2, 0, length(lightPos - WorldPos)), compression);
 
-	lightAttenuation = clamp(lightAttenuation, 0.0, 0.9); // THIS IS WRONG, but does stop super bright region around light source and doesn't seem to affect anything else...
+//	lightAttenuation = clamp(lightAttenuation, 0.0, 0.9); // THIS IS WRONG, but does stop super bright region around light source and doesn't seem to affect anything else...
 	float irradiance = max(dot(lightDir, Normal), 0.0) ;
 	irradiance *= lightAttenuation * lightRadiance;		
     //irradiance = clamp(irradiance, 0.0, 0.9);
@@ -299,15 +299,13 @@ void main() {
     // Indirect lighthing
     vec3 WorldPos2 = WorldPos + (normal * 0.01);
     vec3 indirectLighting = GetIndirectLighting(WorldPos2, normal);
-    //factor = roughness;
-    //indirectLighting *= (0.125) * vec3(factor); 
-    //indirectLighting = max(indirectLighting, vec3(0));
 
     vec3 adjustedIndirectLighting = indirectLighting;
     float factor = min(1, roughness * 1.5);
+    //factor = min(1, roughness * 0.25) * 4;
     adjustedIndirectLighting *= (0.4) * vec3(factor); 
     adjustedIndirectLighting = max(adjustedIndirectLighting, vec3(0));
-    adjustedIndirectLighting *= baseColor;
+    adjustedIndirectLighting *=baseColor * 1.5;
 
     // Composite
     vec3 composite = directLighting  + (adjustedIndirectLighting);
@@ -379,6 +377,7 @@ void main() {
 	FragColor.rgb = FragColor.rgb + vec3(brightness);
     FragColor.g += 0.0025;
     FragColor.a = 1;
+
     //FragColor.rgb = vec3(0);
 
     // not used bruh
@@ -392,8 +391,10 @@ void main() {
     }
     */
     //FragColor.rgb = vec3(baseColor);
-    //FragColor.rgb = vec3(baseColor);
+  // FragColor.rgb = vec3(baseColor);
     //FragColor.rgb = pow(FragColor.rgb, vec3(1.0/2.2)); 
+    //FragColor.rgb = normal;
 
-  //  FragColor.rgb = vec3(normal);
+    
+  // FragColor.rgb = vec3(normal);
 }

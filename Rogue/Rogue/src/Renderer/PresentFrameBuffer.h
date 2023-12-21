@@ -6,6 +6,7 @@ public:
 
 	void Configure(int width, int height);
 	void Bind();
+	void Destroy();
 	unsigned int GetID();
 	unsigned int GetWidth();
 	unsigned int GetHeight();

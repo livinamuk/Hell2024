@@ -8,9 +8,8 @@ Mesh::Mesh(std::vector<Vertex> vertices, std::vector<unsigned int> indices, std:
     _name = name;
     _indexCount = indices.size();
 
-  //  for (Vertex& vertex : vertices) {
-   //     vertex.smoothNormal = vertex.normal;
-  //  }
+    this->vertices = vertices;
+    this->indices = indices;
 
     glGenVertexArrays(1, &_VAO);
     glGenBuffers(1, &_VBO);
@@ -32,8 +31,6 @@ Mesh::Mesh(std::vector<Vertex> vertices, std::vector<unsigned int> indices, std:
     glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, tangent));
     glEnableVertexAttribArray(4);
     glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, bitangent));
-   // glEnableVertexAttribArray(7);
-    //glVertexAttribPointer(7, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, smoothNormal));
 
     glEnableVertexAttribArray(0);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
@@ -51,4 +48,34 @@ int Mesh::GetIndexCount() {
 
 int Mesh::GetVAO() {
     return _VAO;
+}
+
+void Mesh::CreateTriangleMesh() {
+    std::vector<PxVec3> pxvertices;
+    std::vector<unsigned int> pxindices;
+    for (auto& vertex : vertices) {
+        pxvertices.push_back(PxVec3(vertex.position.x, vertex.position.y, vertex.position.z));
+    }
+    for (auto& index : indices) {
+        pxindices.push_back(index);
+    }
+    if (pxindices.size()) {
+        _triangleMesh = Physics::CreateTriangleMesh(pxvertices.size(), pxvertices.data(), pxindices.size() / 3, pxindices.data());
+        std::cout << "Created triangle mesh for " << _name << "\n";
+    }
+}
+
+void Mesh::CreateConvexMesh() {
+    std::vector<PxVec3> pxvertices;
+    std::vector<unsigned int> pxindices;
+    for (auto& vertex : vertices) {
+        pxvertices.push_back(PxVec3(vertex.position.x, vertex.position.y, vertex.position.z));
+    }
+    for (auto& index : indices) {
+        pxindices.push_back(index);
+    }
+    if (pxindices.size()) {
+        _convexMesh = Physics::CreateConvexMesh(pxvertices.size(), pxvertices.data(), pxindices.size() / 3, pxindices.data());
+        std::cout << "Created triangle mesh for " << _name << "\n";
+    }
 }

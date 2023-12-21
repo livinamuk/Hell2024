@@ -45,6 +45,13 @@ void PresentFrameBuffer::Bind() {
 	glBindFramebuffer(GL_FRAMEBUFFER, _ID);
 }
 
+void PresentFrameBuffer::Destroy() {
+	glDeleteTextures(1, &_inputTexture);
+	glDeleteTextures(1, &_fxaaTexture);
+	glDeleteTextures(1, &_depthTexture);
+	glDeleteFramebuffers(1, &_ID);
+}
+
 unsigned int PresentFrameBuffer::GetID() {
 	return _ID;
 }

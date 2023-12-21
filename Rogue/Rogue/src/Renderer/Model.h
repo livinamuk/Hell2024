@@ -1,6 +1,7 @@
 #pragma once
 #include "../Common.h"
 #include "Mesh.h"
+#include "../Core/Physics.h"
 
 struct BoundingBox {
 	glm::vec3 scale;
@@ -12,6 +13,7 @@ class Model
 public:
 	void Load(std::string filepath);
 	void Draw();
+	void CreateTriangleMesh();
 	//void Draw(Shader* shader, glm::mat4 modelMatrix, int primitiveType = GL_TRIANGLES);
 	
 public:
@@ -19,6 +21,7 @@ public:
 	std::vector<Triangle> _triangles;;
 	//std::vector<int> _meshIndices;
 	std::vector<std::string> _meshNames;
+	PxTriangleMesh* _triangleMesh;
 
 public:
 	std::string _name;

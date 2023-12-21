@@ -51,7 +51,7 @@ void FbxImporter::LoadSkinnedModel(std::string filename, SkinnedModel& skinnedMo
      //std::cout << "Loaded model " << skinnedModel._filename << " ("  << skinnedModel.m_BoneInfo.size() << " bones)\n";
      
      for (auto b : skinnedModel.m_BoneInfo) {
-         //std::cout << "-" << b.BoneName << "\n";
+     //    std::cout << "-" << b.BoneName << "\n";
      }
 
 

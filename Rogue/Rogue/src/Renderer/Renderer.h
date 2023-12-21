@@ -1,11 +1,12 @@
 #pragma once
 #include "Texture3D.h"
 #include "../Common.h"
+#include "../Core/Player.h"
 
 namespace Renderer {
 
 	void Init();
-	void RenderFrame();
+	void RenderFrame(Player* player);
 	void RenderEditorFrame();
 	void RenderUI();
 	void HotloadShaders();
@@ -21,19 +22,27 @@ namespace Renderer {
 	void ToggleDrawingLights();
 	void ToggleDrawingProbes();
 	void ToggleDrawingLines();
+	void ToggleCollisionWorld();
+	void TogglePhysicsWorldWorld();
 
 	int GetRenderWidth();
 	int GetRenderHeight();
 	float GetPointCloudSpacing();
 	void NextMode();
 	void PreviousMode();
+	void NextDebugLineRenderMode();
 	void RecreateFrameBuffers();
 	void CreatePointCloudBuffer();
 	void CreateTriangleWorldVertexBuffer();
+	glm::mat4 GetProjectionMatrix(float depthOfField);
 
-	std::vector<int> UpdateDirtyPointCloudIndices();
-	std::vector<glm::uvec4> UpdateDirtyGridChunks();
+	//std::vector<int> UpdateDirtyPointCloudIndices();
+	//std::vector<glm::uvec4> UpdateDirtyGridChunks();
+
+	inline ViewportMode _viewportMode = FULLSCREEN;
 
 	inline int _method = 1;
 	inline bool _shadowMapsAreDirty = true;
+	
+
 }

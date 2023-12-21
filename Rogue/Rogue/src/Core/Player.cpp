@@ -2,48 +2,33 @@
 #include "../Core/Audio.hpp"
 #include "../Core/Input.h"
 #include "../Core/GL.h"
+#include "../Core/Scene.h"
 #include "../Common.h"
 #include "../Util.hpp"
 #include "AnimatedGameObject.h"
 
-namespace Player {
-	glm::vec3 _position = glm::vec3(0);
-	glm::vec3 _rotation = glm::vec3(-0.1f, -HELL_PI * 0.5f, 0);
-	float _viewHeightStanding = 1.65f;
-	float _viewHeightCrouching = 1.15f;
-	//float _viewHeightCrouching = 3.15f; hovery
-	float _crouchDownSpeed = 17.5f;
-	float _currentViewHeight = _viewHeightStanding;
-	float _walkingSpeed = 4;
-	float _crouchingSpeed = 2;
-	glm::mat4 _viewMatrix = glm::mat4(1);
-	glm::mat4 _inverseViewMatrix = glm::mat4(1);
-	glm::vec3 _viewPos = glm::vec3(0);
-	glm::vec3 _front = glm::vec3(0);
-	glm::vec3 _forward = glm::vec3(0);
-	glm::vec3 _up = glm::vec3(0);
-	glm::vec3 _right = glm::vec3(0);
-	float _breatheAmplitude = 0.00052f;
-	float _breatheFrequency = 8;
-	float _headBobAmplitude = 0.00505f;
-	float _headBobFrequency = 25.0f;
-	bool _isMoving = false;
-	float _muzzleFlashTimer = -1;
-	float _muzzleFlashRotation = 0;
 
-	int _currentWeaponIndex = 0;
-	AnimatedGameObject _firstPersonWeapon;
-	WeaponAction _weaponAction = DRAW_BEGIN;
-	std::vector<bool> _weaponInventory(Weapon::WEAPON_COUNT);
+Player::Player() {
 }
 
-void Player::Init(glm::vec3 position) {
+Player::Player(glm::vec3 position, glm::vec3 rotation) {
 	_position = position;
+	_rotation = rotation;
 	SetWeapon(Weapon::GLOCK);
 	_glockAmmo.clip = 8;
 	_glockAmmo.total = 40;
 	_aks74uAmmo.clip = 30;
 	_aks74uAmmo.total = 100;
+	_weaponInventory.resize(Weapon::WEAPON_COUNT);
+
+	_characterModel.SetSkinnedModel("UniSexGuy2");
+	_characterModel.SetMeshMaterial("CC_Base_Body", "UniSexGuyBody");
+	_characterModel.SetMeshMaterial("CC_Base_Eye", "UniSexGuyBody");
+	_characterModel.SetMeshMaterial("Biker_Jeans", "UniSexGuyJeans");
+	_characterModel.SetMeshMaterial("CC_Base_Eye", "UniSexGuyEyes");
+	_characterModel.SetMeshMaterialByIndex(1, "UniSexGuyHead");
+	_characterModel.SetScale(0.01f);
+	_characterModel.SetRotationX(HELL_PI / 2);
 }
 
 void Player::SetWeapon(Weapon weapon) {
@@ -51,9 +36,10 @@ void Player::SetWeapon(Weapon weapon) {
 }
 
 void Player::Update(float deltaTime) {
+		
 
 	// Mouselook
-	if (GL::WindowHasFocus()) {
+	if (!_ignoreControl && GL::WindowHasFocus()) {
 		float mouseSensitivity = 0.002f;
 		static float targetXRot = _rotation.x;
 		static float targetYRot = _rotation.y;
@@ -78,7 +64,7 @@ void Player::Update(float deltaTime) {
 
 	// Crouching
 	bool crouching = false;
-	if (Input::KeyDown(HELL_KEY_LEFT_CONTROL_GLFW)) {
+	if (!_ignoreControl && Input::KeyDown(HELL_KEY_LEFT_CONTROL_GLFW)) {
 		crouching = true;
 	}
 
@@ -115,49 +101,78 @@ void Player::Update(float deltaTime) {
 	_inverseViewMatrix = glm::inverse(_viewMatrix);
 	_right = glm::vec3(_inverseViewMatrix[0]);
 	_up = glm::vec3(_inverseViewMatrix[1]);
-	_front = glm::vec3(_inverseViewMatrix[2]);// *glm::vec3(-1, -1, -1);
-	_forward = glm::normalize(glm::vec3(_front.x, 0, _front.z));
+	_forward = glm::vec3(_inverseViewMatrix[2]);
+	_front = glm::normalize(glm::vec3(_forward.x, 0, _forward.z));
 	_viewPos = _inverseViewMatrix[3];
 
+
 	// WSAD movement
-	glm::vec3 displacement(0); 
 	_isMoving = false;
-	if (Input::KeyDown(HELL_KEY_W)) {
-		displacement -= _forward * speed;
-		_isMoving = true;
+	if (!_ignoreControl) {
+		glm::vec3 displacement(0); 
+		if (Input::KeyDown(HELL_KEY_W)) {
+			displacement -= _front * speed;
+			_isMoving = true;
+		}
+		if (Input::KeyDown(HELL_KEY_S)) {
+			displacement += _front * speed;
+			_isMoving = true;
+		}
+		if (Input::KeyDown(HELL_KEY_A)) {
+			displacement -= _right * speed;
+			_isMoving = true;
+		}
+		if (Input::KeyDown(HELL_KEY_D)) {
+			displacement += _right * speed;
+			_isMoving = true;
+		}
+		_position += displacement;
 	}
-	if (Input::KeyDown(HELL_KEY_S)) {
-		displacement += _forward * speed;
-		_isMoving = true;
+
+	// Collision Detection
+	for (Line& collisioLine : Scene::_collisionLines) {
+				
+			glm::vec3 lineStart = collisioLine.p1.pos;
+			glm::vec3 lineEnd = collisioLine.p2.pos;
+			glm::vec3 playerPos = GetFeetPosition();
+			playerPos.y = 0;
+
+			if (lineStart.y > 0.3f) {
+				continue;
+			}
+
+			glm::vec3 closestPointOnLine = Util::ClosestPointOnLine(playerPos, lineStart, lineEnd);
+
+			glm::vec3 dir = glm::normalize(closestPointOnLine - playerPos);
+			float distToLine = glm::length(closestPointOnLine - playerPos);
+			float correctionFactor = _radius - distToLine;
+
+			if (glm::length(closestPointOnLine - playerPos) < _radius) {
+				_position -= dir * correctionFactor;
+				_position.y = 0;
+			}
 	}
-	if (Input::KeyDown(HELL_KEY_A)) {
-		displacement -= _right * speed;
-		_isMoving = true;
-	}
-	if (Input::KeyDown(HELL_KEY_D)) {
-		displacement += _right * speed;
-		_isMoving = true;
-	}
-	_position += displacement;
 
 	// Footstep audio
 	static float m_footstepAudioTimer = 0;
 	static float footstepAudioLoopLength = 0.5;
 
-	if (!_isMoving)
-		m_footstepAudioTimer = 0;
-	else
-	{
-		if (_isMoving && m_footstepAudioTimer == 0) {
-			int random_number = std::rand() % 4 + 1;
-			std::string file = "player_step_" + std::to_string(random_number) + ".wav";
-			Audio::PlayAudio(file.c_str(), 0.5f);
-		}
-		float timerIncrement = crouching ? deltaTime * 0.75f : deltaTime;
-		m_footstepAudioTimer += timerIncrement;
-
-		if (m_footstepAudioTimer > footstepAudioLoopLength)
+	if (!_ignoreControl) {
+		if (!_isMoving)
 			m_footstepAudioTimer = 0;
+		else
+		{
+			if (_isMoving && m_footstepAudioTimer == 0) {
+				int random_number = std::rand() % 4 + 1;
+				std::string file = "player_step_" + std::to_string(random_number) + ".wav";
+				Audio::PlayAudio(file.c_str(), 0.5f);
+			}
+			float timerIncrement = crouching ? deltaTime * 0.75f : deltaTime;
+			m_footstepAudioTimer += timerIncrement;
+
+			if (m_footstepAudioTimer > footstepAudioLoopLength)
+				m_footstepAudioTimer = 0;
+		}
 	}
 
 	_weaponInventory[Weapon::KNIFE] = true;
@@ -167,7 +182,7 @@ void Player::Update(float deltaTime) {
 	_weaponInventory[Weapon::MP7] = false;
 
 	// Weapons
-	if (Input::KeyPressed(HELL_KEY_Q)) {
+	if (!_ignoreControl && Input::KeyPressed(HELL_KEY_Q)) {
 
 		Audio::PlayAudio("Glock_Equip.wav", 0.5f);
 		bool foundNextWeapon = false;
@@ -190,6 +205,49 @@ void Player::Update(float deltaTime) {
 
 	if (_muzzleFlashTimer >= 0) {
 		_muzzleFlashTimer += deltaTime * 20;
+	}
+
+	if (!_ignoreControl) {
+		Interact();
+		EvaluateCameraRay();
+	}
+
+	// Character model animation
+	if (_currentWeaponIndex == GLOCK) {
+		if (_isMoving) {
+			_characterModel.PlayAndLoopAnimation("Character_Glock_Walk", 1.0f);
+		}
+		else {
+			_characterModel.PlayAndLoopAnimation("Character_Glock_Idle", 1.0f);
+		}
+		if (crouching) {
+			_characterModel.PlayAndLoopAnimation("Character_Glock_Kneel", 1.0f);
+		}
+	}
+	if (_currentWeaponIndex == AKS74U) {
+		if (_isMoving) {
+			_characterModel.PlayAndLoopAnimation("Character_AKS74U_Walk", 1.0f);
+		}
+		else {
+			_characterModel.PlayAndLoopAnimation("Character_AKS74U_Idle", 1.0f);
+		}
+		if (crouching) {
+			_characterModel.PlayAndLoopAnimation("Character_AKS74U_Kneel", 1.0f);
+		}
+	}
+
+
+	_characterModel.SetPosition(GetFeetPosition() + glm::vec3(0.0f, 0.1f, 0.0f));
+	_characterModel.Update(deltaTime);
+	_characterModel.SetRotationY(_rotation.y + HELL_PI);
+
+	if (!_ignoreControl) {
+		if (Input::KeyDown(HELL_KEY_T) && GetCurrentWeaponIndex() == GLOCK) {
+			SpawnGlockCasing();
+		}
+		if (Input::KeyDown(HELL_KEY_T) && GetCurrentWeaponIndex() == AKS74U) {
+			SpawnAKS74UCasing();
+		}
 	}
 }
 
@@ -218,8 +276,8 @@ glm::vec3 Player::GetCameraRight() {
 	return _right;
 }
 
-glm::vec3 Player::GetCameraFront() {
-	return _front;
+glm::vec3 Player::GetCameraForward() {
+	return _forward;
 }
 
 glm::vec3 Player::GetCameraUp() {
@@ -232,6 +290,71 @@ bool Player::IsMoving() {
 
 int Player::GetCurrentWeaponIndex() {
 	return _currentWeaponIndex;
+}
+
+void Player::EvaluateCameraRay() {
+
+	// CAMERA RAY CAST
+	_cameraRayData.found = false;
+	_cameraRayData.distanceToHit = 99999;
+	_cameraRayData.triangle = Triangle();
+	_cameraRayData.raycastObjectType = RaycastObjectType::NONE;
+	_cameraRayData.rayCount = 0;
+	glm::vec3 rayOrigin = GetViewPos();
+	glm::vec3 rayDirection = GetCameraForward() * glm::vec3(-1);
+
+	// house tris
+	std::vector<Triangle> triangles;
+	int vertexCount = Scene::_rtMesh[0].vertexCount;
+	for (int i = 0; i < vertexCount; i += 3) {
+		Triangle& tri = triangles.emplace_back(Triangle());
+		tri.p1 = Scene::_rtVertices[i + 0];
+		tri.p2 = Scene::_rtVertices[i + 1];
+		tri.p3 = Scene::_rtVertices[i + 2];
+	}
+	Util::EvaluateRaycasts(rayOrigin, rayDirection, 10, triangles, RaycastObjectType::WALLS, glm::mat4(1), _cameraRayData, nullptr);
+
+	// Doors
+	int doorIndex = 0;
+	for (RTInstance& instance : Scene::_rtInstances) {
+
+		if (instance.meshIndex == 0) {
+			continue;
+		}
+		triangles.clear();
+
+		RTMesh& mesh = Scene::_rtMesh[instance.meshIndex];
+		int baseVertex = mesh.baseVertex;
+		int vertexCount = mesh.vertexCount;
+		glm::mat4 modelMatrix = instance.modelMatrix;
+
+		for (int i = baseVertex; i < baseVertex + vertexCount; i += 3) {
+			Triangle& tri = triangles.emplace_back(Triangle());
+			tri.p1 = modelMatrix * glm::vec4(Scene::_rtVertices[i + 0], 1.0);
+			tri.p2 = modelMatrix * glm::vec4(Scene::_rtVertices[i + 1], 1.0);
+			tri.p3 = modelMatrix * glm::vec4(Scene::_rtVertices[i + 2], 1.0);
+		}
+		void* parent = &Scene::_doors[doorIndex];
+		Util::EvaluateRaycasts(rayOrigin, rayDirection, 10, triangles, RaycastObjectType::DOOR, glm::mat4(1), _cameraRayData, parent);
+		doorIndex++;
+	}
+}
+
+void Player::Interact() {
+
+	if (Input::KeyPressed(HELL_KEY_E)) {
+		switch (_cameraRayData.raycastObjectType) {
+		case RaycastObjectType::DOOR: {
+			Door* door = (Door*)(_cameraRayData.parent);
+			if (!door->IsInteractable(GetFeetPosition())) {
+				break;
+			}
+			door->Interact();
+		} break;
+		default:
+			break;
+		}
+	}
 }
 
 void Player::UpdateFirstPersonWeapon(float deltaTime) {
@@ -268,7 +391,7 @@ void Player::UpdateFirstPersonWeapon(float deltaTime) {
 	_firstPersonWeapon.SetScale(0.001f);
 	_firstPersonWeapon.SetRotationX(Player::GetViewRotation().x);
 	_firstPersonWeapon.SetRotationY(Player::GetViewRotation().y);
-	_firstPersonWeapon.SetPosition(Player::GetViewPos() - (Player::GetCameraFront() * glm::vec3(0)));
+	_firstPersonWeapon.SetPosition(Player::GetViewPos() - (Player::GetCameraForward() * glm::vec3(0)));
 
 
 	if (_currentWeaponIndex == Weapon::KNIFE) {
@@ -291,7 +414,7 @@ void Player::UpdateFirstPersonWeapon(float deltaTime) {
 			_weaponAction = IDLE;
 		}
 		// Fire
-		if (Input::LeftMousePressed()) {
+		if (!_ignoreControl && Input::LeftMousePressed()) {
 			if (_weaponAction == DRAWING ||
 				_weaponAction == IDLE ||
 				_weaponAction == FIRE && _firstPersonWeapon.AnimationIsPastPercentage(25.0f) ||
@@ -328,7 +451,7 @@ void Player::UpdateFirstPersonWeapon(float deltaTime) {
 			_weaponAction = IDLE;
 		}		
 		// Fire
-		if (Input::LeftMousePressed()) {
+		if (!_ignoreControl && Input::LeftMousePressed()) {
 			if (_weaponAction == DRAWING ||
 				_weaponAction == IDLE ||
 				_weaponAction == FIRE && _firstPersonWeapon.AnimationIsPastPercentage(25.0f) ||
@@ -340,23 +463,24 @@ void Player::UpdateFirstPersonWeapon(float deltaTime) {
 				_firstPersonWeapon.PlayAnimation(aninName, 1.5f);
 				Audio::PlayAudio(audioName, 1.0f);
 				SpawnMuzzleFlash();
+				SpawnBullet(0);
 			}
 		}
 		if (_weaponAction == FIRE && _firstPersonWeapon.AnimationIsPastPercentage(60.0f)) {
 			_weaponAction = IDLE;
 		}
 		// Reload
-		if (Input::KeyPressed(HELL_KEY_R)) {
+		if (!_ignoreControl && Input::KeyPressed(HELL_KEY_R)) {
 			_weaponAction = RELOAD;
 			_firstPersonWeapon.PlayAnimation("Glock_Reload", 1.0f);
 			Audio::PlayAudio("Glock_Reload.wav", 1.0f);
 		}
-		if (Input::KeyPressed(HELL_KEY_G)) {
+		if (!_ignoreControl && Input::KeyPressed(HELL_KEY_G)) {
 			_weaponAction = RELOAD;
 			_firstPersonWeapon.PlayAnimation("Glock_ReloadEmpty", 1.0f);
 			Audio::PlayAudio("Glock_ReloadEmpty.wav", 1.0f);
 		}
-		if (Input::KeyPressed(HELL_KEY_J)) {
+		if (!_ignoreControl && Input::KeyPressed(HELL_KEY_J)) {
 			_weaponAction = RELOAD;
 			_firstPersonWeapon.PlayAnimation("Glock_Spawn", 1.0f);
 			//Audio::PlayAudio("Glock_ReloadEmpty.wav", 1.0f);
@@ -370,7 +494,7 @@ void Player::UpdateFirstPersonWeapon(float deltaTime) {
 	if (_currentWeaponIndex == Weapon::AKS74U) {
 
 		// Fire
-		if (Input::LeftMouseDown()) {
+		if (!_ignoreControl && Input::LeftMouseDown()) {
 			if (_weaponAction == DRAWING || 
 				_weaponAction == IDLE ||
 				_weaponAction == FIRE && _firstPersonWeapon.AnimationIsPastPercentage(25.0f) ||
@@ -383,10 +507,11 @@ void Player::UpdateFirstPersonWeapon(float deltaTime) {
 				_firstPersonWeapon.PlayAnimation(aninName, 1.625f);
 				Audio::PlayAudio(audioName, 1.0f);
 				SpawnMuzzleFlash();
+				SpawnBullet(0.025);
 			}
 		}
 		// Reload
-		if (Input::KeyPressed(HELL_KEY_R)) {
+		if (!_ignoreControl && Input::KeyPressed(HELL_KEY_R)) {
 			_weaponAction = RELOAD;
 			_firstPersonWeapon.PlayAnimation("AKS74U_Reload", 1.1f);
 			Audio::PlayAudio("AK47_Reload.wav", 1.0f);
@@ -421,7 +546,7 @@ void Player::UpdateFirstPersonWeapon(float deltaTime) {
 
 	if (_currentWeaponIndex == Weapon::SHOTGUN) {
 		// Fire
-		if (Input::LeftMousePressed()) {
+		if (!_ignoreControl && Input::LeftMousePressed()) {
 			if (_weaponAction == DRAWING ||
 				_weaponAction == IDLE ||
 				_weaponAction == FIRE && _firstPersonWeapon.AnimationIsPastPercentage(25.0f) ||
@@ -436,7 +561,7 @@ void Player::UpdateFirstPersonWeapon(float deltaTime) {
 			}
 		}
 		// Reload
-		if (Input::KeyPressed(HELL_KEY_R) && false) {
+		if (!_ignoreControl && Input::KeyPressed(HELL_KEY_R) && false) {
 			_weaponAction = RELOAD;
 			_firstPersonWeapon.PlayAnimation("AKS74U_Reload", 1.1f);
 			Audio::PlayAudio("AK47_Reload.wav", 1.0f);
@@ -481,6 +606,89 @@ void Player::SpawnMuzzleFlash() {
 	_muzzleFlashRotation = Util::RandomFloat(0, HELL_PI * 2);
 }
 
+
+
+
+void Player::SpawnGlockCasing() {
+
+	Transform transform;
+	transform.position = _firstPersonWeapon.GetGlockCasingSpawnPostion();
+	transform.rotation.x = HELL_PI * 0.5f;
+	transform.rotation.y = _rotation.y + (HELL_PI * 0.5f);
+
+	PhysicsFilterData filterData;
+	filterData.raycastGroup = RaycastGroup::RAYCAST_DISABLED;
+	filterData.collisionGroup = CollisionGroup::BULLET_CASING;
+	filterData.collidesWith = CollisionGroup::ENVIROMENT_OBSTACLE;
+
+	PxShape* shape = Physics::CreateBoxShape(0.01f, 0.004f, 0.004f);
+	PxRigidDynamic* body = Physics::CreateRigidDynamic(transform, filterData, shape);
+
+	PxVec3 force = Util::GlmVec3toPxVec3(glm::normalize(GetCameraRight() + glm::vec3(0, Util::RandomFloat(0.7, 0.9), 0)) * glm::vec3(0.00215));
+	body->addForce(force);
+	body->setAngularVelocity(PxVec3(Util::RandomFloat(0, 100), Util::RandomFloat(0, 100), Util::RandomFloat(0, 100)));
+	//shape->release();
+
+	BulletCasing bulletCasing;
+	bulletCasing.type = GLOCK;
+	bulletCasing.rigidBody = body;
+	Scene::_bulletCasings.push_back(bulletCasing);
+
+	body->userData = (void*)&Scene::_bulletCasings.back();
+}
+
+
+
+void Player::SpawnAKS74UCasing() {
+
+	Transform transform;
+	transform.position = _firstPersonWeapon.GetAK74USCasingSpawnPostion();
+	transform.rotation.x = HELL_PI * 0.5f;
+	transform.rotation.y = _rotation.y + (HELL_PI * 0.5f);
+
+	PhysicsFilterData filterData;
+	filterData.raycastGroup = RaycastGroup::RAYCAST_DISABLED;
+	filterData.collisionGroup = CollisionGroup::BULLET_CASING;
+	filterData.collidesWith = CollisionGroup::ENVIROMENT_OBSTACLE;
+
+	PxShape* shape = Physics::CreateBoxShape(0.02f, 0.004f, 0.004f);
+	PxRigidDynamic* body = Physics::CreateRigidDynamic(transform, filterData, shape);
+
+	PxVec3 force = Util::GlmVec3toPxVec3(glm::normalize(GetCameraRight() + glm::vec3(0, Util::RandomFloat(0.7, 1.4), 0)) * glm::vec3(0.003));
+	body->addForce(force);
+	body->setAngularVelocity(PxVec3(Util::RandomFloat(0, 50), Util::RandomFloat(0, 50), Util::RandomFloat(0, 50)));
+	//shape->release();
+
+	BulletCasing bulletCasing;
+	bulletCasing.type = AKS74U;
+	bulletCasing.rigidBody = body;
+	Scene::_bulletCasings.push_back(bulletCasing);
+
+	body->userData = (void*)&Scene::_bulletCasings.back();
+}
+
+
+void Player::SpawnBullet(float variance) {
+	Bullet bullet;
+	bullet.spawnPosition = GetViewPos();
+
+	glm::vec3 offset;
+	offset.x = Util::RandomFloat(-(variance * 0.5f), variance * 0.5f);
+	offset.y = Util::RandomFloat(-(variance * 0.5f), variance * 0.5f);
+	offset.z = Util::RandomFloat(-(variance * 0.5f), variance * 0.5f);
+
+	bullet.direction = (glm::normalize(GetCameraForward() + offset)) * glm::vec3(-1);
+	Scene::_bullets.push_back(bullet);
+
+	if (GetCurrentWeaponIndex() == GLOCK) {
+		SpawnGlockCasing();
+	}
+	if (GetCurrentWeaponIndex() == AKS74U) {
+		SpawnAKS74UCasing();
+	}
+}
+
+
 float Player::GetMuzzleFlashTime() {
 	return _muzzleFlashTimer;
 }
@@ -489,10 +697,22 @@ float Player::GetMuzzleFlashRotation() {
 	return _muzzleFlashRotation;
 }
 
-glm::mat4 Player::GetProjectionMatrix(float depthOfField) {
-	return glm::perspective(depthOfField, (float)GL::GetWindowWidth() / (float)GL::GetWindowHeight(), NEAR_PLANE, FAR_PLANE);
-}
 
 void Player::SetRotation(glm::vec3 rotation) {
 	_rotation = rotation;
+}
+
+float Player::GetRadius() {
+	return _radius;
+}
+
+bool Player::CursorShouldBeInterect() {
+	switch (_cameraRayData.raycastObjectType) {
+	case RaycastObjectType::DOOR: {
+		Door* door = (Door*)(_cameraRayData.parent);
+		return door->IsInteractable(GetFeetPosition());
+	}
+	default:
+		return false;
+	}
 }

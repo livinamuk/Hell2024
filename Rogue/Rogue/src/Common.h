@@ -10,6 +10,13 @@
 #include "glm/gtx/hash.hpp"
 #include "Math.h"
 
+enum ViewportMode {FULLSCREEN = 0, SPLITSCREEN, VIEWPORTMODE_COUNT};
+enum Weapon { KNIFE = 0, GLOCK, SHOTGUN, AKS74U, MP7, WEAPON_COUNT };
+enum WeaponAction { IDLE = 0, FIRE, RELOAD, DRAW_BEGIN, DRAWING };
+
+#define DOOR_VOLUME 1.0f
+#define INTERACT_DISTANCE 2.5f
+
 #define NEAR_PLANE 0.005f
 #define FAR_PLANE 50.0f
 
@@ -158,9 +165,10 @@ struct VoxelFace {
 struct Light {
     glm::vec3 position;
     float strength = 1.0f;
-    float radius = 6.0f;
     glm::vec3 color = glm::vec3(1, 0.7799999713897705, 0.5289999842643738);
     bool isDirty = false;
+    float radius = 6.0f;
+private:
 };
 
 struct Triangle {
@@ -228,4 +236,26 @@ struct Material {
     int _basecolor = 0;
     int _normal = 0;
     int _rma = 0;
+};
+
+enum RaycastGroup { RAYCAST_DISABLED = 0, RAYCAST_ENABLED };
+enum PhysicsObjectType { NONE = 0, CUBE, CASING_PROJECTILE_GLOCK, CASING_PROJECTILE_AKS74U };
+
+struct PhysXRayResult {
+    std::string hitObjectName;
+    glm::vec3 hitPosition;
+    glm::vec3 surfaceNormal;
+    glm::vec3 rayDirection;
+    bool hitFound;
+    void* hitActor;
+    void* parent;
+};
+
+enum CollisionGroup {
+    NO_COLLISION = 0,
+    BULLET_CASING = 1,
+    PLAYER = 2,
+    ENVIROMENT_OBSTACLE = 4,
+    GENERIC_BOUNCEABLE = 8,
+    ITEM_PICK_UP = 16,
 };

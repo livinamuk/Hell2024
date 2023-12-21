@@ -1,5 +1,6 @@
 #pragma once
 #include "GameObject.h"
+#include "../Util.hpp"
 #include "Scene.h"
 //#include "Callbacks.hpp"
 
@@ -84,28 +85,7 @@ void GameObject::SetScaleX(float scale) {
 }
 
 glm::mat4 GameObject::GetModelMatrix() {
-	// If this is an item that has been collected, move if way below the world.
-	if (_collected) {
-		Transform t;
-		t.position.y = -100;
-		return t.to_mat4();
-	}
-
-	GameObject* parent = Scene::GetGameObjectByName(_parentName);
-	if (parent) {
-		//if (_overrideTransformWithMatrix) {
-		//	return parent->GetModelMatrix() * _modelMatrixTransformOverride;
-		//}
-		//else {
-			return parent->GetModelMatrix() * _transform.to_mat4() * _openTransform.to_mat4();
-		//}
-	}
-	//if (_overrideTransformWithMatrix) {
-	//	return _modelMatrixTransformOverride;
-	//}
-	//else {
-		return _transform.to_mat4();
-	//}
+	return _modelMatrix;
 }
 
 std::string GameObject::GetName() {
@@ -124,16 +104,14 @@ void GameObject::SetParentName(std::string name) {
 	_parentName = name;
 }
 
+std::string GameObject::GetParentName() {
+	return _parentName;
+}
+
 void GameObject::SetScriptName(std::string name) {
 	_scriptName = name;
 }
 bool GameObject::IsInteractable() {
-
-	if (_name == "ToiletLid" && Scene::GetGameObjectByName("ToiletSeat")->GetOpenState() == OpenState::OPEN)
-		return false;
-	if (_name == "ToiletSeat" && Scene::GetGameObjectByName("ToiletLid")->GetOpenState() == OpenState::OPEN)
-		return false;
-
 	if (_openState == OpenState::CLOSED ||
 		_openState == OpenState::OPEN ||
 		_openState == OpenState::CLOSING ||
@@ -157,36 +135,6 @@ void GameObject::Interact() {
 		_openState = OpenState::CLOSING;
 		Audio::PlayAudio(_audio.onClose.filename, _audio.onClose.volume);
 	}
-	// Interact text
-	/*else if (_interactType == InteractType::TEXT) {
-		// blit any text
-		TextBlitter::Type(_interactText);
-		// call any callback
-		if (_interactCallback)
-			_interactCallback();
-		// Audio
-		if (_audio.onInteract.filename != "") {
-			Audio::PlayAudio(_audio.onInteract);
-		}
-		// Default
-		else if (_interactText.length() > 0) {
-			Audio::PlayAudio("RE_type.wav", 1.0f);
-		}
-	}
-	// Question text
-	else if (_interactType == InteractType::QUESTION) {
-		TextBlitter::AskQuestion(_interactText, this->_interactCallback, nullptr);
-		Audio::PlayAudio("RE_type.wav", 1.0f);
-	}
-	// Pick up
-	else if (_interactType == InteractType::PICKUP) {
-		TextBlitter::AskQuestion(_interactText, this->_interactCallback, this);
-		Audio::PlayAudio("RE_type.wav", 1.0f);
-	}
-	// Callback only
-	else if (_interactType == InteractType::CALLBACK_ONLY) {
-		_interactCallback();
-	}*/
 }
 
 void GameObject::Update(float deltaTime) {
@@ -312,6 +260,52 @@ void GameObject::Update(float deltaTime) {
 		}
 	}
 
+	if (_modelMatrixMode == ModelMatrixMode::GAME_TRANSFORM) {
+		_modelMatrix = GetGameWorldMatrix();
+		if (_collisionBody) {
+			_collisionBody->setGlobalPose(PxTransform(Util::GlmMat4ToPxMat44(_modelMatrix)));
+		}
+		if (_raycastBody) {
+			_raycastBody->setGlobalPose(PxTransform(Util::GlmMat4ToPxMat44(_modelMatrix)));
+		}
+	}
+	else if (_modelMatrixMode == ModelMatrixMode::PHYSX_TRANSFORM && _collisionBody) {
+		Transform transform;
+		transform.scale = _transform.scale;
+		_modelMatrix = Util::PxMat44ToGlmMat4(_collisionBody->getGlobalPose()) * transform.to_mat4();
+
+		if (_raycastBody) {
+			_raycastBody->setGlobalPose(_collisionBody->getGlobalPose());
+		}
+	}
+
+	// Pointers
+	if (_raycastBody) {
+		_raycastBody->userData = this;
+	}
+}
+
+glm::mat4 GameObject::GetGameWorldMatrix() {
+	glm::mat4 result = glm::mat4(1);
+	GameObject* parent = Scene::GetGameObjectByName(_parentName);
+	if (parent) {
+		result = parent->GetGameWorldMatrix() * _transform.to_mat4() * _openTransform.to_mat4();
+	}
+	else {
+		result = _transform.to_mat4();
+	}
+	return result;
+}
+void GameObject::AddForceToCollisionObject(glm::vec3 direction, float strength) {
+	if (!_collisionBody) {
+		return;
+	}
+	auto flags = _collisionBody->getRigidBodyFlags();
+	if (flags & PxRigidBodyFlag::eKINEMATIC) {
+		return;
+	}
+	PxVec3 force = PxVec3(direction.x, direction.y, direction.z) * strength; 
+	_collisionBody->addForce(force);
 }
 
 void GameObject::SetAudioOnOpen(std::string filename, float volume) {
@@ -492,6 +486,125 @@ void GameObject::SetMeshMaterialByMeshName(std::string meshName, std::string mat
 			}
 		}
 	}*/
+}
+
+void GameObject::SetCollisionShape(Transform transform, PxShape* shape, PhysicsFilterData physicsFilterData, bool kinematic) {
+
+	if (_collisionBody) {
+		_collisionBody->release();
+	}
+	_collisionShape = shape;
+	_collisionBody = Physics::CreateRigidDynamic(transform, physicsFilterData, shape);
+	_collisionBody->setRigidBodyFlag(PxRigidBodyFlag::eKINEMATIC, kinematic);
+}
+
+void GameObject::SetCollisionShapeFromConvexHull(Transform transform, Mesh* mesh, PhysicsFilterData physicsFilterData, bool kinematic) {
+
+	/*if (!mesh) {
+		return;
+	}
+
+	if (_collisionBody) {
+		_collisionBody->release();
+	}
+	Mesh& mesh = _model->_meshes[meshIndex];
+	_collisionShape = Physics::CreateConvexFromTriangleMesh(mesh._triangleMesh);
+	_collisionBody = Physics::CreateRigidDynamic(transform, physicsFilterData, _collisionShape);
+	_collisionBody->setRigidBodyFlag(PxRigidBodyFlag::eKINEMATIC, kinematic);
+
+	return;*/
+
+	/*
+	if (!_model || meshIndex < 0 || meshIndex >= _model->_meshes.size()) {
+		return;
+	}
+
+	Mesh& mesh = _model->_meshes[meshIndex];
+	if (!mesh._triangleMesh) {
+		mesh.CreateTriangleMesh();
+	}
+	if (_collisionBody) {
+		_collisionBody->release();
+	}
+	if (mesh._triangleMesh) {
+		_collisionShape = Physics::CreateShapeFromTriangleMesh(mesh._triangleMesh);
+	}
+	_collisionBody = Physics::CreateRigidDynamic(transform, physicsFilterData, _collisionShape);
+	_collisionBody->setRigidBodyFlag(PxRigidBodyFlag::eKINEMATIC, kinematic);*/
+}
+
+void GameObject::SetRaycastShapeFromMesh(Mesh* mesh) {
+	if (!mesh) {
+		return;
+	}
+	if (_raycastBody) {
+		_raycastBody->release();
+	}
+	if (!mesh->_triangleMesh) {
+		mesh->CreateTriangleMesh();
+	}
+	PhysicsFilterData filterData;
+	filterData.raycastGroup = RAYCAST_ENABLED;
+	filterData.collisionGroup = CollisionGroup::NO_COLLISION;
+	filterData.collidesWith = CollisionGroup::NO_COLLISION;
+	_raycastShape = Physics::CreateShapeFromTriangleMesh(mesh->_triangleMesh);
+	_raycastBody = Physics::CreateRigidDynamic(Transform(), filterData, _raycastShape);
+	_raycastBody->setRigidBodyFlag(PxRigidBodyFlag::eKINEMATIC, true);
+}
+
+void GameObject::SetRaycastShapeFromModel(Model* model) {
+	if (!model) {
+		return;
+	}
+	if (_raycastBody) {
+		_raycastBody->release();
+	}
+	if (!model->_triangleMesh) {
+		model->CreateTriangleMesh();
+	}
+	PhysicsFilterData filterData;
+	filterData.raycastGroup = RAYCAST_ENABLED;
+	filterData.collisionGroup = CollisionGroup::NO_COLLISION;
+	filterData.collidesWith = CollisionGroup::NO_COLLISION;
+	_raycastShape = Physics::CreateShapeFromTriangleMesh(model->_triangleMesh);
+	_raycastBody = Physics::CreateRigidDynamic(Transform(), filterData, _raycastShape);
+	_raycastBody->setRigidBodyFlag(PxRigidBodyFlag::eKINEMATIC, true);
+}
+
+void GameObject::SetRaycastShape(PxShape* shape) {
+	if (!shape) {
+		return;
+	}
+	if (_raycastBody) {
+		_raycastBody->release();
+	}
+	PhysicsFilterData filterData;
+	filterData.raycastGroup = RAYCAST_ENABLED;
+	filterData.collisionGroup = CollisionGroup::NO_COLLISION;
+	filterData.collidesWith = CollisionGroup::NO_COLLISION;
+	_raycastBody = Physics::CreateRigidDynamic(Transform(), filterData, shape);
+	_raycastBody->setRigidBodyFlag(PxRigidBodyFlag::eKINEMATIC, true);
+}
+
+void GameObject::SetModelMatrixMode(ModelMatrixMode modelMatrixMode) {
+	_modelMatrixMode = modelMatrixMode;
+}
+
+void GameObject::SetPhysicsTransform(glm::mat4 worldMatrix) {
+
+	std::cout << "cunt\n" << Util::Mat4ToString(worldMatrix) << "\n";
+
+	_collisionBody->setGlobalPose(PxTransform(Util::GlmMat4ToPxMat44(worldMatrix)));
+}
+
+
+void GameObject::CleanUp() {
+	if (_collisionBody) {
+		_collisionBody->release();
+	}
+	if (_collisionShape) {
+		_collisionShape->release();
+	}
 }
 
 std::vector<Triangle> GameObject::GetTris() {

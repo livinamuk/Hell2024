@@ -222,6 +222,11 @@ void GL::Init(int width, int height) {
 
     // Cap to 60fps
     //glfwSwapInterval(1);
+
+    // Clear screen to black
+    glClear(GL_COLOR_BUFFER_BIT);
+    glfwSwapBuffers(_window);
+    glfwPollEvents();
 }
 
 void GL::ProcessInput() {

@@ -223,3 +223,22 @@ void Model::Draw() {
 	for (int i = 0; i < _meshes.size(); ++i)
 		_meshes[i].Draw();;
 }
+
+void Model::CreateTriangleMesh() {
+	std::vector<PxVec3> pxvertices;
+	std::vector<unsigned int> pxindices;
+	int baseIndex = 0;
+	for (Mesh& mesh : _meshes) {
+		for (auto& vertex : mesh.vertices) {
+			pxvertices.push_back(PxVec3(vertex.position.x, vertex.position.y, vertex.position.z));
+		}
+		for (auto& index : mesh.indices) {
+			pxindices.push_back(index + baseIndex);
+		}
+		baseIndex = pxvertices.size();
+	}
+	if (pxindices.size()) {
+		_triangleMesh = Physics::CreateTriangleMesh(pxvertices.size(), pxvertices.data(), pxindices.size() / 3, pxindices.data());
+		std::cout << "Created triangle mesh for model " << _name << " out of " << _meshes.size() << " mesh\n";
+	}
+}

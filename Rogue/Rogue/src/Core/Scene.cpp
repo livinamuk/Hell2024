@@ -11,11 +11,55 @@
 #include "Audio.hpp"
 #include "TextBlitter.h"
 
-#define DOOR_VOLUME 1.0f
-#define INTERACT_DISTANCE 2.5f
+
 float door2X = 2.05f;
 
+
 void Scene::Update(float deltaTime) {
+
+    for (BulletCasing& bulletCasing : _bulletCasings) {
+        bulletCasing.Update(deltaTime);
+    }
+
+    // Process unprocessed bullets
+    for (Bullet& bullet : _bullets) {
+
+        PhysXRayResult rayResult = Util::CastPhysXRay(bullet.spawnPosition, bullet.direction, 1000);
+        if (rayResult.hitFound) {            
+
+            PxRigidDynamic* actor = (PxRigidDynamic*)rayResult.hitActor;            
+            if (actor->userData) {
+                GameObject* gameObject = (GameObject*)actor->userData;
+                gameObject->AddForceToCollisionObject(bullet.direction, 75);
+                std::cout << "adding force\n";
+            }
+
+            // Bullet decal
+            PxRigidBody* parent = actor;
+            glm::mat4 parentMatrix = Util::PxMat44ToGlmMat4(actor->getGlobalPose());
+            glm::vec3 localPosition = glm::inverse(parentMatrix) * glm::vec4(rayResult.hitPosition, 1.0);
+            glm::vec3 localNormal = glm::inverse(parentMatrix) * glm::vec4(rayResult.surfaceNormal, 0.0);
+            Decal decal(localPosition, localNormal, parent);
+            _decals.push_back(decal);
+        }
+
+    }
+    _bullets.clear();
+
+
+    Player* player1 = &Scene::_players[0];
+
+    if (Input::KeyPressed(HELL_KEY_T)) {
+        for (Light& light : Scene::_lights) {
+            light.isDirty = true;
+        }
+    }
+   // if (Input::KeyPressed(HELL_KEY_C)) {
+   //     Scene::_lights[1].isDirty = true;
+  //  }
+
+  //  Scene::_lights[0].isDirty = true;
+
 
     // Are lights dirty? occurs when a door opens within their radius
     // Which triggers update of the point cloud, and then propogation grid
@@ -50,10 +94,10 @@ void Scene::Update(float deltaTime) {
 	 }
 
     // Move light 0 in a figure 8
-    static bool figure8Light = true;
+    static bool figure8Light = false;
     if (Input::KeyPressed(HELL_KEY_P)) {
         figure8Light = !figure8Light;
-        Audio::PlayAudio("RE_Beep.wav", 0.25f);
+        Audio::PlayAudio("RE_Beep.wav", 0.251f);
     }
 
     glm::vec3 lightPos = glm::vec3(2.8, 2.2, 3.6);
@@ -73,25 +117,7 @@ void Scene::Update(float deltaTime) {
     for (Door& door : _doors) {
         door.Update(deltaTime);
     }
-    // Pressing E opens/closeds Door 2
-    if (Input::KeyPressed(HELL_KEY_E)) {
-
-        switch(_cameraRayData.raycastObjectType) {
-
-            case RaycastObjectType::DOOR: {
-
-                Door* door = (Door*)(_cameraRayData.parent);
-
-                if(!door->IsInteractable()) {
-                    break;
-                }
-
-                door->Interact();
-            } break;
-            default:
-                break;
-        }
-    }
+    
 
     // Running Guy
     /*auto enemy = GetAnimatedGameObjectByName("Enemy");
@@ -112,110 +138,24 @@ void Scene::Update(float deltaTime) {
     //    enemy->ToggleAnimationPause();
     }
         
-    CreateRTInstanceData();
-
-    // CAMERA RAY CAST
-
-    _cameraRayData.found = false;
-    _cameraRayData.distanceToHit = 99999;
-    _cameraRayData.triangle = Triangle();
-    _cameraRayData.raycastObjectType = RaycastObjectType::NONE;
-    _cameraRayData.rayCount = 0;
-    glm::vec3 rayOrigin = Player::GetViewPos();
-    glm::vec3 rayDirection = Player::GetCameraFront() * glm::vec3(-1);
-
-    // house tris
-    std::vector<Triangle> triangles;
-    int vertexCount = _rtMesh[0].vertexCount;
-    for (int i = 0; i < vertexCount; i += 3) {
-        Triangle& tri = triangles.emplace_back(Triangle());
-        tri.p1 = _rtVertices[i + 0];
-        tri.p2 = _rtVertices[i + 1];
-        tri.p3 = _rtVertices[i + 2];
-    }
-    Util::EvaluateRaycasts(rayOrigin, rayDirection, 10, triangles, RaycastObjectType::WALLS, glm::mat4(1), _cameraRayData, nullptr);
-
-    // Doors
-    int doorIndex = 0;
-    for (RTInstance& instance : _rtInstances) {
-
-        if (instance.meshIndex == 0) {
-            continue;
-        }
-        triangles.clear();
-
-        RTMesh& mesh = _rtMesh[instance.meshIndex];
-        int baseVertex = mesh.baseVertex;
-        int vertexCount = mesh.vertexCount;
-        glm::mat4 modelMatrix = instance.modelMatrix;
-
-        for (int i = baseVertex; i < baseVertex + vertexCount; i += 3) {
-            Triangle& tri = triangles.emplace_back(Triangle());
-            tri.p1 = modelMatrix * glm::vec4(_rtVertices[i + 0], 1.0);
-            tri.p2 = modelMatrix * glm::vec4(_rtVertices[i + 1], 1.0);
-            tri.p3 = modelMatrix * glm::vec4(_rtVertices[i + 2], 1.0);
-        }
-        void* parent = &_doors[doorIndex];
-        Util::EvaluateRaycasts(rayOrigin, rayDirection, 10, triangles, RaycastObjectType::DOOR, glm::mat4(1), _cameraRayData, parent);
-        doorIndex++;
-    }
+    CreateRTInstanceData();    
+    CreateCollisionWorld();
+    ProcessPhysicsCollisions();
 }
 
 
 void Scene::Init() {
 
+    _players.clear();
+    _players.push_back(Player(glm::vec3(4.0f, 0, 3.6f), glm::vec3(-0.17, 1.54f, 0)));
+
+    if (_playerCount == 2) {
+        _players.push_back(Player(glm::vec3(4.0f, 0, 1.2f), glm::vec3(-0.17, 1.54f, 0)));
+        _players[1]._ignoreControl = true;
+    }
+
     Scene::NewScene();
-    /*
-    // bathroom
-    Floor& bathroomFloor = _floors.emplace_back(Floor(door2X - 0.8f, 7.0f, door2X + 0.8f, 9.95f, 0.1f, AssetManager::GetMaterialIndex("BathroomFloor")));
-
-    // Outer walls
-    _walls.emplace_back(Wall(glm::vec3(0.1f, 0.1f, 0.1f), glm::vec3(6.1f, 0.1f, 0.1f), WALL_HEIGHT, AssetManager::GetMaterialIndex("WallPaper")));
-    _walls.emplace_back(Wall(glm::vec3(0.1f, 0.1f, 6.9f), glm::vec3(0.1f, 0.1f, 0.1f), WALL_HEIGHT, AssetManager::GetMaterialIndex("WallPaper")));
-    _walls.emplace_back(Wall(glm::vec3(6.1f, 0.1f, 0.1f), glm::vec3(6.1f, 0.1f, 6.9f), WALL_HEIGHT, AssetManager::GetMaterialIndex("WallPaper")));
-    _walls.emplace_back(Wall(glm::vec3(6.1f, 0.1f, 6.9f), glm::vec3(0.1f, 0.1f, 6.9f), WALL_HEIGHT, AssetManager::GetMaterialIndex("WallPaper")));
-
-    // First cube
-    _walls.emplace_back(Wall(glm::vec3(4.7f, 0.1f, 1.7f), glm::vec3(3.5f, 0.1f, 1.7f), 1.2f, AssetManager::GetMaterialIndex("WallPaper")));
-    _walls.emplace_back(Wall(glm::vec3(3.5f, 0.1f, 2.9f), glm::vec3(4.7f, 0.1f, 2.9f), 1.2f, AssetManager::GetMaterialIndex("WallPaper")));
-    _walls.emplace_back(Wall(glm::vec3(3.5f, 0.1f, 1.7f), glm::vec3(3.5f, 0.1f, 2.9f), 1.2f, AssetManager::GetMaterialIndex("WallPaper")));
-    _walls.emplace_back(Wall(glm::vec3(4.7f, 0.1f, 2.9f), glm::vec3(4.7f, 0.1f, 1.7f), 1.2f, AssetManager::GetMaterialIndex("WallPaper")));
-
-    // Second cube
-    _walls.emplace_back(Wall(glm::vec3(4.7f, 0.1f, 4.3f), glm::vec3(3.5f, 0.1f, 4.3f), 1.2f, AssetManager::GetMaterialIndex("WallPaper")));
-    _walls.emplace_back(Wall(glm::vec3(3.5f, 0.1f, 5.5f), glm::vec3(4.7f, 0.1f, 5.5f), 1.2f, AssetManager::GetMaterialIndex("WallPaper")));
-    _walls.emplace_back(Wall(glm::vec3(3.5f, 0.1f, 4.3f), glm::vec3(3.5f, 0.1f, 5.5f), 1.2f, AssetManager::GetMaterialIndex("WallPaper")));
-    _walls.emplace_back(Wall(glm::vec3(4.7f, 0.1f, 5.5f), glm::vec3(4.7f, 0.1f, 4.3f), 1.2f, AssetManager::GetMaterialIndex("WallPaper")));
-
-    // Hole walls
-    _walls.emplace_back(Wall(glm::vec3(3.7f, 2.5f, 3.1f), glm::vec3(4.7f, 2.5f, 3.1f), 0.2f, AssetManager::GetMaterialIndex("Ceiling")));
-    _walls.emplace_back(Wall(glm::vec3(4.7f, 2.5f, 4.1f), glm::vec3(3.7f, 2.5f, 4.1f), 0.2f, AssetManager::GetMaterialIndex("Ceiling")));
-    _walls.emplace_back(Wall(glm::vec3(4.7f, 2.5f, 3.1f), glm::vec3(4.7f, 2.5f, 4.1f), 0.2f, AssetManager::GetMaterialIndex("Ceiling")));
-    _walls.emplace_back(Wall(glm::vec3(3.7f, 2.5f, 4.1f), glm::vec3(3.7f, 2.5f, 3.1f), 0.2f, AssetManager::GetMaterialIndex("Ceiling")));
-    
-    _walls.emplace_back(Wall(glm::vec3(bathroomFloor.x2, 0.1f, bathroomFloor.z1), glm::vec3(bathroomFloor.x2, 0.1f, bathroomFloor.z2), WALL_HEIGHT, AssetManager::GetMaterialIndex("WallPaper")));
-    _walls.emplace_back(Wall(glm::vec3(bathroomFloor.x1, 0.1f, bathroomFloor.z2), glm::vec3(bathroomFloor.x1, 0.1f, bathroomFloor.z1), WALL_HEIGHT, AssetManager::GetMaterialIndex("WallPaper")));
-    _walls.emplace_back(Wall(glm::vec3(bathroomFloor.x2, 0.1f, bathroomFloor.z2), glm::vec3(bathroomFloor.x1, 0.1f, bathroomFloor.z2), WALL_HEIGHT, AssetManager::GetMaterialIndex("WallPaper")));
-    _walls.emplace_back(Wall(glm::vec3(bathroomFloor.x1, 0.1f, bathroomFloor.z1), glm::vec3(bathroomFloor.x2, 0.1f, bathroomFloor.z1), WALL_HEIGHT, AssetManager::GetMaterialIndex("WallPaper")));
-
-    Door doorA(glm::vec3(2.05f, 0.1f, 6.95f), -HELL_PI / 2);
-    AddDoor(doorA);
-
-    Door doorB(glm::vec3(0.05f, 0.1f, 3.45f), 0.0f);
-    AddDoor(doorB);
-
-    // floors
-    _floors.emplace_back(Floor(0.1f, 0.1f, 6.1f, 6.9f, 0.1f, AssetManager::GetMaterialIndex("FloorBoards"), 2.0f));
-    _floors.emplace_back(Floor(3.5f, 1.7f, 4.7f, 2.9f, 1.3f, AssetManager::GetMaterialIndex("FloorBoards"), 2.0f));
-    _floors.emplace_back(Floor(3.5f, 4.3f, 4.7f, 5.5f, 1.3f, AssetManager::GetMaterialIndex("FloorBoards"), 2.0f));
-
-
-    _floors.emplace_back(Floor(door2X - 0.4f, 6.9f, door2X + 0.4f, 7.0, 0.1f, AssetManager::GetMaterialIndex("FloorBoards"), 2.0f));
-
-
-    */
-    //Floor bathroomFloor = Floor(door2X - 0.8f, 7.0f, door2X + 0.8f, 9.95f, 0.1f, AssetManager::GetMaterialIndex("BathroomFloor"), 1.0f);
-
+   
 
     _ceilings.emplace_back(door2X - 0.8f, 7.0f, door2X + 0.8f, 9.95f, 2.5f, AssetManager::GetMaterialIndex("Ceiling"));
                            
@@ -224,6 +164,8 @@ void Scene::Init() {
     _ceilings.emplace_back(0.1f, 4.1f, 6.1f, 6.9f, 2.5f, AssetManager::GetMaterialIndex("Ceiling"));
     _ceilings.emplace_back(0.1f, 3.1f, 3.7f, 4.1f, 2.5f, AssetManager::GetMaterialIndex("Ceiling"));
     _ceilings.emplace_back(4.7f, 3.1f, 6.1f, 4.1f, 2.5f, AssetManager::GetMaterialIndex("Ceiling"));
+    _ceilings.emplace_back(6.2f, 0.1f, 11.3f, 3.0f, 2.5f, AssetManager::GetMaterialIndex("Ceiling"));
+
 
     LoadLightSetup(2);
 
@@ -236,60 +178,121 @@ void Scene::Init() {
 
 
 
-    GameObject& smallChestOfDrawers = _gameObjects.emplace_back();
-    smallChestOfDrawers.SetModel("SmallChestOfDrawersFrame");
-    smallChestOfDrawers.SetMeshMaterial("Drawers");
-    smallChestOfDrawers.SetName("SmallDrawersHis");
-    smallChestOfDrawers.SetPosition(0.1, 0, 4.45f);
-    smallChestOfDrawers.SetRotationY(NOOSE_PI / 2);
-    smallChestOfDrawers.SetBoundingBoxFromMesh(0);
-    smallChestOfDrawers.EnableCollision();
 
-    GameObject& lamp = _gameObjects.emplace_back();
-    lamp.SetModel("Lamp");
-    lamp.SetMeshMaterial("Lamp");
-    lamp.SetPosition(-.105f, 0.88, 0.25f);
-    lamp.SetParentName("SmallDrawersHis");
+    {
+        PhysicsFilterData filterData;
+        filterData.raycastGroup = RAYCAST_ENABLED;
+        filterData.collisionGroup = CollisionGroup::NO_COLLISION;
+        filterData.collidesWith = CollisionGroup::NO_COLLISION;
 
-    GameObject& smallChestOfDrawer_1 = _gameObjects.emplace_back();
-    smallChestOfDrawer_1.SetModel("SmallDrawerTop");
-    smallChestOfDrawer_1.SetMeshMaterial("Drawers");
-    smallChestOfDrawer_1.SetParentName("SmallDrawersHis");
-    smallChestOfDrawer_1.SetScriptName("OpenableDrawer");
-    smallChestOfDrawer_1.SetOpenState(OpenState::CLOSED, 2.183f, 0, 0.2f);
-    //smallChestOfDrawer_1.SetAudioOnOpen("DrawerOpen.wav", DRAWER_VOLUME);
-    //smallChestOfDrawer_1.SetAudioOnClose("DrawerOpen.wav", DRAWER_VOLUME);
-    smallChestOfDrawer_1.SetOpenAxis(OpenAxis::TRANSLATE_Z);
+        GameObject& smallChestOfDrawers = _gameObjects.emplace_back();
+        smallChestOfDrawers.SetModel("SmallChestOfDrawersFrame");
+        smallChestOfDrawers.SetMeshMaterial("Drawers");
+        smallChestOfDrawers.SetName("SmallDrawersHis");
+        smallChestOfDrawers.SetPosition(0.1, 0.1f, 4.45f);
+        smallChestOfDrawers.SetRotationY(NOOSE_PI / 2);
+        smallChestOfDrawers.SetBoundingBoxFromMesh(0);
+        smallChestOfDrawers.EnableCollision();
+        smallChestOfDrawers.SetRaycastShapeFromModel(&AssetManager::GetModel("SmallChestOfDrawersFrame"));
 
-    GameObject& smallChestOfDrawer_2 = _gameObjects.emplace_back();
-    smallChestOfDrawer_2.SetModel("SmallDrawerSecond");
-    smallChestOfDrawer_2.SetMeshMaterial("Drawers");
-    smallChestOfDrawer_2.SetParentName("SmallDrawersHis");
-    smallChestOfDrawer_2.SetScriptName("OpenableDrawer");
-    smallChestOfDrawer_2.SetOpenState(OpenState::CLOSED, 2.183f, 0, 0.2f);
-    //smallChestOfDrawer_2.SetAudioOnOpen("DrawerOpen.wav", DRAWER_VOLUME);
-    //smallChestOfDrawer_2.SetAudioOnClose("DrawerOpen.wav", DRAWER_VOLUME);
-    smallChestOfDrawer_2.SetOpenAxis(OpenAxis::TRANSLATE_Z);
+        PhysicsFilterData filterData2;
+        filterData2.raycastGroup = RAYCAST_DISABLED;
+        filterData2.collisionGroup = CollisionGroup::GENERIC_BOUNCEABLE;
+        filterData2.collidesWith = CollisionGroup(ENVIROMENT_OBSTACLE | GENERIC_BOUNCEABLE);
 
-    GameObject& smallChestOfDrawer_3 = _gameObjects.emplace_back();
-    smallChestOfDrawer_3.SetModel("SmallDrawerThird");
-    smallChestOfDrawer_3.SetMeshMaterial("Drawers");
-    smallChestOfDrawer_3.SetParentName("SmallDrawersHis");
-    smallChestOfDrawer_3.SetScriptName("OpenableDrawer");
-    smallChestOfDrawer_3.SetOpenState(OpenState::CLOSED, 2.183f, 0, 0.2f);
-   // smallChestOfDrawer_3.SetAudioOnOpen("DrawerOpen.wav", DRAWER_VOLUME);
-   // smallChestOfDrawer_3.SetAudioOnClose("DrawerOpen.wav", DRAWER_VOLUME);
-    smallChestOfDrawer_3.SetOpenAxis(OpenAxis::TRANSLATE_Z);
+        GameObject& lamp = _gameObjects.emplace_back();
+        lamp.SetModel("Lamp");
+        lamp.SetMeshMaterial("Lamp");
+        lamp.SetPosition(-.105f, 0.88, 0.25f);
+        lamp.SetParentName("SmallDrawersHis");
+        lamp.SetRaycastShapeFromModel(&AssetManager::GetModel("LampConvexHull"));
 
-    GameObject& smallChestOfDrawer_4 = _gameObjects.emplace_back();
-    smallChestOfDrawer_4.SetModel("SmallDrawerFourth");
-    smallChestOfDrawer_4.SetMeshMaterial("Drawers");
-    smallChestOfDrawer_4.SetParentName("SmallDrawersHis");
-    smallChestOfDrawer_4.SetScriptName("OpenableDrawer");
-    smallChestOfDrawer_4.SetOpenState(OpenState::CLOSED, 2.183f, 0, 0.2f);
-   // smallChestOfDrawer_4.SetAudioOnOpen("DrawerOpen.wav", DRAWER_VOLUME);
-   // smallChestOfDrawer_4.SetAudioOnClose("DrawerOpen.wav", DRAWER_VOLUME);
-    smallChestOfDrawer_4.SetOpenAxis(OpenAxis::TRANSLATE_Z);
+        Transform spawnTransform;
+        spawnTransform.position = { 1, 2, 1 };
+
+        PxShape* cubeShape = Physics::CreateBoxShape(0.1, 0.1, 0.1);
+        lamp.SetCollisionShape(spawnTransform, cubeShape, filterData2, false);
+        lamp.SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
+
+
+
+
+        GameObject& smallChestOfDrawer_1 = _gameObjects.emplace_back();
+        smallChestOfDrawer_1.SetModel("SmallDrawerTop");
+        smallChestOfDrawer_1.SetMeshMaterial("Drawers");
+        smallChestOfDrawer_1.SetParentName("SmallDrawersHis");
+        smallChestOfDrawer_1.SetScriptName("OpenableDrawer");
+        smallChestOfDrawer_1.SetOpenState(OpenState::CLOSED, 2.183f, 0, 0.2f);
+        //smallChestOfDrawer_1.SetAudioOnOpen("DrawerOpen.wav", DRAWER_VOLUME);
+        //smallChestOfDrawer_1.SetAudioOnClose("DrawerOpen.wav", DRAWER_VOLUME);
+        smallChestOfDrawer_1.SetOpenAxis(OpenAxis::TRANSLATE_Z);
+        smallChestOfDrawer_1.SetRaycastShapeFromModel(&AssetManager::GetModel("SmallDrawerTop"));
+
+        GameObject& smallChestOfDrawer_2 = _gameObjects.emplace_back();
+        smallChestOfDrawer_2.SetModel("SmallDrawerSecond");
+        smallChestOfDrawer_2.SetMeshMaterial("Drawers");
+        smallChestOfDrawer_2.SetParentName("SmallDrawersHis");
+        smallChestOfDrawer_2.SetScriptName("OpenableDrawer");
+        smallChestOfDrawer_2.SetOpenState(OpenState::CLOSED, 2.183f, 0, 0.2f);
+        //smallChestOfDrawer_2.SetAudioOnOpen("DrawerOpen.wav", DRAWER_VOLUME);
+        //smallChestOfDrawer_2.SetAudioOnClose("DrawerOpen.wav", DRAWER_VOLUME);
+        smallChestOfDrawer_2.SetOpenAxis(OpenAxis::TRANSLATE_Z);
+        smallChestOfDrawer_2.SetRaycastShapeFromModel(&AssetManager::GetModel("SmallDrawerSecond"));
+
+        GameObject& smallChestOfDrawer_3 = _gameObjects.emplace_back();
+        smallChestOfDrawer_3.SetModel("SmallDrawerThird");
+        smallChestOfDrawer_3.SetMeshMaterial("Drawers");
+        smallChestOfDrawer_3.SetParentName("SmallDrawersHis");
+        smallChestOfDrawer_3.SetScriptName("OpenableDrawer");
+        smallChestOfDrawer_3.SetOpenState(OpenState::CLOSED, 2.183f, 0, 0.2f);
+        // smallChestOfDrawer_3.SetAudioOnOpen("DrawerOpen.wav", DRAWER_VOLUME);
+        // smallChestOfDrawer_3.SetAudioOnClose("DrawerOpen.wav", DRAWER_VOLUME);
+        smallChestOfDrawer_3.SetOpenAxis(OpenAxis::TRANSLATE_Z);
+        smallChestOfDrawer_3.SetRaycastShapeFromModel(&AssetManager::GetModel("SmallDrawerThird"));
+
+        GameObject& smallChestOfDrawer_4 = _gameObjects.emplace_back();
+        smallChestOfDrawer_4.SetModel("SmallDrawerFourth");
+        smallChestOfDrawer_4.SetMeshMaterial("Drawers");
+        smallChestOfDrawer_4.SetParentName("SmallDrawersHis");
+        smallChestOfDrawer_4.SetScriptName("OpenableDrawer");
+        smallChestOfDrawer_4.SetOpenState(OpenState::CLOSED, 2.183f, 0, 0.2f);
+        // smallChestOfDrawer_4.SetAudioOnOpen("DrawerOpen.wav", DRAWER_VOLUME);
+        // smallChestOfDrawer_4.SetAudioOnClose("DrawerOpen.wav", DRAWER_VOLUME);
+        smallChestOfDrawer_4.SetOpenAxis(OpenAxis::TRANSLATE_Z);
+        smallChestOfDrawer_4.SetRaycastShapeFromModel(&AssetManager::GetModel("SmallDrawerFourth"));
+    }
+
+
+
+    for (int y = 0; y < 12; y++) {
+
+        GameObject* cube = &_gameObjects.emplace_back();
+        float halfExtent = 0.1f;
+        cube->SetPosition(2.0f, y * halfExtent * 2 + 0.1f, 3.5f);
+        cube->SetModel("Cube");
+        cube->SetMeshMaterial("Ceiling");
+        cube->SetScale(0.2f);
+
+        Transform transform;
+        transform.position = glm::vec3(2.0f, y* halfExtent * 2 + 0.1f, 3.5f);
+
+        PxShape* collisionShape = Physics::CreateBoxShape(halfExtent, halfExtent, halfExtent);
+        PxShape* raycastShape = Physics::CreateBoxShape(halfExtent, halfExtent, halfExtent);
+
+        PhysicsFilterData filterData;   
+        filterData.raycastGroup = RAYCAST_DISABLED;
+        filterData.collisionGroup = CollisionGroup::GENERIC_BOUNCEABLE;
+        filterData.collidesWith = (CollisionGroup)(ENVIROMENT_OBSTACLE | GENERIC_BOUNCEABLE);
+
+        cube->SetCollisionShape(transform, collisionShape, filterData, false);
+        cube->SetRaycastShape(raycastShape);
+        cube->SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
+    }
+
+
+
+
+
 
     /*
     GameObject& smallChestOfDrawers2 = _gameObjects.emplace_back();
@@ -342,17 +345,34 @@ void Scene::Init() {
     // smallChestOfDrawer2_4.SetAudioOnClose("DrawerOpen.wav", DRAWER_VOLUME);
     smallChestOfDrawer2_4.SetOpenAxis(OpenAxis::TRANSLATE_Z);*/
 
-
+/*
     AnimatedGameObject& enemy = _animatedGameObjects.emplace_back(AnimatedGameObject());
     enemy.SetName("Enemy");
-    enemy.SetSkinnedModel("UniSexGuy");
+    enemy.SetSkinnedModel("UniSexGuy2");
     enemy.SetMeshMaterial("CC_Base_Body", "UniSexGuyBody");
     enemy.SetMeshMaterial("CC_Base_Eye", "UniSexGuyBody");
     enemy.SetMeshMaterial("Biker_Jeans", "UniSexGuyJeans");
     enemy.SetMeshMaterial("CC_Base_Eye", "UniSexGuyEyes");
     enemy.SetMeshMaterialByIndex(1, "UniSexGuyHead");
+    enemy.PlayAndLoopAnimation("Character_Glock_Walk", 1.0f);
+    enemy.SetScale(0.01f);
+    enemy.SetPosition(glm::vec3(1.5f, 0.1f, 2));
+    enemy.SetRotationX(HELL_PI / 2);
 
 
+    AnimatedGameObject& enemy2 = _animatedGameObjects.emplace_back(AnimatedGameObject());
+    enemy2.SetName("Wife");
+    enemy2.SetSkinnedModel("UniSexGuy2");
+    enemy2.SetMeshMaterial("CC_Base_Body", "UniSexGuyBody");
+    enemy2.SetMeshMaterial("CC_Base_Eye", "UniSexGuyBody");
+    enemy2.SetMeshMaterial("Biker_Jeans", "UniSexGuyJeans");
+    enemy2.SetMeshMaterial("CC_Base_Eye", "UniSexGuyEyes");
+    enemy2.SetMeshMaterialByIndex(1, "UniSexGuyHead");
+    enemy2.PlayAndLoopAnimation("Character_Glock_Idle", 1.0f);
+    enemy2.SetScale(0.01f);
+    enemy2.SetPosition(glm::vec3(2.5f, 0.1f, 2));
+    enemy2.SetRotationX(HELL_PI / 2);
+    */
     /*
 
     AnimatedGameObject& aks74u = _animatedGameObjects.emplace_back(AnimatedGameObject());
@@ -360,11 +380,19 @@ void Scene::Init() {
     aks74u.SetSkinnedModel("AKS74U"); 
     aks74u.PlayAnimation("AKS74U_Idle", 0.5f);
 
-    */
-    AnimatedGameObject& glock = _animatedGameObjects.emplace_back(AnimatedGameObject());
+   /* AnimatedGameObject& glock = _animatedGameObjects.emplace_back(AnimatedGameObject());
     glock.SetName("Shotgun");
     glock.SetSkinnedModel("Shotgun");
-    glock.PlayAndLoopAnimation("Shotgun_Walk", 1.0f);
+    glock.PlayAndLoopAnimation("Shotgun_Walk", 1.0f);*/
+
+
+   /*AnimatedGameObject& glock = _animatedGameObjects.emplace_back(AnimatedGameObject());
+    glock.SetName("Glock");
+    glock.SetSkinnedModel("Glock");
+    glock.PlayAndLoopAnimation("Glock_Walk", 1.0f);
+    glock.SetScale(0.04f);
+    glock.SetPosition(glm::vec3(2, 1.2, 3.5));
+    */
 
     for (Light& light : Scene::_lights) {
         light.isDirty = true;
@@ -373,6 +401,22 @@ void Scene::Init() {
 }
 
 void Scene::NewScene() {
+
+    for (Door& door : Scene::_doors) {
+        door.CleanUp();
+    }
+    for (BulletCasing& bulletCasing : Scene::_bulletCasings) {
+        bulletCasing.CleanUp();
+    }
+    for (Decal& decal : Scene::_decals) {
+        decal.CleanUp();
+    }
+    for (GameObject& gameObject: Scene::_gameObjects) {
+        gameObject.CleanUp();
+    }
+
+    _bulletCasings.clear();
+    _decals.clear();
     _walls.clear();
     _floors.clear();
     _ceilings.clear();
@@ -490,12 +534,12 @@ void Scene::CreatePointCloud() {
                 continue;
             }
             // Check if it is inside the fucking door
-            glm::vec2 p3 = { door.GetVertFrontLeft().x, door.GetVertFrontLeft().z };
-            glm::vec2 p2 = { door.GetVertFrontRight().x, door.GetVertFrontRight().z };
-            glm::vec2 p1 = { door.GetVertBackRight().x, door.GetVertBackRight().z };
-            glm::vec2 p4 = { door.GetVertBackLeft().x, door.GetVertBackLeft().z };
-            glm::vec2 p5 = { door.GetVertFrontRight().x, door.GetVertFrontRight().z };
-            glm::vec2 p6 = { door.GetVertBackRight().x, door.GetVertBackRight().z };
+            glm::vec2 p3 = { door.GetVertFrontLeftForEditor().x, door.GetVertFrontLeftForEditor().z };
+            glm::vec2 p2 = { door.GetVertFrontRightForEditor().x, door.GetVertFrontRightForEditor().z };
+            glm::vec2 p1 = { door.GetVertBackRightForEditor().x, door.GetVertBackRightForEditor().z };
+            glm::vec2 p4 = { door.GetVertBackLeftForEditor().x, door.GetVertBackLeftForEditor().z };
+            glm::vec2 p5 = { door.GetVertFrontRightForEditor().x, door.GetVertFrontRightForEditor().z };
+            glm::vec2 p6 = { door.GetVertBackRightForEditor().x, door.GetVertBackRightForEditor().z };
             if (Util::PointIn2DTriangle(p, p1, p2, p3) || Util::PointIn2DTriangle(p, p4, p5, p6)) {
                 _cloudPoints.erase(_cloudPoints.begin() + i);
                 i--;
@@ -515,84 +559,36 @@ void Scene::AddFloor(Floor& floor) {
 }
 
 void Scene::LoadLightSetup(int index) {
-    if (index == 1) {
-        _lights.clear();
-        return;
-        Light lightD;
-        lightD.position = glm::vec3(4.2, 4.2, 3.6); 
-        lightD.radius = 3.0f;
-        lightD.strength = 5.0f;
-        lightD.radius = 10;
-        _lights.push_back(lightD);
-
-        Light lightA;
-        lightA.position = glm::vec3(door2X, 2.0, 9.0);
-        lightA.strength = 1.0f;
-        lightA.radius = 4;
-        lightA.color = glm::vec3(1, 0, 0);
-        _lights.push_back(lightA);
-
-        return;
-    }
-
+    
     if (index == 2) {
         _lights.clear();
         Light lightD;
         lightD.position = glm::vec3(2.8, 2.2, 3.6);
-        lightD.strength = 1.0f;// *1.25f;
-        lightD.radius = 6;
+        lightD.strength = 0.3f;
+        lightD.radius = 7;
         _lights.push_back(lightD);
 
         Light lightB;
         lightB.position = glm::vec3(2.05, 2, 9.0);
         lightB.radius = 3.0f;
-        lightB.strength = 5.0f;// *1.25f;
+        lightB.strength = 5.0f * 0.25f;;
         lightB.radius = 4;
         lightB.color = RED;
         _lights.push_back(lightB);
 
         Light lightA;
         lightA.position = glm::vec3(11, 2.0, 6.0);
-        lightA.strength = 1.0f;// *1.25f;
+        lightA.strength = 1.0f * 0.25f;
         lightA.radius = 2;
         lightA.color = LIGHT_BLUE;
         _lights.push_back(lightA);
-    }
 
-    if (index == 0) {
-
-        return;
-        _lights.clear();
-        Light lightA;
-       // lightA.x = 22;// 3;// 27;// 3;
-      //  lightA.y = 9;
-       // lightA.z = 3;
-        lightA.strength = 0.5f;
-        Light lightB;
-     //   lightB.x = 13;
-    //    lightB.y = 3;
-    //    lightB.z = 3;
-        lightB.strength = 0.5f;
-        lightB.color = RED;
         Light lightC;
-     //   lightC.x = 5;
-     //   lightC.y = 3;
-     //   lightC.z = 30;
-        lightC.radius = 3.0f;
-        lightC.strength = 0.75f;
-        lightC.color = LIGHT_BLUE;
-        Light lightD;
-    //    lightD.x = 21;
-   //     lightD.y = 21;
-   //     lightD.z = 18;
-        lightD.radius = 3.0f;
-        lightD.strength = 1.0f;
-        lightD.radius = 10;
-        _lights.push_back(lightA);
-        _lights.push_back(lightB);
+        lightC.position = glm::vec3(8.75, 2.2, 1.55);
+        lightC.strength = 0.3f;
+        lightC.radius = 6;
         _lights.push_back(lightC);
-        _lights.push_back(lightD);
-    }
+    }   
 }
 
 GameObject* Scene::GetGameObjectByName(std::string name) {
@@ -642,18 +638,116 @@ void Scene::CreateRTInstanceData() {
     }
 }
 
-bool Scene::CursorShouldBeInterect() {
+void Scene::CreateScenePhysicsObjects() {
 
-    switch(_cameraRayData.raycastObjectType) {
+    if (_sceneTriangleMesh) {
+        _sceneTriangleMesh->release();
+    }
+    if (_sceneRigidDynamic) {
+        _sceneRigidDynamic->release();
+    }
+    if (_sceneShape) {
+        _sceneShape->release();
+    }
 
-        case RaycastObjectType::DOOR: {
-			Door* door = (Door*)(_cameraRayData.parent);
-			return door->IsInteractable();
+    std::vector<PxVec3> vertices;
+    std::vector<unsigned int> indices;
+    for (Wall& wall : _walls) {
+        for (Vertex& vertex : wall.vertices) {
+            vertices.push_back(PxVec3(vertex.position.x, vertex.position.y, vertex.position.z));
+            indices.push_back(indices.size());
         }
-        default:
-            return false;
+    }
+    for (Floor& floor : _floors) {
+        for (Vertex& vertex : floor.vertices) {
+            vertices.push_back(PxVec3(vertex.position.x, vertex.position.y, vertex.position.z));
+            indices.push_back(indices.size());
+        }
+    }
+    for (Ceiling& ceiling : _ceilings) {
+        for (Vertex& vertex : ceiling.vertices) {
+            vertices.push_back(PxVec3(vertex.position.x, vertex.position.y, vertex.position.z));
+            indices.push_back(indices.size());
+        }
+    }
+
+    if (vertices.size()) {
+        Transform transform;
+        PhysicsFilterData filterData;
+        filterData.raycastGroup = RAYCAST_ENABLED;
+        filterData.collisionGroup = ENVIROMENT_OBSTACLE;
+        filterData.collidesWith = (CollisionGroup)(GENERIC_BOUNCEABLE | BULLET_CASING);
+        _sceneTriangleMesh = Physics::CreateTriangleMesh(vertices.size(), vertices.data(), vertices.size() / 3, indices.data());
+        _sceneShape = Physics::CreateShapeFromTriangleMesh(_sceneTriangleMesh);
+        _sceneRigidDynamic = Physics::CreateRigidDynamic(transform, filterData, _sceneShape);
+        _sceneRigidDynamic->setRigidBodyFlag(PxRigidBodyFlag::eKINEMATIC, true);
+    }
+
+    for (Door& door : _doors) {
+        door.CreatePhysicsObject();
     }
 }
+
+void Scene::ProcessPhysicsCollisions() {
+   
+   /* if (Input::KeyPressed(HELL_KEY_9)) {
+        for (int i = 0; i < 555; i++) {
+            Audio::PlayAudio("BulletCasingBounce.wav", 1.0);
+        }
+    }*/
+    bool playedShellSound = false;
+
+
+
+    for (CollisionReport& report : Physics::GetCollisions()) {
+
+        PxRigidActor* actorA = (PxRigidActor*)report.rigidA;
+        PxRigidActor* actorB = (PxRigidActor*)report.rigidB;
+        PxShape* shapeA;
+        PxShape* shapeB;
+        actorA->getShapes(&shapeA, 1);
+        actorB->getShapes(&shapeB, 1);
+        CollisionGroup groupA = (CollisionGroup)shapeA->getQueryFilterData().word1;
+        CollisionGroup groupB = (CollisionGroup)shapeB->getQueryFilterData().word1;
+
+        if (groupA & BULLET_CASING) {
+            //BulletCasing* casing = (BulletCasing*)actorA->userData;
+            //casing->CollisionResponse();
+            playedShellSound = true;
+        }
+        else if (groupB & BULLET_CASING) {
+            //BulletCasing* casing = (BulletCasing*)actorB->userData;
+            //casing->CollisionResponse();
+            playedShellSound = true;
+        }
+
+        if (playedShellSound) {
+            Audio::PlayAudio("BulletCasingBounce.wav", Util::RandomFloat(0.1f, 0.2f));
+            break;
+        }
+        /*
+        if (groupA & BULLET_CASING && groupB & ENVIROMENT_OBSTACLE) {
+            BulletCasing* casing = (BulletCasing*)actorA->userData;
+            casing->CollisionResponse();
+        }
+        if (groupB & BULLET_CASING && groupA & ENVIROMENT_OBSTACLE) {
+            BulletCasing* casing = (BulletCasing*)actorB->userData;
+            casing->CollisionResponse();
+        }
+        */
+       /* if (report.groupA & BULLET_CASING && report.groupB & ENVIROMENT_OBSTACLE) {
+            BulletCasing* casing = (BulletCasing*)report.parentA;
+            casing->CollisionResponse();
+        }
+        if (report.groupB & BULLET_CASING && report.groupA & ENVIROMENT_OBSTACLE) {
+            BulletCasing* casing = (BulletCasing*)report.parentB;
+            casing->CollisionResponse();
+        }*/
+    }
+
+    Physics::ClearCollisionList();
+}
+
 
 void Scene::RecreateDataStructures() {
 
@@ -662,6 +756,30 @@ void Scene::RecreateDataStructures() {
     CreateRTInstanceData();
     Renderer::CreatePointCloudBuffer();
     Renderer::CreateTriangleWorldVertexBuffer();
+    CreateScenePhysicsObjects();    
+}
+
+void Scene::CreateCollisionWorld() {
+
+    _collisionLines.clear();
+
+    for (Wall& wall : _walls) {
+        for (Line& collisionLine: wall.collisionLines) {
+            _collisionLines.push_back(collisionLine);
+        }
+    }
+
+    for (Door& door : _doors) {
+        Line collisionLine;
+        collisionLine.p1.color = YELLOW;
+        collisionLine.p2.color = RED;
+        collisionLine.p1.pos = door.GetFrontLeftCorner();
+        collisionLine.p2.pos = door.GetFrontRightCorner();
+        _collisionLines.push_back(collisionLine);
+        collisionLine.p1.pos = door.GetBackLeftCorner();
+        collisionLine.p2.pos = door.GetBackRightCorner();
+        _collisionLines.push_back(collisionLine);
+    }
 }
 
 void Scene::CreateMeshData() {
@@ -760,6 +878,7 @@ void Wall::CreateMesh() {
     vertices.clear();
     ceilingTrims.clear();
     floorTrims.clear();
+    collisionLines.clear();
 
     // Init shit
     bool finishedBuildingWall = false;
@@ -783,11 +902,11 @@ void Wall::CreateMesh() {
         for (Door& door : Scene::_doors) {
 
             // Left side
-            glm::vec3 v1(door.GetVertFrontLeft(0.05f));
-            glm::vec3 v2(door.GetVertBackRight(0.05f));
+            glm::vec3 v1(door.GetVertFrontLeftForEditor(0.05f));
+            glm::vec3 v2(door.GetVertBackRightForEditor(0.05f));
             // Right side
-            glm::vec3 v3(door.GetVertBackLeft(0.05f));
-            glm::vec3 v4(door.GetVertFrontRight(0.05f));
+            glm::vec3 v3(door.GetVertBackLeftForEditor(0.05f));
+            glm::vec3 v4(door.GetVertFrontRightForEditor(0.05f));
             // If an intersection is found closer than one u have already then store it
             glm::vec3 tempIntersectionPoint;
             if (Util::LineIntersects(v1, v2, cursor, wallEnd, tempIntersectionPoint)) {
@@ -874,6 +993,13 @@ void Wall::CreateMesh() {
 
             cursor = intersectionPoint + (wallDir * (DOOR_WIDTH + 0.005f)); // This 0.05 is so you don't get an intersection with the door itself
             uvX1 = uvX2;
+
+            Line collisionLine;
+            collisionLine.p1.pos = v1.position;
+            collisionLine.p2.pos = v4.position;
+            collisionLine.p1.color = YELLOW;
+            collisionLine.p2.color = RED;
+            collisionLines.push_back(collisionLine);
        }
         
         // You're on the final bit of wall then aren't ya
@@ -911,6 +1037,13 @@ void Wall::CreateMesh() {
                 ceilingTrims.push_back(trimTransform);
                 floorTrims.push_back(trimTransform);
             }
+
+            Line collisionLine;
+            collisionLine.p1.pos = v1.position;
+            collisionLine.p2.pos = v4.position;
+            collisionLine.p1.color = YELLOW;
+            collisionLine.p2.color = RED;
+            collisionLines.push_back(collisionLine);
         }
     }
 
@@ -950,78 +1083,6 @@ void Wall::Draw() {
     glDrawArrays(GL_TRIANGLES, 0, vertices.size());
 }
 
-//////////////
-//          // 
-//   Door   //
-
-Door::Door(glm::vec3 position, float rotation) {
-    this->position = position;
-    this->rotation = rotation;
-}
-
-void Door::Interact() {
-    if (state == CLOSED) {
-        state = OPENING;
-        Audio::PlayAudio("Door_Open.wav", DOOR_VOLUME);
-    }
-    else if (state == OPEN) {
-        state = CLOSING;
-        Audio::PlayAudio("Door_Open.wav", DOOR_VOLUME);
-    }
-}
-
-void Door::Update(float deltaTime) {
-    float openSpeed = 5.208f;
-    if (state == OPENING) {
-        openRotation -= openSpeed * deltaTime;
-        if (openRotation < -1.9f) {
-            openRotation = -1.9f;
-            state = OPEN;
-        }
-    }
-    if (state == CLOSING) {
-        openRotation += openSpeed * deltaTime;
-        if (openRotation > 0) {
-            openRotation = 0;
-            state = CLOSED;
-        }
-    }
-}
-
-glm::mat4 Door::GetFrameModelMatrix() {
-    Transform frameTransform;
-    frameTransform.position = position;
-    frameTransform.rotation.y = rotation;
-    return frameTransform.to_mat4();
-}
-
-glm::mat4 Door::GetDoorModelMatrix() {
-    Transform doorTransform;
-    doorTransform.position = glm::vec3(0.058520, 0, 0.39550f);
-    doorTransform.rotation.y = openRotation;
-    return GetFrameModelMatrix() * doorTransform.to_mat4();
-}
-
-glm::vec3 Door::GetVertFrontLeft(float padding) {
-    return GetFrameModelMatrix() * glm::vec4(DOOR_EDITOR_DEPTH + padding, 0, (-DOOR_WIDTH / 2), 1.0f);
-}
-
-glm::vec3 Door::GetVertFrontRight(float padding) {
-    return GetFrameModelMatrix() * glm::vec4(DOOR_EDITOR_DEPTH + padding, 0, (DOOR_WIDTH / 2), 1.0f);
-}
-
-glm::vec3 Door::GetVertBackLeft(float padding) {
-    return GetFrameModelMatrix() * glm::vec4(-DOOR_EDITOR_DEPTH - padding, 0, (DOOR_WIDTH / 2), 1.0f);
-}
-
-glm::vec3 Door::GetVertBackRight(float padding) {
-    return GetFrameModelMatrix() * glm::vec4(-DOOR_EDITOR_DEPTH- padding, 0, (-DOOR_WIDTH / 2), 1.0f);
-}
-
-bool Door::IsInteractable() {
-    float distSqrd = Util::DistanceSquared(position, Player::GetFeetPosition());
-    return distSqrd < (INTERACT_DISTANCE * INTERACT_DISTANCE);
-}
 
 
 ///////////////

@@ -3,8 +3,17 @@
 #include "GameObject.h"
 #include "AnimatedGameObject.h"
 #include "../ThreadPool.h"
+#include "Door.h"
+#include "Player.h"
+#include "Physics.h"
+#include "../Effects/BulletCasing.h"
+#include "../Effects/Decal.h"
 
 #define WALL_HEIGHT 2.4f
+
+inline float RandFloat(float min, float max) {
+    return min + static_cast <float> (rand()) / (static_cast <float> (RAND_MAX / (max - min)));
+}
 
 inline glm::vec3 NormalFromThreePoints(glm::vec3 pos0, glm::vec3 pos1, glm::vec3 pos2) {
     return glm::normalize(glm::cross(pos1 - pos0, pos2 - pos0));
@@ -49,22 +58,7 @@ struct CloudPoint {
     glm::vec4 directLighting = glm::vec4(0);
 };
 
-struct Door {
-    glm::vec3 position;
-    float rotation;
-    float openRotation;
-    enum State {CLOSED = 0, CLOSING, OPEN, OPENING} state;
-    Door(glm::vec3 position, float rotation);
-    void Interact();
-    void Update(float deltaTime);
-    glm::mat4 GetFrameModelMatrix();
-    glm::mat4 GetDoorModelMatrix();
-    glm::vec3 GetVertFrontLeft(float padding = 0);
-    glm::vec3 GetVertFrontRight(float padding = 0);
-    glm::vec3 GetVertBackLeft(float padding = 0);
-    glm::vec3 GetVertBackRight(float padding = 0);
-    bool IsInteractable();
-};
+
 
 struct Wall {
     glm::vec3 begin;
@@ -82,6 +76,7 @@ struct Wall {
     void Draw();
     std::vector<Transform> ceilingTrims;
     std::vector<Transform> floorTrims;
+    std::vector<Line> collisionLines;
 };
 
 struct Floor {
@@ -124,8 +119,24 @@ struct RTInstance {
     GLuint padding2 = 0;
 };
 
+struct Bullet {
+    glm::vec3 spawnPosition;
+    glm::vec3 direction;
+};
+
+
+
 namespace Scene {
 
+    // Perhaps this isn't the best place to store this?
+    inline int _playerCount = 2;
+    inline PxTriangleMesh* _sceneTriangleMesh;
+    inline PxRigidDynamic* _sceneRigidDynamic;
+    inline PxShape* _sceneShape;
+
+    inline std::vector<Bullet> _bullets;
+    inline std::vector<BulletCasing> _bulletCasings;
+    inline std::vector<Decal> _decals;
     inline std::vector<Wall> _walls;
     inline std::vector<Door> _doors;
     inline std::vector<Floor> _floors;
@@ -137,7 +148,8 @@ namespace Scene {
     inline std::vector<glm::vec3> _rtVertices;
     inline std::vector<RTMesh> _rtMesh;
     inline std::vector<RTInstance> _rtInstances;
-    inline RayCastResult _cameraRayData;
+    inline std::vector<Line> _collisionLines;
+    inline std::vector<Player> _players;
 
     void Init();
     void NewScene();
@@ -152,6 +164,8 @@ namespace Scene {
     void AddWall(Wall& wall);
     void AddFloor(Floor& floor);
     void CreateRTInstanceData();
-    bool CursorShouldBeInterect();
     void RecreateDataStructures();
+    void CreateCollisionWorld();
+    void CreateScenePhysicsObjects();
+    void ProcessPhysicsCollisions();
 }

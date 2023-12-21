@@ -104,10 +104,18 @@ void AssetManager::LoadEverythingElse() {
 	//return false;
 
 	SkinnedModel& stabbingGuy = _skinnedModels.emplace_back(SkinnedModel());
-	FbxImporter::LoadSkinnedModel("models/UniSexGuy.fbx", stabbingGuy);
-	FbxImporter::LoadAnimation(stabbingGuy, "animations/UnisexGuyIdle.fbx");
-	FbxImporter::LoadAnimation(stabbingGuy, "animations/UnisexGuyRun.fbx"); 
+	FbxImporter::LoadSkinnedModel("models/UniSexGuy2.fbx", stabbingGuy);
+	FbxImporter::LoadAnimation(stabbingGuy, "animations/Character_Glock_Walk.fbx");
+	FbxImporter::LoadAnimation(stabbingGuy, "animations/Character_Glock_Kneel.fbx");
+	FbxImporter::LoadAnimation(stabbingGuy, "animations/Character_Glock_Idle.fbx");
+	FbxImporter::LoadAnimation(stabbingGuy, "animations/Character_AKS74U_Walk.fbx");
+	FbxImporter::LoadAnimation(stabbingGuy, "animations/Character_AKS74U_Kneel.fbx");
+	FbxImporter::LoadAnimation(stabbingGuy, "animations/Character_AKS74U_Idle.fbx");
 
+/*	SkinnedModel& wife = _skinnedModels.emplace_back(SkinnedModel());
+	FbxImporter::LoadSkinnedModel("models/Wife.fbx", wife);
+	FbxImporter::LoadAnimation(stabbingGuy, "animations/Character_Glock_Walk.fbx");
+	*/
 	SkinnedModel& aks74u = _skinnedModels.emplace_back(SkinnedModel());
 	FbxImporter::LoadSkinnedModel("models/AKS74U.fbx", aks74u);
 	FbxImporter::LoadAnimation(aks74u, "animations/AKS74U_DebugTest.fbx");
@@ -149,6 +157,14 @@ void AssetManager::LoadEverythingElse() {
 	FbxImporter::LoadAnimation(shotgun, "animations/Shotgun_Fire1.fbx");
 	FbxImporter::LoadAnimation(shotgun, "animations/Shotgun_Fire2.fbx");
 	FbxImporter::LoadAnimation(shotgun, "animations/Shotgun_Fire3.fbx");
+}
+
+void AssetManager::CreateTriangleMeshes() {
+	GetModel("Door")._meshes[3].CreateTriangleMesh();
+	//GetModel("SmallDrawerTop")._meshes[0].CreateTriangleMesh();
+	//GetModel("SmallDrawerSecond")._meshes[0].CreateTriangleMesh();
+	//GetModel("SmallDrawerThird")._meshes[0].CreateTriangleMesh();
+	//GetModel("SmallDrawerFourth")._meshes[0].CreateTriangleMesh();
 }
 
 Texture& AssetManager::GetTexture(const std::string& filename) {
@@ -205,4 +221,49 @@ SkinnedModel* AssetManager::GetSkinnedModel(const std::string& name) {
 
 std::string AssetManager::GetMaterialNameByIndex(int index) {
 	return _materials[index]._name;
+}
+
+Mesh& AssetManager::GetDecalMesh() {
+
+	static Mesh decalMesh;
+
+	if (decalMesh.GetVAO() == 0) {
+		float offset = 0.1f;
+		Vertex vert0, vert1, vert2, vert3;
+		vert0.position = glm::vec3(-0.5, 0.5, offset);
+		vert1.position = glm::vec3(0.5, 0.5f, offset);
+		vert2.position = glm::vec3(0.5, -0.5, offset);
+		vert3.position = glm::vec3(-0.5, -0.5, offset);
+		vert0.uv = glm::vec2(0, 1);
+		vert1.uv = glm::vec2(1, 1);
+		vert2.uv = glm::vec2(1, 0);
+		vert3.uv = glm::vec2(0, 0);
+		vert0.normal = glm::vec3(0, 0, 1);
+		vert1.normal = glm::vec3(0, 0, 1);
+		vert2.normal = glm::vec3(0, 0, 1);
+		vert3.normal = glm::vec3(0, 0, 1);
+		vert0.bitangent = glm::vec3(0, 1, 0);
+		vert1.bitangent = glm::vec3(0, 1, 0);
+		vert2.bitangent = glm::vec3(0, 1, 0);
+		vert3.bitangent = glm::vec3(0, 1, 0);
+		vert0.tangent = glm::vec3(1, 0, 0);
+		vert1.tangent = glm::vec3(1, 0, 0);
+		vert2.tangent = glm::vec3(1, 0, 0);
+		vert3.tangent = glm::vec3(1, 0, 0);
+		std::vector<Vertex> vertices;
+		std::vector<unsigned int> indices;
+		unsigned int i = (unsigned int)vertices.size();
+		indices.push_back(i + 2);
+		indices.push_back(i + 1);
+		indices.push_back(i + 0);
+		indices.push_back(i + 0);
+		indices.push_back(i + 3);
+		indices.push_back(i + 2);
+		vertices.push_back(vert0);
+		vertices.push_back(vert1);
+		vertices.push_back(vert2);
+		vertices.push_back(vert3);
+		decalMesh = Mesh(vertices, indices, "DecalMesh");
+	}
+	return decalMesh;
 }

@@ -21,6 +21,8 @@ void main() {
         probeColor = vec3(0,1,0);
     }
     
+      //  probeColor = vec3(0,1,0);
+    
     FragColor = vec4(probeColor * 5, 1.0);
   //  FragColor = vec4(probeColor, 1.0);
 }

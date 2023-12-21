@@ -59,12 +59,12 @@ glm::vec3 GetLineMidPoint(Line& line) {
 
 bool MouseOverDoor(Door& door) {
     glm::vec2 p = { Editor::_mouseX, Editor::_mouseZ };
-    glm::vec2 p3 = { door.GetVertFrontLeft().x, door.GetVertFrontLeft().z };
-    glm::vec2 p2 = { door.GetVertFrontRight().x, door.GetVertFrontRight().z };
-    glm::vec2 p1 = { door.GetVertBackRight().x, door.GetVertBackRight().z };
-    glm::vec2 p4 = { door.GetVertBackLeft().x, door.GetVertBackLeft().z };
-    glm::vec2 p5 = { door.GetVertFrontRight().x, door.GetVertFrontRight().z };
-    glm::vec2 p6 = { door.GetVertBackRight().x, door.GetVertBackRight().z };
+    glm::vec2 p3 = { door.GetVertFrontLeftForEditor().x, door.GetVertFrontLeftForEditor().z };
+    glm::vec2 p2 = { door.GetVertFrontRightForEditor().x, door.GetVertFrontRightForEditor().z };
+    glm::vec2 p1 = { door.GetVertBackRightForEditor().x, door.GetVertBackRightForEditor().z };
+    glm::vec2 p4 = { door.GetVertBackLeftForEditor().x, door.GetVertBackLeftForEditor().z };
+    glm::vec2 p5 = { door.GetVertFrontRightForEditor().x, door.GetVertFrontRightForEditor().z };
+    glm::vec2 p6 = { door.GetVertBackRightForEditor().x, door.GetVertBackRightForEditor().z };
     return Util::PointIn2DTriangle(p, p1, p2, p3) || Util::PointIn2DTriangle(p, p4, p5, p6);
 }
 
@@ -485,21 +485,21 @@ void Editor::PrepareRenderFrame() {
             if (MouseOverDoor(door)) {
                 color = WHITE;
             }
-            Renderer::QueuePointForDrawing(Point(door.GetVertFrontLeft(0.0f), LIGHT_BLUE));
-            Renderer::QueuePointForDrawing(Point(door.GetVertFrontRight(0.0f), LIGHT_BLUE));
-            Renderer::QueuePointForDrawing(Point(door.GetVertBackLeft(0.0f), LIGHT_BLUE));
-            Renderer::QueuePointForDrawing(Point(door.GetVertBackRight(0.0f), LIGHT_BLUE));
+            Renderer::QueuePointForDrawing(Point(door.GetVertFrontLeftForEditor(0.0f), LIGHT_BLUE));
+            Renderer::QueuePointForDrawing(Point(door.GetVertFrontRightForEditor(0.0f), LIGHT_BLUE));
+            Renderer::QueuePointForDrawing(Point(door.GetVertBackLeftForEditor(0.0f), LIGHT_BLUE));
+            Renderer::QueuePointForDrawing(Point(door.GetVertBackRightForEditor(0.0f), LIGHT_BLUE));
         }
         Triangle triA;
         triA.color = color;
-        triA.p3 = door.GetVertFrontLeft(0);
-        triA.p2 = door.GetVertFrontRight(0);
-        triA.p1 = door.GetVertBackRight(0);
+        triA.p3 = door.GetVertFrontLeftForEditor(0);
+        triA.p2 = door.GetVertFrontRightForEditor(0);
+        triA.p1 = door.GetVertBackRightForEditor(0);
         Triangle triB;
         triB.color = color;
-        triB.p1 = door.GetVertBackLeft(0);
-        triB.p2 = door.GetVertFrontRight(0);
-        triB.p3 = door.GetVertBackRight(0);
+        triB.p1 = door.GetVertBackLeftForEditor(0);
+        triB.p2 = door.GetVertFrontRightForEditor(0);
+        triB.p3 = door.GetVertBackRightForEditor(0);
         Renderer::QueueTriangleForSolidRendering(triA);
         Renderer::QueueTriangleForSolidRendering(triB);
     }

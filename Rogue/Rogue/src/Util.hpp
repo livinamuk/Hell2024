@@ -11,8 +11,171 @@
 #include <filesystem>
 #include <assimp/matrix3x3.h>
 #include <assimp/matrix4x4.h>
+#include "Core/Physics.h"
 
 namespace Util {
+
+    inline glm::vec3 PxVec3toGlmVec3(PxVec3 vec) {
+        return { vec.x, vec.y, vec.z };
+    }
+
+    inline PxVec3 GlmVec3toPxVec3(glm::vec3 vec) {
+        return { vec.x, vec.y, vec.z };
+    }
+
+    inline PxQuat GlmQuatToPxQuat(glm::quat quat) {
+        return { quat.x, quat.y, quat.z, quat.w };
+    }
+
+    inline PhysXRayResult CastPhysXRay(glm::vec3 rayOrigin, glm::vec3 rayDirection, float rayLength) {
+
+        PxScene* scene = Physics::GetScene();
+        PxVec3 origin = PxVec3(rayOrigin.x, rayOrigin.y, rayOrigin.z);
+        PxVec3 unitDir = PxVec3(rayDirection.x, rayDirection.y, rayDirection.z);
+        PxReal maxDistance = rayLength;
+        PxRaycastBuffer hit;
+        // [in] Define what parts of PxRaycastHit we're interested in
+        const PxHitFlags outputFlags = PxHitFlag::ePOSITION | PxHitFlag::eNORMAL;
+        // Only ray cast against objects with the GROUP_RAYCAST flag
+        PxQueryFilterData filterData = PxQueryFilterData();
+        filterData.data.word0 = RaycastGroup::RAYCAST_ENABLED;
+
+        // Defaults
+        PhysXRayResult result;
+        result.hitObjectName = "NO_HIT";
+        result.hitPosition = glm::vec3(0, 0, 0);
+        result.surfaceNormal = glm::vec3(0, 0, 0);
+        result.rayDirection = rayDirection;
+        result.hitFound = false;
+        result.hitActor = nullptr;
+        result.parent = nullptr;
+
+        // Cast the ray
+        bool status = scene->raycast(origin, unitDir, maxDistance, hit, outputFlags, filterData);
+
+        if (status) {
+            if (hit.block.actor->getName()) {
+                result.hitObjectName = hit.block.actor->getName();
+            }
+            else
+                result.hitObjectName = "HIT OBJECT HAS NO ACTOR NAME";
+
+            result.hitPosition = glm::vec3(hit.block.position.x, hit.block.position.y, hit.block.position.z);
+            result.surfaceNormal = glm::vec3(hit.block.normal.x, hit.block.normal.y, hit.block.normal.z);
+            result.hitFound = true;
+            result.hitActor = hit.block.actor;
+
+            /*EntityData* hitEntityData = (EntityData*)hit.block.actor->userData;
+             m_parent = hitEntityData->parent;
+             m_physicsObjectType = hitEntityData->type;*/
+
+        }
+        return result;
+    }
+
+
+    /*inline PxMat44 GlmMat4ToPxMat44(glm::mat4 matrix) {
+        PxMat44 pxMatrix;
+        for (int x = 0; x < 4; x++)
+            for (int y = 0; y < 4; y++)
+                pxMatrix[x][y] = matrix[x][y];
+        return pxMatrix;
+    }
+
+    inline physx::PxMat44 TransformToPxMaQt44(Transform transform) {
+        return GlmMat4ToPxMat44(transform.to_mat4());
+    }*/
+
+    inline void DrawFrontFacingPlane(int instanceCount) {
+        static unsigned int frontFacingPlaneVAO = 0;
+        float offset = 0.1f;
+        if (frontFacingPlaneVAO == 0) {
+            Vertex vert0, vert1, vert2, vert3;
+            vert0.position = glm::vec3(-0.5, 0.5, offset);
+            vert1.position = glm::vec3(0.5, 0.5f, offset);
+            vert2.position = glm::vec3(0.5, -0.5, offset);
+            vert3.position = glm::vec3(-0.5, -0.5, offset);
+            vert0.uv = glm::vec2(0, 1);
+            vert1.uv = glm::vec2(1, 1);
+            vert2.uv = glm::vec2(1, 0);
+            vert3.uv = glm::vec2(0, 0);
+            vert0.normal = glm::vec3(0, 0, 1);
+            vert1.normal = glm::vec3(0, 0, 1);
+            vert2.normal = glm::vec3(0, 0, 1);
+            vert3.normal = glm::vec3(0, 0, 1);
+            vert0.bitangent = glm::vec3(0, 1, 0);
+            vert1.bitangent = glm::vec3(0, 1, 0);
+            vert2.bitangent = glm::vec3(0, 1, 0);
+            vert3.bitangent = glm::vec3(0, 1, 0);
+            vert0.tangent = glm::vec3(1, 0, 0);
+            vert1.tangent = glm::vec3(1, 0, 0);
+            vert2.tangent = glm::vec3(1, 0, 0);
+            vert3.tangent = glm::vec3(1, 0, 0);
+            std::vector<Vertex> vertices;
+            std::vector<unsigned int> indices;
+            unsigned int i = (unsigned int)vertices.size();
+            indices.push_back(i + 2);
+            indices.push_back(i + 1);
+            indices.push_back(i + 0);
+            indices.push_back(i + 0);
+            indices.push_back(i + 3);
+            indices.push_back(i + 2);
+            vertices.push_back(vert0);
+            vertices.push_back(vert1);
+            vertices.push_back(vert2);
+            vertices.push_back(vert3);
+            unsigned int VBO;
+            unsigned int EBO;
+            glGenVertexArrays(1, &frontFacingPlaneVAO);
+            glGenBuffers(1, &VBO);
+            glGenBuffers(1, &EBO);
+            glBindVertexArray(frontFacingPlaneVAO);
+            glBindBuffer(GL_ARRAY_BUFFER, VBO);
+            glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Vertex), &vertices[0], GL_STATIC_DRAW);
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+            glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), &indices[0], GL_STATIC_DRAW);
+            glEnableVertexAttribArray(0);
+            glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)0);
+            glEnableVertexAttribArray(1);
+            glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, normal));
+            glEnableVertexAttribArray(2);
+            glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, uv));
+            glEnableVertexAttribArray(3);
+            glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, tangent));
+            glEnableVertexAttribArray(4);
+            glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, bitangent));
+        }
+        glBindVertexArray(frontFacingPlaneVAO);
+        glDrawElementsInstanced(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0, instanceCount);
+    }
+
+    inline glm::mat4 PxMat44ToGlmMat4(physx::PxMat44 pxMatrix) {
+        glm::mat4 matrix;
+        for (int x = 0; x < 4; x++)
+            for (int y = 0; y < 4; y++)
+                matrix[x][y] = pxMatrix[x][y];
+        return matrix;
+    }
+
+    inline physx::PxMat44 GlmMat4ToPxMat44(glm::mat4 glmMatrix) {
+        physx::PxMat44 matrix;
+        for (int x = 0; x < 4; x++)
+            for (int y = 0; y < 4; y++)
+                matrix[x][y] = glmMatrix[x][y];
+        return matrix;
+    }
+
+    inline glm::vec3 ClosestPointOnLine(glm::vec3 point, glm::vec3 start, glm::vec3 end) {
+        glm::vec2 p(point.x, point.z);
+        glm::vec2 v(start.x, start.z);
+        glm::vec2 w(end.x, end.z);
+        const float l2 = ((v.x - w.x) * (v.x - w.x)) + ((v.y - w.y) * (v.y - w.y));
+        if (l2 == 0.0)
+            return glm::vec3(0);
+        const float t = std::max(0.0f, std::min(1.0f, dot(p - v, w - v) / l2));
+        const glm::vec2 projection = v + t * (w - v);
+        return glm::vec3(projection.x, 0, projection.y);
+    }
 
     inline float DistanceSquared(glm::vec3 A, glm::vec3 B) {
         glm::vec3 C = A - B;

@@ -1,0 +1,94 @@
+#pragma once
+#include "PxPhysicsAPI.h"
+#include "../Common.h"
+#pragma warning( disable : 6495 ) // Always initialize a member varible
+using namespace physx;
+
+struct PhysicsFilterData {
+	RaycastGroup raycastGroup = RaycastGroup::RAYCAST_DISABLED;
+	CollisionGroup collisionGroup = CollisionGroup::NO_COLLISION;
+	CollisionGroup collidesWith = CollisionGroup::ENVIROMENT_OBSTACLE;
+};
+
+struct CollisionReport {
+	PxActor* rigidA;
+	PxActor* rigidB;
+	/*PxShape* shapeA;
+	PxShape* shapeB;
+	CollisionGroup groupA;
+	CollisionGroup groupB;*/
+};
+
+
+namespace Physics {
+	void Init();
+	void StepPhysics(float deltaTime);
+	PxTriangleMesh* CreateTriangleMesh(PxU32 numVertices, const PxVec3* vertices, PxU32 numTriangles, const PxU32* indices);
+	PxConvexMesh* CreateConvexMesh(PxU32 numVertices, const PxVec3* vertices, PxU32 numTriangles, const PxU32* indices);
+	PxScene* GetScene();
+	PxPhysics* GetPhysics();
+	PxMaterial* GetDefaultMaterial();	
+	PxShape* CreateBoxShape(float width, float height, float depth, PxMaterial* material = NULL);
+	PxRigidDynamic* CreateRigidDynamic(Transform transform, PhysicsFilterData filterData, PxShape* shape);
+	PxShape* CreateShapeFromTriangleMesh(PxTriangleMesh* triangleMesh, PxMaterial* material = NULL, float scale = 1);
+	void EnableRigidBodyDebugLines(PxRigidBody* rigidBody);
+	void DisableRigidBodyDebugLines(PxRigidBody* rigidBody);
+	std::vector<CollisionReport>& GetCollisions();
+	void ClearCollisionList();
+
+	inline std::vector<CollisionReport> _collisionReports;
+	//inline int _shellCollisionsThisFrame = 0;
+}
+
+class ContactReportCallback : public PxSimulationEventCallback {
+public:
+	void onConstraintBreak(PxConstraintInfo* constraints, PxU32 count) { PX_UNUSED(constraints); PX_UNUSED(count); }
+	void onWake(PxActor** actors, PxU32 count) { PX_UNUSED(actors); PX_UNUSED(count); }
+	void onSleep(PxActor** actors, PxU32 count) { PX_UNUSED(actors); PX_UNUSED(count); }
+	void onTrigger(PxTriggerPair* pairs, PxU32 count) { PX_UNUSED(pairs); PX_UNUSED(count); }
+	void onAdvance(const PxRigidBody* const*, const PxTransform*, const PxU32) {}
+	void onContact(const PxContactPairHeader& pairHeader, const PxContactPair* pairs, PxU32 nbPairs) {
+
+		/*PX_UNUSED((pairHeader));
+		std::vector<PxContactPairPoint> contactPoints;
+
+		for (PxU32 i = 0; i < nbPairs; i++) {
+			PxU32 contactCount = pairs[i].contactCount;
+			if (contactCount) {
+				contactPoints.resize(contactCount);
+				pairs[i].extractContacts(&contactPoints[0], contactCount);
+
+				for (PxU32 j = 0; j < contactCount; j++) {
+
+					contactPoints[j].internalFaceIndex0;
+
+					if (!pairHeader.actors[0] || !pairHeader.actors[1]) {
+						continue;
+					}
+
+					gContactPositions.push_back(contactPoints[j].position);
+					gContactImpulses.push_back(contactPoints[j].impulse);
+				}
+			}
+		}*/
+
+
+		if (!pairHeader.actors[0] || !pairHeader.actors[1]) {
+			return;
+		}
+		CollisionReport report; 
+		report.rigidA = (PxActor*)pairHeader.actors[0];
+		report.rigidB = (PxActor*)pairHeader.actors[1];
+	//	report.parentA = (PxRigidActor*)report.rigidA->userData;
+	//	report.parentB = (PxRigidActor*)report.rigidB->userData;
+		/*report.rigidA = (PxRigidActor*)pairHeader.actors[0];
+		report.rigidB = (PxRigidActor*)pairHeader.actors[1];
+		report.rigidA->getShapes(&report.shapeA, 1);
+		report.rigidB->getShapes(&report.shapeB, 1);
+		report.groupA = (CollisionGroup)report.shapeA->getQueryFilterData().word1;
+		report.groupB = (CollisionGroup)report.shapeB->getQueryFilterData().word1;
+		report.parentA = report.rigidA->userData;
+		report.parentB = report.rigidB->userData;*/
+		Physics::_collisionReports.push_back(report);
+	}
+};

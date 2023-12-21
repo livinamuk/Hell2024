@@ -108,6 +108,18 @@
     <ClCompile Include="src\ThreadPool.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\Core\Door.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Core\Physics.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Effects\Decal.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Effects\BulletCasing.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\Core\GL.h">
@@ -215,6 +227,18 @@
     <ClInclude Include="src\ThreadPool.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\Core\Door.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Core\Physics.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Effects\Decal.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Effects\BulletCasing.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="res\shaders\solid_color.frag" />
@@ -242,5 +266,9 @@
     <None Include="res\shaders\editor_textured.vert" />
     <None Include="res\shaders\propogation_list.comp" />
     <None Include="res\shaders\calculate_inidrect_dispatch_size.comp" />
+    <None Include="res\shaders\bullet_decals.vert" />
+    <None Include="res\shaders\bullet_decals.frag" />
+    <None Include="res\shaders\geometry_instanced.frag" />
+    <None Include="res\shaders\geometry_instanced.vert" />
   </ItemGroup>
 </Project>
