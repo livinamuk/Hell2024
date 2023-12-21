@@ -282,8 +282,7 @@ void Physics::Init() {
 }
 
 void Physics::StepPhysics(float deltaTime) {   
-    float maxSimulateTime = (1.0f / 60.0f) * 4.0f;
-    _scene->simulate(std::min(deltaTime, maxSimulateTime));
+    _scene->simulate(deltaTime);
     _scene->fetchResults(true);
 }
 

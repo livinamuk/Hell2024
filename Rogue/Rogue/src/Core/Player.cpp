@@ -68,9 +68,6 @@ void Player::Update(float deltaTime) {
 		crouching = true;
 	}
 
-	// Speed
-	float speed = crouching ? _crouchingSpeed : _walkingSpeed;
-	speed *= deltaTime;
 
 	// View height
 	float viewHeightTarget = crouching ? _viewHeightCrouching : _viewHeightStanding;
@@ -105,28 +102,32 @@ void Player::Update(float deltaTime) {
 	_front = glm::normalize(glm::vec3(_forward.x, 0, _forward.z));
 	_viewPos = _inverseViewMatrix[3];
 
-
 	// WSAD movement
 	_isMoving = false;
 	if (!_ignoreControl) {
 		glm::vec3 displacement(0); 
 		if (Input::KeyDown(HELL_KEY_W)) {
-			displacement -= _front * speed;
+			displacement -= _front;
 			_isMoving = true;
 		}
 		if (Input::KeyDown(HELL_KEY_S)) {
-			displacement += _front * speed;
+			displacement += _front;
 			_isMoving = true;
 		}
 		if (Input::KeyDown(HELL_KEY_A)) {
-			displacement -= _right * speed;
+			displacement -= _right;
 			_isMoving = true;
 		}
 		if (Input::KeyDown(HELL_KEY_D)) {
-			displacement += _right * speed;
+			displacement += _right;
 			_isMoving = true;
 		}
-		_position += displacement;
+
+		float len = length(displacement);
+		if (len != 0.0) {
+            float speed = crouching ? _crouchingSpeed : _walkingSpeed;
+            _position += (displacement / len) * speed * deltaTime;
+		}
 	}
 
 	// Collision Detection

@@ -28,45 +28,46 @@ void Engine::Run() {
 
     Init();
 
-    double lastTime = glfwGetTime();
-    double accumulator = 0.0;
-    double limitUpdates = 1.0 / 60.0;
+    double lastFrame = glfwGetTime();
+    double thisFrame = lastFrame;
+    double deltaTimeAccumulator = 0.0;
+    double fixedDeltaTime = 1.0 / 60.0;
 
     while (GL::WindowIsOpen() && GL::WindowHasNotBeenForceClosed()) {
 
+        lastFrame = thisFrame;
+        thisFrame = glfwGetTime();
+        double deltaTime = thisFrame - lastFrame;
+        deltaTimeAccumulator += deltaTime;
+
         GL::ProcessInput();
+        Input::Update();
 
-        double _deltaTime = glfwGetTime() - lastTime;
-        lastTime = glfwGetTime();
-        accumulator += _deltaTime;
+        while (deltaTimeAccumulator >= fixedDeltaTime) {
+            deltaTimeAccumulator -= fixedDeltaTime;
+            Physics::StepPhysics(fixedDeltaTime);
+        }
 
-        while (accumulator >= limitUpdates) {
-            accumulator -= limitUpdates;                        
+        Audio::Update();
+        if (_engineMode == EngineMode::Game) {
 
-            // Update
-            Input::Update();
-            Audio::Update();
-            if (_engineMode == EngineMode::Game) {
+            LazyKeyPresses();
+            Scene::Update(deltaTime);
 
-                LazyKeyPresses();
-                Scene::Update(limitUpdates);
-
-                for (Player& player : Scene::_players) {
-                    player.Update(limitUpdates);
-                }
-                Physics::StepPhysics(_deltaTime);
+            for (Player& player : Scene::_players) {
+                player.Update(deltaTime);
             }
-            else if (_engineMode == EngineMode::Editor) {
+        }
+        else if (_engineMode == EngineMode::Editor) {
 
-                LazyKeyPressesEditor();
-                Editor::Update(_deltaTime);
-            }
+            LazyKeyPressesEditor();
+            Editor::Update(deltaTime);
         }
 
         Player* player1 = &Scene::_players[0];
 
         // Render
-        TextBlitter::Update(_deltaTime);
+        TextBlitter::Update(deltaTime);
         if (_engineMode == EngineMode::Game) {
 
             if (Renderer::_viewportMode != FULLSCREEN) {
