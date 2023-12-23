@@ -240,7 +240,14 @@ void Physics::Init() {
     }
     _defaultMaterial = _physics->createMaterial(0.5f, 0.5f, 0.6f);
 
- /*   PxRigidStatic* groundPlane = PxCreatePlane(*_physics, PxPlane(0, 1, 0, -0.10f), *_defaultMaterial);
+    // Character controller shit
+    _characterControllerManager = PxCreateControllerManager(*_scene);
+
+
+
+
+
+   PxRigidStatic* groundPlane = PxCreatePlane(*_physics, PxPlane(0, 1, 0, -0.10f), *_defaultMaterial);
     _scene->addActor(*groundPlane);
     PxShape* shape;
     groundPlane->getShapes(&shape, 1);
@@ -249,14 +256,14 @@ void Physics::Init() {
 
     PxFilterData filterData;
     filterData.word0 = RaycastGroup::RAYCAST_DISABLED; // must be disabled or it causes crash in scene::update when it tries to retrieve rigid body flags from this actor 
-    filterData.word1 = CollisionGroup::ENVIROMENT_OBSTACLE;
-    filterData.word2 =
+    filterData.word2 = CollisionGroup::ENVIROMENT_OBSTACLE;
+    filterData.word1 =
         CollisionGroup::BULLET_CASING |
-        CollisionGroup::GENERIC_BOUNCEABLE;
+        CollisionGroup::GENERIC_BOUNCEABLE |
+        CollisionGroup::PLAYER;
     shape->setQueryFilterData(filterData);
     shape->setSimulationFilterData(filterData); // sim is for ragz
-    */
-
+    
     //EnableRayCastingForShape(shape);
 }
 
@@ -279,11 +286,15 @@ PxMaterial* Physics::GetDefaultMaterial() {
     return _defaultMaterial;
 }
 
-PxShape* Physics::CreateBoxShape(float width, float height, float depth, PxMaterial* material) {
+PxShape* Physics::CreateBoxShape(float width, float height, float depth, Transform shapeOffset, PxMaterial* material) {
     if (material == NULL) {
         material = _defaultMaterial;
-    }
-    return _physics->createShape(PxBoxGeometry(width, height, depth), *material);
+    }    
+    PxShape* shape = _physics->createShape(PxBoxGeometry(width, height, depth), *material);
+	PxMat44 localShapeMatrix = Util::GlmMat4ToPxMat44(shapeOffset.to_mat4());
+	PxTransform localShapeTransform(localShapeMatrix);
+	shape->setLocalPose(localShapeTransform);
+    return shape;
 }
 
 PxShape* Physics::CreateShapeFromTriangleMesh(PxTriangleMesh* triangleMesh, PxMaterial* material, float scale) {
@@ -306,7 +317,7 @@ PxShape* Physics::CreateShapeFromConvexMesh(PxConvexMesh* convexMesh, PxMaterial
 
 PxRigidDynamic* Physics::CreateRigidDynamic(Transform transform, PhysicsFilterData physicsFilterData, PxShape* shape, Transform shapeOffset) {
 
-    // You are passing in a PxShape pointer and any shape offset will affects that actually object, where+ver the fuck it is up the function chain.
+    // You are passing in a PxShape pointer and any shape offset will affects that actually object, wherever the fuck it is up the function chain.
 
     PxFilterData filterData;
     filterData.word0 = (PxU32)physicsFilterData.raycastGroup;
@@ -342,6 +353,15 @@ PxRigidDynamic* Physics::CreateRigidDynamic(glm::mat4 matrix, PhysicsFilterData 
     PxRigidBodyExt::updateMassAndInertia(*body, 10.0f);
     _scene->addActor(*body);
     return body;
+}
+
+PxRigidDynamic* Physics::CreateRigidDynamic(glm::mat4 matrix, bool kinematic) {
+	PxMat44 mat = Util::GlmMat4ToPxMat44(matrix);
+	PxTransform transform(mat);
+	PxRigidDynamic* body = _physics->createRigidDynamic(transform);
+	body->setRigidBodyFlag(PxRigidBodyFlag::eKINEMATIC, kinematic);
+	_scene->addActor(*body);
+	return body;
 }
 
 std::vector<CollisionReport>& Physics::GetCollisions() {

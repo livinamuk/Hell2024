@@ -79,7 +79,7 @@ struct PointCloud {
 } _pointCloud;
 
 struct Toggles {
-    bool drawLights = true;
+    bool drawLights = false;
     bool drawProbes = false;
     bool drawLines = false;
     //bool drawPhysXWorld = false;
@@ -253,7 +253,7 @@ void Renderer::RenderFrame(Player* player) {
     LightingPass(player);
     DrawMuzzleFlashes(player);
     
-    // Propgation Grid
+    // Propagation Grid
     if (_toggles.drawProbes) {
         Transform cubeTransform;
         cubeTransform.scale = glm::vec3(0.025f);
@@ -293,7 +293,7 @@ void Renderer::RenderFrame(Player* player) {
     glDisable(GL_DEPTH_TEST);
     DrawFullscreenQuad();
 
-    // Render any debug shit, like the point cloud, progation grid, misc points, lines, etc
+    // Render any debug shit, like the point cloud, prorogation grid, misc points, lines, etc
     DebugPass(player);
 
     // Render UI
@@ -318,9 +318,13 @@ void Renderer::RenderFrame(Player* player) {
     }
     */
 
-    TextBlitter::_debugTextToBilt += "View pos: " + Util::Vec3ToString(player->GetViewPos()) + "\n";
-    TextBlitter::_debugTextToBilt += "View rot: " + Util::Vec3ToString(player->GetViewRotation()) + "\n";
-    TextBlitter::_debugTextToBilt = "";
+	TextBlitter::_debugTextToBilt += "View pos: " + Util::Vec3ToString(player->GetViewPos()) + "\n";
+	TextBlitter::_debugTextToBilt += "View rot: " + Util::Vec3ToString(player->GetViewRotation()) + "\n";
+    TextBlitter::_debugTextToBilt += "Y vel: " + std::to_string(Scene::_players[0]._yVelocity) + "\n";
+
+    
+
+   // TextBlitter::_debugTextToBilt = "";
     glBindFramebuffer(GL_FRAMEBUFFER, presentFrameBuffer.GetID());
     glViewport(0, 0, presentFrameBuffer.GetWidth(), presentFrameBuffer.GetHeight());
     glDisable(GL_DEPTH_TEST);
@@ -753,7 +757,7 @@ void Renderer::RecreateFrameBuffers() {
         height *= 0.5f;
     }
 
-    // Cleanup any existing player render targest
+    // Cleanup any existing player render targets
     for (PlayerRenderTarget& playerRenderTarget : _playerRenderTargets) {
         playerRenderTarget.gBuffer.Destroy();
         playerRenderTarget.presentFrameBuffer.Destroy();
@@ -1560,7 +1564,8 @@ void RenderShadowMaps() {
     glDisable(GL_BLEND);
     glDisable(GL_CULL_FACE);
 
-    // clear all, incase there are less lights now
+    // clear all, in case there are less lights than the previous frame
+    // but really you want to only update lights that have an an dynamic object pass through its radius
     glEnable(GL_DEPTH_TEST);
     glViewport(0, 0, SHADOW_MAP_SIZE, SHADOW_MAP_SIZE);
     for (int i = 0; i < _shadowMaps.size(); i++) {
@@ -1616,31 +1621,12 @@ void Renderer::CreatePointCloudBuffer() {
     glEnableVertexAttribArray(2);
     glVertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, sizeof(CloudPoint), (void*)offsetof(CloudPoint, directLighting));
     glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
-
-    // Floor vertices
-   /* std::vector<glm::vec4> vertices;
-    for (Floor& floor : Scene::_floors) {
-        for (Vertex& vertex : floor.vertices) {
-            vertices.push_back(glm::vec4(vertex.position.x, vertex.position.y, vertex.position.z, 0));
-        }
-    }
-    if (_ssbos.floorVertices != 0) {
-        glDeleteBuffers(1, &_ssbos.floorVertices);
-    }
-    glGenBuffers(1, &_ssbos.floorVertices);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, _ssbos.floorVertices);
-    glBufferStorage(GL_SHADER_STORAGE_BUFFER, vertices.size() * sizeof(glm::vec4), &vertices[0], GL_DYNAMIC_STORAGE_BIT);
-    glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);  
-    _floorVertexCount = vertices.size();
-    std::cout << "You sent " << _floorVertexCount << " to the GPU\n";*/
 }
 
 void DrawPointCloud(Player* player) {
     _shaders.debugViewPointCloud.Use();
     _shaders.debugViewPointCloud.SetMat4("projection", Renderer::GetProjectionMatrix(_depthOfFieldScene));
     _shaders.debugViewPointCloud.SetMat4("view", player->GetViewMatrix());
-    //glBindBuffer(GL_SHADER_STORAGE_BUFFER, _ssbos.pointCloud);
-    //glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, _ssbos.pointCloud);
     glDisable(GL_DEPTH_TEST);
     glBindVertexArray(_pointCloud.VAO);
     glDrawArrays(GL_POINTS, 0, _pointCloud.vertexCount);
@@ -1661,9 +1647,6 @@ void InitCompute() {
     glBindTexture(GL_TEXTURE_3D, _progogationGridTexture);
 
     // Create ssbos
-    //glGenBuffers(1, &_ssbos.indirectDispatchSize);
-    //glGenBuffers(1, &_ssbos.atomicCounter);
-    //glDeleteBuffers(1, &_ssbos.propogationList);
     glDeleteBuffers(1, &_ssbos.rtVertices);
     glDeleteBuffers(1, &_ssbos.rtMesh);
     glGenBuffers(1, &_ssbos.rtInstances);
@@ -1672,16 +1655,13 @@ void InitCompute() {
     _shaders.compute.Load("res/shaders/compute.comp");
     _shaders.pointCloud.Load("res/shaders/point_cloud.comp");
     _shaders.propogateLight.Load("res/shaders/propogate_light.comp");
-    //_shaders.propogationList.Load("res/shaders/propogation_list.comp");
-   // _shaders.calculateIndirectDispatchSize.Load("res/shaders/calculate_inidrect_dispatch_size.comp");
-
     
     Scene::CreatePointCloud();
     Renderer::CreatePointCloudBuffer();
     Renderer::CreateTriangleWorldVertexBuffer();
     
     std::cout << "Point cloud has " << Scene::_cloudPoints.size() << " points\n";
-    std::cout << "Propogation grid has " << (_mapWidth * _mapHeight * _mapDepth / _propogationGridSpacing) << " cells\n";
+    std::cout << "Propagation grid has " << (_mapWidth * _mapHeight * _mapDepth / _propogationGridSpacing) << " cells\n";
 
     // Propogation List
    /*glGenBuffers(1, &_ssbos.propogationList);
@@ -1714,17 +1694,13 @@ void Renderer::CreateTriangleWorldVertexBuffer() {
 }
 
 void ComputePass() {
-
     // Update RT Instances
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, _ssbos.rtInstances);
     glBufferData(GL_SHADER_STORAGE_BUFFER, Scene::_rtInstances.size() * sizeof(RTInstance), &Scene::_rtInstances[0], GL_DYNAMIC_COPY);
     glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
-
     UpdatePointCloudLighting();
     UpdatePropogationgGrid();
 }
-
-
 
 void UpdatePointCloudLighting() {
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, _ssbos.rtVertices);
@@ -1744,10 +1720,7 @@ void UpdatePointCloudLighting() {
         _shaders.pointCloud.SetFloat("lights[" + std::to_string(i) + "].strength", lights[i].strength);
     }
  
-
-
     if (!_dirtyPointCloudIndices.empty()) {
-
         // Cloud point indices buffer
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, _ssbos.dirtyPointCloudIndices);
         glBufferData(GL_SHADER_STORAGE_BUFFER, _dirtyPointCloudIndices.size() * sizeof(int), &_dirtyPointCloudIndices[0], GL_STATIC_COPY);
@@ -1797,7 +1770,7 @@ void FindProbeCoordsWithinMapBounds() {
                         continue;
                     }
                     glm::vec2 probePos = glm::vec2(probePosition.x, probePosition.z);
-                    glm::vec2 v1 = glm::vec2(floorVertices[j + 0].x, floorVertices[j + 0].z); // when you remove this gen code then it doesnt generate any gridIndices meaning no indirectLight
+                    glm::vec2 v1 = glm::vec2(floorVertices[j + 0].x, floorVertices[j + 0].z); // when you remove this gen code then it doesn't generate any gridIndices meaning no indirectLight
                     glm::vec2 v2 = glm::vec2(floorVertices[j + 1].x, floorVertices[j + 1].z);
                     glm::vec2 v3 = glm::vec2(floorVertices[j + 2].x, floorVertices[j + 2].z);
 
@@ -1867,7 +1840,7 @@ void UpdatePropogationgGrid() {
 }
 
 void CalculateDirtyCloudPoints() {
-    // If the area within the lights radius has been modified, queue all the relevant cloud points
+    // If the area within the light's radius has been modified, queue all the relevant cloud points
     _dirtyPointCloudIndices.clear();
     _dirtyPointCloudIndices.reserve(Scene::_cloudPoints.size());
     for (int j = 0; j < Scene::_cloudPoints.size(); j++) {

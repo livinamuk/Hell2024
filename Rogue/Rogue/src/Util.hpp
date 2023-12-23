@@ -15,9 +15,13 @@
 
 namespace Util {
 
-    inline glm::vec3 PxVec3toGlmVec3(PxVec3 vec) {
-        return { vec.x, vec.y, vec.z };
-    }
+	inline glm::vec3 PxVec3toGlmVec3(PxVec3 vec) {
+		return { vec.x, vec.y, vec.z };
+	}
+
+	inline glm::vec3 PxVec3toGlmVec3(PxExtendedVec3 vec) {
+		return { vec.x, vec.y, vec.z };
+	}
 
     inline PxVec3 GlmVec3toPxVec3(glm::vec3 vec) {
         return { vec.x, vec.y, vec.z };

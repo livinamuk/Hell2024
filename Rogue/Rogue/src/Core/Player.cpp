@@ -13,6 +13,7 @@ Player::Player() {
 
 Player::Player(glm::vec3 position, glm::vec3 rotation) {
 	_position = position;
+	_position.y = 10.5f;
 	_rotation = rotation;
 	SetWeapon(Weapon::GLOCK);
 	_glockAmmo.clip = 8;
@@ -29,6 +30,10 @@ Player::Player(glm::vec3 position, glm::vec3 rotation) {
 	_characterModel.SetMeshMaterialByIndex(1, "UniSexGuyHead");
 	_characterModel.SetScale(0.01f);
 	_characterModel.SetRotationX(HELL_PI / 2);
+
+	CreateCharacterController(_position);
+
+	//_characterController->setPosition({position.x, position.y, position.z});
 }
 
 void Player::SetWeapon(Weapon weapon) {
@@ -118,12 +123,54 @@ void Player::Update(float deltaTime) {
 			displacement += _right;// *speed;
 			_isMoving = true;
 		}
-		
+
+		// Adjust displacement for deltatime and movement speed
 		float len = length(displacement);
 		if (len != 0.0) {
 			float speed = crouching ? _crouchingSpeed : _walkingSpeed;
-			_position += (displacement / len) * speed * deltaTime;
+			displacement = (displacement / len) * speed* deltaTime;
 		}
+
+
+		
+
+
+		// Move that character controller
+		PxFilterData filterData;
+		filterData.word0 = 0;
+		filterData.word1 = CollisionGroup::PLAYER;	// Group this player is
+		filterData.word1 = CollisionGroup::ENVIROMENT_OBSTACLE;	// Things to collide with	
+
+		PxControllerFilters data;
+		data.mFilterData = &filterData;
+
+
+
+
+
+		if (Input::KeyPressed(HELL_KEY_SPACE) || Input::KeyDown(HELL_KEY_5)) {
+			_yVelocity = 6.5 * deltaTime;
+			std::cout << "pressed jump\n";
+		}
+
+		//_yVelocity -= 9.81f * deltaTime;
+		_yVelocity -= 0.50f * deltaTime;
+		
+		PxF32 minDist = 0.001f;
+		_characterController->move(PxVec3(displacement.x, _yVelocity , displacement.z), minDist, deltaTime, data);
+
+
+
+
+		_position = Util::PxVec3toGlmVec3(_characterController->getFootPosition());
+
+
+		//if (_position.y <= 0.1f) {
+	//		_yVelocity = 0;
+//		}
+
+		std::cout << Util::Vec3ToString(_position) << "     " << _yVelocity << "\n";
+
 	}
 
 
@@ -716,4 +763,38 @@ bool Player::CursorShouldBeInterect() {
 	default:
 		return false;
 	}
+}
+
+#define PLAYER_CAPSULE_HEIGHT 0.6f
+#define PLAYER_CAPSULE_RADIUS 0.1f
+
+void Player::CreateCharacterController(glm::vec3 position) {
+
+	PxMaterial* material = Physics::GetDefaultMaterial();
+	PxCapsuleControllerDesc* desc = new PxCapsuleControllerDesc;
+	desc->setToDefault();
+	desc->height = PLAYER_CAPSULE_HEIGHT;
+	desc->radius = PLAYER_CAPSULE_RADIUS;
+	desc->position = PxExtendedVec3(position.x, position.y + (PLAYER_CAPSULE_HEIGHT / 2) + (PLAYER_CAPSULE_RADIUS * 2), position.z);
+	desc->material = material;
+	desc->stepOffset = 0.1f;
+
+	std::printf("VALID: %d \n", desc->isValid());
+
+	_characterController = Physics::_characterControllerManager->createController(*desc);
+	if (!_characterController)
+		std::printf("Failed to instance a controller\n");
+	else
+		std::printf("PhysX validated an actor's character controller\n");
+
+	//m_characterController->getActor()->userData = entityData;
+
+	PxShape* shape;
+	_characterController->getActor()->getShapes(&shape, 1);
+
+	PxFilterData filterData;
+	filterData.word1 = CollisionGroup::PLAYER;
+	filterData.word2 = CollisionGroup(ITEM_PICK_UP | ENVIROMENT_OBSTACLE);
+	shape->setQueryFilterData(filterData);
+
 }

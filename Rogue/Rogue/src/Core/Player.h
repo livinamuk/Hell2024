@@ -1,8 +1,7 @@
 #pragma once
 #include "../Common.h"
 #include "AnimatedGameObject.h"
-
-
+#include "Physics.h"
 
 struct Ammo {
 	int clip{ 0 };
@@ -18,6 +17,8 @@ public:
 	bool _ignoreControl = false;
 	RayCastResult _cameraRayData;
 	AnimatedGameObject _characterModel;
+	PxController* _characterController = NULL;
+	float _yVelocity = 0;
 
 	Player();
 	Player(glm::vec3 position, glm::vec3 rotation);
@@ -45,6 +46,7 @@ public:
 	float GetMuzzleFlashRotation();
 	float GetRadius();
 	bool CursorShouldBeInterect();
+	void CreateCharacterController(glm::vec3 position);
 
 
 private:

@@ -111,7 +111,7 @@ copy /Y "$(ProjectDir)vendor\dll_debug\PVDRuntime_64.dll" "$(TargetDir)PVDRuntim
       <OptimizeReferences>false</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>vendor\compressonator\lib;vendor\GLFW\lib\Release;vendor\fmod\lib;vendor\assimp\lib;vendor\physx\lib\Release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>glfw3.lib;fmod_vc.lib;assimp-vc142-mt.lib;Compressonator_MD_DLL.lib;PhysX_64.lib;PhysXCommon_64.lib;PhysXCooking_64.lib;PhysXFoundation_64.lib;PhysXTask_static_64.lib;PhysXPvdSDK_static_64.lib;PVDRuntime_64.lib;PhysXExtensions_static_64.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>glfw3.lib;fmod_vc.lib;assimp-vc142-mt.lib;Compressonator_MD_DLL.lib;PhysX_64.lib;PhysXCommon_64.lib;PhysXCooking_64.lib;PhysXFoundation_64.lib;PhysXTask_static_64.lib;PhysXPvdSDK_static_64.lib;PVDRuntime_64.lib;PhysXExtensions_static_64.lib;PhysXCharacterKinematic_static_64.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <TreatLinkerWarningAsErrors>false</TreatLinkerWarningAsErrors>
       <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
     </Link>

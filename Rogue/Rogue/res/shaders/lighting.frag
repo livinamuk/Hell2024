@@ -265,6 +265,7 @@ void main() {
 
     // Sample GBuffer
     vec3 baseColor = texture(basecolorTexture, TexCoords).rgb;
+    vec3 baseColor2 = baseColor;
     baseColor = pow(baseColor, vec3(2.2));
     vec3 normalMap =  texture2D(normalTexture, TexCoords).rgb;
     vec4 rma =  texture2D(rmaTexture, TexCoords);
@@ -302,10 +303,13 @@ void main() {
 
     vec3 adjustedIndirectLighting = indirectLighting;
     float factor = min(1, roughness * 1.5);
+    //factor = 1;
     //factor = min(1, roughness * 0.25) * 4;
     adjustedIndirectLighting *= (0.4) * vec3(factor); 
     adjustedIndirectLighting = max(adjustedIndirectLighting, vec3(0));
-    adjustedIndirectLighting *=baseColor * 1.5;
+    adjustedIndirectLighting *= baseColor * 1.5;
+  //  adjustedIndirectLighting += sqrt(adjustedIndirectLighting) * 0.1;
+    //adjustedIndirectLighting *= 0.85;
 
     // Composite
     vec3 composite = directLighting  + (adjustedIndirectLighting);
@@ -326,6 +330,7 @@ void main() {
     }
     else if (mode == 3) {
         FragColor.rgb = indirectLighting ;
+        FragColor.rgb = adjustedIndirectLighting;
         FragColor.a = 1;
     }
 
@@ -370,7 +375,7 @@ void main() {
     FragColor.rgb *= vec3(vig);
         
     // Brightness and contrast
-	float contrast = 1.3;
+	float contrast = 1.2;
 	float brightness = -0.098;
     vec3 finalColor = FragColor.rgb;
 	FragColor.rgb = FragColor.rgb * contrast;
@@ -396,5 +401,14 @@ void main() {
     //FragColor.rgb = normal;
 
     
-  // FragColor.rgb = vec3(normal);
+ //  FragColor.rgb = vec3(baseColor.rgb);
+
+
+ /*   if (gl_FragCoord.y < 50) {
+      FragColor.rgb = vec3(0,0,0);
+    }
+    if (gl_FragCoord.y > (432 * 2) - 50) {
+         FragColor.rgb = vec3(0,0,0);
+    }
+    */
 }

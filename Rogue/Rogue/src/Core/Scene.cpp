@@ -166,6 +166,50 @@ void Scene::Init() {
 
 
 
+	GameObject& sofa = _gameObjects.emplace_back();
+    sofa.SetPosition(2.0f, 0.1f, 0.1f);
+    sofa.SetModel("Sofa");
+    sofa.SetMeshMaterial("Sofa");
+    sofa.CreateRigidBody(sofa.GetGameWorldMatrix(), true);
+    sofa.SetRaycastShapeFromModel(AssetManager::GetModel("Sofa"));
+
+	float cushionHeight = 0.555f;
+	float armHeight = 0.86f;
+	float armWidth = 0.30f;
+    float armDepth = 0.927f;
+
+    // Big center cube
+	Transform shapeOffset;
+    shapeOffset.position.y = cushionHeight * 0.5f;
+    shapeOffset.position.z = 0.5f;
+	PxShape* sofaShapeBigCube = Physics::CreateBoxShape(1, cushionHeight * 0.5f, 0.4f, shapeOffset);
+	// Left side
+	shapeOffset.position.x = -1 - armWidth * 0.5f;
+	shapeOffset.position.y = armHeight * 0.5f;
+	shapeOffset.position.z = armDepth * 0.5f;
+	PxShape* sofaShapeLeftArm = Physics::CreateBoxShape(armWidth * 0.5, armHeight * 0.5f, armDepth * 0.5f, shapeOffset);
+	// Right side
+	shapeOffset.position.x = 1 + armWidth * 0.5f;
+	shapeOffset.position.y = armHeight * 0.5f;
+	shapeOffset.position.z = armDepth * 0.5f;
+	PxShape* sofaShapeRightArm = Physics::CreateBoxShape(armWidth * 0.5, armHeight * 0.5f, armDepth * 0.5f, shapeOffset);
+
+	PhysicsFilterData filterData;
+	filterData.raycastGroup = RAYCAST_DISABLED;
+	filterData.collisionGroup = CollisionGroup::ENVIROMENT_OBSTACLE;
+	filterData.collidesWith = (CollisionGroup)(GENERIC_BOUNCEABLE | BULLET_CASING | PLAYER);
+	sofa.AddCollisionShape(sofaShapeBigCube, filterData);
+	sofa.AddCollisionShape(sofaShapeLeftArm, filterData);
+	sofa.AddCollisionShape(sofaShapeRightArm, filterData);
+    sofa.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("Sofa_ConvexMesh")->_meshes[0], filterData);
+    
+    //sofa.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("LampConvexMesh_0")->_meshes[0], filterData2);
+    sofa.SetModelMatrixMode(ModelMatrixMode::GAME_TRANSFORM);
+    sofa.UpdateRigidBodyMassAndInertia(20.0f);
+
+
+
+
     {
         PhysicsFilterData filterData;
         filterData.raycastGroup = RAYCAST_ENABLED;
@@ -182,10 +226,11 @@ void Scene::Init() {
         smallChestOfDrawers.SetRaycastShapeFromModel(AssetManager::GetModel("SmallChestOfDrawersFrame"));
 
         PhysicsFilterData filterData3;
-        filterData3.raycastGroup = RAYCAST_DISABLED;
-        filterData3.collisionGroup = CollisionGroup::ENVIROMENT_OBSTACLE;
-        filterData3.collidesWith = CollisionGroup(GENERIC_BOUNCEABLE);
-        smallChestOfDrawers.SetCollisionShapeFromBoundingBox(smallChestOfDrawers._model->_boundingBox, filterData3, true);
+		filterData3.raycastGroup = RAYCAST_DISABLED;
+		filterData3.collisionGroup = CollisionGroup::ENVIROMENT_OBSTACLE;
+		filterData3.collidesWith = CollisionGroup(GENERIC_BOUNCEABLE | BULLET_CASING | PLAYER);
+		smallChestOfDrawers.CreateRigidBody(smallChestOfDrawers.GetGameWorldMatrix(), true);
+        smallChestOfDrawers.AddCollisionShapeFromBoundingBox(smallChestOfDrawers._model->_boundingBox, filterData3);
 
 
 
@@ -203,9 +248,12 @@ void Scene::Init() {
         lamp.SetPosition(-.105f, 0.88, 0.25f);
         lamp.SetParentName("SmallDrawersHis");
         lamp.SetRaycastShapeFromModel(AssetManager::GetModel("Lamp"));
-        lamp.SetCollisionShapeFromConvexMesh(lamp.GetGameWorldMatrix(), &AssetManager::GetModel("LampConvexMesh")->_meshes[0], filterData2, false);
+		lamp.CreateRigidBody(lamp.GetGameWorldMatrix(), false);
+		lamp.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("LampConvexMesh_0")->_meshes[0], filterData2);
+		lamp.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("LampConvexMesh_1")->_meshes[0], filterData2);
+		lamp.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("LampConvexMesh_2")->_meshes[0], filterData2);
         lamp.SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
-        lamp.SetCollisionObjectMash(10.0f);
+        lamp.UpdateRigidBodyMassAndInertia(20.0f);
 
 
         GameObject& smallChestOfDrawer_1 = _gameObjects.emplace_back();
@@ -275,9 +323,11 @@ void Scene::Init() {
         filterData.collisionGroup = CollisionGroup::GENERIC_BOUNCEABLE;
         filterData.collidesWith = (CollisionGroup)(ENVIROMENT_OBSTACLE | GENERIC_BOUNCEABLE);
 
-        cube->SetCollisionShape(transform, collisionShape, filterData, false);
+        cube->CreateRigidBody(transform.to_mat4(), false);
+        cube->AddCollisionShape(collisionShape, filterData);
         cube->SetRaycastShape(raycastShape);
-        cube->SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
+		cube->SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
+        cube->UpdateRigidBodyMassAndInertia(20.0f);
     }
 
 
@@ -632,7 +682,7 @@ void Scene::CreateScenePhysicsObjects() {
         PhysicsFilterData filterData;
         filterData.raycastGroup = RAYCAST_ENABLED;
         filterData.collisionGroup = ENVIROMENT_OBSTACLE;
-        filterData.collidesWith = (CollisionGroup)(GENERIC_BOUNCEABLE | BULLET_CASING);
+        filterData.collidesWith = (CollisionGroup)(GENERIC_BOUNCEABLE | BULLET_CASING | PLAYER);
         _sceneTriangleMesh = Physics::CreateTriangleMesh(vertices.size(), vertices.data(), vertices.size() / 3, indices.data());
         _sceneShape = Physics::CreateShapeFromTriangleMesh(_sceneTriangleMesh);
         _sceneRigidDynamic = Physics::CreateRigidDynamic(transform, filterData, _sceneShape);

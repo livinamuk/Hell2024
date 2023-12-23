@@ -303,9 +303,9 @@ void GameObject::AddForceToCollisionObject(glm::vec3 direction, float strength) 
 	_collisionBody->addForce(force);
 }
 
-void GameObject::SetCollisionObjectMash(float mass) {
+void GameObject::UpdateRigidBodyMassAndInertia(float density) {
 	if (_collisionBody) {
-		PxRigidBodyExt::updateMassAndInertia(*_collisionBody, mass);
+		PxRigidBodyExt::updateMassAndInertia(*_collisionBody, density);
 	}
 }
 
@@ -464,47 +464,71 @@ void GameObject::SetMeshMaterialByMeshName(std::string meshName, std::string mat
 	}*/
 }
 
-void GameObject::SetCollisionShape(Transform transform, PxShape* shape, PhysicsFilterData physicsFilterData, bool kinematic) {
+void GameObject::AddCollisionShape(PxShape* shape, PhysicsFilterData physicsFilterData) {
+	if (!_collisionBody) {
+		std::cout << "You tried to add a collision shape to a GameObject without a rigid body. GameObject name is '" << _name << "'\n";
+		return;
+	}
+	PxFilterData filterData;
+	filterData.word0 = (PxU32)physicsFilterData.raycastGroup;
+	filterData.word1 = (PxU32)physicsFilterData.collisionGroup;
+	filterData.word2 = (PxU32)physicsFilterData.collidesWith;
+	shape->setQueryFilterData(filterData);       // ray casts
+	shape->setSimulationFilterData(filterData);  // collisions
+	shape = shape;
+	_collisionShapes.push_back(shape);
+	_collisionBody->attachShape(*shape);
+}
 
+void GameObject::CreateRigidBody(glm::mat4 matrix, bool kinematic) {
 	if (_collisionBody) {
 		_collisionBody->release();
 	}
-	_collisionShape = shape;
-	_collisionBody = Physics::CreateRigidDynamic(transform, physicsFilterData, shape);
-	_collisionBody->setRigidBodyFlag(PxRigidBodyFlag::eKINEMATIC, kinematic);
+	_collisionBody = Physics::CreateRigidDynamic(matrix, kinematic);
 }
 
-void GameObject::SetCollisionShapeFromConvexMesh(glm::mat4 matrix, Mesh* mesh, PhysicsFilterData physicsFilterData, bool kinematic) {
-
+void GameObject::AddCollisionShapeFromConvexMesh(Mesh* mesh, PhysicsFilterData physicsFilterData) {
+	if (!_collisionBody) {
+		std::cout << "You tried to add a ConvexMesh shape to a GameObject without a rigid body. GameObject name is '" << _name << "'\n";
+		return;
+	}
 	if (!mesh) {
 		return;
 	}
-	if (_collisionBody) {
-		_collisionBody->release();
-	}
-
 	if (!mesh->_convexMesh) {
 		mesh->CreateConvexMesh();
 	}
-
-	_collisionShape = Physics::CreateShapeFromConvexMesh(mesh->_convexMesh);
-	_collisionBody = Physics::CreateRigidDynamic(matrix, physicsFilterData, _collisionShape);
-	_collisionBody->setRigidBodyFlag(PxRigidBodyFlag::eKINEMATIC, kinematic);
+	PxShape* shape = Physics::CreateShapeFromConvexMesh(mesh->_convexMesh);
+	PxFilterData filterData;
+	filterData.word0 = (PxU32)physicsFilterData.raycastGroup;
+	filterData.word1 = (PxU32)physicsFilterData.collisionGroup;
+	filterData.word2 = (PxU32)physicsFilterData.collidesWith;
+	shape->setQueryFilterData(filterData);       // ray casts
+	shape->setSimulationFilterData(filterData);  // collisions
+	_collisionShapes.push_back(shape);
+	_collisionBody->attachShape(*shape);
 }
 
-void GameObject::SetCollisionShapeFromBoundingBox(BoundingBox& boundingBox, PhysicsFilterData physicsFilterData, bool /*kinematic*/) {
-
-	if (_collisionBody) {
-		_collisionBody->release();
+void GameObject::AddCollisionShapeFromBoundingBox(BoundingBox& boundingBox, PhysicsFilterData physicsFilterData) {
+	if (!_collisionBody) {
+		std::cout << "You tried to add a bounding box collision shape to a GameObject without a rigid body. GameObject name is '" << _name << "'\n";
+		return;
 	}
-	_collisionShape = Physics::CreateBoxShape(boundingBox.size.x * 0.5f, boundingBox.size.y * 0.5f, boundingBox.size.z * 0.5f);
+	PxShape* shape = Physics::CreateBoxShape(boundingBox.size.x * 0.5f, boundingBox.size.y * 0.5f, boundingBox.size.z * 0.5f);
+	PxFilterData filterData;
+	filterData.word0 = (PxU32)physicsFilterData.raycastGroup;
+	filterData.word1 = (PxU32)physicsFilterData.collisionGroup;
+	filterData.word2 = (PxU32)physicsFilterData.collidesWith;
+	shape->setQueryFilterData(filterData);       // ray casts
+	shape->setSimulationFilterData(filterData);  // collisions
+	_collisionShapes.push_back(shape);
+	_collisionBody->attachShape(*shape);
 
-	Transform localShapeOffset;
-	localShapeOffset.position = boundingBox.offsetFromModelOrigin + (boundingBox.size * glm::vec3(0.5f));
-
-	_collisionBody = Physics::CreateRigidDynamic(Transform(), physicsFilterData, _collisionShape, localShapeOffset);
-	_collisionBody->setRigidBodyFlag(PxRigidBodyFlag::eKINEMATIC, true);
-
+	Transform shapeOffset;
+	shapeOffset.position = boundingBox.offsetFromModelOrigin + (boundingBox.size * glm::vec3(0.5f));
+	PxMat44 localShapeMatrix = Util::GlmMat4ToPxMat44(shapeOffset.to_mat4());
+	PxTransform localShapeTransform(localShapeMatrix);
+	shape->setLocalPose(localShapeTransform);
 }
 
 void GameObject::SetRaycastShapeFromMesh(Mesh* mesh) {
@@ -576,8 +600,12 @@ void GameObject::CleanUp() {
 	if (_collisionBody) {
 		_collisionBody->release();
 	}
-	if (_collisionShape) {
-		_collisionShape->release();
+	for (auto* shape : _collisionShapes) {
+		if (shape) {
+			if (shape) {
+				shape->release();
+			}
+		}
 	}
 	if (_raycastBody) {
 		_raycastBody->release();

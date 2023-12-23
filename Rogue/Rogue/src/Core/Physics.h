@@ -33,9 +33,10 @@ namespace Physics {
 	PxScene* GetScene();
 	PxPhysics* GetPhysics();
 	PxMaterial* GetDefaultMaterial();	
-	PxShape* CreateBoxShape(float width, float height, float depth, PxMaterial* material = NULL);
+	PxShape* CreateBoxShape(float width, float height, float depth, Transform shapeOffset = Transform(), PxMaterial * material = NULL);
 	PxRigidDynamic* CreateRigidDynamic(Transform transform, PhysicsFilterData filterData, PxShape* shape, Transform shapeOffset = Transform());
 	PxRigidDynamic* CreateRigidDynamic(glm::mat4 matrix, PhysicsFilterData filterData, PxShape* shape);
+	PxRigidDynamic* CreateRigidDynamic(glm::mat4 matrix, bool kinematic);
 	PxShape* CreateShapeFromTriangleMesh(PxTriangleMesh* triangleMesh, PxMaterial* material = NULL, float scale = 1);
 	PxShape* CreateShapeFromConvexMesh(PxConvexMesh* convexMesh, PxMaterial* material = NULL, float scale = 1);
 	void EnableRigidBodyDebugLines(PxRigidBody* rigidBody);
@@ -44,6 +45,8 @@ namespace Physics {
 	void ClearCollisionList();
 
 	inline std::vector<CollisionReport> _collisionReports;
+	inline PxControllerManager* _characterControllerManager;
+
 	//inline int _shellCollisionsThisFrame = 0;
 }
 

@@ -130,9 +130,6 @@ void Engine::LazyKeyPresses() {
     if (Input::KeyPressed(GLFW_KEY_F)) {
         ToggleFullscreen();
     }
-    if (Input::KeyPressed(GLFW_KEY_SPACE)) {
-        Audio::PlayAudio("RE_Beep.wav", 0.25f);
-    }
     if (Input::KeyPressed(HELL_KEY_TAB)) {
         ToggleEditor();
     }
@@ -148,7 +145,7 @@ void Engine::LazyKeyPresses() {
         Renderer::ToggleCollisionWorld();
         Audio::PlayAudio("RE_Beep.wav", 0.25f);
     }
-    if (Input::KeyPressed(HELL_KEY_SPACE)) {
+    if (Input::KeyPressed(HELL_KEY_9)) {
         Renderer::ToggleDrawingProbes();
         Audio::PlayAudio("RE_Beep.wav", 0.25f);
     }

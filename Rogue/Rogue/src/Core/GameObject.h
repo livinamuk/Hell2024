@@ -51,7 +51,7 @@ private:
 	ModelMatrixMode _modelMatrixMode = ModelMatrixMode::GAME_TRANSFORM;
 
 	PxRigidBody* _collisionBody = NULL;
-	PxShape* _collisionShape = NULL;
+	std::vector<PxShape*> _collisionShapes;
 	PxRigidBody* _raycastBody = NULL;
 	PxShape* _raycastShape = NULL;
 
@@ -120,9 +120,12 @@ public:
 	void SetTransform(Transform& transform);
 	void SetInteractToAffectAnotherObject(std::string objectName);
 	void SetMeshMaterialByMeshName(std::string meshName, std::string materialName);
-	void SetCollisionShape(Transform transform, PxShape* shape, PhysicsFilterData physicsFilterData, bool kinematic);
-	void SetCollisionShapeFromConvexMesh(glm::mat4 matrix, Mesh* mesh, PhysicsFilterData physicsFilterData, bool kinematic);
-	void SetCollisionShapeFromBoundingBox(BoundingBox& boundignBox, PhysicsFilterData physicsFilterData, bool kinematic);
+
+	void CreateRigidBody(glm::mat4 matrix, bool kinematic);
+	void AddCollisionShape(PxShape* shape, PhysicsFilterData physicsFilterData);
+	void AddCollisionShapeFromConvexMesh(Mesh* mesh, PhysicsFilterData physicsFilterData);
+	void AddCollisionShapeFromBoundingBox(BoundingBox& boundignBox, PhysicsFilterData physicsFilterData);
+	void UpdateRigidBodyMassAndInertia(float density);
 
 	void SetRaycastShapeFromMesh(Mesh* mesh);
 	void SetRaycastShapeFromModel(Model* model);
@@ -132,7 +135,6 @@ public:
 	void SetPhysicsTransform(glm::mat4 worldMatrix);
 	glm::mat4 GetGameWorldMatrix(); // aka not the physx matrix
 	void AddForceToCollisionObject(glm::vec3 direction, float strength);
-	void SetCollisionObjectMash(float mass);
 
 	void CleanUp();
 
