@@ -229,9 +229,10 @@ void SkinnedModel::UpdateBoneTransformsFromAnimation(float animTime, Animation* 
     }
 }
 
-void SkinnedModel::UpdateBoneTransformsFromAnimation(float animTime, int animationIndex, std::vector<glm::mat4>& Transforms, std::vector<glm::mat4>& DebugAnimatedTransforms) {
-    Animation* animation = m_animations[animationIndex];
-}
+
+//void SkinnedModel::UpdateBoneTransformsFromAnimation(float animTime, int animationIndex, std::vector<glm::mat4>& /*Transforms*/, std::vector<glm::mat4>& /*DebugAnimatedTransforms*/) {
+//    Animation* animation = m_animations[animationIndex];
+//}
 
 const AnimatedNode* SkinnedModel::FindAnimatedNode(Animation* animation, const char* NodeName) {
     for (unsigned int i = 0; i < animation->m_animatedNodes.size(); i++) {

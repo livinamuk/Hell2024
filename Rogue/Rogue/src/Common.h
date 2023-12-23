@@ -1,4 +1,6 @@
 #pragma once
+
+#pragma warning(push, 0)
 #define GLM_FORCE_SILENT_WARNINGS
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glad/glad.h>
@@ -9,6 +11,7 @@
 #include <glm/gtc/type_ptr.hpp>
 #include "glm/gtx/hash.hpp"
 #include "Math.h"
+#pragma warning(pop)
 
 enum ViewportMode {FULLSCREEN = 0, SPLITSCREEN, VIEWPORTMODE_COUNT};
 enum Weapon { KNIFE = 0, GLOCK, SHOTGUN, AKS74U, MP7, WEAPON_COUNT };

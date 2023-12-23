@@ -1,7 +1,12 @@
 #pragma once
-#include "PxPhysicsAPI.h"
+
 #include "../Common.h"
-#pragma warning( disable : 6495 ) // Always initialize a member varible
+
+#pragma warning(push, 0)
+#include "PxPhysicsAPI.h"
+#pragma warning(pop)
+
+//#pragma warning( disable : 6495 ) // Always initialize a member variable
 using namespace physx;
 
 struct PhysicsFilterData {
@@ -11,8 +16,8 @@ struct PhysicsFilterData {
 };
 
 struct CollisionReport {
-	PxActor* rigidA;
-	PxActor* rigidB;
+	PxActor* rigidA = NULL;
+	PxActor* rigidB = NULL;
 	/*PxShape* shapeA;
 	PxShape* shapeB;
 	CollisionGroup groupA;
@@ -24,13 +29,15 @@ namespace Physics {
 	void Init();
 	void StepPhysics(float deltaTime);
 	PxTriangleMesh* CreateTriangleMesh(PxU32 numVertices, const PxVec3* vertices, PxU32 numTriangles, const PxU32* indices);
-	PxConvexMesh* CreateConvexMesh(PxU32 numVertices, const PxVec3* vertices, PxU32 numTriangles, const PxU32* indices);
+	PxConvexMesh* CreateConvexMesh(PxU32 numVertices, const PxVec3* vertices);
 	PxScene* GetScene();
 	PxPhysics* GetPhysics();
 	PxMaterial* GetDefaultMaterial();	
 	PxShape* CreateBoxShape(float width, float height, float depth, PxMaterial* material = NULL);
-	PxRigidDynamic* CreateRigidDynamic(Transform transform, PhysicsFilterData filterData, PxShape* shape);
+	PxRigidDynamic* CreateRigidDynamic(Transform transform, PhysicsFilterData filterData, PxShape* shape, Transform shapeOffset = Transform());
+	PxRigidDynamic* CreateRigidDynamic(glm::mat4 matrix, PhysicsFilterData filterData, PxShape* shape);
 	PxShape* CreateShapeFromTriangleMesh(PxTriangleMesh* triangleMesh, PxMaterial* material = NULL, float scale = 1);
+	PxShape* CreateShapeFromConvexMesh(PxConvexMesh* convexMesh, PxMaterial* material = NULL, float scale = 1);
 	void EnableRigidBodyDebugLines(PxRigidBody* rigidBody);
 	void DisableRigidBodyDebugLines(PxRigidBody* rigidBody);
 	std::vector<CollisionReport>& GetCollisions();
@@ -47,7 +54,7 @@ public:
 	void onSleep(PxActor** actors, PxU32 count) { PX_UNUSED(actors); PX_UNUSED(count); }
 	void onTrigger(PxTriggerPair* pairs, PxU32 count) { PX_UNUSED(pairs); PX_UNUSED(count); }
 	void onAdvance(const PxRigidBody* const*, const PxTransform*, const PxU32) {}
-	void onContact(const PxContactPairHeader& pairHeader, const PxContactPair* pairs, PxU32 nbPairs) {
+	void onContact(const PxContactPairHeader& pairHeader, const PxContactPair* /*pairs*/, PxU32 /*nbPairs*/) {
 
 		/*PX_UNUSED((pairHeader));
 		std::vector<PxContactPairPoint> contactPoints;

@@ -82,7 +82,7 @@ void AnimatedGameObject::SetMaterial(std::string materialName) {
         return;
     }
     for (int i = 0; i < _skinnedModel->m_meshEntries.size(); i++) {
-        auto& mesh = _skinnedModel->m_meshEntries[i];
+        //auto& mesh = _skinnedModel->m_meshEntries[i];
         _materialIndices[i] = AssetManager::GetMaterialIndex(materialName);
     }
 }

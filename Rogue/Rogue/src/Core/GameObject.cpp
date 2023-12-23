@@ -7,11 +7,6 @@
 GameObject::GameObject() {
 }
 
-void GameObject::SetModelMatrixTransformOverride(glm::mat4 model) {
-	//_overrideTransformWithMatrix = true;
-	//_modelMatrixTransformOverride = model;
-}
-
 void GameObject::SetOpenAxis(OpenAxis openAxis) {
 	_openAxis = openAxis;
 }
@@ -308,6 +303,13 @@ void GameObject::AddForceToCollisionObject(glm::vec3 direction, float strength) 
 	_collisionBody->addForce(force);
 }
 
+void GameObject::SetCollisionObjectMash(float mass) {
+	if (_collisionBody) {
+		PxRigidBodyExt::updateMassAndInertia(*_collisionBody, mass);
+	}
+}
+
+
 void GameObject::SetAudioOnOpen(std::string filename, float volume) {
 	_audio.onOpen = { filename, volume };
 }
@@ -330,7 +332,7 @@ void GameObject::SetOpenState(OpenState openState, float speed, float min, float
 
 void GameObject::SetModel(const std::string& name)
 {
-	_model = &AssetManager::GetModel(name);
+	_model = AssetManager::GetModel(name);
 
 
 	if (_model) {
@@ -396,32 +398,6 @@ void GameObject::SetInteract(InteractType type, std::string text, std::function<
 	_interactCallback = callback;
 }
 
-void GameObject::SetBoundingBoxFromMesh(int meshIndex) {
-	/*
-	Mesh* mesh = AssetManager::GetMesh(_model->_meshIndices[meshIndex]);	
-	std::vector<Vertex>& vertices = AssetManager::GetVertices_TEMPORARY();
-	std::vector<uint32_t>& indices = AssetManager::GetIndices_TEMPORARY();
-
-	int firstIndex = mesh->_indexOffset;
-	int lastIndex = firstIndex + (int)mesh->_indexCount;
-
-	for (int i = firstIndex; i < lastIndex; i++) {
-		_boundingBox.xLow = std::min(_boundingBox.xLow, vertices[indices[i] + mesh->_vertexOffset].position.x);
-		_boundingBox.xHigh = std::max(_boundingBox.xHigh, vertices[indices[i] + mesh->_vertexOffset].position.x);
-		_boundingBox.zLow = std::min(_boundingBox.zLow, vertices[indices[i] + mesh->_vertexOffset].position.z);
-		_boundingBox.zHigh = std::max(_boundingBox.zHigh, vertices[indices[i] + mesh->_vertexOffset].position.z);
-	}	
-	*/
-	/*
-	std::cout << "\n" << GetName() << "\n";
-	std::cout << " meshIndex: " << meshIndex << "\n";
-	std::cout << " firstIndex: " << firstIndex << "\n";
-	std::cout << " lastIndex: " << lastIndex << "\n";
-	std::cout << " _boundingBox.xLow: " << _boundingBox.xLow << "\n";
-	std::cout << " _boundingBox.xHigh: " << _boundingBox.xHigh << "\n";
-	std::cout << " _boundingBox.zLow: " << _boundingBox.zLow << "\n";
-	std::cout << " _boundingBox.zHigh: " << _boundingBox.zHigh << "\n";*/
-}
 
 BoundingBox GameObject::GetBoundingBox() {
 	return _boundingBox;
@@ -498,39 +474,37 @@ void GameObject::SetCollisionShape(Transform transform, PxShape* shape, PhysicsF
 	_collisionBody->setRigidBodyFlag(PxRigidBodyFlag::eKINEMATIC, kinematic);
 }
 
-void GameObject::SetCollisionShapeFromConvexHull(Transform transform, Mesh* mesh, PhysicsFilterData physicsFilterData, bool kinematic) {
+void GameObject::SetCollisionShapeFromConvexMesh(glm::mat4 matrix, Mesh* mesh, PhysicsFilterData physicsFilterData, bool kinematic) {
 
-	/*if (!mesh) {
+	if (!mesh) {
 		return;
 	}
-
 	if (_collisionBody) {
 		_collisionBody->release();
 	}
-	Mesh& mesh = _model->_meshes[meshIndex];
-	_collisionShape = Physics::CreateConvexFromTriangleMesh(mesh._triangleMesh);
-	_collisionBody = Physics::CreateRigidDynamic(transform, physicsFilterData, _collisionShape);
+
+	if (!mesh->_convexMesh) {
+		mesh->CreateConvexMesh();
+	}
+
+	_collisionShape = Physics::CreateShapeFromConvexMesh(mesh->_convexMesh);
+	_collisionBody = Physics::CreateRigidDynamic(matrix, physicsFilterData, _collisionShape);
 	_collisionBody->setRigidBodyFlag(PxRigidBodyFlag::eKINEMATIC, kinematic);
+}
 
-	return;*/
+void GameObject::SetCollisionShapeFromBoundingBox(BoundingBox& boundingBox, PhysicsFilterData physicsFilterData, bool /*kinematic*/) {
 
-	/*
-	if (!_model || meshIndex < 0 || meshIndex >= _model->_meshes.size()) {
-		return;
-	}
-
-	Mesh& mesh = _model->_meshes[meshIndex];
-	if (!mesh._triangleMesh) {
-		mesh.CreateTriangleMesh();
-	}
 	if (_collisionBody) {
 		_collisionBody->release();
 	}
-	if (mesh._triangleMesh) {
-		_collisionShape = Physics::CreateShapeFromTriangleMesh(mesh._triangleMesh);
-	}
-	_collisionBody = Physics::CreateRigidDynamic(transform, physicsFilterData, _collisionShape);
-	_collisionBody->setRigidBodyFlag(PxRigidBodyFlag::eKINEMATIC, kinematic);*/
+	_collisionShape = Physics::CreateBoxShape(boundingBox.size.x * 0.5f, boundingBox.size.y * 0.5f, boundingBox.size.z * 0.5f);
+
+	Transform localShapeOffset;
+	localShapeOffset.position = boundingBox.offsetFromModelOrigin + (boundingBox.size * glm::vec3(0.5f));
+
+	_collisionBody = Physics::CreateRigidDynamic(Transform(), physicsFilterData, _collisionShape, localShapeOffset);
+	_collisionBody->setRigidBodyFlag(PxRigidBodyFlag::eKINEMATIC, true);
+
 }
 
 void GameObject::SetRaycastShapeFromMesh(Mesh* mesh) {
@@ -604,6 +578,12 @@ void GameObject::CleanUp() {
 	}
 	if (_collisionShape) {
 		_collisionShape->release();
+	}
+	if (_raycastBody) {
+		_raycastBody->release();
+	}
+	if (_raycastShape) {
+		_raycastShape->release();
 	}
 }
 

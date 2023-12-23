@@ -30,6 +30,8 @@
 /** \addtogroup vehicle2
   @{
 */
+#pragma warning( disable : 6495 ) // Always initialize a member variable
+
 #include "foundation/PxFoundation.h"
 #include "foundation/PxAssert.h"
 #include "foundation/PxMemory.h"
@@ -37,6 +39,7 @@
 #include "foundation/PxMat33.h"
 
 #include "PxVehicleLimits.h"
+
 
 class OmniPvdWriter;
 

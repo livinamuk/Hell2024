@@ -2,7 +2,6 @@
 #include "../Common.h"
 #include "GameObject.h"
 #include "AnimatedGameObject.h"
-#include "../ThreadPool.h"
 #include "Door.h"
 #include "Player.h"
 #include "Physics.h"
@@ -130,9 +129,9 @@ namespace Scene {
 
     // Perhaps this isn't the best place to store this?
     inline int _playerCount = 2;
-    inline PxTriangleMesh* _sceneTriangleMesh;
-    inline PxRigidDynamic* _sceneRigidDynamic;
-    inline PxShape* _sceneShape;
+    inline PxTriangleMesh* _sceneTriangleMesh = NULL;
+    inline PxRigidDynamic* _sceneRigidDynamic = NULL;
+    inline PxShape* _sceneShape = NULL;
 
     inline std::vector<Bullet> _bullets;
     inline std::vector<BulletCasing> _bulletCasings;
@@ -152,7 +151,9 @@ namespace Scene {
     inline std::vector<Player> _players;
 
     void Init();
+    void CreatePlayers();
     void NewScene();
+    void RemoveEverything();
     void Update(float deltaTime);
     void LoadLightSetup(int index);
     GameObject* GetGameObjectByName(std::string);

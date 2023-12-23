@@ -36,22 +36,14 @@ void Player::SetWeapon(Weapon weapon) {
 }
 
 void Player::Update(float deltaTime) {
-		
-
+			
 	// Mouselook
 	if (!_ignoreControl && GL::WindowHasFocus()) {
 		float mouseSensitivity = 0.002f;
-		static float targetXRot = _rotation.x;
-		static float targetYRot = _rotation.y;
-		targetXRot += -Input::GetMouseOffsetY() * mouseSensitivity;
-		targetYRot += -Input::GetMouseOffsetX() * mouseSensitivity;
-		float cameraRotateSpeed = 50;
-		_rotation.x = Util::FInterpTo(_rotation.x, targetXRot, deltaTime, cameraRotateSpeed);
-		_rotation.y = Util::FInterpTo(_rotation.y, targetYRot, deltaTime, cameraRotateSpeed);
+		_rotation.x += -Input::GetMouseOffsetY() * mouseSensitivity;
+		_rotation.y += -Input::GetMouseOffsetX() * mouseSensitivity;
 		_rotation.x = std::min(_rotation.x, 1.5f);
 		_rotation.x = std::max(_rotation.x, -1.5f);
-		targetXRot = std::min(targetXRot, 1.5f);
-		targetXRot = std::max(targetXRot, -1.5f);
 	}
 
 	float amt = 0.02f;
@@ -69,8 +61,8 @@ void Player::Update(float deltaTime) {
 	}
 
 	// Speed
-	float speed = crouching ? _crouchingSpeed : _walkingSpeed;
-	speed *= deltaTime;
+	//float speed = crouching ? _crouchingSpeed : _walkingSpeed;
+	//speed *= deltaTime;
 
 	// View height
 	float viewHeightTarget = crouching ? _viewHeightCrouching : _viewHeightStanding;
@@ -111,23 +103,30 @@ void Player::Update(float deltaTime) {
 	if (!_ignoreControl) {
 		glm::vec3 displacement(0); 
 		if (Input::KeyDown(HELL_KEY_W)) {
-			displacement -= _front * speed;
+			displacement -= _front;// *speed;
 			_isMoving = true;
 		}
 		if (Input::KeyDown(HELL_KEY_S)) {
-			displacement += _front * speed;
+			displacement += _front;// *speed;
 			_isMoving = true;
 		}
 		if (Input::KeyDown(HELL_KEY_A)) {
-			displacement -= _right * speed;
+			displacement -= _right;// *speed;
 			_isMoving = true;
 		}
 		if (Input::KeyDown(HELL_KEY_D)) {
-			displacement += _right * speed;
+			displacement += _right;// *speed;
 			_isMoving = true;
 		}
-		_position += displacement;
+		
+		float len = length(displacement);
+		if (len != 0.0) {
+			float speed = crouching ? _crouchingSpeed : _walkingSpeed;
+			_position += (displacement / len) * speed * deltaTime;
+		}
 	}
+
+
 
 	// Collision Detection
 	for (Line& collisioLine : Scene::_collisionLines) {
@@ -305,15 +304,16 @@ void Player::EvaluateCameraRay() {
 
 	// house tris
 	std::vector<Triangle> triangles;
-	int vertexCount = Scene::_rtMesh[0].vertexCount;
-	for (int i = 0; i < vertexCount; i += 3) {
-		Triangle& tri = triangles.emplace_back(Triangle());
-		tri.p1 = Scene::_rtVertices[i + 0];
-		tri.p2 = Scene::_rtVertices[i + 1];
-		tri.p3 = Scene::_rtVertices[i + 2];
+	{
+		int vertexCount = Scene::_rtMesh[0].vertexCount;
+		for (int i = 0; i < vertexCount; i += 3) {
+			Triangle& tri = triangles.emplace_back(Triangle());
+			tri.p1 = Scene::_rtVertices[i + 0];
+			tri.p2 = Scene::_rtVertices[i + 1];
+			tri.p3 = Scene::_rtVertices[i + 2];
+		}
+		Util::EvaluateRaycasts(rayOrigin, rayDirection, 10, triangles, RaycastObjectType::WALLS, glm::mat4(1), _cameraRayData, nullptr);
 	}
-	Util::EvaluateRaycasts(rayOrigin, rayDirection, 10, triangles, RaycastObjectType::WALLS, glm::mat4(1), _cameraRayData, nullptr);
-
 	// Doors
 	int doorIndex = 0;
 	for (RTInstance& instance : Scene::_rtInstances) {
@@ -424,6 +424,7 @@ void Player::UpdateFirstPersonWeapon(float deltaTime) {
 				std::string aninName = "Knife_Swing" + std::to_string(random_number);
 				_firstPersonWeapon.PlayAnimation(aninName, 1.5f);
 				Audio::PlayAudio("Knife.wav", 1.0f); 
+				SpawnBullet(0);
 			}
 		}
 		if (_weaponAction == FIRE && _firstPersonWeapon.IsAnimationComplete()) {
@@ -507,7 +508,7 @@ void Player::UpdateFirstPersonWeapon(float deltaTime) {
 				_firstPersonWeapon.PlayAnimation(aninName, 1.625f);
 				Audio::PlayAudio(audioName, 1.0f);
 				SpawnMuzzleFlash();
-				SpawnBullet(0.025);
+				SpawnBullet(0.025f);
 			}
 		}
 		// Reload
@@ -624,9 +625,9 @@ void Player::SpawnGlockCasing() {
 	PxShape* shape = Physics::CreateBoxShape(0.01f, 0.004f, 0.004f);
 	PxRigidDynamic* body = Physics::CreateRigidDynamic(transform, filterData, shape);
 
-	PxVec3 force = Util::GlmVec3toPxVec3(glm::normalize(GetCameraRight() + glm::vec3(0, Util::RandomFloat(0.7, 0.9), 0)) * glm::vec3(0.00215));
+	PxVec3 force = Util::GlmVec3toPxVec3(glm::normalize(GetCameraRight() + glm::vec3(0.0f, Util::RandomFloat(0.7f, 0.9f), 0.0f)) * glm::vec3(0.00215f));
 	body->addForce(force);
-	body->setAngularVelocity(PxVec3(Util::RandomFloat(0, 100), Util::RandomFloat(0, 100), Util::RandomFloat(0, 100)));
+	body->setAngularVelocity(PxVec3(Util::RandomFloat(0.0f, 100.0f), Util::RandomFloat(0.0f, 100.0f), Util::RandomFloat(0.0f, 100.0f)));
 	//shape->release();
 
 	BulletCasing bulletCasing;
@@ -654,9 +655,9 @@ void Player::SpawnAKS74UCasing() {
 	PxShape* shape = Physics::CreateBoxShape(0.02f, 0.004f, 0.004f);
 	PxRigidDynamic* body = Physics::CreateRigidDynamic(transform, filterData, shape);
 
-	PxVec3 force = Util::GlmVec3toPxVec3(glm::normalize(GetCameraRight() + glm::vec3(0, Util::RandomFloat(0.7, 1.4), 0)) * glm::vec3(0.003));
+	PxVec3 force = Util::GlmVec3toPxVec3(glm::normalize(GetCameraRight() + glm::vec3(0.0f, Util::RandomFloat(0.7f, 1.4f), 0.0f)) * glm::vec3(0.003f));
 	body->addForce(force);
-	body->setAngularVelocity(PxVec3(Util::RandomFloat(0, 50), Util::RandomFloat(0, 50), Util::RandomFloat(0, 50)));
+	body->setAngularVelocity(PxVec3(Util::RandomFloat(0.0f, 50.0f), Util::RandomFloat(0.0f, 50.0f), Util::RandomFloat(0.0f, 50.0f)));
 	//shape->release();
 
 	BulletCasing bulletCasing;

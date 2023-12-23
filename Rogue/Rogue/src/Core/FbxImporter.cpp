@@ -40,11 +40,13 @@ void FbxImporter::LoadSkinnedModel(std::string filename, SkinnedModel& skinnedMo
         Ret = InitFromScene(skinnedModel, m_pScene, filename);
     }
     else {
-        printf("Error parsing '%s': '%s'\n", filename, m_Importer.GetErrorString());
+        //printf("Error parsing '%s': '%s'\n", filename, m_Importer.GetErrorString());
+        std::cout << "Error parsing " << filename << ": " << m_Importer.GetErrorString() << "\n";
     }        
 
-    if (m_pScene->mNumCameras > 0)
-        aiCamera* m_camera = m_pScene->mCameras[0];
+    //if (m_pScene->mNumCameras > 0) {
+    //    aiCamera* m_camera = m_pScene->mCameras[0];
+    //}
 
     GrabSkeleton(skinnedModel, m_pScene->mRootNode, -1);
 
@@ -63,11 +65,9 @@ void FbxImporter::LoadSkinnedModel(std::string filename, SkinnedModel& skinnedMo
 }
 
 
-bool FbxImporter::InitFromScene(SkinnedModel& skinnedModel, const aiScene* pScene, const std::string& Filename)
+bool FbxImporter::InitFromScene(SkinnedModel& skinnedModel, const aiScene* pScene, const std::string& /*Filename*/)
 {
     skinnedModel.m_meshEntries.resize(pScene->mNumMeshes);
-
-
 
     unsigned int NumVertices = 0;
     unsigned int NumIndices = 0;
@@ -123,7 +123,7 @@ bool FbxImporter::InitFromScene(SkinnedModel& skinnedModel, const aiScene* pScen
         smoothNormals[i] = smoothNormals[i] / float(count);
     }*/
 
-    for (int i = 0; i < NumVertices; i++) {
+    for (unsigned int i = 0; i < NumVertices; i++) {
 
         Vertex vert;
         vert.position = skinnedModel.Positions[i];
@@ -367,7 +367,8 @@ void FbxImporter::LoadAnimation(SkinnedModel& skinnedModel, const std::string& f
 
     // Some other error possibilty
     else {
-        printf("Error parsing '%s': '%s'\n", filename, m_AnimationImporter.GetErrorString());
+        //printf("Error parsing '%s': '%s'\n", filename, m_AnimationImporter.GetErrorString());
+        std::cout << "Error parsing " << filename << ": " << m_AnimationImporter.GetErrorString();
         assert(0);
     }
 
@@ -382,7 +383,7 @@ void FbxImporter::LoadAnimation(SkinnedModel& skinnedModel, const std::string& f
 
     // Resize the vecotr big enough for each pose
     int nodeCount = aiAnim->mNumChannels;
-    int poseCount = aiAnim->mChannels[0]->mNumPositionKeys;
+   // int poseCount = aiAnim->mChannels[0]->mNumPositionKeys;
       
     // trying the assimp way now. coz why fight it.
     for (int n = 0; n < nodeCount; n++)
@@ -454,7 +455,7 @@ void FbxImporter::LoadAllAnimations(SkinnedModel& skinnedModel, const char* File
 			animation->m_ticksPerSecond = (float)m_pAnimationScene->mAnimations[i]->mTicksPerSecond;
 			std::cout << "Loaded " << i << ": " << name << "\n";
 
-			auto a = m_pAnimationScene->mNumAnimations;
+			//auto a = m_pAnimationScene->mNumAnimations;
 
 			// need to create an animation clip.
 	        // need to fill it with animation poses.
@@ -463,7 +464,7 @@ void FbxImporter::LoadAllAnimations(SkinnedModel& skinnedModel, const char* File
 			// so iterate over each channel, and each channel is for each NODE aka joint.
 			// Resize the vecotr big enough for each pose
 			int nodeCount = aiAnim->mNumChannels;
-			int poseCount = aiAnim->mChannels[i]->mNumPositionKeys;
+			//int poseCount = aiAnim->mChannels[i]->mNumPositionKeys;
 
 			// trying the assimp way now. coz why fight it.
 			for (int n = 0; n < nodeCount; n++)

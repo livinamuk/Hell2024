@@ -72,7 +72,7 @@ void Editor::Init() {
 
 }
 
-void Editor::Update(float deltaTime) {
+void Editor::Update(float /*deltaTime*/) {
 
     if (Input::KeyPressed(HELL_KEY_N)) {
         Scene::NewScene();
@@ -87,8 +87,8 @@ void Editor::Update(float deltaTime) {
     }
 
     // Zoom
-    float screenWidth = GL::GetWindowWidth();
-    float screenHeight = GL::GetWindowHeight();
+    float screenWidth = (float)GL::GetWindowWidth();
+    float screenHeight = (float)GL::GetWindowHeight();
     float scrollSpeedZoomFactor = 1000.0f / _zoom;
     _zoom *= (1 + ((float)-Input::GetMouseWheelValue() / -5));
     _zoom = std::max(_zoom, 20.0f);
@@ -158,7 +158,7 @@ void Editor::WallsModeUpdate() {
         // Create Door
         if (Input::KeyPressed(HELL_KEY_1)) {
             glm::vec3 worldPos = glm::vec3(_gridX + 0.05, 0.1f, _gridZ + 0.05);
-            Door& door = Scene::_doors.emplace_back(Door(worldPos, 0));
+            Scene::_doors.emplace_back(Door(worldPos, 0));
             Audio::PlayAudio("UI_Select.wav", 1.0f);
             goto break_out;
         }
@@ -174,7 +174,7 @@ void Editor::WallsModeUpdate() {
         }
 
         // Find hovered vertex
-        float threshold = 0.05;
+        float threshold = 0.05f;
         for (Wall& wall : Scene::_walls) {
             if (abs(_mouseX - wall.begin.x) < threshold &&
                 abs(_mouseZ - wall.begin.z) < threshold) {
@@ -202,8 +202,8 @@ void Editor::WallsModeUpdate() {
 
     // Dragging a door  
     if (_action == DRAGGING_DOOR) {
-        _draggedDoor->position.x = _gridXHalfSize + 0.05;
-        _draggedDoor->position.z = _gridZHalfSize + 0.05;
+        _draggedDoor->position.x = _gridXHalfSize + 0.05f;
+        _draggedDoor->position.z = _gridZHalfSize + 0.05f;
 
         // Let go of it
         if (!Input::LeftMouseDown()) {
@@ -291,7 +291,7 @@ void Editor::FloorModeUpdate() {
         }
 
         // Find hovered vertex
-        float threshold = 0.05;
+        float threshold = 0.05f;
         for (Floor& floor : Scene::_floors) {
             if (abs(_mouseX - floor.v1.position.x) < threshold &&
                 abs(_mouseZ - floor.v1.position.z) < threshold) {

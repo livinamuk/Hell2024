@@ -10,12 +10,11 @@ namespace AssetManager {
 	void Init();
 	void LoadFont();
 	void LoadEverythingElse();
-	void CreateTriangleMeshes();
-	Texture& GetTexture(const std::string& filename);
+	Texture* GetTexture(const std::string& filename);
 	int GetTextureIndex(const std::string& filename, bool ignoreWarning = false);
 	int GetMaterialIndex(const std::string& _name);
 	void BindMaterialByIndex(int index);
-	Model& GetModel(const std::string& name);
+	Model* GetModel(const std::string& name);
 	SkinnedModel* GetSkinnedModel(const std::string& name);
 	std::string GetMaterialNameByIndex(int index);
 

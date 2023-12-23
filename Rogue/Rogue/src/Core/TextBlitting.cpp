@@ -77,8 +77,8 @@ namespace TextBlitter {
 
 		_charCursorIndex = (int)_textTime;
 
-		float xcursor = _xMargin;
-		float ycursor = _yMargin;
+		float xcursor = (float)_xMargin;
+		float ycursor = (float)_yMargin;
 		int color = 0; // 0 for white, 1 for green
 
 
@@ -123,10 +123,10 @@ namespace TextBlitter {
 				size_t charPos = _charSheet.find(character);
 				if (charPos == std::string::npos)
 					continue;
-				Texture& texture = AssetManager::GetTexture("char_" + std::to_string(charPos + 1));
+				Texture* texture = AssetManager::GetTexture("char_" + std::to_string(charPos + 1));
 
-				float texWidth = texture.GetWidth(); 
-				float texHeight = texture.GetHeight(); 
+				float texWidth = (float)texture->GetWidth();
+				float texHeight = (float)texture->GetHeight();
 				float cursor_X = xcursor + texWidth;
 				float cursor_Y = ycursor + texHeight - _lineHeight;
 					
@@ -174,10 +174,10 @@ namespace TextBlitter {
 			size_t charPos = _charSheet.find(character);
 			if (charPos == std::string::npos)
 				continue;
-			Texture& texture = AssetManager::GetTexture("char_" + std::to_string(charPos + 1));
+			Texture* texture = AssetManager::GetTexture("char_" + std::to_string(charPos + 1));
 
-			float texWidth = texture.GetWidth();
-			float texHeight = texture.GetHeight();
+			float texWidth = (float)texture->GetWidth();
+			float texHeight = (float)texture->GetHeight();
 			float cursor_X = xcursor + texWidth;
 			float cursor_Y = ycursor + texHeight - _lineHeight;
 
@@ -223,7 +223,7 @@ namespace TextBlitter {
 						continue;
 					}
 					size_t charPos = _charSheet.find(character);
-					float texWidth = AssetManager::_charExtents[charPos].width;
+					float texWidth = (float)AssetManager::_charExtents[charPos].width;
 					xcursor += texWidth + _charSpacing;
 				}
 				blitXY.x -= (xcursor / 2);
@@ -261,18 +261,18 @@ namespace TextBlitter {
 					continue;
 				}
 				size_t charPos = _charSheet.find(character);
-				Texture& texture = AssetManager::GetTexture("char_" + std::to_string(charPos + 1));
+				Texture* texture = AssetManager::GetTexture("char_" + std::to_string(charPos + 1));
 
-				float texWidth = texture.GetWidth();
-				float texHeight = texture.GetHeight();
+				float texWidth = (float)texture->GetWidth();
+				float texHeight = (float)texture->GetHeight();
 				float cursor_X = xcursor + texWidth;
 				float cursor_Y = ycursor + texHeight - _lineHeight;
 
 				UIRenderInfo renderInfo;
 				renderInfo.centered = false;
 				renderInfo.textureName = "char_" + std::to_string(charPos + 1);
-				renderInfo.screenX = cursor_X - texWidth;
-				renderInfo.screenY = cursor_Y;
+				renderInfo.screenX = (int)(cursor_X - texWidth);
+				renderInfo.screenY = (int)cursor_Y;
 				Renderer::QueueUIForRendering(renderInfo);
 
 				xcursor += texWidth + _charSpacing;

@@ -198,6 +198,14 @@ void Model::Load(std::string filepath) {
 		_meshes.push_back(Mesh(vertices, indices, std::string(shape.name)));
 	}
 
+	// Build the bounding box
+	float width = std::abs(maxPos.x - minPos.x);
+	float height = std::abs(maxPos.y - minPos.y);
+	float depth = std::abs(maxPos.z - minPos.z);
+	_boundingBox.size = glm::vec3(width, height, depth);
+	_boundingBox.offsetFromModelOrigin = minPos;
+
+
 	// Get the final missing pieces for the bounding box
 	//m_boundingBox.scale = (minPos * glm::vec3(-1)) + maxPos;
 	//m_boundingBox.offsetFromModelOrigin = (m_boundingBox.scale * glm::vec3(0.5)) + minPos;

@@ -205,11 +205,11 @@ Texture::Texture(std::string filepath)
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 		uint32_t glFormat = cmpToOpenGlFormat(cmpTexture.format);
-		unsigned int blockSize = (glFormat == GL_COMPRESSED_RGBA_S3TC_DXT1_EXT) ? 8 : 16;
+		//unsigned int blockSize = (glFormat == GL_COMPRESSED_RGBA_S3TC_DXT1_EXT) ? 8 : 16;
 		if (glFormat != 0xFFFFFFFF) {
-			uint32_t width = cmpTexture.dwWidth;
-			uint32_t height = cmpTexture.dwHeight;
-			uint32_t size1 = ((width + 3) / 4) * ((height + 3) / 4) * blockSize;
+			//uint32_t width = cmpTexture.dwWidth;
+			//uint32_t height = cmpTexture.dwHeight;
+			//uint32_t size1 = ((width + 3) / 4) * ((height + 3) / 4) * blockSize;
 			uint32_t size2 = cmpTexture.dwDataSize;
 			glCompressedTexImage2D(GL_TEXTURE_2D, 0, glFormat, cmpTexture.dwWidth, cmpTexture.dwHeight, 0, size2, cmpTexture.pData);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 1);

@@ -67,15 +67,21 @@ void Mesh::CreateTriangleMesh() {
 
 void Mesh::CreateConvexMesh() {
     std::vector<PxVec3> pxvertices;
-    std::vector<unsigned int> pxindices;
     for (auto& vertex : vertices) {
-        pxvertices.push_back(PxVec3(vertex.position.x, vertex.position.y, vertex.position.z));
+        bool found = false;
+        for  (auto& uniqueVertex : pxvertices) {
+
+            if (vertex.position.x == uniqueVertex.x && vertex.position.y == uniqueVertex.y && vertex.position.z == uniqueVertex.z) {
+                found = true;
+                break;
+            }
+        }
+        if (!found) {
+            pxvertices.push_back(PxVec3(vertex.position.x, vertex.position.y, vertex.position.z));
+        }
     }
-    for (auto& index : indices) {
-        pxindices.push_back(index);
-    }
-    if (pxindices.size()) {
-        _convexMesh = Physics::CreateConvexMesh(pxvertices.size(), pxvertices.data(), pxindices.size() / 3, pxindices.data());
-        std::cout << "Created triangle mesh for " << _name << "\n";
+    if (pxvertices.size()) {
+        _convexMesh = Physics::CreateConvexMesh(pxvertices.size(), pxvertices.data());
+        std::cout << "Created convex mesh for " << _name << " with " << pxvertices.size() << " vertices\n";
     }
 }

@@ -137,9 +137,9 @@ void Input::PreventRightMouseHold() {
 }
 
 int Input::GetMouseX() {
-    return _mouseX;
+    return (int)_mouseX;
 }
 
 int Input::GetMouseY() {
-    return _mouseY;
+    return (int)_mouseY;
 }

@@ -18,7 +18,7 @@ public:
 
 class ComputeShader {
     public:
-        unsigned int _ID = -1;
+        int _ID = -1;
         void Load(std::string computePath);
         void Use();
         void SetBool(const std::string& name, bool value);

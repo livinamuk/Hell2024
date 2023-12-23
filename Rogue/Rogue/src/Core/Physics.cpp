@@ -4,18 +4,20 @@
 #include "../Common.h"
 #include "../Util.hpp"
 
+/*
 #ifdef _DEBUG 
 #define DEBUG
 #else
 #define NDEBUG
 #endif
-#define PVD_HOST "127.0.0.1"
+*/
 
+#define PVD_HOST "127.0.0.1"
 
 class UserErrorCallback : public PxErrorCallback
 {
 public:
-    virtual void reportError(PxErrorCode::Enum code, const char* message, const char* file, int line) {
+    virtual void reportError(PxErrorCode::Enum /*code*/, const char* message, const char* file, int line) {
         std::cout << file << " line " << line << ": " << message << "\n";
         std::cout << "\n";
     }
@@ -48,30 +50,6 @@ void Physics::EnableRigidBodyDebugLines(PxRigidBody* rigidBody) {
 void Physics::DisableRigidBodyDebugLines(PxRigidBody* rigidBody) {
     rigidBody->setActorFlag(PxActorFlag::eVISUALIZATION, false);
 }
-
-PxFilterFlags FilterShaderExample(
-    PxFilterObjectAttributes attributes0, PxFilterData filterData0,
-    PxFilterObjectAttributes attributes1, PxFilterData filterData1,
-    PxPairFlags& pairFlags, const void* constantBlock, PxU32 constantBlockSize)
-{
-    // let triggers through
-    if (PxFilterObjectIsTrigger(attributes0) || PxFilterObjectIsTrigger(attributes1)) {
-        pairFlags = PxPairFlag::eTRIGGER_DEFAULT;
-        return PxFilterFlag::eDEFAULT;
-    }
-    // generate contacts for all that were not filtered above
-    pairFlags = PxPairFlag::eCONTACT_DEFAULT;
-
-    // trigger the contact callback for pairs (A,B) where
-    // the filtermask of A contains the ID of B and vice versa.
-    //if ((filterData0.word0 & filterData1.word1) && (filterData1.word0 & filterData0.word1))
-    if ((filterData0.word2 & filterData1.word1) && (filterData1.word2 & filterData0.word1)) {
-        pairFlags |= PxPairFlag::eNOTIFY_TOUCH_FOUND;
-    }
-
-    return PxFilterFlag::eDEFAULT;
-}
-
 
 
 PxFilterFlags contactReportFilterShader(PxFilterObjectAttributes attributes0, PxFilterData filterData0, PxFilterObjectAttributes attributes1, PxFilterData filterData1, PxPairFlags& pairFlags, const void* constantBlock, PxU32 constantBlockSize) {
@@ -111,11 +89,12 @@ PxFilterFlags contactReportFilterShader(PxFilterObjectAttributes attributes0, Px
     return PxFilterFlag::eKILL;
 }
 
+/*
 PxFilterFlags PhysicsMainFilterShader(PxFilterObjectAttributes attributes0, PxFilterData filterData0, PxFilterObjectAttributes attributes1, PxFilterData filterData1, PxPairFlags& pairFlags, const void* constantBlock, PxU32 constantBlockSize) {
     // generate contacts for all that were not filtered above
     pairFlags = PxPairFlag::eCONTACT_DEFAULT | PxPairFlag::eTRIGGER_DEFAULT | PxPairFlag::eNOTIFY_CONTACT_POINTS;
     return PxFilterFlag::eDEFAULT;
-}
+}*/
 
 
 // Setup common cooking params
@@ -189,7 +168,7 @@ PxTriangleMesh* Physics::CreateTriangleMesh(PxU32 numVertices, const PxVec3* ver
     }
 
     PxTriangleMesh* triMesh = NULL;
-    PxU32 meshSize = 0;
+    //PxU32 meshSize = 0;
 
     triMesh = PxCreateTriangleMesh(params, meshDesc, _physics->getPhysicsInsertionCallback());
     return triMesh;
@@ -198,13 +177,13 @@ PxTriangleMesh* Physics::CreateTriangleMesh(PxU32 numVertices, const PxVec3* ver
 
 
 
-PxConvexMesh* Physics::CreateConvexMesh(PxU32 numVertices, const PxVec3* vertices, PxU32 numTriangles, const PxU32* indices) {    
+PxConvexMesh* Physics::CreateConvexMesh(PxU32 numVertices, const PxVec3* vertices) {    
     PxConvexMeshDesc convexDesc;
     convexDesc.points.count = numVertices;
     convexDesc.points.stride = sizeof(PxVec3);
     convexDesc.points.data = vertices;
-    convexDesc.flags = PxConvexFlag::eCOMPUTE_CONVEX;
-
+    convexDesc.flags = PxConvexFlag::eSHIFT_VERTICES | PxConvexFlag::eCOMPUTE_CONVEX;
+  //  s
     PxTolerancesScale scale;
     PxCookingParams params(scale);
 
@@ -282,8 +261,9 @@ void Physics::Init() {
 }
 
 void Physics::StepPhysics(float deltaTime) {   
-    float maxSimulateTime = (1.0f / 60.0f) * 4.0f;
-    _scene->simulate(std::min(deltaTime, maxSimulateTime));
+    //float maxSimulateTime = (1.0f / 60.0f) * 4.0f;
+    //_scene->simulate(std::min(deltaTime, maxSimulateTime));
+    _scene->simulate(deltaTime);
     _scene->fetchResults(true);
 }
 
@@ -311,11 +291,23 @@ PxShape* Physics::CreateShapeFromTriangleMesh(PxTriangleMesh* triangleMesh, PxMa
         material = _defaultMaterial;
     }
     PxMeshGeometryFlags flags(~PxMeshGeometryFlag::eTIGHT_BOUNDS | ~PxMeshGeometryFlag::eDOUBLE_SIDED);
-    PxTriangleMeshGeometry triGeometry(triangleMesh, PxMeshScale(scale), flags);
-    return _physics->createShape(triGeometry, *material);
+    PxTriangleMeshGeometry geometry(triangleMesh, PxMeshScale(scale), flags);
+    return _physics->createShape(geometry, *material);
 }
 
-PxRigidDynamic* Physics::CreateRigidDynamic(Transform transform, PhysicsFilterData physicsFilterData, PxShape* shape) {
+PxShape* Physics::CreateShapeFromConvexMesh(PxConvexMesh* convexMesh, PxMaterial* material, float /*scale*/) {
+    if (material == NULL) {
+        material = _defaultMaterial;
+    }
+    PxConvexMeshGeometryFlags flags(~PxConvexMeshGeometryFlag::eTIGHT_BOUNDS);
+    PxConvexMeshGeometry geometry(convexMesh, PxMeshScale(), flags);
+    return _physics->createShape(geometry, *material);
+}
+
+PxRigidDynamic* Physics::CreateRigidDynamic(Transform transform, PhysicsFilterData physicsFilterData, PxShape* shape, Transform shapeOffset) {
+
+    // You are passing in a PxShape pointer and any shape offset will affects that actually object, where+ver the fuck it is up the function chain.
+
     PxFilterData filterData;
     filterData.word0 = (PxU32)physicsFilterData.raycastGroup;
     filterData.word1 = (PxU32)physicsFilterData.collisionGroup;
@@ -325,6 +317,27 @@ PxRigidDynamic* Physics::CreateRigidDynamic(Transform transform, PhysicsFilterDa
     PxQuat quat = Util::GlmQuatToPxQuat(glm::quat(transform.rotation));
     PxTransform trans = PxTransform(PxVec3(transform.position.x, transform.position.y, transform.position.z), quat);
     PxRigidDynamic* body = _physics->createRigidDynamic(trans);
+
+    PxMat44 localShapeMatrix = Util::GlmMat4ToPxMat44(shapeOffset.to_mat4());
+    PxTransform localShapeTransform(localShapeMatrix);
+    shape->setLocalPose(localShapeTransform);
+
+    body->attachShape(*shape);
+    PxRigidBodyExt::updateMassAndInertia(*body, 10.0f);
+    _scene->addActor(*body);
+    return body;
+}
+
+PxRigidDynamic* Physics::CreateRigidDynamic(glm::mat4 matrix, PhysicsFilterData physicsFilterData, PxShape* shape) {
+    PxFilterData filterData;
+    filterData.word0 = (PxU32)physicsFilterData.raycastGroup;
+    filterData.word1 = (PxU32)physicsFilterData.collisionGroup;
+    filterData.word2 = (PxU32)physicsFilterData.collidesWith;
+    shape->setQueryFilterData(filterData);       // ray casts
+    shape->setSimulationFilterData(filterData);  // collisions
+    PxMat44 mat = Util::GlmMat4ToPxMat44(matrix);
+    PxTransform transform(mat);
+    PxRigidDynamic* body = _physics->createRigidDynamic(transform);
     body->attachShape(*shape);
     PxRigidBodyExt::updateMassAndInertia(*body, 10.0f);
     _scene->addActor(*body);

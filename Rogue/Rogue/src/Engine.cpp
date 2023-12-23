@@ -12,9 +12,9 @@
 #include "Core/File.h"
 #include "Core/Physics.h"
 // Profiling stuff
-#define TracyGpuCollect
-#include "tracy/Tracy.hpp"
-#include "tracy/TracyOpenGL.hpp"
+//#define TracyGpuCollect
+//#include "tracy/Tracy.hpp"
+//#include "tracy/TracyOpenGL.hpp"
 
 enum class EngineMode { Game, Editor } _engineMode;
 int _currentPlayer = 0;
@@ -28,45 +28,44 @@ void Engine::Run() {
 
     Init();
 
-    double lastTime = glfwGetTime();
-    double accumulator = 0.0;
-    double limitUpdates = 1.0 / 60.0;
+    double lastFrame = glfwGetTime();
+    double thisFrame = lastFrame;
+    double deltaTimeAccumulator = 0.0;
+    double fixedDeltaTime = 1.0 / 60.0;
 
     while (GL::WindowIsOpen() && GL::WindowHasNotBeenForceClosed()) {
 
+        lastFrame = thisFrame;
+        thisFrame = glfwGetTime();
+        double deltaTime = thisFrame - lastFrame;
+        deltaTimeAccumulator += deltaTime;
+
         GL::ProcessInput();
+        Input::Update();
 
-        double _deltaTime = glfwGetTime() - lastTime;
-        lastTime = glfwGetTime();
-        accumulator += _deltaTime;
+        Audio::Update();
+        if (_engineMode == EngineMode::Game) {
 
-        while (accumulator >= limitUpdates) {
-            accumulator -= limitUpdates;                        
-
-            // Update
-            Input::Update();
-            Audio::Update();
-            if (_engineMode == EngineMode::Game) {
-
-                LazyKeyPresses();
-                Scene::Update(limitUpdates);
-
-                for (Player& player : Scene::_players) {
-                    player.Update(limitUpdates);
-                }
-                Physics::StepPhysics(_deltaTime);
+            while (deltaTimeAccumulator >= fixedDeltaTime) {
+                deltaTimeAccumulator -= fixedDeltaTime;
+                Physics::StepPhysics(fixedDeltaTime);
             }
-            else if (_engineMode == EngineMode::Editor) {
 
-                LazyKeyPressesEditor();
-                Editor::Update(_deltaTime);
+            LazyKeyPresses();
+            Scene::Update(deltaTime);
+
+            for (Player& player : Scene::_players) {
+                player.Update(deltaTime);
             }
         }
+        else if (_engineMode == EngineMode::Editor) {
 
-        Player* player1 = &Scene::_players[0];
+            LazyKeyPressesEditor();
+            Editor::Update(deltaTime);
+        }
 
         // Render
-        TextBlitter::Update(_deltaTime);
+        TextBlitter::Update(deltaTime);
         if (_engineMode == EngineMode::Game) {
 
             if (Renderer::_viewportMode != FULLSCREEN) {
@@ -103,15 +102,15 @@ void Engine::Init() {
     Audio::Init();
     AssetManager::LoadFont();
     AssetManager::LoadEverythingElse();
-    AssetManager::CreateTriangleMeshes();
 
     File::LoadMap("map.txt");
-
     Scene::RecreateDataStructures();
 
     Renderer::Init();
     Renderer::CreatePointCloudBuffer();
     Renderer::CreateTriangleWorldVertexBuffer();
+
+    Scene::CreatePlayers();
 
 }
 
@@ -174,8 +173,14 @@ void Engine::LazyKeyPresses() {
     if (Input::KeyPressed(GLFW_KEY_Y)) {
         NextPlayer();
     }
-    if (Input::KeyPressed(GLFW_KEY_N)) {
+    if (Input::KeyPressed(GLFW_KEY_0)) {
         NextViewportMode();
+    }
+    if (Input::KeyPressed(GLFW_KEY_N)) {
+        //Scene::NewScene();
+        File::LoadMap("map.txt");
+        Scene::RecreateDataStructures();
+        Audio::PlayAudio("RE_Beep.wav", 0.25f);
     }
 }
 

@@ -263,17 +263,6 @@ namespace Util {
         return current + DeltaMove;
     }
 
-    inline glm::vec3 GetDirectLightAtAPoint(Light& light, glm::vec3 voxelFaceCenter, glm::vec3 voxelNormal, float _voxelSize) {
-        glm::vec3 lightCenter = light.position;
-        float dist = glm::distance(voxelFaceCenter, lightCenter);
-        //float att = 1.0 / (1.0 + 0.1 * dist + 0.01 * dist * dist);
-        float att = glm::smoothstep(light.radius, 0.0f, glm::length(lightCenter - voxelFaceCenter));
-        glm::vec3 n = glm::normalize(voxelNormal);
-        glm::vec3 l = glm::normalize(lightCenter - voxelFaceCenter);
-        float ndotl = glm::clamp(glm::dot(n, l), 0.0f, 1.0f);
-        return glm::vec3(light.color) * att * light.strength * ndotl;
-    }
-
     inline IntersectionResult RayTriangleIntersectTest(glm::vec3 p1, glm::vec3 p2, glm::vec3 p3, glm::vec3 o, glm::vec3 n) {
 
         IntersectionResult result;
@@ -338,10 +327,10 @@ namespace Util {
         return minOutRange + (maxOutRange - minOutRange) * x;
     }
 
-    inline int MapRange(int inValue, int minInRange, int maxInRange, int minOutRange, int maxOutRange) {
+    /*inline int MapRange(int inValue, int minInRange, int maxInRange, int minOutRange, int maxOutRange) {
         float x = (inValue - minInRange) / (float)(maxInRange - minInRange);
         return minOutRange + (maxOutRange - minOutRange) * x;
-    }
+    }*/
 
     inline void AnyHit(glm::vec3 rayOrigin, glm::vec3 rayDirection, float maxDistance, std::vector<Triangle>& triangles, RayCastResult& out, bool ignoreBackFacing = true) {
 
@@ -619,22 +608,21 @@ namespace Util {
             float b = x1 - x2;
             float c = a * (x1)+b * (y1);
             // Line CD represented as a2x + b2y = c2
-            float a1 = y4 - y3;
-            float b1 = x3 - x4;
-            float c1 = a1 * (x3)+b1 * (y3);
-            float det = a * b1 - a1 * b;
+            float aa1 = y4 - y3;
+            float bb1 = x3 - x4;
+            float cc1 = aa1 * (x3)+bb1 * (y3);
+            float det = a * bb1 - aa1 * b;
             if (det == 0) {
 
                 return false;
             }
             else {
-                float x = (b1 * c - b * c1) / det;
-                float y = (a * c1 - a1 * c) / det;
+                float x = (bb1 * c - b * cc1) / det;
+                float y = (a * cc1 - aa1 * c) / det;
                 result.x = x;
                 result.y = y;
                 return true;
             }
-            return false;
         }
     }
 

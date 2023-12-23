@@ -159,22 +159,13 @@ void AssetManager::LoadEverythingElse() {
 	FbxImporter::LoadAnimation(shotgun, "animations/Shotgun_Fire3.fbx");
 }
 
-void AssetManager::CreateTriangleMeshes() {
-	GetModel("Door")._meshes[3].CreateTriangleMesh();
-	//GetModel("SmallDrawerTop")._meshes[0].CreateTriangleMesh();
-	//GetModel("SmallDrawerSecond")._meshes[0].CreateTriangleMesh();
-	//GetModel("SmallDrawerThird")._meshes[0].CreateTriangleMesh();
-	//GetModel("SmallDrawerFourth")._meshes[0].CreateTriangleMesh();
-}
-
-Texture& AssetManager::GetTexture(const std::string& filename) {
+Texture* AssetManager::GetTexture(const std::string& filename) {
 	for (Texture& texture : _textures) {
 		if (texture.GetFilename() == filename)
-			return texture;
+			return &texture;
 	}
 	std::cout << "Could not get texture with name \"" << filename << "\", it does not exist\n";
-	Texture dummy;
-	return dummy;
+	return nullptr;
 }
 
 int AssetManager::GetMaterialIndex(const std::string& _name) {
@@ -199,14 +190,13 @@ void AssetManager::BindMaterialByIndex(int index) {
 	}
 }
 
-Model& AssetManager::GetModel(const std::string& name) {
+Model* AssetManager::GetModel(const std::string& name) {
 	for (Model& model : _models) {
 		if (model._name == name)
-			return model;
+			return &model;
 	}
 	std::cout << "Could not get model with name \"" << name << "\", it does not exist\n";
-	Model dummy;
-	return dummy;
+	return nullptr;
 }
 
 SkinnedModel* AssetManager::GetSkinnedModel(const std::string& name) {

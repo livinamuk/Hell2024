@@ -60,8 +60,8 @@ private:
 	//float _viewHeightCrouching = 3.15f; hovery
 	float _crouchDownSpeed = 17.5f;
 	float _currentViewHeight = _viewHeightStanding;
-	float _walkingSpeed = 4;
-	float _crouchingSpeed = 2;
+	float _walkingSpeed = 4 * 1.25f;
+	float _crouchingSpeed = 2 * 1.25f;
 	glm::mat4 _viewMatrix = glm::mat4(1);
 	glm::mat4 _inverseViewMatrix = glm::mat4(1);
 	glm::vec3 _viewPos = glm::vec3(0);

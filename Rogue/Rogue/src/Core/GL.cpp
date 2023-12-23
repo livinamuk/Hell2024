@@ -50,7 +50,7 @@ GLenum glCheckError_(const char* file, int line)
 }
 #define glCheckError() glCheckError_(__FILE__, __LINE__)
 
-void APIENTRY glDebugOutput(GLenum source, GLenum type, unsigned int id, GLenum severity, GLsizei length, const char* message, const void* userParam)
+void APIENTRY glDebugOutput(GLenum source, GLenum type, unsigned int id, GLenum severity, GLsizei /*length*/, const char* message, const void* /*userParam*/)
 {
     if (id == 131169 || id == 131185 || id == 131218 || id == 131204) return; // ignore these non-significant error codes
 
@@ -194,7 +194,7 @@ void GL::Init(int width, int height) {
     }
     glfwMakeContextCurrent(_window);
     glfwSetFramebufferSizeCallback(_window, framebuffer_size_callback);
-    glfwSetKeyCallback(_window, key_callback); 
+    //glfwSetKeyCallback(_window, key_callback); 
     glfwSetCursorPosCallback(_window, cursor_position_callback);
     glfwSetWindowFocusCallback(_window, window_focus_callback); 
     glfwSetScrollCallback(_window, scroll_callback);
@@ -309,18 +309,19 @@ void processInput(GLFWwindow* window) {
         glfwSetWindowShouldClose(window, true);
 }
 
-void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
+void framebuffer_size_callback(GLFWwindow* /*window*/, int width, int height) {
     glViewport(0, 0, width, height);
 }
 
-void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
+/*void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
-    /*if (key == GLFW_KEY_H) {
-        std::cout << "test\n";
-    }*/
-}
+    //if (key == GLFW_KEY_H) {
+   //     std::cout << "test\n";
+    //}
+}*/
 
-void cursor_position_callback(GLFWwindow* window, double xpos, double ypos)
+
+void cursor_position_callback(GLFWwindow* /*window*/, double /*xpos*/, double /*ypos*/)
 {
     //std::cout << xpos << "\n";
     /*
@@ -346,7 +347,7 @@ void cursor_position_callback(GLFWwindow* window, double xpos, double ypos)
     }*/
 }
 
-void window_focus_callback(GLFWwindow* window, int focused) {
+void window_focus_callback(GLFWwindow* /*window*/, int focused) {
     if (focused){
         GL::_windowHasFocus = true;
     }
@@ -355,6 +356,6 @@ void window_focus_callback(GLFWwindow* window, int focused) {
     }
 }
 
-void scroll_callback(GLFWwindow* window, double xoffset, double yoffset) {
-    GL::_scrollWheelYOffset = yoffset;
+void scroll_callback(GLFWwindow* /*window*/, double /*xoffset*/, double yoffset) {
+    GL::_scrollWheelYOffset = (int)yoffset;
 }

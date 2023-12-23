@@ -4,7 +4,7 @@
 #include "../Core/Physics.h"
 
 struct BoundingBox {
-	glm::vec3 scale;
+	glm::vec3 size;
 	glm::vec3 offsetFromModelOrigin;
 };
 

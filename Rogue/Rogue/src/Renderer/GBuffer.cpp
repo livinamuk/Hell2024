@@ -53,7 +53,7 @@ void GBuffer::Configure(int width, int height) {
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_TEXTURE_2D, _gDepthTexture, 0);
 
-	auto fboStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+	//auto fboStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 

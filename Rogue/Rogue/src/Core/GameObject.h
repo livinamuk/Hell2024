@@ -69,7 +69,6 @@ public:
 	GameObject();
 	glm::mat4 GetModelMatrix();
 	std::string GetName();
-	void SetModelMatrixTransformOverride(glm::mat4 model);
 	void SetOpenAxis(OpenAxis openAxis);
 	void SetAudioOnInteract(std::string filename, float volume);
 	void SetAudioOnOpen(std::string filename, float volume);
@@ -104,7 +103,7 @@ public:
 	void Interact();
 	void Update(float deltaTime);
 	void SetModel(const std::string& name);
-	void SetBoundingBoxFromMesh(int meshIndex);
+	//void SetBoundingBoxFromMesh(int meshIndex);
 	//VkTransformMatrixKHR GetVkTransformMatrixKHR();
 	void SetMeshMaterial(const char* name, int meshIndex = -1);
 	//Material* GetMaterial(int meshIndex);
@@ -122,7 +121,8 @@ public:
 	void SetInteractToAffectAnotherObject(std::string objectName);
 	void SetMeshMaterialByMeshName(std::string meshName, std::string materialName);
 	void SetCollisionShape(Transform transform, PxShape* shape, PhysicsFilterData physicsFilterData, bool kinematic);
-	void SetCollisionShapeFromConvexHull(Transform transform, Mesh* mesh, PhysicsFilterData physicsFilterData, bool kinematic);
+	void SetCollisionShapeFromConvexMesh(glm::mat4 matrix, Mesh* mesh, PhysicsFilterData physicsFilterData, bool kinematic);
+	void SetCollisionShapeFromBoundingBox(BoundingBox& boundignBox, PhysicsFilterData physicsFilterData, bool kinematic);
 
 	void SetRaycastShapeFromMesh(Mesh* mesh);
 	void SetRaycastShapeFromModel(Model* model);
@@ -132,6 +132,7 @@ public:
 	void SetPhysicsTransform(glm::mat4 worldMatrix);
 	glm::mat4 GetGameWorldMatrix(); // aka not the physx matrix
 	void AddForceToCollisionObject(glm::vec3 direction, float strength);
+	void SetCollisionObjectMash(float mass);
 
 	void CleanUp();
 

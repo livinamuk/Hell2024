@@ -42,7 +42,7 @@ namespace MeshUtil {
     inline Mesh CreateCube(float size, float textureScaling = 1.0f, bool outFacing = true) {
         std::vector<Vertex> vertices;
         std::vector<unsigned int> indices;
-        float d = size * 0.5;
+        float d = size * 0.5f;
         // Top
         vertices.push_back({ glm::vec3(-d, d, d), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec2(0, textureScaling) });
         vertices.push_back({ glm::vec3(-d, d, -d), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec2(0, 0.0f) });
@@ -83,9 +83,9 @@ namespace MeshUtil {
     inline Mesh CreateCuboid(float width, float height, float depth, float textureScaling = 1.0f, bool outFacing = true) {
         std::vector<Vertex> vertices;
         std::vector<unsigned int> indices;
-        float w = width * 0.5;
-        float h = height * 0.5;
-        float d = depth * 0.5;
+        float w = width * 0.5f;
+        float h = height * 0.5f;
+        float d = depth * 0.5f;
         // Top
         vertices.push_back({ glm::vec3(-w, h, d), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec2(0, depth * textureScaling) });
         vertices.push_back({ glm::vec3(-w, h, -d), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec2(0, 0.0f) });
@@ -126,7 +126,7 @@ namespace MeshUtil {
     inline Mesh CreateCubeFaceZFront(float size, float textureScaling = 1.0f) {
         std::vector<Vertex> vertices;
         std::vector<unsigned int> indices;
-        float d = size * 0.5;
+        float d = size * 0.5f;
         vertices.push_back({ glm::vec3(-d, d, d), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec2(0, 0) });
         vertices.push_back({ glm::vec3(-d, -d, d), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec2(0, textureScaling) });
         vertices.push_back({ glm::vec3(d, -d, d), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec2(textureScaling, textureScaling) });
@@ -138,7 +138,7 @@ namespace MeshUtil {
     inline Mesh CreateCubeFaceZBack(float size, float textureScaling = 1.0f) {
         std::vector<Vertex> vertices;
         std::vector<unsigned int> indices;
-        float d = size * 0.5;
+        float d = size * 0.5f;
         vertices.push_back({ glm::vec3(-d, d, -d), glm::vec3(0.0f, 0.0f, -1.0f), glm::vec2(textureScaling, 0) });
         vertices.push_back({ glm::vec3(-d, -d, -d), glm::vec3(0.0f, 0.0f, -1.0f), glm::vec2(textureScaling, textureScaling) });
         vertices.push_back({ glm::vec3(d, -d, -d), glm::vec3(0.0f, 0.0f, -1.0f), glm::vec2(0, textureScaling) });
@@ -150,7 +150,7 @@ namespace MeshUtil {
     inline Mesh CreateCubeFaceXFront(float size, float textureScaling = 1.0f) {
         std::vector<Vertex> vertices;
         std::vector<unsigned int> indices;
-        float d = size * 0.5;
+        float d = size * 0.5f;
         vertices.push_back({ glm::vec3(d, d, -d), glm::vec3(1.0f, 0.0f, 0.0f), glm::vec2(textureScaling, 0) });
         vertices.push_back({ glm::vec3(d, -d, -d), glm::vec3(1.0f, 0.0f, 0.0f), glm::vec2(textureScaling, textureScaling) });
         vertices.push_back({ glm::vec3(d, -d, d), glm::vec3(1.0f, 0.0f, 0.0f), glm::vec2(0, textureScaling) });
@@ -162,7 +162,7 @@ namespace MeshUtil {
     inline Mesh CreateCubeFaceXBack(float size, float textureScaling = 1.0f) {
         std::vector<Vertex> vertices;
         std::vector<unsigned int> indices;
-        float d = size * 0.5;
+        float d = size * 0.5f;
         vertices.push_back({ glm::vec3(-d, d, -d), glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec2(0, 0) });
         vertices.push_back({ glm::vec3(-d, -d, -d), glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec2(0, textureScaling) });
         vertices.push_back({ glm::vec3(-d, -d, d), glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec2(textureScaling, textureScaling) });
@@ -173,7 +173,7 @@ namespace MeshUtil {
     inline Mesh CreateCubeFaceYTop(float size, float textureScaling = 1.0f) {
         std::vector<Vertex> vertices;
         std::vector<unsigned int> indices;
-        float d = size * 0.5;
+        float d = size * 0.5f;
         vertices.push_back({ glm::vec3(-d, d, d), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec2(0, textureScaling) });
         vertices.push_back({ glm::vec3(-d, d, -d), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec2(0, 0.0f) });
         vertices.push_back({ glm::vec3(d, d, -d), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec2(textureScaling, 0.0f) });
@@ -184,7 +184,7 @@ namespace MeshUtil {
     inline Mesh CreateCubeFaceYBottom(float size, float textureScaling = 1.0f) {
         std::vector<Vertex> vertices;
         std::vector<unsigned int> indices;
-        float d = size * 0.5;
+        float d = size * 0.5f;
         vertices.push_back({ glm::vec3(-d, -d, d), glm::vec3(0.0f, -1.0f, 0.0f), glm::vec2(textureScaling, textureScaling) });
         vertices.push_back({ glm::vec3(-d, -d, -d), glm::vec3(0.0f, -1.0f, 0.0f), glm::vec2(textureScaling, 0.0f) });
         vertices.push_back({ glm::vec3(d, -d, -d), glm::vec3(0.0f, -1.0f, 0.0f), glm::vec2(0, 0.0f) });

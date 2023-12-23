@@ -117,16 +117,13 @@ float _mapDepth = 16;
 //std::vector<int> _newDirtyPointCloudIndices;
 int _floorVertexCount;
 
-const int _gridTextureWidth = _mapWidth / _propogationGridSpacing;
-const int _gridTextureHeight = _mapHeight / _propogationGridSpacing;
-const int _gridTextureDepth = _mapDepth / _propogationGridSpacing;
-const int _gridTextureSize = _gridTextureWidth * _gridTextureHeight * _gridTextureDepth;
-const int xSize = std::ceil(_gridTextureWidth * 0.25f);
-const int ySize = std::ceil(_gridTextureHeight * 0.25f);
-const int zSize = std::ceil(_gridTextureDepth * 0.25f);
-
-ThreadPool dirtyUpdatesPool(4);
-ThreadPool gridIndicesPool(1);
+const int _gridTextureWidth = (int)(_mapWidth / _propogationGridSpacing);
+const int _gridTextureHeight = (int)(_mapHeight / _propogationGridSpacing);
+const int _gridTextureDepth = (int)(_mapDepth / _propogationGridSpacing);
+const int _gridTextureSize = (int)(_gridTextureWidth * _gridTextureHeight * _gridTextureDepth);
+//const int _xSize = std::ceil(_gridTextureWidth * 0.25f);
+//const int _ySize = std::ceil(_gridTextureHeight * 0.25f);
+//const int _zSize = std::ceil(_gridTextureDepth * 0.25f);
 
 //std::vector<glm::uvec4> _gridIndices;
 //std::vector<glm::uvec4> _newGridIndices;
@@ -323,6 +320,7 @@ void Renderer::RenderFrame(Player* player) {
 
     TextBlitter::_debugTextToBilt += "View pos: " + Util::Vec3ToString(player->GetViewPos()) + "\n";
     TextBlitter::_debugTextToBilt += "View rot: " + Util::Vec3ToString(player->GetViewRotation()) + "\n";
+    TextBlitter::_debugTextToBilt = "";
     glBindFramebuffer(GL_FRAMEBUFFER, presentFrameBuffer.GetID());
     glViewport(0, 0, presentFrameBuffer.GetWidth(), presentFrameBuffer.GetHeight());
     glDisable(GL_DEPTH_TEST);
@@ -478,7 +476,7 @@ void DebugPass(Player* player) {
 
     int playerIndex = GetPlayerIndexFromPlayerPointer(player);
     PlayerRenderTarget& playerRenderTarget = GetPlayerRenderTarget(playerIndex);
-    GBuffer& gBuffer = playerRenderTarget.gBuffer;
+    //GBuffer& gBuffer = playerRenderTarget.gBuffer;
     PresentFrameBuffer& presentFrameBuffer = playerRenderTarget.presentFrameBuffer;
 
     presentFrameBuffer.Bind();
@@ -524,12 +522,12 @@ void DebugPass(Player* player) {
       _shaders.solidColor.Use();
       _shaders.solidColor.SetBool("uniformColor", false);
       _shaders.solidColor.SetMat4("model", glm::mat4(1));
-      for (auto& casing : Scene::_bulletCasings) {
+      /*for (auto& casing : Scene::_bulletCasings) {
           Point point;
           //point.pos = casing.position;
           point.color = LIGHT_BLUE;
          // Renderer::QueuePointForDrawing(point);
-      }
+      }*/
       glDisable(GL_DEPTH_TEST);
       glDisable(GL_CULL_FACE);
       RenderImmediate();
@@ -539,6 +537,9 @@ void DebugPass(Player* player) {
     _shaders.solidColor.Use();
     _shaders.solidColor.SetBool("uniformColor", false);
     _shaders.solidColor.SetMat4("model", glm::mat4(1));
+
+
+
     for (auto& pos : debugPoints) {
         Point point;
         point.pos = pos;
@@ -676,10 +677,8 @@ void DebugPass(Player* player) {
             _shaders.solidColor.Use();
             _shaders.solidColor.SetBool("uniformColor", false);
             _shaders.solidColor.SetMat4("model", glm::mat4(1));
-            auto* physics = Physics::GetPhysics();
-            auto* scene = Physics::GetScene();
             auto& renderBuffer = scene->getRenderBuffer();
-            for (int i = 0; i < renderBuffer.getNbLines(); i++) {
+            for (unsigned int i = 0; i < renderBuffer.getNbLines(); i++) {
                 auto pxLine = renderBuffer.getLines()[i];
                 Line line;
                 line.p1.pos = Util::PxVec3toGlmVec3(pxLine.pos0);
@@ -700,7 +699,7 @@ void DebugPass(Player* player) {
             for (RTInstance& instance : Scene::_rtInstances) {
                 RTMesh& mesh = Scene::_rtMesh[instance.meshIndex];
 
-                for (int i = mesh.baseVertex; i < mesh.baseVertex + mesh.vertexCount; i+=3) {
+                for (unsigned int i = mesh.baseVertex; i < mesh.baseVertex + mesh.vertexCount; i+=3) {
                     Triangle t;
                     t.p1 = instance.modelMatrix * glm::vec4(Scene::_rtVertices[i+0], 1.0);
                     t.p2 = instance.modelMatrix * glm::vec4(Scene::_rtVertices[i+1], 1.0);
@@ -729,7 +728,7 @@ void DebugPass(Player* player) {
         RenderImmediate();
 
         // Draw player sphere
-        auto& sphere = AssetManager::GetModel("Sphere");
+        auto* sphere = AssetManager::GetModel("Sphere");
         Transform transform;
         transform.position = player->GetFeetPosition() + glm::vec3(0, 0.101f, 0);
         transform.scale.x = player->GetRadius();
@@ -738,15 +737,15 @@ void DebugPass(Player* player) {
         _shaders.solidColor.SetBool("uniformColor", true);
         _shaders.solidColor.SetVec3("color", LIGHT_BLUE);
         _shaders.solidColor.SetMat4("model", transform.to_mat4());
-        sphere.Draw();
+        sphere->Draw();
     }
 
 }
 
 void Renderer::RecreateFrameBuffers() {
 
-    float width = _renderWidth;
-    float height = _renderHeight;
+    float width = (float)_renderWidth;
+    float height = (float)_renderHeight;
     int playerCount = Scene::_playerCount;
 
     // Adjust for splitscreen
@@ -807,7 +806,7 @@ void DrawScene(Shader& shader) {
     for (Wall& wall : Scene::_walls) {
         for (auto& transform : wall.ceilingTrims) {
             shader.SetMat4("model", transform.to_mat4());
-            AssetManager::GetModel("TrimCeiling").Draw();
+            AssetManager::GetModel("TrimCeiling")->Draw();
         }
     } 
     // Floor trims
@@ -815,7 +814,7 @@ void DrawScene(Shader& shader) {
     for (Wall& wall : Scene::_walls) {
         for (auto& transform : wall.floorTrims) {
             shader.SetMat4("model", transform.to_mat4());
-            AssetManager::GetModel("TrimFloor").Draw();
+            AssetManager::GetModel("TrimFloor")->Draw();
         }
     }
 
@@ -832,12 +831,12 @@ void DrawScene(Shader& shader) {
 
         AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("Door"));
         shader.SetMat4("model", door.GetFrameModelMatrix());
-        auto& doorFrameModel = AssetManager::GetModel("DoorFrame");
-        doorFrameModel.Draw();
+        auto* doorFrameModel = AssetManager::GetModel("DoorFrame");
+        doorFrameModel->Draw();
 
         shader.SetMat4("model", door.GetDoorModelMatrix());
-        auto& doorModel = AssetManager::GetModel("Door");
-        doorModel.Draw();
+        auto* doorModel = AssetManager::GetModel("Door");
+        doorModel->Draw();
     }
 
 
@@ -846,11 +845,11 @@ void DrawScene(Shader& shader) {
     AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("Glock"));
     for (auto& matrix : _glockMatrices) {
         shader.SetMat4("model", matrix);
-        AssetManager::GetModel("Glock_Isolated").Draw();
+        AssetManager::GetModel("Glock_Isolated")->Draw();
     }
     for (auto& matrix : _aks74uMatrices) {
         shader.SetMat4("model", matrix);
-        AssetManager::GetModel("AKS74U_Isolated").Draw();
+        AssetManager::GetModel("AKS74U_Isolated")->Draw();
     }
 
 
@@ -989,9 +988,9 @@ void DrawAnimatedObject(Shader& shader, AnimatedGameObject* animatedGameObject) 
 
 
         if (animatedGameObject->_animatedTransforms.names[i] == "Glock") {
-            float x = m[3][0];
-            float y = m[3][1];
-            float z = m[3][2];
+        //    float x = m[3][0];
+        //    float y = m[3][1];
+        //    float z = m[3][2];
          //   debugPoints.push_back(glm::vec3(x, y, z));
         }
 
@@ -1016,6 +1015,9 @@ void DrawAnimatedObject(Shader& shader, AnimatedGameObject* animatedGameObject) 
     if (Input::KeyPressed(HELL_KEY_U)) {
         maleHands = !maleHands;
     }
+
+    glEnable(GL_CULL_FACE);
+
     SkinnedModel& skinnedModel = *animatedGameObject->_skinnedModel;
     glBindVertexArray(skinnedModel.m_VAO);
     for (int i = 0; i < skinnedModel.m_meshEntries.size(); i++) {
@@ -1109,11 +1111,11 @@ void DrawShadowMapScene(Shader& shader) {
 
     for (Door& door : Scene::_doors) {
         shader.SetMat4("model", door.GetFrameModelMatrix());
-        auto& doorFrameModel = AssetManager::GetModel("DoorFrame");
-        doorFrameModel.Draw();
+        auto* doorFrameModel = AssetManager::GetModel("DoorFrame");
+        doorFrameModel->Draw();
         shader.SetMat4("model", door.GetDoorModelMatrix());
-        auto& doorModel = AssetManager::GetModel("Door");
-        doorModel.Draw();
+        auto* doorModel = AssetManager::GetModel("Door");
+        doorModel->Draw();
     }
 }
 
@@ -1175,10 +1177,10 @@ void Renderer::RenderEditorFrame() {
 
     presentFrameBuffer.Bind();
 
-    float renderWidth = presentFrameBuffer.GetWidth();
-    float renderHeight = presentFrameBuffer.GetHeight();
-    float screenWidth = GL::GetWindowWidth();
-    float screenHeight = GL::GetWindowHeight();
+    float renderWidth = (float)presentFrameBuffer.GetWidth();
+    float renderHeight = (float)presentFrameBuffer.GetHeight();
+    //float screenWidth = GL::GetWindowWidth();
+    //float screenHeight = GL::GetWindowHeight();
 
     glViewport(0, 0, renderWidth, renderHeight);
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
@@ -1245,22 +1247,22 @@ void Renderer::ToggleCollisionWorld() {
 
 static Mesh _quadMesh;
 
-inline void DrawQuad(int viewportWidth, int viewPortHeight, int textureWidth, int textureHeight, int xPosition, int yPosition, bool centered = false, float scale = 1.0f, int xSize = -1, int ySize = -1, int xClipMin = -1, int xClipMax = -1, int yClipMin = -1, int yClipMax = -1) {
+inline void DrawQuad(int viewportWidth, int viewPortHeight, int textureWidth, int textureHeight, int xPosition, int yPosition, bool centered = false, float scale = 1.0f, int xSize = -1, int ySize = -1 /*, int xClipMin = -1, int xClipMax = -1, int yClipMin = -1, int yClipMax = -1*/) {
 
-    float quadWidth = xSize;
-    float quadHeight = ySize;
+    float quadWidth = (float)xSize;
+    float quadHeight = (float)ySize;
     if (xSize == -1) {
-        quadWidth = textureWidth;
+        quadWidth = (float)textureWidth;
     }
     if (ySize == -1) {
-        quadHeight = textureHeight;
+        quadHeight = (float)textureHeight;
     }
     if (centered) {
-        xPosition -= quadWidth / 2;
-        yPosition -= quadHeight / 2;
+        xPosition -= (int)(quadWidth / 2);
+        yPosition -= (int)(quadHeight / 2);
     }
-    float renderTargetWidth = viewportWidth;
-    float renderTargetHeight = viewPortHeight;
+    float renderTargetWidth = (float)viewportWidth;
+    float renderTargetHeight = (float)viewPortHeight;
     float width = (1.0f / renderTargetWidth) * quadWidth * scale;
     float height = (1.0f / renderTargetHeight) * quadHeight * scale;
     float ndcX = ((xPosition + (quadWidth / 2.0f)) / renderTargetWidth) * 2 - 1;
@@ -1318,9 +1320,9 @@ void Renderer::RenderUI() {
     }
 
     for (UIRenderInfo& uiRenderInfo : _UIRenderInfos) {
-        AssetManager::GetTexture(uiRenderInfo.textureName).Bind(0);
-        Texture& texture = AssetManager::GetTexture(uiRenderInfo.textureName);
-        DrawQuad(viewportWidth, viewportHeight, texture.GetWidth(), texture.GetHeight(), uiRenderInfo.screenX, uiRenderInfo.screenY, uiRenderInfo.centered);
+        AssetManager::GetTexture(uiRenderInfo.textureName)->Bind(0);
+        Texture* texture = AssetManager::GetTexture(uiRenderInfo.textureName);
+        DrawQuad(viewportWidth, viewportHeight, texture->GetWidth(), texture->GetHeight(), uiRenderInfo.screenX, uiRenderInfo.screenY, uiRenderInfo.centered);
     }
 
     _UIRenderInfos.clear();
@@ -1421,7 +1423,7 @@ void DrawMuzzleFlashes(Player* player) {
     int playerIndex = GetPlayerIndexFromPlayerPointer(player);
     PlayerRenderTarget& playerRenderTarget = GetPlayerRenderTarget(playerIndex);
     GBuffer& gBuffer = playerRenderTarget.gBuffer;
-    PresentFrameBuffer& presentFrameBuffer = playerRenderTarget.presentFrameBuffer;
+    //PresentFrameBuffer& presentFrameBuffer = playerRenderTarget.presentFrameBuffer;
 
     static MuzzleFlash muzzleFlash; // has init on the first use. DISGUSTING. Fix if you ever see this when you aren't on another mission.
 
@@ -1473,7 +1475,7 @@ void DrawMuzzleFlashes(Player* player) {
     _shaders.animatedQuad.SetVec3("u_ViewPos", viewPos);
 
     glActiveTexture(GL_TEXTURE0);
-    AssetManager::GetTexture("MuzzleFlash_ALB").Bind(0);
+    AssetManager::GetTexture("MuzzleFlash_ALB")->Bind(0);
 
     muzzleFlash.Draw(&_shaders.animatedQuad, t, player->GetMuzzleFlashRotation());
     glDisable(GL_BLEND);
@@ -1531,7 +1533,7 @@ void DrawCasingProjectiles(Player* player) {
         }
     }
     AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("BulletCasing"));
-    Mesh& glockCasingmesh = AssetManager::GetModel("BulletCasing")._meshes[0];
+    Mesh& glockCasingmesh = AssetManager::GetModel("BulletCasing")->_meshes[0];
     DrawInstanced(glockCasingmesh, matrices);
 
     // AKS74U
@@ -1542,7 +1544,7 @@ void DrawCasingProjectiles(Player* player) {
         }
     }
     AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("Casing_AkS74U"));
-    Mesh& aks75uCasingmesh = AssetManager::GetModel("BulletCasing_AK")._meshes[0];
+    Mesh& aks75uCasingmesh = AssetManager::GetModel("BulletCasing_AK")->_meshes[0];
     DrawInstanced(aks75uCasingmesh, matrices);
 }
 
@@ -1859,7 +1861,7 @@ void UpdatePropogationgGrid() {
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 8, _ssbos.dirtyGridCoordinates);
 
     if (_dirtyProbeCount > 0) {
-        int invocationCount = std::ceil(_dirtyProbeCoords.size() / 64.0f);
+        int invocationCount = (int)(std::ceil(_dirtyProbeCoords.size() / 64.0f));
         glDispatchCompute(invocationCount, 1, 1);
     }
 }

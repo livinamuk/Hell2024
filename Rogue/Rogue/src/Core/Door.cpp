@@ -56,10 +56,18 @@ void Door::Update(float deltaTime) {
 }
 
 void Door::CleanUp() {
-    collisionBody->release();
-    collisionShape->release();
-    raycastBody->release();
-    raycastShape->release();
+    if (collisionBody) {
+        collisionBody->release();
+    }
+    if (collisionShape) {
+        collisionShape->release();
+    }
+    if (raycastBody) {
+        raycastBody->release();
+    }
+    if (raycastShape) {
+        raycastShape->release();
+    }
 }
 
 glm::mat4 Door::GetFrameModelMatrix() {
@@ -114,7 +122,17 @@ bool Door::IsInteractable(glm::vec3 playerPosition) {
 }
 
 void Door::CreatePhysicsObject() {
-    
+
+    Model* model = AssetManager::GetModel("Door");
+    if (!model) {
+        std::cout << "Failed to create door physics object, cause could not find 'Door' model\n";
+        return;
+    }
+    Mesh* mesh = &model->_meshes[3];
+    if (!mesh->_triangleMesh) {
+        mesh->CreateTriangleMesh();
+    }
+
     PhysicsFilterData filterData;
     filterData.raycastGroup = RAYCAST_DISABLED;
     filterData.collisionGroup = CollisionGroup::ENVIROMENT_OBSTACLE;
@@ -127,7 +145,7 @@ void Door::CreatePhysicsObject() {
     filterData2.raycastGroup = RaycastGroup::RAYCAST_ENABLED;
     filterData2.collisionGroup = NO_COLLISION;
     filterData2.collidesWith = NO_COLLISION;
-    raycastShape = Physics::CreateShapeFromTriangleMesh(AssetManager::GetModel("Door")._meshes[3]._triangleMesh); 
+    raycastShape = Physics::CreateShapeFromTriangleMesh(mesh->_triangleMesh);
     raycastBody = Physics::CreateRigidDynamic(Transform(), filterData2, raycastShape);
     raycastBody->setRigidBodyFlag(PxRigidBodyFlag::eKINEMATIC, true);
 }

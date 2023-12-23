@@ -37,7 +37,7 @@ void NumberBlitter::UpdateBlitter(float deltaTime)
 		s_textToBlit = "";*/
 }
 
-void NumberBlitter::DrawTextBlit(const char* text, int xScreenCoord, int yScreenCoord, int renderWidth, int renderHeight, float scale, glm::vec3 color, bool leftJustified)
+void NumberBlitter::DrawTextBlit(const char* text, int xScreenCoord, int yScreenCoord, int renderWidth, int renderHeight, float scale, glm::vec3 /*color*/, bool leftJustified)
 {
 	float screenWidth = GL::GetWindowWidth();// 1920.0f * 1.5;// *(CoreGL::s_currentWidth / renderWidth); // Have to hard code this coz otherwise the text is the same size in pixels regardless of resolution.
 	float screenHeight = GL::GetWindowHeight();// 1080.0f * 1.5;
