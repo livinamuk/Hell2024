@@ -171,6 +171,12 @@ void Scene::Init() {
 
 
 
+	PhysicsFilterData cushionFilterData;
+	cushionFilterData.raycastGroup = RAYCAST_DISABLED;
+	cushionFilterData.collisionGroup = CollisionGroup::GENERIC_BOUNCEABLE;
+	cushionFilterData.collidesWith = CollisionGroup(ENVIROMENT_OBSTACLE | GENERIC_BOUNCEABLE);
+	float cushionDensity = 20.0f;
+
 	GameObject& sofa = _gameObjects.emplace_back();
 	sofa.SetPosition(2.0f, 0.1f, 0.1f);
 	sofa.SetModel("Sofa_Cushionless");
@@ -178,19 +184,11 @@ void Scene::Init() {
 	sofa.CreateRigidBody(sofa.GetGameWorldMatrix(), true);
 	sofa.SetRaycastShapeFromModel(AssetManager::GetModel("Sofa_Cushionless"));
 
-
-	PhysicsFilterData cushionFilterData;
-    cushionFilterData.raycastGroup = RAYCAST_DISABLED;
-    cushionFilterData.collisionGroup = CollisionGroup::GENERIC_BOUNCEABLE;
-    cushionFilterData.collidesWith = CollisionGroup(ENVIROMENT_OBSTACLE | GENERIC_BOUNCEABLE);
-
-    float cushionDensity = 20.0f;
-
 	GameObject& cushion0 = _gameObjects.emplace_back();
 	cushion0.SetPosition(2.0f, 0.1f, 0.1f);
 	cushion0.SetModel("SofaCushion0");
 	cushion0.SetMeshMaterial("Sofa");
-	cushion0.CreateRigidBody(sofa.GetGameWorldMatrix(), false);
+	cushion0.CreateRigidBody(cushion0.GetGameWorldMatrix(), false);
 	cushion0.SetRaycastShapeFromModel(AssetManager::GetModel("SofaCushion0"));
 	cushion0.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("SofaCushion0_ConvexMesh")->_meshes[0], cushionFilterData);
 	cushion0.SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
@@ -200,7 +198,7 @@ void Scene::Init() {
 	cushion1.SetPosition(2.0f, 0.1f, 0.1f);
 	cushion1.SetModel("SofaCushion1");
 	cushion1.SetMeshMaterial("Sofa");
-	cushion1.CreateRigidBody(sofa.GetGameWorldMatrix(), false);
+	cushion1.CreateRigidBody(cushion1.GetGameWorldMatrix(), false);
 	cushion1.SetRaycastShapeFromModel(AssetManager::GetModel("SofaCushion1"));
 	cushion1.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("SofaCushion1_ConvexMesh")->_meshes[0], cushionFilterData);
 	cushion1.SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
@@ -210,7 +208,7 @@ void Scene::Init() {
 	cushion2.SetPosition(2.0f, 0.1f, 0.1f);
 	cushion2.SetModel("SofaCushion2");
 	cushion2.SetMeshMaterial("Sofa");
-	cushion2.CreateRigidBody(sofa.GetGameWorldMatrix(), false);
+	cushion2.CreateRigidBody(cushion2.GetGameWorldMatrix(), false);
 	cushion2.SetRaycastShapeFromModel(AssetManager::GetModel("SofaCushion2"));
 	cushion2.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("SofaCushion2_ConvexMesh")->_meshes[0], cushionFilterData);
 	cushion2.SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
@@ -220,7 +218,7 @@ void Scene::Init() {
 	cushion3.SetPosition(2.0f, 0.1f, 0.1f);
 	cushion3.SetModel("SofaCushion3");
 	cushion3.SetMeshMaterial("Sofa");
-	cushion3.CreateRigidBody(sofa.GetGameWorldMatrix(), false);
+	cushion3.CreateRigidBody(cushion3.GetGameWorldMatrix(), false); 
 	cushion3.SetRaycastShapeFromModel(AssetManager::GetModel("SofaCushion3"));
 	cushion3.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("SofaCushion3_ConvexMesh")->_meshes[0], cushionFilterData);
 	cushion3.SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
@@ -230,7 +228,7 @@ void Scene::Init() {
 	cushion4.SetPosition(2.0f, 0.1f, 0.1f);
 	cushion4.SetModel("SofaCushion4");
 	cushion4.SetMeshMaterial("Sofa");
-	cushion4.CreateRigidBody(sofa.GetGameWorldMatrix(), false);
+	cushion4.CreateRigidBody(cushion4.GetGameWorldMatrix(), false);
 	cushion4.SetRaycastShapeFromModel(AssetManager::GetModel("SofaCushion4"));
 	cushion4.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("SofaCushion4_ConvexMesh")->_meshes[0], cushionFilterData);
 	cushion4.SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
@@ -477,9 +475,10 @@ void Scene::Init() {
 
 void Scene::CreatePlayers() {
     _players.clear();
-    _players.push_back(Player(glm::vec3(4.0f, 0, 3.6f), glm::vec3(-0.17, 1.54f, 0)));
-    if (_playerCount == 2) {
-        _players.push_back(Player(glm::vec3(4.0f, 10, 1.2f), glm::vec3(-0.17, 1.54f, 0)));
+    _players.push_back(Player(glm::vec3(4.0f, 0.1f, 3.6f), glm::vec3(-0.17, 1.54f, 0)));
+	if (_playerCount == 2) {
+		//_players.push_back(Player(glm::vec3(9.39f, 0.1f, 1.6f), glm::vec3(-0.25, 1.53f, 0)));
+		_players.push_back(Player(glm::vec3(2.1f, 0.1f, 9.6f), glm::vec3(-0.25, 0.0f, 0.0f)));
         _players[1]._ignoreControl = true;
     }
 }
@@ -673,14 +672,15 @@ void Scene::LoadLightSetup(int index) {
         Light lightC;
         lightC.position = glm::vec3(8.75, 2.2, 1.55);
         lightC.strength = 0.3f;
-        lightC.radius = 6;
+		lightC.radius = 6;
+        //lightC.color = RED;
+        //lightC.strength = 5.0f * 0.25f;;
         _lights.push_back(lightC);
     }
 }
 
 GameObject* Scene::GetGameObjectByName(std::string name) {
     if (name == "undefined") {
-        //std::cout << "'undefined' parent name returned from GetGameObjectByName()" << "GetGameObjectByName" << "/n";
         return nullptr;
     }
     for (GameObject& gameObject : _gameObjects) {

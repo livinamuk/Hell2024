@@ -23,7 +23,6 @@ namespace Renderer {
 	void ToggleDrawingProbes();
 	void ToggleDrawingLines();
 	void ToggleCollisionWorld();
-	void TogglePhysicsWorldWorld();
 
 	int GetRenderWidth();
 	int GetRenderHeight();
@@ -31,7 +30,7 @@ namespace Renderer {
 	void NextMode();
 	void PreviousMode();
 	void NextDebugLineRenderMode();
-	void RecreateFrameBuffers();
+	void RecreateFrameBuffers(int currentPlayer);
 	void CreatePointCloudBuffer();
 	void CreateTriangleWorldVertexBuffer();
 	glm::mat4 GetProjectionMatrix(float depthOfField);

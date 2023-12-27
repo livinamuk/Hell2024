@@ -160,14 +160,20 @@ void Player::Update(float deltaTime) {
 		_characterController->move(PxVec3(displacement.x, _yVelocity , displacement.z), minDist, deltaTime, data);
 
 
-		_position = Util::PxVec3toGlmVec3(_characterController->getFootPosition()) - glm::vec3(0, -0.1f, 0);
+		_position = Util::PxVec3toGlmVec3(_characterController->getFootPosition());// -glm::vec3(0, -0.1f, 0);
 
 
-		if (_position.y <= 0.1f) {
+		// Is the player grounded?
+		PhysXRayResult rayResult = Util::CastPhysXRay(_position + glm::vec3(0, 0.01, 0), glm::vec3(0, -1, 0), 0.05);
+		if (rayResult.hitFound) {
 			_yVelocity = 0;
 		}
 
-	//	std::cout << Util::Vec3ToString(_position) << "     " << _yVelocity << "\n";
+		if (_position.y <= 0.1f) {
+		//	_yVelocity = 0;
+		}
+
+		//std::cout << Util::Vec3ToString(_position) << "     " << _yVelocity << "\n";
 
 	}
 
@@ -281,7 +287,7 @@ void Player::Update(float deltaTime) {
 	}
 
 
-	_characterModel.SetPosition(GetFeetPosition() + glm::vec3(0.0f, 0.1f, 0.0f));
+	_characterModel.SetPosition(GetFeetPosition());// +glm::vec3(0.0f, 0.1f, 0.0f));
 	_characterModel.Update(deltaTime);
 	_characterModel.SetRotationY(_rotation.y + HELL_PI);
 
@@ -764,7 +770,7 @@ bool Player::CursorShouldBeInterect() {
 }
 
 #define PLAYER_CAPSULE_HEIGHT 0.6f
-#define PLAYER_CAPSULE_RADIUS 0.1f
+#define PLAYER_CAPSULE_RADIUS 0.2f
 
 void Player::CreateCharacterController(glm::vec3 position) {
 

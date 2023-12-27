@@ -314,6 +314,12 @@ void main() {
     adjustedIndirectLighting *= (0.4) * vec3(factor); 
     adjustedIndirectLighting = max(adjustedIndirectLighting, vec3(0));
     adjustedIndirectLighting *= baseColor * 1.5;
+  //  adjustedIndirectLighting *= 0.8;
+    
+   //  float contrast2 = 2.0;
+	//adjustedIndirectLighting.rgb = adjustedIndirectLighting.rgb * contrast2;
+   // adjustedIndirectLighting.rgb -= vec3(0.0025);
+
   //  adjustedIndirectLighting += sqrt(adjustedIndirectLighting) * 0.1;
     //adjustedIndirectLighting *= 0.85;
 

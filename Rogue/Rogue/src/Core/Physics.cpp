@@ -245,9 +245,10 @@ void Physics::Init() {
 
 
 
-    /*
+    
 
-   PxRigidStatic* groundPlane = PxCreatePlane(*_physics, PxPlane(0, 1, 0, -0.10f), *_defaultMaterial);
+	//PxRigidStatic* groundPlane = PxCreatePlane(*_physics, PxPlane(0, 1, 0, -0.10f), *_defaultMaterial);
+/*	PxRigidStatic* groundPlane = PxCreatePlane(*_physics, PxPlane(0, 1, 0, 0.0f), *_defaultMaterial);
     _scene->addActor(*groundPlane);
     PxShape* shape;
     groundPlane->getShapes(&shape, 1);
@@ -256,8 +257,8 @@ void Physics::Init() {
 
     PxFilterData filterData;
     filterData.word0 = RaycastGroup::RAYCAST_DISABLED; // must be disabled or it causes crash in scene::update when it tries to retrieve rigid body flags from this actor 
-    filterData.word2 = CollisionGroup::ENVIROMENT_OBSTACLE;
-    filterData.word1 =
+    filterData.word1 = CollisionGroup::ENVIROMENT_OBSTACLE;
+    filterData.word2 =
         CollisionGroup::BULLET_CASING |
         CollisionGroup::GENERIC_BOUNCEABLE |
         CollisionGroup::PLAYER;

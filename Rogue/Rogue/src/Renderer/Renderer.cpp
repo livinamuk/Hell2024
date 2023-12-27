@@ -288,7 +288,7 @@ void Renderer::Init() {
 
     _cubeMesh = MeshUtil::CreateCube(1.0f, 1.0f, true);
 
-    RecreateFrameBuffers();
+    RecreateFrameBuffers(0);
 
 
 
@@ -860,7 +860,7 @@ void DebugPass(Player* player) {
 
 }
 
-void Renderer::RecreateFrameBuffers() {
+void Renderer::RecreateFrameBuffers(int currentPlayer) {
 
     float width = (float)_renderWidth;
     float height = (float)_renderHeight;
@@ -879,17 +879,18 @@ void Renderer::RecreateFrameBuffers() {
     _playerRenderTargets.clear();
 
     // Create a PlayerRenderTarget for each player
-    for (int i = 0; i < playerCount; i++) {
+	for (int i = 0; i < playerCount; i++) {
+		//if (_viewportMode == FULLSCREEN && i != currentPlayer) {
+		//	continue;
+		//}
         PlayerRenderTarget& playerRenderTarget = _playerRenderTargets.emplace_back(PlayerRenderTarget());
         playerRenderTarget.gBuffer.Configure(width * 2, height * 2);
         playerRenderTarget.presentFrameBuffer.Configure(width, height);
         
-        if (_viewportMode == FULLSCREEN) {
-            break;
-        }
     }
 
-    std::cout << "Render Size: " << width * 2 << " x " << height * 2 << "\n";
+	std::cout << "Player count: " << playerCount << "\n";
+	std::cout << "Render Size: " << width * 2 << " x " << height * 2 << "\n";
     std::cout << "Present Size: " << width << " x " << height << "\n";
     std::cout << "PlayerRenderTarget Count: " << _playerRenderTargets.size() << "\n";
 }

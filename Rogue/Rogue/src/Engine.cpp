@@ -36,6 +36,16 @@ void Engine::Run() {
 
     while (GL::WindowIsOpen() && GL::WindowHasNotBeenForceClosed()) {
 
+        // Only the current player can be controlled by keyboard/mouse
+		for (int i = 0; i < Scene::_playerCount; i++) {
+			if (i != _currentPlayer) {
+				Scene::_players[i]._ignoreControl = true;
+			}
+			else {
+				Scene::_players[i]._ignoreControl = false;
+			}
+		}
+
         lastFrame = thisFrame;
         thisFrame = glfwGetTime();
         double deltaTime = thisFrame - lastFrame;
@@ -83,7 +93,7 @@ void Engine::Run() {
                 }
             }
             else {
-                Renderer::RenderFrame(&Scene::_players[0]);
+                Renderer::RenderFrame(&Scene::_players[_currentPlayer]);
             }
 
         }
@@ -220,19 +230,8 @@ void ToggleEditor() {
 }
 void ToggleFullscreen() {
     GL::ToggleFullscreen();
-    Renderer::RecreateFrameBuffers();
+    Renderer::RecreateFrameBuffers(_currentPlayer);
     Audio::PlayAudio("RE_Beep.wav", 0.25f);
-}
-
-void SpawnPlayer2IfRequired() {
-	// Hack to spawn player 2 in when switching to splitscreen or "NEXT PLAYER" the first time.
-    // Until then, he's in the air 10 meters up so as not to ruin the aesthetics by just standing there like an idiot
-	Player* player = &Scene::_players[_currentPlayer];
-	auto footPostion = player->_characterController->getFootPosition();
-	if (footPostion.y > 5.0f) {
-		footPostion.y = 0.1f;
-		player->_characterController->setFootPosition(footPostion);
-	}
 }
 
 void NextPlayer() {
@@ -240,14 +239,16 @@ void NextPlayer() {
     if (_currentPlayer == Scene::_playerCount) {
         _currentPlayer = 0;
     }
-    
-    for (int i = 0; i < Scene::_playerCount; i++) {
-        Scene::_players[i]._ignoreControl = (i != _currentPlayer);
-    }
-    Audio::PlayAudio("RE_Beep.wav", 0.25f);
-    std::cout << "Current player is: " << _currentPlayer << "\n";
 
-    SpawnPlayer2IfRequired();
+	if (Renderer::_viewportMode == FULLSCREEN) {
+		Renderer::RecreateFrameBuffers(_currentPlayer);
+	}
+    
+    //for (int i = 0; i < Scene::_playerCount; i++) {
+    //    Scene::_players[i]._ignoreControl = (i != _currentPlayer);
+   // }
+    Audio::PlayAudio("RE_Beep.wav", 0.25f);
+    std::cout << "Current player is: " << _currentPlayer << "\n"; 
 }
 
 void NextViewportMode() {
@@ -259,17 +260,6 @@ void NextViewportMode() {
     Renderer::_viewportMode = (ViewportMode)currentViewportMode;
     Audio::PlayAudio("RE_Beep.wav", 0.25f);
 
-    // Only first player 0 can every be fullscreen.
-    _currentPlayer = 0;
-
-    // So disable other player control (for now)
-    if (currentViewportMode == ViewportMode::FULLSCREEN) {
-        for (int i = 0; i < Scene::_playerCount; i++) {
-            Scene::_players[i]._ignoreControl = (i != 0);
-        }
-    }
-    Renderer::RecreateFrameBuffers();
+    Renderer::RecreateFrameBuffers(_currentPlayer);
     std::cout << "Current player: " << _currentPlayer << "\n";
-
-	SpawnPlayer2IfRequired();
 }

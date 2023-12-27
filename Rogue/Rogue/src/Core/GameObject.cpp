@@ -293,6 +293,7 @@ glm::mat4 GameObject::GetGameWorldMatrix() {
 	}
 	return result;
 }
+
 void GameObject::AddForceToCollisionObject(glm::vec3 direction, float strength) {
 	if (!_collisionBody) {
 		return;
