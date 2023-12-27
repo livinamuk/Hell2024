@@ -13,7 +13,6 @@ Player::Player() {
 
 Player::Player(glm::vec3 position, glm::vec3 rotation) {
 	_position = position;
-	//_position.y = 10.5f;
 	_rotation = rotation;
 	SetWeapon(Weapon::GLOCK);
 	_glockAmmo.clip = 8;
@@ -38,6 +37,41 @@ Player::Player(glm::vec3 position, glm::vec3 rotation) {
 
 void Player::SetWeapon(Weapon weapon) {
 	_currentWeaponIndex = (int)weapon;
+}
+
+void Player::DetermineIfGrounded() {
+	glm::vec3 rayOrigin = _position + glm::vec3(0, 0.01, 0);
+	glm::vec3 rayDirection = glm::vec3(0, -1, 0);
+	PxReal rayLength = 0.05f;
+	PxScene* scene = Physics::GetScene();
+	PxVec3 origin = PxVec3(rayOrigin.x, rayOrigin.y, rayOrigin.z);
+	PxVec3 unitDir = PxVec3(rayDirection.x, rayDirection.y, rayDirection.z);
+	PxRaycastBuffer hit;
+	const PxHitFlags outputFlags = PxHitFlag::ePOSITION;
+	PxQueryFilterData filterData = PxQueryFilterData();
+	filterData.data.word0 = RaycastGroup::RAYCAST_ENABLED;
+	filterData.data.word2 = CollisionGroup::ENVIROMENT_OBSTACLE;
+	_isGrounded = scene->raycast(origin, unitDir, rayLength, hit, outputFlags, filterData);
+}
+
+void Player::WipeYVelocityToZeroIfHeadHitCeiling() {
+	/*
+	glm::vec3 rayOrigin = _position + glm::vec3(0, 1.5, 0);
+	glm::vec3 rayDirection = glm::vec3(0, 1, 0);
+	PxReal rayLength = 0.5f;
+	PxScene* scene = Physics::GetScene();
+	PxVec3 origin = PxVec3(rayOrigin.x, rayOrigin.y, rayOrigin.z);
+	PxVec3 unitDir = PxVec3(rayDirection.x, rayDirection.y, rayDirection.z);
+	PxRaycastBuffer hit;
+	const PxHitFlags outputFlags = PxHitFlag::ePOSITION;
+	PxQueryFilterData filterData = PxQueryFilterData();
+	filterData.data.word0 = RaycastGroup::RAYCAST_ENABLED;
+	filterData.data.word2 = CollisionGroup::ENVIROMENT_OBSTACLE;
+
+	if (scene->raycast(origin, unitDir, rayLength, hit, outputFlags, filterData)) {
+		//_yVelocity = 0;
+		//std::cout << "HIT HEAD " << Util::Vec3ToString(rayOrigin) << "\n";
+	}*/
 }
 
 void Player::Update(float deltaTime) {
@@ -144,63 +178,26 @@ void Player::Update(float deltaTime) {
 		PxControllerFilters data;
 		data.mFilterData = &filterData;
 
-
-
-
-
-		if (Input::KeyPressed(HELL_KEY_SPACE) || Input::KeyDown(HELL_KEY_5)) {
+		// Jump
+		DetermineIfGrounded();
+		if (Input::KeyPressed(HELL_KEY_SPACE) && _isGrounded) {
 			_yVelocity = 6.5 * deltaTime;
-			//std::cout << "pressed jump\n";
+			_isGrounded = false;
 		}
+		WipeYVelocityToZeroIfHeadHitCeiling();
 
-		//_yVelocity -= 9.81f * deltaTime;
-		_yVelocity -= 0.50f * deltaTime;
-		
-		PxF32 minDist = 0.001f;
-		_characterController->move(PxVec3(displacement.x, _yVelocity , displacement.z), minDist, deltaTime, data);
-
-
-		_position = Util::PxVec3toGlmVec3(_characterController->getFootPosition());// -glm::vec3(0, -0.1f, 0);
-
-
-		// Is the player grounded?
-		PhysXRayResult rayResult = Util::CastPhysXRay(_position + glm::vec3(0, 0.01, 0), glm::vec3(0, -1, 0), 0.05);
-		if (rayResult.hitFound) {
+		// Gravity		
+		if (_isGrounded) {
 			_yVelocity = 0;
 		}
-
-		if (_position.y <= 0.1f) {
-		//	_yVelocity = 0;
+		else {
+			_yVelocity -= 0.50f * deltaTime;
 		}
-
-		//std::cout << Util::Vec3ToString(_position) << "     " << _yVelocity << "\n";
-
-	}
-
-
-
-	// Collision Detection
-	for (Line& collisioLine : Scene::_collisionLines) {
-				
-			glm::vec3 lineStart = collisioLine.p1.pos;
-			glm::vec3 lineEnd = collisioLine.p2.pos;
-			glm::vec3 playerPos = GetFeetPosition();
-			playerPos.y = 0;
-
-			if (lineStart.y > 0.3f) {
-				continue;
-			}
-
-			glm::vec3 closestPointOnLine = Util::ClosestPointOnLine(playerPos, lineStart, lineEnd);
-
-			glm::vec3 dir = glm::normalize(closestPointOnLine - playerPos);
-			float distToLine = glm::length(closestPointOnLine - playerPos);
-			float correctionFactor = _radius - distToLine;
-
-			if (glm::length(closestPointOnLine - playerPos) < _radius) {
-				_position -= dir * correctionFactor;
-				_position.y = 0;
-			}
+		
+		// Move PhysX character controller
+		PxF32 minDist = 0.001f;
+		_characterController->move(PxVec3(displacement.x, _yVelocity , displacement.z), minDist, deltaTime, data);
+		_position = Util::PxVec3toGlmVec3(_characterController->getFootPosition());
 	}
 
 	// Footstep audio
@@ -210,8 +207,7 @@ void Player::Update(float deltaTime) {
 	if (!_ignoreControl) {
 		if (!_isMoving)
 			m_footstepAudioTimer = 0;
-		else
-		{
+		else {
 			if (_isMoving && m_footstepAudioTimer == 0) {
 				int random_number = std::rand() % 4 + 1;
 				std::string file = "player_step_" + std::to_string(random_number) + ".wav";
@@ -219,9 +215,9 @@ void Player::Update(float deltaTime) {
 			}
 			float timerIncrement = crouching ? deltaTime * 0.75f : deltaTime;
 			m_footstepAudioTimer += timerIncrement;
-
-			if (m_footstepAudioTimer > footstepAudioLoopLength)
+			if (m_footstepAudioTimer > footstepAudioLoopLength) {
 				m_footstepAudioTimer = 0;
+			}
 		}
 	}
 
@@ -242,11 +238,9 @@ void Player::Update(float deltaTime) {
 			if (_currentWeaponIndex == Weapon::WEAPON_COUNT) {
 				_currentWeaponIndex = 0;
 			}
-
 			if (_weaponInventory[_currentWeaponIndex]) {
 				foundNextWeapon = true;
 			}
-
 			_weaponAction = WeaponAction::DRAW_BEGIN;
 		}
 	}

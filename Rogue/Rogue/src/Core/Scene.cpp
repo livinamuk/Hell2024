@@ -136,7 +136,6 @@ void Scene::Update(float deltaTime) {
     }
 
     CreateRTInstanceData();
-    CreateCollisionWorld();
     ProcessPhysicsCollisions();
 }
 
@@ -238,7 +237,7 @@ void Scene::Init() {
     tree.SetPosition(0.75f, 0.1f, 6.2f);
     tree.SetModel("ChristmasTree");
     tree.SetMeshMaterial("Tree");
-    tree.CreateRigidBody(sofa.GetGameWorldMatrix(), true);
+    //tree.CreateRigidBody(sofa.GetGameWorldMatrix(), true);
     
 
 	float cushionHeight = 0.555f;
@@ -850,29 +849,6 @@ void Scene::RecreateDataStructures() {
     Renderer::CreatePointCloudBuffer();
     Renderer::CreateTriangleWorldVertexBuffer();
     CreateScenePhysicsObjects();
-}
-
-void Scene::CreateCollisionWorld() {
-
-    _collisionLines.clear();
-
-    for (Wall& wall : _walls) {
-        for (Line& collisionLine : wall.collisionLines) {
-            _collisionLines.push_back(collisionLine);
-        }
-    }
-
-    for (Door& door : _doors) {
-        Line collisionLine;
-        collisionLine.p1.color = YELLOW;
-        collisionLine.p2.color = RED;
-        collisionLine.p1.pos = door.GetFrontLeftCorner();
-        collisionLine.p2.pos = door.GetFrontRightCorner();
-        _collisionLines.push_back(collisionLine);
-        collisionLine.p1.pos = door.GetBackLeftCorner();
-        collisionLine.p2.pos = door.GetBackRightCorner();
-        _collisionLines.push_back(collisionLine);
-    }
 }
 
 void Scene::CreateMeshData() {

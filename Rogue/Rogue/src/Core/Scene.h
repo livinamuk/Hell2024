@@ -61,9 +61,9 @@ struct CloudPoint {
 
 
 struct Wall {
-    glm::vec3 begin;
+    glm::vec3 begin = glm::vec3(0);
     glm::vec3 end;
-    float height;
+    float height = 0;
     GLuint VAO = 0;
     GLuint VBO = 0;
     std::vector<Vertex> vertices;
@@ -149,7 +149,6 @@ namespace Scene {
     inline std::vector<glm::vec3> _rtVertices;
     inline std::vector<RTMesh> _rtMesh;
     inline std::vector<RTInstance> _rtInstances;
-    inline std::vector<Line> _collisionLines;
     inline std::vector<Player> _players;
 
     void Init();
@@ -168,7 +167,6 @@ namespace Scene {
     void AddFloor(Floor& floor);
     void CreateRTInstanceData();
     void RecreateDataStructures();
-    void CreateCollisionWorld();
     void CreateScenePhysicsObjects();
     void ProcessPhysicsCollisions();
 }

@@ -84,8 +84,7 @@ struct Toggles {
     bool drawLights = false;
     bool drawProbes = false;
     bool drawLines = false;
-    //bool drawPhysXWorld = false;
-    bool drawCollisionWorld = false;
+    bool drawRagdolls = false;
 } _toggles;
 
 struct PlayerRenderTarget {
@@ -420,7 +419,8 @@ void Renderer::RenderFrame(Player* player) {
 
 	TextBlitter::_debugTextToBilt += "View pos: " + Util::Vec3ToString(player->GetViewPos()) + "\n";
 	TextBlitter::_debugTextToBilt += "View rot: " + Util::Vec3ToString(player->GetViewRotation()) + "\n";
-    TextBlitter::_debugTextToBilt += "Y vel: " + std::to_string(Scene::_players[0]._yVelocity) + "\n";
+	TextBlitter::_debugTextToBilt += "Grounded: " + std::to_string(Scene::_players[0]._isGrounded) + "\n";
+	TextBlitter::_debugTextToBilt += "Y vel: " + std::to_string(Scene::_players[0]._yVelocity) + "\n";
 
     
 
@@ -832,7 +832,7 @@ void DebugPass(Player* player) {
         }    
 
     // Draw collision world
-    if (_toggles.drawCollisionWorld) {
+    /*if (_toggles.drawCollisionWorld) {
         _shaders.solidColor.Use();
         _shaders.solidColor.SetBool("uniformColor", false);
         _shaders.solidColor.SetMat4("model", glm::mat4(1));
@@ -856,7 +856,7 @@ void DebugPass(Player* player) {
         _shaders.solidColor.SetVec3("color", LIGHT_BLUE);
         _shaders.solidColor.SetMat4("model", transform.to_mat4());
         sphere->Draw();
-    }
+    }*/
 
 }
 
@@ -1376,8 +1376,8 @@ void Renderer::ToggleDrawingProbes() {
 void Renderer::ToggleDrawingLines() {
     _toggles.drawLines = !_toggles.drawLines;
 }
-void Renderer::ToggleCollisionWorld() {
-    _toggles.drawCollisionWorld = !_toggles.drawCollisionWorld;
+void Renderer::ToggleDrawingRagdolls() {
+    _toggles.drawRagdolls = !_toggles.drawRagdolls;
 }
 
 

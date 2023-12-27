@@ -22,7 +22,7 @@ namespace Renderer {
 	void ToggleDrawingLights();
 	void ToggleDrawingProbes();
 	void ToggleDrawingLines();
-	void ToggleCollisionWorld();
+	void ToggleDrawingRagdolls();
 
 	int GetRenderWidth();
 	int GetRenderHeight();
