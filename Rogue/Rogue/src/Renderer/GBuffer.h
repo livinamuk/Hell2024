@@ -15,6 +15,8 @@ public:
 	unsigned int _gRMATexture = { 0 };
 	unsigned int _gDepthTexture = { 0 };
 	unsigned int _gLightingTexture = { 0 };
+	unsigned int _gGlassTexture = { 0 };
+	unsigned int _gGlassCompositeTemporary = { 0 };
 
 private:
 	unsigned int _ID = { 0 };

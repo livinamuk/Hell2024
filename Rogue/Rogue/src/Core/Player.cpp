@@ -13,7 +13,7 @@ Player::Player() {
 
 Player::Player(glm::vec3 position, glm::vec3 rotation) {
 	_position = position;
-	_position.y = 10.5f;
+	//_position.y = 10.5f;
 	_rotation = rotation;
 	SetWeapon(Weapon::GLOCK);
 	_glockAmmo.clip = 8;
@@ -138,7 +138,7 @@ void Player::Update(float deltaTime) {
 		// Move that character controller
 		PxFilterData filterData;
 		filterData.word0 = 0;
-		filterData.word1 = CollisionGroup::PLAYER;	// Group this player is
+		//filterData.word1 = CollisionGroup::PLAYER;	// Group this player is
 		filterData.word1 = CollisionGroup::ENVIROMENT_OBSTACLE;	// Things to collide with	
 
 		PxControllerFilters data;
@@ -150,7 +150,7 @@ void Player::Update(float deltaTime) {
 
 		if (Input::KeyPressed(HELL_KEY_SPACE) || Input::KeyDown(HELL_KEY_5)) {
 			_yVelocity = 6.5 * deltaTime;
-			std::cout << "pressed jump\n";
+			//std::cout << "pressed jump\n";
 		}
 
 		//_yVelocity -= 9.81f * deltaTime;
@@ -160,16 +160,14 @@ void Player::Update(float deltaTime) {
 		_characterController->move(PxVec3(displacement.x, _yVelocity , displacement.z), minDist, deltaTime, data);
 
 
+		_position = Util::PxVec3toGlmVec3(_characterController->getFootPosition()) - glm::vec3(0, -0.1f, 0);
 
 
-		_position = Util::PxVec3toGlmVec3(_characterController->getFootPosition());
+		if (_position.y <= 0.1f) {
+			_yVelocity = 0;
+		}
 
-
-		//if (_position.y <= 0.1f) {
-	//		_yVelocity = 0;
-//		}
-
-		std::cout << Util::Vec3ToString(_position) << "     " << _yVelocity << "\n";
+	//	std::cout << Util::Vec3ToString(_position) << "     " << _yVelocity << "\n";
 
 	}
 

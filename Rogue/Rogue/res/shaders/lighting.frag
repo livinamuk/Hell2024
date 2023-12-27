@@ -265,6 +265,9 @@ void main() {
 
     // Sample GBuffer
     vec3 baseColor = texture(basecolorTexture, TexCoords).rgb;
+
+//    baseColor *= 2.0;
+
     vec3 baseColor2 = baseColor;
     baseColor = pow(baseColor, vec3(2.2));
     vec3 normalMap =  texture2D(normalTexture, TexCoords).rgb;
@@ -286,6 +289,9 @@ void main() {
     float roughness = rma.r;
     float metallic = rma.g;
     float ao = rma.b;
+
+  //  roughness = 0.99;
+ //   metallic = 1;
 
     // Direct lighting
     vec3 directLighting = vec3(0);
@@ -334,54 +340,50 @@ void main() {
         FragColor.a = 1;
     }
 
-    // Fog
-    float d = distance(viewPos, WorldPos);
-    float alpha = getFogFactor(d);
-    vec3 FogColor = vec3(0.0);
-    FragColor.rgb = mix(FragColor.rgb, FogColor, alpha);
 
-    // Tonemap
-	FragColor.rgb = pow(FragColor.rgb, vec3(1.0/2.2)); 
-    FragColor.rgb = mix(FragColor.rgb, Tonemap_ACES(FragColor.rgb), 1.0);
-    	
-	// Temperature
-	//float temperature = 15200; 
-	//float temperatureStrength = 1.0;
-	//finalColor = mix(finalColor, finalColor * colorTemperatureToRGB(temperature), temperatureStrength); 
-	
-	// Filmic tonemapping
-	FragColor.rgb = mix(FragColor.rgb, filmic(FragColor.rgb), 0.5);
+    
+        float d = distance(viewPos, WorldPos);
+        float alpha = getFogFactor(d);
+        vec3 FogColor = vec3(0.0);
+        FragColor.rgb = mix(FragColor.rgb, FogColor, alpha);
+	    FragColor.rgb = pow(FragColor.rgb, vec3(1.0/2.2)); 
+        FragColor.rgb = mix(FragColor.rgb, Tonemap_ACES(FragColor.rgb), 1.0);
+        FragColor.rgb = mix(FragColor.rgb, Tonemap_ACES(FragColor.rgb), 0.25);
 
-    // Noise
-    vec2 uv = gl_FragCoord.xy / vec2(screenWidth, screenHeight);
-    vec2 filmRes = vec2(screenWidth, screenHeight);
-    vec2 coord = gl_FragCoord.xy;
-    vec2 rest = modf(uv * filmRes, coord);
-    vec3 noise00 = filmPixel(coord / filmRes);
-    vec3 noise01 = filmPixel((coord + vec2(0, 1)) / filmRes);
-    vec3 noise10 = filmPixel((coord + vec2(1, 0)) / filmRes);
-    vec3 noise11 = filmPixel((coord + vec2(1, 1)) / filmRes);
-    vec3 noise = mix(mix(noise00, noise01, rest.y), mix(noise10, noise11, rest.y), rest.x) * vec3(0.7, 0.6, 0.8);
-    float noiseSpeed = 30.0;
-    float x = rand(uv + rand(vec2(int(time * noiseSpeed), int(-time * noiseSpeed))));
-    float noiseFactor = 0.049;
-    FragColor.rgb = FragColor.rgb + (x * -noiseFactor) + (noiseFactor / 2);
+           // Noise
+        vec2 uv = gl_FragCoord.xy / vec2(screenWidth, screenHeight);
+        vec2 filmRes = vec2(screenWidth, screenHeight);
+        vec2 coord = gl_FragCoord.xy;
+        vec2 rest = modf(uv * filmRes, coord);
+        vec3 noise00 = filmPixel(coord / filmRes);
+        vec3 noise01 = filmPixel((coord + vec2(0, 1)) / filmRes);
+        vec3 noise10 = filmPixel((coord + vec2(1, 0)) / filmRes);
+        vec3 noise11 = filmPixel((coord + vec2(1, 1)) / filmRes);
+        vec3 noise = mix(mix(noise00, noise01, rest.y), mix(noise10, noise11, rest.y), rest.x) * vec3(0.7, 0.6, 0.8);
+        float noiseSpeed = 30.0;
+        float x = rand(uv + rand(vec2(int(time * noiseSpeed), int(-time * noiseSpeed))));
+        float noiseFactor = 0.049;
+        FragColor.rgb = FragColor.rgb + (x * -noiseFactor) + (noiseFactor / 2);
 
-    // vignette         
-    uv = gl_FragCoord.xy / vec2(screenWidth * 1, screenHeight * 1);
-    uv *=  1.0 - uv.yx;           
-    float vig = uv.x*uv.y * 15.0; // multiply with sth for intensity    
-    vig = pow(vig, 0.05); // change pow for modifying the extend of the  vignette    
-    FragColor.rgb *= vec3(vig);
+
         
-    // Brightness and contrast
-	float contrast = 1.2;
-	float brightness = -0.098;
-    vec3 finalColor = FragColor.rgb;
-	FragColor.rgb = FragColor.rgb * contrast;
-	FragColor.rgb = FragColor.rgb + vec3(brightness);
-    FragColor.g += 0.0025;
-    FragColor.a = 1;
+        // vignette         
+        uv = gl_FragCoord.xy / vec2(screenWidth * 1, screenHeight * 1);
+        uv *=  1.0 - uv.yx;           
+        float vig = uv.x*uv.y * 15.0; // multiply with sth for intensity    
+        vig = pow(vig, 0.05); // change pow for modifying the extend of the  vignette    
+        FragColor.rgb *= vec3(vig);
+
+                // Brightness and contrast
+	    float contrast = 1.6;
+	    float brightness = -0.09999;
+        vec3 finalColor = FragColor.rgb;
+	    FragColor.rgb = FragColor.rgb * contrast;
+	    //FragColor.rgb = FragColor.rgb + vec3(brightness);
+        FragColor.rgb -= vec3(0.075);
+        FragColor.g += 0.0025;
+        FragColor.a = 1;
+
 
     //FragColor.rgb = vec3(0);
 
@@ -398,7 +400,7 @@ void main() {
     //FragColor.rgb = vec3(baseColor);
   // FragColor.rgb = vec3(baseColor);
     //FragColor.rgb = pow(FragColor.rgb, vec3(1.0/2.2)); 
-    //FragColor.rgb = normal;
+ //   FragColor.rgb = baseColor;
 
     
  //  FragColor.rgb = vec3(baseColor.rgb);
@@ -411,4 +413,6 @@ void main() {
          FragColor.rgb = vec3(0,0,0);
     }
     */
+
+  //  FragColor.rgb = normal;
 }

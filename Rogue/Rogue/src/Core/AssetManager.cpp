@@ -66,6 +66,7 @@ void AssetManager::LoadEverythingElse() {
 		FileInfo info = Util::GetFileInfo(entry);
 		if (info.filetype == "obj") {
 			Model& model = _models.emplace_back(Model());
+			std::cout << "loading " << info.fullpath << "\n";
 			model.Load(info.fullpath);
 		}
 	}

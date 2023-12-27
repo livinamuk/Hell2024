@@ -145,6 +145,11 @@ void Scene::Init() {
 
     Scene::NewScene();
 
+
+	Window& windowA = _windows.emplace_back();
+	windowA.position = glm::vec3(6.15f, 0.1f, 1.6f);
+    windowA.rotation.y = HELL_PI * 0.5f;
+
     _ceilings.emplace_back(door2X - 0.8f, 7.0f, door2X + 0.8f, 9.95f, 2.5f, AssetManager::GetMaterialIndex("Ceiling"));
 
     // ceilings            
@@ -167,11 +172,76 @@ void Scene::Init() {
 
 
 	GameObject& sofa = _gameObjects.emplace_back();
-    sofa.SetPosition(2.0f, 0.1f, 0.1f);
-    sofa.SetModel("Sofa");
-    sofa.SetMeshMaterial("Sofa");
-    sofa.CreateRigidBody(sofa.GetGameWorldMatrix(), true);
-    sofa.SetRaycastShapeFromModel(AssetManager::GetModel("Sofa"));
+	sofa.SetPosition(2.0f, 0.1f, 0.1f);
+	sofa.SetModel("Sofa_Cushionless");
+	sofa.SetMeshMaterial("Sofa");
+	sofa.CreateRigidBody(sofa.GetGameWorldMatrix(), true);
+	sofa.SetRaycastShapeFromModel(AssetManager::GetModel("Sofa_Cushionless"));
+
+
+	PhysicsFilterData cushionFilterData;
+    cushionFilterData.raycastGroup = RAYCAST_DISABLED;
+    cushionFilterData.collisionGroup = CollisionGroup::GENERIC_BOUNCEABLE;
+    cushionFilterData.collidesWith = CollisionGroup(ENVIROMENT_OBSTACLE | GENERIC_BOUNCEABLE);
+
+    float cushionDensity = 20.0f;
+
+	GameObject& cushion0 = _gameObjects.emplace_back();
+	cushion0.SetPosition(2.0f, 0.1f, 0.1f);
+	cushion0.SetModel("SofaCushion0");
+	cushion0.SetMeshMaterial("Sofa");
+	cushion0.CreateRigidBody(sofa.GetGameWorldMatrix(), false);
+	cushion0.SetRaycastShapeFromModel(AssetManager::GetModel("SofaCushion0"));
+	cushion0.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("SofaCushion0_ConvexMesh")->_meshes[0], cushionFilterData);
+	cushion0.SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
+	cushion0.UpdateRigidBodyMassAndInertia(cushionDensity);
+
+	GameObject& cushion1 = _gameObjects.emplace_back();
+	cushion1.SetPosition(2.0f, 0.1f, 0.1f);
+	cushion1.SetModel("SofaCushion1");
+	cushion1.SetMeshMaterial("Sofa");
+	cushion1.CreateRigidBody(sofa.GetGameWorldMatrix(), false);
+	cushion1.SetRaycastShapeFromModel(AssetManager::GetModel("SofaCushion1"));
+	cushion1.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("SofaCushion1_ConvexMesh")->_meshes[0], cushionFilterData);
+	cushion1.SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
+	cushion1.UpdateRigidBodyMassAndInertia(cushionDensity);
+
+	GameObject& cushion2 = _gameObjects.emplace_back();
+	cushion2.SetPosition(2.0f, 0.1f, 0.1f);
+	cushion2.SetModel("SofaCushion2");
+	cushion2.SetMeshMaterial("Sofa");
+	cushion2.CreateRigidBody(sofa.GetGameWorldMatrix(), false);
+	cushion2.SetRaycastShapeFromModel(AssetManager::GetModel("SofaCushion2"));
+	cushion2.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("SofaCushion2_ConvexMesh")->_meshes[0], cushionFilterData);
+	cushion2.SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
+	cushion2.UpdateRigidBodyMassAndInertia(cushionDensity);
+
+	GameObject& cushion3 = _gameObjects.emplace_back();
+	cushion3.SetPosition(2.0f, 0.1f, 0.1f);
+	cushion3.SetModel("SofaCushion3");
+	cushion3.SetMeshMaterial("Sofa");
+	cushion3.CreateRigidBody(sofa.GetGameWorldMatrix(), false);
+	cushion3.SetRaycastShapeFromModel(AssetManager::GetModel("SofaCushion3"));
+	cushion3.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("SofaCushion3_ConvexMesh")->_meshes[0], cushionFilterData);
+	cushion3.SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
+	cushion3.UpdateRigidBodyMassAndInertia(cushionDensity);
+
+	GameObject& cushion4 = _gameObjects.emplace_back();
+	cushion4.SetPosition(2.0f, 0.1f, 0.1f);
+	cushion4.SetModel("SofaCushion4");
+	cushion4.SetMeshMaterial("Sofa");
+	cushion4.CreateRigidBody(sofa.GetGameWorldMatrix(), false);
+	cushion4.SetRaycastShapeFromModel(AssetManager::GetModel("SofaCushion4"));
+	cushion4.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("SofaCushion4_ConvexMesh")->_meshes[0], cushionFilterData);
+	cushion4.SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
+	cushion4.UpdateRigidBodyMassAndInertia(15.0f);
+
+	GameObject& tree = _gameObjects.emplace_back();
+    tree.SetPosition(0.75f, 0.1f, 6.2f);
+    tree.SetModel("ChristmasTree");
+    tree.SetMeshMaterial("Tree");
+    tree.CreateRigidBody(sofa.GetGameWorldMatrix(), true);
+    
 
 	float cushionHeight = 0.555f;
 	float armHeight = 0.86f;
@@ -199,13 +269,16 @@ void Scene::Init() {
 	filterData.collisionGroup = CollisionGroup::ENVIROMENT_OBSTACLE;
 	filterData.collidesWith = (CollisionGroup)(GENERIC_BOUNCEABLE | BULLET_CASING | PLAYER);
 	sofa.AddCollisionShape(sofaShapeBigCube, filterData);
-	sofa.AddCollisionShape(sofaShapeLeftArm, filterData);
+	//sofa.AddCollisionShape(sofaShapeLeftArm, filterData);
 	sofa.AddCollisionShape(sofaShapeRightArm, filterData);
-    sofa.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("Sofa_ConvexMesh")->_meshes[0], filterData);
+    //sofa.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("Sofa_ConvexMesh")->_meshes[0], filterData);
     
-    //sofa.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("LampConvexMesh_0")->_meshes[0], filterData2);
+	//sofa.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("LampConvexMesh_0")->_meshes[0], filterData2);
+	sofa.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("SofaBack_ConvexMesh")->_meshes[0], filterData);
+	sofa.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("SofaLeftArm_ConvexMesh")->_meshes[0], filterData);
+	sofa.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("SofaRightArm_ConvexMesh")->_meshes[0], filterData);
     sofa.SetModelMatrixMode(ModelMatrixMode::GAME_TRANSFORM);
-    sofa.UpdateRigidBodyMassAndInertia(20.0f);
+    //sofa.UpdateRigidBodyMassAndInertia(20.0f);
 
 
 
@@ -307,10 +380,23 @@ void Scene::Init() {
 
         GameObject* cube = &_gameObjects.emplace_back();
         float halfExtent = 0.1f;
-        cube->SetPosition(2.0f, y * halfExtent * 2 + 0.1f, 3.5f);
-        cube->SetModel("Cube");
-        cube->SetMeshMaterial("Ceiling");
-        cube->SetScale(0.2f);
+		cube->SetPosition(2.0f, y * halfExtent * 2 + 0.1f, 3.5f);
+		cube->SetModel("SmallCube");
+        cube->SetName("Present");
+
+		if (y == 0 || y == 4 || y == 8) {
+			cube->SetMeshMaterial("PresentA");
+		}
+		if (y == 1 || y == 5 || y == 9) {
+			cube->SetMeshMaterial("PresentB");
+		}
+		if (y == 2 || y == 6 || y == 10) {
+			cube->SetMeshMaterial("PresentC");
+		}
+		if (y == 3 || y == 7 || y == 11) {
+			cube->SetMeshMaterial("PresentD");
+		}
+
 
         Transform transform;
         transform.position = glm::vec3(2.0f, y * halfExtent * 2 + 0.1f, 3.5f);
@@ -393,7 +479,7 @@ void Scene::CreatePlayers() {
     _players.clear();
     _players.push_back(Player(glm::vec3(4.0f, 0, 3.6f), glm::vec3(-0.17, 1.54f, 0)));
     if (_playerCount == 2) {
-        _players.push_back(Player(glm::vec3(4.0f, 0, 1.2f), glm::vec3(-0.17, 1.54f, 0)));
+        _players.push_back(Player(glm::vec3(4.0f, 10, 1.2f), glm::vec3(-0.17, 1.54f, 0)));
         _players[1]._ignoreControl = true;
     }
 }
@@ -594,6 +680,7 @@ void Scene::LoadLightSetup(int index) {
 
 GameObject* Scene::GetGameObjectByName(std::string name) {
     if (name == "undefined") {
+        //std::cout << "'undefined' parent name returned from GetGameObjectByName()" << "GetGameObjectByName" << "/n";
         return nullptr;
     }
     for (GameObject& gameObject : _gameObjects) {
@@ -879,6 +966,9 @@ Wall::Wall(glm::vec3 begin, glm::vec3 end, float height, int materialIndex) {
     CreateMesh();
 }
 
+#define WINDOW_WIDTH 0.9f
+#define WINDOW_HEIGHT 2.1f
+
 void Wall::CreateMesh() {
 
     vertices.clear();
@@ -901,8 +991,9 @@ void Wall::CreateMesh() {
     int count = 0;
     while (!finishedBuildingWall || count > 1000) {
         count++;
-        float shortestDistance = 9999;
-        Door* closestDoor = nullptr;
+		float shortestDistance = 9999;
+		Door* closestDoor = nullptr;
+		Window* closestWindow = nullptr;
         glm::vec3 intersectionPoint;
 
         for (Door& door : Scene::_doors) {
@@ -931,6 +1022,40 @@ void Wall::CreateMesh() {
                 }
             }
         }
+
+		for (Window& window : Scene::_windows) {
+
+			// Left side
+			glm::vec3 v1(window.position + glm::vec3(-0.1, 0, -0.45));
+			glm::vec3 v2(window.position + glm::vec3(0.1f, 0, -0.45));
+			// Right side
+			glm::vec3 v3(window.position + glm::vec3(-0.1, 0, 0.45));
+			glm::vec3 v4(window.position + glm::vec3(0.1f, 0, 0.45));
+
+            //std::cout << "\n" << Util::Vec3ToString(v1) << "\n\n";
+
+			// If an intersection is found closer than one u have already then store it
+			glm::vec3 tempIntersectionPoint;
+			if (Util::LineIntersects(v1, v2, cursor, wallEnd, tempIntersectionPoint)) {
+				if (shortestDistance > glm::distance(cursor, tempIntersectionPoint)) {
+					shortestDistance = glm::distance(cursor, tempIntersectionPoint);
+                    closestWindow = &window;
+                    closestDoor = NULL;
+					intersectionPoint = tempIntersectionPoint;
+					//std::cout << "\n\n\nHELLO\n\n";
+				}
+			}
+			// Check the other side now
+			if (Util::LineIntersects(v3, v4, cursor, wallEnd, tempIntersectionPoint)) {
+				if (shortestDistance > glm::distance(cursor, tempIntersectionPoint)) {
+					shortestDistance = glm::distance(cursor, tempIntersectionPoint);
+					closestWindow = &window;
+					closestDoor = NULL;
+					intersectionPoint = tempIntersectionPoint;
+                    //std::cout << "\n\n\nHELLO\n\n";
+				}
+			}
+		}
 
         // Did ya find a door?
         if (closestDoor != nullptr) {
@@ -1007,6 +1132,103 @@ void Wall::CreateMesh() {
             collisionLine.p2.color = RED;
             collisionLines.push_back(collisionLine);
         }
+        else if (closestWindow != nullptr) {
+
+			// The wall piece from cursor to window            
+			Vertex v1, v2, v3, v4;
+			v1.position = cursor;
+			v2.position = cursor + glm::vec3(0, height, 0);
+			v3.position = intersectionPoint + glm::vec3(0, height, 0);
+			v4.position = intersectionPoint;
+			float segmentWidth = abs(glm::length((v4.position - v1.position))) / WALL_HEIGHT;
+			float segmentHeight = glm::length((v2.position - v1.position)) / WALL_HEIGHT;
+			uvX2 = uvX1 + segmentWidth;
+			v1.uv = glm::vec2(uvX1, segmentHeight) * texScale;
+			v2.uv = glm::vec2(uvX1, 0) * texScale;
+			v3.uv = glm::vec2(uvX2, 0) * texScale;
+			v4.uv = glm::vec2(uvX2, segmentHeight) * texScale;
+			SetNormalsAndTangentsFromVertices(&v3, &v2, &v1);
+			SetNormalsAndTangentsFromVertices(&v3, &v1, &v4);
+			vertices.push_back(v3);
+			vertices.push_back(v2);
+			vertices.push_back(v1);
+			vertices.push_back(v3);
+			vertices.push_back(v1);
+			vertices.push_back(v4);
+
+			if (hasTrims) {
+				Transform trimTransform;
+				trimTransform.position = cursor;
+				trimTransform.rotation.y = Util::YRotationBetweenTwoPoints(v4.position, v1.position) + HELL_PI;
+				trimTransform.scale.x = segmentWidth * WALL_HEIGHT;
+				ceilingTrims.push_back(trimTransform);
+				floorTrims.push_back(trimTransform);
+			}
+
+			// Bit above the window
+			Vertex v5, v6, v7, v8;
+			v5.position = intersectionPoint + glm::vec3(0, WINDOW_HEIGHT, 0);
+			v6.position = intersectionPoint + glm::vec3(0, height, 0);
+			v7.position = intersectionPoint + (wallDir * (WINDOW_WIDTH + 0.005f)) + glm::vec3(0, height, 0);
+			v8.position = intersectionPoint + (wallDir * (WINDOW_WIDTH + 0.005f)) + glm::vec3(0, WINDOW_HEIGHT, 0);
+			segmentWidth = abs(glm::length((v8.position - v5.position))) / WALL_HEIGHT;
+			segmentHeight = glm::length((v6.position - v5.position)) / WALL_HEIGHT;
+			uvX1 = uvX2;
+			uvX2 = uvX1 + segmentWidth;
+			v5.uv = glm::vec2(uvX1, segmentHeight) * texScale;
+			v6.uv = glm::vec2(uvX1, 0) * texScale;
+			v7.uv = glm::vec2(uvX2, 0) * texScale;
+			v8.uv = glm::vec2(uvX2, segmentHeight) * texScale;
+			SetNormalsAndTangentsFromVertices(&v7, &v6, &v5);
+			SetNormalsAndTangentsFromVertices(&v7, &v5, &v8);
+			vertices.push_back(v7);
+			vertices.push_back(v6);
+			vertices.push_back(v5);
+			vertices.push_back(v7);
+			vertices.push_back(v5);
+			vertices.push_back(v8);	
+
+			// Bit below the window
+            {
+                float windowYBegin = 0.8f;
+                float height = windowYBegin + 0.1f;
+
+                Vertex v5, v6, v7, v8;
+				v5.position = intersectionPoint + glm::vec3(0, 0, 0);
+				v6.position = intersectionPoint + glm::vec3(0, height, 0);
+				v7.position = intersectionPoint + (wallDir * (WINDOW_WIDTH + 0.005f)) + glm::vec3(0, height, 0);
+				v8.position = intersectionPoint + (wallDir * (WINDOW_WIDTH + 0.005f)) + glm::vec3(0, 0, 0);
+				segmentWidth = abs(glm::length((v8.position - v5.position))) / WALL_HEIGHT;
+				segmentHeight = glm::length((v6.position - v5.position)) / WALL_HEIGHT;
+                uvX1 = uvX2;
+                uvX2 = uvX1 + segmentWidth;
+                v5.uv = glm::vec2(uvX1, segmentHeight) * texScale;
+                v6.uv = glm::vec2(uvX1, 0) * texScale;
+                v7.uv = glm::vec2(uvX2, 0) * texScale;
+                v8.uv = glm::vec2(uvX2, segmentHeight) * texScale;
+                SetNormalsAndTangentsFromVertices(&v7, &v6, &v5);
+                SetNormalsAndTangentsFromVertices(&v7, &v5, &v8);
+                vertices.push_back(v7);
+                vertices.push_back(v6);
+                vertices.push_back(v5);
+                vertices.push_back(v7);
+                vertices.push_back(v5);
+                vertices.push_back(v8);
+            }
+
+			if (hasTrims) {
+				Transform trimTransform;
+				trimTransform.position = intersectionPoint;
+				trimTransform.rotation.y = Util::YRotationBetweenTwoPoints(v4.position, v1.position) + HELL_PI;
+				trimTransform.scale.x = segmentWidth * WALL_HEIGHT;
+				ceilingTrims.push_back(trimTransform);
+				floorTrims.push_back(trimTransform);
+			}
+
+
+			cursor = intersectionPoint + (wallDir * (WINDOW_WIDTH + 0.005f)); // This 0.05 is so you don't get an intersection with the door itself
+			uvX1 = uvX2;
+		}
 
         // You're on the final bit of wall then aren't ya
         else {

@@ -245,7 +245,7 @@ void Physics::Init() {
 
 
 
-
+    /*
 
    PxRigidStatic* groundPlane = PxCreatePlane(*_physics, PxPlane(0, 1, 0, -0.10f), *_defaultMaterial);
     _scene->addActor(*groundPlane);
@@ -263,7 +263,8 @@ void Physics::Init() {
         CollisionGroup::PLAYER;
     shape->setQueryFilterData(filterData);
     shape->setSimulationFilterData(filterData); // sim is for ragz
-    
+    */
+
     //EnableRayCastingForShape(shape);
 }
 

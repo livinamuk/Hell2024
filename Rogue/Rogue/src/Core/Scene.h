@@ -3,6 +3,7 @@
 #include "GameObject.h"
 #include "AnimatedGameObject.h"
 #include "Door.h"
+#include "Window.h"
 #include "Player.h"
 #include "Physics.h"
 #include "../Effects/BulletCasing.h"
@@ -26,7 +27,7 @@ inline void SetNormalsAndTangentsFromVertices(Vertex* vert0, Vertex* vert1, Vert
     glm::vec2& uv0 = vert0->uv;
     glm::vec2& uv1 = vert1->uv;
     glm::vec2& uv2 = vert2->uv;
-    // Edges of the triangle : postion delta. UV delta
+    // Edges of the triangle : position delta. UV delta
     glm::vec3 deltaPos1 = v1 - v0;
     glm::vec3 deltaPos2 = v2 - v0;
     glm::vec2 deltaUV1 = uv1 - uv0;
@@ -136,8 +137,9 @@ namespace Scene {
     inline std::vector<Bullet> _bullets;
     inline std::vector<BulletCasing> _bulletCasings;
     inline std::vector<Decal> _decals;
-    inline std::vector<Wall> _walls;
-    inline std::vector<Door> _doors;
+	inline std::vector<Wall> _walls;
+	inline std::vector<Window> _windows;
+	inline std::vector<Door> _doors;
     inline std::vector<Floor> _floors;
     inline std::vector<Ceiling> _ceilings;
     inline std::vector<CloudPoint> _cloudPoints;

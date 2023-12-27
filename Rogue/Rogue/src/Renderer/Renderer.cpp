@@ -49,8 +49,10 @@ struct Shaders {
     Shader debugViewPropgationGrid;
     Shader geometry;
     Shader geometry_instanced;
-    Shader lighting;
-    Shader bulletDecals;
+	Shader lighting;
+	Shader bulletDecals;
+	Shader glass;
+    Shader glassComposite;
     ComputeShader compute;
     ComputeShader pointCloud;
     ComputeShader propogateLight;
@@ -160,6 +162,103 @@ void RenderImmediate();
 void FindProbeCoordsWithinMapBounds();
 void CalculateDirtyCloudPoints();
 void CalculateDirtyProbeCoords();
+void GlassPass(Player* player);
+
+int GetPlayerIndexFromPlayerPointer(Player* player) {
+	for (int i = 0; i < Scene::_players.size(); i++) {
+		if (&Scene::_players[i] == player) {
+			return i;
+		}
+	}
+	return -1;
+}
+
+PlayerRenderTarget& GetPlayerRenderTarget(int playerIndex) {
+	return _playerRenderTargets[playerIndex];
+}
+
+void GlassPass(Player* player) {
+
+
+	glm::mat4 projection = Renderer::GetProjectionMatrix(_depthOfFieldScene);
+	glm::mat4 view = player->GetViewMatrix();
+
+	int playerIndex = GetPlayerIndexFromPlayerPointer(player);
+	PlayerRenderTarget& playerRenderTarget = GetPlayerRenderTarget(playerIndex);
+	GBuffer& gBuffer = playerRenderTarget.gBuffer;
+    
+
+	gBuffer.Bind();
+	unsigned int attachments[1] = { GL_COLOR_ATTACHMENT4 };
+	glDrawBuffers(1, attachments);
+	glViewport(0, 0, gBuffer.GetWidth(), gBuffer.GetHeight());
+	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+	//glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_CULL_FACE);
+	glCullFace(GL_BACK);
+	_shaders.glass.Use();
+	_shaders.glass.SetMat4("projection", projection);
+	_shaders.glass.SetMat4("view", view);
+	_shaders.glass.SetVec3("viewPos", player->GetViewPos());
+	_shaders.glass.SetFloat("screenWidth", gBuffer.GetWidth());
+	_shaders.glass.SetFloat("screenHeight", gBuffer.GetHeight());
+
+	_shaders.glass.SetInt("lightCount", std::min((int)Scene::_lights.size(), 32));
+	auto& lights = Scene::_lights;
+	for (int i = 0; i < lights.size(); i++) {
+		_shaders.glass.SetVec3("lights[" + std::to_string(i) + "].position", lights[i].position);
+		_shaders.glass.SetVec3("lights[" + std::to_string(i) + "].color", lights[i].color);
+		_shaders.glass.SetFloat("lights[" + std::to_string(i) + "].radius", lights[i].radius);
+		_shaders.glass.SetFloat("lights[" + std::to_string(i) + "].strength", lights[i].strength);
+	}
+
+    AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("WindowExterior"));
+	glActiveTexture(GL_TEXTURE4);
+	glBindTexture(GL_TEXTURE_2D, gBuffer._gLightingTexture);
+
+	//glDisable(GL_CULL_FACE);
+	for (Window& window : Scene::_windows) {
+	//	AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("Glock"));
+		_shaders.glass.SetMat4("model", window.GetModelMatrix());
+        AssetManager::GetModel("Glass")->Draw();
+
+		/*for (int i = 0; i < AssetManager::GetModel("Window")->_meshes.size(); i++) {
+			Mesh* mesh = &AssetManager::GetModel("Window")->_meshes[i];
+			if (i == 0 || i == 1) {
+				mesh->Draw();
+			}
+		}*/
+	}
+
+	_shaders.glassComposite.Use();
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, gBuffer._gLightingTexture);
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, gBuffer._gGlassTexture);
+    glDisable(GL_DEPTH_TEST);
+	unsigned int attachments2[1] = { GL_COLOR_ATTACHMENT5 };
+	glDrawBuffers(1, attachments2);
+    DrawFullscreenQuad();
+
+
+	//glBindFramebuffer(GL_READ_FRAMEBUFFER, playerRenderTarget.gBuffer.GetID());
+	//glBindFramebuffer(GL_DRAW_FRAMEBUFFER, playerRenderTarget.gBuffer.GetID());
+	glReadBuffer(GL_COLOR_ATTACHMENT5);
+	glDrawBuffer(GL_COLOR_ATTACHMENT3);
+	float x0 = 0;
+	float y0 = 0;
+	float x1 = playerRenderTarget.gBuffer.GetWidth();
+	float y1 = playerRenderTarget.gBuffer.GetHeight();
+	float d_x0 = 0;
+	float d_y0 = 0;
+	float d_x1 = playerRenderTarget.gBuffer.GetWidth();
+	float d_y1 = playerRenderTarget.gBuffer.GetHeight();
+	glBlitFramebuffer(x0, y0, x1, y1, d_x0, d_y0, d_x1, d_y1, GL_COLOR_BUFFER_BIT, GL_NEAREST);
+
+
+}
+
 //std::vector<glm::uvec4> GridIndicesUpdate(std::vector<glm::uvec4> allGridIndicesWithinRooms);
 
 void Renderer::Init() {
@@ -181,8 +280,10 @@ void Renderer::Init() {
     _shaders.geometry_instanced.Load("geometry_instanced.vert", "geometry_instanced.frag");
     _shaders.lighting.Load("lighting.vert", "lighting.frag");
     _shaders.debugViewPropgationGrid.Load("debug_view_propogation_grid.vert", "debug_view_propogation_grid.frag");
-    _shaders.editorTextured.Load("editor_textured.vert", "editor_textured.frag");
-    _shaders.bulletDecals.Load("bullet_decals.vert", "bullet_decals.frag");
+	_shaders.editorTextured.Load("editor_textured.vert", "editor_textured.frag");
+	_shaders.bulletDecals.Load("bullet_decals.vert", "bullet_decals.frag");
+	_shaders.glass.Load("glass.vert", "glass.frag");
+	_shaders.glassComposite.Load("glass_composite.vert", "glass_composite.frag");
     
 
     _cubeMesh = MeshUtil::CreateCube(1.0f, 1.0f, true);
@@ -211,19 +312,6 @@ void Renderer::Init() {
     InitCompute();
 }
 
-int GetPlayerIndexFromPlayerPointer(Player* player) {
-    for (int i = 0; i < Scene::_players.size(); i++) {
-        if (&Scene::_players[i] == player) {
-            return i;
-        }
-    }
-    return -1;
-}
-
-PlayerRenderTarget& GetPlayerRenderTarget(int playerIndex) {
-    return _playerRenderTargets[playerIndex];
-}
-
 void Renderer::RenderFrame(Player* player) {
 
     if (!player) {
@@ -240,6 +328,14 @@ void Renderer::RenderFrame(Player* player) {
     GBuffer& gBuffer = playerRenderTarget.gBuffer;
     PresentFrameBuffer& presentFrameBuffer = playerRenderTarget.presentFrameBuffer;
 
+    gBuffer.Bind();
+	unsigned int attachments[4] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT4 };
+	glDrawBuffers(4, attachments);
+	glViewport(0, 0, gBuffer.GetWidth(), gBuffer.GetHeight());
+	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
     if (playerIndex == 0) {
         RenderShadowMaps();
         CalculateDirtyCloudPoints();
@@ -248,9 +344,13 @@ void Renderer::RenderFrame(Player* player) {
     }
 
     GeometryPass(player);
+
     DrawBulletDecals(player);
     DrawCasingProjectiles(player);
     LightingPass(player);
+
+	GlassPass(player);
+
     DrawMuzzleFlashes(player);
     
     // Propagation Grid
@@ -354,6 +454,20 @@ void Renderer::RenderFrame(Player* player) {
         }
     }
 
+	/*glBindFramebuffer(GL_READ_FRAMEBUFFER, playerRenderTarget.gBuffer.GetID());
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+	glReadBuffer(GL_COLOR_ATTACHMENT4);
+    float x0 = 0;
+    float y0 = 0;
+    float x1 = playerRenderTarget.gBuffer.GetWidth();
+    float y1 = playerRenderTarget.gBuffer.GetHeight();
+    float d_x0 = 0;
+    float d_y0 = 0;
+    float d_x1 = playerRenderTarget.gBuffer.GetWidth() * 0.8f;
+    float d_y1 = playerRenderTarget.gBuffer.GetHeight() * 0.8f;
+	glBlitFramebuffer(x0, y0, x1, y1, d_x0, d_y0, d_x1, d_y1, GL_COLOR_BUFFER_BIT, GL_NEAREST);
+    */
+
     // Wipe all light dirty flags back to false
     for (Light& light : Scene::_lights) {
         light.isDirty = false;
@@ -372,8 +486,8 @@ void GeometryPass(Player* player) {
     unsigned int attachments[3] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2 };
     glDrawBuffers(3, attachments);
     glViewport(0, 0, gBuffer.GetWidth(), gBuffer.GetHeight());
-    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+   // glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+   // glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
@@ -829,6 +943,11 @@ void DrawScene(Shader& shader) {
             AssetManager::BindMaterialByIndex(gameObject._meshMaterialIndices[i]);
             gameObject._model->_meshes[i].Draw();
         }
+
+        if (gameObject.GetName() == "Present") {
+			AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("Gold"));
+            AssetManager::GetModel("ChristmasBow")->Draw();
+        }
     }
 
     for (Door& door : Scene::_doors) {
@@ -843,7 +962,17 @@ void DrawScene(Shader& shader) {
         doorModel->Draw();
     }
 
-
+	for (Window& window : Scene::_windows) {
+		AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("WindowExterior"));
+		shader.SetMat4("model", window.GetModelMatrix());
+        for (int i = 0; i < AssetManager::GetModel("Window")->_meshes.size(); i++) {
+            Mesh* mesh = &AssetManager::GetModel("Window")->_meshes[i];
+            if (i == 0 || i == 1) {
+                continue;
+            }
+            mesh->Draw();
+        }
+	}
 
     // This is a hack. Fix this.
     AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("Glock"));
@@ -1166,6 +1295,8 @@ void Renderer::HotloadShaders() {
     _shaders.editorTextured.Load("editor_textured.vert", "editor_textured.frag");
     _shaders.bulletDecals.Load("bullet_decals.vert", "bullet_decals.frag");
     _shaders.geometry_instanced.Load("geometry_instanced.vert", "geometry_instanced.frag");
+	_shaders.glass.Load("glass.vert", "glass.frag");
+	_shaders.glassComposite.Load("glass_composite.vert", "glass_composite.frag");
 
     _shaders.compute.Load("res/shaders/compute.comp");
     _shaders.pointCloud.Load("res/shaders/point_cloud.comp");
@@ -1502,6 +1633,9 @@ void DrawInstanced(Mesh& mesh, std::vector<glm::mat4>& matrices) {
 }
 
 void DrawBulletDecals(Player* player) {
+
+	unsigned int attachments[3] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2 };
+	glDrawBuffers(3, attachments);
 
     std::vector<glm::mat4> matrices;
     for (Decal& decal : Scene::_decals) {

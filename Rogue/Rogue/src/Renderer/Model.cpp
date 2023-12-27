@@ -225,6 +225,10 @@ void Model::Load(std::string filepath) {
 			_triangles.push_back(tri);
 		}
 	}*/
+
+	for (int m = 0; m < _meshes.size(); m++) {
+	//	std::cout << m << ": " << _meshes[m]._name << " with " << _meshes[m].vertices.size() << " vertices\n";
+	}
 }
 
 void Model::Draw() {

@@ -18,6 +18,7 @@
 
 enum class EngineMode { Game, Editor } _engineMode;
 int _currentPlayer = 0;
+unsigned int _frameCount = 0;
 
 void ToggleEditor();
 void ToggleFullscreen();
@@ -67,6 +68,14 @@ void Engine::Run() {
         // Render
         TextBlitter::Update(deltaTime);
         if (_engineMode == EngineMode::Game) {
+            
+            _frameCount++;
+
+            // Hack to fix broken physics on first load. TODO: Find out why it's fucked.
+			if (_frameCount == 1) {
+				File::LoadMap("map.txt");
+				Scene::RecreateDataStructures();
+            }
 
             if (Renderer::_viewportMode != FULLSCREEN) {
                 for (Player& player : Scene::_players) {
@@ -92,7 +101,7 @@ void Engine::Run() {
 
 void Engine::Init() {
 
-    std::cout << "We are all alone on life's journey, held captive by the limitations of human conciousness.\n";
+    std::cout << "We are all alone on life's journey, held captive by the limitations of human consciousness.\n";
 
     GL::Init(1920 * 1.5f, 1080 * 1.5f);
     Input::Init();
@@ -100,7 +109,7 @@ void Engine::Init() {
 
     Editor::Init();
     Audio::Init();
-    AssetManager::LoadFont();
+	AssetManager::LoadFont();
     AssetManager::LoadEverythingElse();
 
     File::LoadMap("map.txt");
@@ -141,11 +150,11 @@ void Engine::LazyKeyPresses() {
         Renderer::NextDebugLineRenderMode();
         Audio::PlayAudio("RE_Beep.wav", 0.25f);
     }
-    if (Input::KeyPressed(HELL_KEY_V)) {
-        Renderer::ToggleCollisionWorld();
-        Audio::PlayAudio("RE_Beep.wav", 0.25f);
-    }
-    if (Input::KeyPressed(HELL_KEY_9)) {
+    //if (Input::KeyPressed(HELL_KEY_V)) {
+    //    Renderer::ToggleCollisionWorld();
+    //    Audio::PlayAudio("RE_Beep.wav", 0.25f);
+    //}
+    if (Input::KeyPressed(HELL_KEY_Y)) {
         Renderer::ToggleDrawingProbes();
         Audio::PlayAudio("RE_Beep.wav", 0.25f);
     }
@@ -167,10 +176,10 @@ void Engine::LazyKeyPresses() {
         Scene::CreatePointCloud();
         Audio::PlayAudio("RE_Beep.wav", 0.25f);
     }
-    if (Input::KeyPressed(GLFW_KEY_Y)) {
+    if (Input::KeyPressed(GLFW_KEY_C)) {
         NextPlayer();
     }
-    if (Input::KeyPressed(GLFW_KEY_0)) {
+    if (Input::KeyPressed(GLFW_KEY_V)) {
         NextViewportMode();
     }
     if (Input::KeyPressed(GLFW_KEY_N)) {
@@ -215,16 +224,30 @@ void ToggleFullscreen() {
     Audio::PlayAudio("RE_Beep.wav", 0.25f);
 }
 
+void SpawnPlayer2IfRequired() {
+	// Hack to spawn player 2 in when switching to splitscreen or "NEXT PLAYER" the first time.
+    // Until then, he's in the air 10 meters up so as not to ruin the aesthetics by just standing there like an idiot
+	Player* player = &Scene::_players[_currentPlayer];
+	auto footPostion = player->_characterController->getFootPosition();
+	if (footPostion.y > 5.0f) {
+		footPostion.y = 0.1f;
+		player->_characterController->setFootPosition(footPostion);
+	}
+}
+
 void NextPlayer() {
     _currentPlayer++;
     if (_currentPlayer == Scene::_playerCount) {
         _currentPlayer = 0;
     }
+    
     for (int i = 0; i < Scene::_playerCount; i++) {
         Scene::_players[i]._ignoreControl = (i != _currentPlayer);
     }
     Audio::PlayAudio("RE_Beep.wav", 0.25f);
     std::cout << "Current player is: " << _currentPlayer << "\n";
+
+    SpawnPlayer2IfRequired();
 }
 
 void NextViewportMode() {
@@ -247,4 +270,6 @@ void NextViewportMode() {
     }
     Renderer::RecreateFrameBuffers();
     std::cout << "Current player: " << _currentPlayer << "\n";
+
+	SpawnPlayer2IfRequired();
 }

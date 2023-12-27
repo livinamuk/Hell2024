@@ -282,9 +282,11 @@ void GameObject::Update(float deltaTime) {
 
 glm::mat4 GameObject::GetGameWorldMatrix() {
 	glm::mat4 result = glm::mat4(1);
-	GameObject* parent = Scene::GetGameObjectByName(_parentName);
-	if (parent) {
-		result = parent->GetGameWorldMatrix() * _transform.to_mat4() * _openTransform.to_mat4();
+	if (_parentName != "undefined") {
+		GameObject* parent = Scene::GetGameObjectByName(_parentName);
+		if (parent) {
+			result = parent->GetGameWorldMatrix() * _transform.to_mat4() * _openTransform.to_mat4();
+		}
 	}
 	else {
 		result = _transform.to_mat4();
