@@ -1,7 +1,7 @@
-# HELL ENGINE; rewrite one billion++
+# HELL ENGINE: rewrite one billion++
 
 #### December 27 2023
-This codebase began as a CPU raycaster to explore the possibility a voxel based idea I had for global illumination. The voxel idea didn't working, but rewriting it to use a pointcloud did and here we are. This is now the new Hell Engine, the engine I'm writing a splitscreen roguelike/deathmatch survival horror game.       
+This codebase began as a CPU raycaster to explore the viability of a voxel based idea I had for global illumination. The voxel idea didn't work out in the end, the voxel grid caused lighting artefacts, but rewriting it to use a pointcloud did and here we are. This is now the new Hell Engine, the engine I'm writing to house a splitscreen roguelike/deathmatch survival horror game.       
 
 ![Image](https://www.principiaprogrammatica.com/dump/ChristmasShot.png)
 
