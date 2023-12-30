@@ -21,7 +21,7 @@ C: switch player
 Y: show probes
 
 
-Build in release. Debug doesn't have libs/dlls setup correctly. If you run into any problems just ask.
+Build in release. Debug doesn't have libs/dlls setup correctly.
 ```
 
 #### December 27 2023
