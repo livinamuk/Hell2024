@@ -1,5 +1,10 @@
 # HELL ENGINE: rewrite one billion++
 
+#### December 27 2023
+This codebase began as a CPU raycaster to explore the viability of a voxel based idea I had for global illumination. The voxel idea didn't work out in the end, the voxel grid caused lighting artefacts, but rewriting it to use a pointcloud did and here we are. This is now the new Hell Engine, the engine I'm writing to house a splitscreen roguelike/deathmatch survival horror game.       
+
+![Image](https://www.principiaprogrammatica.com/dump/ChristmasShot.png)
+
 ```
 CONTROLS:
 WSAD: movement
@@ -23,11 +28,6 @@ Y: show probes
 
 Build in release. Debug doesn't have libs/dlls setup correctly.
 ```
-
-#### December 27 2023
-This codebase began as a CPU raycaster to explore the viability of a voxel based idea I had for global illumination. The voxel idea didn't work out in the end, the voxel grid caused lighting artefacts, but rewriting it to use a pointcloud did and here we are. This is now the new Hell Engine, the engine I'm writing to house a splitscreen roguelike/deathmatch survival horror game.       
-
-![Image](https://www.principiaprogrammatica.com/dump/ChristmasShot.png)
 
 #### November 14 2023
 Huge improvements since the entries below. I scrapped the voxel thing entirely because it was causing lighting artefacts for geometry that didn't fit nicely into the voxel grid, most importantly swinging doors. It now calculates direct lighting for an approximated point cloud of the scene which is in turn used to propogate light through a 3D grid to simulate bounced light, both these passes are performed with raytracing in custom compute shaders. I've got skeletal animation too now and we're running realtime baby.     
