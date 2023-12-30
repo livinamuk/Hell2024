@@ -1,5 +1,29 @@
 # HELL ENGINE: rewrite one billion++
 
+```
+CONTROLS:
+WSAD: movement
+Left Mouse: fire
+Space bar:  jump
+Q: cycle weapons
+E: interact
+R: reload
+Left ctrl: crouch
+F: fullscreen
+Z: previous render mode
+X: next render mode
+B: cycle debug lines
+N: reload map
+L: show lights
+P: force realtime indirect lighting updates
+V: splitscreen
+C: switch player
+Y: show probes
+
+
+Build in release. Debug doesn't have libs/dlls setup correctly. If you run into any problems just ask.
+```
+
 #### December 27 2023
 This codebase began as a CPU raycaster to explore the viability of a voxel based idea I had for global illumination. The voxel idea didn't work out in the end, the voxel grid caused lighting artefacts, but rewriting it to use a pointcloud did and here we are. This is now the new Hell Engine, the engine I'm writing to house a splitscreen roguelike/deathmatch survival horror game.       
 
