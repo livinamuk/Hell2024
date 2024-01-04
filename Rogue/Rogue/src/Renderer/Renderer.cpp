@@ -1680,15 +1680,17 @@ void DrawInstanced(Mesh& mesh, std::vector<glm::mat4>& matrices) {
 
 void DrawBulletDecals(Player* player) {
 
-	unsigned int attachments[3] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2 };
-	glDrawBuffers(3, attachments);
+    unsigned int attachments[3] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2 };
+    glDrawBuffers(3, attachments);
 
-  
+    glEnable(GL_CULL_FACE);
+    
+    {
         std::vector<glm::mat4> matrices;
         for (Decal& decal : Scene::_decals) {
-           // if (decal.type == Decal::Type::REGULAR) {
+            if (decal.type == Decal::Type::REGULAR) {
                 matrices.push_back(decal.GetModelMatrix());
-        //    }
+            }
         }
 
         glm::mat4 projection = Renderer::GetProjectionMatrix(_depthOfFieldScene); // 1.0 for weapon, 0.9 for scene.
@@ -1700,13 +1702,15 @@ void DrawBulletDecals(Player* player) {
 
         AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("BulletHole_Plaster"));
 
-        DrawInstanced(AssetManager::GetDecalMesh(), matrices); 
-  
-	/* {
+        DrawInstanced(AssetManager::GetDecalMesh(), matrices);
+    }
+	{
 		std::vector<glm::mat4> matrices;
 		for (Decal& decal : Scene::_decals) {
-			if (decal.type == Decal::Type::GLASS) {
-				matrices.push_back(decal.GetModelMatrix());
+			if (decal.type == Decal::Type::GLASS) {                
+                Transform transform;
+                transform.scale = glm::vec3(2.0f);                
+                matrices.push_back(decal.GetModelMatrix() * transform.to_mat4());
 			}
 		}
 
@@ -1720,7 +1724,7 @@ void DrawBulletDecals(Player* player) {
 		AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("BulletHole_Glass"));
 
 		DrawInstanced(AssetManager::GetDecalMesh(), matrices);
-	}*/
+	}
 }
 
 

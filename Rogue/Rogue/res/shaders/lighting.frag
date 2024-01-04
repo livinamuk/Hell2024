@@ -418,7 +418,7 @@ void main() {
     }
     */
 
-  //  FragColor.rgb = normal;
+   // FragColor.rgb = normal;
 
 //  FragColor.rgb = vec3(normal);
 }

@@ -56,7 +56,7 @@ void Scene::Update(float deltaTime) {
 					// Front glass bullet decal
 					PxRigidBody* parent = actor;
 					glm::mat4 parentMatrix = Util::PxMat44ToGlmMat4(actor->getGlobalPose());
-					glm::vec3 localPosition = glm::inverse(parentMatrix) * glm::vec4(rayResult.hitPosition, 1.0);
+                    glm::vec3 localPosition = glm::inverse(parentMatrix) * glm::vec4(rayResult.hitPosition + (rayResult.surfaceNormal * glm::vec3(00)) , 1.0);
 					glm::vec3 localNormal = glm::inverse(parentMatrix) * glm::vec4(rayResult.surfaceNormal, 0.0);
 					Decal decal(localPosition, localNormal, parent, Decal::Type::GLASS);
 					_decals.push_back(decal);
@@ -66,7 +66,7 @@ void Scene::Update(float deltaTime) {
 					Decal decal2(localPosition, localNormal, parent, Decal::Type::GLASS);
 					_decals.push_back(decal2);
 
-                    //Audio::PlayAudio("GlassImpact.wav", 1.0f);
+                    Audio::PlayAudio("GlassImpact.wav", 3.0f);
 					
 				}
                 else {
@@ -91,10 +91,11 @@ void Scene::Update(float deltaTime) {
             light.isDirty = true;
         }
     }
-
-	// auto ak = GetGameObjectByName("AKS74U_Carlos");
-	// ak->SetRotationY(ak->GetRotationY() - deltaTime * 1.5f);
-
+    /*
+	 auto ak = GetGameObjectByName("AKS74U_Carlos");
+     if (ak) {
+	    // ak->SetRotationY(ak->GetRotationY() - deltaTime * 1.5f);
+     }*/
 
 
 
@@ -192,7 +193,7 @@ void Scene::LoadHardCodedObjects() {
     glockAmmoBox.SetName("GlockAmmoBox");
     glockAmmoBox.SetMeshMaterial("GlockAmmoBox");*/
 
-    /*
+   /*
     GameObject& aks74u = _gameObjects.emplace_back();
     aks74u.SetPosition(2.0f, 1.7f, 3.6f);
     aks74u.SetModel("AKS74U_Carlos");
@@ -207,8 +208,8 @@ void Scene::LoadHardCodedObjects() {
     aks74u.SetMeshMaterialByMeshName("Trigger_low", "AKS74U_2");
     aks74u.SetMeshMaterialByMeshName("MagRelease_low", "AKS74U_2");
     aks74u.SetMeshMaterialByMeshName("Magazine_Housing_low", "AKS74U_3");
-    aks74u.SetMeshMaterialByMeshName("BarrelTip_low", "AKS74U_4");*/
-
+    aks74u.SetMeshMaterialByMeshName("BarrelTip_low", "AKS74U_4");
+    */
 
 	Window& windowA = _windows.emplace_back();
 	windowA.position = glm::vec3(6.15f, 0.1f, 1.6f);

@@ -8,6 +8,7 @@ uniform mat4 projection;
 uniform mat4 view;
 //uniform mat4 model;
 out vec2 TexCoord;
+out vec3 Normal;
 
 layout(std430, binding = 0) readonly buffer decalMatrices {
     mat4 DecalMatrices[];
@@ -16,6 +17,7 @@ layout(std430, binding = 0) readonly buffer decalMatrices {
 
 void main() {
 	TexCoord = aTexCoord;
+	Normal = aNormal;
 
 	mat4 model = DecalMatrices[gl_InstanceID]; 
 
