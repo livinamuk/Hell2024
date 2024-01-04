@@ -133,7 +133,7 @@ namespace TextBlitter {
 				UIRenderInfo renderInfo;
 				renderInfo.centered = false;
 				renderInfo.textureName = "char_" + std::to_string(charPos + 1);
-				renderInfo.screenX = cursor_X - texWidth;
+				renderInfo.screenX = (int)(cursor_X - texWidth);
 				renderInfo.screenY = cursor_Y;
 				Renderer::QueueUIForRendering(renderInfo);
 
@@ -226,7 +226,7 @@ namespace TextBlitter {
 					float texWidth = (float)AssetManager::_charExtents[charPos].width;
 					xcursor += texWidth + _charSpacing;
 				}
-				blitXY.x -= (xcursor / 2);
+				blitXY.x -= (int)(xcursor / 2);
 			}
 
 			color = 0;

@@ -125,6 +125,36 @@ struct Bullet {
 };
 
 
+struct PickUp {
+
+	enum class Type { GLOCK_AMMO = 0};
+
+	Type type;
+	glm::vec3 position;
+	glm::vec3 rotation;
+	std::string parentGameObjectName = "";
+	bool pickedUp = false;
+    float timeSincePickedUp = 0.0f;
+	float respawnTime = 10.0f;
+
+	glm::mat4 GetModelMatrix() {
+		Transform transform;
+		transform.position = position;
+		transform.rotation = rotation;
+		return transform.to_mat4();
+	}
+
+    void Update(float deltaTime) {
+
+        if (pickedUp) {
+            timeSincePickedUp += deltaTime;
+        }
+        if (timeSincePickedUp > respawnTime) {
+            pickedUp = false;
+            timeSincePickedUp = 0;
+        }
+    }
+};
 
 namespace Scene {
 
@@ -134,6 +164,7 @@ namespace Scene {
     inline PxRigidDynamic* _sceneRigidDynamic = NULL;
     inline PxShape* _sceneShape = NULL;
 
+    inline std::vector<PickUp> _pickUps;
     inline std::vector<Bullet> _bullets;
     inline std::vector<BulletCasing> _bulletCasings;
     inline std::vector<Decal> _decals;
@@ -151,10 +182,12 @@ namespace Scene {
     inline std::vector<RTInstance> _rtInstances;
     inline std::vector<Player> _players;
 
-    void Init();
+	void LoadHardCodedObjects();
+	void LoadMap(std::string mapPath);
+	void SaveMap(std::string mapPath);
     void CreatePlayers();
-    void NewScene();
-    void RemoveEverything();
+   // void NewScene();
+    void CleanUp();
     void Update(float deltaTime);
     void LoadLightSetup(int index);
     GameObject* GetGameObjectByName(std::string);
@@ -165,8 +198,9 @@ namespace Scene {
     void AddDoor(Door& door);
     void AddWall(Wall& wall);
     void AddFloor(Floor& floor);
-    void CreateRTInstanceData();
+    void UpdateRTInstanceData();
     void RecreateDataStructures();
     void CreateScenePhysicsObjects();
     void ProcessPhysicsCollisions();
+    void UpdatePhysXUserData();
 }

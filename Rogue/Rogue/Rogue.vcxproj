@@ -143,6 +143,7 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <ClCompile Include="src\Core\GL.cpp" />
     <ClCompile Include="src\Core\Input.cpp" />
     <ClCompile Include="src\Core\Physics.cpp" />
+    <ClCompile Include="src\Core\PickUp.cpp" />
     <ClCompile Include="src\Core\Player.cpp" />
     <ClCompile Include="src\Core\Scene.cpp" />
     <ClCompile Include="src\Core\TextBlitting.cpp" />
@@ -183,6 +184,7 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <ClInclude Include="src\Core\Input.h" />
     <ClInclude Include="src\Core\keycodes.h" />
     <ClInclude Include="src\Core\Physics.h" />
+    <ClInclude Include="src\Core\PickUp.h" />
     <ClInclude Include="src\Core\Player.h" />
     <ClInclude Include="src\Core\Scene.h" />
     <ClInclude Include="src\Core\TextBlitter.h" />
@@ -228,6 +230,7 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <None Include="res\shaders\geometry_instanced.vert" />
     <None Include="res\shaders\glass.frag" />
     <None Include="res\shaders\glass.vert" />
+    <None Include="res\shaders\test.comp" />
     <None Include="res\shaders\glass_composite.frag" />
     <None Include="res\shaders\glass_composite.vert" />
     <None Include="res\shaders\lighting.frag" />

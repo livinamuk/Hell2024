@@ -30,7 +30,9 @@ PxPhysics*              _physics = NULL;
 PxDefaultCpuDispatcher* _dispatcher = NULL;
 PxScene*                _scene = NULL;
 PxMaterial*             _defaultMaterial = NULL;
-ContactReportCallback   _contactReportCallback;
+ContactReportCallback   _contactReportCallback; 
+PxRigidStatic*          _groundPlane = NULL;
+PxShape*                _groundShape = NULL;
 
 void EnableRayCastingForShape(PxShape* shape) {
     PxFilterData filterData = shape->getQueryFilterData();
@@ -246,32 +248,44 @@ void Physics::Init() {
 
 
     
-
-	//PxRigidStatic* groundPlane = PxCreatePlane(*_physics, PxPlane(0, 1, 0, -0.10f), *_defaultMaterial);
-/*	PxRigidStatic* groundPlane = PxCreatePlane(*_physics, PxPlane(0, 1, 0, 0.0f), *_defaultMaterial);
-    _scene->addActor(*groundPlane);
-    PxShape* shape;
-    groundPlane->getShapes(&shape, 1);
-
-    groundPlane->setActorFlag(PxActorFlag::eVISUALIZATION, false);
-
-    PxFilterData filterData;
-    filterData.word0 = RaycastGroup::RAYCAST_DISABLED; // must be disabled or it causes crash in scene::update when it tries to retrieve rigid body flags from this actor 
-    filterData.word1 = CollisionGroup::ENVIROMENT_OBSTACLE;
-    filterData.word2 =
-        CollisionGroup::BULLET_CASING |
-        CollisionGroup::GENERIC_BOUNCEABLE |
-        CollisionGroup::PLAYER;
-    shape->setQueryFilterData(filterData);
-    shape->setSimulationFilterData(filterData); // sim is for ragz
-    */
+    
+    _groundPlane = PxCreatePlane(*_physics, PxPlane(0, 1, 0, 0.0f), *_defaultMaterial);
+    _scene->addActor(*_groundPlane);
+    _groundPlane->getShapes(&_groundShape, 1);
+	PxFilterData filterData;
+	filterData.word0 = RaycastGroup::RAYCAST_DISABLED; // must be disabled or it causes crash in scene::update when it tries to retrieve rigid body flags from this actor 
+	filterData.word1 = CollisionGroup::ENVIROMENT_OBSTACLE;
+	filterData.word2 = CollisionGroup::BULLET_CASING | CollisionGroup::GENERIC_BOUNCEABLE | CollisionGroup::PLAYER;
+	_groundShape->setQueryFilterData(filterData);
+	_groundShape->setSimulationFilterData(filterData); // sim is for ragz   
 
     //EnableRayCastingForShape(shape);
 }
 
+/*
+void Physics::RemoveGroundPlaneFilterData() {
+	PxFilterData filterData;
+    filterData.word0 = 0;
+	filterData.word1 = 0;
+	filterData.word2 = 0;
+	_groundShape->setQueryFilterData(filterData);
+    _groundShape->setSimulationFilterData(filterData);
+}
+
+void Physics::AddGroundPlaneFilterData() {
+	PxFilterData filterData;
+	filterData.word0 = RaycastGroup::RAYCAST_DISABLED; // must be disabled or it causes crash in scene::update when it tries to retrieve rigid body flags from this actor 
+	filterData.word1 = CollisionGroup::ENVIROMENT_OBSTACLE;
+	filterData.word2 = CollisionGroup::BULLET_CASING | CollisionGroup::GENERIC_BOUNCEABLE |	CollisionGroup::PLAYER;
+	_groundShape->setQueryFilterData(filterData);
+	_groundShape->setSimulationFilterData(filterData); // sim is for ragz
+}*/
+
+
 void Physics::StepPhysics(float deltaTime) {   
     //float maxSimulateTime = (1.0f / 60.0f) * 4.0f;
     //_scene->simulate(std::min(deltaTime, maxSimulateTime));
+
     _scene->simulate(deltaTime);
     _scene->fetchResults(true);
 }
@@ -371,4 +385,8 @@ std::vector<CollisionReport>& Physics::GetCollisions() {
 }
 void Physics::ClearCollisionList() {
     _collisionReports.clear();
+}
+
+physx::PxRigidActor* Physics::GetGroundPlane() {
+    return _groundPlane;
 }

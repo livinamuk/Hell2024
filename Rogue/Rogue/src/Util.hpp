@@ -69,6 +69,18 @@ namespace Util {
             result.hitFound = true;
             result.hitActor = hit.block.actor;
 
+            if (hit.block.actor->userData) {
+
+                PhysicsObjectData* physicsObjectData = (PhysicsObjectData*)hit.block.actor->userData;
+                result.physicsObjectType = physicsObjectData->type;
+                result.parent = physicsObjectData->parent;
+
+            }
+            else {
+                result.physicsObjectType == UNDEFINED;
+             //   std::cout << "no user data\n";
+            }
+
             /*EntityData* hitEntityData = (EntityData*)hit.block.actor->userData;
              m_parent = hitEntityData->parent;
              m_physicsObjectType = hitEntityData->type;*/
@@ -335,7 +347,8 @@ namespace Util {
         float x = (inValue - minInRange) / (float)(maxInRange - minInRange);
         return minOutRange + (maxOutRange - minOutRange) * x;
     }*/
-
+    
+    /*
     inline void AnyHit(glm::vec3 rayOrigin, glm::vec3 rayDirection, float maxDistance, std::vector<Triangle>& triangles, RayCastResult& out, bool ignoreBackFacing = true) {
 
         for (Triangle& triangle : triangles) {
@@ -360,9 +373,9 @@ namespace Util {
             }
             out.rayCount++;
         }
-    }
+    }*/
 
-
+    /*
     inline void EvaluateRaycasts(glm::vec3 rayOrigin, glm::vec3 rayDirection, float maxDistance, std::vector<Triangle>& triangles, RaycastObjectType parentType, glm::mat4 parentMatrix, RayCastResult& out, void* parent, bool ignoreBackFacing = true) {
         glm::mat4 inverseTransform = glm::inverse(parentMatrix);
 
@@ -392,7 +405,7 @@ namespace Util {
             }
             out.rayCount++;
         }
-    }
+    }*/
 
     inline FileInfo GetFileInfo(std::string filepath) {
         // isolate name
@@ -400,7 +413,7 @@ namespace Util {
         filename = filename.substr(0, filename.length() - 4);
         // isolate filetype
         std::string filetype = filepath.substr(filepath.length() - 3);
-        // isolate direcetory
+        // isolate directory
         std::string directory = filepath.substr(0, filepath.rfind("/") + 1);
         // material name
         std::string materialType = "NONE";

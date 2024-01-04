@@ -373,22 +373,20 @@ void main() {
 
 
         
-        // vignette         
+        // Vignette         
         uv = gl_FragCoord.xy / vec2(screenWidth * 1, screenHeight * 1);
         uv *=  1.0 - uv.yx;           
         float vig = uv.x*uv.y * 15.0; // multiply with sth for intensity    
         vig = pow(vig, 0.05); // change pow for modifying the extend of the  vignette    
         FragColor.rgb *= vec3(vig);
 
-                // Brightness and contrast
-	    float contrast = 1.6;
-	    float brightness = -0.09999;
+        // Contrast
+	    float contrast = 1.5;
         vec3 finalColor = FragColor.rgb;
 	    FragColor.rgb = FragColor.rgb * contrast;
-	    //FragColor.rgb = FragColor.rgb + vec3(brightness);
-        FragColor.rgb -= vec3(0.075);
-        FragColor.g += 0.0025;
-        FragColor.a = 1;
+
+        // Brightness
+        FragColor.rgb -= vec3(0.085);
 
 
     //FragColor.rgb = vec3(0);
@@ -421,4 +419,6 @@ void main() {
     */
 
   //  FragColor.rgb = normal;
+
+//  FragColor.rgb = vec3(normal);
 }

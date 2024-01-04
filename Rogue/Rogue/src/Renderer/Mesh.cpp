@@ -61,7 +61,7 @@ void Mesh::CreateTriangleMesh() {
     }
     if (pxindices.size()) {
         _triangleMesh = Physics::CreateTriangleMesh(pxvertices.size(), pxvertices.data(), pxindices.size() / 3, pxindices.data());
-        std::cout << "Created triangle mesh for " << _name << "\n";
+        //std::cout << "Created triangle mesh for " << _name << "\n";
     }
 }
 
@@ -82,6 +82,6 @@ void Mesh::CreateConvexMesh() {
     }
     if (pxvertices.size()) {
         _convexMesh = Physics::CreateConvexMesh(pxvertices.size(), pxvertices.data());
-        std::cout << "Created convex mesh for " << _name << " with " << pxvertices.size() << " vertices\n";
+        //std::cout << "Created convex mesh for " << _name << " with " << pxvertices.size() << " vertices\n";
     }
 }

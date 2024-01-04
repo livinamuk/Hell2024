@@ -66,7 +66,7 @@ void AssetManager::LoadEverythingElse() {
 		FileInfo info = Util::GetFileInfo(entry);
 		if (info.filetype == "obj") {
 			Model& model = _models.emplace_back(Model());
-			std::cout << "loading " << info.fullpath << "\n";
+			std::cout << "Loading " << info.fullpath << "\n";
 			model.Load(info.fullpath);
 		}
 	}
@@ -150,14 +150,14 @@ void AssetManager::LoadEverythingElse() {
 	FbxImporter::LoadAnimation(knife, "animations/Knife_Swing3.fbx");
 
 
-	SkinnedModel& shotgun = _skinnedModels.emplace_back(SkinnedModel());
+	/*SkinnedModel& shotgun = _skinnedModels.emplace_back(SkinnedModel());
 	FbxImporter::LoadSkinnedModel("models/Shotgun.fbx", shotgun);
 	FbxImporter::LoadAnimation(shotgun, "animations/Shotgun_Idle.fbx");
 	FbxImporter::LoadAnimation(shotgun, "animations/Shotgun_Walk.fbx");
 	FbxImporter::LoadAnimation(shotgun, "animations/Shotgun_Draw.fbx");
 	FbxImporter::LoadAnimation(shotgun, "animations/Shotgun_Fire1.fbx");
 	FbxImporter::LoadAnimation(shotgun, "animations/Shotgun_Fire2.fbx");
-	FbxImporter::LoadAnimation(shotgun, "animations/Shotgun_Fire3.fbx");
+	FbxImporter::LoadAnimation(shotgun, "animations/Shotgun_Fire3.fbx");*/
 }
 
 Texture* AssetManager::GetTexture(const std::string& filename) {

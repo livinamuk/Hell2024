@@ -54,8 +54,9 @@ struct Shaders {
 	Shader glass;
     Shader glassComposite;
     ComputeShader compute;
-    ComputeShader pointCloud;
-    ComputeShader propogateLight;
+	ComputeShader pointCloud;
+	ComputeShader propogateLight;
+	ComputeShader computeTest;
     //ComputeShader propogationList;
     //ComputeShader calculateIndirectDispatchSize;
 } _shaders;
@@ -85,6 +86,7 @@ struct Toggles {
     bool drawProbes = false;
     bool drawLines = false;
     bool drawRagdolls = false;
+    bool drawDebugText = false;
 } _toggles;
 
 struct PlayerRenderTarget {
@@ -141,6 +143,7 @@ std::vector<glm::mat4> _aks74uMatrices;
 enum RenderMode { COMPOSITE, DIRECT_LIGHT, INDIRECT_LIGHT, POINT_CLOUD, MODE_COUNT } _mode;
 enum DebugLineRenderMode { SHOW_NO_LINES, PHYSX_ALL, PHYSX_RAYCAST, PHYSX_COLLISION, RAYTRACE_LAND, DEBUG_LINE_MODE_COUNT} _debugLineRenderMode;
 
+void DrawHud(Player* player);
 void DrawScene(Shader& shader);
 void DrawAnimatedScene(Shader& shader, Player* player);
 void DrawShadowMapScene(Shader& shader);
@@ -218,17 +221,10 @@ void GlassPass(Player* player) {
 
 	//glDisable(GL_CULL_FACE);
 	for (Window& window : Scene::_windows) {
-	//	AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("Glock"));
 		_shaders.glass.SetMat4("model", window.GetModelMatrix());
         AssetManager::GetModel("Glass")->Draw();
-
-		/*for (int i = 0; i < AssetManager::GetModel("Window")->_meshes.size(); i++) {
-			Mesh* mesh = &AssetManager::GetModel("Window")->_meshes[i];
-			if (i == 0 || i == 1) {
-				mesh->Draw();
-			}
-		}*/
 	}
+
 
 	_shaders.glassComposite.Use();
 	glActiveTexture(GL_TEXTURE0);
@@ -265,7 +261,7 @@ void Renderer::Init() {
     glGenVertexArrays(1, &_pointLineVAO);
     glGenBuffers(1, &_pointLineVBO);
     glPointSize(2);
-        
+            
     _shaders.solidColor.Load("solid_color.vert", "solid_color.frag");
     _shaders.shadowMap.Load("shadowmap.vert", "shadowmap.frag", "shadowmap.geom");
     _shaders.UI.Load("ui.vert", "ui.frag");
@@ -283,6 +279,7 @@ void Renderer::Init() {
 	_shaders.bulletDecals.Load("bullet_decals.vert", "bullet_decals.frag");
 	_shaders.glass.Load("glass.vert", "glass.frag");
 	_shaders.glassComposite.Load("glass_composite.vert", "glass_composite.frag");
+	_shaders.computeTest.Load("res/shaders/test.comp");
     
 
     _cubeMesh = MeshUtil::CreateCube(1.0f, 1.0f, true);
@@ -371,7 +368,12 @@ void Renderer::RenderFrame(Player* player) {
         glBindTexture(GL_TEXTURE_3D, _progogationGridTexture);
         glBindVertexArray(_cubeMesh.GetVAO());
         glDrawElementsInstanced(GL_TRIANGLES, _cubeMesh.GetIndexCount(), GL_UNSIGNED_INT, 0, count);
-    }
+	}
+
+    // HUD
+    glDisable(GL_DEPTH_TEST);
+	glDrawBuffer(GL_COLOR_ATTACHMENT3);
+	DrawHud(player);
 
     // Blit final image from large FBO down into a smaller FBO
     glBindFramebuffer(GL_READ_FRAMEBUFFER, gBuffer.GetID());
@@ -403,7 +405,7 @@ void Renderer::RenderFrame(Player* player) {
         texture = "CrosshairSquare";
     }
     QueueUIForRendering(texture, presentFrameBuffer.GetWidth() / 2, presentFrameBuffer.GetHeight() / 2, true);
-   
+
     /*if (Scene::_cameraRayData.found) {
         if (Scene::_cameraRayData.raycastObjectType == RaycastObjectType::WALLS) {
             TextBlitter::_debugTextToBilt += "Ray hit: WALL\n";
@@ -419,17 +421,21 @@ void Renderer::RenderFrame(Player* player) {
 
 	TextBlitter::_debugTextToBilt += "View pos: " + Util::Vec3ToString(player->GetViewPos()) + "\n";
 	TextBlitter::_debugTextToBilt += "View rot: " + Util::Vec3ToString(player->GetViewRotation()) + "\n";
-	TextBlitter::_debugTextToBilt += "Grounded: " + std::to_string(Scene::_players[0]._isGrounded) + "\n";
-	TextBlitter::_debugTextToBilt += "Y vel: " + std::to_string(Scene::_players[0]._yVelocity) + "\n";
-
+	//TextBlitter::_debugTextToBilt += "Grounded: " + std::to_string(Scene::_players[0]._isGrounded) + "\n";
+	//TextBlitter::_debugTextToBilt += "Y vel: " + std::to_string(Scene::_players[0]._yVelocity) + "\n";
+    //TextBlitter::_debugTextToBilt = "";
     
+    if (!_toggles.drawDebugText) {
+        TextBlitter::_debugTextToBilt = "";
+    }
 
-   // TextBlitter::_debugTextToBilt = "";
     glBindFramebuffer(GL_FRAMEBUFFER, presentFrameBuffer.GetID());
     glViewport(0, 0, presentFrameBuffer.GetWidth(), presentFrameBuffer.GetHeight());
     glDisable(GL_DEPTH_TEST);
     glDisable(GL_CULL_FACE);
     Renderer::RenderUI();
+
+
 
     // Blit that smaller FBO into the main frame buffer 
     if (_viewportMode == FULLSCREEN) {
@@ -472,6 +478,50 @@ void Renderer::RenderFrame(Player* player) {
     for (Light& light : Scene::_lights) {
         light.isDirty = false;
     }
+}
+
+
+void DrawHud(Player* player) {
+
+	int playerIndex = GetPlayerIndexFromPlayerPointer(player);
+	PlayerRenderTarget& playerRenderTarget = GetPlayerRenderTarget(playerIndex);
+	GBuffer& gBuffer = playerRenderTarget.gBuffer;
+
+	_shaders.UI.Use();
+	_shaders.UI.SetMat4("model", glm::mat4(1));
+    AssetManager::GetTexture("NumSheet")->Bind(0);
+
+	float scale = 1.1f;
+	unsigned int slashXPos = gBuffer.GetWidth() - 180.0f;
+    unsigned int slashYPos = gBuffer.GetHeight() - 120.0f;
+	float viewportWidth = gBuffer.GetWidth();
+	float viewportHeight = gBuffer.GetHeight();
+
+    if (Renderer::_viewportMode == SPLITSCREEN) {
+        slashYPos = gBuffer.GetHeight() - 70.0f;
+        scale = 1.05f;
+    }
+    glm::vec3 ammoColor = glm::vec3(0.16f, 0.78f, 0.23f);
+
+    /*
+	int Player::GetCurrentWeaponClipAmmo() {
+	int Player::GetCurrentWeaponTotalAmmo() {
+    */
+
+    if (player->GetCurrentWeaponIndex() == Weapon::KNIFE) {
+        return;
+    }
+
+    std::string clipAmmo = std::to_string(player->GetCurrentWeaponClipAmmo());
+    std::string totalAmmo = std::to_string(player->GetCurrentWeaponTotalAmmo());
+
+
+
+	_shaders.UI.SetVec3("color", ammoColor);
+	NumberBlitter::Draw(clipAmmo.c_str(), slashXPos - 4, slashYPos, viewportWidth, viewportHeight, scale, NumberBlitter::Justification::RIGHT);
+	_shaders.UI.SetVec3("color", WHITE);
+	NumberBlitter::Draw("/", slashXPos, slashYPos, viewportWidth, viewportHeight, scale, NumberBlitter::Justification::LEFT);
+	NumberBlitter::Draw(totalAmmo.c_str(), slashXPos + 17, slashYPos, viewportWidth, viewportHeight, scale * 0.8f, NumberBlitter::Justification::LEFT);
 }
 
 void GeometryPass(Player* player) {
@@ -729,6 +779,12 @@ void DebugPass(Player* player) {
         std::vector<PxRigidActor*> actors(nbActors);
         scene->getActors(PxActorTypeFlag::eRIGID_DYNAMIC | PxActorTypeFlag::eRIGID_STATIC, reinterpret_cast<PxActor**>(&actors[0]), nbActors);
         for (PxRigidActor* actor : actors) {
+
+			if (actor == Physics::GetGroundPlane()) {
+				actor->setActorFlag(PxActorFlag::eVISUALIZATION, false);
+                continue;
+            }
+
             PxShape* shape;
             actor->getShapes(&shape, 1);
             actor->setActorFlag(PxActorFlag::eVISUALIZATION, true);
@@ -755,42 +811,6 @@ void DebugPass(Player* player) {
             _debugLineRenderMode == DebugLineRenderMode::PHYSX_COLLISION ||
             _debugLineRenderMode == DebugLineRenderMode::PHYSX_RAYCAST) {
 
-
-/*
-        //    Physics::EnableRigidBodyDebugLines(Scene::_sceneRigidDynamic);
-
-            for (BulletCasing& casing : Scene::_bulletCasings) {
-                if (casing.HasActivePhysics()) {
-                 //   Physics::EnableRigidBodyDebugLines(casing.rigidBody);
-                }
-            }
-            for (Door& door : Scene::_doors) {
-                Physics::EnableRigidBodyDebugLines(door.collisionBody);
-                //Physics::EnableRigidBodyDebugLines(door.raycastBody);
-            }
-            glm::vec3 color = GREEN;
-
-            if (_debugLineRenderMode == DebugLineRenderMode::PHYSX_COLLISION) {
-                color = LIGHT_BLUE;
-                for (BulletCasing& casing : Scene::_bulletCasings) {
-
-                }
-                for (Door& door : Scene::_doors) {
-                    //Physics::DisableRigidBodyDebugLines(door.raycastBody);
-                }
-            }
-            else if (_debugLineRenderMode == DebugLineRenderMode::PHYSX_RAYCAST) {
-                
-                for (BulletCasing& casing : Scene::_bulletCasings) {
-                    if (casing.HasActivePhysics()) {
-                  //      Physics::DisableRigidBodyDebugLines(casing.rigidBody);
-                    }
-                }
-                for (Door& door : Scene::_doors) {
-                    Physics::DisableRigidBodyDebugLines(door.collisionBody);
-                }
-            }
-            */
             _lines.clear();
             _shaders.solidColor.Use();
             _shaders.solidColor.SetBool("uniformColor", false);
@@ -814,6 +834,7 @@ void DebugPass(Player* player) {
             _shaders.solidColor.SetBool("uniformColor", true);
             _shaders.solidColor.SetVec3("color", YELLOW);
             _shaders.solidColor.SetMat4("model", glm::mat4(1));
+
             for (RTInstance& instance : Scene::_rtInstances) {
                 RTMesh& mesh = Scene::_rtMesh[instance.meshIndex];
 
@@ -889,10 +910,10 @@ void Renderer::RecreateFrameBuffers(int currentPlayer) {
         
     }
 
-	std::cout << "Player count: " << playerCount << "\n";
+	//std::cout << "Player count: " << playerCount << "\n";
 	std::cout << "Render Size: " << width * 2 << " x " << height * 2 << "\n";
     std::cout << "Present Size: " << width << " x " << height << "\n";
-    std::cout << "PlayerRenderTarget Count: " << _playerRenderTargets.size() << "\n";
+    //std::cout << "PlayerRenderTarget Count: " << _playerRenderTargets.size() << "\n";
 }
 
 void DrawScene(Shader& shader) {
@@ -901,7 +922,7 @@ void DrawScene(Shader& shader) {
     AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("Ceiling"));
     //AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("NumGrid"));
     for (Wall& wall : Scene::_walls) {
-     //   AssetManager::BindMaterialByIndex(wall.materialIndex);
+        AssetManager::BindMaterialByIndex(wall.materialIndex);
         wall.Draw();
     }
 
@@ -918,22 +939,37 @@ void DrawScene(Shader& shader) {
     }
 
     static int trimCeilingMaterialIndex = AssetManager::GetMaterialIndex("Trims");
-    static int trimFloorMaterialIndex = AssetManager::GetMaterialIndex("Door");
+	static int trimFloorMaterialIndex = AssetManager::GetMaterialIndex("Door");
+	static int ceilingMaterialIndex = AssetManager::GetMaterialIndex("Ceiling");
+	static int wallPaperMaterialIndex = AssetManager::GetMaterialIndex("WallPaper");
 
     // Ceiling trims
    AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("Ceiling"));
     for (Wall& wall : Scene::_walls) {
-        for (auto& transform : wall.ceilingTrims) {
-            shader.SetMat4("model", transform.to_mat4());
+		for (auto& transform : wall.ceilingTrims) {
+			shader.SetMat4("model", transform.to_mat4());
+			if (wall.materialIndex == ceilingMaterialIndex) {
+				AssetManager::BindMaterialByIndex(ceilingMaterialIndex);
+			}
+			else if (wall.materialIndex == wallPaperMaterialIndex) {
+				AssetManager::BindMaterialByIndex(trimCeilingMaterialIndex);
+			}
             AssetManager::GetModel("TrimCeiling")->Draw();
         }
     } 
     // Floor trims
     AssetManager::BindMaterialByIndex(trimFloorMaterialIndex);
     for (Wall& wall : Scene::_walls) {
-        for (auto& transform : wall.floorTrims) {
-            shader.SetMat4("model", transform.to_mat4());
-            AssetManager::GetModel("TrimFloor")->Draw();
+		for (auto& transform : wall.floorTrims) {
+			shader.SetMat4("model", transform.to_mat4());
+			if (wall.materialIndex == ceilingMaterialIndex) {
+				AssetManager::BindMaterialByIndex(ceilingMaterialIndex);
+				AssetManager::GetModel("TrimFloor2")->Draw();
+			}
+			else if (wall.materialIndex == wallPaperMaterialIndex) {
+				AssetManager::BindMaterialByIndex(trimCeilingMaterialIndex);
+				AssetManager::GetModel("TrimFloor")->Draw();
+			}
         }
     }
 
@@ -951,6 +987,31 @@ void DrawScene(Shader& shader) {
         }
     }
 
+    // Render pickups
+    for (PickUp& pickup : Scene::_pickUps) {
+
+        if (pickup.pickedUp) {
+            continue;
+        }
+
+        if (pickup.type == PickUp::Type::GLOCK_AMMO) {
+
+            glm::mat4 parentMatrix = glm::mat4(1);
+
+            if (pickup.parentGameObjectName != "") {
+                parentMatrix = Scene::GetGameObjectByName(pickup.parentGameObjectName)->GetModelMatrix();
+            }
+
+			shader.SetMat4("model", parentMatrix * pickup.GetModelMatrix());
+            
+            AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("GlockAmmoBox"));
+            AssetManager::GetModel("GlockAmmoBox")->Draw();
+        }
+    }
+
+
+
+
     for (Door& door : Scene::_doors) {
 
         AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("Door"));
@@ -964,15 +1025,16 @@ void DrawScene(Shader& shader) {
     }
 
 	for (Window& window : Scene::_windows) {
-		AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("WindowExterior"));
 		shader.SetMat4("model", window.GetModelMatrix());
-        for (int i = 0; i < AssetManager::GetModel("Window")->_meshes.size(); i++) {
-            Mesh* mesh = &AssetManager::GetModel("Window")->_meshes[i];
-            if (i == 0 || i == 1) {
-                continue;
-            }
-            mesh->Draw();
-        }
+		AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("Window"));
+		AssetManager::GetModel("Window")->_meshes[0].Draw();
+		AssetManager::GetModel("Window")->_meshes[1].Draw();
+		AssetManager::GetModel("Window")->_meshes[2].Draw();
+		AssetManager::GetModel("Window")->_meshes[3].Draw();
+		AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("WindowExterior"));
+		AssetManager::GetModel("Window")->_meshes[4].Draw();
+		AssetManager::GetModel("Window")->_meshes[5].Draw();
+		AssetManager::GetModel("Window")->_meshes[6].Draw();
 	}
 
     // This is a hack. Fix this.
@@ -988,7 +1050,7 @@ void DrawScene(Shader& shader) {
 
 
     // Draw physics objects
-
+    /*
     // remove everything below here soon
     PxScene* scene = Physics::GetScene();
     PxU32 nbActors = scene->getNbActors(PxActorTypeFlag::eRIGID_DYNAMIC | PxActorTypeFlag::eRIGID_STATIC);
@@ -1029,28 +1091,10 @@ void DrawScene(Shader& shader) {
                     AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("Ceiling"));
                    // AssetManager::GetModel("Cube").Draw();
                 }
-
-             /*   if (shape->getQueryFilterData().word3 == PhysicsObjectType::CASING_PROJECTILE_GLOCK) {
-                    Transform localTransform;
-                    localTransform.scale *= glm::vec3(2.0f);
-                    glm::mat4 model = Util::PxMat44ToGlmMat4(actor->getGlobalPose()) * localTransform.to_mat4();
-                    shader.SetMat4("model", model);
-                    AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("BulletCasing"));
-                    AssetManager::GetModel("BulletCasing").Draw();
-                }
-
-                if (shape->getQueryFilterData().word3 == PhysicsObjectType::CASING_PROJECTILE_AKS74U) {
-                    Transform localTransform;
-                    localTransform.scale *= glm::vec3(2.0f);
-                    glm::mat4 model = Util::PxMat44ToGlmMat4(actor->getGlobalPose()) * localTransform.to_mat4();
-                    shader.SetMat4("model", model);
-                    AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("Casing_AkS74U"));
-                    AssetManager::GetModel("BulletCasing_AK").Draw();
-                }*/
             }
         }
     }
-
+    */
 
 /*
     Player& player = Scene::_players[0];
@@ -1150,7 +1194,6 @@ void DrawAnimatedObject(Shader& shader, AnimatedGameObject* animatedGameObject) 
         maleHands = !maleHands;
     }
 
-    glEnable(GL_CULL_FACE);
 
     SkinnedModel& skinnedModel = *animatedGameObject->_skinnedModel;
     glBindVertexArray(skinnedModel.m_VAO);
@@ -1301,9 +1344,8 @@ void Renderer::HotloadShaders() {
 
     _shaders.compute.Load("res/shaders/compute.comp");
     _shaders.pointCloud.Load("res/shaders/point_cloud.comp");
-    _shaders.propogateLight.Load("res/shaders/propogate_light.comp");
-    //_shaders.propogationList.Load("res/shaders/propogation_list.comp");
-    //_shaders.calculateIndirectDispatchSize.Load("res/shaders/calculate_inidrect_dispatch_size.comp");
+	_shaders.propogateLight.Load("res/shaders/propogate_light.comp");
+	_shaders.computeTest.Load("res/shaders/test.comp");
 }
 
 void Renderer::RenderEditorFrame() {
@@ -1377,7 +1419,10 @@ void Renderer::ToggleDrawingLines() {
     _toggles.drawLines = !_toggles.drawLines;
 }
 void Renderer::ToggleDrawingRagdolls() {
-    _toggles.drawRagdolls = !_toggles.drawRagdolls;
+	_toggles.drawRagdolls = !_toggles.drawRagdolls;
+}
+void Renderer::ToggleDebugText() {
+	_toggles.drawDebugText = !_toggles.drawDebugText;
 }
 
 
@@ -1638,21 +1683,44 @@ void DrawBulletDecals(Player* player) {
 	unsigned int attachments[3] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2 };
 	glDrawBuffers(3, attachments);
 
-    std::vector<glm::mat4> matrices;
-    for (Decal& decal : Scene::_decals) {
-        matrices.push_back(decal.GetModelMatrix());
-    }
+  
+        std::vector<glm::mat4> matrices;
+        for (Decal& decal : Scene::_decals) {
+           // if (decal.type == Decal::Type::REGULAR) {
+                matrices.push_back(decal.GetModelMatrix());
+        //    }
+        }
 
-    glm::mat4 projection = Renderer::GetProjectionMatrix(_depthOfFieldScene); // 1.0 for weapon, 0.9 for scene.
-    glm::mat4 view = player->GetViewMatrix();
+        glm::mat4 projection = Renderer::GetProjectionMatrix(_depthOfFieldScene); // 1.0 for weapon, 0.9 for scene.
+        glm::mat4 view = player->GetViewMatrix();
 
-    _shaders.bulletDecals.Use();
-    _shaders.bulletDecals.SetMat4("projection", projection);
-    _shaders.bulletDecals.SetMat4("view", view);
+        _shaders.bulletDecals.Use();
+        _shaders.bulletDecals.SetMat4("projection", projection);
+        _shaders.bulletDecals.SetMat4("view", view);
 
-    AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("BulletHole_Plaster"));
+        AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("BulletHole_Plaster"));
 
-    DrawInstanced(AssetManager::GetDecalMesh(), matrices);
+        DrawInstanced(AssetManager::GetDecalMesh(), matrices); 
+  
+	/* {
+		std::vector<glm::mat4> matrices;
+		for (Decal& decal : Scene::_decals) {
+			if (decal.type == Decal::Type::GLASS) {
+				matrices.push_back(decal.GetModelMatrix());
+			}
+		}
+
+		glm::mat4 projection = Renderer::GetProjectionMatrix(_depthOfFieldScene); // 1.0 for weapon, 0.9 for scene.
+		glm::mat4 view = player->GetViewMatrix();
+
+		_shaders.bulletDecals.Use();
+		_shaders.bulletDecals.SetMat4("projection", projection);
+		_shaders.bulletDecals.SetMat4("view", view);
+
+		AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("BulletHole_Glass"));
+
+		DrawInstanced(AssetManager::GetDecalMesh(), matrices);
+	}*/
 }
 
 
@@ -1795,8 +1863,8 @@ void InitCompute() {
     Renderer::CreatePointCloudBuffer();
     Renderer::CreateTriangleWorldVertexBuffer();
     
-    std::cout << "Point cloud has " << Scene::_cloudPoints.size() << " points\n";
-    std::cout << "Propagation grid has " << (_mapWidth * _mapHeight * _mapDepth / _propogationGridSpacing) << " cells\n";
+   // std::cout << "Point cloud has " << Scene::_cloudPoints.size() << " points\n";
+   // std::cout << "Propagation grid has " << (_mapWidth * _mapHeight * _mapDepth / _propogationGridSpacing) << " cells\n";
 
     // Propogation List
    /*glGenBuffers(1, &_ssbos.propogationList);
@@ -1824,17 +1892,26 @@ void Renderer::CreateTriangleWorldVertexBuffer() {
     glBufferStorage(GL_SHADER_STORAGE_BUFFER, Scene::_rtMesh.size() * sizeof(RTMesh), &Scene::_rtMesh[0], GL_DYNAMIC_STORAGE_BIT);
     glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
 
-    std::cout << "You are raytracing against " << (vertices.size() / 3) << " tris\n";
-    std::cout << "You are raytracing " << Scene::_rtMesh.size() << " mesh\n";
+    //std::cout << "You are raytracing against " << (vertices.size() / 3) << " tris\n";
+    //std::cout << "You are raytracing " << Scene::_rtMesh.size() << " mesh\n";
 }
 
 void ComputePass() {
+    if (Scene::_rtInstances.empty()) {
+        return;
+    }
     // Update RT Instances
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, _ssbos.rtInstances);
     glBufferData(GL_SHADER_STORAGE_BUFFER, Scene::_rtInstances.size() * sizeof(RTInstance), &Scene::_rtInstances[0], GL_DYNAMIC_COPY);
     glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
     UpdatePointCloudLighting();
     UpdatePropogationgGrid();
+
+	// Composite
+	//_shaders.computeTest.Use();
+	//glBindImageTexture(0, gBuffer._gLightingTexture, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA16F);
+	//glDispatchCompute(gBuffer.GetWidth() / 8, gBuffer.GetHeight() / 8, 1);
+	//glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 }
 
 void UpdatePointCloudLighting() {
@@ -1873,7 +1950,7 @@ void FindProbeCoordsWithinMapBounds() {
     _probeCoordsWithinMapBounds.clear();
     _probeWorldPositionsWithinMapBounds.clear();
 
-    Timer t("FindProbeCoordsWithinMapBounds()");
+    //Timer t("FindProbeCoordsWithinMapBounds()");
 
     // Build a list of floor/ceiling vertices
     std::vector<glm::vec4> floorVertices;
@@ -1940,7 +2017,7 @@ void FindProbeCoordsWithinMapBounds() {
         }
     }
 
-    std::cout << "There are " << _probeCoordsWithinMapBounds.size() << " probes within rooms\n";    
+    //std::cout << "There are " << _probeCoordsWithinMapBounds.size() << " probes within rooms\n";    
 }
 
 void UpdatePropogationgGrid() {

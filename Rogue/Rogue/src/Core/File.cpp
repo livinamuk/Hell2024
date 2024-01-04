@@ -33,8 +33,6 @@ namespace File {
 
 void File::LoadMap(std::string mapName) {
 
-	Scene::Init();
-
 	FILE* filepoint;
 	errno_t err;
 	std::string fileName = "res/maps/" + mapName;

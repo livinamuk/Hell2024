@@ -23,6 +23,7 @@ namespace Renderer {
 	void ToggleDrawingProbes();
 	void ToggleDrawingLines();
 	void ToggleDrawingRagdolls();
+	void ToggleDebugText();
 
 	int GetRenderWidth();
 	int GetRenderHeight();

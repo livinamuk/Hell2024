@@ -7,6 +7,7 @@
 #include "AssetManager.h"
 #include "../Renderer/Renderer.h"
 #include "Input.h"
+#include "File.h"
 #include "Player.h"
 #include "Audio.hpp"
 #include "TextBlitter.h"
@@ -21,26 +22,65 @@ void Scene::Update(float deltaTime) {
         bulletCasing.Update(deltaTime);
     }
 
-    // Process unprocessed bullets
-    for (Bullet& bullet : _bullets) {
+	for (PickUp& pickUp : _pickUps) {
+        pickUp.Update(deltaTime);
+	}
+
+
+	// Process unprocessed bullets
+	//for (Bullet& bullet : _bullets) {
+    for (int i = 0; i < _bullets.size(); i++) {
+
+        Bullet& bullet = _bullets[i];
 
         PhysXRayResult rayResult = Util::CastPhysXRay(bullet.spawnPosition, bullet.direction, 1000);
         if (rayResult.hitFound) {
-
+            
             PxRigidDynamic* actor = (PxRigidDynamic*)rayResult.hitActor;
             if (actor->userData) {
-                GameObject* gameObject = (GameObject*)actor->userData;
-                gameObject->AddForceToCollisionObject(bullet.direction, 75);
-                std::cout << "adding force\n";
+                PhysicsObjectData* physicsObjectData = (PhysicsObjectData*)actor->userData;				
+                if (physicsObjectData->type == GAME_OBJECT) {
+					GameObject* gameObject = (GameObject*)physicsObjectData->parent;
+					gameObject->AddForceToCollisionObject(bullet.direction, 75);
+				}
+
+				if (physicsObjectData->type == GLASS) {
+
+                    std::cout << "you shot glass\n";
+
+                    Bullet newBullet;
+                    newBullet.direction = bullet.direction;
+                    newBullet.spawnPosition = rayResult.hitPosition + (bullet.direction * glm::vec3(0.5f));
+                    _bullets.push_back(newBullet);
+
+					// Front glass bullet decal
+					PxRigidBody* parent = actor;
+					glm::mat4 parentMatrix = Util::PxMat44ToGlmMat4(actor->getGlobalPose());
+					glm::vec3 localPosition = glm::inverse(parentMatrix) * glm::vec4(rayResult.hitPosition, 1.0);
+					glm::vec3 localNormal = glm::inverse(parentMatrix) * glm::vec4(rayResult.surfaceNormal, 0.0);
+					Decal decal(localPosition, localNormal, parent, Decal::Type::GLASS);
+					_decals.push_back(decal);
+
+                    // Back glass bullet decal
+					localNormal = glm::inverse(parentMatrix) * glm::vec4(rayResult.surfaceNormal * glm::vec3(-1), 0.0);
+					Decal decal2(localPosition, localNormal, parent, Decal::Type::GLASS);
+					_decals.push_back(decal2);
+
+                    //Audio::PlayAudio("GlassImpact.wav", 1.0f);
+					
+				}
+                else {
+					// Bullet decal
+					PxRigidBody* parent = actor;
+					glm::mat4 parentMatrix = Util::PxMat44ToGlmMat4(actor->getGlobalPose());
+					glm::vec3 localPosition = glm::inverse(parentMatrix) * glm::vec4(rayResult.hitPosition, 1.0);
+					glm::vec3 localNormal = glm::inverse(parentMatrix) * glm::vec4(rayResult.surfaceNormal, 0.0);
+					Decal decal(localPosition, localNormal, parent, Decal::Type::REGULAR);
+					_decals.push_back(decal);
+                }
+
             }
 
-            // Bullet decal
-            PxRigidBody* parent = actor;
-            glm::mat4 parentMatrix = Util::PxMat44ToGlmMat4(actor->getGlobalPose());
-            glm::vec3 localPosition = glm::inverse(parentMatrix) * glm::vec4(rayResult.hitPosition, 1.0);
-            glm::vec3 localNormal = glm::inverse(parentMatrix) * glm::vec4(rayResult.surfaceNormal, 0.0);
-            Decal decal(localPosition, localNormal, parent);
-            _decals.push_back(decal);
         }
 
     }
@@ -51,15 +91,15 @@ void Scene::Update(float deltaTime) {
             light.isDirty = true;
         }
     }
-    // if (Input::KeyPressed(HELL_KEY_C)) {
-    //     Scene::_lights[1].isDirty = true;
-   //  }
 
-   //  Scene::_lights[0].isDirty = true;
+	// auto ak = GetGameObjectByName("AKS74U_Carlos");
+	// ak->SetRotationY(ak->GetRotationY() - deltaTime * 1.5f);
 
 
-     // Are lights dirty? occurs when a door opens within their radius
-     // Which triggers update of the point cloud, and then propogation grid
+
+
+    // Are lights dirty? occurs when a door opens within their radius
+    // Which triggers update of the point cloud, and then propagation grid
 
     for (const auto& door : _doors) {
         if (door.state != Door::State::OPENING && door.state != Door::State::CLOSING) continue;
@@ -87,14 +127,14 @@ void Scene::Update(float deltaTime) {
         float amplitude = 0.5f;
         totalTime += deltaTime;
         Scene::_lights[2].strength = 1.0f + sin(totalTime * frequency) * amplitude;
-        //_lights[2].isDirty = true;
     }
 
     // Move light 0 in a figure 8
     static bool figure8Light = false;
     if (Input::KeyPressed(HELL_KEY_P)) {
         figure8Light = !figure8Light;
-        Audio::PlayAudio("RE_Beep.wav", 0.251f);
+		Audio::PlayAudio(AUDIO_SELECT, 1.0f);
+        _lights[0].isDirty = true;
     }
 
     glm::vec3 lightPos = glm::vec3(2.8, 2.2, 3.6);
@@ -130,19 +170,44 @@ void Scene::Update(float deltaTime) {
     glock->SetScale(0.00f);
     glock->SetPosition(glm::vec3(1.3f, 1.1, 3.5f));*/
 
-    // Lazy key presses
-    if (Input::KeyPressed(HELL_KEY_T)) {
-        //    enemy->ToggleAnimationPause();
-    }
 
-    CreateRTInstanceData();
+    UpdateRTInstanceData();
     ProcessPhysicsCollisions();
 }
 
 
-void Scene::Init() {
+void Scene::LoadHardCodedObjects() {
 
-    Scene::NewScene();
+	PickUp& glockAmmoA = _pickUps.emplace_back();
+	//glockAmmoA.position = glm::vec3(2.0f, 0.1f, 3.6f);
+	glockAmmoA.position = glm::vec3(0.0f, 0.676f, 0.3f);
+    glockAmmoA.rotation.y = HELL_PI * 0.4f;
+    glockAmmoA.type = PickUp::Type::GLOCK_AMMO;
+    glockAmmoA.parentGameObjectName = "TopDraw";
+
+    /*
+	GameObject& glockAmmoBox = _gameObjects.emplace_back();
+    glockAmmoBox.SetPosition(2.0f, 0.1f, 3.6f);
+    glockAmmoBox.SetModel("GlockAmmoBox");
+    glockAmmoBox.SetName("GlockAmmoBox");
+    glockAmmoBox.SetMeshMaterial("GlockAmmoBox");*/
+
+    /*
+    GameObject& aks74u = _gameObjects.emplace_back();
+    aks74u.SetPosition(2.0f, 1.7f, 3.6f);
+    aks74u.SetModel("AKS74U_Carlos");
+    aks74u.SetName("AKS74U_Carlos");
+    aks74u.SetScale(0.01f);
+    aks74u.SetMeshMaterial("Ceiling");
+    aks74u.SetMeshMaterialByMeshName("FrontSight_low", "AKS74U_0");
+    aks74u.SetMeshMaterialByMeshName("Receiver_low", "AKS74U_1");
+    aks74u.SetMeshMaterialByMeshName("BoltCarrier_low", "AKS74U_1");
+    aks74u.SetMeshMaterialByMeshName("SafetySwitch_low", "AKS74U_1");
+    aks74u.SetMeshMaterialByMeshName("Pistol_low", "AKS74U_2");
+    aks74u.SetMeshMaterialByMeshName("Trigger_low", "AKS74U_2");
+    aks74u.SetMeshMaterialByMeshName("MagRelease_low", "AKS74U_2");
+    aks74u.SetMeshMaterialByMeshName("Magazine_Housing_low", "AKS74U_3");
+    aks74u.SetMeshMaterialByMeshName("BarrelTip_low", "AKS74U_4");*/
 
 
 	Window& windowA = _windows.emplace_back();
@@ -158,7 +223,6 @@ void Scene::Init() {
     _ceilings.emplace_back(4.7f, 3.1f, 6.1f, 4.1f, 2.5f, AssetManager::GetMaterialIndex("Ceiling"));
     _ceilings.emplace_back(6.2f, 0.1f, 11.3f, 3.0f, 2.5f, AssetManager::GetMaterialIndex("Ceiling"));
 
-
     LoadLightSetup(2);
 
     GameObject& pictureFrame = _gameObjects.emplace_back();
@@ -168,13 +232,15 @@ void Scene::Init() {
     pictureFrame.SetModel("PictureFrame_1");
     pictureFrame.SetMeshMaterial("LongFrame");
 
-
-
-	PhysicsFilterData cushionFilterData;
-	cushionFilterData.raycastGroup = RAYCAST_DISABLED;
-	cushionFilterData.collisionGroup = CollisionGroup::GENERIC_BOUNCEABLE;
-	cushionFilterData.collidesWith = CollisionGroup(ENVIROMENT_OBSTACLE | GENERIC_BOUNCEABLE);
-	float cushionDensity = 20.0f;
+	float cushionHeight = 0.555f;
+	Transform shapeOffset;
+	shapeOffset.position.y = cushionHeight * 0.5f;
+	shapeOffset.position.z = 0.5f;
+	PxShape* sofaShapeBigCube = Physics::CreateBoxShape(1, cushionHeight * 0.5f, 0.4f, shapeOffset);
+	PhysicsFilterData sofaFilterData;
+    sofaFilterData.raycastGroup = RAYCAST_DISABLED;
+    sofaFilterData.collisionGroup = CollisionGroup::ENVIROMENT_OBSTACLE;
+    sofaFilterData.collidesWith = (CollisionGroup)(GENERIC_BOUNCEABLE | BULLET_CASING | PLAYER);
 
 	GameObject& sofa = _gameObjects.emplace_back();
 	sofa.SetPosition(2.0f, 0.1f, 0.1f);
@@ -182,6 +248,17 @@ void Scene::Init() {
 	sofa.SetMeshMaterial("Sofa");
 	sofa.CreateRigidBody(sofa.GetGameWorldMatrix(), true);
 	sofa.SetRaycastShapeFromModel(AssetManager::GetModel("Sofa_Cushionless"));
+	sofa.AddCollisionShape(sofaShapeBigCube, sofaFilterData);
+	sofa.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("SofaBack_ConvexMesh")->_meshes[0], sofaFilterData);
+	sofa.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("SofaLeftArm_ConvexMesh")->_meshes[0], sofaFilterData);
+	sofa.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("SofaRightArm_ConvexMesh")->_meshes[0], sofaFilterData);
+	sofa.SetModelMatrixMode(ModelMatrixMode::GAME_TRANSFORM);
+
+	PhysicsFilterData cushionFilterData;
+	cushionFilterData.raycastGroup = RAYCAST_DISABLED;
+	cushionFilterData.collisionGroup = CollisionGroup::GENERIC_BOUNCEABLE;
+	cushionFilterData.collidesWith = CollisionGroup(ENVIROMENT_OBSTACLE | GENERIC_BOUNCEABLE);
+	float cushionDensity = 20.0f;
 
 	GameObject& cushion0 = _gameObjects.emplace_back();
 	cushion0.SetPosition(2.0f, 0.1f, 0.1f);
@@ -238,44 +315,8 @@ void Scene::Init() {
     tree.SetModel("ChristmasTree");
     tree.SetMeshMaterial("Tree");
     //tree.CreateRigidBody(sofa.GetGameWorldMatrix(), true);
-    
 
-	float cushionHeight = 0.555f;
-	float armHeight = 0.86f;
-	float armWidth = 0.30f;
-    float armDepth = 0.927f;
 
-    // Big center cube
-	Transform shapeOffset;
-    shapeOffset.position.y = cushionHeight * 0.5f;
-    shapeOffset.position.z = 0.5f;
-	PxShape* sofaShapeBigCube = Physics::CreateBoxShape(1, cushionHeight * 0.5f, 0.4f, shapeOffset);
-	// Left side
-	shapeOffset.position.x = -1 - armWidth * 0.5f;
-	shapeOffset.position.y = armHeight * 0.5f;
-	shapeOffset.position.z = armDepth * 0.5f;
-	PxShape* sofaShapeLeftArm = Physics::CreateBoxShape(armWidth * 0.5, armHeight * 0.5f, armDepth * 0.5f, shapeOffset);
-	// Right side
-	shapeOffset.position.x = 1 + armWidth * 0.5f;
-	shapeOffset.position.y = armHeight * 0.5f;
-	shapeOffset.position.z = armDepth * 0.5f;
-	PxShape* sofaShapeRightArm = Physics::CreateBoxShape(armWidth * 0.5, armHeight * 0.5f, armDepth * 0.5f, shapeOffset);
-
-	PhysicsFilterData filterData;
-	filterData.raycastGroup = RAYCAST_DISABLED;
-	filterData.collisionGroup = CollisionGroup::ENVIROMENT_OBSTACLE;
-	filterData.collidesWith = (CollisionGroup)(GENERIC_BOUNCEABLE | BULLET_CASING | PLAYER);
-	sofa.AddCollisionShape(sofaShapeBigCube, filterData);
-	//sofa.AddCollisionShape(sofaShapeLeftArm, filterData);
-	sofa.AddCollisionShape(sofaShapeRightArm, filterData);
-    //sofa.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("Sofa_ConvexMesh")->_meshes[0], filterData);
-    
-	//sofa.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("LampConvexMesh_0")->_meshes[0], filterData2);
-	sofa.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("SofaBack_ConvexMesh")->_meshes[0], filterData);
-	sofa.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("SofaLeftArm_ConvexMesh")->_meshes[0], filterData);
-	sofa.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("SofaRightArm_ConvexMesh")->_meshes[0], filterData);
-    sofa.SetModelMatrixMode(ModelMatrixMode::GAME_TRANSFORM);
-    //sofa.UpdateRigidBodyMassAndInertia(20.0f);
 
 
 
@@ -294,6 +335,9 @@ void Scene::Init() {
         smallChestOfDrawers.SetRotationY(NOOSE_PI / 2);
         smallChestOfDrawers.EnableCollision();
         smallChestOfDrawers.SetRaycastShapeFromModel(AssetManager::GetModel("SmallChestOfDrawersFrame"));
+		smallChestOfDrawers.SetOpenState(OpenState::NONE, 0, 0, 0);
+		smallChestOfDrawers.SetAudioOnOpen("DrawerOpen.wav", 1.0f);
+		smallChestOfDrawers.SetAudioOnClose("DrawerOpen.wav", 1.0f);
 
         PhysicsFilterData filterData3;
 		filterData3.raycastGroup = RAYCAST_DISABLED;
@@ -323,13 +367,15 @@ void Scene::Init() {
 		lamp.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("LampConvexMesh_1")->_meshes[0], filterData2);
 		lamp.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("LampConvexMesh_2")->_meshes[0], filterData2);
         lamp.SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
-        lamp.UpdateRigidBodyMassAndInertia(20.0f);
+		lamp.UpdateRigidBodyMassAndInertia(20.0f);
+      //  lamp.userData = new PhysicsObjectData(PhysicsObjectType::GAME_OBJECT, &_gameObjects[_gameObjects.size()-1]);
 
 
         GameObject& smallChestOfDrawer_1 = _gameObjects.emplace_back();
         smallChestOfDrawer_1.SetModel("SmallDrawerTop");
-        smallChestOfDrawer_1.SetMeshMaterial("Drawers");
-        smallChestOfDrawer_1.SetParentName("SmallDrawersHis");
+		smallChestOfDrawer_1.SetMeshMaterial("Drawers");
+		smallChestOfDrawer_1.SetParentName("SmallDrawersHis");
+		smallChestOfDrawer_1.SetName("TopDraw");
         smallChestOfDrawer_1.SetScriptName("OpenableDrawer");
         smallChestOfDrawer_1.SetOpenState(OpenState::CLOSED, 2.183f, 0, 0.2f);
         //smallChestOfDrawer_1.SetAudioOnOpen("DrawerOpen.wav", DRAWER_VOLUME);
@@ -337,12 +383,14 @@ void Scene::Init() {
         smallChestOfDrawer_1.SetOpenAxis(OpenAxis::TRANSLATE_Z);
         smallChestOfDrawer_1.SetRaycastShapeFromModel(AssetManager::GetModel("SmallDrawerTop"));
 
+
+
         GameObject& smallChestOfDrawer_2 = _gameObjects.emplace_back();
         smallChestOfDrawer_2.SetModel("SmallDrawerSecond");
         smallChestOfDrawer_2.SetMeshMaterial("Drawers");
         smallChestOfDrawer_2.SetParentName("SmallDrawersHis");
         smallChestOfDrawer_2.SetScriptName("OpenableDrawer");
-        smallChestOfDrawer_2.SetOpenState(OpenState::CLOSED, 2.183f, 0, 0.2f);
+       // smallChestOfDrawer_2.SetOpenState(OpenState::CLOSED, 2.183f, 0, 0.2f);
         //smallChestOfDrawer_2.SetAudioOnOpen("DrawerOpen.wav", DRAWER_VOLUME);
         //smallChestOfDrawer_2.SetAudioOnClose("DrawerOpen.wav", DRAWER_VOLUME);
         smallChestOfDrawer_2.SetOpenAxis(OpenAxis::TRANSLATE_Z);
@@ -353,7 +401,7 @@ void Scene::Init() {
         smallChestOfDrawer_3.SetMeshMaterial("Drawers");
         smallChestOfDrawer_3.SetParentName("SmallDrawersHis");
         smallChestOfDrawer_3.SetScriptName("OpenableDrawer");
-        smallChestOfDrawer_3.SetOpenState(OpenState::CLOSED, 2.183f, 0, 0.2f);
+      //  smallChestOfDrawer_3.SetOpenState(OpenState::CLOSED, 2.183f, 0, 0.2f);
         // smallChestOfDrawer_3.SetAudioOnOpen("DrawerOpen.wav", DRAWER_VOLUME);
         // smallChestOfDrawer_3.SetAudioOnClose("DrawerOpen.wav", DRAWER_VOLUME);
         smallChestOfDrawer_3.SetOpenAxis(OpenAxis::TRANSLATE_Z);
@@ -364,7 +412,7 @@ void Scene::Init() {
         smallChestOfDrawer_4.SetMeshMaterial("Drawers");
         smallChestOfDrawer_4.SetParentName("SmallDrawersHis");
         smallChestOfDrawer_4.SetScriptName("OpenableDrawer");
-        smallChestOfDrawer_4.SetOpenState(OpenState::CLOSED, 2.183f, 0, 0.2f);
+      //  smallChestOfDrawer_4.SetOpenState(OpenState::CLOSED, 2.183f, 0, 0.2f);
         // smallChestOfDrawer_4.SetAudioOnOpen("DrawerOpen.wav", DRAWER_VOLUME);
         // smallChestOfDrawer_4.SetAudioOnClose("DrawerOpen.wav", DRAWER_VOLUME);
         smallChestOfDrawer_4.SetOpenAxis(OpenAxis::TRANSLATE_Z);
@@ -472,6 +520,17 @@ void Scene::Init() {
 
 }
 
+void Scene::LoadMap(std::string mapPath) {
+    Scene::CleanUp();   
+	File::LoadMap(mapPath);
+    Scene::LoadHardCodedObjects();
+	Scene::RecreateDataStructures();
+}
+
+void Scene::SaveMap(std::string mapPath) {
+	File::SaveMap(mapPath);
+}
+
 void Scene::CreatePlayers() {
     _players.clear();
     _players.push_back(Player(glm::vec3(4.0f, 0.1f, 3.6f), glm::vec3(-0.17, 1.54f, 0)));
@@ -482,32 +541,48 @@ void Scene::CreatePlayers() {
     }
 }
 
-void Scene::NewScene() {
-    std::cout << "NEW SCENE\n";
-    RemoveEverything();
-}
 
-void Scene::RemoveEverything() {
-    for (Door& door : Scene::_doors) {
+void Scene::CleanUp() {
+    for (Door& door : _doors) {
         door.CleanUp();
     }
-    for (BulletCasing& bulletCasing : Scene::_bulletCasings) {
+    for (BulletCasing& bulletCasing : _bulletCasings) {
         bulletCasing.CleanUp();
     }
-    for (Decal& decal : Scene::_decals) {
+    for (Decal& decal : _decals) {
         decal.CleanUp();
     }
-    for (GameObject& gameObject : Scene::_gameObjects) {
+    for (GameObject& gameObject : _gameObjects) {
         gameObject.CleanUp();
-    }
+	}
+	for (Window& window : _windows) {
+        window.CleanUp();
+	}
     _bulletCasings.clear();
     _decals.clear();
     _walls.clear();
     _floors.clear();
-    _ceilings.clear();
-    _doors.clear();
-    _gameObjects.clear();
-    _animatedGameObjects.clear();
+	_ceilings.clear();
+	_doors.clear();
+    _windows.clear();
+	_gameObjects.clear();
+	_animatedGameObjects.clear();
+	_pickUps.clear();
+
+	if (_sceneShape) {
+		_sceneShape->release();
+	}
+	if (_sceneRigidDynamic) {
+		_sceneRigidDynamic->release();
+	}
+	if (_sceneTriangleMesh) {
+		_sceneTriangleMesh->release();
+	}
+
+    // RT
+	_rtInstances.clear();    
+    _rtVertices.clear();
+	_rtMesh.clear();
 }
 
 void Scene::AddDoor(Door& door) {
@@ -708,10 +783,9 @@ std::vector<AnimatedGameObject>& Scene::GetAnimatedGameObjects() {
     return _animatedGameObjects;
 }
 
-void Scene::CreateRTInstanceData() {
+void Scene::UpdateRTInstanceData() {
 
     _rtInstances.clear();
-
     RTInstance& houseInstance = _rtInstances.emplace_back(RTInstance());
     houseInstance.meshIndex = 0;
     houseInstance.modelMatrix = glm::mat4(1);
@@ -727,24 +801,14 @@ void Scene::CreateRTInstanceData() {
 
 void Scene::CreateScenePhysicsObjects() {
 
-    if (_sceneShape) {
-        _sceneShape->release();
-        std::cout << "Scene shape released\n";
-    }
-
-    if (_sceneRigidDynamic) {
-        _sceneRigidDynamic->release();
-        std::cout << "Scene rigid released\n";
-    }
-
-    if (_sceneTriangleMesh) {
-        _sceneTriangleMesh->release();
-        std::cout << "Scene triangle mesh released\n";
-    }
-
     std::vector<PxVec3> vertices;
     std::vector<unsigned int> indices;
     for (Wall& wall : _walls) {
+
+        if (wall.begin.y > 2.0f) {
+            continue;
+        }
+
         for (Vertex& vertex : wall.vertices) {
             vertices.push_back(PxVec3(vertex.position.x, vertex.position.y, vertex.position.z));
             indices.push_back(indices.size());
@@ -758,8 +822,8 @@ void Scene::CreateScenePhysicsObjects() {
     }
     for (Ceiling& ceiling : _ceilings) {
         for (Vertex& vertex : ceiling.vertices) {
-            vertices.push_back(PxVec3(vertex.position.x, vertex.position.y, vertex.position.z));
-            indices.push_back(indices.size());
+            //vertices.push_back(PxVec3(vertex.position.x, vertex.position.y, vertex.position.z));
+            //indices.push_back(indices.size());
         }
     }
 
@@ -773,11 +837,17 @@ void Scene::CreateScenePhysicsObjects() {
         _sceneShape = Physics::CreateShapeFromTriangleMesh(_sceneTriangleMesh);
         _sceneRigidDynamic = Physics::CreateRigidDynamic(transform, filterData, _sceneShape);
         _sceneRigidDynamic->setRigidBodyFlag(PxRigidBodyFlag::eKINEMATIC, true);
+
+        _sceneRigidDynamic->userData = new PhysicsObjectData(PhysicsObjectType::SCENE_MESH, nullptr);
+
     }
 
-    for (Door& door : _doors) {
-        door.CreatePhysicsObject();
-    }
+	for (Door& door : _doors) {
+		door.CreatePhysicsObject();
+	}
+	for (Window& window : _windows) {
+        window.CreatePhysicsObjects();
+	}
 }
 
 void Scene::ProcessPhysicsCollisions() {
@@ -817,27 +887,13 @@ void Scene::ProcessPhysicsCollisions() {
             Audio::PlayAudio("BulletCasingBounce.wav", Util::RandomFloat(0.2f, 0.3f));
             break;
         }
-        /*
-        if (groupA & BULLET_CASING && groupB & ENVIROMENT_OBSTACLE) {
-            BulletCasing* casing = (BulletCasing*)actorA->userData;
-            casing->CollisionResponse();
-        }
-        if (groupB & BULLET_CASING && groupA & ENVIROMENT_OBSTACLE) {
-            BulletCasing* casing = (BulletCasing*)actorB->userData;
-            casing->CollisionResponse();
-        }
-        */
-        /* if (report.groupA & BULLET_CASING && report.groupB & ENVIROMENT_OBSTACLE) {
-             BulletCasing* casing = (BulletCasing*)report.parentA;
-             casing->CollisionResponse();
-         }
-         if (report.groupB & BULLET_CASING && report.groupA & ENVIROMENT_OBSTACLE) {
-             BulletCasing* casing = (BulletCasing*)report.parentB;
-             casing->CollisionResponse();
-         }*/
     }
 
     Physics::ClearCollisionList();
+}
+
+void Scene::UpdatePhysXUserData() {
+
 }
 
 
@@ -845,10 +901,11 @@ void Scene::RecreateDataStructures() {
 
     CreateMeshData();
     CreatePointCloud();
-    CreateRTInstanceData();
+    UpdateRTInstanceData();
     Renderer::CreatePointCloudBuffer();
     Renderer::CreateTriangleWorldVertexBuffer();
     CreateScenePhysicsObjects();
+    UpdatePhysXUserData();
 }
 
 void Scene::CreateMeshData() {
@@ -861,8 +918,6 @@ void Scene::CreateMeshData() {
     }
 
     // RT vertices and mesh
-    _rtVertices.clear();
-    _rtMesh.clear();
     int baseVertex = 0;
 
     // House
@@ -942,7 +997,7 @@ Wall::Wall(glm::vec3 begin, glm::vec3 end, float height, int materialIndex) {
     CreateMesh();
 }
 
-#define WINDOW_WIDTH 0.9f
+#define WINDOW_WIDTH 0.85f
 #define WINDOW_HEIGHT 2.1f
 
 void Wall::CreateMesh() {
@@ -959,6 +1014,10 @@ void Wall::CreateMesh() {
     glm::vec3 cursor = wallStart;
     glm::vec3 wallDir = glm::normalize(wallEnd - cursor);
     float texScale = 2.0f;
+    if (materialIndex == AssetManager::GetMaterialIndex("WallPaper")) {
+        texScale = 1.0f;
+    }
+
     float uvX1 = 0;
     float uvX2 = 0;
 
@@ -1002,11 +1061,11 @@ void Wall::CreateMesh() {
 		for (Window& window : Scene::_windows) {
 
 			// Left side
-			glm::vec3 v1(window.position + glm::vec3(-0.1, 0, -0.45));
-			glm::vec3 v2(window.position + glm::vec3(0.1f, 0, -0.45));
+			glm::vec3 v1(window.position + glm::vec3(-0.1, 0, WINDOW_WIDTH * -0.5));
+			glm::vec3 v2(window.position + glm::vec3(0.1f, 0, WINDOW_WIDTH * -0.5));
 			// Right side
-			glm::vec3 v3(window.position + glm::vec3(-0.1, 0, 0.45));
-			glm::vec3 v4(window.position + glm::vec3(0.1f, 0, 0.45));
+			glm::vec3 v3(window.position + glm::vec3(-0.1, 0, WINDOW_WIDTH * 0.5));
+			glm::vec3 v4(window.position + glm::vec3(0.1f, 0, WINDOW_WIDTH * 0.5));
 
             //std::cout << "\n" << Util::Vec3ToString(v1) << "\n\n";
 

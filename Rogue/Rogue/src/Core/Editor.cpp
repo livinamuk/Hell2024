@@ -2,7 +2,6 @@
 #include "Input.h"
 #include "GL.h"
 #include "../Util.hpp"
-#include "../Core/File.h"
 #include "../Core/Scene.h"
 #include "../Core/TextBlitter.h"
 #include "../Renderer/Renderer.h"
@@ -75,15 +74,13 @@ void Editor::Init() {
 void Editor::Update(float /*deltaTime*/) {
 
     if (Input::KeyPressed(HELL_KEY_N)) {
-        Scene::NewScene();
-        Scene::RecreateDataStructures();
+        Scene::CleanUp();
     }
-    if (Input::KeyPressed(HELL_KEY_O)) {
-        File::LoadMap("map.txt");
-        Scene::RecreateDataStructures();
+	if (Input::KeyPressed(HELL_KEY_O)) {
+		Scene::LoadMap("map.txt");
     }
     if (Input::KeyPressed(HELL_KEY_P)) {
-        File::SaveMap("map.txt");
+        Scene::SaveMap("map.txt");
     }
 
     // Zoom

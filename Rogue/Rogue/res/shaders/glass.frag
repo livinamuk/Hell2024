@@ -125,34 +125,29 @@ void main() {
     float roughness =  texture2D(rmaTexture, TexCoords).r;
     float metallic = 0;
 
+    baseColor += (roughness) * (0.75);
 
-	vec2 uv = gl_FragCoord.xy / vec2(screenWidth, screenHeight);    
-    vec3 color = texture(finalLighting, uv).rgb;
-    color.g = 0;
-    color.b = 0;
-   // color.rg = uv;
-
-   // color.rgb = vec3(0,1,0);
-
-   vec3 blur = blur(finalLighting, uv, 1 / vec2(screenWidth, screenHeight) * 0.15).rgb;
+    vec2 uv = gl_FragCoord.xy / vec2(screenWidth, screenHeight);    
+    vec3 blur = blur(finalLighting, uv, 1 / vec2(screenWidth, screenHeight) * 0.15).rgb;   
+    vec3 color = vec3(blur) ;
    
-   color.r -= 0.02;
-   color.g -= 0.02;
-   //color -= vec3(0.02);
+   for (int i = 0; i < 4; i++) {
+       vec3 lightPos = lights[i].position;
+       vec3 lightColor = lights[i].color;
+       float radius = lights[i].radius;
+       float strength = lights[i].strength;
 
-   color.rgb = vec3(TexCoords, 0);
-   color.rgb = baseColor;
-   
-   color = vec3(blur) ;
-   
-   vec3 lightPos = lights[0].position;
-   vec3 lightColor = lights[0].color;
-   float radius = lights[0].radius;
-   float strength = lights[0].strength;
 
-   color += GetDirectLighting(lightPos, lightColor, radius, strength, Normal, WorldPos, baseColor, roughness, metallic);
-   
-   color += (roughness) * (0.5) * lightColor;
+
+       vec3 directLight = GetDirectLighting(lightPos, lightColor, radius, strength, Normal, WorldPos, baseColor, roughness, metallic);
+	   directLight.rgb = pow(directLight.rgb, vec3(1.0/2.2)); 
+
+       color += directLight;
+
+   } 
+   color.r -= 0.005;
+   color.g -= 0.005;
+//   color += (roughness) * (0.25) ;//* lightColor;
    color -= vec3(0.05);
   // color += (roughness * 0.5) ;
    //color = vec3(roughness);

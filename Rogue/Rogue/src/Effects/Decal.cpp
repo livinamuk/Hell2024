@@ -3,7 +3,7 @@
 
 Decal::Decal() {}
 
-Decal::Decal(glm::vec3 localPosition, glm::vec3 localNormal, PxRigidBody * parent) {
+Decal::Decal(glm::vec3 localPosition, glm::vec3 localNormal, PxRigidBody * parent, Type type) {
     float min = 0;
     float max = HELL_PI * 2;
     float randomFloat = min + static_cast <float> (rand()) / (static_cast <float> (RAND_MAX / (max - min)));
@@ -11,6 +11,7 @@ Decal::Decal(glm::vec3 localPosition, glm::vec3 localNormal, PxRigidBody * paren
     this->localPosition = localPosition;
     this->localNormal = localNormal;
     this->parent = parent;
+    this->type = type;
 }
 
 void Decal::CleanUp() {

@@ -1,72 +1,51 @@
 #include "NumberBlitter.h"
 #include <algorithm>
+#include <iostream>
 #include "../Core/GL.h"
-//#include "Helpers/Util.h"
-//#include "Helpers/AssetManager.h"
+#include "../Core/AssetManager.h"
 
-unsigned int NumberBlitter::VAO = 0;
-unsigned int NumberBlitter::VBO = 0;
-unsigned int NumberBlitter::currentCharIndex = 0;
-float NumberBlitter::s_blitTimer = 0;
-float NumberBlitter::s_blitSpeed = 50;
-float NumberBlitter::s_waitTimer = 0;
-float NumberBlitter::s_timeToWait = 2;
-bool NumberBlitter::s_centerText = true;
-std::string NumberBlitter::s_NumSheet = "1234567890/";
-std::string NumberBlitter::s_textToBlit = "1234";
 
-void NumberBlitter::UpdateBlitter(float deltaTime)
-{
-	// Main timer
-	/*s_blitTimer += deltaTime * s_blitSpeed;
-	currentCharIndex = s_blitTimer;
-	currentCharIndex = std::min(currentCharIndex, (unsigned int)s_textToBlit.size());
+unsigned int VAO = 0;
+unsigned int VBO = 0;
+std::string _NumSheet = "1234567890/";
 
-	if (s_blitSpeed == -1) {
-		currentCharIndex = (unsigned int)s_textToBlit.size();
-		return;
-	}
+void NumberBlitter::Draw(const char* text, int xScreenCoord, int yScreenCoord, int renderWidth, int renderHeight, float scale, Justification justification) {
 
-	if (s_timeToWait == -1)
-		return;
+/*	float renderTargetWidth = (float)viewportWidth;
+	float renderTargetHeight = (float)viewPortHeight;
+	float width = (1.0f / renderTargetWidth) * quadWidth * scale;
+	float height = (1.0f / renderTargetHeight) * quadHeight * scale;
+	float ndcX = ((xPosition + (quadWidth / 2.0f)) / renderTargetWidth) * 2 - 1;
+	float ndcY = ((yPosition + (quadHeight / 2.0f)) / renderTargetHeight) * 2 - 1;
+*/
 
-	// Wait time
-	if (currentCharIndex == (unsigned int)s_textToBlit.size())
-		s_waitTimer += deltaTime;
-	if (s_waitTimer > s_timeToWait)
-		s_textToBlit = "";*/
-}
 
-void NumberBlitter::DrawTextBlit(const char* text, int xScreenCoord, int yScreenCoord, int renderWidth, int renderHeight, float scale, glm::vec3 /*color*/, bool leftJustified)
-{
-	float screenWidth = GL::GetWindowWidth();// 1920.0f * 1.5;// *(CoreGL::s_currentWidth / renderWidth); // Have to hard code this coz otherwise the text is the same size in pixels regardless of resolution.
-	float screenHeight = GL::GetWindowHeight();// 1080.0f * 1.5;
-	//float widths[11] = { 9, 15, 15, 17, 15, 16, 15, 16, 15, 16, 12};
+	//float screenWidth = 1920.0f * 1.0f;
+	//float screenHeight = 1080.0f * 1.0f;
+	float screenWidth = renderWidth * 1.0f;
+	float screenHeight = renderHeight * 1.0f;
 	float textureWidth = 161;
-	static float textScale = 1;
+	//static float textScale = 1;
 	float cursor_X = 0;
 	float cursor_Y = -1;
 
 	cursor_X = (xScreenCoord / screenWidth) * 2 - 1;
 	cursor_Y = (yScreenCoord / screenHeight) * 2 - 1;
-
 	cursor_Y *= -1;
-
-	//struct Vertex2D {
-	//	glm::vec2 position;
-	//	glm::vec2 uv;
-	//};
 
 	std::vector<Vertex> vertices;
 	char character;
 	float charWidth, charBegin;
 
+
 	for (int i = 0; i < strlen(text); i++)
 	{
-		if (leftJustified)
+		if (justification == Justification::LEFT) {
 			character = text[i];
-		else
-			character = text[strlen(text)-1-i];
+		}
+		else {
+			character = text[strlen(text) - 1 - i];
+		}
 
 		float charHeight = 34;
 
@@ -124,11 +103,12 @@ void NumberBlitter::DrawTextBlit(const char* text, int xScreenCoord, int yScreen
 		charHeight *= scale;
 		charBegin *= scale;
 
-		float w = charWidth / (screenWidth / 2) * (GL::GetWindowWidth() / renderWidth);
-		float h = charHeight / (screenHeight / 2) * (GL::GetWindowHeight() / renderHeight);
+		float w = charWidth / (screenWidth / 2) * (screenWidth / renderWidth);
+		float h = charHeight / (screenHeight / 2) * (screenHeight / renderHeight);
 
-		if (!leftJustified)
+		if (justification != Justification::LEFT) {
 			cursor_X -= w;
+		}
 
 		Vertex v1 = { glm::vec3(cursor_X, cursor_Y, 0), NRM_Y_UP, glm::vec2(tex_coord_L, 0) };
 		Vertex v2 = { glm::vec3(cursor_X, cursor_Y - h, 0), NRM_Y_UP, glm::vec2(tex_coord_L, 1) };
@@ -140,8 +120,9 @@ void NumberBlitter::DrawTextBlit(const char* text, int xScreenCoord, int yScreen
 		vertices.push_back(v3);
 		vertices.push_back(v4);
 
-		if (leftJustified)
+		if (justification == Justification::LEFT) {
 			cursor_X += w;
+		}
 	}
 
 	if (VAO == 0) {
@@ -161,49 +142,8 @@ void NumberBlitter::DrawTextBlit(const char* text, int xScreenCoord, int yScreen
 	glEnableVertexAttribArray(2);
 	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, uv));
 
-	//glEnableVertexAttribArray(0);
-	//glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
-	////glEnableVertexAttribArray(1);
-	//glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
-
-	//glm::mat4 modelMatrix = glm::mat4(1.0f);
-	//shader->setMat4("model", modelMatrix);
-	//shader->setVec3("colorTint", color);
-
 	glBindVertexArray(VAO);
 	glEnable(GL_BLEND);
 	glDrawArrays(GL_TRIANGLE_STRIP, 0, (GLsizei)vertices.size());
 	glBindVertexArray(0);
-}
-
-void NumberBlitter::TypeText(std::string text, bool centered)
-{
-	s_blitTimer = 0;
-	s_waitTimer = 0;
-	s_blitSpeed = 50;
-	s_textToBlit = text;
-	s_centerText = centered;
-	s_timeToWait = 2;
-}
-
-void NumberBlitter::BlitText(std::string text, bool centered)
-{
-	currentCharIndex = (int)text.length();
-	s_blitTimer = 0;
-	s_waitTimer = 0;
-	s_blitSpeed = -1;
-	s_textToBlit = text;
-	s_centerText = centered;
-	s_timeToWait = -1;
-}
-
-void NumberBlitter::ResetBlitter()
-{
-	currentCharIndex = 0;
-	s_blitTimer = 0;
-	s_waitTimer = 0;
-	s_blitSpeed = -1;
-	s_textToBlit = "";
-	s_centerText = false;
-	s_timeToWait = -1;
 }

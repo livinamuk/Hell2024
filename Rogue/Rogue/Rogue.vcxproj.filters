@@ -120,6 +120,9 @@
     <ClCompile Include="src\Core\Window.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\Core\PickUp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\Core\GL.h">
@@ -239,6 +242,9 @@
     <ClInclude Include="src\Core\Window.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\Core\PickUp.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="res\shaders\solid_color.frag" />
@@ -274,5 +280,6 @@
     <None Include="res\shaders\glass.vert" />
     <None Include="res\shaders\glass_composite.frag" />
     <None Include="res\shaders\glass_composite.vert" />
+    <None Include="res\shaders\test.comp" />
   </ItemGroup>
 </Project>

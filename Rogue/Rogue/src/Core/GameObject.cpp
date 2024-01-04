@@ -123,20 +123,52 @@ void GameObject::Interact() {
 	// Open
 	if (_openState == OpenState::CLOSED) {
 		_openState = OpenState::OPENING;
-		Audio::PlayAudio(_audio.onOpen.filename, _audio.onOpen.volume);
+		Audio::PlayAudio("DrawerOpen.wav", 1.0f);
 	}
 	// Close
 	else if (_openState == OpenState::OPEN) {
+		Audio::PlayAudio("DrawerClose.wav", 1.0f); 
 		_openState = OpenState::CLOSING;
-		Audio::PlayAudio(_audio.onClose.filename, _audio.onClose.volume);
+		//Audio::PlayAudio(_audio.onClose.filename, _audio.onClose.volume);
 	}
 }
 
 void GameObject::Update(float deltaTime) {
 	// Open/Close if applicable
 	if (_openState != OpenState::NONE) {
+
+		if (_openState == OpenState::OPENING) {
+
+			float speed = 3.0f;
+			float maxOpenDistance = 0.3f;
+
+			if (_openTransform.position.z < maxOpenDistance) {
+				_openTransform.position.z += deltaTime * speed;
+			}
+			
+			if (_openTransform.position.z >= maxOpenDistance) {
+				_openState = OpenState::OPEN;
+			}
+		}
+
+		if (_openState == OpenState::CLOSING) {
+
+			float speed = 3.0f;
+
+			if (_openTransform.position.z > 0) {
+				_openTransform.position.z -= deltaTime * speed;
+			}
+
+			if (_openTransform.position.z <= 0) {
+				_openState = OpenState::CLOSED;
+				_openTransform.position.z = 0;
+			}
+
+		}
+
+
 		// Rotation
-		if (_openAxis == OpenAxis::ROTATION_NEG_Y) {
+		/*if (_openAxis == OpenAxis::ROTATION_NEG_Y) {
 			if (_openState == OpenState::OPENING) {
 				_openTransform.rotation.y -= _openSpeed * deltaTime;
 			}
@@ -151,7 +183,7 @@ void GameObject::Update(float deltaTime) {
 				_openTransform.rotation.y = _minOpenAmount;
 				_openState = OpenState::CLOSED;
 			}
-		}
+		}*/
 		/*if (_openAxis == OpenAxis::ROTATION_POS_Y) {
 			if (_openState == OpenState::OPENING) {
 				_transform.rotation.y += _openSpeed * deltaTime;
@@ -276,7 +308,11 @@ void GameObject::Update(float deltaTime) {
 
 	// Pointers
 	if (_raycastBody) {
-		_raycastBody->userData = this;
+		PhysicsObjectData* physicsObjectData = (PhysicsObjectData*)_raycastBody->userData;
+		physicsObjectData->type = GAME_OBJECT;
+		physicsObjectData->parent = this;
+
+		//_raycastBody->userData = new PhysicsObjectData(GAME_OBJECT, this);
 	}
 }
 
@@ -337,7 +373,6 @@ void GameObject::SetModel(const std::string& name)
 {
 	_model = AssetManager::GetModel(name);
 
-
 	if (_model) {
 		_meshMaterialIndices.resize(_model->_meshes.size());
 		//_meshMaterialTypes.resize(_model->_meshIndices.size());
@@ -347,6 +382,25 @@ void GameObject::SetModel(const std::string& name)
 		std::cout << "Failed to set model '" << name << "', it does not exist.\n";
 	}
 }
+
+void GameObject::SetMeshMaterialByMeshName(std::string meshName, std::string materialName) {
+	int materialIndex = AssetManager::GetMaterialIndex(materialName);
+	if (_model && materialIndex != -1) {
+		for (int i = 0; i < _model->_meshes.size(); i++) {
+			if (_model->_meshes[i]._name == meshName) {
+				_meshMaterialIndices[i] = materialIndex;
+				return;
+			}
+		}
+	}
+	if (!_model) {
+		std::cout << "Tried to call SetMeshMaterialByMeshName() but this GameObject has a nullptr model\n";
+	}
+	if (materialIndex == -1) {
+		std::cout << "Tried to call SetMeshMaterialByMeshName() but the material index was -1\n";
+	}
+}
+
 
 void GameObject::SetMeshMaterial(const char* name, int meshIndex) {
 	// Range checks
@@ -457,15 +511,6 @@ void GameObject::SetInteractToAffectAnotherObject(std::string objectName)
 }
 
 
-void GameObject::SetMeshMaterialByMeshName(std::string meshName, std::string materialName) {
-	/*	if (_model && AssetManager::GetMaterial(materialName)) {
-		for(int i = 0; i < _model->_meshNames.size(); i++) {
-			if (_model->_meshNames[i] == meshName) {
-				_meshMaterialIndices[i] = AssetManager::GetMaterialIndex(materialName);
-			}
-		}
-	}*/
-}
 
 void GameObject::AddCollisionShape(PxShape* shape, PhysicsFilterData physicsFilterData) {
 	if (!_collisionBody) {
@@ -551,6 +596,7 @@ void GameObject::SetRaycastShapeFromMesh(Mesh* mesh) {
 	_raycastShape = Physics::CreateShapeFromTriangleMesh(mesh->_triangleMesh);
 	_raycastBody = Physics::CreateRigidDynamic(Transform(), filterData, _raycastShape);
 	_raycastBody->setRigidBodyFlag(PxRigidBodyFlag::eKINEMATIC, true);
+	_raycastBody->userData = new PhysicsObjectData(PhysicsObjectType::GAME_OBJECT, this);
 }
 
 void GameObject::SetRaycastShapeFromModel(Model* model) {
@@ -570,6 +616,7 @@ void GameObject::SetRaycastShapeFromModel(Model* model) {
 	_raycastShape = Physics::CreateShapeFromTriangleMesh(model->_triangleMesh);
 	_raycastBody = Physics::CreateRigidDynamic(Transform(), filterData, _raycastShape);
 	_raycastBody->setRigidBodyFlag(PxRigidBodyFlag::eKINEMATIC, true);
+	_raycastBody->userData = new PhysicsObjectData(PhysicsObjectType::GAME_OBJECT, this);
 }
 
 void GameObject::SetRaycastShape(PxShape* shape) {
@@ -585,6 +632,8 @@ void GameObject::SetRaycastShape(PxShape* shape) {
 	filterData.collidesWith = CollisionGroup::NO_COLLISION;
 	_raycastBody = Physics::CreateRigidDynamic(Transform(), filterData, shape);
 	_raycastBody->setRigidBodyFlag(PxRigidBodyFlag::eKINEMATIC, true);
+	_raycastBody->userData = new PhysicsObjectData(PhysicsObjectType::GAME_OBJECT, this);
+
 }
 
 void GameObject::SetModelMatrixMode(ModelMatrixMode modelMatrixMode) {

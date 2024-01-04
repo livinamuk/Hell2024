@@ -47,6 +47,11 @@ namespace Physics {
 	inline std::vector<CollisionReport> _collisionReports;
 	inline PxControllerManager* _characterControllerManager;
 
+	//void RemoveGroundPlaneFilterData();
+	//void AddGroundPlaneFilterData();
+
+	PxRigidActor* GetGroundPlane();
+
 	//inline int _shellCollisionsThisFrame = 0;
 }
 

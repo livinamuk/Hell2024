@@ -148,6 +148,9 @@ void Door::CreatePhysicsObject() {
     raycastShape = Physics::CreateShapeFromTriangleMesh(mesh->_triangleMesh);
     raycastBody = Physics::CreateRigidDynamic(Transform(), filterData2, raycastShape);
     raycastBody->setRigidBodyFlag(PxRigidBodyFlag::eKINEMATIC, true);
+
+    PhysicsObjectData* physicsObjectData = new PhysicsObjectData(PhysicsObjectType::DOOR, this);
+    raycastBody->userData = physicsObjectData;
 }
 /*
 

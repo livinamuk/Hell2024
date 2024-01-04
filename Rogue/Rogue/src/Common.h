@@ -17,6 +17,8 @@ enum ViewportMode {FULLSCREEN = 0, SPLITSCREEN, VIEWPORTMODE_COUNT};
 enum Weapon { KNIFE = 0, GLOCK, SHOTGUN, AKS74U, MP7, WEAPON_COUNT };
 enum WeaponAction { IDLE = 0, FIRE, RELOAD, DRAW_BEGIN, DRAWING };
 
+#define AUDIO_SELECT "SELECT.wav"
+
 #define DOOR_VOLUME 1.0f
 #define INTERACT_DISTANCE 2.5f
 
@@ -210,20 +212,9 @@ struct UIRenderInfo {
     void* parent = nullptr;
 };
 
-enum class RaycastObjectType { NONE, FLOOR, WALLS, ENEMY, DOOR };
+//enum class RaycastObjectType { NONE, FLOOR, WALLS, ENEMY, DOOR };
 
-struct RayCastResult {
-    bool found = false;
-    float distanceToHit = 99999;
-    void* parent = nullptr;
-    Triangle triangle;
-    RaycastObjectType raycastObjectType = RaycastObjectType::NONE;
-    glm::mat4 triangeleModelMatrix = glm::mat4(1);
-    glm::vec3 intersectionPoint = glm::vec3(0);
-    glm::vec2 baryPosition = glm::vec2(0);
-    glm::vec3 closestPointOnBoundingBox = glm::vec3(0, 0, 0);
-    unsigned int rayCount = 0;
-};
+
 
 struct FileInfo {
     std::string fullpath;
@@ -242,7 +233,16 @@ struct Material {
 };
 
 enum RaycastGroup { RAYCAST_DISABLED = 0, RAYCAST_ENABLED };
-enum PhysicsObjectType { NONE = 0, CUBE, CASING_PROJECTILE_GLOCK, CASING_PROJECTILE_AKS74U };
+enum PhysicsObjectType { UNDEFINED = 0, GAME_OBJECT, GLASS, DOOR, SCENE_MESH};
+
+struct PhysicsObjectData {
+    PhysicsObjectData(PhysicsObjectType type, void* parent) {
+		this->type = type;
+		this->parent = parent;
+	}
+	PhysicsObjectType type;
+	void* parent;
+};
 
 struct PhysXRayResult {
     std::string hitObjectName;
@@ -252,6 +252,7 @@ struct PhysXRayResult {
     bool hitFound;
     void* hitActor;
     void* parent;
+    PhysicsObjectType physicsObjectType;
 };
 
 enum CollisionGroup {
@@ -262,3 +263,31 @@ enum CollisionGroup {
     GENERIC_BOUNCEABLE = 8,
     ITEM_PICK_UP = 16,
 };
+
+/*
+struct PhysicsObjectData {
+    PhysicsObjectData(PhysicsObjectType type, void* index) {
+		this->type = type;
+		this->index = index;
+	}
+	PhysicsObjectType type;
+	void* index;
+};*/
+
+/*
+struct RayCastResult {
+	bool found = false;
+//	float distanceToHit = 99999;
+	void* parent = nullptr;
+//	Triangle triangle;
+	PhysicsObjectType physicsObjectType = PhysicsObjectType::UNDEFINED;
+    void* hitActor;
+
+
+
+//	glm::mat4 triangeleModelMatrix = glm::mat4(1);
+//	glm::vec3 intersectionPoint = glm::vec3(0);
+//	glm::vec2 baryPosition = glm::vec2(0);
+//	glm::vec3 closestPointOnBoundingBox = glm::vec3(0, 0, 0);
+//	unsigned int rayCount = 0;
+};*/

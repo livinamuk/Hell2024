@@ -3,25 +3,42 @@
 #include "AnimatedGameObject.h"
 #include "Physics.h"
 
+#define GLOCK_CLIP_SIZE 12
+#define GLOCK_MAX_AMMO_SIZE 200
+#define AKS74U_CLIP_SIZE 30
+#define AKS74U_MAX_AMMO_SIZE 9999
+
 struct Ammo {
-	int clip{ 0 };
-	int total{ 0 };
+	int clip = 0;
+	int total = 0;
+};
+
+struct Inventory {
+	Ammo glockAmmo;
+	Ammo aks74uAmmo;
 };
 
 class Player {
 
 public:
-	Ammo _glockAmmo;
-	Ammo _aks74uAmmo;
 	float _radius = 0.1f;
 	bool _ignoreControl = false;
-	RayCastResult _cameraRayData;
+
+	PhysXRayResult _cameraRayResult;
+
+	//RayCastResult _cameraRayData;
 	AnimatedGameObject _characterModel;
 	PxController* _characterController = NULL;
 	float _yVelocity = 0;
 
+	Inventory _inventory;
+
 	Player();
 	Player(glm::vec3 position, glm::vec3 rotation);
+
+	int GetCurrentWeaponClipAmmo();
+	int GetCurrentWeaponTotalAmmo();
+
 
 	//void Init(glm::vec3 position);
 	void Update(float deltaTime);
