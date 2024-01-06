@@ -143,7 +143,6 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <ClCompile Include="src\Core\GL.cpp" />
     <ClCompile Include="src\Core\Input.cpp" />
     <ClCompile Include="src\Core\Physics.cpp" />
-    <ClCompile Include="src\Core\PickUp.cpp" />
     <ClCompile Include="src\Core\Player.cpp" />
     <ClCompile Include="src\Core\Scene.cpp" />
     <ClCompile Include="src\Core\TextBlitting.cpp" />
@@ -184,7 +183,6 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <ClInclude Include="src\Core\Input.h" />
     <ClInclude Include="src\Core\keycodes.h" />
     <ClInclude Include="src\Core\Physics.h" />
-    <ClInclude Include="src\Core\PickUp.h" />
     <ClInclude Include="src\Core\Player.h" />
     <ClInclude Include="src\Core\Scene.h" />
     <ClInclude Include="src\Core\TextBlitter.h" />
@@ -213,6 +211,9 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
   <ItemGroup>
     <None Include="res\shaders\animated_quad.frag" />
     <None Include="res\shaders\animated_quad.vert" />
+    <None Include="res\shaders\blur.frag" />
+    <None Include="res\shaders\blurHorizontal.vert" />
+    <None Include="res\shaders\blurVertical.vert" />
     <None Include="res\shaders\bullet_decals.frag" />
     <None Include="res\shaders\bullet_decals.vert" />
     <None Include="res\shaders\calculate_inidrect_dispatch_size.comp" />

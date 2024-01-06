@@ -3,6 +3,7 @@
 layout (location = 0) out vec4 BaseColorOut;
 layout (location = 1) out vec4 NormalsOut;
 layout (location = 2) out vec4 RMAOut;
+layout (location = 3) out vec4 EmissiveOut;
 
 layout (binding = 0) uniform sampler2D basecolorTexture;
 layout (binding = 1) uniform sampler2D normalTexture;
@@ -22,6 +23,8 @@ in vec3 attrBiTangent;
 uniform float time;
 uniform float screenWidth;
 uniform float screenHeight;
+uniform bool outputEmissive;
+uniform vec3 lightColor;
 
 uniform float projectionMatrixIndex;
 
@@ -42,4 +45,15 @@ void main()
         discard;
     }
 
+    if (outputEmissive) {
+        if (rma.b == 1.0) {
+            EmissiveOut = vec4(lightColor, 0);
+        } 
+        else {
+            EmissiveOut = vec4(0, 0, 0, 1);
+        }
+    } 
+    else {
+        EmissiveOut = vec4(0, 0, 0, 1);
+    }
 }

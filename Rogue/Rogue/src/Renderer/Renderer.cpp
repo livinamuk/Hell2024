@@ -33,7 +33,14 @@
 
 std::vector<glm::vec3> debugPoints;
 
-
+struct BlurBuffer {
+	GLuint width = 0;
+	GLuint height = 0;
+	GLuint FBO = 0;
+	GLuint textureA = 0;
+	GLuint textureB = 0;
+};
+std::vector<BlurBuffer> _blurBuffers;
 
 struct Shaders {
     Shader solidColor;
@@ -52,7 +59,9 @@ struct Shaders {
 	Shader lighting;
 	Shader bulletDecals;
 	Shader glass;
-    Shader glassComposite;
+	Shader glassComposite;
+	Shader blurVertical;
+	Shader blurHorizontal;
     ComputeShader compute;
 	ComputeShader pointCloud;
 	ComputeShader propogateLight;
@@ -140,6 +149,7 @@ std::vector<glm::mat4> _glockMatrices;
 std::vector<glm::mat4> _aks74uMatrices;
 
 
+
 enum RenderMode { COMPOSITE, DIRECT_LIGHT, INDIRECT_LIGHT, POINT_CLOUD, MODE_COUNT } _mode;
 enum DebugLineRenderMode { SHOW_NO_LINES, PHYSX_ALL, PHYSX_RAYCAST, PHYSX_COLLISION, RAYTRACE_LAND, DEBUG_LINE_MODE_COUNT} _debugLineRenderMode;
 
@@ -151,6 +161,7 @@ void DrawBulletDecals(Player* player);
 void DrawCasingProjectiles(Player* player);
 void DrawFullscreenQuad();
 void DrawMuzzleFlashes(Player* player);
+void BlurEmissiveBulbs(Player* player);
 void InitCompute();
 void ComputePass();
 void RenderShadowMaps();
@@ -165,6 +176,7 @@ void FindProbeCoordsWithinMapBounds();
 void CalculateDirtyCloudPoints();
 void CalculateDirtyProbeCoords();
 void GlassPass(Player* player);
+void BlitDebugTexture(GLint fbo, GLenum colorAttachment, GLint srcWidth, GLint srcHeight);
 
 int GetPlayerIndexFromPlayerPointer(Player* player) {
 	for (int i = 0; i < Scene::_players.size(); i++) {
@@ -231,6 +243,18 @@ void GlassPass(Player* player) {
 	glBindTexture(GL_TEXTURE_2D, gBuffer._gLightingTexture);
 	glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_2D, gBuffer._gGlassTexture);
+
+
+	glActiveTexture(GL_TEXTURE2);
+	glBindTexture(GL_TEXTURE_2D, _blurBuffers[0].textureB);
+	glActiveTexture(GL_TEXTURE3);
+	glBindTexture(GL_TEXTURE_2D, _blurBuffers[1].textureB);
+	glActiveTexture(GL_TEXTURE4);
+	glBindTexture(GL_TEXTURE_2D, _blurBuffers[2].textureB);
+	glActiveTexture(GL_TEXTURE5);
+	glBindTexture(GL_TEXTURE_2D, _blurBuffers[3].textureB);
+
+
     glDisable(GL_DEPTH_TEST);
 	unsigned int attachments2[1] = { GL_COLOR_ATTACHMENT5 };
 	glDrawBuffers(1, attachments2);
@@ -256,6 +280,31 @@ void GlassPass(Player* player) {
 
 //std::vector<glm::uvec4> GridIndicesUpdate(std::vector<glm::uvec4> allGridIndicesWithinRooms);
 
+void DrawFullScreenQuad() {
+    static GLuint VAO = 0;
+    if (VAO == 0) {
+        float quadVertices[] = {
+            // positions         texcoords
+            -1.0f,  1.0f, 0.0f,  0.0f, 1.0f,
+            -1.0f, -1.0f, 0.0f,  0.0f, 0.0f,
+             1.0f,  1.0f, 0.0f,  1.0f, 1.0f,
+             1.0f, -1.0f, 0.0f,  1.0f, 0.0f,
+        };
+        unsigned int VBO;
+        glGenVertexArrays(1, &VAO);
+        glGenBuffers(1, &VBO);
+        glBindVertexArray(VAO);
+        glBindBuffer(GL_ARRAY_BUFFER, VBO);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+        glEnableVertexAttribArray(1);
+        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+    }
+    glBindVertexArray(VAO);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+}
+
 void Renderer::Init() {
 
     glGenVertexArrays(1, &_pointLineVAO);
@@ -280,6 +329,10 @@ void Renderer::Init() {
 	_shaders.glass.Load("glass.vert", "glass.frag");
 	_shaders.glassComposite.Load("glass_composite.vert", "glass_composite.frag");
 	_shaders.computeTest.Load("res/shaders/test.comp");
+    
+
+	_shaders.blurVertical.Load("blurVertical.vert", "blur.frag");
+	_shaders.blurHorizontal.Load("blurHorizontal.vert", "blur.frag");
     
 
     _cubeMesh = MeshUtil::CreateCube(1.0f, 1.0f, true);
@@ -308,6 +361,138 @@ void Renderer::Init() {
     InitCompute();
 }
 
+
+void BlurEmissiveBulbs(Player* player) {
+
+    // 1536 x 864
+
+
+    if (!_blurBuffers.size()) {
+
+		int width = 1536 * 0.5f;
+		int height = 864 * 0.5f;
+
+        for (int i = 0; i < 4; i++) {
+
+			BlurBuffer& blurBuffer = _blurBuffers.emplace_back(BlurBuffer());
+			blurBuffer.width = width;
+			blurBuffer.height = height;
+
+            glGenFramebuffers(1, &blurBuffer.FBO);
+            glGenTextures(1, &blurBuffer.textureA);
+            glGenTextures(1, &blurBuffer.textureB);
+
+            glBindFramebuffer(GL_FRAMEBUFFER, blurBuffer.FBO);
+
+            glBindTexture(GL_TEXTURE_2D, blurBuffer.textureA);
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, blurBuffer.textureA, 0);
+
+            glBindTexture(GL_TEXTURE_2D, blurBuffer.textureB);
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, blurBuffer.textureB, 0);
+
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+			width *= 0.5f;
+            height *= 0.5f;
+        }
+    }
+
+
+	int playerIndex = GetPlayerIndexFromPlayerPointer(player);
+	PlayerRenderTarget& playerRenderTarget = GetPlayerRenderTarget(playerIndex);
+	GBuffer& gBuffer = playerRenderTarget.gBuffer;
+
+	
+
+    // first round
+
+	glBindFramebuffer(GL_FRAMEBUFFER, _blurBuffers[0].FBO);
+	glViewport(0, 0, _blurBuffers[0].width, _blurBuffers[0].height);
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, gBuffer._gEmissive);
+    glDrawBuffer(GL_COLOR_ATTACHMENT0);
+	_shaders.blurHorizontal.Use();
+	_shaders.blurHorizontal.SetFloat("targetWidth", _blurBuffers[0].width);
+	DrawFullScreenQuad();
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, _blurBuffers[0].textureA);
+	glDrawBuffer(GL_COLOR_ATTACHMENT1);
+	_shaders.blurVertical.Use();
+	_shaders.blurVertical.SetFloat("targetHeight", _blurBuffers[0].height);
+	DrawFullScreenQuad();
+
+	// second round
+
+	glBindFramebuffer(GL_FRAMEBUFFER, _blurBuffers[1].FBO);
+	glViewport(0, 0, _blurBuffers[1].width, _blurBuffers[1].height);
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, _blurBuffers[0].textureB);
+	glDrawBuffer(GL_COLOR_ATTACHMENT0);
+	_shaders.blurHorizontal.Use();
+	_shaders.blurHorizontal.SetFloat("targetWidth", _blurBuffers[1].width);
+	DrawFullScreenQuad();
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, _blurBuffers[1].textureA);
+	glDrawBuffer(GL_COLOR_ATTACHMENT1);
+	_shaders.blurVertical.Use();
+	_shaders.blurVertical.SetFloat("targetHeight", _blurBuffers[1].height);
+	DrawFullScreenQuad();
+
+	// third round
+	glBindFramebuffer(GL_FRAMEBUFFER, _blurBuffers[2].FBO);
+	glViewport(0, 0, _blurBuffers[2].width, _blurBuffers[2].height);
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, _blurBuffers[1].textureB);
+	glDrawBuffer(GL_COLOR_ATTACHMENT0);
+	_shaders.blurHorizontal.Use();
+	_shaders.blurHorizontal.SetFloat("targetWidth", _blurBuffers[2].width);
+	DrawFullScreenQuad();
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, _blurBuffers[2].textureA);
+	glDrawBuffer(GL_COLOR_ATTACHMENT1);
+	_shaders.blurVertical.Use();
+	_shaders.blurVertical.SetFloat("targetHeight", _blurBuffers[2].height);
+	DrawFullScreenQuad();
+
+    
+	// forth round
+
+	glBindFramebuffer(GL_FRAMEBUFFER, _blurBuffers[3].FBO);
+	glViewport(0, 0, _blurBuffers[3].width, _blurBuffers[3].height);
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, _blurBuffers[2].textureB);
+	glDrawBuffer(GL_COLOR_ATTACHMENT0);
+	_shaders.blurHorizontal.Use();
+	_shaders.blurHorizontal.SetFloat("targetWidth", _blurBuffers[3].width);
+	DrawFullScreenQuad();
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, _blurBuffers[3].textureA);
+	glDrawBuffer(GL_COLOR_ATTACHMENT1);
+	_shaders.blurVertical.Use();
+	_shaders.blurVertical.SetFloat("targetHeight", _blurBuffers[3].height);
+	DrawFullScreenQuad();
+  
+  
+}
+
 void Renderer::RenderFrame(Player* player) {
 
     if (!player) {
@@ -325,8 +510,8 @@ void Renderer::RenderFrame(Player* player) {
     PresentFrameBuffer& presentFrameBuffer = playerRenderTarget.presentFrameBuffer;
 
     gBuffer.Bind();
-	unsigned int attachments[4] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT4 };
-	glDrawBuffers(4, attachments);
+	unsigned int attachments[5] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3, GL_COLOR_ATTACHMENT4 };
+	glDrawBuffers(5, attachments);
 	glViewport(0, 0, gBuffer.GetWidth(), gBuffer.GetHeight());
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 
@@ -344,6 +529,8 @@ void Renderer::RenderFrame(Player* player) {
     DrawBulletDecals(player);
     DrawCasingProjectiles(player);
     LightingPass(player);
+
+    BlurEmissiveBulbs(player);
 
 	GlassPass(player);
 
@@ -460,24 +647,30 @@ void Renderer::RenderFrame(Player* player) {
         }
     }
 
-	/*glBindFramebuffer(GL_READ_FRAMEBUFFER, playerRenderTarget.gBuffer.GetID());
-	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-	glReadBuffer(GL_COLOR_ATTACHMENT4);
-    float x0 = 0;
-    float y0 = 0;
-    float x1 = playerRenderTarget.gBuffer.GetWidth();
-    float y1 = playerRenderTarget.gBuffer.GetHeight();
-    float d_x0 = 0;
-    float d_y0 = 0;
-    float d_x1 = playerRenderTarget.gBuffer.GetWidth() * 0.8f;
-    float d_y1 = playerRenderTarget.gBuffer.GetHeight() * 0.8f;
-	glBlitFramebuffer(x0, y0, x1, y1, d_x0, d_y0, d_x1, d_y1, GL_COLOR_BUFFER_BIT, GL_NEAREST);
-    */
+  //  BlitDebugTexture(_blurBuffers[2].FBO, GL_COLOR_ATTACHMENT1, _blurBuffers[2].width, _blurBuffers[2].height);
+
 
     // Wipe all light dirty flags back to false
     for (Light& light : Scene::_lights) {
         light.isDirty = false;
     }
+}
+
+void BlitDebugTexture(GLint fbo, GLenum colorAttachment, GLint srcWidth, GLint srcHeight) {
+
+	glBindFramebuffer(GL_READ_FRAMEBUFFER, _blurBuffers[1].FBO);
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+	glReadBuffer(colorAttachment);
+	float x0 = 0;
+	float y0 = 0;
+	float x1 = srcWidth;
+	float y1 = srcHeight;
+	float d_x0 = 0;
+	float d_y0 = 0;
+	float d_x1 = 1536 * 1.0f;
+	float d_y1 = 864 * 1.0f;
+	glBlitFramebuffer(x0, y0, x1, y1, d_x0, d_y0, d_x1, d_y1, GL_COLOR_BUFFER_BIT, GL_NEAREST);
+
 }
 
 
@@ -533,8 +726,8 @@ void GeometryPass(Player* player) {
     GBuffer& gBuffer = playerRenderTarget.gBuffer;
 
     gBuffer.Bind();
-    unsigned int attachments[3] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2 };
-    glDrawBuffers(3, attachments);
+    unsigned int attachments[4] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT6 };
+    glDrawBuffers(4, attachments);
     glViewport(0, 0, gBuffer.GetWidth(), gBuffer.GetHeight());
    // glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
    // glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -987,6 +1180,8 @@ void DrawScene(Shader& shader) {
         }
     }
 
+
+
     // Render pickups
     for (PickUp& pickup : Scene::_pickUps) {
 
@@ -1115,6 +1310,20 @@ void DrawScene(Shader& shader) {
             actor->addForce(force);
         }
     }*/
+
+
+    shader.SetBool("outputEmissive", true);
+	// Light bulbs
+	for (Light& light : Scene::_lights) {
+		Transform transform;
+		transform.position = light.position;
+		shader.SetVec3("lightColor", light.color);
+		shader.SetMat4("model", transform.to_mat4());
+		AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("Light"));
+		AssetManager::GetModel("Light1")->Draw();
+	}
+	shader.SetBool("outputEmissive", false);
+
 }
 
 void DrawAnimatedObject(Shader& shader, AnimatedGameObject* animatedGameObject) {

@@ -311,8 +311,6 @@ void GameObject::Update(float deltaTime) {
 		PhysicsObjectData* physicsObjectData = (PhysicsObjectData*)_raycastBody->userData;
 		physicsObjectData->type = GAME_OBJECT;
 		physicsObjectData->parent = this;
-
-		//_raycastBody->userData = new PhysicsObjectData(GAME_OBJECT, this);
 	}
 }
 

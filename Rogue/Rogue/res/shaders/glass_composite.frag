@@ -13,6 +13,11 @@ in vec2 TexCoords;
 layout (binding = 0) uniform sampler2D mainImageTexture;
 layout (binding = 1) uniform sampler2D glassTexture;
 
+layout (binding = 2) uniform sampler2D blurTexture0;
+layout (binding = 3) uniform sampler2D blurTexture1;
+layout (binding = 4) uniform sampler2D blurTexture2;
+layout (binding = 5) uniform sampler2D blurTexture3;
+
 uniform mat4 projectionScene;
 uniform mat4 projectionWeapon;
 uniform mat4 inverseProjectionScene;
@@ -36,12 +41,22 @@ void main() {
     vec3 lightingColor = texture(mainImageTexture, TexCoords).rgb;
     vec3 glassColor = texture(glassTexture, TexCoords).rgb;
 
+
 	vec3 final = lightingColor;
+
+	vec3 emissive = vec3(0);
+	emissive += texture(blurTexture0, TexCoords).rgb;
+	emissive += texture(blurTexture1, TexCoords).rgb;
+	emissive += texture(blurTexture2, TexCoords).rgb;
+	emissive += texture(blurTexture3, TexCoords).rgb;
+	
 
 	if (glassColor != vec3(0,0,0)) {
 		final = glassColor;
 	}
-
+	
+	final += emissive;
 	FragColor = vec4(final, 1);
+
    
 }
