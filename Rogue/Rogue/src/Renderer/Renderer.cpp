@@ -364,13 +364,10 @@ void Renderer::Init() {
 
 void BlurEmissiveBulbs(Player* player) {
 
-    // 1536 x 864
-
-
     if (!_blurBuffers.size()) {
 
-		int width = 1536 * 0.5f;
-		int height = 864 * 0.5f;
+		int width = 1536;
+		int height = 864;
 
         for (int i = 0; i < 4; i++) {
 
@@ -510,8 +507,8 @@ void Renderer::RenderFrame(Player* player) {
     PresentFrameBuffer& presentFrameBuffer = playerRenderTarget.presentFrameBuffer;
 
     gBuffer.Bind();
-	unsigned int attachments[5] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3, GL_COLOR_ATTACHMENT4 };
-	glDrawBuffers(5, attachments);
+	unsigned int attachments[6] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3, GL_COLOR_ATTACHMENT4, GL_COLOR_ATTACHMENT6 };
+	glDrawBuffers(6, attachments);
 	glViewport(0, 0, gBuffer.GetWidth(), gBuffer.GetHeight());
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 
@@ -616,6 +613,8 @@ void Renderer::RenderFrame(Player* player) {
         TextBlitter::_debugTextToBilt = "";
     }
 
+    TextBlitter::BlitAtPosition(player->_pickUpText, 60, presentFrameBuffer.GetHeight() - 60, false, 1.0f);
+
     glBindFramebuffer(GL_FRAMEBUFFER, presentFrameBuffer.GetID());
     glViewport(0, 0, presentFrameBuffer.GetWidth(), presentFrameBuffer.GetHeight());
     glDisable(GL_DEPTH_TEST);
@@ -707,6 +706,10 @@ void DrawHud(Player* player) {
 
     std::string clipAmmo = std::to_string(player->GetCurrentWeaponClipAmmo());
     std::string totalAmmo = std::to_string(player->GetCurrentWeaponTotalAmmo());
+
+	if (player->GetCurrentWeaponClipAmmo() == 0) {
+        ammoColor = glm::vec3(0.8f, 0.05f, 0.05f);
+	}
 
 
 
@@ -1326,7 +1329,7 @@ void DrawScene(Shader& shader) {
 
 }
 
-void DrawAnimatedObject(Shader& shader, AnimatedGameObject* animatedGameObject) {
+void DrawAnimatedObject(Shader& shader, AnimatedGameObject* animatedGameObject, Player* player) {
 
     if (!animatedGameObject) {
         std::cout << "You tried to draw an nullptr AnimatedGameObject\n";
@@ -1337,9 +1340,62 @@ void DrawAnimatedObject(Shader& shader, AnimatedGameObject* animatedGameObject) 
         return;
     }
 
+
+
+
     std::vector<glm::mat4> tempSkinningMats;
     for (unsigned int i = 0; i < animatedGameObject->_animatedTransforms.local.size(); i++) {
+
         glm::mat4 matrix = animatedGameObject->_animatedTransforms.local[i];
+
+		// move glock slide if necessary
+        if (animatedGameObject == &player->GetFirstPersonWeapon() && player->GetCurrentWeaponIndex() == GLOCK && player->_glockSlideNeedsToBeOut) {
+            if (i == 3) {
+                glm::mat4 matrix2 = animatedGameObject->_animatedTransforms.local[i];
+                Transform transform;
+                transform.position.y = 5.0f;
+                matrix = matrix2 * transform.to_mat4();
+            }
+        }
+
+
+        // Weapon sway
+        if (animatedGameObject == &player->GetFirstPersonWeapon()) {
+
+			static Transform swayTransform;
+			float xSwayTarget = 0.0f;
+			float ySwayTarget = 0.0f;
+
+            float xthreshold = 1;
+
+			if (Input::GetMouseOffsetX() < -xthreshold) {
+				xSwayTarget = -1.5f;
+			}
+
+			if (Input::GetMouseOffsetX() > xthreshold) {
+				xSwayTarget = 2.5f;
+			}
+			if (Input::GetMouseOffsetY() < 0) {
+				ySwayTarget = -0.5f;
+			}
+
+			if (Input::GetMouseOffsetY() > 0) {
+				ySwayTarget = 0.5f;
+			}
+
+			float speed = 0.2f;
+			swayTransform.position.x = Util::FInterpTo(swayTransform.position.x, xSwayTarget, 1.0f / 60.0f, speed);
+			swayTransform.position.y = Util::FInterpTo(swayTransform.position.y, ySwayTarget, 1.0f / 60.0f, speed);
+
+            matrix = swayTransform.to_mat4() * matrix;
+
+        }
+
+	
+
+
+
+
         shader.SetMat4("skinningMats[" + std::to_string(i) + "]", matrix);
         tempSkinningMats.push_back(matrix);
     }
@@ -1357,11 +1413,12 @@ void DrawAnimatedObject(Shader& shader, AnimatedGameObject* animatedGameObject) 
         }
 
    // }
-    
+
+
+
     for (int i = 0; i < animatedGameObject->_animatedTransforms.worldspace.size(); i++) {
 
-
-
+       
 
 
         auto& bone = animatedGameObject->_animatedTransforms.worldspace[i];
@@ -1375,6 +1432,8 @@ void DrawAnimatedObject(Shader& shader, AnimatedGameObject* animatedGameObject) 
 
 
         if (animatedGameObject->_animatedTransforms.names[i] == "Glock") {
+
+
         //    float x = m[3][0];
         //    float y = m[3][1];
         //    float z = m[3][2];
@@ -1391,6 +1450,8 @@ void DrawAnimatedObject(Shader& shader, AnimatedGameObject* animatedGameObject) 
         }
         */
 
+
+
         if (animatedGameObject->GetName() == "Shotgun") {
             glm::vec3 barrelPosition = animatedGameObject->GetShotgunBarrelPostion();
             Point point = Point(barrelPosition, BLUE);
@@ -1403,14 +1464,15 @@ void DrawAnimatedObject(Shader& shader, AnimatedGameObject* animatedGameObject) 
         maleHands = !maleHands;
     }
 
-
     SkinnedModel& skinnedModel = *animatedGameObject->_skinnedModel;
     glBindVertexArray(skinnedModel.m_VAO);
     for (int i = 0; i < skinnedModel.m_meshEntries.size(); i++) {
         AssetManager::BindMaterialByIndex(animatedGameObject->_materialIndices[i]);
+
         if (maleHands) {
-            if (skinnedModel.m_meshEntries[i].Name == "SK_FPSArms_Female.001" ||
-                skinnedModel.m_meshEntries[i].Name == "SK_FPSArms_Female") {
+			if (skinnedModel.m_meshEntries[i].Name == "SK_FPSArms_Female.001" ||
+				skinnedModel.m_meshEntries[i].Name == "SK_FPSArms_Female" ||
+				skinnedModel.m_meshEntries[i].Name == "SK_FPSArms_Female_LOD0.001") {				
                 continue;
             }
         }
@@ -1445,6 +1507,7 @@ void DrawAnimatedScene(Shader& shader, Player* player) {
                 }
             }
         }
+
     }
 
     shader.Use();
@@ -1455,7 +1518,7 @@ void DrawAnimatedScene(Shader& shader, Player* player) {
     // Render other players
     for (Player& otherPlayer : Scene::_players) {
         if (&otherPlayer != player) {
-            DrawAnimatedObject(shader, &otherPlayer._characterModel);            
+            DrawAnimatedObject(shader, &otherPlayer._characterModel, player);            
         }
     }
 
@@ -1463,15 +1526,16 @@ void DrawAnimatedScene(Shader& shader, Player* player) {
     shader.SetMat4("model", glm::mat4(1)); // 1.0 for weapon, 0.9 for scene.
     shader.SetFloat("projectionMatrixIndex", 0.0f);
     for (auto& animatedObject : Scene::GetAnimatedGameObjects()) {
-        DrawAnimatedObject(shader, &animatedObject);
+        DrawAnimatedObject(shader, &animatedObject, player);
     }
 
     glDisable(GL_CULL_FACE);
     shader.SetFloat("projectionMatrixIndex", 1.0f);
     shader.SetMat4("projection", Renderer::GetProjectionMatrix(_depthOfFieldWeapon)); // 1.0 for weapon, 0.9 for scene.
-    DrawAnimatedObject(shader, &player->GetFirstPersonWeapon());
+    DrawAnimatedObject(shader, &player->GetFirstPersonWeapon(), player);
     shader.SetFloat("projectionMatrixIndex", 0.0f);
     glEnable(GL_CULL_FACE);
+
 
     shader.SetBool("isAnimated", false);
 }

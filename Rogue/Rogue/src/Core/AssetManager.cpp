@@ -126,6 +126,7 @@ void AssetManager::LoadEverythingElse() {
 	FbxImporter::LoadAnimation(aks74u, "animations/AKS74U_Idle.fbx");
 	FbxImporter::LoadAnimation(aks74u, "animations/AKS74U_Walk.fbx");
 	FbxImporter::LoadAnimation(aks74u, "animations/AKS74U_Reload.fbx");
+	FbxImporter::LoadAnimation(aks74u, "animations/AKS74U_ReloadEmpty.fbx");
 	FbxImporter::LoadAnimation(aks74u, "animations/AKS74U_Draw.fbx");
 
 	SkinnedModel& glock = _skinnedModels.emplace_back(SkinnedModel());

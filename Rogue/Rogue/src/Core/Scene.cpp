@@ -515,6 +515,38 @@ void Scene::LoadHardCodedObjects() {
          glock.SetPosition(glm::vec3(2, 1.2, 3.5));
          */
 
+
+/*
+	AnimatedGameObject& aks74u = _animatedGameObjects.emplace_back(AnimatedGameObject());
+	aks74u.SetName("AKS74U");
+	aks74u.SetSkinnedModel("AKS74U");
+	aks74u.PlayAnimation("AKS74U_Idle", 0.5f);
+	aks74u.SetMaterial("Hands");
+	aks74u.SetPosition(glm::vec3(2, 1.75f, 3.5));
+	aks74u.SetScale(0.01f);
+
+	aks74u.SetMeshMaterialByIndex(2, "AKS74U_3");
+	aks74u.SetMeshMaterialByIndex(3, "AKS74U_3"); // possibly incorrect. this is the follower
+	aks74u.SetMeshMaterialByIndex(4, "AKS74U_1");
+	aks74u.SetMeshMaterialByIndex(5, "AKS74U_4");
+	aks74u.SetMeshMaterialByIndex(6, "AKS74U_0");
+	aks74u.SetMeshMaterialByIndex(7, "AKS74U_2");
+	aks74u.SetMeshMaterialByIndex(8, "AKS74U_1");  // Bolt_low. Possibly wrong
+	aks74u.SetMeshMaterialByIndex(9, "AKS74U_3"); // possibly incorrect.
+    */
+
+
+   auto _skinnedModel = AssetManager::GetSkinnedModel("AKS74U");
+	for (int i = 0; i < _skinnedModel->m_meshEntries.size(); i++) {
+		auto& mesh = _skinnedModel->m_meshEntries[i];
+        std::cout << i << ": " << mesh.Name << "\n";
+		//if (mesh.Name == meshName) {
+		//	_materialIndices[i] = AssetManager::GetMaterialIndex(materialName);
+			//return;
+		//}
+	}
+    
+
     for (Light& light : Scene::_lights) {
         light.isDirty = true;
     }

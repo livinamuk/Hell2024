@@ -5,10 +5,10 @@
 #include <string>
 #include <iostream>
 
-inline bool FileExists2(const std::string& name) {
-	struct stat buffer;
-	return (stat(name.c_str(), &buffer) == 0);
-}
+//inline bool FileExists2(const std::string& name) {
+//	struct stat buffer;
+//	return (stat(name.c_str(), &buffer) == 0);
+//}
 
 struct AudioHandle {
 	FMOD::Sound* sound = nullptr;
@@ -58,9 +58,9 @@ namespace Audio {
 
 	inline void LoadAudio(std::string name) {
 
-		if (!FileExists2(name)) {
-			std::cout << "LoadAudio() failed because " << name << " does not exist!!!\n";
-		}
+		//if (!FileExists2(name)) {
+		//	std::cout << "LoadAudio() failed because " << name << " does not exist!!!\n";
+		//}
 
 		FMOD_MODE eMode = FMOD_DEFAULT;
 		FMOD::Sound* sound = nullptr;

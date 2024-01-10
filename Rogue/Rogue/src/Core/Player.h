@@ -5,7 +5,7 @@
 
 #define GLOCK_CLIP_SIZE 12
 #define GLOCK_MAX_AMMO_SIZE 200
-#define AKS74U_CLIP_SIZE 30
+#define AKS74U_MAG_SIZE 30
 #define AKS74U_MAX_AMMO_SIZE 9999
 
 struct Ammo {
@@ -39,6 +39,7 @@ public:
 	int GetCurrentWeaponClipAmmo();
 	int GetCurrentWeaponTotalAmmo();
 
+	bool _glockSlideNeedsToBeOut = false;
 
 	//void Init(glm::vec3 position);
 	void Update(float deltaTime);
@@ -68,6 +69,9 @@ public:
 	void WipeYVelocityToZeroIfHeadHitCeiling();
 
 	bool _isGrounded = true;
+
+	std::string _pickUpText = "";
+	float _pickUpTextTimer = 0;
 
 private:
 

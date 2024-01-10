@@ -39,8 +39,8 @@ Player::Player(glm::vec3 position, glm::vec3 rotation) {
 
 	_inventory.glockAmmo.clip = GLOCK_CLIP_SIZE;
 	_inventory.glockAmmo.total = 80;
-	_inventory.aks74uAmmo.clip = AKS74U_CLIP_SIZE;
-	_inventory.aks74uAmmo.total = 200;
+	_inventory.aks74uAmmo.clip = AKS74U_MAG_SIZE;
+	_inventory.aks74uAmmo.total = 9999;
 
 	_weaponInventory.resize(Weapon::WEAPON_COUNT);
 
@@ -121,6 +121,14 @@ void Player::WipeYVelocityToZeroIfHeadHitCeiling() {
 
 void Player::Update(float deltaTime) {
 			
+	if (_pickUpTextTimer > 0) {
+		_pickUpTextTimer -= deltaTime;
+	}
+	else {
+		_pickUpTextTimer = 0;
+		_pickUpText = "";
+	}
+
 	// Mouselook
 	if (!_ignoreControl && GL::WindowHasFocus()) {
 		float mouseSensitivity = 0.002f;
@@ -166,8 +174,7 @@ void Player::Update(float deltaTime) {
 		headBobTransform.position.y = sin(totalTime * _headBobFrequency) * _headBobAmplitude * 2;
 	}
 
-	//headBobTransform = Transform();
-	//breatheTransform = Transform();
+
 
 	// View matrix
 	Transform camTransform;
@@ -379,6 +386,9 @@ void Player::Update(float deltaTime) {
 			pickUp.pickedUp = true;
 			_inventory.glockAmmo.total += 50.0f;
 
+			_pickUpText = "PICKED UP GLOCK AMMO";
+			_pickUpTextTimer = 2.0f;
+
 			Audio::PlayAudio("ItemPickUp.wav", 1.0f);
 		}
 
@@ -562,7 +572,15 @@ void Player::UpdateFirstPersonWeapon(float deltaTime) {
 		else if (_currentWeaponIndex == Weapon::AKS74U) {
 			_firstPersonWeapon.SetName("AKS74U");
 			_firstPersonWeapon.SetSkinnedModel("AKS74U");
-			_firstPersonWeapon.SetMaterial("Glock");
+			_firstPersonWeapon.SetMeshMaterialByIndex(2, "AKS74U_3");
+			_firstPersonWeapon.SetMeshMaterialByIndex(3, "AKS74U_3"); // possibly incorrect. this is the follower
+			_firstPersonWeapon.SetMeshMaterialByIndex(4, "AKS74U_1");
+			_firstPersonWeapon.SetMeshMaterialByIndex(5, "AKS74U_4");
+			_firstPersonWeapon.SetMeshMaterialByIndex(6, "AKS74U_0");
+			_firstPersonWeapon.SetMeshMaterialByIndex(7, "AKS74U_2");
+			_firstPersonWeapon.SetMeshMaterialByIndex(8, "AKS74U_1");  // Bolt_low. Possibly wrong
+			_firstPersonWeapon.SetMeshMaterialByIndex(9, "AKS74U_3"); // possibly incorrect.
+
 		}
 		else if (_currentWeaponIndex == Weapon::SHOTGUN) {
 			_firstPersonWeapon.SetName("Shotgun");
@@ -622,6 +640,18 @@ void Player::UpdateFirstPersonWeapon(float deltaTime) {
 	}
 
 	if (_currentWeaponIndex == Weapon::GLOCK) {
+
+		// Give reload ammo
+		static bool needsAmmoReloaded = false;
+		if (_weaponAction == RELOAD && needsAmmoReloaded && _firstPersonWeapon.AnimationIsPastPercentage(50.0f)) {
+			int ammoToGive = std::min(GLOCK_CLIP_SIZE, _inventory.glockAmmo.total);
+			_inventory.glockAmmo.clip = ammoToGive;
+			_inventory.glockAmmo.total -= ammoToGive;
+			needsAmmoReloaded = false;
+			_glockSlideNeedsToBeOut = false;
+		}
+
+
 		// Idle
 		if (_weaponAction == IDLE) {
 			if (Player::IsMoving()) {
@@ -664,13 +694,16 @@ void Player::UpdateFirstPersonWeapon(float deltaTime) {
 		// Reload
 		if (!_ignoreControl && Input::KeyPressed(HELL_KEY_R) && _inventory.glockAmmo.total > 0) {
 			_weaponAction = RELOAD;
-			_firstPersonWeapon.PlayAnimation("Glock_Reload", 1.0f);
-			Audio::PlayAudio("Glock_Reload.wav", 1.0f);
 
-			int ammoToGive = std::min(GLOCK_CLIP_SIZE, _inventory.glockAmmo.total);
-			_inventory.glockAmmo.clip = ammoToGive;
-			_inventory.glockAmmo.total -= ammoToGive;				
-
+			if (GetCurrentWeaponClipAmmo() == 0) {
+				_firstPersonWeapon.PlayAnimation("Glock_ReloadEmpty", 1.0f);
+				Audio::PlayAudio("Glock_ReloadFromEmpty.wav", 1.0f);				
+			}
+			else {
+				_firstPersonWeapon.PlayAnimation("Glock_Reload", 1.0f);
+				Audio::PlayAudio("Glock_Reload.wav", 1.0f);
+			}
+			needsAmmoReloaded = true;	
 		}
 		if (!_ignoreControl && Input::KeyPressed(HELL_KEY_G)) {
 			_weaponAction = RELOAD;
@@ -686,9 +719,30 @@ void Player::UpdateFirstPersonWeapon(float deltaTime) {
 		if (_weaponAction == RELOAD && _firstPersonWeapon.IsAnimationComplete()) {
 			_weaponAction = IDLE;
 		}
+
+		// Set flag to move glock slide out
+		if (GetCurrentWeaponClipAmmo() == 0) {
+			if (_weaponAction != RELOAD) {
+				_glockSlideNeedsToBeOut = true;
+			}
+			if (_weaponAction == RELOAD && !_firstPersonWeapon.AnimationIsPastPercentage(50.0f)) {
+				_glockSlideNeedsToBeOut = false;
+			}
+		}
 	}
 
 	if (_currentWeaponIndex == Weapon::AKS74U) {
+
+		// Give reload ammo
+		static bool needsAmmoReloaded = false;
+		if (_weaponAction == RELOAD && needsAmmoReloaded && _firstPersonWeapon.AnimationIsPastPercentage(38.0f)) {
+			int ammoToGive = std::min(AKS74U_MAG_SIZE, _inventory.aks74uAmmo.total);
+			_inventory.aks74uAmmo.clip = ammoToGive;
+			_inventory.aks74uAmmo.total -= ammoToGive;
+			needsAmmoReloaded = false;
+		}
+
+
 
 		// Fire
 		if (!_ignoreControl && Input::LeftMouseDown() && _inventory.aks74uAmmo.clip > 0) {
@@ -711,12 +765,17 @@ void Player::UpdateFirstPersonWeapon(float deltaTime) {
 		// Reload	
 		if (!_ignoreControl && Input::KeyPressed(HELL_KEY_R) && _inventory.aks74uAmmo.total > 0) {
 			_weaponAction = RELOAD;
-			_firstPersonWeapon.PlayAnimation("AKS74U_Reload", 1.1f);
-			Audio::PlayAudio("AK47_Reload.wav", 1.0f);
 
-			int ammoToGive = std::min(AKS74U_CLIP_SIZE, _inventory.aks74uAmmo.total);
-			_inventory.aks74uAmmo.clip = ammoToGive;
-			_inventory.aks74uAmmo.total -= ammoToGive;
+			if (GetCurrentWeaponClipAmmo() == 0) {
+				_firstPersonWeapon.PlayAnimation("AKS74U_ReloadEmpty", 1.0f);
+				Audio::PlayAudio("AK47_Reload.wav", 1.0f);
+			}
+			else {
+				_firstPersonWeapon.PlayAnimation("AKS74U_Reload", 1.0f);
+				Audio::PlayAudio("AK47_Reload.wav", 1.0f);
+			}
+			needsAmmoReloaded = true;
+
 		}
 
 		// Return to idle
@@ -796,6 +855,9 @@ void Player::UpdateFirstPersonWeapon(float deltaTime) {
 		}
 	}
 	
+
+
+
 	_firstPersonWeapon.Update(deltaTime);
 }
 
@@ -924,7 +986,7 @@ bool Player::CursorShouldBeInterect() {
 }
 
 #define PLAYER_CAPSULE_HEIGHT 0.6f
-#define PLAYER_CAPSULE_RADIUS 0.2f
+#define PLAYER_CAPSULE_RADIUS 0.01f
 
 void Player::CreateCharacterController(glm::vec3 position) {
 
