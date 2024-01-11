@@ -19,17 +19,12 @@ namespace GL {
     inline WindowMode _windowMode = WINDOWED;// FULLSCREEN;
 }
 
-void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow* window);
-void cursor_position_callback(GLFWwindow* window, double xpos, double ypos);
 void window_focus_callback(GLFWwindow* window, int focused);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 
-//void APIENTRY glDebugOutput(GLenum type, unsigned int id, GLenum severity, GLsizei length, const char* message, const void* userParam);
-
-GLenum glCheckError_(const char* file, int line)
-{
+GLenum glCheckError_(const char* file, int line) {
     GLenum errorCode;
     while ((errorCode = glGetError()) != GL_NO_ERROR)
     {
@@ -50,15 +45,11 @@ GLenum glCheckError_(const char* file, int line)
 }
 #define glCheckError() glCheckError_(__FILE__, __LINE__)
 
-void APIENTRY glDebugOutput(GLenum source, GLenum type, unsigned int id, GLenum severity, GLsizei /*length*/, const char* message, const void* /*userParam*/)
-{
+void APIENTRY glDebugOutput(GLenum source, GLenum type, unsigned int id, GLenum severity, GLsizei /*length*/, const char* message, const void* /*userParam*/) {
     if (id == 131169 || id == 131185 || id == 131218 || id == 131204) return; // ignore these non-significant error codes
-
     std::cout << "---------------" << std::endl;
     std::cout << "Debug message (" << id << "): " << message << std::endl;
-
-    switch (source)
-    {
+    switch (source){
     case GL_DEBUG_SOURCE_API:             std::cout << "Source: API"; break;
     case GL_DEBUG_SOURCE_WINDOW_SYSTEM:   std::cout << "Source: Window System"; break;
     case GL_DEBUG_SOURCE_SHADER_COMPILER: std::cout << "Source: Shader Compiler"; break;
@@ -66,9 +57,7 @@ void APIENTRY glDebugOutput(GLenum source, GLenum type, unsigned int id, GLenum 
     case GL_DEBUG_SOURCE_APPLICATION:     std::cout << "Source: Application"; break;
     case GL_DEBUG_SOURCE_OTHER:           std::cout << "Source: Other"; break;
     } std::cout << std::endl;
-
-    switch (type)
-    {
+    switch (type) {
     case GL_DEBUG_TYPE_ERROR:               std::cout << "Type: Error"; break;
     case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR: std::cout << "Type: Deprecated Behaviour"; break;
     case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR:  std::cout << "Type: Undefined Behaviour"; break;
@@ -80,8 +69,7 @@ void APIENTRY glDebugOutput(GLenum source, GLenum type, unsigned int id, GLenum 
     case GL_DEBUG_TYPE_OTHER:               std::cout << "Type: Other"; break;
     } std::cout << std::endl;
 
-    switch (severity)
-    {
+    switch (severity){
     case GL_DEBUG_SEVERITY_HIGH:         std::cout << "Severity: high"; break;
     case GL_DEBUG_SEVERITY_MEDIUM:       std::cout << "Severity: medium"; break;
     case GL_DEBUG_SEVERITY_LOW:          std::cout << "Severity: low"; break;
@@ -153,7 +141,6 @@ void QuerySizes() {
     std::cout << "Max size of a work group in Y dimension " << max_compute_work_group_size[1] << std::endl;
     std::cout << "Max size of a work group in Z dimension " << max_compute_work_group_size[2] << std::endl;
     std::cout << "Number of invocations in a single local work group that may be dispatched to a compute shader " << max_compute_work_group_invocations << std::endl;
-
 }
 
 void GL::Init(int width, int height) {
@@ -162,8 +149,7 @@ void GL::Init(int width, int height) {
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-    glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, true); 
-   
+    glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, true);    
     // Resolution and window size
     _monitor = glfwGetPrimaryMonitor();
     _mode = glfwGetVideoMode(_monitor);
@@ -175,12 +161,10 @@ void GL::Init(int width, int height) {
     _fullscreenHeight = _mode->height;
     _windowedWidth = width;
     _windowedHeight = height;
-
 	if (_windowedWidth > _fullscreenWidth || _windowedHeight > _fullscreenHeight) {
 		_windowedWidth = _fullscreenWidth * 0.75f;
 		_windowedHeight = _fullscreenHeight * 0.75f;
 	}
-
     if (_windowMode == FULLSCREEN) {
         _currentWidth = _fullscreenWidth;
         _currentHeight = _fullscreenHeight;
@@ -190,8 +174,8 @@ void GL::Init(int width, int height) {
         _currentWidth = _windowedWidth;
         _currentHeight = _windowedHeight;
         _window = glfwCreateWindow(_windowedWidth, _windowedHeight, "Rogue", NULL, NULL);
+		glfwSetWindowPos(_window, 0, 0);
     }
-
     if (_window == NULL) {
         std::cout << "Failed to create GLFW window" << std::endl;
         glfwTerminate();
@@ -199,16 +183,12 @@ void GL::Init(int width, int height) {
     }
     glfwMakeContextCurrent(_window);
     glfwSetFramebufferSizeCallback(_window, framebuffer_size_callback);
-    //glfwSetKeyCallback(_window, key_callback); 
-    glfwSetCursorPosCallback(_window, cursor_position_callback);
     glfwSetWindowFocusCallback(_window, window_focus_callback); 
     glfwSetScrollCallback(_window, scroll_callback);
-
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
         std::cout << "Failed to initialize GLAD" << std::endl;
         return;
     }
-
     int flags;
     glGetIntegerv(GL_CONTEXT_FLAGS, &flags);
     if (flags & GL_CONTEXT_FLAG_DEBUG_BIT) {
@@ -218,15 +198,8 @@ void GL::Init(int width, int height) {
         glDebugMessageCallback(glDebugOutput, nullptr);
     } else {
         std::cout << "Debug GL context not available\n";
-    }
-
-    //glDebugMessageCallback(glDebugOutput, nullptr);
-
-    
+    }    
     glfwSetInputMode(_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-
-    // Cap to 60fps
-    //glfwSwapInterval(1);
 
     // Clear screen to black
     glClear(GL_COLOR_BUFFER_BIT);
@@ -316,40 +289,6 @@ void processInput(GLFWwindow* window) {
 
 void framebuffer_size_callback(GLFWwindow* /*window*/, int width, int height) {
     glViewport(0, 0, width, height);
-}
-
-/*void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
-{
-    //if (key == GLFW_KEY_H) {
-   //     std::cout << "test\n";
-    //}
-}*/
-
-
-void cursor_position_callback(GLFWwindow* /*window*/, double /*xpos*/, double /*ypos*/)
-{
-    //std::cout << xpos << "\n";
-    /*
-    // these three lines were default at event.c code
-    Slot* slot = static_cast<Slot*>(glfwGetWindowUserPointer(window));
-    printf("%08x to %i at %0.3f: Cursor position: %f %f\n",
-        counter++, slot->number, glfwGetTime(), xpos, ypos);
-
-    // these code copied from "cursorPosCallback" default optix sample function, commented above
-    Params* params = static_cast<Params*>(glfwGetWindowUserPointer(window));
-
-    if (mouse_button == GLFW_MOUSE_BUTTON_LEFT)
-    {
-        trackball.setViewMode(sutil::Trackball::LookAtFixed);
-        trackball.updateTracking(static_cast<int>(xpos), static_cast<int>(ypos), params->width, params->height);
-        camera_changed = true;
-    }
-    else if (mouse_button == GLFW_MOUSE_BUTTON_RIGHT)
-    {
-        trackball.setViewMode(sutil::Trackball::EyeFixed);
-        trackball.updateTracking(static_cast<int>(xpos), static_cast<int>(ypos), params->width, params->height);
-        camera_changed = true;
-    }*/
 }
 
 void window_focus_callback(GLFWwindow* /*window*/, int focused) {

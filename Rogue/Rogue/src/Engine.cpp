@@ -17,7 +17,6 @@
 
 enum class EngineMode { Game, Editor } _engineMode;
 int _currentPlayer = 0;
-unsigned int _frameCount = 0;
 
 void ToggleEditor();
 void ToggleFullscreen();
@@ -78,14 +77,6 @@ void Engine::Run() {
         TextBlitter::Update(deltaTime);
         if (_engineMode == EngineMode::Game) {
             
-            _frameCount++;
-
-            // Hack to fix broken physics on first load. TODO: Find out why it's fucked.
-			if (_frameCount == 1) {
-				//File::LoadMap("map.txt");
-				//Scene::RecreateDataStructures();
-            }
-
             if (Renderer::_viewportMode != FULLSCREEN) {
                 for (Player& player : Scene::_players) {
                     Renderer::RenderFrame(&player);
@@ -93,17 +84,6 @@ void Engine::Run() {
             }
             else {
                 Renderer::RenderFrame(&Scene::_players[_currentPlayer]);
-            }
-
-            // hack to fix broken indirect lighting on load. find out why!
-            static bool runOnce = true;
-            static int runThreeTimes = 0;
-            if (runThreeTimes < 3) {
-				for (Light& light : Scene::_lights) {
-					light.isDirty = true;
-				}
-                runThreeTimes++;
-                runOnce = false;
             }
 
         }
@@ -246,14 +226,9 @@ void NextPlayer() {
     if (_currentPlayer == Scene::_playerCount) {
         _currentPlayer = 0;
     }
-
 	if (Renderer::_viewportMode == FULLSCREEN) {
 		Renderer::RecreateFrameBuffers(_currentPlayer);
-	}
-    
-    //for (int i = 0; i < Scene::_playerCount; i++) {
-    //    Scene::_players[i]._ignoreControl = (i != _currentPlayer);
-   // }
+	}    
     Audio::PlayAudio(AUDIO_SELECT, 1.00f);
     std::cout << "Current player is: " << _currentPlayer << "\n"; 
 }

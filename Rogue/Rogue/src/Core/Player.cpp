@@ -174,8 +174,6 @@ void Player::Update(float deltaTime) {
 		headBobTransform.position.y = sin(totalTime * _headBobFrequency) * _headBobAmplitude * 2;
 	}
 
-
-
 	// View matrix
 	Transform camTransform;
 	camTransform.position = _position + glm::vec3(0, _currentViewHeight, 0);
@@ -187,7 +185,6 @@ void Player::Update(float deltaTime) {
 	_forward = glm::vec3(_inverseViewMatrix[2]);
 	_front = glm::normalize(glm::vec3(_forward.x, 0, _forward.z));
 	_viewPos = _inverseViewMatrix[3];
-
 
 	// WSAD movement
 	_isMoving = false;
@@ -279,7 +276,7 @@ void Player::Update(float deltaTime) {
 	_weaponInventory[Weapon::AKS74U] = true;
 	_weaponInventory[Weapon::MP7] = false;
 
-	// Weapons
+	// Next weapon
 	if (!_ignoreControl && Input::KeyPressed(HELL_KEY_Q)) {
 
 		Audio::PlayAudio("Glock_Equip.wav", 0.5f);
@@ -601,6 +598,9 @@ void Player::UpdateFirstPersonWeapon(float deltaTime) {
 	_firstPersonWeapon.SetPosition(Player::GetViewPos() - (Player::GetCameraForward() * glm::vec3(0)));
 
 
+	///////////////
+	//   Knife   //
+
 	if (_currentWeaponIndex == Weapon::KNIFE) {
 		// Idle
 		if (_weaponAction == IDLE) {
@@ -639,6 +639,10 @@ void Player::UpdateFirstPersonWeapon(float deltaTime) {
 		}
 	}
 
+
+	///////////////
+	//   Glock	 //
+
 	if (_currentWeaponIndex == Weapon::GLOCK) {
 
 		// Give reload ammo
@@ -671,28 +675,35 @@ void Player::UpdateFirstPersonWeapon(float deltaTime) {
 			_weaponAction = IDLE;
 		}		
 		// Fire
-		if (!_ignoreControl && Input::LeftMousePressed() && _inventory.glockAmmo.clip > 0) {
-			if (_weaponAction == DRAWING ||
-				_weaponAction == IDLE ||
-				_weaponAction == FIRE && _firstPersonWeapon.AnimationIsPastPercentage(25.0f) ||
-				_weaponAction == RELOAD && _firstPersonWeapon.AnimationIsPastPercentage(80.0f)) {
-				_weaponAction = FIRE;
-				int random_number = std::rand() % 3 + 1;
-				std::string aninName = "Glock_Fire" + std::to_string(random_number);
-				std::string audioName = "Glock_Fire" + std::to_string(random_number) + ".wav";
-				_firstPersonWeapon.PlayAnimation(aninName, 1.5f);
-				Audio::PlayAudio(audioName, 1.0f);
-				SpawnMuzzleFlash();
-				SpawnBullet(0);
+		if (!_ignoreControl && Input::LeftMousePressed()) {
+			// Has ammo
+			if(_inventory.glockAmmo.clip > 0) {
+				if (_weaponAction == DRAWING ||
+					_weaponAction == IDLE ||
+					_weaponAction == FIRE && _firstPersonWeapon.AnimationIsPastPercentage(25.0f) ||
+					_weaponAction == RELOAD && _firstPersonWeapon.AnimationIsPastPercentage(80.0f)) {
+					_weaponAction = FIRE;
+					int random_number = std::rand() % 3 + 1;
+					std::string aninName = "Glock_Fire" + std::to_string(random_number);
+					std::string audioName = "Glock_Fire" + std::to_string(random_number) + ".wav";
+					_firstPersonWeapon.PlayAnimation(aninName, 1.5f);
+					Audio::PlayAudio(audioName, 1.0f);
+					SpawnMuzzleFlash();
+					SpawnBullet(0);
 
-				_inventory.glockAmmo.clip--;
+					_inventory.glockAmmo.clip--;
+				}
+			}
+			// Is empty 
+			else {
+				Audio::PlayAudio("Dry_Fire.wav", 0.8f);
 			}
 		}
 		if (_weaponAction == FIRE && _firstPersonWeapon.AnimationIsPastPercentage(60.0f)) {
 			_weaponAction = IDLE;
 		}
 		// Reload
-		if (!_ignoreControl && Input::KeyPressed(HELL_KEY_R) && _inventory.glockAmmo.total > 0) {
+		if (!_ignoreControl && Input::KeyPressed(HELL_KEY_R) && _inventory.glockAmmo.total > 0 && _inventory.glockAmmo.clip < GLOCK_CLIP_SIZE) {
 			_weaponAction = RELOAD;
 
 			if (GetCurrentWeaponClipAmmo() == 0) {
@@ -731,6 +742,10 @@ void Player::UpdateFirstPersonWeapon(float deltaTime) {
 		}
 	}
 
+
+	////////////////
+	//   AKs74u   //
+
 	if (_currentWeaponIndex == Weapon::AKS74U) {
 
 		// Give reload ammo
@@ -742,11 +757,9 @@ void Player::UpdateFirstPersonWeapon(float deltaTime) {
 			needsAmmoReloaded = false;
 		}
 
-
-
-		// Fire
+		// Fire (has ammo)
 		if (!_ignoreControl && Input::LeftMouseDown() && _inventory.aks74uAmmo.clip > 0) {
-			if (_weaponAction == DRAWING || 
+			if (_weaponAction == DRAWING ||
 				_weaponAction == IDLE ||
 				_weaponAction == FIRE && _firstPersonWeapon.AnimationIsPastPercentage(25.0f) ||
 				_weaponAction == RELOAD && _firstPersonWeapon.AnimationIsPastPercentage(80.0f)) {
@@ -762,8 +775,13 @@ void Player::UpdateFirstPersonWeapon(float deltaTime) {
 				_inventory.aks74uAmmo.clip--;
 			}
 		}
+		// Fire (is empty)
+		if (!_ignoreControl && Input::LeftMousePressed() && _inventory.aks74uAmmo.clip == 0) {	
+			Audio::PlayAudio("Dry_Fire.wav", 0.8f);
+		}
+
 		// Reload	
-		if (!_ignoreControl && Input::KeyPressed(HELL_KEY_R) && _inventory.aks74uAmmo.total > 0) {
+		if (!_ignoreControl && Input::KeyPressed(HELL_KEY_R) && _inventory.aks74uAmmo.total > 0 && _inventory.aks74uAmmo.clip < AKS74U_MAG_SIZE) {
 			_weaponAction = RELOAD;
 
 			if (GetCurrentWeaponClipAmmo() == 0) {
