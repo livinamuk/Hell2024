@@ -1359,8 +1359,8 @@ void DrawAnimatedObject(Shader& shader, AnimatedGameObject* animatedGameObject, 
         }
 
 
-        // Weapon sway
-        if (animatedGameObject == &player->GetFirstPersonWeapon()) {
+        // Weapon sway, on controlled player
+        if (animatedGameObject == &player->GetFirstPersonWeapon() && !player->_ignoreControl) {
 
 			static Transform swayTransform;
 			float xSwayTarget = 0.0f;
