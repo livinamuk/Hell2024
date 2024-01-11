@@ -123,8 +123,7 @@ void Engine::Init() {
 
     std::cout << "We are all alone on life's journey, held captive by the limitations of human consciousness.\n";
 
-    //GL::Init(1920 * 1.5f, 1080 * 1.5f);
-    GL::Init(1920 * 1.0f, 1080 * 1.0f);
+    GL::Init(1920 * 1.5f, 1080 * 1.5f);
     Input::Init();
     Physics::Init();
 
