@@ -55,7 +55,7 @@ public:
 	glm::vec3 GetCameraUp();
 	bool IsMoving();
 	int GetCurrentWeaponIndex();
-	void UpdateFirstPersonWeapon(float deltaTime);
+	void UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime);
 	AnimatedGameObject& GetFirstPersonWeapon();
 	void SpawnMuzzleFlash();
 	void SpawnGlockCasing();
@@ -76,14 +76,12 @@ public:
 private:
 
 	void Interact();
-	void EvaluateCameraRay();
 	void SpawnBullet(float variance);
 
 	glm::vec3 _position = glm::vec3(0);
 	glm::vec3 _rotation = glm::vec3(-0.1f, -HELL_PI * 0.5f, 0);
 	float _viewHeightStanding = 1.65f;
 	float _viewHeightCrouching = 1.15f;
-	//float _viewHeightCrouching = 3.15f; hovery
 	float _crouchDownSpeed = 17.5f;
 	float _currentViewHeight = _viewHeightStanding;
 	float _walkingSpeed = 4 * 1.25f;

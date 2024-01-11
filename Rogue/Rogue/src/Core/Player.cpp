@@ -152,10 +152,6 @@ void Player::Update(float deltaTime) {
 		crouching = true;
 	}
 
-	// Speed
-	//float speed = crouching ? _crouchingSpeed : _walkingSpeed;
-	//speed *= deltaTime;
-
 	// View height
 	float viewHeightTarget = crouching ? _viewHeightCrouching : _viewHeightStanding;
 	_currentViewHeight = Util::FInterpTo(_currentViewHeight, viewHeightTarget, deltaTime, _crouchDownSpeed);
@@ -214,26 +210,13 @@ void Player::Update(float deltaTime) {
 			displacement = (displacement / len) * speed* deltaTime;
 		}
 
-
-
-
-		// Move that character controller
-		PxFilterData filterData;
-		filterData.word0 = 0;
-		//filterData.word1 = CollisionGroup::PLAYER;	// Group this player is
-		filterData.word1 = CollisionGroup::ENVIROMENT_OBSTACLE;	// Things to collide with	
-
-		PxControllerFilters data;
-		data.mFilterData = &filterData;
-
 		// Jump
 		DetermineIfGrounded();
-		//if (Input::KeyPressed(HELL_KEY_SPACE) && _isGrounded) {
 		if (Input::KeyPressed(HELL_KEY_SPACE)) {
 			_yVelocity = 6.5f * deltaTime;
 			_isGrounded = false;
 		}
-		WipeYVelocityToZeroIfHeadHitCeiling();
+		//WipeYVelocityToZeroIfHeadHitCeiling();
 
 		// Gravity		
 		if (_isGrounded) {
@@ -244,6 +227,11 @@ void Player::Update(float deltaTime) {
 		}
 		
 		// Move PhysX character controller
+		PxFilterData filterData;
+		filterData.word0 = 0;
+		filterData.word1 = CollisionGroup::ENVIROMENT_OBSTACLE;	// Things to collide with	
+		PxControllerFilters data;
+		data.mFilterData = &filterData;
 		PxF32 minDist = 0.001f;
 		_characterController->move(PxVec3(displacement.x, _yVelocity , displacement.z), minDist, deltaTime, data);
 		_position = Util::PxVec3toGlmVec3(_characterController->getFootPosition());
@@ -294,15 +282,16 @@ void Player::Update(float deltaTime) {
 		}
 	}
 
-	UpdateFirstPersonWeapon(deltaTime);
+	UpdateFirstPersonWeaponLogicAndAnimations(deltaTime);
 
 	if (_muzzleFlashTimer >= 0) {
 		_muzzleFlashTimer += deltaTime * 20;
 	}
 
+	// Interact
 	if (!_ignoreControl) {
+		_cameraRayResult = Util::CastPhysXRay(GetViewPos(), GetCameraForward() * glm::vec3(-1), 100);
 		Interact();
-		EvaluateCameraRay();
 	}
 
 	// Character model animation
@@ -328,12 +317,11 @@ void Player::Update(float deltaTime) {
 			_characterModel.PlayAndLoopAnimation("Character_AKS74U_Kneel", 1.0f);
 		}
 	}
-
-
 	_characterModel.SetPosition(GetFeetPosition());// +glm::vec3(0.0f, 0.1f, 0.0f));
 	_characterModel.Update(deltaTime);
 	_characterModel.SetRotationY(_rotation.y + HELL_PI);
 
+	// Debug casing spawn
 	if (!_ignoreControl) {
 		if (Input::KeyDown(HELL_KEY_T) && GetCurrentWeaponIndex() == GLOCK) {
 			SpawnGlockCasing();
@@ -344,51 +332,32 @@ void Player::Update(float deltaTime) {
 	}
 
 	// Check for pick up "collision"
-
 	for (PickUp& pickUp : Scene::_pickUps) {
-
 		if (pickUp.pickedUp) {
 			continue;
 		}
-
 		glm::mat4 parentMatrix = glm::mat4(1);
-
 		if (pickUp.parentGameObjectName != "") {
-
 			GameObject* parentgameObject = Scene::GetGameObjectByName(pickUp.parentGameObjectName);
-
 			if (parentgameObject->GetOpenState() == OpenState::CLOSED ||
 				parentgameObject->GetOpenState() == OpenState::OPENING) {
 				continue;
 			}
-
 			parentMatrix = parentgameObject->GetModelMatrix();
-
-
-
 		}
-
 		glm::vec3 worldPositionOfPickUp = parentMatrix * glm::vec4(pickUp.position, 1.0f);
-
-
 		float allowedPickupMinDistance = 0.4f;
-
 		glm::vec3 a = glm::vec3(worldPositionOfPickUp.x, 0, worldPositionOfPickUp.z);
 		glm::vec3 b = glm::vec3(GetFeetPosition().x, 0, GetFeetPosition().z);
-
 		float distanceToPickUp = glm::distance(a, b);
 
 		if (distanceToPickUp < allowedPickupMinDistance) {
-
 			pickUp.pickedUp = true;
 			_inventory.glockAmmo.total += 50.0f;
-
 			_pickUpText = "PICKED UP GLOCK AMMO";
 			_pickUpTextTimer = 2.0f;
-
 			Audio::PlayAudio("ItemPickUp.wav", 1.0f);
 		}
-
 	}
 }
 
@@ -433,92 +402,7 @@ int Player::GetCurrentWeaponIndex() {
 	return _currentWeaponIndex;
 }
 
-void Player::EvaluateCameraRay() {
-
-//	_cameraRayData.physicsObjectType = PhysicsObjectType::UNDEFINED;
-//	_cameraRayData.parent = nullptr;
-//	_cameraRayData.found = false;
-
-	// do physx stuff  here
-	_cameraRayResult = Util::CastPhysXRay(GetViewPos(), GetCameraForward() * glm::vec3(-1), 100);
-	/*
-	if (cameraRayResult.hitFound) {
-
-		cameraRayResult.hitActor;
-
-		if (cameraRayResult.physicsObjectType == UNDEFINED) {
-		//	std::cout << "UNDEFINED\n";
-		}
-		if (cameraRayResult.physicsObjectType == GAME_OBJECT) {
-		//	std::cout << "GAME_OBJECT\n";
-		}
-		if (cameraRayResult.physicsObjectType == DOOR) {
-	//		std::cout << "DOOR\n";
-
-			//_cameraRayData.found = false;
-		//	_cameraRayData.distanceToHit = 99999;
-			//_cameraRayData.triangle = Triangle();
-			_cameraRayData.physicsObjectType = cameraRayResult.physicsObjectType;
-			_cameraRayData.found = true;
-			_cameraRayData.parent = cameraRayResult.parent;
-		//	_cameraRayData.rayCount = 0;
-
-		}
-
-
-	}
-	*/
-	/*
-	// CAMERA RAY CAST
-	_cameraRayData.found = false;
-	_cameraRayData.distanceToHit = 99999;
-	_cameraRayData.triangle = Triangle();
-	_cameraRayData.raycastObjectType = RaycastObjectType::NONE;
-	_cameraRayData.rayCount = 0;
-	glm::vec3 rayOrigin = GetViewPos();
-	glm::vec3 rayDirection = GetCameraForward() * glm::vec3(-1);
-
-	// house tris
-	std::vector<Triangle> triangles;
-	{
-		int vertexCount = Scene::_rtMesh[0].vertexCount;
-		for (int i = 0; i < vertexCount; i += 3) {
-			Triangle& tri = triangles.emplace_back(Triangle());
-			tri.p1 = Scene::_rtVertices[i + 0];
-			tri.p2 = Scene::_rtVertices[i + 1];
-			tri.p3 = Scene::_rtVertices[i + 2];
-		}
-		Util::EvaluateRaycasts(rayOrigin, rayDirection, 10, triangles, RaycastObjectType::WALLS, glm::mat4(1), _cameraRayData, nullptr);
-	}
-	// Doors
-	int doorIndex = 0;
-	for (RTInstance& instance : Scene::_rtInstances) {
-
-		if (instance.meshIndex == 0) {
-			continue;
-		}
-		triangles.clear();
-
-		RTMesh& mesh = Scene::_rtMesh[instance.meshIndex];
-		int baseVertex = mesh.baseVertex;
-		int vertexCount = mesh.vertexCount;
-		glm::mat4 modelMatrix = instance.modelMatrix;
-
-		for (int i = baseVertex; i < baseVertex + vertexCount; i += 3) {
-			Triangle& tri = triangles.emplace_back(Triangle());
-			tri.p1 = modelMatrix * glm::vec4(Scene::_rtVertices[i + 0], 1.0);
-			tri.p2 = modelMatrix * glm::vec4(Scene::_rtVertices[i + 1], 1.0);
-			tri.p3 = modelMatrix * glm::vec4(Scene::_rtVertices[i + 2], 1.0);
-		}
-		void* parent = &Scene::_doors[doorIndex];
-		Util::EvaluateRaycasts(rayOrigin, rayDirection, 10, triangles, RaycastObjectType::DOOR, glm::mat4(1), _cameraRayData, parent);
-		doorIndex++;
-	}*/
-
-}
-
 void Player::Interact() {
-
 
 	if (Input::KeyPressed(HELL_KEY_E)) {
 		if (_cameraRayResult.physicsObjectType == DOOR) {
@@ -537,23 +421,9 @@ void Player::Interact() {
 			gameObject->Interact();
 		}
 	}
-
-	/*if (Input::KeyPressed(HELL_KEY_E)) {
-		switch (_cameraRayData.raycastObjectType) {
-		case RaycastObjectType::DOOR: {
-			Door* door = (Door*)(_cameraRayData.parent);
-			if (!door->IsInteractable(GetFeetPosition())) {
-				break;
-			}
-			door->Interact();
-		} break;
-		default:
-			break;
-		}
-	}*/
 }
 
-void Player::UpdateFirstPersonWeapon(float deltaTime) {
+void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
 
 	if (_weaponAction == DRAW_BEGIN) {
 		if (_currentWeaponIndex == Weapon::KNIFE) {
@@ -678,8 +548,8 @@ void Player::UpdateFirstPersonWeapon(float deltaTime) {
 		if (!_ignoreControl && Input::LeftMousePressed()) {
 			// Has ammo
 			if(_inventory.glockAmmo.clip > 0) {
-				if (_weaponAction == DRAWING ||
-					_weaponAction == IDLE ||
+				if (_weaponAction == IDLE ||
+					_weaponAction == DRAWING && _firstPersonWeapon.AnimationIsPastPercentage(50.0f) ||
 					_weaponAction == FIRE && _firstPersonWeapon.AnimationIsPastPercentage(25.0f) ||
 					_weaponAction == RELOAD && _firstPersonWeapon.AnimationIsPastPercentage(80.0f)) {
 					_weaponAction = FIRE;
@@ -750,19 +620,22 @@ void Player::UpdateFirstPersonWeapon(float deltaTime) {
 
 		// Give reload ammo
 		static bool needsAmmoReloaded = false;
-		if (_weaponAction == RELOAD && needsAmmoReloaded && _firstPersonWeapon.AnimationIsPastPercentage(38.0f)) {
-			int ammoToGive = std::min(AKS74U_MAG_SIZE, _inventory.aks74uAmmo.total);
-			_inventory.aks74uAmmo.clip = ammoToGive;
-			_inventory.aks74uAmmo.total -= ammoToGive;
-			needsAmmoReloaded = false;
+		if (_weaponAction == RELOAD || _weaponAction == RELOAD_FROM_EMPTY) {
+			if (needsAmmoReloaded&& _firstPersonWeapon.AnimationIsPastPercentage(38.0f)) {
+				int ammoToGive = std::min(AKS74U_MAG_SIZE, _inventory.aks74uAmmo.total);
+				_inventory.aks74uAmmo.clip = ammoToGive;
+				_inventory.aks74uAmmo.total -= ammoToGive;
+				needsAmmoReloaded = false;
+			}
 		}
-
 		// Fire (has ammo)
 		if (!_ignoreControl && Input::LeftMouseDown() && _inventory.aks74uAmmo.clip > 0) {
-			if (_weaponAction == DRAWING ||
-				_weaponAction == IDLE ||
-				_weaponAction == FIRE && _firstPersonWeapon.AnimationIsPastPercentage(25.0f) ||
-				_weaponAction == RELOAD && _firstPersonWeapon.AnimationIsPastPercentage(80.0f)) {
+
+			if (_weaponAction == IDLE || 
+				_weaponAction == DRAWING && _firstPersonWeapon.AnimationIsPastPercentage(75.0f) ||				
+				_weaponAction == FIRE && _firstPersonWeapon.AnimationIsPastPercentage(22.5f) ||
+				_weaponAction == RELOAD && _firstPersonWeapon.AnimationIsPastPercentage(80.0f) ||
+				_weaponAction == RELOAD_FROM_EMPTY && _firstPersonWeapon.AnimationIsPastPercentage(95.0f)) {
 
 				_weaponAction = FIRE;
 				int random_number = std::rand() % 3 + 1;
@@ -779,25 +652,24 @@ void Player::UpdateFirstPersonWeapon(float deltaTime) {
 		if (!_ignoreControl && Input::LeftMousePressed() && _inventory.aks74uAmmo.clip == 0) {	
 			Audio::PlayAudio("Dry_Fire.wav", 0.8f);
 		}
-
 		// Reload	
 		if (!_ignoreControl && Input::KeyPressed(HELL_KEY_R) && _inventory.aks74uAmmo.total > 0 && _inventory.aks74uAmmo.clip < AKS74U_MAG_SIZE) {
-			_weaponAction = RELOAD;
-
+			
 			if (GetCurrentWeaponClipAmmo() == 0) {
 				_firstPersonWeapon.PlayAnimation("AKS74U_ReloadEmpty", 1.0f);
-				Audio::PlayAudio("AK47_Reload.wav", 1.0f);
+				Audio::PlayAudio("AK47_ReloadEmpty.wav", 1.0f);
+				_weaponAction = RELOAD_FROM_EMPTY;
 			}
 			else {
 				_firstPersonWeapon.PlayAnimation("AKS74U_Reload", 1.0f);
-				Audio::PlayAudio("AK47_Reload.wav", 1.0f);
+				Audio::PlayAudio("AK47_Reload.wav", 1.0f); 
+				_weaponAction = RELOAD;
 			}
 			needsAmmoReloaded = true;
-
 		}
-
 		// Return to idle
-		if (_firstPersonWeapon.IsAnimationComplete() && _weaponAction == RELOAD) {
+		if (_firstPersonWeapon.IsAnimationComplete() && _weaponAction == RELOAD ||
+			_firstPersonWeapon.IsAnimationComplete() && _weaponAction == RELOAD_FROM_EMPTY) {
 			_weaponAction = IDLE;
 		}
 		if (_weaponAction == FIRE && _firstPersonWeapon.AnimationIsPastPercentage(50.0f)) {
@@ -814,7 +686,7 @@ void Player::UpdateFirstPersonWeapon(float deltaTime) {
 		}
 		// Draw
 		if (_weaponAction == DRAW_BEGIN) {
-			_firstPersonWeapon.PlayAnimation("AKS74U_Draw", 1.0f);
+			_firstPersonWeapon.PlayAnimation("AKS74U_Draw", 1.125f);
 			_weaponAction = DRAWING;
 		}
 		// Drawing
@@ -822,6 +694,10 @@ void Player::UpdateFirstPersonWeapon(float deltaTime) {
 			_weaponAction = IDLE;
 		}
 	}
+
+
+	/////////////////
+	//   Shotgun   //
 
 	if (_currentWeaponIndex == Weapon::SHOTGUN) {
 		// Fire
@@ -874,8 +750,7 @@ void Player::UpdateFirstPersonWeapon(float deltaTime) {
 	}
 	
 
-
-
+	// Update animated bone transforms for the first person weapon model
 	_firstPersonWeapon.Update(deltaTime);
 }
 
@@ -887,9 +762,6 @@ void Player::SpawnMuzzleFlash() {
 	_muzzleFlashTimer = 0;
 	_muzzleFlashRotation = Util::RandomFloat(0, HELL_PI * 2);
 }
-
-
-
 
 void Player::SpawnGlockCasing() {
 
@@ -909,14 +781,11 @@ void Player::SpawnGlockCasing() {
 	PxVec3 force = Util::GlmVec3toPxVec3(glm::normalize(GetCameraRight() + glm::vec3(0.0f, Util::RandomFloat(0.7f, 0.9f), 0.0f)) * glm::vec3(0.00215f));
 	body->addForce(force);
 	body->setAngularVelocity(PxVec3(Util::RandomFloat(0.0f, 100.0f), Util::RandomFloat(0.0f, 100.0f), Util::RandomFloat(0.0f, 100.0f)));
-	//shape->release();
 
 	BulletCasing bulletCasing;
 	bulletCasing.type = GLOCK;
 	bulletCasing.rigidBody = body;
 	Scene::_bulletCasings.push_back(bulletCasing);
-
-	//body->userData = (void*)&Scene::_bulletCasings.back();
 }
 
 
