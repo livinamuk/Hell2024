@@ -45,6 +45,7 @@ public:
 	void Update(float deltaTime);
 	void SetRotation(glm::vec3 rotation);
 	void SetWeapon(Weapon weapon);
+	void Respawn(glm::vec3 position, glm::vec3 rotation);
 	glm::mat4 GetViewMatrix();
 	glm::mat4 GetInverseViewMatrix();
 	glm::vec3 GetViewPos();
@@ -104,4 +105,5 @@ private:
 	AnimatedGameObject _firstPersonWeapon;
 	WeaponAction _weaponAction = DRAW_BEGIN;
 	std::vector<bool> _weaponInventory;
+	bool _needsRespawning = true;
 };

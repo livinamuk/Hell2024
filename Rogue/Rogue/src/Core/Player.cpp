@@ -32,15 +32,7 @@ Player::Player() {
 
 Player::Player(glm::vec3 position, glm::vec3 rotation) {
 
-	SetWeapon(Weapon::GLOCK);
-
-	_position = position;
-	_rotation = rotation;
-
-	_inventory.glockAmmo.clip = GLOCK_CLIP_SIZE;
-	_inventory.glockAmmo.total = 80;
-	_inventory.aks74uAmmo.clip = AKS74U_MAG_SIZE;
-	_inventory.aks74uAmmo.total = 9999;
+	Respawn(position, rotation);
 
 	_weaponInventory.resize(Weapon::WEAPON_COUNT);
 
@@ -423,8 +415,34 @@ void Player::Interact() {
 	}
 }
 
+void Player::Respawn(glm::vec3 position, glm::vec3 rotation) {
+	SetWeapon(Weapon::GLOCK);
+	_weaponAction = SPAWNING;
+	_position = position;
+	_rotation = rotation;
+	_inventory.glockAmmo.clip = GLOCK_CLIP_SIZE;
+	_inventory.glockAmmo.total = 80;
+	_inventory.aks74uAmmo.clip = AKS74U_MAG_SIZE;
+	_inventory.aks74uAmmo.total = 9999;
+	_firstPersonWeapon.SetName("Glock");
+	_firstPersonWeapon.SetSkinnedModel("Glock");
+	_firstPersonWeapon.SetMaterial("Glock");
+	_firstPersonWeapon.PlayAnimation("Glock_Spawn", 1.0f);
+	_firstPersonWeapon.SetMeshMaterial("manniquen1_2.001", "Hands");
+	_firstPersonWeapon.SetMeshMaterial("manniquen1_2", "Hands");
+	_firstPersonWeapon.SetMeshMaterial("SK_FPSArms_Female.001", "FemaleArms");
+	_firstPersonWeapon.SetMeshMaterial("SK_FPSArms_Female", "FemaleArms");
+	Audio::PlayAudio("Glock_Equip.wav", 0.5f);
+}
+
 void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
 
+	// Debug test spawn logic (respawns at same pos/rot)
+	if (!_ignoreControl && Input::KeyPressed(HELL_KEY_J)) {
+		Respawn(_position, _rotation);
+	}
+
+	// Switching weapon? Well change all the shit you need to then
 	if (_weaponAction == DRAW_BEGIN) {
 		if (_currentWeaponIndex == Weapon::KNIFE) {
 			_firstPersonWeapon.SetName("Knife");
@@ -454,18 +472,16 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
 			_firstPersonWeapon.SetSkinnedModel("Shotgun");
 			_firstPersonWeapon.SetMeshMaterial("Shotgun Mesh", "Shotgun");
 			_firstPersonWeapon.SetMeshMaterial("shotgunshells", "Shell");
-		}
-		
+		}		
 		_firstPersonWeapon.SetMeshMaterial("manniquen1_2.001", "Hands");
 		_firstPersonWeapon.SetMeshMaterial("manniquen1_2", "Hands");
 		_firstPersonWeapon.SetMeshMaterial("SK_FPSArms_Female.001", "FemaleArms");
 		_firstPersonWeapon.SetMeshMaterial("SK_FPSArms_Female", "FemaleArms");
 	}
-
 	_firstPersonWeapon.SetScale(0.001f);
 	_firstPersonWeapon.SetRotationX(Player::GetViewRotation().x);
 	_firstPersonWeapon.SetRotationY(Player::GetViewRotation().y);
-	_firstPersonWeapon.SetPosition(Player::GetViewPos() - (Player::GetCameraForward() * glm::vec3(0)));
+	_firstPersonWeapon.SetPosition(Player::GetViewPos());
 
 
 	///////////////
@@ -524,8 +540,6 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
 			needsAmmoReloaded = false;
 			_glockSlideNeedsToBeOut = false;
 		}
-
-
 		// Idle
 		if (_weaponAction == IDLE) {
 			if (Player::IsMoving()) {
@@ -551,7 +565,8 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
 				if (_weaponAction == IDLE ||
 					_weaponAction == DRAWING && _firstPersonWeapon.AnimationIsPastPercentage(50.0f) ||
 					_weaponAction == FIRE && _firstPersonWeapon.AnimationIsPastPercentage(25.0f) ||
-					_weaponAction == RELOAD && _firstPersonWeapon.AnimationIsPastPercentage(80.0f)) {
+					_weaponAction == RELOAD && _firstPersonWeapon.AnimationIsPastPercentage(80.0f) ||
+					_weaponAction == SPAWNING && _firstPersonWeapon.AnimationIsPastPercentage(5.0f)) {
 					_weaponAction = FIRE;
 					int random_number = std::rand() % 3 + 1;
 					std::string aninName = "Glock_Fire" + std::to_string(random_number);
@@ -560,7 +575,6 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
 					Audio::PlayAudio(audioName, 1.0f);
 					SpawnMuzzleFlash();
 					SpawnBullet(0);
-
 					_inventory.glockAmmo.clip--;
 				}
 			}
@@ -591,16 +605,11 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
 			_firstPersonWeapon.PlayAnimation("Glock_ReloadEmpty", 1.0f);
 			Audio::PlayAudio("Glock_ReloadEmpty.wav", 1.0f);
 		}
-		if (!_ignoreControl && Input::KeyPressed(HELL_KEY_J)) {
-			_weaponAction = RELOAD;
-			_firstPersonWeapon.PlayAnimation("Glock_Spawn", 1.0f);
-			//Audio::PlayAudio("Glock_ReloadEmpty.wav", 1.0f);
-			Audio::PlayAudio("Glock_Equip.wav", 0.5f);
-		}
-		if (_weaponAction == RELOAD && _firstPersonWeapon.IsAnimationComplete()) {
+		if (_weaponAction == RELOAD && _firstPersonWeapon.IsAnimationComplete() ||
+			_weaponAction == SPAWNING && _firstPersonWeapon.IsAnimationComplete()) {
 			_weaponAction = IDLE;
 		}
-
+		
 		// Set flag to move glock slide out
 		if (GetCurrentWeaponClipAmmo() == 0) {
 			if (_weaponAction != RELOAD) {
@@ -749,9 +758,41 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
 		}
 	}
 	
-
 	// Update animated bone transforms for the first person weapon model
 	_firstPersonWeapon.Update(deltaTime);
+
+	// Move glock slide bone if necessary
+	if (GetCurrentWeaponIndex() == GLOCK && _glockSlideNeedsToBeOut) {
+		Transform transform;
+		transform.position.y = 5.0f;
+		_firstPersonWeapon._animatedTransforms.local[3] *= transform.to_mat4();	// 3 is slide bone
+	}
+
+	// Weapon sway
+	if (!_ignoreControl) {
+		static Transform swayTransform;
+		float xSwayTarget = 0.0f;
+		float ySwayTarget = 0.0f;
+		float xthreshold = 1;
+		if (Input::GetMouseOffsetX() < -xthreshold) {
+			xSwayTarget = -1.5f;
+		}
+		if (Input::GetMouseOffsetX() > xthreshold) {
+			xSwayTarget = 2.5f;
+		}
+		if (Input::GetMouseOffsetY() < 0) {
+			ySwayTarget = -0.5f;
+		}
+		if (Input::GetMouseOffsetY() > 0) {
+			ySwayTarget = 0.5f;
+		}
+		float speed = 10.2f;
+		swayTransform.position.x = Util::FInterpTo(swayTransform.position.x, xSwayTarget, deltaTime, speed);
+		swayTransform.position.y = Util::FInterpTo(swayTransform.position.y, ySwayTarget, deltaTime, speed);
+		for (int i = 0; i < _firstPersonWeapon._animatedTransforms.local.size(); i++) {
+			_firstPersonWeapon._animatedTransforms.local[i] = swayTransform.to_mat4() * _firstPersonWeapon._animatedTransforms.local[i];			
+		}
+	}
 }
 
 AnimatedGameObject& Player::GetFirstPersonWeapon() {
@@ -864,7 +905,7 @@ bool Player::CursorShouldBeInterect() {
 		return door->IsInteractable(GetFeetPosition());
 	}
 
-	if (_cameraRayResult.physicsObjectType == GAME_OBJECT) {		
+	if (_cameraRayResult.physicsObjectType == GAME_OBJECT && _cameraRayResult.parent) {
 		GameObject* gameObject = (GameObject*)(_cameraRayResult.parent);
 		return gameObject->IsInteractable();	// TO DO: add interact distance for game objects
 	}

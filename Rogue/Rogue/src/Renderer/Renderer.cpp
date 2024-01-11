@@ -1329,7 +1329,7 @@ void DrawScene(Shader& shader) {
 
 }
 
-void DrawAnimatedObject(Shader& shader, AnimatedGameObject* animatedGameObject, Player* player) {
+void DrawAnimatedObject(Shader& shader, AnimatedGameObject* animatedGameObject) {
 
     if (!animatedGameObject) {
         std::cout << "You tried to draw an nullptr AnimatedGameObject\n";
@@ -1340,87 +1340,25 @@ void DrawAnimatedObject(Shader& shader, AnimatedGameObject* animatedGameObject, 
         return;
     }
 
-
-
-
     std::vector<glm::mat4> tempSkinningMats;
     for (unsigned int i = 0; i < animatedGameObject->_animatedTransforms.local.size(); i++) {
-
         glm::mat4 matrix = animatedGameObject->_animatedTransforms.local[i];
-
-		// move glock slide if necessary
-        if (animatedGameObject == &player->GetFirstPersonWeapon() && player->GetCurrentWeaponIndex() == GLOCK && player->_glockSlideNeedsToBeOut) {
-            if (i == 3) {
-                glm::mat4 matrix2 = animatedGameObject->_animatedTransforms.local[i];
-                Transform transform;
-                transform.position.y = 5.0f;
-                matrix = matrix2 * transform.to_mat4();
-            }
-        }
-
-
-        // Weapon sway
-        if (animatedGameObject == &player->GetFirstPersonWeapon() && !player->_ignoreControl) {
-
-			static Transform swayTransform;
-			float xSwayTarget = 0.0f;
-			float ySwayTarget = 0.0f;
-
-            float xthreshold = 1;
-
-			if (Input::GetMouseOffsetX() < -xthreshold) {
-				xSwayTarget = -1.5f;
-			}
-
-			if (Input::GetMouseOffsetX() > xthreshold) {
-				xSwayTarget = 2.5f;
-			}
-			if (Input::GetMouseOffsetY() < 0) {
-				ySwayTarget = -0.5f;
-			}
-
-			if (Input::GetMouseOffsetY() > 0) {
-				ySwayTarget = 0.5f;
-			}
-
-			float speed = 0.2f;
-			swayTransform.position.x = Util::FInterpTo(swayTransform.position.x, xSwayTarget, 1.0f / 60.0f, speed);
-			swayTransform.position.y = Util::FInterpTo(swayTransform.position.y, ySwayTarget, 1.0f / 60.0f, speed);
-
-            matrix = swayTransform.to_mat4() * matrix;
-
-        }
-
-	
-
-
-
-
         shader.SetMat4("skinningMats[" + std::to_string(i) + "]", matrix);
         tempSkinningMats.push_back(matrix);
     }
     shader.SetMat4("model", animatedGameObject->GetModelMatrix());
 
-  //  std::cout << "\n";
-
-  //  if(Input::KeyPressed(HELL_KEY_T)) {
-        if (animatedGameObject->GetName() == "Glock") {
-            glm::vec3 barrelPosition = animatedGameObject->GetGlockCasingSpawnPostion();
-            Point point = Point(barrelPosition, BLUE);
-            Renderer::QueuePointForDrawing(point);
-            //            debugPoints.push_back(barrelPosition);
-
-        }
-
-   // }
-
+    /*
+    if (animatedGameObject->GetName() == "Glock") {
+        glm::vec3 barrelPosition = animatedGameObject->GetGlockCasingSpawnPostion();
+        Point point = Point(barrelPosition, BLUE);
+        Renderer::QueuePointForDrawing(point);
+        //debugPoints.push_back(barrelPosition);
+    }*/
 
 
     for (int i = 0; i < animatedGameObject->_animatedTransforms.worldspace.size(); i++) {
-
-       
-
-
+             
         auto& bone = animatedGameObject->_animatedTransforms.worldspace[i];
         glm::mat4 m = animatedGameObject->GetModelMatrix() * bone;
         float x = m[3][0];
@@ -1429,34 +1367,19 @@ void DrawAnimatedObject(Shader& shader, AnimatedGameObject* animatedGameObject, 
         Point p2(glm::vec3(x, y, z), RED);
         Renderer::QueuePointForDrawing(p2);
 
-
-
+        /*
         if (animatedGameObject->_animatedTransforms.names[i] == "Glock") {
-
-
-        //    float x = m[3][0];
-        //    float y = m[3][1];
-        //    float z = m[3][2];
-         //   debugPoints.push_back(glm::vec3(x, y, z));
+            //    float x = m[3][0];
+            //    float y = m[3][1];
+            //    float z = m[3][2];
+             //   debugPoints.push_back(glm::vec3(x, y, z));
         }
-
-       // std::cout << i << ": " << animatedGameObject->_animatedTransforms.names[i] << "\n";
-
-     /*   if (animatedGameObject->_animatedTransforms.names[i] == "Glock") {
-            _glockMatrices.push_back(m);
-        }
-        if (animatedGameObject->_animatedTransforms.names[i] == "Glock") {
-            _aks74uMatrices.push_back(m);
-        }
-        */
-
-
 
         if (animatedGameObject->GetName() == "Shotgun") {
             glm::vec3 barrelPosition = animatedGameObject->GetShotgunBarrelPostion();
             Point point = Point(barrelPosition, BLUE);
             //   QueuePointForDrawing(point);
-        }
+        }*/
     }
 
     static bool maleHands = true;
@@ -1507,35 +1430,31 @@ void DrawAnimatedScene(Shader& shader, Player* player) {
                 }
             }
         }
-
     }
 
     shader.Use();
     shader.SetBool("isAnimated", true);
-
-    shader.SetMat4("model", glm::mat4(1)); // 1.0 for weapon, 0.9 for scene.
+    shader.SetMat4("model", glm::mat4(1)); 
 
     // Render other players
     for (Player& otherPlayer : Scene::_players) {
         if (&otherPlayer != player) {
-            DrawAnimatedObject(shader, &otherPlayer._characterModel, player);            
+            DrawAnimatedObject(shader, &otherPlayer._characterModel);            
         }
     }
 
-
-    shader.SetMat4("model", glm::mat4(1)); // 1.0 for weapon, 0.9 for scene.
+    shader.SetMat4("model", glm::mat4(1));
     shader.SetFloat("projectionMatrixIndex", 0.0f);
     for (auto& animatedObject : Scene::GetAnimatedGameObjects()) {
-        DrawAnimatedObject(shader, &animatedObject, player);
+        DrawAnimatedObject(shader, &animatedObject);
     }
 
     glDisable(GL_CULL_FACE);
     shader.SetFloat("projectionMatrixIndex", 1.0f);
     shader.SetMat4("projection", Renderer::GetProjectionMatrix(_depthOfFieldWeapon)); // 1.0 for weapon, 0.9 for scene.
-    DrawAnimatedObject(shader, &player->GetFirstPersonWeapon(), player);
+    DrawAnimatedObject(shader, &player->GetFirstPersonWeapon());
     shader.SetFloat("projectionMatrixIndex", 0.0f);
     glEnable(GL_CULL_FACE);
-
 
     shader.SetBool("isAnimated", false);
 }
