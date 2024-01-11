@@ -7,7 +7,7 @@ namespace GL {
     inline const GLFWvidmode* _mode;
     inline int _currentWidth = 0;
     inline int _currentHeight = 0;
-    inline int _windowedtWidth = 0;
+    inline int _windowedWidth = 0;
     inline int _windowedHeight = 0;
     inline int _fullscreenWidth = 0;
     inline int _fullscreenHeight = 0;
@@ -108,9 +108,9 @@ void GL::ResetScrollWheelYOffset() {
 
 void GL::CreateWindow(WindowMode windowMode) {
     if (windowMode == WINDOWED) {
-        _currentWidth = _windowedtWidth;
+        _currentWidth = _windowedWidth;
         _currentHeight = _windowedHeight;
-        _window = glfwCreateWindow(_windowedtWidth, _windowedHeight, "Rogue", NULL, NULL);
+        _window = glfwCreateWindow(_windowedWidth, _windowedHeight, "Rogue", NULL, NULL);
     }
     else if (windowMode == FULLSCREEN) {
         _currentWidth = _fullscreenWidth;
@@ -122,9 +122,9 @@ void GL::CreateWindow(WindowMode windowMode) {
 
 void GL::SetWindowMode(WindowMode windowMode) {
     if (windowMode == WINDOWED) {
-        _currentWidth = _windowedtWidth;
+        _currentWidth = _windowedWidth;
         _currentHeight = _windowedHeight;
-        glfwSetWindowMonitor(_window, nullptr, 0, 0, _windowedtWidth, _windowedHeight, 0);
+        glfwSetWindowMonitor(_window, nullptr, 0, 0, _windowedWidth, _windowedHeight, 0);
     } 
     else if (windowMode == FULLSCREEN) {
         _currentWidth = _fullscreenWidth;
@@ -173,8 +173,13 @@ void GL::Init(int width, int height) {
     glfwWindowHint(GLFW_REFRESH_RATE, _mode->refreshRate);
     _fullscreenWidth = _mode->width;
     _fullscreenHeight = _mode->height;
-    _windowedtWidth = width;
+    _windowedWidth = width;
     _windowedHeight = height;
+
+	if (_windowedWidth > _fullscreenWidth || _windowedHeight > _fullscreenHeight) {
+		_windowedWidth = _fullscreenWidth * 0.75f;
+		_windowedHeight = _fullscreenHeight * 0.75f;
+	}
 
     if (_windowMode == FULLSCREEN) {
         _currentWidth = _fullscreenWidth;
@@ -182,9 +187,9 @@ void GL::Init(int width, int height) {
         _window = glfwCreateWindow(_fullscreenWidth, _fullscreenHeight, "Noose Girl", _monitor, NULL);
     } 
     else {
-        _currentWidth = _windowedtWidth;
+        _currentWidth = _windowedWidth;
         _currentHeight = _windowedHeight;
-        _window = glfwCreateWindow(_windowedtWidth, _windowedHeight, "Rogue", NULL, NULL);
+        _window = glfwCreateWindow(_windowedWidth, _windowedHeight, "Rogue", NULL, NULL);
     }
 
     if (_window == NULL) {
@@ -212,7 +217,7 @@ void GL::Init(int width, int height) {
         glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS); // makes sure errors are displayed synchronously
         glDebugMessageCallback(glDebugOutput, nullptr);
     } else {
-        std::cout << "Debug GL context not avaliable\n";
+        std::cout << "Debug GL context not available\n";
     }
 
     //glDebugMessageCallback(glDebugOutput, nullptr);
