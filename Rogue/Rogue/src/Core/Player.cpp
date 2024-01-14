@@ -260,7 +260,7 @@ void Player::Update(float deltaTime) {
 
 	_weaponInventory[Weapon::KNIFE] = true;
 	_weaponInventory[Weapon::GLOCK] = true;
-	_weaponInventory[Weapon::SHOTGUN] = true;
+	_weaponInventory[Weapon::SHOTGUN] = false;
 	_weaponInventory[Weapon::AKS74U] = true;
 	_weaponInventory[Weapon::MP7] = false;
 
