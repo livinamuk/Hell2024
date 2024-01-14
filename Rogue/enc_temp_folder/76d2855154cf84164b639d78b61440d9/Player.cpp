@@ -69,7 +69,7 @@ void Player::DetermineIfGrounded() {
 	filterData.data.word0 = RaycastGroup::RAYCAST_ENABLED;
 	filterData.data.word2 = CollisionGroup::ENVIROMENT_OBSTACLE;
 
-	_isGrounded = false;
+	_isGrounded = true;
 
 	/*
 	_isGrounded = scene->raycast(origin, unitDir, rayLength, hit, outputFlags, filterData);
