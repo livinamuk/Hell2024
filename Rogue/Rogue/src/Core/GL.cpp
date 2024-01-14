@@ -1,5 +1,6 @@
 #include "GL.h"
 #include <iostream>
+#include <string>
 
 namespace GL {
     inline GLFWwindow* _window;
@@ -146,6 +147,9 @@ void QuerySizes() {
 void GL::Init(int width, int height) {
 
     glfwInit();
+	glfwSetErrorCallback([](int error, const char* description) {
+		std::cout << "GLFW Error (" << std::to_string(error) << "): " << description << std::endl;
+	});
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);

@@ -778,29 +778,21 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
 
 	// Weapon sway
 	if (!_ignoreControl) {
+
 		constexpr float swaySpeed = 5.0f;
 		constexpr float swayAmount = 0.2f;
 		constexpr glm::vec2 swayAmountMax(2.5f);
-
 		const float lerpFrac = swaySpeed * deltaTime;
-
 		const glm::vec2 lookDelta = glm::vec2(-Input::GetMouseOffsetX(), -Input::GetMouseOffsetY());
 
-		static glm::vec2 _weaponSwayFactor = glm::vec2(0);
-		static glm::vec3 _weaponSwayTargetPos = glm::vec3(0);
 		_weaponSwayFactor  = glm::mix(_weaponSwayFactor, -(lookDelta * swayAmount), lerpFrac);
 		_weaponSwayFactor = glm::clamp(_weaponSwayFactor, -swayAmountMax, swayAmountMax);
-
 		_weaponSwayTargetPos = glm::mix(_weaponSwayTargetPos, glm::vec3(_weaponSwayFactor, 0), lerpFrac);
 
 		const glm::mat4 swayTransform = glm::translate(glm::mat4(1.0f), _weaponSwayTargetPos);
-
-		for (int i = 0; i < _firstPersonWeapon._animatedTransforms.local.size(); i++) {
-			_firstPersonWeapon._animatedTransforms.local[i] = swayTransform * _firstPersonWeapon._animatedTransforms.local[i];
+		for (auto& transform : _firstPersonWeapon._animatedTransforms.local) {
+			transform = swayTransform * transform;
 		}
-
-		//for (auto& transform : _firstPersonWeapon._animatedTransforms.local)
-		//	transform = swayTransform * transform;
 	}
 
 	if (!_ignoreControl && false) {

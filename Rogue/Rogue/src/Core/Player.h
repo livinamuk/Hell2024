@@ -106,4 +106,6 @@ private:
 	WeaponAction _weaponAction = DRAW_BEGIN;
 	std::vector<bool> _weaponInventory;
 	bool _needsRespawning = true;
+	glm::vec2 _weaponSwayFactor = glm::vec2(0);
+	glm::vec3 _weaponSwayTargetPos = glm::vec3(0);
 };
