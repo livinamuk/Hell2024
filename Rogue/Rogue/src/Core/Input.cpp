@@ -45,7 +45,7 @@ void Input::Update() {
     GL::ResetScrollWheelYOffset();
 
     // Keyboard
-    for (int i = 30; i < 350; i++) {
+    for (int i = 32; i < 349; i++) {
         // down
         if (glfwGetKey(window, i) == GLFW_PRESS)
             _keyDown[i] = true;

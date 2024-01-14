@@ -778,7 +778,6 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
 
 	// Weapon sway
 	if (!_ignoreControl) {
-
 		constexpr float swaySpeed = 5.0f;
 		constexpr float swayAmount = 0.2f;
 		constexpr glm::vec2 swayAmountMax(2.5f);
@@ -792,31 +791,6 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
 		const glm::mat4 swayTransform = glm::translate(glm::mat4(1.0f), _weaponSwayTargetPos);
 		for (auto& transform : _firstPersonWeapon._animatedTransforms.local) {
 			transform = swayTransform * transform;
-		}
-	}
-
-	if (!_ignoreControl && false) {
-		static Transform swayTransform;
-		float xSwayTarget = 0.0f;
-		float ySwayTarget = 0.0f;
-		float xthreshold = 1;
-		if (Input::GetMouseOffsetX() < -xthreshold) {
-			xSwayTarget = -1.5f;
-		}
-		if (Input::GetMouseOffsetX() > xthreshold) {
-			xSwayTarget = 2.5f;
-		}
-		if (Input::GetMouseOffsetY() < 0) {
-			ySwayTarget = -0.5f;
-		}
-		if (Input::GetMouseOffsetY() > 0) {
-			ySwayTarget = 0.5f;
-		}
-		float speed = 10.2f;
-		swayTransform.position.x = Util::FInterpTo(swayTransform.position.x, xSwayTarget, deltaTime, speed);
-		swayTransform.position.y = Util::FInterpTo(swayTransform.position.y, ySwayTarget, deltaTime, speed);
-		for (int i = 0; i < _firstPersonWeapon._animatedTransforms.local.size(); i++) {
-			_firstPersonWeapon._animatedTransforms.local[i] = swayTransform.to_mat4() * _firstPersonWeapon._animatedTransforms.local[i];			
 		}
 	}
 }
