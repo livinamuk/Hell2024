@@ -161,7 +161,7 @@ namespace Scene {
     // Perhaps this isn't the best place to store this?
     inline int _playerCount = 2;
     inline PxTriangleMesh* _sceneTriangleMesh = NULL;
-    inline PxRigidDynamic* _sceneRigidDynamic = NULL;
+    inline PxRigidStatic* _sceneRigidDynamic = NULL;
     inline PxShape* _sceneShape = NULL;
 
     inline std::vector<PickUp> _pickUps;

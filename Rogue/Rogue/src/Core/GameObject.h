@@ -52,7 +52,7 @@ private:
 
 	PxRigidBody* _collisionBody = NULL;
 	std::vector<PxShape*> _collisionShapes;
-	PxRigidBody* _raycastBody = NULL;
+	PxRigidStatic* _raycastBody = NULL;
 	PxShape* _raycastShape = NULL;
 
 	struct AudioEffects {

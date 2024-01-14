@@ -250,6 +250,7 @@ void Model::CreateTriangleMesh() {
 		baseIndex = pxvertices.size();
 	}
 	if (pxindices.size()) {
+
 		_triangleMesh = Physics::CreateTriangleMesh(pxvertices.size(), pxvertices.data(), pxindices.size() / 3, pxindices.data());
 		//std::cout << "Created triangle mesh for model " << _name << " out of " << _meshes.size() << " mesh\n";
 	}

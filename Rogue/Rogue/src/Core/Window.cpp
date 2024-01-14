@@ -34,9 +34,9 @@ void Window::CreatePhysicsObjects() {
 		filterData2.raycastGroup = RaycastGroup::RAYCAST_ENABLED;
 		filterData2.collisionGroup = NO_COLLISION;
 		filterData2.collidesWith = NO_COLLISION;
-		raycastShape = Physics::CreateShapeFromTriangleMesh(mesh->_triangleMesh);
-		raycastBody = Physics::CreateRigidDynamic(Transform(), filterData2, raycastShape);
-		raycastBody->setRigidBodyFlag(PxRigidBodyFlag::eKINEMATIC, true);
+		PxShapeFlags shapeFlags(PxShapeFlag::eSCENE_QUERY_SHAPE); // Most importantly NOT eSIMULATION_SHAPE. PhysX does not allow for tri mesh.
+		raycastShape = Physics::CreateShapeFromTriangleMesh(mesh->_triangleMesh, shapeFlags);
+		raycastBody = Physics::CreateRigidStatic(Transform(), filterData2, raycastShape);
 
 		PhysicsObjectData* physicsObjectData = new PhysicsObjectData(PhysicsObjectType::GLASS, this);
 		raycastBody->userData = physicsObjectData;
@@ -55,9 +55,9 @@ void Window::CreatePhysicsObjects() {
 		filterData2.raycastGroup = RaycastGroup::RAYCAST_ENABLED;
 		filterData2.collisionGroup = NO_COLLISION;
 		filterData2.collidesWith = NO_COLLISION;
-		raycastShape = Physics::CreateShapeFromTriangleMesh(mesh->_triangleMesh);
-		raycastBody = Physics::CreateRigidDynamic(Transform(), filterData2, raycastShape);
-		raycastBody->setRigidBodyFlag(PxRigidBodyFlag::eKINEMATIC, true);
+		PxShapeFlags shapeFlags(PxShapeFlag::eSCENE_QUERY_SHAPE); // Most importantly NOT eSIMULATION_SHAPE. PhysX does not allow for tri mesh.
+		raycastShape = Physics::CreateShapeFromTriangleMesh(mesh->_triangleMesh, shapeFlags);
+		raycastBody = Physics::CreateRigidStatic(Transform(), filterData2, raycastShape);
 
 		PhysicsObjectData* physicsObjectData = new PhysicsObjectData(PhysicsObjectType::GLASS, this);
 		raycastBody->userData = physicsObjectData;

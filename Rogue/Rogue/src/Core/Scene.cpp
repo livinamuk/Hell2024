@@ -860,19 +860,17 @@ void Scene::CreateScenePhysicsObjects() {
         }
     }
 
-    if (vertices.size()) {
+    if (vertices.size()) {;
         Transform transform;
         PhysicsFilterData filterData;
         filterData.raycastGroup = RAYCAST_ENABLED;
         filterData.collisionGroup = ENVIROMENT_OBSTACLE;
         filterData.collidesWith = (CollisionGroup)(GENERIC_BOUNCEABLE | BULLET_CASING | PLAYER);
-        _sceneTriangleMesh = Physics::CreateTriangleMesh(vertices.size(), vertices.data(), vertices.size() / 3, indices.data());
-        _sceneShape = Physics::CreateShapeFromTriangleMesh(_sceneTriangleMesh);
-        _sceneRigidDynamic = Physics::CreateRigidDynamic(transform, filterData, _sceneShape);
-        _sceneRigidDynamic->setRigidBodyFlag(PxRigidBodyFlag::eKINEMATIC, true);
-
-        _sceneRigidDynamic->userData = new PhysicsObjectData(PhysicsObjectType::SCENE_MESH, nullptr);
-
+		_sceneTriangleMesh = Physics::CreateTriangleMesh(vertices.size(), vertices.data(), vertices.size() / 3, indices.data());
+		PxShapeFlags shapeFlags(PxShapeFlag::eSIMULATION_SHAPE);
+        _sceneShape = Physics::CreateShapeFromTriangleMesh(_sceneTriangleMesh, shapeFlags);
+        _sceneRigidDynamic = Physics::CreateRigidStatic(transform, filterData, _sceneShape);
+		_sceneRigidDynamic->userData = new PhysicsObjectData(PhysicsObjectType::SCENE_MESH, nullptr);
     }
 
 	for (Door& door : _doors) {

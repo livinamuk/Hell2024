@@ -6,7 +6,6 @@ layout (location = 2) in vec2 aTexCoord;
 
 uniform mat4 projection;
 uniform mat4 view;
-//uniform mat4 model;
 out vec2 TexCoord;
 out vec3 Normal;
 
@@ -14,13 +13,10 @@ layout(std430, binding = 0) readonly buffer decalMatrices {
     mat4 DecalMatrices[];
 };
 
-
 void main() {
 	TexCoord = aTexCoord;
 	Normal = aNormal;
-
 	mat4 model = DecalMatrices[gl_InstanceID]; 
-
 	gl_Position = projection * view * model *vec4(aPos, 1.0);
 }
 

@@ -52,6 +52,10 @@ void Player::SetWeapon(Weapon weapon) {
 	_currentWeaponIndex = (int)weapon;
 }
 
+PxSweepCallback* CreateSweepBuffer() {
+	return new PxSweepBuffer;
+}
+
 void Player::DetermineIfGrounded() {
 	glm::vec3 rayOrigin = _position + glm::vec3(0, 0.01, 0);
 	glm::vec3 rayDirection = glm::vec3(0, -1, 0);
@@ -64,31 +68,35 @@ void Player::DetermineIfGrounded() {
 	PxQueryFilterData filterData = PxQueryFilterData();
 	filterData.data.word0 = RaycastGroup::RAYCAST_ENABLED;
 	filterData.data.word2 = CollisionGroup::ENVIROMENT_OBSTACLE;
-	_isGrounded = scene->raycast(origin, unitDir, rayLength, hit, outputFlags, filterData);
-	
-	/*
-	for (int x = -2; x <= 2; x++) {
-		for (int z = -2; z <= 2; z++) {
-			float offset = 0.05f;
-			glm::vec3 rayOrigin = _position + glm::vec3(offset * x, 0.01, offset * z);
-			glm::vec3 rayDirection = glm::vec3(0, -1, 0);
-			PxReal rayLength = 0.15f;
-			PxScene* scene = Physics::GetScene();
-			PxVec3 origin = PxVec3(rayOrigin.x, rayOrigin.y, rayOrigin.z);
-			PxVec3 unitDir = PxVec3(rayDirection.x, rayDirection.y, rayDirection.z);
-			PxRaycastBuffer hit;
-			const PxHitFlags outputFlags = PxHitFlag::ePOSITION;
-			PxQueryFilterData filterData = PxQueryFilterData();
-			filterData.data.word0 = RaycastGroup::RAYCAST_ENABLED;
-			filterData.data.word2 = CollisionGroup::ENVIROMENT_OBSTACLE;
 
-			if (scene->raycast(origin, unitDir, rayLength, hit, outputFlags, filterData)) {
-				_isGrounded = true;
-				return;
-			}
-		}
-	}
-	_isGrounded = false;*/
+	_isGrounded = true;
+
+	/*
+	_isGrounded = scene->raycast(origin, unitDir, rayLength, hit, outputFlags, filterData);
+
+
+	static PxSweepCallback* callback = CreateSweepBuffer();
+	
+
+	PxShape* shape;
+	_characterController->getActor()->getShapes(&shape, 1);
+	const PxGeometry& geometry = shape->getGeometry();
+	const PxTransform pose = _characterController->getActor()->getGlobalPose();
+	const PxVec3 dir = { 0.0f, -1.0f, 0.0f };
+	const PxReal dist = 10.9f;
+
+	PxQueryFilterData filterData2 = PxQueryFilterData();
+	filterData2.data.word0 = RaycastGroup::RAYCAST_ENABLED;
+	filterData2.data.word1 = CollisionGroup::ENVIROMENT_OBSTACLE;
+	filterData2.data.word2 = CollisionGroup::PLAYER;
+	scene->sweep(geometry, pose, dir, dist, *callback, outputFlags);
+
+	_isGrounded = (callback->nbTouches > 0);
+
+	std::cout << callback->nbTouches << "\n";
+	*/
+	
+	
 }
 
 void Player::WipeYVelocityToZeroIfHeadHitCeiling() {
@@ -770,6 +778,32 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
 
 	// Weapon sway
 	if (!_ignoreControl) {
+		constexpr float swaySpeed = 5.0f;
+		constexpr float swayAmount = 0.2f;
+		constexpr glm::vec2 swayAmountMax(2.5f);
+
+		const float lerpFrac = swaySpeed * deltaTime;
+
+		const glm::vec2 lookDelta = glm::vec2(-Input::GetMouseOffsetX(), -Input::GetMouseOffsetY());
+
+		static glm::vec2 _weaponSwayFactor = glm::vec2(0);
+		static glm::vec3 _weaponSwayTargetPos = glm::vec3(0);
+		_weaponSwayFactor  = glm::mix(_weaponSwayFactor, -(lookDelta * swayAmount), lerpFrac);
+		_weaponSwayFactor = glm::clamp(_weaponSwayFactor, -swayAmountMax, swayAmountMax);
+
+		_weaponSwayTargetPos = glm::mix(_weaponSwayTargetPos, glm::vec3(_weaponSwayFactor, 0), lerpFrac);
+
+		const glm::mat4 swayTransform = glm::translate(glm::mat4(1.0f), _weaponSwayTargetPos);
+
+		for (int i = 0; i < _firstPersonWeapon._animatedTransforms.local.size(); i++) {
+			_firstPersonWeapon._animatedTransforms.local[i] = swayTransform * _firstPersonWeapon._animatedTransforms.local[i];
+		}
+
+		//for (auto& transform : _firstPersonWeapon._animatedTransforms.local)
+		//	transform = swayTransform * transform;
+	}
+
+	if (!_ignoreControl && false) {
 		static Transform swayTransform;
 		float xSwayTarget = 0.0f;
 		float ySwayTarget = 0.0f;
@@ -914,7 +948,7 @@ bool Player::CursorShouldBeInterect() {
 }
 
 #define PLAYER_CAPSULE_HEIGHT 0.6f
-#define PLAYER_CAPSULE_RADIUS 0.01f
+#define PLAYER_CAPSULE_RADIUS 0.1f
 
 void Player::CreateCharacterController(glm::vec3 position) {
 

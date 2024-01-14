@@ -35,9 +35,10 @@ namespace Physics {
 	PxMaterial* GetDefaultMaterial();	
 	PxShape* CreateBoxShape(float width, float height, float depth, Transform shapeOffset = Transform(), PxMaterial * material = NULL);
 	PxRigidDynamic* CreateRigidDynamic(Transform transform, PhysicsFilterData filterData, PxShape* shape, Transform shapeOffset = Transform());
+	PxRigidStatic* CreateRigidStatic(Transform transform, PhysicsFilterData physicsFilterData, PxShape* shape, Transform shapeOffset = Transform());
 	PxRigidDynamic* CreateRigidDynamic(glm::mat4 matrix, PhysicsFilterData filterData, PxShape* shape);
 	PxRigidDynamic* CreateRigidDynamic(glm::mat4 matrix, bool kinematic);
-	PxShape* CreateShapeFromTriangleMesh(PxTriangleMesh* triangleMesh, PxMaterial* material = NULL, float scale = 1);
+	PxShape* CreateShapeFromTriangleMesh(PxTriangleMesh* triangleMesh, PxShapeFlags shapeFlags, PxMaterial* material = NULL, float scale = 1);
 	PxShape* CreateShapeFromConvexMesh(PxConvexMesh* convexMesh, PxMaterial* material = NULL, float scale = 1);
 	void EnableRigidBodyDebugLines(PxRigidBody* rigidBody);
 	void DisableRigidBodyDebugLines(PxRigidBody* rigidBody);

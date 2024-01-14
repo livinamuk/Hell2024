@@ -138,16 +138,15 @@ void Door::CreatePhysicsObject() {
     filterData.collisionGroup = CollisionGroup::ENVIROMENT_OBSTACLE;
     filterData.collidesWith = (CollisionGroup)(GENERIC_BOUNCEABLE | BULLET_CASING);
     collisionShape = Physics::CreateBoxShape(DOOR_EDITOR_DEPTH * 0.5f, DOOR_HEIGHT * 0.5f, DOOR_WIDTH * 0.5f);
-    collisionBody = Physics::CreateRigidDynamic(Transform(), filterData, collisionShape);
-    collisionBody->setRigidBodyFlag(PxRigidBodyFlag::eKINEMATIC, true);
-    
+    collisionBody = Physics::CreateRigidStatic(Transform(), filterData, collisionShape);
+
+	PxShapeFlags shapeFlags(PxShapeFlag::eSCENE_QUERY_SHAPE); // Most importantly NOT eSIMULATION_SHAPE. PhysX does not allow for tri mesh.
     PhysicsFilterData filterData2;
     filterData2.raycastGroup = RaycastGroup::RAYCAST_ENABLED;
     filterData2.collisionGroup = NO_COLLISION;
     filterData2.collidesWith = NO_COLLISION;
-    raycastShape = Physics::CreateShapeFromTriangleMesh(mesh->_triangleMesh);
-    raycastBody = Physics::CreateRigidDynamic(Transform(), filterData2, raycastShape);
-    raycastBody->setRigidBodyFlag(PxRigidBodyFlag::eKINEMATIC, true);
+    raycastShape = Physics::CreateShapeFromTriangleMesh(mesh->_triangleMesh, shapeFlags);
+    raycastBody = Physics::CreateRigidStatic(Transform(), filterData2, raycastShape);
 
     PhysicsObjectData* physicsObjectData = new PhysicsObjectData(PhysicsObjectType::DOOR, this);
     raycastBody->userData = physicsObjectData;

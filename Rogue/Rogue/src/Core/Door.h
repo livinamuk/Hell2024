@@ -26,8 +26,8 @@ struct Door {
 
     bool IsInteractable(glm::vec3 playerPosition);
     std::vector<Line> collisonLines;
-    PxRigidBody* collisionBody = NULL;
-    PxRigidBody* raycastBody = NULL;
+    PxRigidStatic* collisionBody = NULL;
+    PxRigidStatic* raycastBody = NULL;
     PxShape* collisionShape = NULL;
     PxShape* raycastShape = NULL;
 

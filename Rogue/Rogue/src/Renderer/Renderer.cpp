@@ -2033,6 +2033,7 @@ void DrawPointCloud(Player* player) {
 }
 
 void InitCompute() {
+
     glGenTextures(1, &_progogationGridTexture);
     glBindTexture(GL_TEXTURE_3D, _progogationGridTexture);
     glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -2096,12 +2097,29 @@ void ComputePass() {
     if (Scene::_rtInstances.empty()) {
         return;
     }
+
+    // Hack to disable compute on toggle
+    static bool disableCompute = false;
+    if (Input::KeyPressed(HELL_KEY_O)) {
+        disableCompute = !disableCompute;
+    }
+	if (disableCompute) {
+        return;
+	}
+
     // Update RT Instances
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, _ssbos.rtInstances);
     glBufferData(GL_SHADER_STORAGE_BUFFER, Scene::_rtInstances.size() * sizeof(RTInstance), &Scene::_rtInstances[0], GL_DYNAMIC_COPY);
     glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
     UpdatePointCloudLighting();
     UpdatePropogationgGrid();
+
+	// Hack to initially disable compute after the first time it runs
+    static bool runOnce = true;
+    if (runOnce) {
+        disableCompute = true;
+        runOnce = false;
+    }
 
 	// Composite
 	//_shaders.computeTest.Use();

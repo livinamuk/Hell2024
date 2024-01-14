@@ -9,9 +9,9 @@ public:
 	glm::vec3 position = glm::vec3(0);
 	glm::vec3 rotation = glm::vec3(0);
 
-	PxRigidBody* raycastBody = NULL;
+	PxRigidStatic* raycastBody = NULL;
 	PxShape* raycastShape = NULL;
-	PxRigidBody* raycastBodyTop = NULL;
+	PxRigidStatic* raycastBodyTop = NULL;
 	PxShape* raycastShapeTop = NULL;
 
 	Window();

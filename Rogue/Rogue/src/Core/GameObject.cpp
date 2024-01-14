@@ -591,9 +591,9 @@ void GameObject::SetRaycastShapeFromMesh(Mesh* mesh) {
 	filterData.raycastGroup = RAYCAST_ENABLED;
 	filterData.collisionGroup = CollisionGroup::NO_COLLISION;
 	filterData.collidesWith = CollisionGroup::NO_COLLISION;
-	_raycastShape = Physics::CreateShapeFromTriangleMesh(mesh->_triangleMesh);
-	_raycastBody = Physics::CreateRigidDynamic(Transform(), filterData, _raycastShape);
-	_raycastBody->setRigidBodyFlag(PxRigidBodyFlag::eKINEMATIC, true);
+	PxShapeFlags shapeFlags(PxShapeFlag::eSCENE_QUERY_SHAPE); // Most importantly NOT eSIMULATION_SHAPE. PhysX does not allow for tri mesh.
+	_raycastShape = Physics::CreateShapeFromTriangleMesh(mesh->_triangleMesh, shapeFlags);
+	_raycastBody = Physics::CreateRigidStatic(Transform(), filterData, _raycastShape);
 	_raycastBody->userData = new PhysicsObjectData(PhysicsObjectType::GAME_OBJECT, this);
 }
 
@@ -605,15 +605,16 @@ void GameObject::SetRaycastShapeFromModel(Model* model) {
 		_raycastBody->release();
 	}
 	if (!model->_triangleMesh) {
+		//std::cout << "SetRaycastShapeFromModel() for game object '" << this->_name << "' with model '" << model->_name << "'\n";
 		model->CreateTriangleMesh();
 	}
 	PhysicsFilterData filterData;
 	filterData.raycastGroup = RAYCAST_ENABLED;
 	filterData.collisionGroup = CollisionGroup::NO_COLLISION;
 	filterData.collidesWith = CollisionGroup::NO_COLLISION;
-	_raycastShape = Physics::CreateShapeFromTriangleMesh(model->_triangleMesh);
-	_raycastBody = Physics::CreateRigidDynamic(Transform(), filterData, _raycastShape);
-	_raycastBody->setRigidBodyFlag(PxRigidBodyFlag::eKINEMATIC, true);
+	PxShapeFlags shapeFlags(PxShapeFlag::eSCENE_QUERY_SHAPE); // Most importantly NOT eSIMULATION_SHAPE. PhysX does not allow for tri mesh.
+	_raycastShape = Physics::CreateShapeFromTriangleMesh(model->_triangleMesh, shapeFlags);
+	_raycastBody = Physics::CreateRigidStatic(Transform(), filterData, _raycastShape);
 	_raycastBody->userData = new PhysicsObjectData(PhysicsObjectType::GAME_OBJECT, this);
 }
 
@@ -628,8 +629,7 @@ void GameObject::SetRaycastShape(PxShape* shape) {
 	filterData.raycastGroup = RAYCAST_ENABLED;
 	filterData.collisionGroup = CollisionGroup::NO_COLLISION;
 	filterData.collidesWith = CollisionGroup::NO_COLLISION;
-	_raycastBody = Physics::CreateRigidDynamic(Transform(), filterData, shape);
-	_raycastBody->setRigidBodyFlag(PxRigidBodyFlag::eKINEMATIC, true);
+	_raycastBody = Physics::CreateRigidStatic(Transform(), filterData, shape);
 	_raycastBody->userData = new PhysicsObjectData(PhysicsObjectType::GAME_OBJECT, this);
 
 }

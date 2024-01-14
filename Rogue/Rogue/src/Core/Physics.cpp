@@ -248,7 +248,7 @@ void Physics::Init() {
 
 
     
-    
+    //std::cout << "creating ground plane..\n";
     _groundPlane = PxCreatePlane(*_physics, PxPlane(0, 1, 0, 0.0f), *_defaultMaterial);
     _scene->addActor(*_groundPlane);
     _groundPlane->getShapes(&_groundShape, 1);
@@ -258,6 +258,7 @@ void Physics::Init() {
 	filterData.word2 = CollisionGroup::BULLET_CASING | CollisionGroup::GENERIC_BOUNCEABLE | CollisionGroup::PLAYER;
 	_groundShape->setQueryFilterData(filterData);
 	_groundShape->setSimulationFilterData(filterData); // sim is for ragz   
+	//std::cout << "created ground plane..\n";
 
     //EnableRayCastingForShape(shape);
 }
@@ -306,20 +307,23 @@ PxShape* Physics::CreateBoxShape(float width, float height, float depth, Transfo
     if (material == NULL) {
         material = _defaultMaterial;
     }    
-    PxShape* shape = _physics->createShape(PxBoxGeometry(width, height, depth), *material);
+    PxShape* shape = _physics->createShape(PxBoxGeometry(width, height, depth), *material, true);
 	PxMat44 localShapeMatrix = Util::GlmMat4ToPxMat44(shapeOffset.to_mat4());
 	PxTransform localShapeTransform(localShapeMatrix);
 	shape->setLocalPose(localShapeTransform);
     return shape;
 }
 
-PxShape* Physics::CreateShapeFromTriangleMesh(PxTriangleMesh* triangleMesh, PxMaterial* material, float scale) {
+PxShape* Physics::CreateShapeFromTriangleMesh(PxTriangleMesh* triangleMesh, PxShapeFlags shapeFlags2, PxMaterial* material, float scale) {
     if (material == NULL) {
         material = _defaultMaterial;
     }
     PxMeshGeometryFlags flags(~PxMeshGeometryFlag::eTIGHT_BOUNDS | ~PxMeshGeometryFlag::eDOUBLE_SIDED);
     PxTriangleMeshGeometry geometry(triangleMesh, PxMeshScale(scale), flags);
-    return _physics->createShape(geometry, *material);
+
+    
+	PxShapeFlags shapeFlags(PxShapeFlag::eSCENE_QUERY_SHAPE); // Most importantly NOT eSIMULATION_SHAPE. PhysX does not allow for tri mesh.
+    return _physics->createShape(geometry, *material, shapeFlags);
 }
 
 PxShape* Physics::CreateShapeFromConvexMesh(PxConvexMesh* convexMesh, PxMaterial* material, float /*scale*/) {
@@ -333,26 +337,49 @@ PxShape* Physics::CreateShapeFromConvexMesh(PxConvexMesh* convexMesh, PxMaterial
 
 PxRigidDynamic* Physics::CreateRigidDynamic(Transform transform, PhysicsFilterData physicsFilterData, PxShape* shape, Transform shapeOffset) {
 
-    // You are passing in a PxShape pointer and any shape offset will affects that actually object, wherever the fuck it is up the function chain.
-
-    PxFilterData filterData;
-    filterData.word0 = (PxU32)physicsFilterData.raycastGroup;
-    filterData.word1 = (PxU32)physicsFilterData.collisionGroup;
-    filterData.word2 = (PxU32)physicsFilterData.collidesWith;
-    shape->setQueryFilterData(filterData);       // ray casts
-    shape->setSimulationFilterData(filterData);  // collisions
     PxQuat quat = Util::GlmQuatToPxQuat(glm::quat(transform.rotation));
     PxTransform trans = PxTransform(PxVec3(transform.position.x, transform.position.y, transform.position.z), quat);
     PxRigidDynamic* body = _physics->createRigidDynamic(trans);
 
+	// You are passing in a PxShape pointer and any shape offset will affects that actually object, wherever the fuck it is up the function chain.
+    // Maybe look into this when you can be fucked, possibly you can just set the isExclusive bool to true, where and whenever the fuck that is and happens.
+	PxFilterData filterData;
+	filterData.word0 = (PxU32)physicsFilterData.raycastGroup;
+	filterData.word1 = (PxU32)physicsFilterData.collisionGroup;
+	filterData.word2 = (PxU32)physicsFilterData.collidesWith;
+	shape->setQueryFilterData(filterData);       // ray casts
+	shape->setSimulationFilterData(filterData);  // collisions
     PxMat44 localShapeMatrix = Util::GlmMat4ToPxMat44(shapeOffset.to_mat4());
     PxTransform localShapeTransform(localShapeMatrix);
-    shape->setLocalPose(localShapeTransform);
+	shape->setLocalPose(localShapeTransform);
 
     body->attachShape(*shape);
     PxRigidBodyExt::updateMassAndInertia(*body, 10.0f);
     _scene->addActor(*body);
     return body;
+}
+
+PxRigidStatic* Physics::CreateRigidStatic(Transform transform, PhysicsFilterData physicsFilterData, PxShape* shape, Transform shapeOffset) {
+
+	PxQuat quat = Util::GlmQuatToPxQuat(glm::quat(transform.rotation));
+	PxTransform trans = PxTransform(PxVec3(transform.position.x, transform.position.y, transform.position.z), quat);
+	PxRigidStatic* body = _physics->createRigidStatic(trans);
+
+	// You are passing in a PxShape pointer and any shape offset will affects that actually object, wherever the fuck it is up the function chain.
+	// Maybe look into this when you can be fucked, possibly you can just set the isExclusive bool to true, where and whenever the fuck that is and happens.
+	PxFilterData filterData;
+	filterData.word0 = (PxU32)physicsFilterData.raycastGroup;
+	filterData.word1 = (PxU32)physicsFilterData.collisionGroup;
+	filterData.word2 = (PxU32)physicsFilterData.collidesWith;
+	shape->setQueryFilterData(filterData);       // ray casts
+	shape->setSimulationFilterData(filterData);  // collisions
+	PxMat44 localShapeMatrix = Util::GlmMat4ToPxMat44(shapeOffset.to_mat4());
+	PxTransform localShapeTransform(localShapeMatrix);
+	shape->setLocalPose(localShapeTransform);
+
+	body->attachShape(*shape);
+	_scene->addActor(*body);
+	return body;
 }
 
 PxRigidDynamic* Physics::CreateRigidDynamic(glm::mat4 matrix, PhysicsFilterData physicsFilterData, PxShape* shape) {
