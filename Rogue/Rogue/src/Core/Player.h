@@ -30,7 +30,7 @@ public:
 	AnimatedGameObject _characterModel;
 	PxController* _characterController = NULL;
 	float _yVelocity = 0;
-
+	bool isReloading = false;
 	Inventory _inventory;
 
 	Player();

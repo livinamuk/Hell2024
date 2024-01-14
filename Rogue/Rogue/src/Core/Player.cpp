@@ -260,7 +260,7 @@ void Player::Update(float deltaTime) {
 
 	_weaponInventory[Weapon::KNIFE] = true;
 	_weaponInventory[Weapon::GLOCK] = true;
-	_weaponInventory[Weapon::SHOTGUN] = false;
+	_weaponInventory[Weapon::SHOTGUN] = true;
 	_weaponInventory[Weapon::AKS74U] = true;
 	_weaponInventory[Weapon::MP7] = false;
 
@@ -548,6 +548,9 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
 			needsAmmoReloaded = false;
 			_glockSlideNeedsToBeOut = false;
 		}
+		if (needsAmmoReloaded == false) {
+			isReloading = false;
+		}
 		// Idle
 		if (_weaponAction == IDLE) {
 			if (Player::IsMoving()) {
@@ -579,6 +582,7 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
 					int random_number = std::rand() % 3 + 1;
 					std::string aninName = "Glock_Fire" + std::to_string(random_number);
 					std::string audioName = "Glock_Fire" + std::to_string(random_number) + ".wav";
+					//SetRotation()
 					_firstPersonWeapon.PlayAnimation(aninName, 1.5f);
 					Audio::PlayAudio(audioName, 1.0f);
 					SpawnMuzzleFlash();
@@ -595,9 +599,9 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
 			_weaponAction = IDLE;
 		}
 		// Reload
-		if (!_ignoreControl && Input::KeyPressed(HELL_KEY_R) && _inventory.glockAmmo.total > 0 && _inventory.glockAmmo.clip < GLOCK_CLIP_SIZE) {
+		if (!_ignoreControl && Input::KeyPressed(HELL_KEY_R) && _inventory.glockAmmo.total > 0 && _inventory.glockAmmo.clip < GLOCK_CLIP_SIZE && !isReloading) {
 			_weaponAction = RELOAD;
-
+			isReloading = true;
 			if (GetCurrentWeaponClipAmmo() == 0) {
 				_firstPersonWeapon.PlayAnimation("Glock_ReloadEmpty", 1.0f);
 				Audio::PlayAudio("Glock_ReloadFromEmpty.wav", 1.0f);				
@@ -645,6 +649,11 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
 				needsAmmoReloaded = false;
 			}
 		}
+
+		if (needsAmmoReloaded == false) {
+			isReloading = false;
+		}
+
 		// Fire (has ammo)
 		if (!_ignoreControl && Input::LeftMouseDown() && _inventory.aks74uAmmo.clip > 0) {
 
@@ -670,8 +679,9 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
 			Audio::PlayAudio("Dry_Fire.wav", 0.8f);
 		}
 		// Reload	
-		if (!_ignoreControl && Input::KeyPressed(HELL_KEY_R) && _inventory.aks74uAmmo.total > 0 && _inventory.aks74uAmmo.clip < AKS74U_MAG_SIZE) {
-			
+		if (!_ignoreControl && Input::KeyPressed(HELL_KEY_R) && _inventory.aks74uAmmo.total > 0 && _inventory.aks74uAmmo.clip < AKS74U_MAG_SIZE && !isReloading) {
+			isReloading = true;
+
 			if (GetCurrentWeaponClipAmmo() == 0) {
 				_firstPersonWeapon.PlayAnimation("AKS74U_ReloadEmpty", 1.0f);
 				Audio::PlayAudio("AK47_ReloadEmpty.wav", 1.0f);
