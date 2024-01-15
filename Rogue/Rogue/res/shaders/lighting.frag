@@ -419,6 +419,6 @@ void main() {
     */
 
    // FragColor.rgb = normal;
-
-//  FragColor.rgb = vec3(normal);
+ //  float originalZ = gl_FragCoord.z / gl_FragCoord.w;
+ // FragColor.rgb = vec3(originalZ);
 }
