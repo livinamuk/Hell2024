@@ -77,7 +77,7 @@ namespace Util {
 
             }
             else {
-                result.physicsObjectType == UNDEFINED;
+                result.physicsObjectType = UNDEFINED;
              //   std::cout << "no user data\n";
             }
 

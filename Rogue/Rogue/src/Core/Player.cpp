@@ -184,8 +184,8 @@ void Player::Update(float deltaTime) {
 
 	// WSAD movement
 	_isMoving = false;
+	glm::vec3 displacement(0);
 	if (!_ignoreControl) {
-		glm::vec3 displacement(0); 
 		if (Input::KeyDown(HELL_KEY_W)) {
 			displacement -= _front;// *speed;
 			_isMoving = true;
@@ -202,40 +202,41 @@ void Player::Update(float deltaTime) {
 			displacement += _right;// *speed;
 			_isMoving = true;
 		}
-
-		// Adjust displacement for deltatime and movement speed
-		float len = length(displacement);
-		if (len != 0.0) {
-			float speed = crouching ? _crouchingSpeed : _walkingSpeed;
-			displacement = (displacement / len) * speed* deltaTime;
-		}
-
-		// Jump
-		DetermineIfGrounded();
-		if (Input::KeyPressed(HELL_KEY_SPACE)) {
-			_yVelocity = 6.5f * deltaTime;
-			_isGrounded = false;
-		}
-		//WipeYVelocityToZeroIfHeadHitCeiling();
-
-		// Gravity		
-		if (_isGrounded) {
-			_yVelocity = 0;
-		}
-		else {
-			_yVelocity -= 0.50f * deltaTime;
-		}
-		
-		// Move PhysX character controller
-		PxFilterData filterData;
-		filterData.word0 = 0;
-		filterData.word1 = CollisionGroup::ENVIROMENT_OBSTACLE;	// Things to collide with	
-		PxControllerFilters data;
-		data.mFilterData = &filterData;
-		PxF32 minDist = 0.001f;
-		_characterController->move(PxVec3(displacement.x, _yVelocity , displacement.z), minDist, deltaTime, data);
-		_position = Util::PxVec3toGlmVec3(_characterController->getFootPosition());
 	}
+
+	// Adjust displacement for deltatime and movement speed
+	float len = length(displacement);
+	if (len != 0.0) {
+		float speed = crouching ? _crouchingSpeed : _walkingSpeed;
+		displacement = (displacement / len) * speed* deltaTime;
+	}
+
+	// Jump
+	DetermineIfGrounded();
+	if (Input::KeyPressed(HELL_KEY_SPACE) && !_ignoreControl) {
+		_yVelocity = 6.5f * deltaTime;
+		_isGrounded = false;
+	}
+	//WipeYVelocityToZeroIfHeadHitCeiling();
+
+	// Gravity		
+	if (_isGrounded) {
+		_yVelocity = 0;
+	}
+	else {
+		_yVelocity -= 0.50f * deltaTime;
+	}
+		
+	// Move PhysX character controller
+	PxFilterData filterData;
+	filterData.word0 = 0;
+	filterData.word1 = CollisionGroup::ENVIROMENT_OBSTACLE;	// Things to collide with	
+	PxControllerFilters data;
+	data.mFilterData = &filterData;
+	PxF32 minDist = 0.001f;
+	_characterController->move(PxVec3(displacement.x, _yVelocity , displacement.z), minDist, deltaTime, data);
+	_position = Util::PxVec3toGlmVec3(_characterController->getFootPosition());
+	
 
 	// Footstep audio
 	static float m_footstepAudioTimer = 0;
@@ -817,10 +818,11 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
 	}
 
 	// Weapon sway
-	if (!_ignoreControl) {
-		constexpr float swaySpeed = 5.0f;
-		constexpr float swayAmount = 0.2f;
-		constexpr glm::vec2 swayAmountMax(2.5f);
+	//if (!_ignoreControl) {
+	if (true) {
+		float swaySpeed = 5.0f;
+		float swayAmount = 0.8f;
+		glm::vec2 swayAmountMax(3.0f);
 		const float lerpFrac = swaySpeed * deltaTime;
 		const glm::vec2 lookDelta = glm::vec2(-Input::GetMouseOffsetX(), -Input::GetMouseOffsetY());
 

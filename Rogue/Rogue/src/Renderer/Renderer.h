@@ -8,6 +8,7 @@ namespace Renderer {
 	void Init();
 	void RenderFrame(Player* player);
 	void RenderEditorFrame();
+	void RenderDebugMenu();
 	void RenderUI();
 	void HotloadShaders();
 	void WipeShadowMaps();
@@ -16,7 +17,7 @@ namespace Renderer {
 	void QueuePointForDrawing(Point point);
 	void QueueTriangleForLineRendering(Triangle& triangle);
 	void QueueTriangleForSolidRendering(Triangle& triangle);
-	void QueueUIForRendering(std::string textureName, int screenX, int screenY, bool centered);
+	void QueueUIForRendering(std::string textureName, int screenX, int screenY, bool centered, glm::vec3 color);
 	void QueueUIForRendering(UIRenderInfo renderInfo);
 
 	void ToggleDrawingLights();

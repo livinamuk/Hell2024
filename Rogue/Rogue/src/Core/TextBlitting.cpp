@@ -79,8 +79,8 @@ namespace TextBlitter {
 
 		float xcursor = (float)_xMargin;
 		float ycursor = (float)_yMargin;
-		int color = 0; // 0 for white, 1 for green
-
+		//int color = 0; // 0 for white, 1 for green
+		glm::vec3 color = WHITE;
 
 
 		// Decrement timer
@@ -100,14 +100,14 @@ namespace TextBlitter {
 					_textToBilt[(size_t)i + 1] == 'w' &&
 					_textToBilt[(size_t)i + 2] == ']') {
 					i += 2;
-					color = 0;
+					color = WHITE;
 					continue;
 				}
 				if (_textToBilt[i] == '[' &&
 					_textToBilt[(size_t)i + 1] == 'g' &&
 					_textToBilt[(size_t)i + 2] == ']') {
 					i += 2;
-					color = 1;
+					color = GREEN;
 					continue;
 				}
 				if (character == ' ') {
@@ -142,7 +142,7 @@ namespace TextBlitter {
 		}
 
 		// Debug text
-		color = 0;
+		color = WHITE;
 		xcursor = _xDebugMargin;
 		ycursor = _yDebugMargin;
 		for (int i = 0; i < _debugTextToBilt.length(); i++)
@@ -152,14 +152,14 @@ namespace TextBlitter {
 				_debugTextToBilt[(size_t)i + 1] == 'w' &&
 				_debugTextToBilt[(size_t)i + 2] == ']') {
 				i += 2;
-				color = 0;
+				color = WHITE;
 				continue;
 			}
 			if (_debugTextToBilt[i] == '[' &&
 				_debugTextToBilt[(size_t)i + 1] == 'g' &&
 				_debugTextToBilt[(size_t)i + 2] == ']') {
 				i += 2;
-				color = 1;
+				color = GREEN;
 				continue;
 			}
 			if (character == ' ') {
@@ -203,14 +203,14 @@ namespace TextBlitter {
 						blitXY.text[(size_t)i + 1] == 'w' &&
 						blitXY.text[(size_t)i + 2] == ']') {
 						i += 2;
-						color = 0;
+						color = WHITE;
 						continue;
 					}
 					if (blitXY.text[i] == '[' &&
 						blitXY.text[(size_t)i + 1] == 'g' &&
 						blitXY.text[(size_t)i + 2] == ']') {
 						i += 2;
-						color = 1;
+						color = GREEN;
 						continue;
 					}
 					if (character == ' ') {
@@ -229,7 +229,7 @@ namespace TextBlitter {
 				blitXY.x -= (int)(xcursor / 2);
 			}
 
-			color = 0;
+			color = WHITE;
 			xcursor = blitXY.x;
 			ycursor = blitXY.y;
 
@@ -241,14 +241,14 @@ namespace TextBlitter {
 					blitXY.text[(size_t)i + 1] == 'w' &&
 					blitXY.text[(size_t)i + 2] == ']') {
 					i += 2;
-					color = 0;
+					color = WHITE;
 					continue;
 				}
 				if (blitXY.text[i] == '[' &&
 					blitXY.text[(size_t)i + 1] == 'g' &&
 					blitXY.text[(size_t)i + 2] == ']') {
 					i += 2;
-					color = 1;
+					color = GREEN;
 					continue;
 				}
 				if (character == ' ') {
@@ -273,6 +273,7 @@ namespace TextBlitter {
 				renderInfo.textureName = "char_" + std::to_string(charPos + 1);
 				renderInfo.screenX = (int)(cursor_X - texWidth);
 				renderInfo.screenY = (int)cursor_Y;
+				renderInfo.color = color;
 				Renderer::QueueUIForRendering(renderInfo);
 
 				xcursor += texWidth + _charSpacing;
@@ -292,4 +293,42 @@ namespace TextBlitter {
 		blitXY.scale = scale;
 		blitXYs.push_back(blitXY);
 	}
+}
+
+int TextBlitter::GetTextWidth(const std::string& text) {
+	float maxLineWidth = 0;
+	float xcursor = 0;
+	for (int i = 0; i < text.length(); i++) {
+		char character = text[i];
+		if (text[i] == '[' &&
+			text[(size_t)i + 1] == 'w' &&
+			text[(size_t)i + 2] == ']') {
+			i += 2;
+			continue;
+		}
+		if (text[i] == '[' &&
+			text[(size_t)i + 1] == 'g' &&
+			text[(size_t)i + 2] == ']') {
+			i += 2;
+			continue;
+		}
+		if (character == ' ') {
+			xcursor += _spaceWidth;
+			continue;
+		}
+		if (character == '\n') {
+			xcursor = 0;
+			continue;
+		}
+		size_t charPos = _charSheet.find(character);
+		Texture* texture = AssetManager::GetTexture("char_" + std::to_string(charPos + 1));
+		float texWidth = (float)texture->GetWidth();
+		xcursor += texWidth + _charSpacing;
+		maxLineWidth = std::max(maxLineWidth, xcursor);
+	}
+	return maxLineWidth;
+}
+
+int TextBlitter::GetLineHeight() {
+	return _lineHeight;
 }

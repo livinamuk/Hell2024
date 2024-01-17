@@ -222,8 +222,22 @@ Texture::Texture(std::string filepath)
 
 	//For everything else just load the raw texture. Compression fucks up UI elements.
 
+
 	stbi_set_flip_vertically_on_load(false);
 	_data = stbi_load(filepath.c_str(), &_width, &_height, &_NumOfChannels, 0);
+
+
+	if (_filename == "MenuBorderHorizontal") {
+
+		unsigned bytePerPixel = _NumOfChannels;
+
+		for (int i = 0; i < _width * _height; i++) {
+			std::cout << _data[i] << "\n";
+		}
+
+
+	}
+
 
 	glGenTextures(1, &_ID);
 	glBindTexture(GL_TEXTURE_2D, _ID);
@@ -243,7 +257,6 @@ Texture::Texture(std::string filepath)
 		//glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 3);
 		//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, _width, _height, 0, format, GL_UNSIGNED_BYTE, _data);
-		glGenerateMipmap(GL_TEXTURE_2D);
 	}
 	else
 		std::cout << "Failed to load texture: " << filepath << "\n";

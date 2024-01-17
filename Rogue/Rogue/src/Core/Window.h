@@ -19,4 +19,9 @@ public:
 	void CleanUp();
 	void CreatePhysicsObjects();
 
+	glm::vec3 GetFrontLeftCorner();
+	glm::vec3 GetFrontRightCorner();
+	glm::vec3 GetBackLeftCorner();
+	glm::vec3 GetBackRightCorner();
+
 };

@@ -133,6 +133,19 @@ void Door::CreatePhysicsObject() {
         mesh->CreateTriangleMesh();
     }
 
+	if (collisionBody) {
+		collisionBody->release();
+	}
+	if (raycastBody) {
+		raycastBody->release();
+	}
+	if (collisionShape) {
+		collisionShape->release();
+	}
+	if (raycastShape) {
+        raycastShape->release();
+	}
+
     PhysicsFilterData filterData;
     filterData.raycastGroup = RAYCAST_DISABLED;
     filterData.collisionGroup = CollisionGroup::ENVIROMENT_OBSTACLE;

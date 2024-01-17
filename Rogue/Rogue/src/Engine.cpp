@@ -10,6 +10,8 @@
 #include "Core/TextBlitter.h"
 #include "Core/Scene.h"
 #include "Core/Physics.h"
+#include "Core/DebugMenu.h"
+
 // Profiling stuff
 //#define TracyGpuCollect
 //#include "tracy/Tracy.hpp"
@@ -34,9 +36,13 @@ void Engine::Run() {
 
     while (GL::WindowIsOpen() && GL::WindowHasNotBeenForceClosed()) {
 
+        if (Editor::WasForcedOpen()) {
+            _engineMode = EngineMode::Editor;
+        }
+
         // Only the current player can be controlled by keyboard/mouse
 		for (int i = 0; i < Scene::_playerCount; i++) {
-			if (i != _currentPlayer) {
+			if (i != _currentPlayer || DebugMenu::IsOpen()) {
 				Scene::_players[i]._ignoreControl = true;
 			}
 			else {
@@ -51,7 +57,8 @@ void Engine::Run() {
 
         GL::ProcessInput();
         Input::Update();
-
+        DebugMenu::Update();
+	
         Audio::Update();
         if (_engineMode == EngineMode::Game) {
 
@@ -75,7 +82,9 @@ void Engine::Run() {
 
         // Render
         TextBlitter::Update(deltaTime);
-        if (_engineMode == EngineMode::Game) {
+		if (_engineMode == EngineMode::Game) {
+
+			GL::DisableCursor();
             
             if (Renderer::_viewportMode != FULLSCREEN) {
                 for (Player& player : Scene::_players) {
@@ -87,9 +96,16 @@ void Engine::Run() {
             }
 
         }
-        else if (_engineMode == EngineMode::Editor) {
+		else if (_engineMode == EngineMode::Editor) {
+
+			GL::ShowCursor();
+
             Editor::PrepareRenderFrame();
             Renderer::RenderEditorFrame();
+        }
+
+        if (DebugMenu::IsOpen()) {
+            Renderer::RenderDebugMenu();
         }
 
         GL::SwapBuffersPollEvents();
@@ -119,7 +135,7 @@ void Engine::Init() {
     Renderer::CreateTriangleWorldVertexBuffer();
 
     Scene::CreatePlayers();
-
+    DebugMenu::Init();
 }
 
 void Engine::LazyKeyPresses() {
@@ -139,7 +155,9 @@ void Engine::LazyKeyPresses() {
         ToggleFullscreen();
     }
     if (Input::KeyPressed(HELL_KEY_TAB)) {
-        ToggleEditor();
+		//ToggleEditor();
+		Audio::PlayAudio(AUDIO_SELECT, 1.00f);
+        DebugMenu::Toggle();
     }
     if (Input::KeyPressed(HELL_KEY_L)) {
         Renderer::ToggleDrawingLights();
@@ -182,8 +200,15 @@ void Engine::LazyKeyPresses() {
         NextViewportMode();
     }
     if (Input::KeyPressed(GLFW_KEY_N)) {
+        Physics::ClearCollisionList();
         Scene::LoadMap("map.txt");
         Audio::PlayAudio(AUDIO_SELECT, 1.00f);
+
+        // Hack to fix a bug on reload of the map
+        // seems like it tries to look up some shit from the last frames camera raycast, and those physx objects are removed by this point
+        for (auto& player : Scene::_players) {
+            player._cameraRayResult.hitFound = false;
+        }
     }
 }
 
@@ -206,11 +231,11 @@ void Engine::LazyKeyPressesEditor() {
 
 void ToggleEditor() {
     if (_engineMode == EngineMode::Game) {
-        GL::ShowCursor();
+        //GL::ShowCursor();
         _engineMode = EngineMode::Editor;
     }
     else {
-        GL::DisableCursor();
+        //GL::DisableCursor();
         _engineMode = EngineMode::Game;
     }
     Audio::PlayAudio(AUDIO_SELECT, 1.00f);

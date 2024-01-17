@@ -211,9 +211,13 @@ void Scene::LoadHardCodedObjects() {
     aks74u.SetMeshMaterialByMeshName("BarrelTip_low", "AKS74U_4");
     */
 
-	Window& windowA = _windows.emplace_back();
-	windowA.position = glm::vec3(6.15f, 0.1f, 1.6f);
-    windowA.rotation.y = HELL_PI * 0.5f;
+//	Window& windowA = _windows.emplace_back();
+//	windowA.position = glm::vec3(6.15f, 0.1f, 1.6f);
+//	windowA.rotation.y = HELL_PI * 0.5f;
+
+	//Window& windowB = _windows.emplace_back();
+   // windowB.position = glm::vec3(4.7f, 0.1f, 0.05f);
+   // windowB.rotation.y = HELL_PI * 1.0f;
 
     _ceilings.emplace_back(door2X - 0.8f, 7.0f, door2X + 0.8f, 9.95f, 2.5f, AssetManager::GetMaterialIndex("Ceiling"));
 
@@ -245,6 +249,7 @@ void Scene::LoadHardCodedObjects() {
 
 	GameObject& sofa = _gameObjects.emplace_back();
 	sofa.SetPosition(2.0f, 0.1f, 0.1f);
+    sofa.SetName("Sofa");
 	sofa.SetModel("Sofa_Cushionless");
 	sofa.SetMeshMaterial("Sofa");
 	sofa.CreateRigidBody(sofa.GetGameWorldMatrix(), true);
@@ -265,6 +270,7 @@ void Scene::LoadHardCodedObjects() {
 	cushion0.SetPosition(2.0f, 0.1f, 0.1f);
 	cushion0.SetModel("SofaCushion0");
 	cushion0.SetMeshMaterial("Sofa");
+    cushion0.SetName("SofaCushion0");
 	cushion0.CreateRigidBody(cushion0.GetGameWorldMatrix(), false);
 	cushion0.SetRaycastShapeFromModel(AssetManager::GetModel("SofaCushion0"));
 	cushion0.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("SofaCushion0_ConvexMesh")->_meshes[0], cushionFilterData);
@@ -274,6 +280,7 @@ void Scene::LoadHardCodedObjects() {
 	GameObject& cushion1 = _gameObjects.emplace_back();
 	cushion1.SetPosition(2.0f, 0.1f, 0.1f);
 	cushion1.SetModel("SofaCushion1");
+	cushion1.SetName("SofaCushion1");
 	cushion1.SetMeshMaterial("Sofa");
 	cushion1.CreateRigidBody(cushion1.GetGameWorldMatrix(), false);
 	cushion1.SetRaycastShapeFromModel(AssetManager::GetModel("SofaCushion1"));
@@ -284,6 +291,7 @@ void Scene::LoadHardCodedObjects() {
 	GameObject& cushion2 = _gameObjects.emplace_back();
 	cushion2.SetPosition(2.0f, 0.1f, 0.1f);
 	cushion2.SetModel("SofaCushion2");
+	cushion2.SetName("SofaCushion2");
 	cushion2.SetMeshMaterial("Sofa");
 	cushion2.CreateRigidBody(cushion2.GetGameWorldMatrix(), false);
 	cushion2.SetRaycastShapeFromModel(AssetManager::GetModel("SofaCushion2"));
@@ -294,6 +302,7 @@ void Scene::LoadHardCodedObjects() {
 	GameObject& cushion3 = _gameObjects.emplace_back();
 	cushion3.SetPosition(2.0f, 0.1f, 0.1f);
 	cushion3.SetModel("SofaCushion3");
+	cushion3.SetName("SofaCushion3");
 	cushion3.SetMeshMaterial("Sofa");
 	cushion3.CreateRigidBody(cushion3.GetGameWorldMatrix(), false); 
 	cushion3.SetRaycastShapeFromModel(AssetManager::GetModel("SofaCushion3"));
@@ -304,6 +313,7 @@ void Scene::LoadHardCodedObjects() {
 	GameObject& cushion4 = _gameObjects.emplace_back();
 	cushion4.SetPosition(2.0f, 0.1f, 0.1f);
 	cushion4.SetModel("SofaCushion4");
+	cushion4.SetName("SofaCushion4");
 	cushion4.SetMeshMaterial("Sofa");
 	cushion4.CreateRigidBody(cushion4.GetGameWorldMatrix(), false);
 	cushion4.SetRaycastShapeFromModel(AssetManager::GetModel("SofaCushion4"));
@@ -313,7 +323,8 @@ void Scene::LoadHardCodedObjects() {
 
 	GameObject& tree = _gameObjects.emplace_back();
     tree.SetPosition(0.75f, 0.1f, 6.2f);
-    tree.SetModel("ChristmasTree");
+	tree.SetModel("ChristmasTree");
+	tree.SetName("ChristmasTree");
     tree.SetMeshMaterial("Tree");
     //tree.CreateRigidBody(sofa.GetGameWorldMatrix(), true);
 
@@ -600,22 +611,12 @@ void Scene::CleanUp() {
     _windows.clear();
 	_gameObjects.clear();
 	_animatedGameObjects.clear();
-	_pickUps.clear();
+	_pickUps.clear();	
 
-	if (_sceneShape) {
-		_sceneShape->release();
-	}
-	if (_sceneRigidDynamic) {
-		_sceneRigidDynamic->release();
-	}
 	if (_sceneTriangleMesh) {
 		_sceneTriangleMesh->release();
-	}
-
-    // RT
-	_rtInstances.clear();    
-    _rtVertices.clear();
-	_rtMesh.clear();
+		_sceneShape->release();
+    }
 }
 
 void Scene::AddDoor(Door& door) {
@@ -832,7 +833,7 @@ void Scene::UpdateRTInstanceData() {
     }
 }
 
-void Scene::CreateScenePhysicsObjects() {
+void Scene::RecreateAllPhysicsObjects() {
 
     std::vector<PxVec3> vertices;
     std::vector<unsigned int> indices;
@@ -860,6 +861,15 @@ void Scene::CreateScenePhysicsObjects() {
         }
     }
 
+    // commenting the shit below out prevented the crash it mentions, but who knows if that is gonna break something elsewhere
+
+	/*if (_sceneTriangleMesh) {
+		_sceneTriangleMesh->release();
+	}
+	if (_sceneShape) {
+        _sceneShape->release(); // crashed here once? // again again./ figure out
+	}*/
+
     if (vertices.size()) {;
         Transform transform;
         PhysicsFilterData filterData;
@@ -881,6 +891,21 @@ void Scene::CreateScenePhysicsObjects() {
 	}
 }
 
+void Scene::RemoveAllDecalsFromWindow(Window* window) {    
+
+    std::cout << "size was: " << _decals.size() << "\n";
+
+    for (int i = 0; i < _decals.size(); i++) {
+        PxRigidBody* decalParentRigid = _decals[i].parent;
+        if (decalParentRigid == (void*)window->raycastBody ||
+            decalParentRigid == (void*)window->raycastBodyTop) {
+            _decals.erase(_decals.begin() + i);
+            i--;
+            std::cout << "removed decal " << i << " size is now: " << _decals.size() << "\n";
+        }
+    }
+}
+
 void Scene::ProcessPhysicsCollisions() {
 
     /* if (Input::KeyPressed(HELL_KEY_9)) {
@@ -889,8 +914,6 @@ void Scene::ProcessPhysicsCollisions() {
          }
      }*/
     bool playedShellSound = false;
-
-
 
     for (CollisionReport& report : Physics::GetCollisions()) {
 
@@ -923,20 +946,22 @@ void Scene::ProcessPhysicsCollisions() {
     Physics::ClearCollisionList();
 }
 
-void Scene::UpdatePhysXUserData() {
-
-}
-
 
 void Scene::RecreateDataStructures() {
+
+    // Remove all scene physx objects, if they exist
+	if (_sceneTriangleMesh) {
+		_sceneTriangleMesh->release();
+		_sceneShape->release(); 
+        _sceneRigidDynamic->release();
+	}
 
     CreateMeshData();
     CreatePointCloud();
     UpdateRTInstanceData();
     Renderer::CreatePointCloudBuffer();
     Renderer::CreateTriangleWorldVertexBuffer();
-    CreateScenePhysicsObjects();
-    UpdatePhysXUserData();
+    RecreateAllPhysicsObjects();
 }
 
 void Scene::CreateMeshData() {
@@ -947,6 +972,9 @@ void Scene::CreateMeshData() {
     for (Floor& floor : _floors) {
         floor.CreateMesh();
     }
+
+	_rtVertices.clear();
+	_rtMesh.clear();
 
     // RT vertices and mesh
     int baseVertex = 0;
@@ -1028,8 +1056,7 @@ Wall::Wall(glm::vec3 begin, glm::vec3 end, float height, int materialIndex) {
     CreateMesh();
 }
 
-#define WINDOW_WIDTH 0.85f
-#define WINDOW_HEIGHT 2.1f
+
 
 void Wall::CreateMesh() {
 
@@ -1091,12 +1118,28 @@ void Wall::CreateMesh() {
 
 		for (Window& window : Scene::_windows) {
 
+            
 			// Left side
-			glm::vec3 v1(window.position + glm::vec3(-0.1, 0, WINDOW_WIDTH * -0.5));
+			glm::vec3 v3(window.GetFrontLeftCorner());
+			glm::vec3 v4(window.GetBackRightCorner());
+			// Right side
+			glm::vec3 v1(window.GetFrontRightCorner());
+			glm::vec3 v2(window.GetBackLeftCorner());
+           
+
+          /*
+			// Left side
+			//glm::vec3 v1(window.position + glm::vec3(-0.1, 0, WINDOW_WIDTH * -0.5));
+            glm::vec3 v1 = window.GetFrontLeftCorner();
 			glm::vec3 v2(window.position + glm::vec3(0.1f, 0, WINDOW_WIDTH * -0.5));
 			// Right side
 			glm::vec3 v3(window.position + glm::vec3(-0.1, 0, WINDOW_WIDTH * 0.5));
 			glm::vec3 v4(window.position + glm::vec3(0.1f, 0, WINDOW_WIDTH * 0.5));
+*/
+			v1.y = 0.1f;
+			v2.y = 0.1f;
+			v3.y = 0.1f;
+			v4.y = 0.1f;
 
             //std::cout << "\n" << Util::Vec3ToString(v1) << "\n\n";
 

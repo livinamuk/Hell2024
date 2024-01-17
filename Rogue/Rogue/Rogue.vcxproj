@@ -131,6 +131,7 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="src\Core\DebugMenu.cpp" />
     <ClCompile Include="src\Core\Animation\Animation.cpp" />
     <ClCompile Include="src\Core\Animation\SkinnedModel.cpp" />
     <ClCompile Include="src\Core\AssetManager.cpp" />
@@ -168,6 +169,8 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <ClCompile Include="vendor\tracy\public\TracyClient.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\Core\Config.hpp" />
+    <ClInclude Include="src\Core\DebugMenu.h" />
     <ClInclude Include="src\Common.h" />
     <ClInclude Include="src\Core\Animation\Animation.h" />
     <ClInclude Include="src\Core\Animation\SkinnedModel.h" />
@@ -231,6 +234,8 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <None Include="res\shaders\geometry_instanced.vert" />
     <None Include="res\shaders\glass.frag" />
     <None Include="res\shaders\glass.vert" />
+    <None Include="res\shaders\skybox.frag" />
+    <None Include="res\shaders\skybox.vert" />
     <None Include="res\shaders\test.comp" />
     <None Include="res\shaders\glass_composite.frag" />
     <None Include="res\shaders\glass_composite.vert" />

@@ -200,7 +200,8 @@ namespace Scene {
     void AddFloor(Floor& floor);
     void UpdateRTInstanceData();
     void RecreateDataStructures();
-    void CreateScenePhysicsObjects();
+    //void CreateScenePhysicsObjects();
     void ProcessPhysicsCollisions();
-    void UpdatePhysXUserData();
+	void RecreateAllPhysicsObjects();
+	void RemoveAllDecalsFromWindow(Window* window);
 }

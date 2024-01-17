@@ -33,6 +33,9 @@ enum WeaponAction { IDLE = 0, FIRE, RELOAD, RELOAD_FROM_EMPTY, DRAW_BEGIN, DRAWI
 #define DOOR_HEIGHT 2.0f
 #define DOOR_EDITOR_DEPTH 0.05f
 
+#define WINDOW_WIDTH 0.85f
+#define WINDOW_HEIGHT 2.1f
+
 //#define MAP_WIDTH   32
 //#define MAP_HEIGHT  16
 //#define MAP_DEPTH   50
@@ -207,6 +210,7 @@ struct UIRenderInfo {
     int screenX = 0;
     int screenY = 0;
     glm::mat4 modelMatrix = glm::mat4(1);
+    glm::vec3 color = WHITE;
     bool centered = false;
     GLuint target = GL_TEXTURE_2D;
     void* parent = nullptr;

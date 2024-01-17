@@ -22,8 +22,10 @@ int checkCompileErrors(unsigned int shader, std::string type) {
     return success;
 }
 
-void Shader::Load(std::string vertexPath, std::string fragmentPath)
-{
+void Shader::Load(std::string vertexPath, std::string fragmentPath) {
+
+    //std::cout << "Loading: " << vertexPath << " " << fragmentPath << "\n";
+
     std::string vertexSource = Util::ReadTextFromFile("res/shaders/" + vertexPath);
     std::string fragmentSource = Util::ReadTextFromFile("res/shaders/" + fragmentPath);
 

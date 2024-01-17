@@ -14,6 +14,8 @@ namespace Editor {
 	glm::mat4 GetViewMatrix();	
 	void NextMode();
 	void PreviousMode();
+	bool WasForcedOpen();
+	void ForcedOpen();
 
 	/*glm::vec3 GetEditorWorldPosFromCoord(int x, int z);
 	int GetMouseGridX();

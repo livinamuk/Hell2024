@@ -26,6 +26,7 @@ namespace Editor {
     Door* _draggedDoor;
     glm::vec3 _creatingFloorBegin = glm::vec3(0);
     glm::vec3 _creatingFloorEnd = glm::vec3(0);
+    bool _wasForcedOpen = false;
 
     struct HoveredVertex {
         bool hoverFound = false;
@@ -522,4 +523,16 @@ void Editor::PreviousMode() {
     else
         _mode = (EditorMode)(int(_mode) - 1);
     _action = IDLE;
+}
+
+bool Editor::WasForcedOpen() {
+	if (_wasForcedOpen) {
+		_wasForcedOpen = false;
+		return true;
+	}
+	return false;
+}
+
+void Editor::ForcedOpen() {
+    _wasForcedOpen = true;
 }

@@ -65,6 +65,19 @@ void File::LoadMap(std::string mapName) {
 		}
 	}
 
+	//	
+
+	if (document.HasMember("Windows")) {
+		const rapidjson::Value& objects = document["Windows"];
+		for (rapidjson::SizeType i = 0; i < objects.Size(); i++) {
+			glm::vec3 position = ReadVec3(objects[i], "position");
+			float rotation = ReadFloat(objects[i], "rotation");
+			Window& window = Scene::_windows.emplace_back();
+			window.position = position;
+			window.rotation.y = rotation;
+		}
+	}
+
 	if (document.HasMember("Doors")) {
 		const rapidjson::Value& objects = document["Doors"];
 		for (rapidjson::SizeType i = 0; i < objects.Size(); i++) {
@@ -104,6 +117,7 @@ void File::SaveMap(std::string mapName) {
 	rapidjson::Document::AllocatorType& allocator = document.GetAllocator();
 	rapidjson::Value walls(rapidjson::kArrayType);
 	rapidjson::Value doors(rapidjson::kArrayType);
+	rapidjson::Value windows(rapidjson::kArrayType);
 	rapidjson::Value floors(rapidjson::kArrayType);
 	rapidjson::Value gameObjects(rapidjson::kArrayType);
 	document.SetObject();
@@ -115,6 +129,13 @@ void File::SaveMap(std::string mapName) {
 		SaveFloat(&object, "height", wall.height, allocator);
 		SaveString(&object, "materialName", AssetManager::GetMaterialNameByIndex(wall.materialIndex), allocator);
 		walls.PushBack(object, allocator);
+	}
+
+	for (Window& window: Scene::_windows) {
+		rapidjson::Value object(rapidjson::kObjectType);
+		SaveVec3(&object, "position", window.position, allocator);
+		SaveFloat(&object, "rotation", window.rotation.y, allocator);
+		windows.PushBack(object, allocator);
 	}
 
 	for (Door& door : Scene::_doors) {
@@ -145,6 +166,7 @@ void File::SaveMap(std::string mapName) {
 	document.AddMember("Walls", walls, allocator);
 	document.AddMember("Floors", floors, allocator);
 	document.AddMember("Doors", doors, allocator);
+	document.AddMember("Windows", windows, allocator);
 
 	rapidjson::StringBuffer strbuf;
 	rapidjson::PrettyWriter<rapidjson::StringBuffer> writer(strbuf);

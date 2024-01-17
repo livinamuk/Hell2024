@@ -150,6 +150,7 @@ void GL::Init(int width, int height) {
 	glfwSetErrorCallback([](int error, const char* description) {
 		std::cout << "GLFW Error (" << std::to_string(error) << "): " << description << std::endl;
 	});
+
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
@@ -193,6 +194,16 @@ void GL::Init(int width, int height) {
         std::cout << "Failed to initialize GLAD" << std::endl;
         return;
     }
+    GLint major, minor;
+    glGetIntegerv(GL_MAJOR_VERSION, &major);
+    glGetIntegerv(GL_MINOR_VERSION, &minor);
+    const GLubyte* vendor = glGetString(GL_VENDOR);
+    const GLubyte* renderer = glGetString(GL_RENDERER);
+    std::cout << "\nVENDOR: " << vendor << "\n";
+    std::cout << "RENDERER: " << renderer << "\n";
+    std::cout << "MAJOR: " << major << "\n";
+    std::cout << "MINOR: " << minor << "\n\n";
+
     int flags;
     glGetIntegerv(GL_CONTEXT_FLAGS, &flags);
     if (flags & GL_CONTEXT_FLAG_DEBUG_BIT) {

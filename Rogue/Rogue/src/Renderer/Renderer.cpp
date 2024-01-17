@@ -30,8 +30,14 @@
 
 #include "../Core/AnimatedGameObject.h"
 #include "../Effects/MuzzleFlash.h"
+#include "../Core/DebugMenu.h"
 
 std::vector<glm::vec3> debugPoints;
+
+struct MenuRenderTarget {
+	GLuint fbo = { 0 };
+	GLuint texutre = { 0 };
+} _menuRenderTarget;
 
 struct BlurBuffer {
 	GLuint width = 0;
@@ -54,8 +60,9 @@ struct Shaders {
     Shader depthOfField;
     Shader debugViewPointCloud;
     Shader debugViewPropgationGrid;
-    Shader geometry;
-    Shader geometry_instanced;
+	Shader geometry;
+	Shader geometry_instanced;
+	Shader skybox;
 	Shader lighting;
 	Shader bulletDecals;
 	Shader glass;
@@ -128,6 +135,7 @@ float _mapHeight = 8;
 float _mapDepth = 16; 
 //std::vector<int> _newDirtyPointCloudIndices;
 int _floorVertexCount;
+Mesh _quadMesh;
 
 const int _gridTextureWidth = (int)(_mapWidth / _propogationGridSpacing);
 const int _gridTextureHeight = (int)(_mapHeight / _propogationGridSpacing);
@@ -159,7 +167,8 @@ void DrawAnimatedScene(Shader& shader, Player* player);
 void DrawShadowMapScene(Shader& shader);
 void DrawBulletDecals(Player* player);
 void DrawCasingProjectiles(Player* player);
-void DrawFullscreenQuad();
+void DrawFullscreenQuad(); 
+void DrawFullscreenQuadWithNormals();
 void DrawMuzzleFlashes(Player* player);
 void BlurEmissiveBulbs(Player* player);
 void InitCompute();
@@ -177,6 +186,9 @@ void CalculateDirtyCloudPoints();
 void CalculateDirtyProbeCoords();
 void GlassPass(Player* player);
 void BlitDebugTexture(GLint fbo, GLenum colorAttachment, GLint srcWidth, GLint srcHeight);
+void DrawQuad(int viewportWidth, int viewPortHeight, int textureWidth, int textureHeight, int xPos, int yPos, bool centered = false, float scale = 1.0f, int xSize = -1, int ySize = -1);
+void SkyBoxPass(Player* player);
+
 
 int GetPlayerIndexFromPlayerPointer(Player* player) {
 	for (int i = 0; i < Scene::_players.size(); i++) {
@@ -244,7 +256,6 @@ void GlassPass(Player* player) {
 	glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_2D, gBuffer._gGlassTexture);
 
-
 	glActiveTexture(GL_TEXTURE2);
 	glBindTexture(GL_TEXTURE_2D, _blurBuffers[0].textureB);
 	glActiveTexture(GL_TEXTURE3);
@@ -253,6 +264,9 @@ void GlassPass(Player* player) {
 	glBindTexture(GL_TEXTURE_2D, _blurBuffers[2].textureB);
 	glActiveTexture(GL_TEXTURE5);
 	glBindTexture(GL_TEXTURE_2D, _blurBuffers[3].textureB);
+
+	glActiveTexture(GL_TEXTURE6);
+	glBindTexture(GL_TEXTURE_2D, gBuffer._gDepthTexture);
 
 
     glDisable(GL_DEPTH_TEST);
@@ -310,7 +324,17 @@ void Renderer::Init() {
     glGenVertexArrays(1, &_pointLineVAO);
     glGenBuffers(1, &_pointLineVBO);
     glPointSize(2);
-            
+
+    // Menu FBO
+	glGenFramebuffers(1, &_menuRenderTarget.fbo);
+	glGenTextures(1, &_menuRenderTarget.texutre);
+	glBindFramebuffer(GL_FRAMEBUFFER, _menuRenderTarget.fbo);
+	glBindTexture(GL_TEXTURE_2D, _menuRenderTarget.texutre);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, _renderWidth, _renderHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, _menuRenderTarget.texutre, 0);
+
     _shaders.solidColor.Load("solid_color.vert", "solid_color.frag");
     _shaders.shadowMap.Load("shadowmap.vert", "shadowmap.frag", "shadowmap.geom");
     _shaders.UI.Load("ui.vert", "ui.frag");
@@ -328,12 +352,14 @@ void Renderer::Init() {
 	_shaders.bulletDecals.Load("bullet_decals.vert", "bullet_decals.frag");
 	_shaders.glass.Load("glass.vert", "glass.frag");
 	_shaders.glassComposite.Load("glass_composite.vert", "glass_composite.frag");
+	_shaders.skybox.Load("skybox.vert", "skybox.frag");
 	_shaders.computeTest.Load("res/shaders/test.comp");
     
 
 	_shaders.blurVertical.Load("blurVertical.vert", "blur.frag");
 	_shaders.blurHorizontal.Load("blurHorizontal.vert", "blur.frag");
     
+
 
     _cubeMesh = MeshUtil::CreateCube(1.0f, 1.0f, true);
 
@@ -526,6 +552,8 @@ void Renderer::RenderFrame(Player* player) {
     DrawBulletDecals(player);
     DrawCasingProjectiles(player);
     LightingPass(player);
+    SkyBoxPass(player);
+
 
     BlurEmissiveBulbs(player);
 
@@ -588,7 +616,7 @@ void Renderer::RenderFrame(Player* player) {
     if (player->CursorShouldBeInterect()) {
         texture = "CrosshairSquare";
     }
-    QueueUIForRendering(texture, presentFrameBuffer.GetWidth() / 2, presentFrameBuffer.GetHeight() / 2, true);
+    QueueUIForRendering(texture, presentFrameBuffer.GetWidth() / 2, presentFrameBuffer.GetHeight() / 2, true, WHITE);
 
     /*if (Scene::_cameraRayData.found) {
         if (Scene::_cameraRayData.raycastObjectType == RaycastObjectType::WALLS) {
@@ -653,6 +681,148 @@ void Renderer::RenderFrame(Player* player) {
     for (Light& light : Scene::_lights) {
         light.isDirty = false;
     }
+}
+
+
+struct CubemapTexutre {
+
+	GLuint ID;
+
+	void Create(std::vector<std::string>& textures) {
+		glGenTextures(1, &ID);
+		glBindTexture(GL_TEXTURE_CUBE_MAP, ID);
+		int width, height, nrChannels;
+		for (unsigned int i = 0; i < textures.size(); i++) {
+			unsigned char* data = stbi_load(textures[i].c_str(), &width, &height, &nrChannels, 0);
+			if (data) {
+				GLint format = GL_RGB;
+				if (nrChannels == 4)
+					format = GL_RGBA;
+				if (nrChannels == 1)
+					format = GL_RED;
+				glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGBA, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+				stbi_image_free(data);
+			}
+			else {
+				std::cout << "Failed to load cubemap\n";
+				stbi_image_free(data);
+			}
+		}
+		glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+	}
+};
+
+GLuint _cubeVao = 0;
+CubemapTexutre _skyboxTexture;
+
+void SkyBoxPass(Player* player) {
+
+    if (_cubeVao == 0) {
+
+
+
+		// Init cube vertices (for skybox)	
+		std::vector<glm::vec3> cubeVertices;
+		std::vector<unsigned int> cubeIndices;
+		float d = 0.5f;
+		cubeVertices.push_back(glm::vec3(-d, d, d));	// Top
+		cubeVertices.push_back(glm::vec3(-d, d, -d));
+		cubeVertices.push_back(glm::vec3(d, d, -d));
+		cubeVertices.push_back(glm::vec3(d, d, d));
+		cubeVertices.push_back(glm::vec3(-d, -d, d));	// Bottom
+		cubeVertices.push_back(glm::vec3(-d, -d, -d));
+		cubeVertices.push_back(glm::vec3(d, -d, -d));
+		cubeVertices.push_back(glm::vec3(d, -d, d));
+		cubeVertices.push_back(glm::vec3(-d, d, d));	// Z front
+		cubeVertices.push_back(glm::vec3(-d, -d, d));
+		cubeVertices.push_back(glm::vec3(d, -d, d));
+		cubeVertices.push_back(glm::vec3(d, d, d));
+		cubeVertices.push_back(glm::vec3(-d, d, -d));	// Z back
+		cubeVertices.push_back(glm::vec3(-d, -d, -d));
+		cubeVertices.push_back(glm::vec3(d, -d, -d));
+		cubeVertices.push_back(glm::vec3(d, d, -d));
+		cubeVertices.push_back(glm::vec3(d, d, -d));	// X front
+		cubeVertices.push_back(glm::vec3(d, -d, -d));
+		cubeVertices.push_back(glm::vec3(d, -d, d));
+		cubeVertices.push_back(glm::vec3(d, d, d));
+		cubeVertices.push_back(glm::vec3(-d, d, -d));	// X back
+		cubeVertices.push_back(glm::vec3(-d, -d, -d));
+		cubeVertices.push_back(glm::vec3(-d, -d, d));
+		cubeVertices.push_back(glm::vec3(-d, d, d));
+		cubeIndices = { 0, 1, 3, 1, 2, 3, 7, 5, 4, 7, 6, 5, 11, 9, 8, 11, 10, 9, 12, 13, 15, 13, 14, 15, 16, 17, 19, 17, 18, 19, 23, 21, 20, 23, 22, 21 };
+		unsigned int vbo;
+		unsigned int ebo;
+		glGenVertexArrays(1, &_cubeVao);
+		glGenBuffers(1, &vbo);
+		glGenBuffers(1, &ebo);
+		glBindVertexArray(_cubeVao);
+		glBindBuffer(GL_ARRAY_BUFFER, vbo);
+		glBufferData(GL_ARRAY_BUFFER, cubeVertices.size() * sizeof(glm::vec3), &cubeVertices[0], GL_STATIC_DRAW);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, cubeIndices.size() * sizeof(unsigned int), &cubeIndices[0], GL_STATIC_DRAW);
+		glEnableVertexAttribArray(0);
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void*)0);
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+		glBindVertexArray(0);
+
+
+		// Load cubemap textures
+		std::vector<std::string> skyboxTextureFilePaths;
+		skyboxTextureFilePaths.push_back("res/textures/back.png");
+		skyboxTextureFilePaths.push_back("res/textures/back.png");
+		skyboxTextureFilePaths.push_back("res/textures/back.png");
+
+
+
+		skyboxTextureFilePaths.push_back("res/textures/bottom.png");
+		skyboxTextureFilePaths.push_back("res/textures/top.png");
+		skyboxTextureFilePaths.push_back("res/textures/front.png");
+        /*
+
+		skyboxTextureFilePaths.push_back("res/textures/right.png");
+		skyboxTextureFilePaths.push_back("res/textures/left.png");
+		skyboxTextureFilePaths.push_back("res/textures/top.png");
+		skyboxTextureFilePaths.push_back("res/textures/bottom.png");
+		skyboxTextureFilePaths.push_back("res/textures/front.png");
+		skyboxTextureFilePaths.push_back("res/textures/back.png");*/
+		_skyboxTexture.Create(skyboxTextureFilePaths);
+
+    }
+
+
+
+
+
+
+
+	glm::mat4 projection = glm::perspective(1.0f, 1920.0f / 1080.0f, NEAR_PLANE, FAR_PLANE);
+	glm::mat4 view = player->GetViewMatrix();
+
+    glEnable(GL_DEPTH_TEST);
+    glDrawBuffer(GL_COLOR_ATTACHMENT3);
+
+	// Render skybox
+	static Transform skyBoxTransform;
+    skyBoxTransform.position = player->GetViewPos();
+	//skyBoxTransform.rotation.y -= 0.00015f;
+	skyBoxTransform.scale = glm::vec3(50.0f);
+	_shaders.skybox.Use();
+    _shaders.skybox.SetMat4("projection", projection);
+    _shaders.skybox.SetMat4("view", view);
+    _shaders.skybox.SetMat4("model", skyBoxTransform.to_mat4());
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, _skyboxTexture.ID);
+	glBindVertexArray(_cubeVao);
+	glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
+//	glClear(GL_DEPTH_BUFFER_BIT);
+
+
+
 }
 
 void BlitDebugTexture(GLint fbo, GLenum colorAttachment, GLint srcWidth, GLint srcHeight) {
@@ -773,6 +943,7 @@ void LightingPass(Player* player) {
         _shaders.lighting.SetInt("mode", 3);
     }
 
+
     if (_debugLineRenderMode == DebugLineRenderMode::SHOW_NO_LINES) {
         // Do nothing
     }
@@ -788,6 +959,8 @@ void LightingPass(Player* player) {
     else if (_debugLineRenderMode == DebugLineRenderMode::RAYTRACE_LAND) {
         TextBlitter::_debugTextToBilt += "Line Mode: COMPUTE RAY WORLD\n";
     }
+
+    
   
     gBuffer.Bind();
     glDrawBuffer(GL_COLOR_ATTACHMENT3);
@@ -904,68 +1077,54 @@ void DebugPass(Player* player) {
 
 
 
+    //////////////////////////////////////////////
+    //                                          //
+    //  !!! DEBUG POINTS ARE RENDERED HERE !!!  //   
+    //                                          //  and they work, so don't fret, just got for it
+   
+
+    for (Window& window : Scene::_windows) {
+
+		debugPoints.push_back(window.GetFrontLeftCorner());
+		//debugPoints.push_back(window.GetBackRightCorner());
+
+		////debugPoints.push_back(window.GetFrontRightCorner());
+		//debugPoints.push_back(window.GetBackLeftCorner());
+    }
+
+
     for (auto& pos : debugPoints) {
         Point point;
         point.pos = pos;
-        point.color = LIGHT_BLUE;
+        point.pos.y = 0.0125f;
+        point.color = RED;
         Renderer::QueuePointForDrawing(point);
     }
     glDisable(GL_DEPTH_TEST);
     glDisable(GL_CULL_FACE);
     RenderImmediate();
     debugPoints.clear();
+
+
+
+    Window& window = Scene::_windows[0];
+    glm::vec3 v1(window.position + glm::vec3(-0.1, 0, WINDOW_WIDTH * -0.5));
+    debugPoints.push_back(v1);
+
+	for (auto& pos : debugPoints) {
+		Point point;
+		point.pos = pos;
+		point.color = GREEN;
+		Renderer::QueuePointForDrawing(point);
+	}
+	glDisable(GL_DEPTH_TEST);
+	glDisable(GL_CULL_FACE);
+	RenderImmediate();
+	debugPoints.clear();
+
+
+    //////////////////////////////////////////////////////////////////////////////////////////////
     
-
-
-    // Draw physx word as lines
-  /*  _lines.clear();
-    _shaders.solidColor.Use();
-    _shaders.solidColor.SetBool("uniformColor", false);
-    _shaders.solidColor.SetMat4("model", glm::mat4(1));
-    auto* physics = Physics::GetPhysics();
-    auto* scene = Physics::GetScene();
-    auto& renderBuffer = scene->getRenderBuffer();
-    for (int i = 0; i < renderBuffer.getNbLines(); i++) {
-        auto pxLine = renderBuffer.getLines()[i];
-        Line line;
-        line.p1.pos = Util::PxVec3toGlmVec3(pxLine.pos0);
-        line.p2.pos = Util::PxVec3toGlmVec3(pxLine.pos1);
-        line.p1.color = GREEN;
-        line.p2.color = GREEN;
-        //Renderer::QueueLineForDrawing(line);
-    }
-
-    glDisable(GL_DEPTH_TEST);
-    glDisable(GL_CULL_FACE);
-    RenderImmediate();
-    */
-    // Draw debugcals
-   /*
-    _points.clear();
-    _shaders.solidColor.Use();
-    _shaders.solidColor.SetBool("uniformColor", false);
-    _shaders.solidColor.SetMat4("model", glm::mat4(1));
-    for (auto& decal : Scene::_decals) {
-
-        glm::mat4 parentMatrix = Util::PxMat44ToGlmMat4(decal.parent->getGlobalPose());
-
-        glm::mat4 modelMatrix = decal.GetModelMatrix();
-        float x = modelMatrix[3][0];
-        float y = modelMatrix[3][1];
-        float z = modelMatrix[3][2];
-
-        //glm::vec3 worldPosition = parentMatrix * glm::vec4(decal.position, 1.0);
-
-        Point point;
-        point.pos = glm::vec3(x, y, z);
-        point.color = LIGHT_BLUE;
-        Renderer::QueuePointForDrawing(point);
-    }
-    glDisable(GL_DEPTH_TEST);
-    glDisable(GL_CULL_FACE);
-    RenderImmediate();
-    ;*/
-
 
 
     glm::vec3 color = GREEN;
@@ -1594,6 +1753,138 @@ void Renderer::RenderEditorFrame() {
     glBlitFramebuffer(0, 0, presentFrameBuffer.GetWidth(), presentFrameBuffer.GetHeight(), 0, 0, GL::GetWindowWidth(), GL::GetWindowHeight(), GL_COLOR_BUFFER_BIT, GL_NEAREST);
 }
 
+
+void DrawQuad2(int viewportWidth, int viewPortHeight, int xPos, int yPos, int xSize, int ySize, bool centered) {
+
+	float quadWidth = (float)xSize;
+	float quadHeight = (float)ySize;
+
+	//if (centered) {
+	//	xPos -= (int)(quadWidth / 2);
+	//	yPos -= (int)(quadHeight / 2);
+	//
+
+	float renderTargetWidth = (float)viewportWidth;
+	float renderTargetHeight = (float)viewPortHeight;
+	float width = (1.0f / renderTargetWidth) * quadWidth;
+	float height = (1.0f / renderTargetHeight) * quadHeight;
+	float ndcX = ((xPos + (quadWidth / 2.0f)) / renderTargetWidth) * 2 - 1;
+	float ndcY = ((yPos + (quadHeight / 2.0f)) / renderTargetHeight) * 2 - 1;
+	Transform transform;
+	//transform.position.x = ndcX;
+	//transform.position.y = ndcY * -1;
+	//transform.scale = glm::vec3(width, height * -1, 1);
+
+	width = (1.0f / renderTargetWidth) * xSize;
+	height = (1.0f / renderTargetHeight) * ySize;
+	transform.scale.x = width;
+	transform.scale.y = height;
+
+	_shaders.UI.SetMat4("model", transform.to_mat4());
+	_quadMesh.Draw();
+}
+
+void Renderer::RenderDebugMenu() {
+
+
+	glBindFramebuffer(GL_FRAMEBUFFER, _menuRenderTarget.fbo);
+	glViewport(0, 0, _renderWidth, _renderHeight);
+	glClearColor(0, 0, 0, 0);
+	glClear(GL_COLOR_BUFFER_BIT);
+	glDisable(GL_DEPTH_TEST);
+	glDisable(GL_CULL_FACE);
+
+	_shaders.UI.Use();
+	_shaders.UI.SetMat4("model", glm::mat4(1));
+
+	float minMenuHeight = 160.0f;
+    float lineHeight = TextBlitter::GetLineHeight();
+    float paddingBetweenHeading = 8.0f;
+    float paddingBetweenLeftAndRightText = 10.0f;
+	float viewportCenterX = _renderWidth * 0.5f;
+	float viewportCenterY = _renderHeight * 0.5f;
+
+    float subMenuHeight = DebugMenu::GetSubMenuItemCount() * lineHeight;
+    float headingHeight = lineHeight;
+
+    float menuWidth, textLeftX, textRightX;
+	float totalMenuHeight = subMenuHeight + headingHeight;
+
+	float textWidthHeading = TextBlitter::GetTextWidth(DebugMenu::GetHeading());
+	float textWidthLeft = TextBlitter::GetTextWidth(DebugMenu::GetTextLeft());
+	float textWidthRight = TextBlitter::GetTextWidth(DebugMenu::GetHeading());
+    float leftTextWidth = TextBlitter::GetTextWidth(DebugMenu::GetTextLeft());
+    float rightTextWidth = TextBlitter::GetTextWidth(DebugMenu::GetTextRight());
+
+	if (DebugMenu::SubMenuHasValues()) {
+		menuWidth = std::max(textWidthHeading, textWidthLeft);
+        textLeftX = viewportCenterX - leftTextWidth * 0.5f;
+        textRightX = 0;
+    }
+    else {
+		menuWidth = std::max(textWidthHeading, textWidthLeft + textWidthRight + (paddingBetweenLeftAndRightText * 2));
+		textLeftX = viewportCenterX - leftTextWidth - paddingBetweenLeftAndRightText;
+		textRightX = viewportCenterX + paddingBetweenLeftAndRightText;
+    }
+
+	// Add padding
+    totalMenuHeight += (paddingBetweenHeading * 2) + (lineHeight * 2);
+    totalMenuHeight = std::max(minMenuHeight, totalMenuHeight);
+
+	float headingY = viewportCenterY - (totalMenuHeight * 0.5f) + (lineHeight * 1.5f);
+	float subMenuY = headingY + lineHeight;
+
+    subMenuY += paddingBetweenHeading;
+	menuWidth += (lineHeight * 6);
+
+    float paddingLeftRight = 24;
+	menuWidth = 372;
+	textLeftX = viewportCenterX - (menuWidth * 0.5f) + paddingLeftRight;
+	textRightX = viewportCenterX + 0;
+
+
+//	std::cout << menuWidth << "\n";
+    	
+	// Draw menu background
+	AssetManager::GetTexture("MenuBG")->Bind(0);
+	DrawQuad(_renderWidth, _renderHeight, menuWidth, totalMenuHeight, viewportCenterX, viewportCenterY, true);
+
+	AssetManager::GetTexture("MenuBorderHorizontal")->Bind(0);
+	DrawQuad(_renderWidth, _renderHeight, menuWidth, 3, viewportCenterX, viewportCenterY - (totalMenuHeight * 0.5f), true);
+	DrawQuad(_renderWidth, _renderHeight, menuWidth, 3, viewportCenterX, viewportCenterY + (totalMenuHeight * 0.5f), true);
+	AssetManager::GetTexture("MenuBorderVertical")->Bind(0);
+	DrawQuad(_renderWidth, _renderHeight, 3, totalMenuHeight, viewportCenterX - (menuWidth * 0.5f), viewportCenterY, true);
+	DrawQuad(_renderWidth, _renderHeight, 3, totalMenuHeight, viewportCenterX + (menuWidth * 0.5f), viewportCenterY, true);
+
+	AssetManager::GetTexture("MenuBorderCornerTL")->Bind(0);
+	DrawQuad(_renderWidth, _renderHeight, 3, 3, viewportCenterX - (menuWidth * 0.5f), viewportCenterY - (totalMenuHeight * 0.5f), true);
+	AssetManager::GetTexture("MenuBorderCornerTR")->Bind(0);
+	DrawQuad(_renderWidth, _renderHeight, 3, 3, viewportCenterX + (menuWidth * 0.5f), viewportCenterY - (totalMenuHeight * 0.5f), true);
+	AssetManager::GetTexture("MenuBorderCornerBL")->Bind(0);
+	DrawQuad(_renderWidth, _renderHeight, 3, 3, viewportCenterX - (menuWidth * 0.5f), viewportCenterY + (totalMenuHeight * 0.5f), true);
+	AssetManager::GetTexture("MenuBorderCornerBR")->Bind(0);
+	DrawQuad(_renderWidth, _renderHeight, 3, 3, viewportCenterX + (menuWidth * 0.5f), viewportCenterY + (totalMenuHeight * 0.5f), true);
+
+    // Draw menu text
+    TextBlitter::BlitAtPosition(DebugMenu::GetHeading(), viewportCenterX, headingY, true, 1.0f);
+    TextBlitter::BlitAtPosition(DebugMenu::GetTextLeft(), textLeftX, subMenuY, false, 1.0f);
+	TextBlitter::BlitAtPosition(DebugMenu::GetTextRight(), textRightX, subMenuY, false, 1.0f);
+
+    TextBlitter::Update(1.0f / 60.0f);
+	Renderer::RenderUI();
+
+    // Draw the menu into the main frame buffer
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glViewport(0, 0, GL::GetWindowWidth(), GL::GetWindowHeight());
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, _menuRenderTarget.texutre);
+	glDisable(GL_DEPTH_TEST);
+	glEnable(GL_BLEND);
+	_shaders.UI.Use();
+	_shaders.UI.SetMat4("model", glm::mat4(1));
+    DrawFullscreenQuadWithNormals();
+}
+
 void Renderer::WipeShadowMaps() {
 
     for (ShadowMap& shadowMap : _shadowMaps) {
@@ -1618,9 +1909,8 @@ void Renderer::ToggleDebugText() {
 }
 
 
-static Mesh _quadMesh;
 
-inline void DrawQuad(int viewportWidth, int viewPortHeight, int textureWidth, int textureHeight, int xPosition, int yPosition, bool centered = false, float scale = 1.0f, int xSize = -1, int ySize = -1 /*, int xClipMin = -1, int xClipMax = -1, int yClipMin = -1, int yClipMax = -1*/) {
+void DrawQuad(int viewportWidth, int viewPortHeight, int textureWidth, int textureHeight, int xPos, int yPos, bool centered, float scale, int xSize, int ySize) {
 
     float quadWidth = (float)xSize;
     float quadHeight = (float)ySize;
@@ -1631,15 +1921,15 @@ inline void DrawQuad(int viewportWidth, int viewPortHeight, int textureWidth, in
         quadHeight = (float)textureHeight;
     }
     if (centered) {
-        xPosition -= (int)(quadWidth / 2);
-        yPosition -= (int)(quadHeight / 2);
+        xPos -= (int)(quadWidth / 2);
+        yPos -= (int)(quadHeight / 2);
     }
     float renderTargetWidth = (float)viewportWidth;
     float renderTargetHeight = (float)viewPortHeight;
     float width = (1.0f / renderTargetWidth) * quadWidth * scale;
     float height = (1.0f / renderTargetHeight) * quadHeight * scale;
-    float ndcX = ((xPosition + (quadWidth / 2.0f)) / renderTargetWidth) * 2 - 1;
-    float ndcY = ((yPosition + (quadHeight / 2.0f)) / renderTargetHeight) * 2 - 1;
+    float ndcX = ((xPos + (quadWidth / 2.0f)) / renderTargetWidth) * 2 - 1;
+    float ndcY = ((yPos + (quadHeight / 2.0f)) / renderTargetHeight) * 2 - 1;
     Transform transform;
     transform.position.x = ndcX;
     transform.position.y = ndcY * -1;
@@ -1648,12 +1938,13 @@ inline void DrawQuad(int viewportWidth, int viewPortHeight, int textureWidth, in
     _quadMesh.Draw();
 }
 
-void Renderer::QueueUIForRendering(std::string textureName, int screenX, int screenY, bool centered) {
+void Renderer::QueueUIForRendering(std::string textureName, int screenX, int screenY, bool centered, glm::vec3 color) {
     UIRenderInfo info;
     info.textureName = textureName;
     info.screenX = screenX;
-    info.screenY = screenY;
-    info.centered = centered;
+	info.screenY = screenY;
+	info.centered = centered;
+	info.color = color;
     _UIRenderInfos.push_back(info);
 }
 void Renderer::QueueUIForRendering(UIRenderInfo renderInfo) {
@@ -1695,6 +1986,7 @@ void Renderer::RenderUI() {
     for (UIRenderInfo& uiRenderInfo : _UIRenderInfos) {
         AssetManager::GetTexture(uiRenderInfo.textureName)->Bind(0);
         Texture* texture = AssetManager::GetTexture(uiRenderInfo.textureName);
+        _shaders.UI.SetVec3("color", uiRenderInfo.color);
         DrawQuad(viewportWidth, viewportHeight, texture->GetWidth(), texture->GetHeight(), uiRenderInfo.screenX, uiRenderInfo.screenY, uiRenderInfo.centered);
     }
 
@@ -1745,6 +2037,7 @@ glm::mat4 Renderer::GetProjectionMatrix(float depthOfField) {
     return glm::perspective(depthOfField, width / height, NEAR_PLANE, FAR_PLANE);
 }
 
+
 void Renderer::QueueLineForDrawing(Line line) {
     _lines.push_back(line);
 }
@@ -1791,6 +2084,33 @@ void DrawFullscreenQuad() {
     glBindVertexArray(0);
 }
 
+void DrawFullscreenQuadWithNormals() {
+	static GLuint vao2 = 0;
+	if (vao2 == 0) {
+		float vertices[] = {
+			// positions         normals            texcoords
+            -1.0f,  1.0f, 0.0f,  0.0f, 0.0f, 1.0f,  0.0f, 1.0f,
+			-1.0f, -1.0f, 0.0f,  0.0f, 0.0f, 1.0f,  0.0f, 0.0f,
+			 1.0f,  1.0f, 0.0f,  0.0f, 0.0f, 1.0f,  1.0f, 1.0f,
+			 1.0f, -1.0f, 0.0f,  0.0f, 0.0f, 1.0f,  1.0f, 0.0f,
+		};
+		unsigned int vbo;
+		glGenVertexArrays(1, &vao2);
+		glGenBuffers(1, &vbo);
+		glBindVertexArray(vao2);
+		glBindBuffer(GL_ARRAY_BUFFER, vbo);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), &vertices, GL_STATIC_DRAW);
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+		glEnableVertexAttribArray(0);
+		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+		glEnableVertexAttribArray(1);
+		glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+		glEnableVertexAttribArray(2);
+	}
+	glBindVertexArray(vao2);
+	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+	glBindVertexArray(0);
+}
 void DrawMuzzleFlashes(Player* player) {
 
     int playerIndex = GetPlayerIndexFromPlayerPointer(player);
