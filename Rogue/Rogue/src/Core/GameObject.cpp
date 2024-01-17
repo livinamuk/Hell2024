@@ -110,11 +110,11 @@ bool GameObject::IsInteractable() {
 	if (_openState == OpenState::CLOSED ||
 		_openState == OpenState::OPEN ||
 		_openState == OpenState::CLOSING ||
-		_openState == OpenState::OPENING ||
-		_interactType == InteractType::PICKUP ||
-		_interactType == InteractType::TEXT ||
-		_interactType == InteractType::QUESTION ||
-		_interactType == InteractType::CALLBACK_ONLY)
+		_openState == OpenState::OPENING)
+		//_interactType == InteractType::PICKUP ||
+		//_interactType == InteractType::TEXT ||
+		//_interactType == InteractType::QUESTION ||
+		//_interactType == InteractType::CALLBACK_ONLY)
 		return true;
 	return false;
 }
@@ -437,19 +437,19 @@ Material* GameObject::GetMaterial(int meshIndex) {
 void GameObject::PickUp() {
 	//GameData::AddInventoryItem(GetName());
 	//Audio::PlayAudio("ItemPickUp.wav", 0.5f);
-	_collected = true;
-	std::cout << "Picked up \"" << GetName() << "\"\n";
-	std::cout << "_collected \"" << _collected << "\"\n";
+	//_collected = true;
+//	std::cout << "Picked up \"" << GetName() << "\"\n";
+//	std::cout << "_collected \"" << _collected << "\"\n";
 	//std::cout << "Picked up \"" << _transform.position.x << " " <<_transform.position.y << " " << _transform.position.z << " " << "\"\n";
 }
 
 void GameObject::SetCollectedState(bool value) {
-	_collected = value;
+	//_collected = value;
 }
 
 void GameObject::SetInteract(InteractType type, std::string text, std::function<void(void)> callback) {
-	_interactType = type;
-	_interactText = text;
+	//_interactType = type;
+	//_interactText = text;
 	_interactCallback = callback;
 }
 
@@ -459,23 +459,26 @@ BoundingBox GameObject::GetBoundingBox() {
 }
 
 void GameObject::EnableCollision() {
-	_collisionEnabled = true;
+	//_collisionEnabled = true;
 }
 
 void GameObject::DisableCollision() {
-	_collisionEnabled = false;
+	//_collisionEnabled = false;
 }
 
 bool GameObject::HasCollisionsEnabled() {
-	return _collisionEnabled;
+	return true;
+	//return _collisionEnabled;
 }
 
 bool GameObject::IsCollected() {
-	return _collected;
+	//return _collected;
+	return true;
 }
 
 const InteractType& GameObject::GetInteractType() {
-	return _interactType;
+	return InteractType::NONE;
+	//return _interactType;
 }
 
 OpenState& GameObject::GetOpenState() {

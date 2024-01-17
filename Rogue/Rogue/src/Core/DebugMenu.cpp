@@ -18,10 +18,12 @@ namespace DebugMenu {
 	int _lineHeight = 16;
 	MenuItem* _currentMenuItem = nullptr;
 	MenuItem* _parentMenuItem = nullptr;
-	
+
 	MenuItem _windowMenu;
+	MenuItem _gameObjectsMenu;
 
 	int _selectedWindowIndex = -1;
+	int _selectedGameObjectIndex = -1;
 
 }
 
@@ -56,7 +58,7 @@ void DebugMenu::Init() {
 			auto& editGameObjects = editObjects.AddItem("Game Objects",MenuItemFlag::UNDEFINED, nullptr); {
 				for (int i = 0; i < Scene::_gameObjects.size() && i < 20; i++) {
 					GameObject& gameObject = Scene::_gameObjects[i];
-					editGameObjects.AddItem(gameObject.GetName(),MenuItemFlag::UNDEFINED, nullptr);
+					editGameObjects.AddItem(gameObject.GetName(),MenuItemFlag::EDIT_GAME_OBJECT, nullptr);
 				}
 			}
 
@@ -99,6 +101,7 @@ void DebugMenu::Init() {
 	_currentMenuItem = &_menu;
 	_parentMenuItem = nullptr;
 	_selectedWindowIndex = -1;
+	_selectedGameObjectIndex = -1;
 }
 
 void DebugMenu::UpdateWindowMenuPointers() {
@@ -110,10 +113,27 @@ void DebugMenu::UpdateWindowMenuPointers() {
 	_windowMenu.AddItem("Remove", MenuItemFlag::REMOVE_WINDOW, nullptr);
 }
 
+void DebugMenu::UpdateGameObjectMenuPointers() {
+	_gameObjectsMenu.subMenu.clear();
+	_gameObjectsMenu.AddItem("X Position", MenuItemFlag::FLOAT, &Scene::_gameObjects[_selectedGameObjectIndex]._transform.position.x);
+	_gameObjectsMenu.AddItem("Y Position", MenuItemFlag::FLOAT, &Scene::_gameObjects[_selectedGameObjectIndex]._transform.position.y);
+	_gameObjectsMenu.AddItem("Z Position", MenuItemFlag::FLOAT, &Scene::_gameObjects[_selectedGameObjectIndex]._transform.position.z);
+	_gameObjectsMenu.AddItem("", MenuItemFlag::UNDEFINED, nullptr);
+	_gameObjectsMenu.AddItem("X Rotation", MenuItemFlag::FLOAT, &Scene::_gameObjects[_selectedGameObjectIndex]._transform.rotation.x);
+	_gameObjectsMenu.AddItem("Y Rotation", MenuItemFlag::FLOAT, &Scene::_gameObjects[_selectedGameObjectIndex]._transform.rotation.y);
+	_gameObjectsMenu.AddItem("Z Rotation", MenuItemFlag::FLOAT, &Scene::_gameObjects[_selectedGameObjectIndex]._transform.rotation.z);
+	_gameObjectsMenu.AddItem("", MenuItemFlag::UNDEFINED, nullptr);
+	_gameObjectsMenu.AddItem("Remove", MenuItemFlag::REMOVE_GAME_OBJECT, nullptr);
+}
+
+
 void DebugMenu::Update() {
 
 	if (_selectedWindowIndex != -1) {
 		UpdateWindowMenuPointers();
+	}
+	if (_selectedGameObjectIndex != -1) {
+		UpdateGameObjectMenuPointers();
 	}
 
 	if (!IsOpen()) {
@@ -202,6 +222,27 @@ void DebugMenu::PressedEnter() {
 		Scene::_windows.erase(Scene::_windows.begin() + _selectedWindowIndex);
 		Scene::RecreateDataStructures();
 	}
+	// Edit a game object
+	else if (flag == MenuItemFlag::EDIT_GAME_OBJECT) {
+		std::cout << "Selected EDIT_GAME_OBJECT and _selectionIndex was " << _selectionIndex << "\n";
+		_parentMenuItem = _currentMenuItem;
+		_currentMenuItem = &_gameObjectsMenu;
+		_selectedGameObjectIndex = _selectionIndex;
+		_gameObjectsMenu.name = "GAME OBJECT " + std::to_string(_selectedGameObjectIndex);
+		_selectionIndex = 0;
+		Audio::PlayAudio(AUDIO_SELECT, 1.00f);
+	}
+	// Remove window
+	else if (flag == MenuItemFlag::REMOVE_GAME_OBJECT) {		
+		std::cout << "you need to write this code mate\n";
+		/*
+		GameObject& gameObject = Scene::_gameObjects[_selectedGameObjectIndex];
+		//Scene::RemoveAllDecalsFromWindow(&gameObject);
+		gameObject.CleanUp();
+		Scene::_windows.erase(Scene::_windows.begin() + _selectedGameObjectIndex);
+		Scene::RecreateDataStructures();
+		*/
+	}
 
 }
 
@@ -252,6 +293,14 @@ void DebugMenu::IncreaseValue() {
 		Scene::RecreateDataStructures();
 	}
 
+
+	if (_currentMenuItem == &_gameObjectsMenu) {
+		GameObject& gameObject = Scene::_gameObjects[_selectedGameObjectIndex];
+		if (flag == MenuItemFlag::FLOAT) {
+			*(float*)ptr += 0.1f;
+		}
+	}
+
 }
 
 void DebugMenu::DecreaseValue() {
@@ -266,6 +315,14 @@ void DebugMenu::DecreaseValue() {
 		}
 		window.CreatePhysicsObjects();
 		Scene::RecreateDataStructures();
+	}
+
+
+	if (_currentMenuItem == &_gameObjectsMenu) {
+		GameObject& gameObject = Scene::_gameObjects[_selectedGameObjectIndex];
+		if (flag == MenuItemFlag::FLOAT) {
+			*(float*)ptr -= 0.1f;
+		}
 	}
 }
 

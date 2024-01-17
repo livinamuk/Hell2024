@@ -773,23 +773,12 @@ void SkyBoxPass(Player* player) {
 
 		// Load cubemap textures
 		std::vector<std::string> skyboxTextureFilePaths;
-		skyboxTextureFilePaths.push_back("res/textures/back.png");
-		skyboxTextureFilePaths.push_back("res/textures/back.png");
-		skyboxTextureFilePaths.push_back("res/textures/back.png");
-
-
-
-		skyboxTextureFilePaths.push_back("res/textures/bottom.png");
-		skyboxTextureFilePaths.push_back("res/textures/top.png");
-		skyboxTextureFilePaths.push_back("res/textures/front.png");
-        /*
-
 		skyboxTextureFilePaths.push_back("res/textures/right.png");
 		skyboxTextureFilePaths.push_back("res/textures/left.png");
 		skyboxTextureFilePaths.push_back("res/textures/top.png");
 		skyboxTextureFilePaths.push_back("res/textures/bottom.png");
 		skyboxTextureFilePaths.push_back("res/textures/front.png");
-		skyboxTextureFilePaths.push_back("res/textures/back.png");*/
+		skyboxTextureFilePaths.push_back("res/textures/back.png");
 		_skyboxTexture.Create(skyboxTextureFilePaths);
 
     }
@@ -1006,6 +995,23 @@ void LightingPass(Player* player) {
     _shaders.lighting.SetVec3("viewPos", player->GetViewPos());
     _shaders.lighting.SetFloat("propogationGridSpacing", _propogationGridSpacing);
 
+
+  //  GLint texture_units;
+  //  glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &texture_units);
+  //  std::cout << "texture_units: " << texture_units << "\n";
+
+
+	_shaders.lighting.SetVec3("player1MuzzleFlashPosition", Scene::_players[0].GetViewPos());
+	_shaders.lighting.SetVec3("player2MuzzleFlashPosition", Scene::_players[1].GetViewPos());
+	_shaders.lighting.SetBool("player1NeedsMuzzleFlash", Scene::_players[0].MuzzleFlashIsRequired());
+	_shaders.lighting.SetBool("player2NeedsMuzzleFlash", Scene::_players[1].MuzzleFlashIsRequired());
+
+
+	glActiveTexture(GL_TEXTURE22);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, Scene::_players[0]._shadowMap._depthTexture);
+	glActiveTexture(GL_TEXTURE23);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, Scene::_players[1]._shadowMap._depthTexture);
+
     DrawFullscreenQuad();
 }
 
@@ -1085,7 +1091,7 @@ void DebugPass(Player* player) {
 
     for (Window& window : Scene::_windows) {
 
-		debugPoints.push_back(window.GetFrontLeftCorner());
+	//	debugPoints.push_back(window.GetFrontLeftCorner());
 		//debugPoints.push_back(window.GetBackRightCorner());
 
 		////debugPoints.push_back(window.GetFrontRightCorner());
@@ -1104,23 +1110,6 @@ void DebugPass(Player* player) {
     glDisable(GL_CULL_FACE);
     RenderImmediate();
     debugPoints.clear();
-
-
-
-    Window& window = Scene::_windows[0];
-    glm::vec3 v1(window.position + glm::vec3(-0.1, 0, WINDOW_WIDTH * -0.5));
-    debugPoints.push_back(v1);
-
-	for (auto& pos : debugPoints) {
-		Point point;
-		point.pos = pos;
-		point.color = GREEN;
-		Renderer::QueuePointForDrawing(point);
-	}
-	glDisable(GL_DEPTH_TEST);
-	glDisable(GL_CULL_FACE);
-	RenderImmediate();
-	debugPoints.clear();
 
 
     //////////////////////////////////////////////////////////////////////////////////////////////
@@ -1330,6 +1319,11 @@ void DrawScene(Shader& shader) {
 
     // Render game objects
     for (GameObject& gameObject : Scene::_gameObjects) {
+
+        if (gameObject.collected) {
+            continue;
+        }
+
         shader.SetMat4("model", gameObject.GetModelMatrix());
         for (int i = 0; i < gameObject._meshMaterialIndices.size(); i++) {
             AssetManager::BindMaterialByIndex(gameObject._meshMaterialIndices[i]);
@@ -1631,6 +1625,11 @@ void DrawShadowMapScene(Shader& shader) {
         ceiling.Draw();
     }
     for (GameObject& gameObject : Scene::_gameObjects) {
+
+        if (gameObject.collected) {
+            continue;
+        }
+
         shader.SetMat4("model", gameObject.GetModelMatrix());
         for (int i = 0; i < gameObject._meshMaterialIndices.size(); i++) {
             gameObject._model->_meshes[i].Draw();
@@ -1692,6 +1691,7 @@ void Renderer::HotloadShaders() {
     _shaders.geometry_instanced.Load("geometry_instanced.vert", "geometry_instanced.frag");
 	_shaders.glass.Load("glass.vert", "glass.frag");
 	_shaders.glassComposite.Load("glass_composite.vert", "glass_composite.frag");
+	_shaders.skybox.Load("skybox.vert", "skybox.frag");
 
     _shaders.compute.Load("res/shaders/compute.comp");
     _shaders.pointCloud.Load("res/shaders/point_cloud.comp");
@@ -2273,8 +2273,47 @@ void DrawCasingProjectiles(Player* player) {
 
 void RenderShadowMaps() {
 
-    if (!Renderer::_shadowMapsAreDirty)
-        return;
+
+	// Render player shadowmaps (muzzle flashes)
+	_shaders.shadowMap.Use();
+	_shaders.shadowMap.SetFloat("far_plane", SHADOW_FAR_PLANE);
+	_shaders.shadowMap.SetMat4("model", glm::mat4(1));
+	glDepthMask(true);
+	glDisable(GL_BLEND);
+	glDisable(GL_CULL_FACE);
+
+    for (Player& player : Scene::_players) {
+
+		glEnable(GL_DEPTH_TEST);
+		glViewport(0, 0, SHADOW_MAP_SIZE, SHADOW_MAP_SIZE);
+		glBindFramebuffer(GL_FRAMEBUFFER, player._shadowMap._ID);
+		glClear(GL_DEPTH_BUFFER_BIT);
+
+		std::vector<glm::mat4> projectionTransforms;
+        glm::vec3 position = player.GetViewPos();
+		glm::mat4 shadowProj = glm::perspective(glm::radians(90.0f), (float)SHADOW_MAP_SIZE / (float)SHADOW_MAP_SIZE, SHADOW_NEAR_PLANE, SHADOW_FAR_PLANE);
+		projectionTransforms.clear();
+		projectionTransforms.push_back(shadowProj * glm::lookAt(position, position + glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
+		projectionTransforms.push_back(shadowProj * glm::lookAt(position, position + glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
+		projectionTransforms.push_back(shadowProj * glm::lookAt(position, position + glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f)));
+		projectionTransforms.push_back(shadowProj * glm::lookAt(position, position + glm::vec3(0.0f, -1.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f)));
+		projectionTransforms.push_back(shadowProj * glm::lookAt(position, position + glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
+		projectionTransforms.push_back(shadowProj * glm::lookAt(position, position + glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
+		_shaders.shadowMap.SetMat4("shadowMatrices[0]", projectionTransforms[0]);
+		_shaders.shadowMap.SetMat4("shadowMatrices[1]", projectionTransforms[1]);
+		_shaders.shadowMap.SetMat4("shadowMatrices[2]", projectionTransforms[2]);
+		_shaders.shadowMap.SetMat4("shadowMatrices[3]", projectionTransforms[3]);
+		_shaders.shadowMap.SetMat4("shadowMatrices[4]", projectionTransforms[4]);
+		_shaders.shadowMap.SetMat4("shadowMatrices[5]", projectionTransforms[5]);
+		_shaders.shadowMap.SetVec3("lightPosition", position);
+		_shaders.shadowMap.SetMat4("model", glm::mat4(1));
+		DrawShadowMapScene(_shaders.shadowMap);
+    }
+
+
+
+//    if (!Renderer::_shadowMapsAreDirty)
+  //      return;
 
     _shaders.shadowMap.Use();
     _shaders.shadowMap.SetFloat("far_plane", SHADOW_FAR_PLANE);
@@ -2315,6 +2354,8 @@ void RenderShadowMaps() {
         DrawShadowMapScene(_shaders.shadowMap);
     }
     //Renderer::_shadowMapsAreDirty = false;
+
+
 }
 
 void Renderer::CreatePointCloudBuffer() {

@@ -8,6 +8,7 @@ enum class OpenAxis { NONE, TRANSLATE_X, TRANSLATE_Y, TRANSLATE_Z, ROTATION_POS_
 enum class InteractType { NONE, TEXT, QUESTION, PICKUP, CALLBACK_ONLY };
 enum class ModelMatrixMode { GAME_TRANSFORM, PHYSX_TRANSFORM };
 
+
 /*struct BoundingBox {
 	float xLow = 0;
 	float xHigh = 0;
@@ -18,37 +19,34 @@ enum class ModelMatrixMode { GAME_TRANSFORM, PHYSX_TRANSFORM };
 struct GameObject {
 public:
 	Model* _model = nullptr;
-	std::vector<int> _meshMaterialIndices;
-	//std::vector<MaterialType> _meshMaterialTypes;
-	//std::vector<Transform> _meshTransforms;
-	//bool _overrideTransformWithMatrix = false;
-	//std::string _interactAffectsThisObjectInstead = "";
 
+
+
+	std::vector<int> _meshMaterialIndices;
 	Transform _transform;
 	Transform _openTransform;
-
-private:
-	std::function<void(void)> _interactCallback = nullptr;
-	//callback_function _pickupCallback = nullptr;
 	std::string _name = "undefined";
 	std::string _parentName = "undefined";
 	std::string _scriptName = "undefined";
-	std::string _interactText = "";
-	//std::string _interactTextOLD = "";
-	//std::string _questionText = "";
-	glm::mat4 _modelMatrixTransformOverride = glm::mat4(1);
 	OpenState _openState = OpenState::NONE;
 	OpenAxis _openAxis = OpenAxis::NONE;
 	float _maxOpenAmount = 0;
 	float _minOpenAmount = 0;
 	float _openSpeed = 0;
-	bool _collected = false; // if this were an item
-	BoundingBox _boundingBox;
-	bool _collisionEnabled = true;
-	InteractType _interactType = InteractType::NONE;
-	//MaterialType _materialType = MaterialType::DEFAULT;
-	//PxRigidDynamic* _rigidBody = nullptr;
+	bool collectable = false;
+	bool collected = false;
+
+
+private:
+	std::function<void(void)> _interactCallback = nullptr;
+
+
+
+
+	//InteractType _interactType = InteractType::NONE;
+	
 	ModelMatrixMode _modelMatrixMode = ModelMatrixMode::GAME_TRANSFORM;
+	BoundingBox _boundingBox;
 
 	PxRigidBody* _collisionBody = NULL;
 	std::vector<PxShape*> _collisionShapes;

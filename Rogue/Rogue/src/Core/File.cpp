@@ -22,8 +22,10 @@ namespace File {
 	void SaveBool(rapidjson::Value* object, std::string elementName, bool boolean, rapidjson::Document::AllocatorType& allocator);
 	void SaveFloat(rapidjson::Value* object, std::string elementName, float number, rapidjson::Document::AllocatorType& allocator);
 	void SaveInt(rapidjson::Value* object, std::string elementName, int number, rapidjson::Document::AllocatorType& allocator);
+	void SaveIntArray(rapidjson::Value* object, std::string elementName, std::vector<int> integers, rapidjson::Document::AllocatorType& allocator);
 	glm::vec2 ReadVec2(const rapidjson::Value& value, std::string name);
 	glm::vec3 ReadVec3(const rapidjson::Value& value, std::string name);
+	std::vector<int> ReadIntArray(const rapidjson::Value& value, std::string name);
 	std::string ReadString(const rapidjson::Value& value, std::string name);
 	//char* ReadText(const rapidjson::Value& value, std::string name);
 	bool ReadBool(const rapidjson::Value& value, std::string name);
@@ -41,7 +43,7 @@ void File::LoadMap(std::string mapName) {
 	if ((err = fopen_s(&filepoint, fileName.c_str(), "rb")) != 0) {
 		//fprintf(stderr, "cannot open file '%s': %s\n", fileName, strerror(err));
 		std::cout << "Failed to open " << fileName << "\n";
-		return; 
+		return;
 	}
 	else {
 		char buffer[65536];
@@ -65,7 +67,36 @@ void File::LoadMap(std::string mapName) {
 		}
 	}
 
-	//	
+	if (false) {
+		if (document.HasMember("GameObjects")) {
+			const rapidjson::Value& objects = document["GameObjects"];
+			for (rapidjson::SizeType i = 0; i < objects.Size(); i++) {
+
+				glm::vec3 position = ReadVec3(objects[i], "position");
+				glm::vec3 rotation = ReadVec3(objects[i], "rotation");
+				glm::vec3 scale = ReadVec3(objects[i], "scale");
+				std::string name = ReadString(objects[i], "name");
+				std::string modelName = ReadString(objects[i], "modelName");
+				std::string parentName = ReadString(objects[i], "parentName");
+
+				std::vector<int> meshIndices = ReadIntArray(objects[i], "meshMaterialIndices");
+
+
+				std::cout << "Loading game object: " << name << "\n";
+
+				GameObject& gameObject = Scene::_gameObjects.emplace_back();
+				gameObject._transform.position = position;
+				gameObject._transform.rotation = rotation;
+				gameObject._transform.scale = scale;
+				gameObject.SetName(name);
+				gameObject.SetParentName(parentName);
+				gameObject.SetModel(modelName);
+				gameObject._meshMaterialIndices = meshIndices;
+			}
+		}
+	}
+
+
 
 	if (document.HasMember("Windows")) {
 		const rapidjson::Value& objects = document["Windows"];
@@ -122,6 +153,30 @@ void File::SaveMap(std::string mapName) {
 	rapidjson::Value gameObjects(rapidjson::kArrayType);
 	document.SetObject();
 
+	for (GameObject& gameObject : Scene::_gameObjects) {
+		rapidjson::Value object(rapidjson::kObjectType);
+
+
+		//std::vector<int> _meshMaterialIndices;
+		//OpenState _openState = OpenState::NONE;
+		//OpenAxis _openAxis = OpenAxis::NONE;
+		//float _maxOpenAmount = 0;
+		//float _minOpenAmount = 0;
+		//float _openSpeed = 0;
+
+		SaveVec3(&object, "position", gameObject._transform.position, allocator);
+		SaveVec3(&object, "rotation", gameObject._transform.rotation, allocator);
+		SaveVec3(&object, "scale", gameObject._transform.scale, allocator);
+		SaveString(&object, "name", gameObject._name, allocator);
+		SaveString(&object, "parentName", gameObject._parentName, allocator);
+		SaveIntArray(&object, "meshMaterialIndices", gameObject._meshMaterialIndices, allocator);
+		SaveString(&object, "modelName", gameObject._model->_name, allocator);
+
+		
+
+		gameObjects.PushBack(object, allocator);
+	}
+
 	for (Wall& wall : Scene::_walls) {
 		rapidjson::Value object(rapidjson::kObjectType);
 		SaveVec3(&object, "begin", wall.begin, allocator);
@@ -167,6 +222,7 @@ void File::SaveMap(std::string mapName) {
 	document.AddMember("Floors", floors, allocator);
 	document.AddMember("Doors", doors, allocator);
 	document.AddMember("Windows", windows, allocator);
+	document.AddMember("GameObjects", gameObjects, allocator);
 
 	rapidjson::StringBuffer strbuf;
 	rapidjson::PrettyWriter<rapidjson::StringBuffer> writer(strbuf);
@@ -225,6 +281,30 @@ void File::SaveInt(rapidjson::Value* object, std::string elementName, int number
 	rapidjson::Value value(rapidjson::kObjectType);
 	value.SetInt(number);
 	object->AddMember(name, value, allocator);
+}
+
+void File::SaveIntArray(rapidjson::Value* object, std::string elementName, std::vector<int> integers, rapidjson::Document::AllocatorType& allocator) {
+	rapidjson::Value array(rapidjson::kArrayType);
+	rapidjson::Value name(elementName.c_str(), allocator);	
+	for (int i = 0; i < integers.size(); i++) {
+		array.PushBack(rapidjson::Value().Set(integers[i]), allocator);
+	}
+	object->AddMember(name, array, allocator);
+}
+
+
+std::vector<int> File::ReadIntArray(const rapidjson::Value& value, std::string name) {
+	std::vector<int> array;
+	if (value.HasMember(name.c_str())) {
+		const rapidjson::Value& element = value[name.c_str()];
+		for (int i = 0; i < element.Size(); i++) {
+			array.emplace_back(element[i].GetInt());
+			std::cout << i << " \n";
+		}
+	}
+	else
+		std::cout << "'" << name << "' NOT FOUND IN MAP FILE\n";
+	return array;
 }
 
 

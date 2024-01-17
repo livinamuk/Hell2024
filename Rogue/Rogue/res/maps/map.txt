@@ -970,5 +970,637 @@
             ],
             "rotation": 3.149998188018799
         }
+    ],
+    "GameObjects": [
+        {
+            "position": [
+                2.0,
+                1.7000000476837159,
+                3.5999999046325685
+            ],
+            "rotation": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "scale": [
+                0.009999999776482582,
+                0.009999999776482582,
+                0.009999999776482582
+            ],
+            "name": "AKS74U_Carlos",
+            "parentName": "undefined",
+            "meshMaterialIndices": [
+                0,
+                1,
+                1,
+                1,
+                2,
+                2,
+                2,
+                3,
+                4
+            ],
+            "modelName": "AKS74U_Carlos"
+        },
+        {
+            "position": [
+                0.10000000149011612,
+                1.5,
+                2.5
+            ],
+            "rotation": [
+                0.0,
+                1.5707963705062867,
+                0.0
+            ],
+            "scale": [
+                0.009999999776482582,
+                0.009999999776482582,
+                0.009999999776482582
+            ],
+            "name": "undefined",
+            "parentName": "undefined",
+            "meshMaterialIndices": [
+                22
+            ],
+            "modelName": "PictureFrame_1"
+        },
+        {
+            "position": [
+                2.0,
+                0.10000000149011612,
+                0.10000000149011612
+            ],
+            "rotation": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "scale": [
+                1.0,
+                1.0,
+                1.0
+            ],
+            "name": "Sofa",
+            "parentName": "undefined",
+            "meshMaterialIndices": [
+                29
+            ],
+            "modelName": "Sofa_Cushionless"
+        },
+        {
+            "position": [
+                2.0,
+                0.10000000149011612,
+                0.10000000149011612
+            ],
+            "rotation": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "scale": [
+                1.0,
+                1.0,
+                1.0
+            ],
+            "name": "SofaCushion0",
+            "parentName": "undefined",
+            "meshMaterialIndices": [
+                29
+            ],
+            "modelName": "SofaCushion0"
+        },
+        {
+            "position": [
+                2.0,
+                0.10000000149011612,
+                0.10000000149011612
+            ],
+            "rotation": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "scale": [
+                1.0,
+                1.0,
+                1.0
+            ],
+            "name": "SofaCushion1",
+            "parentName": "undefined",
+            "meshMaterialIndices": [
+                29
+            ],
+            "modelName": "SofaCushion1"
+        },
+        {
+            "position": [
+                2.0,
+                0.10000000149011612,
+                0.10000000149011612
+            ],
+            "rotation": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "scale": [
+                1.0,
+                1.0,
+                1.0
+            ],
+            "name": "SofaCushion2",
+            "parentName": "undefined",
+            "meshMaterialIndices": [
+                29
+            ],
+            "modelName": "SofaCushion2"
+        },
+        {
+            "position": [
+                2.0,
+                0.10000000149011612,
+                0.10000000149011612
+            ],
+            "rotation": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "scale": [
+                1.0,
+                1.0,
+                1.0
+            ],
+            "name": "SofaCushion3",
+            "parentName": "undefined",
+            "meshMaterialIndices": [
+                29
+            ],
+            "modelName": "SofaCushion3"
+        },
+        {
+            "position": [
+                2.0,
+                0.10000000149011612,
+                0.10000000149011612
+            ],
+            "rotation": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "scale": [
+                1.0,
+                1.0,
+                1.0
+            ],
+            "name": "SofaCushion4",
+            "parentName": "undefined",
+            "meshMaterialIndices": [
+                29
+            ],
+            "modelName": "SofaCushion4"
+        },
+        {
+            "position": [
+                0.75,
+                0.10000000149011612,
+                6.199999809265137
+            ],
+            "rotation": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "scale": [
+                1.0,
+                1.0,
+                1.0
+            ],
+            "name": "ChristmasTree",
+            "parentName": "undefined",
+            "meshMaterialIndices": [
+                30
+            ],
+            "modelName": "ChristmasTree"
+        },
+        {
+            "position": [
+                0.10000000149011612,
+                0.10000000149011612,
+                4.449999809265137
+            ],
+            "rotation": [
+                0.0,
+                1.5707963705062867,
+                0.0
+            ],
+            "scale": [
+                1.0,
+                1.0,
+                1.0
+            ],
+            "name": "SmallDrawersHis",
+            "parentName": "undefined",
+            "meshMaterialIndices": [
+                12
+            ],
+            "modelName": "SmallChestOfDrawersFrame"
+        },
+        {
+            "position": [
+                -0.10499999672174454,
+                0.8799999952316284,
+                0.25
+            ],
+            "rotation": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "scale": [
+                1.0,
+                1.0,
+                1.0
+            ],
+            "name": "undefined",
+            "parentName": "SmallDrawersHis",
+            "meshMaterialIndices": [
+                20,
+                20
+            ],
+            "modelName": "Lamp"
+        },
+        {
+            "position": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "rotation": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "scale": [
+                1.0,
+                1.0,
+                1.0
+            ],
+            "name": "TopDraw",
+            "parentName": "SmallDrawersHis",
+            "meshMaterialIndices": [
+                12
+            ],
+            "modelName": "SmallDrawerTop"
+        },
+        {
+            "position": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "rotation": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "scale": [
+                1.0,
+                1.0,
+                1.0
+            ],
+            "name": "undefined",
+            "parentName": "SmallDrawersHis",
+            "meshMaterialIndices": [
+                12
+            ],
+            "modelName": "SmallDrawerSecond"
+        },
+        {
+            "position": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "rotation": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "scale": [
+                1.0,
+                1.0,
+                1.0
+            ],
+            "name": "undefined",
+            "parentName": "SmallDrawersHis",
+            "meshMaterialIndices": [
+                12
+            ],
+            "modelName": "SmallDrawerThird"
+        },
+        {
+            "position": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "rotation": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "scale": [
+                1.0,
+                1.0,
+                1.0
+            ],
+            "name": "undefined",
+            "parentName": "SmallDrawersHis",
+            "meshMaterialIndices": [
+                12
+            ],
+            "modelName": "SmallDrawerFourth"
+        },
+        {
+            "position": [
+                2.0,
+                0.10000000149011612,
+                3.5
+            ],
+            "rotation": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "scale": [
+                1.0,
+                1.0,
+                1.0
+            ],
+            "name": "Present",
+            "parentName": "undefined",
+            "meshMaterialIndices": [
+                24
+            ],
+            "modelName": "SmallCube"
+        },
+        {
+            "position": [
+                2.0,
+                0.30000001192092898,
+                3.5
+            ],
+            "rotation": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "scale": [
+                1.0,
+                1.0,
+                1.0
+            ],
+            "name": "Present",
+            "parentName": "undefined",
+            "meshMaterialIndices": [
+                25
+            ],
+            "modelName": "SmallCube"
+        },
+        {
+            "position": [
+                2.0,
+                0.5,
+                3.5
+            ],
+            "rotation": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "scale": [
+                1.0,
+                1.0,
+                1.0
+            ],
+            "name": "Present",
+            "parentName": "undefined",
+            "meshMaterialIndices": [
+                26
+            ],
+            "modelName": "SmallCube"
+        },
+        {
+            "position": [
+                2.0,
+                0.7000000476837158,
+                3.5
+            ],
+            "rotation": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "scale": [
+                1.0,
+                1.0,
+                1.0
+            ],
+            "name": "Present",
+            "parentName": "undefined",
+            "meshMaterialIndices": [
+                27
+            ],
+            "modelName": "SmallCube"
+        },
+        {
+            "position": [
+                2.0,
+                0.9000000357627869,
+                3.5
+            ],
+            "rotation": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "scale": [
+                1.0,
+                1.0,
+                1.0
+            ],
+            "name": "Present",
+            "parentName": "undefined",
+            "meshMaterialIndices": [
+                24
+            ],
+            "modelName": "SmallCube"
+        },
+        {
+            "position": [
+                2.0,
+                1.100000023841858,
+                3.5
+            ],
+            "rotation": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "scale": [
+                1.0,
+                1.0,
+                1.0
+            ],
+            "name": "Present",
+            "parentName": "undefined",
+            "meshMaterialIndices": [
+                25
+            ],
+            "modelName": "SmallCube"
+        },
+        {
+            "position": [
+                2.0,
+                1.3000000715255738,
+                3.5
+            ],
+            "rotation": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "scale": [
+                1.0,
+                1.0,
+                1.0
+            ],
+            "name": "Present",
+            "parentName": "undefined",
+            "meshMaterialIndices": [
+                26
+            ],
+            "modelName": "SmallCube"
+        },
+        {
+            "position": [
+                2.0,
+                1.5,
+                3.5
+            ],
+            "rotation": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "scale": [
+                1.0,
+                1.0,
+                1.0
+            ],
+            "name": "Present",
+            "parentName": "undefined",
+            "meshMaterialIndices": [
+                27
+            ],
+            "modelName": "SmallCube"
+        },
+        {
+            "position": [
+                2.0,
+                1.7000000476837159,
+                3.5
+            ],
+            "rotation": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "scale": [
+                1.0,
+                1.0,
+                1.0
+            ],
+            "name": "Present",
+            "parentName": "undefined",
+            "meshMaterialIndices": [
+                24
+            ],
+            "modelName": "SmallCube"
+        },
+        {
+            "position": [
+                2.0,
+                1.9000000953674317,
+                3.5
+            ],
+            "rotation": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "scale": [
+                1.0,
+                1.0,
+                1.0
+            ],
+            "name": "Present",
+            "parentName": "undefined",
+            "meshMaterialIndices": [
+                25
+            ],
+            "modelName": "SmallCube"
+        },
+        {
+            "position": [
+                2.0,
+                2.0999999046325685,
+                3.5
+            ],
+            "rotation": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "scale": [
+                1.0,
+                1.0,
+                1.0
+            ],
+            "name": "Present",
+            "parentName": "undefined",
+            "meshMaterialIndices": [
+                26
+            ],
+            "modelName": "SmallCube"
+        },
+        {
+            "position": [
+                2.0,
+                2.299999952316284,
+                3.5
+            ],
+            "rotation": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "scale": [
+                1.0,
+                1.0,
+                1.0
+            ],
+            "name": "Present",
+            "parentName": "undefined",
+            "meshMaterialIndices": [
+                27
+            ],
+            "modelName": "SmallCube"
+        }
     ]
 }

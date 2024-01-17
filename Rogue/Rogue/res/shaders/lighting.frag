@@ -17,6 +17,9 @@ layout (binding = 3) uniform sampler2D depthTexture;
 layout (binding = 4) uniform sampler3D propgationGridTexture;
 layout (binding = 5) uniform samplerCube shadowMap[16];
 
+layout (binding = 22) uniform samplerCube player1_shadowMap;
+layout (binding = 23) uniform samplerCube player2_shadowMap;
+
 uniform mat4 projectionScene;
 uniform mat4 projectionWeapon;
 uniform mat4 inverseProjectionScene;
@@ -31,6 +34,11 @@ uniform float screenHeight;
 uniform float time;
 uniform int mode;
 uniform float propogationGridSpacing;
+uniform bool player1NeedsMuzzleFlash;
+uniform bool player2NeedsMuzzleFlash;
+
+uniform vec3 player1MuzzleFlashPosition;
+uniform vec3 player2MuzzleFlashPosition;
 
 const float PI = 3.14159265359;
 
@@ -301,7 +309,33 @@ void main() {
         directLighting += shadow * ligthting;
     }
     
+   //. float
+   vec3 muzzleFlashLightColor =  vec3(1, 0.7799999713897705, 0.5289999842643738);
+   muzzleFlashLightColor *= 0.0025;
+   float muzzleFlashRadius = 15;
+   float muzzleFlashStrength = 10;
+
+   
+   vec3 directLightingFromPlayer1MuzzleFlashPosition = GetDirectLighting(player1MuzzleFlashPosition, muzzleFlashLightColor, muzzleFlashRadius, muzzleFlashStrength, normal, WorldPos, baseColor, roughness, metallic);
+   float player1MuzzleFlashshadow =   ShadowCalculation(player1_shadowMap, player1MuzzleFlashPosition, WorldPos, viewPos, normal); 
+   vec3 p1MuzzleFlashColor = directLightingFromPlayer1MuzzleFlashPosition * player1MuzzleFlashshadow;
+
+   
+   vec3 directLightingFromPlayer2MuzzleFlashPosition = GetDirectLighting(player2MuzzleFlashPosition, muzzleFlashLightColor, muzzleFlashRadius, muzzleFlashStrength, normal, WorldPos, baseColor, roughness, metallic);
+   float player2MuzzleFlashshadow =   ShadowCalculation(player2_shadowMap, player2MuzzleFlashPosition, WorldPos, viewPos, normal); 
+   vec3 p2MuzzleFlashColor = directLightingFromPlayer2MuzzleFlashPosition * player2MuzzleFlashshadow;
+
+   
+
     directLighting = clamp(directLighting, 0, 1);
+
+    
+    if (player1NeedsMuzzleFlash) {
+        directLighting += p1MuzzleFlashColor;
+    }
+    if (player2NeedsMuzzleFlash) {
+        directLighting += p2MuzzleFlashColor;
+    }
 
     // Indirect lighthing
     vec3 WorldPos2 = WorldPos + (normal * 0.01);

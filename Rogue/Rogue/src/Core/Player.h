@@ -2,6 +2,7 @@
 #include "../Common.h"
 #include "AnimatedGameObject.h"
 #include "Physics.h"
+#include "../Renderer/ShadowMap.h"
 
 #define GLOCK_CLIP_SIZE 12
 #define GLOCK_MAX_AMMO_SIZE 200
@@ -68,6 +69,11 @@ public:
 	void CreateCharacterController(glm::vec3 position);
 	void DetermineIfGrounded();
 	void WipeYVelocityToZeroIfHeadHitCeiling();
+
+	ShadowMap _shadowMap;
+	float _muzzleFlashCounter = 0;
+
+	bool MuzzleFlashIsRequired();
 
 	bool _isGrounded = true;
 

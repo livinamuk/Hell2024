@@ -45,6 +45,16 @@ Player::Player(glm::vec3 position, glm::vec3 rotation) {
 	_characterModel.SetScale(0.01f);
 	_characterModel.SetRotationX(HELL_PI / 2);
 
+	_shadowMap.Init();
+	
+
+	_weaponInventory[Weapon::KNIFE] = true;
+	_weaponInventory[Weapon::GLOCK] = true;
+	_weaponInventory[Weapon::SHOTGUN] = false;
+	_weaponInventory[Weapon::AKS74U] = true;
+	_weaponInventory[Weapon::MP7] = false;
+
+
 	CreateCharacterController(_position);
 }
 
@@ -99,6 +109,12 @@ void Player::DetermineIfGrounded() {
 	
 }
 
+
+bool Player::MuzzleFlashIsRequired() {	
+	return (_muzzleFlashCounter > 0);
+}
+
+
 void Player::WipeYVelocityToZeroIfHeadHitCeiling() {
 	/*
 	glm::vec3 rayOrigin = _position + glm::vec3(0, 1.5, 0);
@@ -128,6 +144,10 @@ void Player::Update(float deltaTime) {
 		_pickUpTextTimer = 0;
 		_pickUpText = "";
 	}
+
+	// Muzzle flash timer
+	_muzzleFlashCounter -= deltaTime;
+	_muzzleFlashCounter = std::max(_muzzleFlashCounter, 0.0f);
 
 	// Mouselook
 	if (!_ignoreControl && GL::WindowHasFocus()) {
@@ -258,13 +278,6 @@ void Player::Update(float deltaTime) {
 			}
 		}
 	}
-
-	_weaponInventory[Weapon::KNIFE] = true;
-	_weaponInventory[Weapon::GLOCK] = true;
-	_weaponInventory[Weapon::SHOTGUN] = false;
-	_weaponInventory[Weapon::AKS74U] = true;
-	_weaponInventory[Weapon::MP7] = false;
-
 	// Next weapon
 	if (!_ignoreControl && Input::KeyPressed(HELL_KEY_Q)) {
 
@@ -331,6 +344,31 @@ void Player::Update(float deltaTime) {
 		if (Input::KeyDown(HELL_KEY_T) && GetCurrentWeaponIndex() == AKS74U) {
 			SpawnAKS74UCasing();
 		}
+	}
+
+
+	// Check for game object pick up collision
+	for (GameObject & gameObject: Scene::_gameObjects) {
+
+		if (gameObject.collectable && !gameObject.collected) {
+
+			glm::vec3 worldPositionOfPickUp = glm::vec4(gameObject._transform.position, 1.0f);
+			float allowedPickupMinDistance = 0.6f;
+			glm::vec3 a = glm::vec3(worldPositionOfPickUp.x, 0, worldPositionOfPickUp.z);
+			glm::vec3 b = glm::vec3(GetFeetPosition().x, 0, GetFeetPosition().z);
+			float distanceToPickUp = glm::distance(a, b);
+
+			if (distanceToPickUp < allowedPickupMinDistance) {
+				_pickUpText = "PICKED UP AKS74U";
+				_pickUpTextTimer = 2.0f;
+				Audio::PlayAudio("ItemPickUp.wav", 1.0f);
+				gameObject.collected = true;
+
+				_weaponInventory[Weapon::AKS74U] = true;
+				std::cout << "this code ran\n";
+				//SetWeapon(Weapon::AKS74U);
+			}
+		}		
 	}
 
 	// Check for pick up "collision"
@@ -426,6 +464,15 @@ void Player::Interact() {
 }
 
 void Player::Respawn(glm::vec3 position, glm::vec3 rotation) {
+
+	if (_weaponInventory.size()) {
+		_weaponInventory[Weapon::KNIFE] = true;
+		_weaponInventory[Weapon::GLOCK] = true;
+		_weaponInventory[Weapon::SHOTGUN] = false;
+		_weaponInventory[Weapon::AKS74U] = false;
+		_weaponInventory[Weapon::MP7] = false;
+	}
+
 	SetWeapon(Weapon::GLOCK);
 	_weaponAction = SPAWNING;
 	_position = position;
@@ -873,6 +920,8 @@ void Player::SpawnGlockCasing() {
 
 
 
+
+
 void Player::SpawnAKS74UCasing() {
 
 	Transform transform;
@@ -903,6 +952,9 @@ void Player::SpawnAKS74UCasing() {
 
 
 void Player::SpawnBullet(float variance) {
+
+	_muzzleFlashCounter = 0.0005f;
+
 	Bullet bullet;
 	bullet.spawnPosition = GetViewPos();
 

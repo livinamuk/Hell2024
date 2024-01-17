@@ -20,6 +20,8 @@ namespace DebugMenu {
 		ADD_WINDOW, 
 		EDIT_WINDOW,
 		REMOVE_WINDOW,
+		EDIT_GAME_OBJECT,
+		REMOVE_GAME_OBJECT,
 		SAVE_MAP,
 		LOAD_MAP
 	};
@@ -61,5 +63,6 @@ namespace DebugMenu {
 	const bool SubMenuHasValues();
 
 	void UpdateWindowMenuPointers();
+	void UpdateGameObjectMenuPointers();
 };
 

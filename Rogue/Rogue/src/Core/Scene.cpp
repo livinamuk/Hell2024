@@ -67,6 +67,52 @@ void Scene::Update(float deltaTime) {
 					_decals.push_back(decal2);
 
                     Audio::PlayAudio("GlassImpact.wav", 3.0f);
+
+
+
+
+
+
+
+
+						Transform transform;
+						transform.position = rayResult.hitPosition + (rayResult.surfaceNormal * glm::vec3(0.03));
+                        //transform.rotation = rayResult.rayDirection;
+
+						PhysicsFilterData filterData;
+						filterData.raycastGroup = RaycastGroup::RAYCAST_DISABLED;
+						filterData.collisionGroup = CollisionGroup::BULLET_CASING;
+						filterData.collidesWith = CollisionGroup::ENVIROMENT_OBSTACLE;
+
+						PxShape* shape = Physics::CreateBoxShape(0.02f, 0.004f, 0.004f);
+						PxRigidDynamic* body = Physics::CreateRigidDynamic(transform, filterData, shape);
+
+                      //  PxVec3 force = PxVec3(0, 0, 0);//
+                        
+                        PxVec3 force = Util::GlmVec3toPxVec3(-rayResult.rayDirection) * 0.0005f;;
+                            
+						body->addForce(force);
+						body->setAngularVelocity(PxVec3(Util::RandomFloat(0.0f, 50.0f), Util::RandomFloat(0.0f, 50.0f), Util::RandomFloat(0.0f, 50.0f)));
+						//shape->release();
+
+						BulletCasing bulletCasing;
+						bulletCasing.type = AKS74U;
+						bulletCasing.rigidBody = body;
+						Scene::_bulletCasings.push_back(bulletCasing);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 					
 				}
                 else {
@@ -186,38 +232,6 @@ void Scene::LoadHardCodedObjects() {
     glockAmmoA.type = PickUp::Type::GLOCK_AMMO;
     glockAmmoA.parentGameObjectName = "TopDraw";
 
-    /*
-	GameObject& glockAmmoBox = _gameObjects.emplace_back();
-    glockAmmoBox.SetPosition(2.0f, 0.1f, 3.6f);
-    glockAmmoBox.SetModel("GlockAmmoBox");
-    glockAmmoBox.SetName("GlockAmmoBox");
-    glockAmmoBox.SetMeshMaterial("GlockAmmoBox");*/
-
-   /*
-    GameObject& aks74u = _gameObjects.emplace_back();
-    aks74u.SetPosition(2.0f, 1.7f, 3.6f);
-    aks74u.SetModel("AKS74U_Carlos");
-    aks74u.SetName("AKS74U_Carlos");
-    aks74u.SetScale(0.01f);
-    aks74u.SetMeshMaterial("Ceiling");
-    aks74u.SetMeshMaterialByMeshName("FrontSight_low", "AKS74U_0");
-    aks74u.SetMeshMaterialByMeshName("Receiver_low", "AKS74U_1");
-    aks74u.SetMeshMaterialByMeshName("BoltCarrier_low", "AKS74U_1");
-    aks74u.SetMeshMaterialByMeshName("SafetySwitch_low", "AKS74U_1");
-    aks74u.SetMeshMaterialByMeshName("Pistol_low", "AKS74U_2");
-    aks74u.SetMeshMaterialByMeshName("Trigger_low", "AKS74U_2");
-    aks74u.SetMeshMaterialByMeshName("MagRelease_low", "AKS74U_2");
-    aks74u.SetMeshMaterialByMeshName("Magazine_Housing_low", "AKS74U_3");
-    aks74u.SetMeshMaterialByMeshName("BarrelTip_low", "AKS74U_4");
-    */
-
-//	Window& windowA = _windows.emplace_back();
-//	windowA.position = glm::vec3(6.15f, 0.1f, 1.6f);
-//	windowA.rotation.y = HELL_PI * 0.5f;
-
-	//Window& windowB = _windows.emplace_back();
-   // windowB.position = glm::vec3(4.7f, 0.1f, 0.05f);
-   // windowB.rotation.y = HELL_PI * 1.0f;
 
     _ceilings.emplace_back(door2X - 0.8f, 7.0f, door2X + 0.8f, 9.95f, 2.5f, AssetManager::GetMaterialIndex("Ceiling"));
 
@@ -230,250 +244,286 @@ void Scene::LoadHardCodedObjects() {
 
     LoadLightSetup(2);
 
-    GameObject& pictureFrame = _gameObjects.emplace_back();
-    pictureFrame.SetPosition(0.1f, 1.5f, 2.5f);
-    pictureFrame.SetScale(0.01f);
-    pictureFrame.SetRotationY(HELL_PI / 2);
-    pictureFrame.SetModel("PictureFrame_1");
-    pictureFrame.SetMeshMaterial("LongFrame");
 
-	float cushionHeight = 0.555f;
-	Transform shapeOffset;
-	shapeOffset.position.y = cushionHeight * 0.5f;
-	shapeOffset.position.z = 0.5f;
-	PxShape* sofaShapeBigCube = Physics::CreateBoxShape(1, cushionHeight * 0.5f, 0.4f, shapeOffset);
-	PhysicsFilterData sofaFilterData;
-    sofaFilterData.raycastGroup = RAYCAST_DISABLED;
-    sofaFilterData.collisionGroup = CollisionGroup::ENVIROMENT_OBSTACLE;
-    sofaFilterData.collidesWith = (CollisionGroup)(GENERIC_BOUNCEABLE | BULLET_CASING | PLAYER);
-
-	GameObject& sofa = _gameObjects.emplace_back();
-	sofa.SetPosition(2.0f, 0.1f, 0.1f);
-    sofa.SetName("Sofa");
-	sofa.SetModel("Sofa_Cushionless");
-	sofa.SetMeshMaterial("Sofa");
-	sofa.CreateRigidBody(sofa.GetGameWorldMatrix(), true);
-	sofa.SetRaycastShapeFromModel(AssetManager::GetModel("Sofa_Cushionless"));
-	sofa.AddCollisionShape(sofaShapeBigCube, sofaFilterData);
-	sofa.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("SofaBack_ConvexMesh")->_meshes[0], sofaFilterData);
-	sofa.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("SofaLeftArm_ConvexMesh")->_meshes[0], sofaFilterData);
-	sofa.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("SofaRightArm_ConvexMesh")->_meshes[0], sofaFilterData);
-	sofa.SetModelMatrixMode(ModelMatrixMode::GAME_TRANSFORM);
-
-	PhysicsFilterData cushionFilterData;
-	cushionFilterData.raycastGroup = RAYCAST_DISABLED;
-	cushionFilterData.collisionGroup = CollisionGroup::GENERIC_BOUNCEABLE;
-	cushionFilterData.collidesWith = CollisionGroup(ENVIROMENT_OBSTACLE | GENERIC_BOUNCEABLE);
-	float cushionDensity = 20.0f;
-
-	GameObject& cushion0 = _gameObjects.emplace_back();
-	cushion0.SetPosition(2.0f, 0.1f, 0.1f);
-	cushion0.SetModel("SofaCushion0");
-	cushion0.SetMeshMaterial("Sofa");
-    cushion0.SetName("SofaCushion0");
-	cushion0.CreateRigidBody(cushion0.GetGameWorldMatrix(), false);
-	cushion0.SetRaycastShapeFromModel(AssetManager::GetModel("SofaCushion0"));
-	cushion0.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("SofaCushion0_ConvexMesh")->_meshes[0], cushionFilterData);
-	cushion0.SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
-	cushion0.UpdateRigidBodyMassAndInertia(cushionDensity);
-
-	GameObject& cushion1 = _gameObjects.emplace_back();
-	cushion1.SetPosition(2.0f, 0.1f, 0.1f);
-	cushion1.SetModel("SofaCushion1");
-	cushion1.SetName("SofaCushion1");
-	cushion1.SetMeshMaterial("Sofa");
-	cushion1.CreateRigidBody(cushion1.GetGameWorldMatrix(), false);
-	cushion1.SetRaycastShapeFromModel(AssetManager::GetModel("SofaCushion1"));
-	cushion1.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("SofaCushion1_ConvexMesh")->_meshes[0], cushionFilterData);
-	cushion1.SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
-	cushion1.UpdateRigidBodyMassAndInertia(cushionDensity);
-
-	GameObject& cushion2 = _gameObjects.emplace_back();
-	cushion2.SetPosition(2.0f, 0.1f, 0.1f);
-	cushion2.SetModel("SofaCushion2");
-	cushion2.SetName("SofaCushion2");
-	cushion2.SetMeshMaterial("Sofa");
-	cushion2.CreateRigidBody(cushion2.GetGameWorldMatrix(), false);
-	cushion2.SetRaycastShapeFromModel(AssetManager::GetModel("SofaCushion2"));
-	cushion2.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("SofaCushion2_ConvexMesh")->_meshes[0], cushionFilterData);
-	cushion2.SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
-	cushion2.UpdateRigidBodyMassAndInertia(cushionDensity);
-
-	GameObject& cushion3 = _gameObjects.emplace_back();
-	cushion3.SetPosition(2.0f, 0.1f, 0.1f);
-	cushion3.SetModel("SofaCushion3");
-	cushion3.SetName("SofaCushion3");
-	cushion3.SetMeshMaterial("Sofa");
-	cushion3.CreateRigidBody(cushion3.GetGameWorldMatrix(), false); 
-	cushion3.SetRaycastShapeFromModel(AssetManager::GetModel("SofaCushion3"));
-	cushion3.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("SofaCushion3_ConvexMesh")->_meshes[0], cushionFilterData);
-	cushion3.SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
-	cushion3.UpdateRigidBodyMassAndInertia(cushionDensity);
-
-	GameObject& cushion4 = _gameObjects.emplace_back();
-	cushion4.SetPosition(2.0f, 0.1f, 0.1f);
-	cushion4.SetModel("SofaCushion4");
-	cushion4.SetName("SofaCushion4");
-	cushion4.SetMeshMaterial("Sofa");
-	cushion4.CreateRigidBody(cushion4.GetGameWorldMatrix(), false);
-	cushion4.SetRaycastShapeFromModel(AssetManager::GetModel("SofaCushion4"));
-	cushion4.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("SofaCushion4_ConvexMesh")->_meshes[0], cushionFilterData);
-	cushion4.SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
-	cushion4.UpdateRigidBodyMassAndInertia(15.0f);
-
-	GameObject& tree = _gameObjects.emplace_back();
-    tree.SetPosition(0.75f, 0.1f, 6.2f);
-	tree.SetModel("ChristmasTree");
-	tree.SetName("ChristmasTree");
-    tree.SetMeshMaterial("Tree");
-    //tree.CreateRigidBody(sofa.GetGameWorldMatrix(), true);
+	GameObject& shard = _gameObjects.emplace_back();
+    shard.SetPosition(3.8f, 1.4f, 3.75f);
+    shard.SetModel("GlassShard");
+    shard.SetScale(100.0f);
+    shard.SetMeshMaterial("BulletHole_Glass");
 
 
 
 
+    if (true) {
+
+		GameObject& aks74u = _gameObjects.emplace_back();
+		aks74u.SetPosition(1.8f, 0.7f, 0.75f);
+		aks74u.SetRotationX(-1.7f);
+		aks74u.SetRotationY(0.0f);
+		aks74u.SetRotationZ(-1.6f);
+        aks74u.SetModel("AKS74U_Carlos");
+        aks74u.SetName("AKS74U_Carlos");
+        aks74u.SetScale(0.01f);
+        aks74u.SetMeshMaterial("Ceiling");
+        aks74u.SetMeshMaterialByMeshName("FrontSight_low", "AKS74U_0");
+        aks74u.SetMeshMaterialByMeshName("Receiver_low", "AKS74U_1");
+        aks74u.SetMeshMaterialByMeshName("BoltCarrier_low", "AKS74U_1");
+        aks74u.SetMeshMaterialByMeshName("SafetySwitch_low", "AKS74U_1");
+        aks74u.SetMeshMaterialByMeshName("Pistol_low", "AKS74U_2");
+        aks74u.SetMeshMaterialByMeshName("Trigger_low", "AKS74U_2");
+        aks74u.SetMeshMaterialByMeshName("MagRelease_low", "AKS74U_2");
+        aks74u.SetMeshMaterialByMeshName("Magazine_Housing_low", "AKS74U_3");
+        aks74u.SetMeshMaterialByMeshName("BarrelTip_low", "AKS74U_4");
+        aks74u.collectable = true;
+
+        GameObject& pictureFrame = _gameObjects.emplace_back();
+        pictureFrame.SetPosition(0.1f, 1.5f, 2.5f);
+        pictureFrame.SetScale(0.01f);
+        pictureFrame.SetRotationY(HELL_PI / 2);
+        pictureFrame.SetModel("PictureFrame_1");
+        pictureFrame.SetMeshMaterial("LongFrame");
+
+        float cushionHeight = 0.555f;
+        Transform shapeOffset;
+        shapeOffset.position.y = cushionHeight * 0.5f;
+        shapeOffset.position.z = 0.5f;
+        PxShape* sofaShapeBigCube = Physics::CreateBoxShape(1, cushionHeight * 0.5f, 0.4f, shapeOffset);
+        PhysicsFilterData sofaFilterData;
+        sofaFilterData.raycastGroup = RAYCAST_DISABLED;
+        sofaFilterData.collisionGroup = CollisionGroup::ENVIROMENT_OBSTACLE;
+        sofaFilterData.collidesWith = (CollisionGroup)(GENERIC_BOUNCEABLE | BULLET_CASING | PLAYER);
+
+        GameObject& sofa = _gameObjects.emplace_back();
+        sofa.SetPosition(2.0f, 0.1f, 0.1f);
+        sofa.SetName("Sofa");
+        sofa.SetModel("Sofa_Cushionless");
+        sofa.SetMeshMaterial("Sofa");
+        sofa.CreateRigidBody(sofa.GetGameWorldMatrix(), true);
+        sofa.SetRaycastShapeFromModel(AssetManager::GetModel("Sofa_Cushionless"));
+        sofa.AddCollisionShape(sofaShapeBigCube, sofaFilterData);
+        sofa.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("SofaBack_ConvexMesh")->_meshes[0], sofaFilterData);
+        sofa.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("SofaLeftArm_ConvexMesh")->_meshes[0], sofaFilterData);
+        sofa.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("SofaRightArm_ConvexMesh")->_meshes[0], sofaFilterData);
+        sofa.SetModelMatrixMode(ModelMatrixMode::GAME_TRANSFORM);
+
+        PhysicsFilterData cushionFilterData;
+        cushionFilterData.raycastGroup = RAYCAST_DISABLED;
+        cushionFilterData.collisionGroup = CollisionGroup::GENERIC_BOUNCEABLE;
+        cushionFilterData.collidesWith = CollisionGroup(ENVIROMENT_OBSTACLE | GENERIC_BOUNCEABLE);
+        float cushionDensity = 20.0f;
+
+        GameObject& cushion0 = _gameObjects.emplace_back();
+        cushion0.SetPosition(2.0f, 0.1f, 0.1f);
+        cushion0.SetModel("SofaCushion0");
+        cushion0.SetMeshMaterial("Sofa");
+        cushion0.SetName("SofaCushion0");
+        cushion0.CreateRigidBody(cushion0.GetGameWorldMatrix(), false);
+        cushion0.SetRaycastShapeFromModel(AssetManager::GetModel("SofaCushion0"));
+        cushion0.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("SofaCushion0_ConvexMesh")->_meshes[0], cushionFilterData);
+        cushion0.SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
+        cushion0.UpdateRigidBodyMassAndInertia(cushionDensity);
+
+        GameObject& cushion1 = _gameObjects.emplace_back();
+        cushion1.SetPosition(2.0f, 0.1f, 0.1f);
+        cushion1.SetModel("SofaCushion1");
+        cushion1.SetName("SofaCushion1");
+        cushion1.SetMeshMaterial("Sofa");
+        cushion1.CreateRigidBody(cushion1.GetGameWorldMatrix(), false);
+        cushion1.SetRaycastShapeFromModel(AssetManager::GetModel("SofaCushion1"));
+        cushion1.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("SofaCushion1_ConvexMesh")->_meshes[0], cushionFilterData);
+        cushion1.SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
+        cushion1.UpdateRigidBodyMassAndInertia(cushionDensity);
+
+        GameObject& cushion2 = _gameObjects.emplace_back();
+        cushion2.SetPosition(2.0f, 0.1f, 0.1f);
+        cushion2.SetModel("SofaCushion2");
+        cushion2.SetName("SofaCushion2");
+        cushion2.SetMeshMaterial("Sofa");
+        cushion2.CreateRigidBody(cushion2.GetGameWorldMatrix(), false);
+        cushion2.SetRaycastShapeFromModel(AssetManager::GetModel("SofaCushion2"));
+        cushion2.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("SofaCushion2_ConvexMesh")->_meshes[0], cushionFilterData);
+        cushion2.SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
+        cushion2.UpdateRigidBodyMassAndInertia(cushionDensity);
+
+        GameObject& cushion3 = _gameObjects.emplace_back();
+        cushion3.SetPosition(2.0f, 0.1f, 0.1f);
+        cushion3.SetModel("SofaCushion3");
+        cushion3.SetName("SofaCushion3");
+        cushion3.SetMeshMaterial("Sofa");
+        cushion3.CreateRigidBody(cushion3.GetGameWorldMatrix(), false);
+        cushion3.SetRaycastShapeFromModel(AssetManager::GetModel("SofaCushion3"));
+        cushion3.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("SofaCushion3_ConvexMesh")->_meshes[0], cushionFilterData);
+        cushion3.SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
+        cushion3.UpdateRigidBodyMassAndInertia(cushionDensity);
+
+        GameObject& cushion4 = _gameObjects.emplace_back();
+        cushion4.SetPosition(2.0f, 0.1f, 0.1f);
+        cushion4.SetModel("SofaCushion4");
+        cushion4.SetName("SofaCushion4");
+        cushion4.SetMeshMaterial("Sofa");
+        cushion4.CreateRigidBody(cushion4.GetGameWorldMatrix(), false);
+        cushion4.SetRaycastShapeFromModel(AssetManager::GetModel("SofaCushion4"));
+        cushion4.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("SofaCushion4_ConvexMesh")->_meshes[0], cushionFilterData);
+        cushion4.SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
+        cushion4.UpdateRigidBodyMassAndInertia(15.0f);
+
+        GameObject& tree = _gameObjects.emplace_back();
+        tree.SetPosition(0.75f, 0.1f, 6.2f);
+        tree.SetModel("ChristmasTree");
+        tree.SetName("ChristmasTree");
+        tree.SetMeshMaterial("Tree");
+        //tree.CreateRigidBody(sofa.GetGameWorldMatrix(), true);
 
 
-    {
-        PhysicsFilterData filterData;
-        filterData.raycastGroup = RAYCAST_ENABLED;
-        filterData.collisionGroup = CollisionGroup::NO_COLLISION;
-        filterData.collidesWith = CollisionGroup::NO_COLLISION;
-
-        GameObject& smallChestOfDrawers = _gameObjects.emplace_back();
-        smallChestOfDrawers.SetModel("SmallChestOfDrawersFrame");
-        smallChestOfDrawers.SetMeshMaterial("Drawers");
-        smallChestOfDrawers.SetName("SmallDrawersHis");
-        smallChestOfDrawers.SetPosition(0.1f, 0.1f, 4.45f);
-        smallChestOfDrawers.SetRotationY(NOOSE_PI / 2);
-        smallChestOfDrawers.EnableCollision();
-        smallChestOfDrawers.SetRaycastShapeFromModel(AssetManager::GetModel("SmallChestOfDrawersFrame"));
-		smallChestOfDrawers.SetOpenState(OpenState::NONE, 0, 0, 0);
-		smallChestOfDrawers.SetAudioOnOpen("DrawerOpen.wav", 1.0f);
-		smallChestOfDrawers.SetAudioOnClose("DrawerOpen.wav", 1.0f);
-
-        PhysicsFilterData filterData3;
-		filterData3.raycastGroup = RAYCAST_DISABLED;
-		filterData3.collisionGroup = CollisionGroup::ENVIROMENT_OBSTACLE;
-		filterData3.collidesWith = CollisionGroup(GENERIC_BOUNCEABLE | BULLET_CASING | PLAYER);
-		smallChestOfDrawers.CreateRigidBody(smallChestOfDrawers.GetGameWorldMatrix(), true);
-        smallChestOfDrawers.AddCollisionShapeFromBoundingBox(smallChestOfDrawers._model->_boundingBox, filterData3);
 
 
 
 
+        {
+            PhysicsFilterData filterData;
+            filterData.raycastGroup = RAYCAST_ENABLED;
+            filterData.collisionGroup = CollisionGroup::NO_COLLISION;
+            filterData.collidesWith = CollisionGroup::NO_COLLISION;
 
+            GameObject& smallChestOfDrawers = _gameObjects.emplace_back();
+            smallChestOfDrawers.SetModel("SmallChestOfDrawersFrame");
+            smallChestOfDrawers.SetMeshMaterial("Drawers");
+            smallChestOfDrawers.SetName("SmallDrawersHis");
+            smallChestOfDrawers.SetPosition(0.1f, 0.1f, 4.45f);
+            smallChestOfDrawers.SetRotationY(NOOSE_PI / 2);
+            smallChestOfDrawers.EnableCollision();
+            smallChestOfDrawers.SetRaycastShapeFromModel(AssetManager::GetModel("SmallChestOfDrawersFrame"));
+            smallChestOfDrawers.SetOpenState(OpenState::NONE, 0, 0, 0);
+            smallChestOfDrawers.SetAudioOnOpen("DrawerOpen.wav", 1.0f);
+            smallChestOfDrawers.SetAudioOnClose("DrawerOpen.wav", 1.0f);
 
-        PhysicsFilterData filterData2;
-        filterData2.raycastGroup = RAYCAST_DISABLED;
-        filterData2.collisionGroup = CollisionGroup::GENERIC_BOUNCEABLE;
-        filterData2.collidesWith = CollisionGroup(ENVIROMENT_OBSTACLE | GENERIC_BOUNCEABLE);
-
-        GameObject& lamp = _gameObjects.emplace_back();
-        lamp.SetModel("Lamp");
-        lamp.SetMeshMaterial("Lamp");
-        lamp.SetPosition(-.105f, 0.88, 0.25f);
-        lamp.SetParentName("SmallDrawersHis");
-        lamp.SetRaycastShapeFromModel(AssetManager::GetModel("Lamp"));
-		lamp.CreateRigidBody(lamp.GetGameWorldMatrix(), false);
-		lamp.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("LampConvexMesh_0")->_meshes[0], filterData2);
-		lamp.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("LampConvexMesh_1")->_meshes[0], filterData2);
-		lamp.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("LampConvexMesh_2")->_meshes[0], filterData2);
-        lamp.SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
-		lamp.UpdateRigidBodyMassAndInertia(20.0f);
-      //  lamp.userData = new PhysicsObjectData(PhysicsObjectType::GAME_OBJECT, &_gameObjects[_gameObjects.size()-1]);
-
-
-        GameObject& smallChestOfDrawer_1 = _gameObjects.emplace_back();
-        smallChestOfDrawer_1.SetModel("SmallDrawerTop");
-		smallChestOfDrawer_1.SetMeshMaterial("Drawers");
-		smallChestOfDrawer_1.SetParentName("SmallDrawersHis");
-		smallChestOfDrawer_1.SetName("TopDraw");
-        smallChestOfDrawer_1.SetScriptName("OpenableDrawer");
-        smallChestOfDrawer_1.SetOpenState(OpenState::CLOSED, 2.183f, 0, 0.2f);
-        //smallChestOfDrawer_1.SetAudioOnOpen("DrawerOpen.wav", DRAWER_VOLUME);
-        //smallChestOfDrawer_1.SetAudioOnClose("DrawerOpen.wav", DRAWER_VOLUME);
-        smallChestOfDrawer_1.SetOpenAxis(OpenAxis::TRANSLATE_Z);
-        smallChestOfDrawer_1.SetRaycastShapeFromModel(AssetManager::GetModel("SmallDrawerTop"));
+            PhysicsFilterData filterData3;
+            filterData3.raycastGroup = RAYCAST_DISABLED;
+            filterData3.collisionGroup = CollisionGroup::ENVIROMENT_OBSTACLE;
+            filterData3.collidesWith = CollisionGroup(GENERIC_BOUNCEABLE | BULLET_CASING | PLAYER);
+            smallChestOfDrawers.CreateRigidBody(smallChestOfDrawers.GetGameWorldMatrix(), true);
+            smallChestOfDrawers.AddCollisionShapeFromBoundingBox(smallChestOfDrawers._model->_boundingBox, filterData3);
 
 
 
-        GameObject& smallChestOfDrawer_2 = _gameObjects.emplace_back();
-        smallChestOfDrawer_2.SetModel("SmallDrawerSecond");
-        smallChestOfDrawer_2.SetMeshMaterial("Drawers");
-        smallChestOfDrawer_2.SetParentName("SmallDrawersHis");
-        smallChestOfDrawer_2.SetScriptName("OpenableDrawer");
-       // smallChestOfDrawer_2.SetOpenState(OpenState::CLOSED, 2.183f, 0, 0.2f);
-        //smallChestOfDrawer_2.SetAudioOnOpen("DrawerOpen.wav", DRAWER_VOLUME);
-        //smallChestOfDrawer_2.SetAudioOnClose("DrawerOpen.wav", DRAWER_VOLUME);
-        smallChestOfDrawer_2.SetOpenAxis(OpenAxis::TRANSLATE_Z);
-        smallChestOfDrawer_2.SetRaycastShapeFromModel(AssetManager::GetModel("SmallDrawerSecond"));
 
-        GameObject& smallChestOfDrawer_3 = _gameObjects.emplace_back();
-        smallChestOfDrawer_3.SetModel("SmallDrawerThird");
-        smallChestOfDrawer_3.SetMeshMaterial("Drawers");
-        smallChestOfDrawer_3.SetParentName("SmallDrawersHis");
-        smallChestOfDrawer_3.SetScriptName("OpenableDrawer");
-      //  smallChestOfDrawer_3.SetOpenState(OpenState::CLOSED, 2.183f, 0, 0.2f);
-        // smallChestOfDrawer_3.SetAudioOnOpen("DrawerOpen.wav", DRAWER_VOLUME);
-        // smallChestOfDrawer_3.SetAudioOnClose("DrawerOpen.wav", DRAWER_VOLUME);
-        smallChestOfDrawer_3.SetOpenAxis(OpenAxis::TRANSLATE_Z);
-        smallChestOfDrawer_3.SetRaycastShapeFromModel(AssetManager::GetModel("SmallDrawerThird"));
 
-        GameObject& smallChestOfDrawer_4 = _gameObjects.emplace_back();
-        smallChestOfDrawer_4.SetModel("SmallDrawerFourth");
-        smallChestOfDrawer_4.SetMeshMaterial("Drawers");
-        smallChestOfDrawer_4.SetParentName("SmallDrawersHis");
-        smallChestOfDrawer_4.SetScriptName("OpenableDrawer");
-      //  smallChestOfDrawer_4.SetOpenState(OpenState::CLOSED, 2.183f, 0, 0.2f);
-        // smallChestOfDrawer_4.SetAudioOnOpen("DrawerOpen.wav", DRAWER_VOLUME);
-        // smallChestOfDrawer_4.SetAudioOnClose("DrawerOpen.wav", DRAWER_VOLUME);
-        smallChestOfDrawer_4.SetOpenAxis(OpenAxis::TRANSLATE_Z);
-        smallChestOfDrawer_4.SetRaycastShapeFromModel(AssetManager::GetModel("SmallDrawerFourth"));
+
+            PhysicsFilterData filterData2;
+            filterData2.raycastGroup = RAYCAST_DISABLED;
+            filterData2.collisionGroup = CollisionGroup::GENERIC_BOUNCEABLE;
+            filterData2.collidesWith = CollisionGroup(ENVIROMENT_OBSTACLE | GENERIC_BOUNCEABLE);
+
+            GameObject& lamp = _gameObjects.emplace_back();
+            lamp.SetModel("Lamp");
+            lamp.SetMeshMaterial("Lamp");
+            lamp.SetPosition(-.105f, 0.88, 0.25f);
+            lamp.SetParentName("SmallDrawersHis");
+
+            lamp.SetRaycastShapeFromModel(AssetManager::GetModel("Lamp"));
+            lamp.CreateRigidBody(lamp.GetGameWorldMatrix(), false);
+
+            lamp.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("LampConvexMesh_0")->_meshes[0], filterData2);
+            lamp.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("LampConvexMesh_1")->_meshes[0], filterData2);
+            lamp.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("LampConvexMesh_2")->_meshes[0], filterData2);
+            lamp.SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
+            lamp.UpdateRigidBodyMassAndInertia(20.0f);
+
+
+            //  lamp.userData = new PhysicsObjectData(PhysicsObjectType::GAME_OBJECT, &_gameObjects[_gameObjects.size()-1]);
+
+
+            GameObject& smallChestOfDrawer_1 = _gameObjects.emplace_back();
+            smallChestOfDrawer_1.SetModel("SmallDrawerTop");
+            smallChestOfDrawer_1.SetMeshMaterial("Drawers");
+            smallChestOfDrawer_1.SetParentName("SmallDrawersHis");
+            smallChestOfDrawer_1.SetName("TopDraw");
+            smallChestOfDrawer_1.SetScriptName("OpenableDrawer");
+            smallChestOfDrawer_1.SetOpenState(OpenState::CLOSED, 2.183f, 0, 0.2f);
+            //smallChestOfDrawer_1.SetAudioOnOpen("DrawerOpen.wav", DRAWER_VOLUME);
+            //smallChestOfDrawer_1.SetAudioOnClose("DrawerOpen.wav", DRAWER_VOLUME);
+            smallChestOfDrawer_1.SetOpenAxis(OpenAxis::TRANSLATE_Z);
+            smallChestOfDrawer_1.SetRaycastShapeFromModel(AssetManager::GetModel("SmallDrawerTop"));
+
+
+
+            GameObject& smallChestOfDrawer_2 = _gameObjects.emplace_back();
+            smallChestOfDrawer_2.SetModel("SmallDrawerSecond");
+            smallChestOfDrawer_2.SetMeshMaterial("Drawers");
+            smallChestOfDrawer_2.SetParentName("SmallDrawersHis");
+            smallChestOfDrawer_2.SetScriptName("OpenableDrawer");
+            // smallChestOfDrawer_2.SetOpenState(OpenState::CLOSED, 2.183f, 0, 0.2f);
+             //smallChestOfDrawer_2.SetAudioOnOpen("DrawerOpen.wav", DRAWER_VOLUME);
+             //smallChestOfDrawer_2.SetAudioOnClose("DrawerOpen.wav", DRAWER_VOLUME);
+            smallChestOfDrawer_2.SetOpenAxis(OpenAxis::TRANSLATE_Z);
+            smallChestOfDrawer_2.SetRaycastShapeFromModel(AssetManager::GetModel("SmallDrawerSecond"));
+
+            GameObject& smallChestOfDrawer_3 = _gameObjects.emplace_back();
+            smallChestOfDrawer_3.SetModel("SmallDrawerThird");
+            smallChestOfDrawer_3.SetMeshMaterial("Drawers");
+            smallChestOfDrawer_3.SetParentName("SmallDrawersHis");
+            smallChestOfDrawer_3.SetScriptName("OpenableDrawer");
+            //  smallChestOfDrawer_3.SetOpenState(OpenState::CLOSED, 2.183f, 0, 0.2f);
+              // smallChestOfDrawer_3.SetAudioOnOpen("DrawerOpen.wav", DRAWER_VOLUME);
+              // smallChestOfDrawer_3.SetAudioOnClose("DrawerOpen.wav", DRAWER_VOLUME);
+            smallChestOfDrawer_3.SetOpenAxis(OpenAxis::TRANSLATE_Z);
+            smallChestOfDrawer_3.SetRaycastShapeFromModel(AssetManager::GetModel("SmallDrawerThird"));
+
+            GameObject& smallChestOfDrawer_4 = _gameObjects.emplace_back();
+            smallChestOfDrawer_4.SetModel("SmallDrawerFourth");
+            smallChestOfDrawer_4.SetMeshMaterial("Drawers");
+            smallChestOfDrawer_4.SetParentName("SmallDrawersHis");
+            smallChestOfDrawer_4.SetScriptName("OpenableDrawer");
+            //  smallChestOfDrawer_4.SetOpenState(OpenState::CLOSED, 2.183f, 0, 0.2f);
+              // smallChestOfDrawer_4.SetAudioOnOpen("DrawerOpen.wav", DRAWER_VOLUME);
+              // smallChestOfDrawer_4.SetAudioOnClose("DrawerOpen.wav", DRAWER_VOLUME);
+            smallChestOfDrawer_4.SetOpenAxis(OpenAxis::TRANSLATE_Z);
+            smallChestOfDrawer_4.SetRaycastShapeFromModel(AssetManager::GetModel("SmallDrawerFourth"));
+        }
+
+
+
+        for (int y = 0; y < 12; y++) {
+
+            GameObject* cube = &_gameObjects.emplace_back();
+            float halfExtent = 0.1f;
+            cube->SetPosition(2.0f, y * halfExtent * 2 + 0.1f, 3.5f);
+            cube->SetModel("SmallCube");
+            cube->SetName("Present");
+
+            if (y == 0 || y == 4 || y == 8) {
+                cube->SetMeshMaterial("PresentA");
+            }
+            if (y == 1 || y == 5 || y == 9) {
+                cube->SetMeshMaterial("PresentB");
+            }
+            if (y == 2 || y == 6 || y == 10) {
+                cube->SetMeshMaterial("PresentC");
+            }
+            if (y == 3 || y == 7 || y == 11) {
+                cube->SetMeshMaterial("PresentD");
+            }
+
+
+            Transform transform;
+            transform.position = glm::vec3(2.0f, y * halfExtent * 2 + 0.1f, 3.5f);
+
+            PxShape* collisionShape = Physics::CreateBoxShape(halfExtent, halfExtent, halfExtent);
+            PxShape* raycastShape = Physics::CreateBoxShape(halfExtent, halfExtent, halfExtent);
+
+            PhysicsFilterData filterData;
+            filterData.raycastGroup = RAYCAST_DISABLED;
+            filterData.collisionGroup = CollisionGroup::GENERIC_BOUNCEABLE;
+            filterData.collidesWith = (CollisionGroup)(ENVIROMENT_OBSTACLE | GENERIC_BOUNCEABLE);
+
+            cube->CreateRigidBody(transform.to_mat4(), false);
+            cube->AddCollisionShape(collisionShape, filterData);
+            cube->SetRaycastShape(raycastShape);
+            cube->SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
+            cube->UpdateRigidBodyMassAndInertia(20.0f);
+        }
+
     }
-
-
-
-    for (int y = 0; y < 12; y++) {
-
-        GameObject* cube = &_gameObjects.emplace_back();
-        float halfExtent = 0.1f;
-		cube->SetPosition(2.0f, y * halfExtent * 2 + 0.1f, 3.5f);
-		cube->SetModel("SmallCube");
-        cube->SetName("Present");
-
-		if (y == 0 || y == 4 || y == 8) {
-			cube->SetMeshMaterial("PresentA");
-		}
-		if (y == 1 || y == 5 || y == 9) {
-			cube->SetMeshMaterial("PresentB");
-		}
-		if (y == 2 || y == 6 || y == 10) {
-			cube->SetMeshMaterial("PresentC");
-		}
-		if (y == 3 || y == 7 || y == 11) {
-			cube->SetMeshMaterial("PresentD");
-		}
-
-
-        Transform transform;
-        transform.position = glm::vec3(2.0f, y * halfExtent * 2 + 0.1f, 3.5f);
-
-        PxShape* collisionShape = Physics::CreateBoxShape(halfExtent, halfExtent, halfExtent);
-        PxShape* raycastShape = Physics::CreateBoxShape(halfExtent, halfExtent, halfExtent);
-
-        PhysicsFilterData filterData;
-        filterData.raycastGroup = RAYCAST_DISABLED;
-        filterData.collisionGroup = CollisionGroup::GENERIC_BOUNCEABLE;
-        filterData.collidesWith = (CollisionGroup)(ENVIROMENT_OBSTACLE | GENERIC_BOUNCEABLE);
-
-        cube->CreateRigidBody(transform.to_mat4(), false);
-        cube->AddCollisionShape(collisionShape, filterData);
-        cube->SetRaycastShape(raycastShape);
-		cube->SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
-        cube->UpdateRigidBodyMassAndInertia(20.0f);
-    }
-
-
 
 
 
