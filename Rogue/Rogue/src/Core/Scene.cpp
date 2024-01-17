@@ -73,32 +73,53 @@ void Scene::Update(float deltaTime) {
 
 
 
+                    // Glass projectile
+
+                    for (int i = 0; i < 2; i++) {
 
 
-						Transform transform;
-						transform.position = rayResult.hitPosition + (rayResult.surfaceNormal * glm::vec3(0.03));
-                        //transform.rotation = rayResult.rayDirection;
+                        Transform transform;                        
+                        if (i == 1) {
+                            transform.position = rayResult.hitPosition + (rayResult.surfaceNormal * glm::vec3(-0.13));
+						}
+						else {
+							transform.position = rayResult.hitPosition + (rayResult.surfaceNormal * glm::vec3(0.03));
+						}
 
-						PhysicsFilterData filterData;
-						filterData.raycastGroup = RaycastGroup::RAYCAST_DISABLED;
-						filterData.collisionGroup = CollisionGroup::BULLET_CASING;
-						filterData.collidesWith = CollisionGroup::ENVIROMENT_OBSTACLE;
+                        PhysicsFilterData filterData;
+                        filterData.raycastGroup = RaycastGroup::RAYCAST_DISABLED;
+                        filterData.collisionGroup = CollisionGroup::BULLET_CASING;
+                        filterData.collidesWith = CollisionGroup::ENVIROMENT_OBSTACLE;
 
-						PxShape* shape = Physics::CreateBoxShape(0.02f, 0.004f, 0.004f);
-						PxRigidDynamic* body = Physics::CreateRigidDynamic(transform, filterData, shape);
+                        PxShape* shape = Physics::CreateBoxShape(0.008f, 0.008f, 0.008f);
+                        PxRigidDynamic* body = Physics::CreateRigidDynamic(transform, filterData, shape);
 
-                      //  PxVec3 force = PxVec3(0, 0, 0);//
-                        
-                        PxVec3 force = Util::GlmVec3toPxVec3(-rayResult.rayDirection) * 0.0005f;;
-                            
-						body->addForce(force);
-						body->setAngularVelocity(PxVec3(Util::RandomFloat(0.0f, 50.0f), Util::RandomFloat(0.0f, 50.0f), Util::RandomFloat(0.0f, 50.0f)));
-						//shape->release();
+                        //  PxVec3 force = PxVec3(0, 0, 0);//
 
-						BulletCasing bulletCasing;
-						bulletCasing.type = AKS74U;
-						bulletCasing.rigidBody = body;
-						Scene::_bulletCasings.push_back(bulletCasing);
+                        glm::vec3 forceGLM = -rayResult.rayDirection;
+                        if (i == 1) {
+                            forceGLM *= glm::vec3(-1);
+                        }
+
+						forceGLM.x += Util::RandomFloat(0, 0.5f);
+						forceGLM.y += Util::RandomFloat(0, 0.5f);
+						forceGLM.z += Util::RandomFloat(0, 0.5f);
+
+                        PxVec3 force = Util::GlmVec3toPxVec3(forceGLM) * 0.001f;;
+
+
+
+                        body->addForce(force);
+                        body->setAngularVelocity(PxVec3(Util::RandomFloat(0.0f, 50.0f), Util::RandomFloat(0.0f, 50.0f), Util::RandomFloat(0.0f, 50.0f)));
+                        //shape->release();
+
+                        BulletCasing bulletCasing;
+                        bulletCasing.type = MP7;
+                        bulletCasing.rigidBody = body;
+                        Scene::_bulletCasings.push_back(bulletCasing);
+
+                        std::cout << "shard spawned\n";
+                    }
 
 
 
@@ -244,14 +265,14 @@ void Scene::LoadHardCodedObjects() {
 
     LoadLightSetup(2);
 
-
+    /*
 	GameObject& shard = _gameObjects.emplace_back();
     shard.SetPosition(3.8f, 1.4f, 3.75f);
     shard.SetModel("GlassShard");
     shard.SetScale(100.0f);
     shard.SetMeshMaterial("BulletHole_Glass");
 
-
+    */
 
 
     if (true) {

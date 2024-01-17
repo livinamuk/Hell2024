@@ -2269,6 +2269,23 @@ void DrawCasingProjectiles(Player* player) {
     AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("Casing_AkS74U"));
     Mesh& aks75uCasingmesh = AssetManager::GetModel("BulletCasing_AK")->_meshes[0];
     DrawInstanced(aks75uCasingmesh, matrices);
+
+
+
+	// DRAW GLASS PROJECTILES 
+    // 
+    // (currently using the mp7 as a tag, thats fucked, rewrite this soon
+
+	matrices.clear();
+	for (BulletCasing& casing : Scene::_bulletCasings) {
+		if (casing.type == MP7) {
+			matrices.push_back(casing.GetModelMatrix());
+		}
+	}
+	AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("BulletHole_Glass"));
+	Mesh& shardMesh = AssetManager::GetModel("GlassShard")->_meshes[0];
+	DrawInstanced(shardMesh, matrices);
+
 }
 
 void RenderShadowMaps() {
