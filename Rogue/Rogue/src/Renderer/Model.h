@@ -11,13 +11,15 @@ struct BoundingBox {
 class Model
 {
 public:
-	void Load(std::string filepath);
+	void Load(std::string filepath, const bool bake_on_load = true);
 	void Draw();
 	void CreateTriangleMesh();
 	//void Draw(Shader* shader, glm::mat4 modelMatrix, int primitiveType = GL_TRIANGLES);
-	
+
+	void Bake();
+
 public:
-	std::vector<Mesh> _meshes; 
+	std::vector<Mesh> _meshes;
 	std::vector<Triangle> _triangles;;
 	//std::vector<int> _meshIndices;
 	std::vector<std::string> _meshNames;

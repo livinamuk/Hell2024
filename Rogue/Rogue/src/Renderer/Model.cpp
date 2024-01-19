@@ -49,17 +49,20 @@ inline void TangentFromUVs(Vertex* v0, Vertex* v1, Vertex* v2) {
 }
 
 
-void Model::Load(std::string filepath) {
+void Model::Load(std::string filepath, const bool bake_on_load) {
 
 	_filename = filepath.substr(filepath.rfind("/") + 1);
 	_name = _filename.substr(0, _filename.length() - 4);
 
 	if (!Util::FileExists(filepath.c_str()))
-		std::cout << filepath.c_str() << " does not exist!\n";
+		std::cout << filepath << " does not exist!\n";
 
+	constexpr size_t batch_size{ 128 };
 	tinyobj::attrib_t attrib;
 	std::vector<tinyobj::shape_t> shapes;
 	std::vector<tinyobj::material_t> materials;
+	shapes.reserve(batch_size);
+	materials.reserve(batch_size);
 	std::string warn, err;
 
 	if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, filepath.c_str())) {
@@ -74,6 +77,8 @@ void Model::Load(std::string filepath) {
 
 	std::vector<Vertex> vertices;
 	std::vector<unsigned int> indices;
+	vertices.reserve(batch_size);
+	indices.reserve(batch_size);
 
 	// Loop over shapes
 	for (size_t s = 0; s < shapes.size(); s++) {
@@ -102,7 +107,7 @@ void Model::Load(std::string filepath) {
 					vertex.uv.x = attrib.texcoords[2 * size_t(idx.texcoord_index) + 0];
 					vertex.uv.y = attrib.texcoords[2 * size_t(idx.texcoord_index) + 1];
 				}
-				vertices.push_back(vertex);
+				vertices.emplace_back(std::move(vertex));
 				indices.push_back(indices.size());
 			}
 			index_offset += fv;
@@ -120,12 +125,12 @@ void Model::Load(std::string filepath) {
 	{
 		std::vector<Vertex> vertices;
 		std::vector<unsigned int> indices;
+		vertices.reserve(shape.mesh.indices.size());
+		indices.reserve(shape.mesh.indices.size());
 
-		for (int i = 0; i < shape.mesh.indices.size(); i++) {
+		for (const auto &index : shape.mesh.indices) {
 			//		for (const auto& index : shape.mesh.indices) {
 			Vertex vertex = {};
-
-			const auto& index = shape.mesh.indices[i];
 			//vertex.MaterialID = shape.mesh.material_ids[i / 3];
 
 			vertex.position = {
@@ -164,9 +169,9 @@ void Model::Load(std::string filepath) {
 			indices.push_back(uniqueVertices[vertex]);
 		}
 
-		for (int i = 0; i < indices.size(); i += 3) {
-			//SetNormalsAndTangentsFromVertices(&vertices[indices[i]], &vertices[indices[i + 1]], &vertices[indices[i + 2]]);
-		}
+		// for (int i = 0; i < indices.size(); i += 3) {
+			// SetNormalsAndTangentsFromVertices(&vertices[indices[i]], &vertices[indices[i + 1]], &vertices[indices[i + 2]]);
+		// }
 
 		for (int i = 0; i < indices.size(); i += 3) {
 			Vertex* vert0 = &vertices[indices[i]];
@@ -195,7 +200,8 @@ void Model::Load(std::string filepath) {
 			vert2->bitangent = bitangent;
 			//std::cout << i << Util::Vec3ToString(bitangent) << "\n";
 		}
-		_meshes.push_back(Mesh(vertices, indices, std::string(shape.name)));
+		_meshes.emplace_back(std::move(vertices), std::move(indices),
+			std::string(shape.name), bake_on_load);
 	}
 
 	// Build the bounding box
@@ -253,5 +259,11 @@ void Model::CreateTriangleMesh() {
 
 		_triangleMesh = Physics::CreateTriangleMesh(pxvertices.size(), pxvertices.data(), pxindices.size() / 3, pxindices.data());
 		//std::cout << "Created triangle mesh for model " << _name << " out of " << _meshes.size() << " mesh\n";
+	}
+}
+
+void Model::Bake() {
+	for (auto &mesh : _meshes) {
+		mesh.Bake();
 	}
 }

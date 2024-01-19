@@ -1,6 +1,12 @@
-#include "AssetManager.h"
 #include <vector>
 #include <iostream>
+#include <iterator>
+#include <algorithm>
+#include <filesystem>
+
+#include <BS_thread_pool.hpp>
+
+#include "AssetManager.h"
 #include "../Common.h"
 #include "../Util.hpp"
 #include "../Renderer/Model.h"
@@ -11,6 +17,42 @@ std::vector<Material> _materials;
 std::vector<Model> _models;
 std::vector<SkinnedModel> _skinnedModels;
 
+namespace {
+
+constexpr BS::concurrency_t thread_count{ 4 };
+BS::thread_pool g_asset_mgr_loading_pool{ thread_count };
+
+size_t count_files_in(const std::string_view path) {
+	return std::distance(std::filesystem::directory_iterator(path), {});
+}
+
+std::vector<std::future<Texture *>> load_textures_from_directory(const std::string_view directory) {
+	std::vector<std::future<Texture *>> loadedTextures;
+	loadedTextures.reserve(count_files_in(directory));
+
+	for (const auto &entry : std::filesystem::directory_iterator(directory)) {
+		auto info = Util::GetFileInfo(entry);
+		if (!Util::FileExists(info.fullpath))
+			continue;
+
+		if (info.filetype == "png" || info.filetype == "tga" || info.filetype == "jpg") {
+			auto &texture{ _textures.emplace_back(Texture{}) };
+			loadedTextures.emplace_back(g_asset_mgr_loading_pool.submit_task(
+				[texture_ptr = &texture, path = std::move(info.fullpath)]() -> Texture * {
+					if (texture_ptr->Load(path, false)) {
+						return texture_ptr;
+					}
+					std::cout << "Failed to load " << path << "\n";
+					return nullptr;
+				}));
+		}
+	}
+	return std::move(loadedTextures);
+}
+
+} // anonymous namespace
+
+
 void AssetManager::Init() {
 
 
@@ -20,16 +62,14 @@ void AssetManager::Init() {
 void AssetManager::LoadFont() {
 
 	_charExtents.clear();
-	for (size_t i = 1; i <= 90; i++) {
-		std::string filepath = "res/textures/font/char_" + std::to_string(i) + ".png";
-		if (Util::FileExists(filepath)) {
-			Texture& texture = _textures.emplace_back(Texture(filepath));
-			_charExtents.push_back({ texture.GetWidth(), texture.GetHeight()});
+	_textures.reserve(_textures.size() + count_files_in("res/textures/font/"));
+	for (auto &&loaded : load_textures_from_directory("res/textures/font/")) {
+		if (auto texture{ loaded.get() }; texture) {
+			texture->Bake();
+			_charExtents.push_back({ texture->GetWidth(), texture->GetHeight() });
 		}
 	}
 }
-
-#include <filesystem>
 
 int AssetManager::GetTextureIndex(const std::string& filename, bool ignoreWarning) {
 	for (int i = 0; i < _textures.size(); i++) {
@@ -43,32 +83,57 @@ int AssetManager::GetTextureIndex(const std::string& filename, bool ignoreWarnin
 }
 
 void AssetManager::LoadEverythingElse() {
+	namespace fs = std::filesystem;
 
-	static auto allTextures = std::filesystem::directory_iterator("res/textures/");
-	static auto uiTextures = std::filesystem::directory_iterator("res/textures/ui");
-	static auto allModels = std::filesystem::directory_iterator("res/models/");
+	static auto allTextures = fs::directory_iterator("res/textures/");
+	static auto uiTextures = fs::directory_iterator("res/textures/ui");
+	static auto allModels = fs::directory_iterator("res/models/");
 
-	for (const auto& entry : allTextures) {
-		FileInfo info = Util::GetFileInfo(entry);
-		if (info.filetype == "png" || info.filetype == "tga" || info.filetype == "jpg") {
-			_textures.emplace_back(Texture(info.fullpath.c_str()));
+	const size_t textures_count{ count_files_in("res/textures/") + count_files_in("res/textures/ui") };
+	_textures.reserve(_textures.size() + textures_count);
+
+	std::vector<std::future<Texture*>> loadedTextures;
+	loadedTextures.reserve(textures_count);
+
+	if (auto loaded{ load_textures_from_directory("res/textures/ui") }; !loaded.empty()) {
+		loadedTextures.insert(loadedTextures.end(), std::make_move_iterator(loaded.begin()), std::make_move_iterator(loaded.end()));
+	}
+	if (auto loaded{ load_textures_from_directory("res/textures/") }; !loaded.empty()) {
+		loadedTextures.insert(loadedTextures.end(), std::make_move_iterator(loaded.begin()), std::make_move_iterator(loaded.end()));
+	}
+
+	for (auto&& futureTexture : loadedTextures) {
+		if (auto texture{ futureTexture.get() }; texture) {
+			texture->Bake();
 		}
 	}
 
-	for (const auto& entry : uiTextures) {
-		FileInfo info = Util::GetFileInfo(entry);
-		if (info.filetype == "png" || info.filetype == "tga" || info.filetype == "jpg") {
-			_textures.emplace_back(Texture(info.fullpath.c_str()));
-		}
-	}
+	const auto models_count{ count_files_in("res/models/") };
+	_models.reserve(_models.size() + models_count);
 
-	for (const auto& entry : allModels) {
-		FileInfo info = Util::GetFileInfo(entry);
+	constexpr bool bake_on_load{ false };
+
+	for (const auto &entry : allModels) {
+		auto info = Util::GetFileInfo(entry);
 		if (info.filetype == "obj") {
-			Model& model = _models.emplace_back(Model());
-			std::cout << "Loading " << info.fullpath << "\n";
-			model.Load(info.fullpath);
+			auto &model{ _models.emplace_back(Model()) };
+			g_asset_mgr_loading_pool.detach_task(
+				[&model, path = std::move(info.fullpath)] () mutable {
+					// We need this shit cuz it's concurency cout
+					constexpr bool bake_on_load{ false };
+					const auto message{ (std::stringstream{} << "[" << std::setw(6)
+						<< std::this_thread::get_id() << "] Loading " << path << "\n").str()
+					};
+					std::cout << message;
+					model.Load(std::move(path), bake_on_load);
+				}
+			);
 		}
+	}
+
+	g_asset_mgr_loading_pool.wait();
+	for (auto& model : _models) {
+		model.Bake();
 	}
 
 	// Build materials
@@ -104,52 +169,103 @@ void AssetManager::LoadEverythingElse() {
 	// Everything is loaded
 	//return false;
 
-	SkinnedModel& stabbingGuy = _skinnedModels.emplace_back(SkinnedModel());
-	FbxImporter::LoadSkinnedModel("models/UniSexGuy2.fbx", stabbingGuy);
-	FbxImporter::LoadAnimation(stabbingGuy, "animations/Character_Glock_Walk.fbx");
-	FbxImporter::LoadAnimation(stabbingGuy, "animations/Character_Glock_Kneel.fbx");
-	FbxImporter::LoadAnimation(stabbingGuy, "animations/Character_Glock_Idle.fbx");
-	FbxImporter::LoadAnimation(stabbingGuy, "animations/Character_AKS74U_Walk.fbx");
-	FbxImporter::LoadAnimation(stabbingGuy, "animations/Character_AKS74U_Kneel.fbx");
-	FbxImporter::LoadAnimation(stabbingGuy, "animations/Character_AKS74U_Idle.fbx");
+	static const auto load_model_animations = [](std::vector<std::string> &&animations) {
+		std::vector<std::future<Animation*>> futureAnimations;
+		futureAnimations.reserve(animations.size());
+		for (auto &&animation : animations) {
+			futureAnimations.emplace_back(g_asset_mgr_loading_pool.submit_task([anim = std::move(animation)] {
+				auto animation{ FbxImporter::LoadAnimation(anim) };
+				std::cout << "[" << std::setw(6) << std::this_thread::get_id() << "] "
+					<< "Loaded animation: " << anim << "\n";
+				return animation;
+			}));
+		}
+		return std::move(futureAnimations);
+	};
+	static const auto emplace_animations = [](auto &model, auto &&futures) {
+		model.m_animations.reserve(futures.size());
+		for (auto &&future : futures) {
+			if (auto animation{ future.get() }; animation) {
+				model.m_animations.emplace_back(animation);
+			}
+		}
+	};
+
+	struct skinned_model_path {
+		std::string path;
+		std::vector<std::string> animations;
+	};
+
+	std::vector<skinned_model_path> model_paths{
+		skinned_model_path{ "models/UniSexGuy2.fbx", std::vector<std::string>{
+			"animations/Character_Glock_Walk.fbx",
+			"animations/Character_Glock_Kneel.fbx",
+			"animations/Character_Glock_Idle.fbx",
+			"animations/Character_AKS74U_Walk.fbx",
+			"animations/Character_AKS74U_Kneel.fbx",
+			"animations/Character_AKS74U_Idle.fbx",
+		} },
+		skinned_model_path{ "models/AKS74U.fbx", std::vector<std::string>{
+			"animations/AKS74U_Spawn.fbx",
+			"animations/AKS74U_DebugTest.fbx",
+			"animations/AKS74U_Fire1.fbx",
+			"animations/AKS74U_Fire2.fbx",
+			"animations/AKS74U_Fire3.fbx",
+			"animations/AKS74U_Idle.fbx",
+			"animations/AKS74U_Walk.fbx",
+			"animations/AKS74U_Reload.fbx",
+			"animations/AKS74U_ReloadEmpty.fbx",
+			"animations/AKS74U_Draw.fbx",
+		} },
+		skinned_model_path{ "models/Glock.fbx", std::vector<std::string>{
+			"animations/Glock_Spawn.fbx",
+			"animations/Glock_DebugTest.fbx",
+			"animations/Glock_Fire1.fbx",
+			"animations/Glock_Fire2.fbx",
+			"animations/Glock_Fire3.fbx",
+			"animations/Glock_Idle.fbx",
+			"animations/Glock_Walk.fbx",
+			"animations/Glock_Reload.fbx",
+			"animations/Glock_ReloadEmpty.fbx",
+			"animations/Glock_Draw.fbx",
+		} },
+		skinned_model_path{ "models/Knife.fbx", std::vector<std::string>{
+			"animations/Knife_Idle.fbx",
+			"animations/Knife_Walk.fbx",
+			"animations/Knife_Draw.fbx",
+			"animations/Knife_Swing1.fbx",
+			"animations/Knife_Swing2.fbx",
+			"animations/Knife_Swing3.fbx",
+		} },
+	};
+
+	std::unordered_map<SkinnedModel*, std::vector<std::future<Animation*>>> animations_futures;
+	animations_futures.reserve(model_paths.size());
+
+	_skinnedModels.reserve(model_paths.size());
+	for (auto &&[path, animations] : model_paths) {
+		auto &model = _skinnedModels.emplace_back(SkinnedModel());
+		g_asset_mgr_loading_pool.detach_task([model_ptr = &model, path] {
+			if (FbxImporter::LoadSkinnedModelData(*model_ptr, path)) {
+				std::cout << "[SKINNED_MODEL] Loaded '" << path << "'\n";
+			} else {
+				std::cout << "[SKINNED_MODEL] Loading failed '" << path << "'\n";
+			}
+		});
+		animations_futures.emplace(&model, load_model_animations(std::move(animations)));
+	}
+
+	g_asset_mgr_loading_pool.wait();
+
+	for (auto &&[model_ptr, future_animations] : animations_futures) {
+		FbxImporter::BakeSkinnedModel(*model_ptr);
+		emplace_animations(*model_ptr, std::move(future_animations));
+	}
 
 /*	SkinnedModel& wife = _skinnedModels.emplace_back(SkinnedModel());
 	FbxImporter::LoadSkinnedModel("models/Wife.fbx", wife);
 	FbxImporter::LoadAnimation(stabbingGuy, "animations/Character_Glock_Walk.fbx");
 	*/
-	SkinnedModel& aks74u = _skinnedModels.emplace_back(SkinnedModel());
-	FbxImporter::LoadSkinnedModel("models/AKS74U.fbx", aks74u);
-	FbxImporter::LoadAnimation(aks74u, "animations/AKS74U_DebugTest.fbx");
-	FbxImporter::LoadAnimation(aks74u, "animations/AKS74U_Fire1.fbx");
-	FbxImporter::LoadAnimation(aks74u, "animations/AKS74U_Fire2.fbx");
-	FbxImporter::LoadAnimation(aks74u, "animations/AKS74U_Fire3.fbx");
-	FbxImporter::LoadAnimation(aks74u, "animations/AKS74U_Idle.fbx");
-	FbxImporter::LoadAnimation(aks74u, "animations/AKS74U_Walk.fbx");
-	FbxImporter::LoadAnimation(aks74u, "animations/AKS74U_Reload.fbx");
-	FbxImporter::LoadAnimation(aks74u, "animations/AKS74U_ReloadEmpty.fbx");
-	FbxImporter::LoadAnimation(aks74u, "animations/AKS74U_Draw.fbx");
-
-	SkinnedModel& glock = _skinnedModels.emplace_back(SkinnedModel());
-	FbxImporter::LoadSkinnedModel("models/Glock.fbx", glock);
-	FbxImporter::LoadAnimation(glock, "animations/Glock_Idle.fbx");
-	FbxImporter::LoadAnimation(glock, "animations/Glock_Walk.fbx");
-	FbxImporter::LoadAnimation(glock, "animations/Glock_Draw.fbx");
-	FbxImporter::LoadAnimation(glock, "animations/Glock_Spawn.fbx");
-	FbxImporter::LoadAnimation(glock, "animations/Glock_Fire1.fbx");
-	FbxImporter::LoadAnimation(glock, "animations/Glock_Fire2.fbx");
-	FbxImporter::LoadAnimation(glock, "animations/Glock_Fire3.fbx");
-	FbxImporter::LoadAnimation(glock, "animations/Glock_Reload.fbx");
-	FbxImporter::LoadAnimation(glock, "animations/Glock_ReloadEmpty.fbx");
-
-	SkinnedModel& knife = _skinnedModels.emplace_back(SkinnedModel());
-	FbxImporter::LoadSkinnedModel("models/Knife.fbx", knife);
-	FbxImporter::LoadAnimation(knife, "animations/Knife_Idle.fbx");
-	FbxImporter::LoadAnimation(knife, "animations/Knife_Walk.fbx");
-	FbxImporter::LoadAnimation(knife, "animations/Knife_Draw.fbx");
-	FbxImporter::LoadAnimation(knife, "animations/Knife_Swing1.fbx");
-	FbxImporter::LoadAnimation(knife, "animations/Knife_Swing2.fbx");
-	FbxImporter::LoadAnimation(knife, "animations/Knife_Swing3.fbx");
-
 
 	/*SkinnedModel& shotgun = _skinnedModels.emplace_back(SkinnedModel());
 	FbxImporter::LoadSkinnedModel("models/Shotgun.fbx", shotgun);

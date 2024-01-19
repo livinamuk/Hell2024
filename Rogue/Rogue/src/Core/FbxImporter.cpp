@@ -3,6 +3,119 @@
 #include "../common.h"
 
 
+namespace {
+
+void create_model_buffers(SkinnedModel& model) {
+    glGenVertexArrays(1, &model.m_VAO);
+    glBindVertexArray(model.m_VAO);
+    glGenBuffers(ARRAY_SIZE_IN_ELEMENTS(model.m_Buffers), model.m_Buffers);
+}
+
+void bake_model(SkinnedModel &model) {
+    glBindBuffer(GL_ARRAY_BUFFER, model.m_Buffers[POS_VB]);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(model.Positions[0]) * model.Positions.size(), &model.Positions[0], GL_STATIC_DRAW);
+    glEnableVertexAttribArray(POSITION_LOCATION);
+    glVertexAttribPointer(POSITION_LOCATION, 3, GL_FLOAT, GL_FALSE, 0, 0);
+
+    glBindBuffer(GL_ARRAY_BUFFER, model.m_Buffers[NORMAL_VB]);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(model.Normals[0]) * model.Normals.size(), &model.Normals[0], GL_STATIC_DRAW);
+    glEnableVertexAttribArray(NORMAL_LOCATION);
+    glVertexAttribPointer(NORMAL_LOCATION, 3, GL_FLOAT, GL_FALSE, 0, 0);
+
+    glBindBuffer(GL_ARRAY_BUFFER, model.m_Buffers[TEXCOORD_VB]);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(model.TexCoords[0]) * model.TexCoords.size(), &model.TexCoords[0], GL_STATIC_DRAW);
+    glEnableVertexAttribArray(TEX_COORD_LOCATION);
+    glVertexAttribPointer(TEX_COORD_LOCATION, 2, GL_FLOAT, GL_FALSE, 0, 0);
+
+    glBindBuffer(GL_ARRAY_BUFFER, model.m_Buffers[TANGENT_VB]);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(model.Tangents[0]) * model.Tangents.size(), &model.Tangents[0], GL_STATIC_DRAW);
+    glEnableVertexAttribArray(TANGENT_LOCATION);
+    glVertexAttribPointer(TANGENT_LOCATION, 3, GL_FLOAT, GL_FALSE, 0, 0);
+
+    glBindBuffer(GL_ARRAY_BUFFER, model.m_Buffers[BITANGENT_VB]);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(model.Bitangents[0]) * model.Bitangents.size(), &model.Bitangents[0], GL_STATIC_DRAW);
+    glEnableVertexAttribArray(BITANGENT_LOCATION);
+    glVertexAttribPointer(BITANGENT_LOCATION, 3, GL_FLOAT, GL_FALSE, 0, 0);
+
+    glBindBuffer(GL_ARRAY_BUFFER, model.m_Buffers[BONE_VB]);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(model.Bones[0]) * model.Bones.size(), &model.Bones[0], GL_STATIC_DRAW);
+    glEnableVertexAttribArray(BONE_ID_LOCATION);
+    glVertexAttribIPointer(BONE_ID_LOCATION, 4, GL_INT, sizeof(VertexBoneData), (const GLvoid*)0);
+    glEnableVertexAttribArray(BONE_WEIGHT_LOCATION);
+    glVertexAttribPointer(BONE_WEIGHT_LOCATION, 4, GL_FLOAT, GL_FALSE, sizeof(VertexBoneData), (const GLvoid*)16);
+
+   /* glBindBuffer(GL_ARRAY_BUFFER, model.m_Buffers[SMOOTH_NORMAL_VB]);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(smoothNormals[0]) * smoothNormals.size(), &smoothNormals[0], GL_STATIC_DRAW);
+    glEnableVertexAttribArray(SMOOTH_NORMAL_LOCATION);
+    glVertexAttribPointer(SMOOTH_NORMAL_LOCATION, 3, GL_FLOAT, GL_FALSE, 0, 0);
+    */
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, model.m_Buffers[INDEX_BUFFER]);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(model.Indices[0]) * model.Indices.size(), &model.Indices[0], GL_STATIC_DRAW);
+}
+
+} // anonymous namespace
+
+bool FbxImporter::LoadSkinnedModelData(SkinnedModel &model, const std::string &filename) {
+
+    FileInfo fileInfo = Util::GetFileInfo(filename);
+
+    const aiScene* m_pScene;
+    Assimp::Importer m_Importer;
+
+    model.m_VAO = 0; 
+    ZERO_MEM(model.m_Buffers);
+    model.m_NumBones = 0;
+    model._filename = fileInfo.filename;
+
+    bool Ret = false;
+
+    std::string filepath = "res/";
+    filepath += filename;
+
+    const aiScene* tempScene = m_Importer.ReadFile(filepath.c_str(), aiProcess_LimitBoneWeights | aiProcess_Triangulate | aiProcess_GenSmoothNormals | aiProcess_FlipUVs | aiProcess_CalcTangentSpace);
+
+    //Getting corrupted later. So deep copying now.
+    if (!tempScene) {
+        std::cout << "Something fucked up loading your skinned model: " << filepath << "\n";
+        return false;
+    }
+    
+    // Try load the assimp scene
+    m_pScene = new aiScene(*tempScene);
+    if (m_pScene)  {
+        model.m_GlobalInverseTransform = Util::aiMatrix4x4ToGlm(m_pScene->mRootNode->mTransformation);
+        model.m_GlobalInverseTransform = glm::inverse(model.m_GlobalInverseTransform);
+        Ret = InitFromScene(model, m_pScene, filename, false);
+    }
+    else {
+        //printf("Error parsing '%s': '%s'\n", filename, m_Importer.GetErrorString());
+        std::cout << "Error parsing " << filename << ": " << m_Importer.GetErrorString() << "\n";
+    }        
+
+    //if (m_pScene->mNumCameras > 0) {
+    //    aiCamera* m_camera = m_pScene->mCameras[0];
+    //}
+
+    GrabSkeleton(model, m_pScene->mRootNode, -1);
+
+     //std::cout << "Loaded model " << model._filename << " ("  << model.m_BoneInfo.size() << " bones)\n";
+     
+     for (auto b : model.m_BoneInfo) {
+     //    std::cout << "-" << b.BoneName << "\n";
+     }
+
+
+    m_Importer.FreeScene();
+
+    return Ret;
+}
+
+void FbxImporter::BakeSkinnedModel(SkinnedModel& skinnedModel) {
+    create_model_buffers(skinnedModel);
+    bake_model(skinnedModel);
+}
+
+
 void FbxImporter::LoadSkinnedModel(std::string filename, SkinnedModel& skinnedModel) {
 
     FileInfo fileInfo = Util::GetFileInfo(filename);
@@ -15,9 +128,7 @@ void FbxImporter::LoadSkinnedModel(std::string filename, SkinnedModel& skinnedMo
     skinnedModel.m_NumBones = 0;
     skinnedModel._filename = fileInfo.filename;
 
-    glGenVertexArrays(1, &skinnedModel.m_VAO);
-    glBindVertexArray(skinnedModel.m_VAO);
-    glGenBuffers(ARRAY_SIZE_IN_ELEMENTS(skinnedModel.m_Buffers), skinnedModel.m_Buffers);
+    create_model_buffers(skinnedModel);
 
     bool Ret = false;
 
@@ -59,13 +170,10 @@ void FbxImporter::LoadSkinnedModel(std::string filename, SkinnedModel& skinnedMo
 
     m_Importer.FreeScene();
 
-
-
     return;
 }
 
-
-bool FbxImporter::InitFromScene(SkinnedModel& skinnedModel, const aiScene* pScene, const std::string& /*Filename*/)
+bool FbxImporter::InitFromScene(SkinnedModel& skinnedModel, const aiScene* pScene, const std::string& /*Filename*/, const bool bake)
 {
     skinnedModel.m_meshEntries.resize(pScene->mNumMeshes);
 
@@ -173,51 +281,9 @@ bool FbxImporter::InitFromScene(SkinnedModel& skinnedModel, const aiScene* pScen
        // std::cout << i << " " << Util::Vec3ToString(vertexPosition) << "\n";
     }
 
-
-    glBindBuffer(GL_ARRAY_BUFFER, skinnedModel.m_Buffers[POS_VB]);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(skinnedModel.Positions[0]) * skinnedModel.Positions.size(), &skinnedModel.Positions[0], GL_STATIC_DRAW);
-    glEnableVertexAttribArray(POSITION_LOCATION);
-    glVertexAttribPointer(POSITION_LOCATION, 3, GL_FLOAT, GL_FALSE, 0, 0);
-
-    glBindBuffer(GL_ARRAY_BUFFER, skinnedModel.m_Buffers[NORMAL_VB]);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(skinnedModel.Normals[0]) * skinnedModel.Normals.size(), &skinnedModel.Normals[0], GL_STATIC_DRAW);
-    glEnableVertexAttribArray(NORMAL_LOCATION);
-    glVertexAttribPointer(NORMAL_LOCATION, 3, GL_FLOAT, GL_FALSE, 0, 0);
-
-    glBindBuffer(GL_ARRAY_BUFFER, skinnedModel.m_Buffers[TEXCOORD_VB]);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(skinnedModel.TexCoords[0]) * skinnedModel.TexCoords.size(), &skinnedModel.TexCoords[0], GL_STATIC_DRAW);
-    glEnableVertexAttribArray(TEX_COORD_LOCATION);
-    glVertexAttribPointer(TEX_COORD_LOCATION, 2, GL_FLOAT, GL_FALSE, 0, 0);
-
-    glBindBuffer(GL_ARRAY_BUFFER, skinnedModel.m_Buffers[TANGENT_VB]);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(skinnedModel.Tangents[0]) * skinnedModel.Tangents.size(), &skinnedModel.Tangents[0], GL_STATIC_DRAW);
-    glEnableVertexAttribArray(TANGENT_LOCATION);
-    glVertexAttribPointer(TANGENT_LOCATION, 3, GL_FLOAT, GL_FALSE, 0, 0);
-
-    glBindBuffer(GL_ARRAY_BUFFER, skinnedModel.m_Buffers[BITANGENT_VB]);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(skinnedModel.Bitangents[0]) * skinnedModel.Bitangents.size(), &skinnedModel.Bitangents[0], GL_STATIC_DRAW);
-    glEnableVertexAttribArray(BITANGENT_LOCATION);
-    glVertexAttribPointer(BITANGENT_LOCATION, 3, GL_FLOAT, GL_FALSE, 0, 0);
-
-    glBindBuffer(GL_ARRAY_BUFFER, skinnedModel.m_Buffers[BONE_VB]);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(skinnedModel.Bones[0]) * skinnedModel.Bones.size(), &skinnedModel.Bones[0], GL_STATIC_DRAW);
-    glEnableVertexAttribArray(BONE_ID_LOCATION);
-    glVertexAttribIPointer(BONE_ID_LOCATION, 4, GL_INT, sizeof(VertexBoneData), (const GLvoid*)0);
-    glEnableVertexAttribArray(BONE_WEIGHT_LOCATION);
-    glVertexAttribPointer(BONE_WEIGHT_LOCATION, 4, GL_FLOAT, GL_FALSE, sizeof(VertexBoneData), (const GLvoid*)16);
-
-   /* glBindBuffer(GL_ARRAY_BUFFER, skinnedModel.m_Buffers[SMOOTH_NORMAL_VB]);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(smoothNormals[0]) * smoothNormals.size(), &smoothNormals[0], GL_STATIC_DRAW);
-    glEnableVertexAttribArray(SMOOTH_NORMAL_LOCATION);
-    glVertexAttribPointer(SMOOTH_NORMAL_LOCATION, 3, GL_FLOAT, GL_FALSE, 0, 0);
-    */
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, skinnedModel.m_Buffers[INDEX_BUFFER]);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(skinnedModel.Indices[0]) * skinnedModel.Indices.size(), &skinnedModel.Indices[0], GL_STATIC_DRAW);
+	if (bake) bake_model(skinnedModel);
 
     //std::cout << "INDICES.size: " << Indices.size() << "\n";
-
-
-
 
     return true;
 }
@@ -340,6 +406,10 @@ void FbxImporter::GrabSkeleton(SkinnedModel& skinnedModel, const aiNode* pNode, 
 
 void FbxImporter::LoadAnimation(SkinnedModel& skinnedModel, const std::string& filename)
 {
+    skinnedModel.m_animations.emplace_back(LoadAnimation(filename));
+}
+
+Animation *FbxImporter::LoadAnimation(const std::string &filename) {
     aiScene* m_pAnimationScene;
     Assimp::Importer m_AnimationImporter;
 
@@ -353,7 +423,7 @@ void FbxImporter::LoadAnimation(SkinnedModel& skinnedModel, const std::string& f
     if (!tempAnimScene) {
         std::cout << "Could not load: " << filename << "\n";
         delete animation;
-        return;
+        return nullptr;
     }
 
     // Success
@@ -415,11 +485,9 @@ void FbxImporter::LoadAnimation(SkinnedModel& skinnedModel, const std::string& f
     //std::cout << "Loaded animation: " << animation->_filename << "\n";// << " " << animation->m_duration << "\n";
 
     // Store it
-    skinnedModel.m_animations.emplace_back(animation);
     m_AnimationImporter.FreeScene();
+    return animation;
 }
-
-
 
 void FbxImporter::LoadAllAnimations(SkinnedModel& skinnedModel, const char* Filename)
 {
