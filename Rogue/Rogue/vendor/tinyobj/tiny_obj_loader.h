@@ -2062,7 +2062,7 @@ void LoadMtl(std::map<std::string, int> *material_map,
   // flush last material.
   material_map->insert(std::pair<std::string, int>(
       material.name, static_cast<int>(materials->size())));
-  materials->push_back(material);
+  materials->push_back(std::move(material));
 
   if (warning) {
     (*warning) = warn_ss.str();
@@ -2198,6 +2198,9 @@ bool LoadObj(attrib_t *attrib, std::vector<shape_t> *shapes,
   std::vector<real_t> vc;
   std::vector<tag_t> tags;
   PrimGroup prim_group;
+  prim_group.faceGroup.reserve(128);
+  prim_group.lineGroup.reserve(128);
+  prim_group.pointsGroup.reserve(128);
   std::string name;
 
   // material
@@ -2389,7 +2392,7 @@ bool LoadObj(attrib_t *attrib, std::vector<shape_t> *shapes,
       }
 
       // replace with emplace_back + std::move on C++11
-      prim_group.faceGroup.push_back(face);
+      prim_group.faceGroup.push_back(std::move(face));
 
       continue;
     }
@@ -2491,7 +2494,7 @@ bool LoadObj(attrib_t *attrib, std::vector<shape_t> *shapes,
       (void)ret;  // return value not used.
 
       if (shape.mesh.indices.size() > 0) {
-        shapes->push_back(shape);
+        shapes->push_back(std::move(shape));
       }
 
       shape = shape_t();
@@ -2544,7 +2547,7 @@ bool LoadObj(attrib_t *attrib, std::vector<shape_t> *shapes,
 
       if (shape.mesh.indices.size() > 0 || shape.lines.indices.size() > 0 ||
           shape.points.indices.size() > 0) {
-        shapes->push_back(shape);
+        shapes->push_back(std::move(shape));
       }
 
       // material = -1;
@@ -2607,7 +2610,7 @@ bool LoadObj(attrib_t *attrib, std::vector<shape_t> *shapes,
         tag.stringValues[i] = parseString(&token);
       }
 
-      tags.push_back(tag);
+      tags.push_back(std::move(tag));
 
       continue;
     }
@@ -2686,7 +2689,7 @@ bool LoadObj(attrib_t *attrib, std::vector<shape_t> *shapes,
   // faces(indices)
   if (ret || shape.mesh.indices
                  .size()) {  // FIXME(syoyo): Support other prims(e.g. lines)
-    shapes->push_back(shape);
+    shapes->push_back(std::move(shape));
   }
   prim_group.clear();  // for safety
 
@@ -2901,8 +2904,7 @@ bool LoadObjWithCallback(std::istream &inStream, const callback_t &callback,
       names.clear();
 
       while (!IS_NEW_LINE(token[0])) {
-        std::string str = parseString(&token);
-        names.push_back(str);
+        names.push_back(parseString(&token));
         token += strspn(token, " \t\r");  // skip tag
       }
 

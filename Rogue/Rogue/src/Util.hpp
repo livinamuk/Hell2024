@@ -242,9 +242,9 @@ namespace Util {
         return result;
     }
 
-    inline bool FileExists(const std::string& name) {
+    inline bool FileExists(const std::string_view name) {
         struct stat buffer;
-        return (stat(name.c_str(), &buffer) == 0);
+        return (stat(name.data(), &buffer) == 0);
     }
 
     inline glm::mat4 GetVoxelModelMatrix(VoxelFace& voxel, float voxelSize) {
@@ -432,36 +432,29 @@ namespace Util {
         return info;
     }
 
-    inline FileInfo GetFileInfo(const std::filesystem::directory_entry filepath)
+    inline FileInfo GetFileInfo(const std::filesystem::directory_entry &filepath)
     {
-        std::stringstream ss;
-        ss << filepath.path();
-        std::string fullpath = ss.str();
-        // remove quotes at beginning and end
-        fullpath = fullpath.substr(1);
-        fullpath = fullpath.substr(0, fullpath.length() - 1);
-        // isolate name
-        std::string filename = fullpath.substr(fullpath.rfind("/") + 1);
-        filename = filename.substr(0, filename.length() - 4);
-        // isolate filetype
-        std::string filetype = fullpath.substr(fullpath.length() - 3);
-        // isolate direcetory
-        std::string directory = fullpath.substr(0, fullpath.rfind("/") + 1);
-        // material name
-        std::string materialType = "NONE";
-        if (filename.length() > 5) {
-            std::string query = filename.substr(filename.length() - 3);
-            if (query == "ALB" || query == "RMA" || query == "NRM")
-                materialType = query;
-        }
-        // RETURN IT
-        FileInfo info;
-        info.fullpath = fullpath;
-        info.filename = filename;
-        info.filetype = filetype;
-        info.directory = directory;
-        info.materialType = materialType;
-        return info;
+        const auto &path{ filepath.path() };
+
+        static const auto get_material_type{ [] (std::string_view filename) {
+			if (filename.size() > 5) {
+				filename.remove_prefix(filename.size() - 3);
+				if (filename == "ALB" || filename == "RMA" || filename == "NRM") {
+					return std::string{ filename };
+				}
+			}
+            return std::string{ "NONE" };
+        }};
+
+		const auto stem{ path.has_stem() ? path.stem().string() : "" };
+
+        return FileInfo{
+            path.string(),
+            path.parent_path().string(),
+            stem,
+            path.has_extension() ? path.extension().string().substr(1) : "", // remove dot
+            get_material_type(stem)
+        };
     }
 
     inline float YRotationBetweenTwoPoints(glm::vec3 a, glm::vec3 b) {

@@ -1,3 +1,4 @@
+#include "BS_thread_pool.hpp"
 #include "Renderer.h"
 #include "GBuffer.h"
 #include "PresentFrameBuffer.h"
@@ -685,29 +686,52 @@ void Renderer::RenderFrame(Player* player) {
 
 
 struct CubemapTexutre {
+    struct face_info{
+        uint8_t *texture{ nullptr };
+        int32_t width{};
+        int32_t height{};
+        int32_t format{ GL_RGB };
+        uint8_t id{};
+    };
 
 	GLuint ID;
 
 	void Create(std::vector<std::string>& textures) {
 		glGenTextures(1, &ID);
 		glBindTexture(GL_TEXTURE_CUBE_MAP, ID);
-		int width, height, nrChannels;
-		for (unsigned int i = 0; i < textures.size(); i++) {
-			unsigned char* data = stbi_load(textures[i].c_str(), &width, &height, &nrChannels, 0);
-			if (data) {
-				GLint format = GL_RGB;
+
+        BS::thread_pool pool(textures.size());
+        std::vector<face_info> result(textures.size());
+
+        pool.detach_loop(size_t{}, textures.size(), [&textures, &result](const size_t i) {
+            face_info &info{ result[i] };
+		    int32_t nrChannels;
+            info.id = static_cast<uint8_t>(i);
+			info.texture = stbi_load(textures[i].c_str(), &info.width, &info.height, &nrChannels, 0);
+			if (info.texture) {
 				if (nrChannels == 4)
-					format = GL_RGBA;
+					info.format = GL_RGBA;
 				if (nrChannels == 1)
-					format = GL_RED;
-				glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGBA, width, height, 0, format, GL_UNSIGNED_BYTE, data);
-				stbi_image_free(data);
-			}
-			else {
+					info.format = GL_RED;
+			} else {
 				std::cout << "Failed to load cubemap\n";
-				stbi_image_free(data);
+                stbi_image_free(info.texture);
+                info.texture = nullptr;
 			}
-		}
+            return info;
+        });
+        pool.wait();
+
+        for (auto info : result) {
+            if (info.texture == nullptr) {
+                continue;
+            }
+		    glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + info.id, 0, GL_RGBA,
+                info.width, info.height, 0, info.format, GL_UNSIGNED_BYTE, info.texture);
+
+            stbi_image_free(info.texture);
+        }
+
 		glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -2186,7 +2210,7 @@ void DrawInstanced(Mesh& mesh, std::vector<glm::mat4>& matrices) {
         glNamedBufferSubData(_ssbos.instanceMatrices, 0, matrices.size() * sizeof(glm::mat4), &matrices[0]);
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, _ssbos.instanceMatrices);
         glBindVertexArray(mesh._VAO);
-        glDrawElementsInstanced(GL_TRIANGLES, mesh._indexCount, GL_UNSIGNED_INT, 0, matrices.size());
+        glDrawElementsInstanced(GL_TRIANGLES, mesh.GetIndexCount(), GL_UNSIGNED_INT, 0, matrices.size());
     }
 }
 

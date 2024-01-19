@@ -7,18 +7,20 @@ class Mesh {
 
 	public:
 		Mesh();
-		Mesh (std::vector<Vertex> vertices, std::vector<unsigned int> indices, std::string name);
+		Mesh (std::vector<Vertex> vertices, std::vector<unsigned int> indices, std::string name,
+			const bool instant_bake = true);
 		void Draw();
 		int GetIndexCount();
 		int GetVAO();
 		void CreateTriangleMesh();
 		void CreateConvexMesh();
 
+		void Bake();
+
 	public:
 		unsigned int _VBO = 0;
 		unsigned int _VAO = 0;
 		unsigned int _EBO = 0;
-		unsigned int _indexCount = 0;
 		std::string _name;
 		std::vector<Vertex> vertices;
 		std::vector<unsigned int> indices;

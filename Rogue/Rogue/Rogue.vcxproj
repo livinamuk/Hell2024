@@ -62,10 +62,11 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>vendor\compressonator\include;vendor\tracy\public;vendor\tinyobj;vendor\GLFW\include;vendor\glm;vendor\glad\include;vendor\stb_image;vendor\fmod\include;vendor\assimp\include;vendor\rapidjson\include;vendor\physx\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>vendor\compressonator\include;vendor\tracy\public;vendor\tinyobj;vendor\GLFW\include;vendor\glm;vendor\glad\include;vendor\stb_image;vendor\fmod\include;vendor\assimp\include;vendor\rapidjson\include;vendor\physx\include;vendor\thread_pool\include</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -97,7 +98,7 @@ copy /Y "$(ProjectDir)vendor\dll_debug\PVDRuntime_64.dll" "$(TargetDir)PVDRuntim
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;TRACY_ENABLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>vendor\compressonator\include;vendor\tracy\public;vendor\tinyobj;vendor\GLFW\include;vendor\glm;vendor\glad\include;vendor\stb_image;vendor\fmod\include;vendor\assimp\include;vendor\rapidjson\include;vendor\physx\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>vendor\compressonator\include;vendor\tracy\public;vendor\tinyobj;vendor\GLFW\include;vendor\glm;vendor\glad\include;vendor\stb_image;vendor\fmod\include;vendor\assimp\include;vendor\rapidjson\include;vendor\physx\include;vendor\thread_pool\include</AdditionalIncludeDirectories>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
@@ -105,6 +106,7 @@ copy /Y "$(ProjectDir)vendor\dll_debug\PVDRuntime_64.dll" "$(TargetDir)PVDRuntim
       <WholeProgramOptimization>false</WholeProgramOptimization>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <TreatWarningAsError>false</TreatWarningAsError>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
