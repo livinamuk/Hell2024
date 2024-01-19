@@ -199,10 +199,8 @@ void GL::Init(int width, int height) {
     glGetIntegerv(GL_MINOR_VERSION, &minor);
     const GLubyte* vendor = glGetString(GL_VENDOR);
     const GLubyte* renderer = glGetString(GL_RENDERER);
-    std::cout << "\nVENDOR: " << vendor << "\n";
-    std::cout << "RENDERER: " << renderer << "\n";
-    std::cout << "MAJOR: " << major << "\n";
-    std::cout << "MINOR: " << minor << "\n\n";
+    std::cout << "GPU: " << renderer << "\n";
+    std::cout << "Highest supported GL verison: " << major << "." << minor << "\n";
 
     int flags;
     glGetIntegerv(GL_CONTEXT_FLAGS, &flags);

@@ -235,14 +235,8 @@ bool Texture::Bake() {
 		return true;
 	}
 
-	if (_data == nullptr) return false;
-
-	if (_filename == "MenuBorderHorizontal") {
-		unsigned bytePerPixel = _NumOfChannels;
-
-		for (int i = 0; i < _width * _height; i++) {
-			std::cout << _data[i] << "\n";
-		}
+	if (_data == nullptr) {
+		return false;
 	}
 
 	glGenTextures(1, &_ID);
