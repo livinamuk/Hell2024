@@ -11,11 +11,13 @@
 #include "../Util.hpp"
 #include "../Renderer/Model.h"
 #include "FbxImporter.h"
+#include "../Renderer/Renderer.h"
 
 std::vector<Texture> _textures;
 std::vector<Material> _materials;
 std::vector<Model> _models;
 std::vector<SkinnedModel> _skinnedModels;
+
 
 namespace {
 
@@ -25,6 +27,8 @@ BS::thread_pool g_asset_mgr_loading_pool{ thread_count };
 size_t count_files_in(const std::string_view path) {
 	return std::distance(std::filesystem::directory_iterator(path), {});
 }
+
+std::mutex _loadLogMutex;
 
 std::vector<std::future<Texture *>> load_textures_from_directory(const std::string_view directory) {
 	std::vector<std::future<Texture *>> loadedTextures;
@@ -37,9 +41,16 @@ std::vector<std::future<Texture *>> load_textures_from_directory(const std::stri
 
 		if (info.filetype == "png" || info.filetype == "tga" || info.filetype == "jpg") {
 			auto &texture{ _textures.emplace_back(Texture{}) };
+
+			if (info.filename.substr(0, 4) != "char") {
+				_loadLogMutex.lock();
+				AssetManager::_loadLog.push_back("Loaded " + info.filename + "." + info.filetype);
+				_loadLogMutex.unlock();
+			}
+
 			loadedTextures.emplace_back(g_asset_mgr_loading_pool.submit_task(
 				[texture_ptr = &texture, path = std::move(info.fullpath)]() -> Texture * {
-					if (texture_ptr->Load(path, false)) {
+					if (texture_ptr->Load(path, false)) {		
 						return texture_ptr;
 					}
 					std::cout << "Failed to load " << path << "\n";
@@ -92,20 +103,13 @@ void AssetManager::LoadEverythingElse() {
 	const size_t textures_count{ count_files_in("res/textures/") + count_files_in("res/textures/ui") };
 	_textures.reserve(_textures.size() + textures_count);
 
-	std::vector<std::future<Texture*>> loadedTextures;
-	loadedTextures.reserve(textures_count);
+	_loadedTextures.reserve(textures_count);
 
 	if (auto loaded{ load_textures_from_directory("res/textures/ui") }; !loaded.empty()) {
-		loadedTextures.insert(loadedTextures.end(), std::make_move_iterator(loaded.begin()), std::make_move_iterator(loaded.end()));
+		_loadedTextures.insert(_loadedTextures.end(), std::make_move_iterator(loaded.begin()), std::make_move_iterator(loaded.end())); 
 	}
 	if (auto loaded{ load_textures_from_directory("res/textures/") }; !loaded.empty()) {
-		loadedTextures.insert(loadedTextures.end(), std::make_move_iterator(loaded.begin()), std::make_move_iterator(loaded.end()));
-	}
-
-	for (auto&& futureTexture : loadedTextures) {
-		if (auto texture{ futureTexture.get() }; texture) {
-			texture->Bake();
-		}
+		_loadedTextures.insert(_loadedTextures.end(), std::make_move_iterator(loaded.begin()), std::make_move_iterator(loaded.end()));
 	}
 
 	const auto models_count{ count_files_in("res/models/") };
@@ -134,6 +138,15 @@ void AssetManager::LoadEverythingElse() {
 	g_asset_mgr_loading_pool.wait();
 	for (auto& model : _models) {
 		model.Bake();
+	}
+
+
+
+	// Load assets
+	for (auto&& futureTexture : AssetManager::_loadedTextures) {
+		if (auto texture{ futureTexture.get() }; texture) {
+			texture->Bake();
+		}
 	}
 
 	// Build materials

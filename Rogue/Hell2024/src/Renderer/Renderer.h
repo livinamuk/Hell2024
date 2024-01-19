@@ -5,7 +5,9 @@
 
 namespace Renderer {
 
+	void InitMinimumToRenderLoadingFrame();
 	void Init();
+	void RenderLoadingFrame();
 	void RenderFrame(Player* player);
 	void RenderEditorFrame();
 	void RenderDebugMenu();

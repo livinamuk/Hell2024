@@ -148,7 +148,7 @@ void GL::Init(int width, int height) {
 
     glfwInit();
 	glfwSetErrorCallback([](int error, const char* description) {
-		std::cout << "GLFW Error (" << std::to_string(error) << "): " << description << std::endl;
+        std::cout << "GLFW Error (" << std::to_string(error) << "): " << description << "\n";
 	});
 
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
@@ -199,8 +199,8 @@ void GL::Init(int width, int height) {
     glGetIntegerv(GL_MINOR_VERSION, &minor);
     const GLubyte* vendor = glGetString(GL_VENDOR);
     const GLubyte* renderer = glGetString(GL_RENDERER);
-    std::cout << "GPU: " << renderer << "\n";
-    std::cout << "Highest supported GL verison: " << major << "." << minor << "\n";
+    std::cout << "\nGPU: " << renderer << "\n";
+    std::cout << "GL version: " << major << "." << minor << "\n\n";
 
     int flags;
     glGetIntegerv(GL_CONTEXT_FLAGS, &flags);

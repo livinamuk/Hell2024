@@ -35,10 +35,24 @@
 
 std::vector<glm::vec3> debugPoints;
 
-struct MenuRenderTarget {
-	GLuint fbo = { 0 };
-	GLuint texutre = { 0 };
-} _menuRenderTarget;
+
+struct RenderTarget {
+    GLuint fbo = { 0 };
+	GLuint texture = { 0 };
+	GLuint width = { 0 };
+	GLuint height = { 0 };
+
+    void Create(int width, int height) {
+		if (fbo != 0) {
+			glDeleteFramebuffers(1, &fbo);
+		}
+		glGenFramebuffers(1, &fbo);
+		this->width = width;
+		this->height = height;
+    }
+};
+
+RenderTarget _menuRenderTarget;
 
 struct BlurBuffer {
 	GLuint width = 0;
@@ -320,25 +334,30 @@ void DrawFullScreenQuad() {
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 }
 
+void Renderer::InitMinimumToRenderLoadingFrame() {
+
+	_shaders.UI.Load("ui.vert", "ui.frag");
+
+	// Menu FBO
+	_menuRenderTarget.Create(_renderWidth, _renderHeight);
+	glBindFramebuffer(GL_FRAMEBUFFER, _menuRenderTarget.fbo);
+	glGenTextures(1, &_menuRenderTarget.texture);
+	glBindTexture(GL_TEXTURE_2D, _menuRenderTarget.texture);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, _renderWidth, _renderHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, _menuRenderTarget.texture, 0);
+
+}
+
 void Renderer::Init() {
 
     glGenVertexArrays(1, &_pointLineVAO);
     glGenBuffers(1, &_pointLineVBO);
     glPointSize(2);
 
-    // Menu FBO
-	glGenFramebuffers(1, &_menuRenderTarget.fbo);
-	glGenTextures(1, &_menuRenderTarget.texutre);
-	glBindFramebuffer(GL_FRAMEBUFFER, _menuRenderTarget.fbo);
-	glBindTexture(GL_TEXTURE_2D, _menuRenderTarget.texutre);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, _renderWidth, _renderHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, _menuRenderTarget.texutre, 0);
-
     _shaders.solidColor.Load("solid_color.vert", "solid_color.frag");
     _shaders.shadowMap.Load("shadowmap.vert", "shadowmap.frag", "shadowmap.geom");
-    _shaders.UI.Load("ui.vert", "ui.frag");
     _shaders.editorSolidColor.Load("editor_solid_color.vert", "editor_solid_color.frag");
     _shaders.composite.Load("composite.vert", "composite.frag");
     _shaders.fxaa.Load("fxaa.vert", "fxaa.frag");
@@ -356,16 +375,12 @@ void Renderer::Init() {
 	_shaders.skybox.Load("skybox.vert", "skybox.frag");
 	_shaders.computeTest.Load("res/shaders/test.comp");
     
-
 	_shaders.blurVertical.Load("blurVertical.vert", "blur.frag");
 	_shaders.blurHorizontal.Load("blurHorizontal.vert", "blur.frag");
     
-
-
     _cubeMesh = MeshUtil::CreateCube(1.0f, 1.0f, true);
 
     RecreateFrameBuffers(0);
-
 
 
     /*
@@ -386,6 +401,43 @@ void Renderer::Init() {
     FindProbeCoordsWithinMapBounds();
 
     InitCompute();
+}
+
+void Renderer::RenderLoadingFrame() {
+
+    glBindFramebuffer(GL_FRAMEBUFFER, _menuRenderTarget.fbo);
+	glViewport(0, 0, _menuRenderTarget.width, _menuRenderTarget.height);
+	glDisable(GL_DEPTH_TEST);
+	glDisable(GL_CULL_FACE);
+
+	glClearColor(0, 0, 0.1f, 0);
+	glClear(GL_COLOR_BUFFER_BIT);
+	glDisable(GL_DEPTH_TEST);
+
+	_shaders.UI.Use();
+	_shaders.UI.SetVec3("color", WHITE);
+	_shaders.UI.SetVec3("overrideColor", WHITE);
+
+    Transform transform;
+    transform.scale = glm::vec3(0.15f, 0.15f, 1.0f);
+	_shaders.UI.SetMat4("model", transform.to_mat4());
+
+    std::string text = "We are all alone on life's journey, held captive by the limitations of human consciousness.\n";
+    for (auto& str : AssetManager::_loadLog) {
+        text += str + "\n";
+    }
+	TextBlitter::_debugTextToBilt = text;
+    TextBlitter::Update(1.0f / 60.0f);
+	Renderer::RenderUI();    
+
+	glViewport(0, 0, GL::GetWindowWidth(), GL::GetWindowHeight());
+	glBindFramebuffer(GL_READ_FRAMEBUFFER, _menuRenderTarget.fbo);
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+	glReadBuffer(GL_COLOR_ATTACHMENT0);
+	glBlitFramebuffer(0, 0, _menuRenderTarget.width, _menuRenderTarget.height, 0, 0, GL::GetWindowWidth(), GL::GetWindowHeight(), GL_COLOR_BUFFER_BIT, GL_NEAREST);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+
 }
 
 
@@ -532,6 +584,9 @@ void Renderer::RenderFrame(Player* player) {
     PlayerRenderTarget& playerRenderTarget = GetPlayerRenderTarget(playerIndex);
     GBuffer& gBuffer = playerRenderTarget.gBuffer;
     PresentFrameBuffer& presentFrameBuffer = playerRenderTarget.presentFrameBuffer;
+
+	_shaders.UI.Use();
+	_shaders.UI.SetVec3("overrideColor", WHITE);
 
     gBuffer.Bind();
 	unsigned int attachments[6] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3, GL_COLOR_ATTACHMENT4, GL_COLOR_ATTACHMENT6 };
@@ -1870,9 +1925,12 @@ void Renderer::RenderDebugMenu() {
 //	std::cout << menuWidth << "\n";
     	
 	// Draw menu background
+
+	_shaders.UI.SetVec3("overrideColor", RED);
 	AssetManager::GetTexture("MenuBG")->Bind(0);
 	DrawQuad(_renderWidth, _renderHeight, menuWidth, totalMenuHeight, viewportCenterX, viewportCenterY, true);
 
+	_shaders.UI.SetVec3("overrideColor", RED);
 	AssetManager::GetTexture("MenuBorderHorizontal")->Bind(0);
 	DrawQuad(_renderWidth, _renderHeight, menuWidth, 3, viewportCenterX, viewportCenterY - (totalMenuHeight * 0.5f), true);
 	DrawQuad(_renderWidth, _renderHeight, menuWidth, 3, viewportCenterX, viewportCenterY + (totalMenuHeight * 0.5f), true);
@@ -1894,14 +1952,16 @@ void Renderer::RenderDebugMenu() {
     TextBlitter::BlitAtPosition(DebugMenu::GetTextLeft(), textLeftX, subMenuY, false, 1.0f);
 	TextBlitter::BlitAtPosition(DebugMenu::GetTextRight(), textRightX, subMenuY, false, 1.0f);
 
+	_shaders.UI.SetVec3("overrideColor", RED);
     TextBlitter::Update(1.0f / 60.0f);
 	Renderer::RenderUI();
+	_shaders.UI.SetVec3("overrideColor", WHITE);
 
     // Draw the menu into the main frame buffer
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	glViewport(0, 0, GL::GetWindowWidth(), GL::GetWindowHeight());
 	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, _menuRenderTarget.texutre);
+	glBindTexture(GL_TEXTURE_2D, _menuRenderTarget.texture);
 	glDisable(GL_DEPTH_TEST);
 	glEnable(GL_BLEND);
 	_shaders.UI.Use();
@@ -1980,7 +2040,9 @@ void Renderer::RenderUI() {
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glBlendEquation(GL_FUNC_ADD);
-    _shaders.UI.Use();
+
+
+	_shaders.UI.Use();
 
     if (_quadMesh.GetIndexCount() == 0) {
         Vertex vertA, vertB, vertC, vertD;

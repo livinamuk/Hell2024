@@ -5,6 +5,7 @@
 #include <vector>
 #include "../Common.h"
 #include "Animation/SkinnedModel.h"
+#include <future>
 
 namespace AssetManager {
 	void Init();
@@ -22,4 +23,7 @@ namespace AssetManager {
 
 	inline std::vector<Extent2Di> _charExtents;
 	inline GLuint _textureArray;
+
+	inline std::vector<std::string> _loadLog;
+	inline std::vector<std::future<Texture*>> _loadedTextures;
 }

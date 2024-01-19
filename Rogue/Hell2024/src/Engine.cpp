@@ -27,12 +27,34 @@ void NextViewportMode();
 
 void Engine::Run() {
 
+	GL::Init(1920 * 1.5f, 1080 * 1.5f);
+	Renderer::InitMinimumToRenderLoadingFrame();
+	AssetManager::LoadFont();
+	AssetManager::LoadEverythingElse();
+
+    while (GL::WindowIsOpen() && GL::WindowHasNotBeenForceClosed()) {
+
+		GL::ProcessInput();
+		Input::Update();
+        Renderer::RenderLoadingFrame();
+        GL::SwapBuffersPollEvents();
+
+        // If loading is complete BREAK OUT
+    }
+
+    // Begin main loop
+  
+
+    return;
+
+
     Init();
 
     double lastFrame = glfwGetTime();
     double thisFrame = lastFrame;
     double deltaTimeAccumulator = 0.0;
-    double fixedDeltaTime = 1.0 / 60.0;
+	double fixedDeltaTime = 1.0 / 60.0;
+
 
     while (GL::WindowIsOpen() && GL::WindowHasNotBeenForceClosed()) {
 
@@ -123,14 +145,14 @@ void Engine::Init() {
 
     std::cout << "We are all alone on life's journey, held captive by the limitations of human consciousness.\n";
 
-    GL::Init(1920 * 1.5f, 1080 * 1.5f);
+
+
     Input::Init();
     Physics::Init();
 
     Editor::Init();
     Audio::Init();
-	AssetManager::LoadFont();
-    AssetManager::LoadEverythingElse();
+
 
     Scene::LoadMap("map.txt");
 
