@@ -21,6 +21,9 @@ void Scene::Update(float deltaTime) {
 
     SetPlayerGroundedStates();
     ProcessBullets();
+
+    // fix this
+	Renderer::_shadowMapsAreDirty = true;
 	
     for (BulletCasing& bulletCasing : _bulletCasings) {
         bulletCasing.Update(deltaTime);
@@ -117,7 +120,6 @@ void Scene::Update(float deltaTime) {
 
 
 void SetPlayerGroundedStates() {
-	// Set player grounded states
 	for (Player& player : Scene::_players) {
 		player._isGrounded = false;
 		for (auto& report : Physics::_characterCollisionReports) {
@@ -663,7 +665,6 @@ void Scene::AddDoor(Door& door) {
 
 void Scene::CreatePointCloud() {
 
-    Renderer::_shadowMapsAreDirty = true;
     float pointSpacing = Renderer::GetPointCloudSpacing();;
 
     _cloudPoints.clear();
