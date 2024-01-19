@@ -203,5 +203,6 @@ namespace Scene {
     //void CreateScenePhysicsObjects();
     void ProcessPhysicsCollisions();
 	void RecreateAllPhysicsObjects();
-	void RemoveAllDecalsFromWindow(Window* window);
+	void RemoveAllDecalsFromWindow(Window* window); 
+    Player* GetPlayerFromCharacterControler(PxController* characterController);
 }

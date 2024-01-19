@@ -18,12 +18,23 @@ struct PhysicsFilterData {
 struct CollisionReport {
 	PxActor* rigidA = NULL;
 	PxActor* rigidB = NULL;
-	/*PxShape* shapeA;
-	PxShape* shapeB;
-	CollisionGroup groupA;
-	CollisionGroup groupB;*/
 };
 
+struct CharacterCollisionReport {
+	PxController* characterController;
+	PxShape* hitShape;
+	PxRigidActor* hitActor;
+	glm::vec3 hitNormal;
+	glm::vec3 worldPosition;
+};
+
+
+class CCTHitCallback : public PxUserControllerHitReport {
+public:
+	void onShapeHit(const PxControllerShapeHit& hit);
+	void onControllerHit(const PxControllersHit& hit);
+	void onObstacleHit(const PxControllerObstacleHit& hit);
+};
 
 namespace Physics {
 	void Init();
@@ -32,8 +43,8 @@ namespace Physics {
 	PxConvexMesh* CreateConvexMesh(PxU32 numVertices, const PxVec3* vertices);
 	PxScene* GetScene();
 	PxPhysics* GetPhysics();
-	PxMaterial* GetDefaultMaterial();	
-	PxShape* CreateBoxShape(float width, float height, float depth, Transform shapeOffset = Transform(), PxMaterial * material = NULL);
+	PxMaterial* GetDefaultMaterial();
+	PxShape* CreateBoxShape(float width, float height, float depth, Transform shapeOffset = Transform(), PxMaterial* material = NULL);
 	PxRigidDynamic* CreateRigidDynamic(Transform transform, PhysicsFilterData filterData, PxShape* shape, Transform shapeOffset = Transform());
 	PxRigidStatic* CreateRigidStatic(Transform transform, PhysicsFilterData physicsFilterData, PxShape* shape, Transform shapeOffset = Transform());
 	PxRigidDynamic* CreateRigidDynamic(glm::mat4 matrix, PhysicsFilterData filterData, PxShape* shape);
@@ -43,17 +54,14 @@ namespace Physics {
 	void EnableRigidBodyDebugLines(PxRigidBody* rigidBody);
 	void DisableRigidBodyDebugLines(PxRigidBody* rigidBody);
 	std::vector<CollisionReport>& GetCollisions();
-	void ClearCollisionList();
+	void ClearCollisionLists();
 
 	inline std::vector<CollisionReport> _collisionReports;
+	inline std::vector<CharacterCollisionReport> _characterCollisionReports;
 	inline PxControllerManager* _characterControllerManager;
-
-	//void RemoveGroundPlaneFilterData();
-	//void AddGroundPlaneFilterData();
+	inline CCTHitCallback _cctHitCallback;
 
 	PxRigidActor* GetGroundPlane();
-
-	//inline int _shellCollisionsThisFrame = 0;
 }
 
 class ContactReportCallback : public PxSimulationEventCallback {
@@ -92,19 +100,19 @@ public:
 		if (!pairHeader.actors[0] || !pairHeader.actors[1]) {
 			return;
 		}
-		CollisionReport report; 
+		CollisionReport report;
 		report.rigidA = (PxActor*)pairHeader.actors[0];
 		report.rigidB = (PxActor*)pairHeader.actors[1];
-	//	report.parentA = (PxRigidActor*)report.rigidA->userData;
-	//	report.parentB = (PxRigidActor*)report.rigidB->userData;
-		/*report.rigidA = (PxRigidActor*)pairHeader.actors[0];
-		report.rigidB = (PxRigidActor*)pairHeader.actors[1];
-		report.rigidA->getShapes(&report.shapeA, 1);
-		report.rigidB->getShapes(&report.shapeB, 1);
-		report.groupA = (CollisionGroup)report.shapeA->getQueryFilterData().word1;
-		report.groupB = (CollisionGroup)report.shapeB->getQueryFilterData().word1;
-		report.parentA = report.rigidA->userData;
-		report.parentB = report.rigidB->userData;*/
+		//	report.parentA = (PxRigidActor*)report.rigidA->userData;
+		//	report.parentB = (PxRigidActor*)report.rigidB->userData;
+			/*report.rigidA = (PxRigidActor*)pairHeader.actors[0];
+			report.rigidB = (PxRigidActor*)pairHeader.actors[1];
+			report.rigidA->getShapes(&report.shapeA, 1);
+			report.rigidB->getShapes(&report.shapeB, 1);
+			report.groupA = (CollisionGroup)report.shapeA->getQueryFilterData().word1;
+			report.groupB = (CollisionGroup)report.shapeB->getQueryFilterData().word1;
+			report.parentA = report.rigidA->userData;
+			report.parentB = report.rigidB->userData;*/
 		Physics::_collisionReports.push_back(report);
 	}
 };

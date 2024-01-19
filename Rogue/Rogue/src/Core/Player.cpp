@@ -47,7 +47,6 @@ Player::Player(glm::vec3 position, glm::vec3 rotation) {
 
 	_shadowMap.Init();
 	
-
 	_weaponInventory[Weapon::KNIFE] = true;
 	_weaponInventory[Weapon::GLOCK] = true;
 	_weaponInventory[Weapon::SHOTGUN] = false;
@@ -65,50 +64,6 @@ void Player::SetWeapon(Weapon weapon) {
 PxSweepCallback* CreateSweepBuffer() {
 	return new PxSweepBuffer;
 }
-
-void Player::DetermineIfGrounded() {
-	glm::vec3 rayOrigin = _position + glm::vec3(0, 0.01, 0);
-	glm::vec3 rayDirection = glm::vec3(0, -1, 0);
-	PxReal rayLength = 0.15f;
-	PxScene* scene = Physics::GetScene();
-	PxVec3 origin = PxVec3(rayOrigin.x, rayOrigin.y, rayOrigin.z);
-	PxVec3 unitDir = PxVec3(rayDirection.x, rayDirection.y, rayDirection.z);
-	PxRaycastBuffer hit;
-	const PxHitFlags outputFlags = PxHitFlag::ePOSITION;
-	PxQueryFilterData filterData = PxQueryFilterData();
-	filterData.data.word0 = RaycastGroup::RAYCAST_ENABLED;
-	filterData.data.word2 = CollisionGroup::ENVIROMENT_OBSTACLE;
-
-	_isGrounded = false;
-
-	/*
-	_isGrounded = scene->raycast(origin, unitDir, rayLength, hit, outputFlags, filterData);
-
-
-	static PxSweepCallback* callback = CreateSweepBuffer();
-	
-
-	PxShape* shape;
-	_characterController->getActor()->getShapes(&shape, 1);
-	const PxGeometry& geometry = shape->getGeometry();
-	const PxTransform pose = _characterController->getActor()->getGlobalPose();
-	const PxVec3 dir = { 0.0f, -1.0f, 0.0f };
-	const PxReal dist = 10.9f;
-
-	PxQueryFilterData filterData2 = PxQueryFilterData();
-	filterData2.data.word0 = RaycastGroup::RAYCAST_ENABLED;
-	filterData2.data.word1 = CollisionGroup::ENVIROMENT_OBSTACLE;
-	filterData2.data.word2 = CollisionGroup::PLAYER;
-	scene->sweep(geometry, pose, dir, dist, *callback, outputFlags);
-
-	_isGrounded = (callback->nbTouches > 0);
-
-	std::cout << callback->nbTouches << "\n";
-	*/
-	
-	
-}
-
 
 bool Player::MuzzleFlashIsRequired() {	
 	return (_muzzleFlashCounter > 0);
@@ -232,16 +187,16 @@ void Player::Update(float deltaTime) {
 	}
 
 	// Jump
-	DetermineIfGrounded();
-	if (Input::KeyPressed(HELL_KEY_SPACE) && !_ignoreControl) {
+	if (Input::KeyPressed(HELL_KEY_SPACE) && !_ignoreControl && _isGrounded) {
 		_yVelocity = 6.5f * deltaTime;
 		_isGrounded = false;
 	}
+
 	//WipeYVelocityToZeroIfHeadHitCeiling();
 
 	// Gravity		
 	if (_isGrounded) {
-		_yVelocity = 0;
+		_yVelocity = -0.01f;
 	}
 	else {
 		_yVelocity -= 0.50f * deltaTime;
@@ -1010,6 +965,10 @@ bool Player::CursorShouldBeInterect() {
 #define PLAYER_CAPSULE_HEIGHT 0.6f
 #define PLAYER_CAPSULE_RADIUS 0.1f
 
+
+//CCTHitCallback _cctHitCallback;
+
+
 void Player::CreateCharacterController(glm::vec3 position) {
 
 	PxMaterial* material = Physics::GetDefaultMaterial();
@@ -1020,16 +979,8 @@ void Player::CreateCharacterController(glm::vec3 position) {
 	desc->position = PxExtendedVec3(position.x, position.y + (PLAYER_CAPSULE_HEIGHT / 2) + (PLAYER_CAPSULE_RADIUS * 2), position.z);
 	desc->material = material;
 	desc->stepOffset = 0.1f;
-
-	//std::printf("VALID: %d \n", desc->isValid());
-
+	desc->reportCallback = &Physics::_cctHitCallback;
 	_characterController = Physics::_characterControllerManager->createController(*desc);
-	/*if (!_characterController)
-		std::printf("Failed to instance a controller\n");
-	else
-		std::printf("PhysX validated an actor's character controller\n");*/
-
-	//m_characterController->getActor()->userData = entityData;
 
 	PxShape* shape;
 	_characterController->getActor()->getShapes(&shape, 1);

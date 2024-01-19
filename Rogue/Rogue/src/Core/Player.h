@@ -67,7 +67,6 @@ public:
 	float GetRadius();
 	bool CursorShouldBeInterect();
 	void CreateCharacterController(glm::vec3 position);
-	void DetermineIfGrounded();
 	void WipeYVelocityToZeroIfHeadHitCeiling();
 
 	ShadowMap _shadowMap;

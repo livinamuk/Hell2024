@@ -62,6 +62,9 @@ void Engine::Run() {
         Audio::Update();
         if (_engineMode == EngineMode::Game) {
 
+            //static int frameNumber = 0;
+            //std::cout << "FRAME: " << frameNumber++ << "\n";
+
             while (deltaTimeAccumulator >= fixedDeltaTime) {
                 deltaTimeAccumulator -= fixedDeltaTime;
                 Physics::StepPhysics(fixedDeltaTime);
@@ -73,6 +76,7 @@ void Engine::Run() {
             for (Player& player : Scene::_players) {
                 player.Update(deltaTime);
             }
+
         }
         else if (_engineMode == EngineMode::Editor) {
 
@@ -200,7 +204,7 @@ void Engine::LazyKeyPresses() {
         NextViewportMode();
     }
     if (Input::KeyPressed(GLFW_KEY_N)) {
-        Physics::ClearCollisionList();
+        Physics::ClearCollisionLists();
         Scene::LoadMap("map.txt");
         Audio::PlayAudio(AUDIO_SELECT, 1.00f);
 

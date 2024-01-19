@@ -5,7 +5,7 @@
 #include "../Util.hpp"
 
 /*
-#ifdef _DEBUG 
+#ifdef _DEBUG
 #define DEBUG
 #else
 #define NDEBUG
@@ -23,16 +23,16 @@ public:
     }
 }gErrorCallback;
 
-PxFoundation*           _foundation;
+PxFoundation* _foundation;
 PxDefaultAllocator      _allocator;
-PxPvd*                  _pvd = NULL;
-PxPhysics*              _physics = NULL;
+PxPvd* _pvd = NULL;
+PxPhysics* _physics = NULL;
 PxDefaultCpuDispatcher* _dispatcher = NULL;
-PxScene*                _scene = NULL;
-PxMaterial*             _defaultMaterial = NULL;
-ContactReportCallback   _contactReportCallback; 
-PxRigidStatic*          _groundPlane = NULL;
-PxShape*                _groundShape = NULL;
+PxScene* _scene = NULL;
+PxMaterial* _defaultMaterial = NULL;
+ContactReportCallback   _contactReportCallback;
+PxRigidStatic* _groundPlane = NULL;
+PxShape* _groundShape = NULL;
 
 void EnableRayCastingForShape(PxShape* shape) {
     PxFilterData filterData = shape->getQueryFilterData();
@@ -53,9 +53,24 @@ void Physics::DisableRigidBodyDebugLines(PxRigidBody* rigidBody) {
     rigidBody->setActorFlag(PxActorFlag::eVISUALIZATION, false);
 }
 
+void CCTHitCallback::onShapeHit(const PxControllerShapeHit& hit) {
+    CharacterCollisionReport report;
+	report.hitNormal = Util::PxVec3toGlmVec3(hit.worldNormal);
+	report.worldPosition = Util::PxVec3toGlmVec3(hit.worldPos);
+	report.characterController = hit.controller;
+	report.hitShape = hit.shape;
+	report.hitActor = hit.actor;
+    Physics::_characterCollisionReports.push_back(report);
+}
+
+void CCTHitCallback::onControllerHit(const PxControllersHit& hit){
+}
+
+void CCTHitCallback::onObstacleHit(const PxControllerObstacleHit& hit) {
+}
 
 PxFilterFlags contactReportFilterShader(PxFilterObjectAttributes attributes0, PxFilterData filterData0, PxFilterObjectAttributes attributes1, PxFilterData filterData1, PxPairFlags& pairFlags, const void* constantBlock, PxU32 constantBlockSize) {
-   
+
     PX_UNUSED(attributes0);
     PX_UNUSED(attributes1);
     PX_UNUSED(constantBlockSize);
@@ -63,8 +78,8 @@ PxFilterFlags contactReportFilterShader(PxFilterObjectAttributes attributes0, Px
 
     // let triggers through
     if (PxFilterObjectIsTrigger(attributes0) || PxFilterObjectIsTrigger(attributes1)) {
-     //   pairFlags = PxPairFlag::eTRIGGER_DEFAULT;
-    //    return PxFilterFlag::eDEFAULT;
+        //   pairFlags = PxPairFlag::eTRIGGER_DEFAULT;
+       //    return PxFilterFlag::eDEFAULT;
     }
 
     // generate contacts for all that were not filtered above
@@ -126,7 +141,7 @@ void SetupCommonCookingParams(PxCookingParams& params, bool skipMeshCleanup, boo
 }
 
 PxTriangleMesh* Physics::CreateTriangleMesh(PxU32 numVertices, const PxVec3* vertices, PxU32 numTriangles, const PxU32* indices) {
-    
+
     PxTriangleMeshDesc meshDesc;
     meshDesc.points.count = numVertices;
     meshDesc.points.data = vertices;
@@ -179,13 +194,13 @@ PxTriangleMesh* Physics::CreateTriangleMesh(PxU32 numVertices, const PxVec3* ver
 
 
 
-PxConvexMesh* Physics::CreateConvexMesh(PxU32 numVertices, const PxVec3* vertices) {    
+PxConvexMesh* Physics::CreateConvexMesh(PxU32 numVertices, const PxVec3* vertices) {
     PxConvexMeshDesc convexDesc;
     convexDesc.points.count = numVertices;
     convexDesc.points.stride = sizeof(PxVec3);
     convexDesc.points.data = vertices;
     convexDesc.flags = PxConvexFlag::eSHIFT_VERTICES | PxConvexFlag::eCOMPUTE_CONVEX;
-  //  s
+    //  s
     PxTolerancesScale scale;
     PxCookingParams params(scale);
 
@@ -247,43 +262,43 @@ void Physics::Init() {
 
 
 
-    
+
     //std::cout << "creating ground plane..\n";
     _groundPlane = PxCreatePlane(*_physics, PxPlane(0, 1, 0, 0.0f), *_defaultMaterial);
     _scene->addActor(*_groundPlane);
     _groundPlane->getShapes(&_groundShape, 1);
-	PxFilterData filterData;
-	filterData.word0 = RaycastGroup::RAYCAST_DISABLED; // must be disabled or it causes crash in scene::update when it tries to retrieve rigid body flags from this actor 
-	filterData.word1 = CollisionGroup::ENVIROMENT_OBSTACLE;
-	filterData.word2 = CollisionGroup::BULLET_CASING | CollisionGroup::GENERIC_BOUNCEABLE | CollisionGroup::PLAYER;
-	_groundShape->setQueryFilterData(filterData);
-	_groundShape->setSimulationFilterData(filterData); // sim is for ragz   
-	//std::cout << "created ground plane..\n";
+    PxFilterData filterData;
+    filterData.word0 = RaycastGroup::RAYCAST_DISABLED; // must be disabled or it causes crash in scene::update when it tries to retrieve rigid body flags from this actor 
+    filterData.word1 = CollisionGroup::ENVIROMENT_OBSTACLE;
+    filterData.word2 = CollisionGroup::BULLET_CASING | CollisionGroup::GENERIC_BOUNCEABLE | CollisionGroup::PLAYER;
+    _groundShape->setQueryFilterData(filterData);
+    _groundShape->setSimulationFilterData(filterData); // sim is for ragz   
+    //std::cout << "created ground plane..\n";
 
     //EnableRayCastingForShape(shape);
 }
 
 /*
 void Physics::RemoveGroundPlaneFilterData() {
-	PxFilterData filterData;
+    PxFilterData filterData;
     filterData.word0 = 0;
-	filterData.word1 = 0;
-	filterData.word2 = 0;
-	_groundShape->setQueryFilterData(filterData);
+    filterData.word1 = 0;
+    filterData.word2 = 0;
+    _groundShape->setQueryFilterData(filterData);
     _groundShape->setSimulationFilterData(filterData);
 }
 
 void Physics::AddGroundPlaneFilterData() {
-	PxFilterData filterData;
-	filterData.word0 = RaycastGroup::RAYCAST_DISABLED; // must be disabled or it causes crash in scene::update when it tries to retrieve rigid body flags from this actor 
-	filterData.word1 = CollisionGroup::ENVIROMENT_OBSTACLE;
-	filterData.word2 = CollisionGroup::BULLET_CASING | CollisionGroup::GENERIC_BOUNCEABLE |	CollisionGroup::PLAYER;
-	_groundShape->setQueryFilterData(filterData);
-	_groundShape->setSimulationFilterData(filterData); // sim is for ragz
+    PxFilterData filterData;
+    filterData.word0 = RaycastGroup::RAYCAST_DISABLED; // must be disabled or it causes crash in scene::update when it tries to retrieve rigid body flags from this actor
+    filterData.word1 = CollisionGroup::ENVIROMENT_OBSTACLE;
+    filterData.word2 = CollisionGroup::BULLET_CASING | CollisionGroup::GENERIC_BOUNCEABLE |	CollisionGroup::PLAYER;
+    _groundShape->setQueryFilterData(filterData);
+    _groundShape->setSimulationFilterData(filterData); // sim is for ragz
 }*/
 
 
-void Physics::StepPhysics(float deltaTime) {   
+void Physics::StepPhysics(float deltaTime) {
     //float maxSimulateTime = (1.0f / 60.0f) * 4.0f;
     //_scene->simulate(std::min(deltaTime, maxSimulateTime));
 
@@ -306,11 +321,11 @@ PxMaterial* Physics::GetDefaultMaterial() {
 PxShape* Physics::CreateBoxShape(float width, float height, float depth, Transform shapeOffset, PxMaterial* material) {
     if (material == NULL) {
         material = _defaultMaterial;
-    }    
+    }
     PxShape* shape = _physics->createShape(PxBoxGeometry(width, height, depth), *material, true);
-	PxMat44 localShapeMatrix = Util::GlmMat4ToPxMat44(shapeOffset.to_mat4());
-	PxTransform localShapeTransform(localShapeMatrix);
-	shape->setLocalPose(localShapeTransform);
+    PxMat44 localShapeMatrix = Util::GlmMat4ToPxMat44(shapeOffset.to_mat4());
+    PxTransform localShapeTransform(localShapeMatrix);
+    shape->setLocalPose(localShapeTransform);
     return shape;
 }
 
@@ -321,8 +336,8 @@ PxShape* Physics::CreateShapeFromTriangleMesh(PxTriangleMesh* triangleMesh, PxSh
     PxMeshGeometryFlags flags(~PxMeshGeometryFlag::eTIGHT_BOUNDS | ~PxMeshGeometryFlag::eDOUBLE_SIDED);
     PxTriangleMeshGeometry geometry(triangleMesh, PxMeshScale(scale), flags);
 
-    
-	PxShapeFlags shapeFlags(PxShapeFlag::eSCENE_QUERY_SHAPE); // Most importantly NOT eSIMULATION_SHAPE. PhysX does not allow for tri mesh.
+
+    PxShapeFlags shapeFlags(PxShapeFlag::eSCENE_QUERY_SHAPE); // Most importantly NOT eSIMULATION_SHAPE. PhysX does not allow for tri mesh.
     return _physics->createShape(geometry, *material, shapeFlags);
 }
 
@@ -341,17 +356,17 @@ PxRigidDynamic* Physics::CreateRigidDynamic(Transform transform, PhysicsFilterDa
     PxTransform trans = PxTransform(PxVec3(transform.position.x, transform.position.y, transform.position.z), quat);
     PxRigidDynamic* body = _physics->createRigidDynamic(trans);
 
-	// You are passing in a PxShape pointer and any shape offset will affects that actually object, wherever the fuck it is up the function chain.
+    // You are passing in a PxShape pointer and any shape offset will affects that actually object, wherever the fuck it is up the function chain.
     // Maybe look into this when you can be fucked, possibly you can just set the isExclusive bool to true, where and whenever the fuck that is and happens.
-	PxFilterData filterData;
-	filterData.word0 = (PxU32)physicsFilterData.raycastGroup;
-	filterData.word1 = (PxU32)physicsFilterData.collisionGroup;
-	filterData.word2 = (PxU32)physicsFilterData.collidesWith;
-	shape->setQueryFilterData(filterData);       // ray casts
-	shape->setSimulationFilterData(filterData);  // collisions
+    PxFilterData filterData;
+    filterData.word0 = (PxU32)physicsFilterData.raycastGroup;
+    filterData.word1 = (PxU32)physicsFilterData.collisionGroup;
+    filterData.word2 = (PxU32)physicsFilterData.collidesWith;
+    shape->setQueryFilterData(filterData);       // ray casts
+    shape->setSimulationFilterData(filterData);  // collisions
     PxMat44 localShapeMatrix = Util::GlmMat4ToPxMat44(shapeOffset.to_mat4());
     PxTransform localShapeTransform(localShapeMatrix);
-	shape->setLocalPose(localShapeTransform);
+    shape->setLocalPose(localShapeTransform);
 
     body->attachShape(*shape);
     PxRigidBodyExt::updateMassAndInertia(*body, 10.0f);
@@ -361,25 +376,25 @@ PxRigidDynamic* Physics::CreateRigidDynamic(Transform transform, PhysicsFilterDa
 
 PxRigidStatic* Physics::CreateRigidStatic(Transform transform, PhysicsFilterData physicsFilterData, PxShape* shape, Transform shapeOffset) {
 
-	PxQuat quat = Util::GlmQuatToPxQuat(glm::quat(transform.rotation));
-	PxTransform trans = PxTransform(PxVec3(transform.position.x, transform.position.y, transform.position.z), quat);
-	PxRigidStatic* body = _physics->createRigidStatic(trans);
+    PxQuat quat = Util::GlmQuatToPxQuat(glm::quat(transform.rotation));
+    PxTransform trans = PxTransform(PxVec3(transform.position.x, transform.position.y, transform.position.z), quat);
+    PxRigidStatic* body = _physics->createRigidStatic(trans);
 
-	// You are passing in a PxShape pointer and any shape offset will affects that actually object, wherever the fuck it is up the function chain.
-	// Maybe look into this when you can be fucked, possibly you can just set the isExclusive bool to true, where and whenever the fuck that is and happens.
-	PxFilterData filterData;
-	filterData.word0 = (PxU32)physicsFilterData.raycastGroup;
-	filterData.word1 = (PxU32)physicsFilterData.collisionGroup;
-	filterData.word2 = (PxU32)physicsFilterData.collidesWith;
-	shape->setQueryFilterData(filterData);       // ray casts
-	shape->setSimulationFilterData(filterData);  // collisions
-	PxMat44 localShapeMatrix = Util::GlmMat4ToPxMat44(shapeOffset.to_mat4());
-	PxTransform localShapeTransform(localShapeMatrix);
-	shape->setLocalPose(localShapeTransform);
+    // You are passing in a PxShape pointer and any shape offset will affects that actually object, wherever the fuck it is up the function chain.
+    // Maybe look into this when you can be fucked, possibly you can just set the isExclusive bool to true, where and whenever the fuck that is and happens.
+    PxFilterData filterData;
+    filterData.word0 = (PxU32)physicsFilterData.raycastGroup;
+    filterData.word1 = (PxU32)physicsFilterData.collisionGroup;
+    filterData.word2 = (PxU32)physicsFilterData.collidesWith;
+    shape->setQueryFilterData(filterData);       // ray casts
+    shape->setSimulationFilterData(filterData);  // collisions
+    PxMat44 localShapeMatrix = Util::GlmMat4ToPxMat44(shapeOffset.to_mat4());
+    PxTransform localShapeTransform(localShapeMatrix);
+    shape->setLocalPose(localShapeTransform);
 
-	body->attachShape(*shape);
-	_scene->addActor(*body);
-	return body;
+    body->attachShape(*shape);
+    _scene->addActor(*body);
+    return body;
 }
 
 PxRigidDynamic* Physics::CreateRigidDynamic(glm::mat4 matrix, PhysicsFilterData physicsFilterData, PxShape* shape) {
@@ -399,19 +414,20 @@ PxRigidDynamic* Physics::CreateRigidDynamic(glm::mat4 matrix, PhysicsFilterData 
 }
 
 PxRigidDynamic* Physics::CreateRigidDynamic(glm::mat4 matrix, bool kinematic) {
-	PxMat44 mat = Util::GlmMat4ToPxMat44(matrix);
-	PxTransform transform(mat);
-	PxRigidDynamic* body = _physics->createRigidDynamic(transform);
-	body->setRigidBodyFlag(PxRigidBodyFlag::eKINEMATIC, kinematic);
-	_scene->addActor(*body);
-	return body;
+    PxMat44 mat = Util::GlmMat4ToPxMat44(matrix);
+    PxTransform transform(mat);
+    PxRigidDynamic* body = _physics->createRigidDynamic(transform);
+    body->setRigidBodyFlag(PxRigidBodyFlag::eKINEMATIC, kinematic);
+    _scene->addActor(*body);
+    return body;
 }
 
 std::vector<CollisionReport>& Physics::GetCollisions() {
     return _collisionReports;
 }
-void Physics::ClearCollisionList() {
+void Physics::ClearCollisionLists() {
     _collisionReports.clear();
+    _characterCollisionReports.clear();
 }
 
 physx::PxRigidActor* Physics::GetGroundPlane() {

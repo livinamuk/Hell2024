@@ -109,7 +109,7 @@ void GameObject::SetScriptName(std::string name) {
 bool GameObject::IsInteractable() {
 	if (_openState == OpenState::CLOSED ||
 		_openState == OpenState::OPEN ||
-		_openState == OpenState::CLOSING ||
+ 		_openState == OpenState::CLOSING ||
 		_openState == OpenState::OPENING)
 		//_interactType == InteractType::PICKUP ||
 		//_interactType == InteractType::TEXT ||
