@@ -397,8 +397,8 @@ const std::string DebugMenu::GetTextRight() {
 		std::string rightBracket = "  ";
 
 		if (_selectionIndex == i) {
-			leftBracket = "< ";
-			rightBracket = " >";
+			leftBracket = "[g]< ";
+			rightBracket = " >[w]";
 		}
 
 

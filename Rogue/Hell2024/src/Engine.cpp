@@ -32,7 +32,7 @@ void Engine::Run() {
 	AssetManager::LoadFont();
 	AssetManager::LoadEverythingElse();
 
-    while (GL::WindowIsOpen() && GL::WindowHasNotBeenForceClosed()) {
+   /* while (GL::WindowIsOpen() && GL::WindowHasNotBeenForceClosed()) {
 
 		GL::ProcessInput();
 		Input::Update();
@@ -46,7 +46,7 @@ void Engine::Run() {
   
 
     return;
-
+    */
 
     Init();
 
