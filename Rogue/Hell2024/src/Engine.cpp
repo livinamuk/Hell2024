@@ -28,33 +28,96 @@ void NextViewportMode();
 void Engine::Run() {
 
 	GL::Init(1920 * 1.5f, 1080 * 1.5f);
+
 	Renderer::InitMinimumToRenderLoadingFrame();
-	AssetManager::LoadFont();
-	AssetManager::LoadEverythingElse();
 
-   /* while (GL::WindowIsOpen() && GL::WindowHasNotBeenForceClosed()) {
+    AssetManager::LoadFont(); 
+    AssetManager::LoadAssetsMultithreaded();
 
+
+	////////////////////////////////////
+    //                                //
+    //      Load assets from CPU      //
+    //                                //
+
+    while (GL::WindowIsOpen()) {
+
+		if (Input::KeyPressed(GLFW_KEY_F)) {
+			ToggleFullscreen();
+		}
+		if (Input::KeyPressed(GLFW_KEY_ESCAPE)) {
+			return;
+		}
 		GL::ProcessInput();
 		Input::Update();
         Renderer::RenderLoadingFrame();
         GL::SwapBuffersPollEvents();
 
-        // If loading is complete BREAK OUT
+        //std::cout << AssetManager::numFilesToLoad << " " << AssetManager::_loadLog.size() << "\n";
+
+		if (AssetManager::_loadLog.size() == 200) { // remember the first 2 lines of _loadLog are that welcome msg, and not actual files
+			break;
+		}
     }
 
-    // Begin main loop
-  
+    //////////////////////////////////
+    //                              //
+    //      Bake assets to GPU      //
+    //                              //
 
-    return;
-    */
+    while (GL::WindowIsOpen()) {
+
+		if (Input::KeyPressed(GLFW_KEY_F)) {
+			ToggleFullscreen();
+		}
+		if (Input::KeyPressed(GLFW_KEY_ESCAPE)) {
+			return;
+		}
+		bool bakingComplete = true;
+
+		for (int i = 0; i < AssetManager::GetTextureCount(); i++) {
+			Texture* texture = AssetManager::GetTextureByIndex(i);
+			if (!texture->IsBaked()) {
+				texture->Bake();
+				bakingComplete = false;
+				AssetManager::_loadLog.push_back("Baking textures/" + texture->GetFilename() + "." + texture->GetFiletype());
+				break;
+			}
+		}
+		for (int i = 0; i < AssetManager::GetModelCount(); i++) {
+			Model* model = AssetManager::GetModelByIndex(i);
+			if (!model->IsBaked()) {
+                model->Bake();
+				bakingComplete = false;
+                AssetManager::_loadLog.push_back("Baking models/" + model->_name + ".obj");
+				break;
+			}
+		}
+		GL::ProcessInput();
+		Input::Update();
+		Renderer::RenderLoadingFrame();
+		GL::SwapBuffersPollEvents();
+
+        if (bakingComplete) {
+            break;
+        }
+    }
+
+	AssetManager::LoadEverythingElse();
 
     Init();
+
+
+	/////////////////////////
+	//                     //
+	//      Game loop      //
+	//                     //
+
 
     double lastFrame = glfwGetTime();
     double thisFrame = lastFrame;
     double deltaTimeAccumulator = 0.0;
 	double fixedDeltaTime = 1.0 / 60.0;
-
 
     while (GL::WindowIsOpen() && GL::WindowHasNotBeenForceClosed()) {
 
@@ -145,14 +208,11 @@ void Engine::Init() {
 
     std::cout << "We are all alone on life's journey, held captive by the limitations of human consciousness.\n";
 
-
-
     Input::Init();
     Physics::Init();
 
     Editor::Init();
     Audio::Init();
-
 
     Scene::LoadMap("map.txt");
 
@@ -181,7 +241,6 @@ void Engine::LazyKeyPresses() {
         ToggleFullscreen();
     }
     if (Input::KeyPressed(HELL_KEY_TAB)) {
-		//ToggleEditor();
 		Audio::PlayAudio(AUDIO_SELECT, 1.00f);
         DebugMenu::Toggle();
     }

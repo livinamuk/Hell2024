@@ -11,7 +11,7 @@ namespace Renderer {
 	void RenderFrame(Player* player);
 	void RenderEditorFrame();
 	void RenderDebugMenu();
-	void RenderUI();
+	void RenderUI(float viewportWidth, float viewportHeight);
 	void HotloadShaders();
 	void WipeShadowMaps();
 

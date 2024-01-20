@@ -53,6 +53,7 @@ struct RenderTarget {
 };
 
 RenderTarget _menuRenderTarget;
+RenderTarget _loadingScreenRenderTarget;
 
 struct BlurBuffer {
 	GLuint width = 0;
@@ -343,10 +344,20 @@ void Renderer::InitMinimumToRenderLoadingFrame() {
 	glBindFramebuffer(GL_FRAMEBUFFER, _menuRenderTarget.fbo);
 	glGenTextures(1, &_menuRenderTarget.texture);
 	glBindTexture(GL_TEXTURE_2D, _menuRenderTarget.texture);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, _renderWidth, _renderHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, _menuRenderTarget.width, _menuRenderTarget.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, _menuRenderTarget.texture, 0);
+
+	_loadingScreenRenderTarget.Create(_renderWidth * 1.45f, _renderHeight * 1.45f);
+	glBindFramebuffer(GL_FRAMEBUFFER, _loadingScreenRenderTarget.fbo);
+	glGenTextures(1, &_loadingScreenRenderTarget.texture);
+	glBindTexture(GL_TEXTURE_2D, _loadingScreenRenderTarget.texture);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, _loadingScreenRenderTarget.width, _loadingScreenRenderTarget.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, _loadingScreenRenderTarget.texture, 0);
+
 
 }
 
@@ -405,39 +416,38 @@ void Renderer::Init() {
 
 void Renderer::RenderLoadingFrame() {
 
-    glBindFramebuffer(GL_FRAMEBUFFER, _menuRenderTarget.fbo);
-	glViewport(0, 0, _menuRenderTarget.width, _menuRenderTarget.height);
+    glBindFramebuffer(GL_FRAMEBUFFER, _loadingScreenRenderTarget.fbo);
+	glViewport(0, 0, _loadingScreenRenderTarget.width, _loadingScreenRenderTarget.height);
 	glDisable(GL_DEPTH_TEST);
 	glDisable(GL_CULL_FACE);
 
-	glClearColor(0, 0, 0.1f, 0);
+	glClearColor(0, 0, 0, 0);
 	glClear(GL_COLOR_BUFFER_BIT);
 	glDisable(GL_DEPTH_TEST);
 
 	_shaders.UI.Use();
 	_shaders.UI.SetVec3("color", WHITE);
 	_shaders.UI.SetVec3("overrideColor", WHITE);
+	_shaders.UI.SetMat4("model", glm::mat4(1));
 
-    Transform transform;
-    transform.scale = glm::vec3(0.15f, 0.15f, 1.0f);
-	_shaders.UI.SetMat4("model", transform.to_mat4());
-
-    std::string text = "We are all alone on life's journey, held captive by the limitations of human consciousness.\n";
-    for (auto& str : AssetManager::_loadLog) {
-        text += str + "\n";
+    std::string text = "";
+    int maxLinesDisplayed = 40;
+	int endIndex = AssetManager::_loadLog.size();
+    int beginIndex = std::max(0, endIndex - maxLinesDisplayed);
+    for (int i = beginIndex; i < endIndex; i++) {
+        text += AssetManager::_loadLog[i] + "\n";
     }
+
 	TextBlitter::_debugTextToBilt = text;
     TextBlitter::Update(1.0f / 60.0f);
-	Renderer::RenderUI();    
+	Renderer::RenderUI(_loadingScreenRenderTarget.width, _loadingScreenRenderTarget.height);
 
 	glViewport(0, 0, GL::GetWindowWidth(), GL::GetWindowHeight());
-	glBindFramebuffer(GL_READ_FRAMEBUFFER, _menuRenderTarget.fbo);
+	glBindFramebuffer(GL_READ_FRAMEBUFFER, _loadingScreenRenderTarget.fbo);
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 	glReadBuffer(GL_COLOR_ATTACHMENT0);
-	glBlitFramebuffer(0, 0, _menuRenderTarget.width, _menuRenderTarget.height, 0, 0, GL::GetWindowWidth(), GL::GetWindowHeight(), GL_COLOR_BUFFER_BIT, GL_NEAREST);
+	glBlitFramebuffer(0, 0, _loadingScreenRenderTarget.width, _loadingScreenRenderTarget.height, 0, 0, GL::GetWindowWidth(), GL::GetWindowHeight(), GL_COLOR_BUFFER_BIT, GL_NEAREST);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-
 }
 
 
@@ -703,7 +713,7 @@ void Renderer::RenderFrame(Player* player) {
     glViewport(0, 0, presentFrameBuffer.GetWidth(), presentFrameBuffer.GetHeight());
     glDisable(GL_DEPTH_TEST);
     glDisable(GL_CULL_FACE);
-    Renderer::RenderUI();
+    Renderer::RenderUI(presentFrameBuffer.GetWidth(), presentFrameBuffer.GetHeight());
 
 
 
@@ -1823,7 +1833,7 @@ void Renderer::RenderEditorFrame() {
     glViewport(0, 0, presentFrameBuffer.GetWidth(), presentFrameBuffer.GetHeight());
     glDisable(GL_DEPTH_TEST);
     glDisable(GL_CULL_FACE);
-    Renderer::RenderUI();
+    Renderer::RenderUI(presentFrameBuffer.GetWidth(), presentFrameBuffer.GetHeight());
 
     // Blit image back to frame buffer
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -1926,11 +1936,10 @@ void Renderer::RenderDebugMenu() {
     	
 	// Draw menu background
 
-	_shaders.UI.SetVec3("overrideColor", RED);
+	_shaders.UI.SetVec3("overrideColor", GREEN);
 	AssetManager::GetTexture("MenuBG")->Bind(0);
 	DrawQuad(_renderWidth, _renderHeight, menuWidth, totalMenuHeight, viewportCenterX, viewportCenterY, true);
 
-	_shaders.UI.SetVec3("overrideColor", RED);
 	AssetManager::GetTexture("MenuBorderHorizontal")->Bind(0);
 	DrawQuad(_renderWidth, _renderHeight, menuWidth, 3, viewportCenterX, viewportCenterY - (totalMenuHeight * 0.5f), true);
 	DrawQuad(_renderWidth, _renderHeight, menuWidth, 3, viewportCenterX, viewportCenterY + (totalMenuHeight * 0.5f), true);
@@ -1952,9 +1961,9 @@ void Renderer::RenderDebugMenu() {
     TextBlitter::BlitAtPosition(DebugMenu::GetTextLeft(), textLeftX, subMenuY, false, 1.0f);
 	TextBlitter::BlitAtPosition(DebugMenu::GetTextRight(), textRightX, subMenuY, false, 1.0f);
 
-	_shaders.UI.SetVec3("overrideColor", RED);
+	_shaders.UI.SetVec3("overrideColor", WHITE);
     TextBlitter::Update(1.0f / 60.0f);
-	Renderer::RenderUI();
+	Renderer::RenderUI(_renderWidth, _renderHeight);
 	_shaders.UI.SetVec3("overrideColor", WHITE);
 
     // Draw the menu into the main frame buffer
@@ -2035,7 +2044,7 @@ void Renderer::QueueUIForRendering(UIRenderInfo renderInfo) {
     _UIRenderInfos.push_back(renderInfo);
 }
 
-void Renderer::RenderUI() {
+void Renderer::RenderUI(float viewportWidth, float viewportHeight) {
 
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -2063,8 +2072,8 @@ void Renderer::RenderUI() {
         _quadMesh = Mesh(vertices, indices, "QuadMesh");
     }
 
-    float viewportWidth = (float)_renderWidth;
-    float viewportHeight = (float)_renderHeight;
+    //float viewportWidth = (float)_renderWidth;
+    //float viewportHeight = (float)_renderHeight;
     if (_viewportMode == SPLITSCREEN) {
         viewportHeight *= 0.5f;
     }

@@ -9,13 +9,15 @@ class Texture
 public: // Methods
 	Texture() = default;
 	explicit Texture(const std::string_view filepath);
-	bool Load(const std::string_view filepath, const bool bake = true);
+	bool Load(const std::string_view filepath);
 	bool Bake();
 	void Bind(unsigned int slot);
 	unsigned int GetID();
 	int GetWidth();
 	int GetHeight();
 	std::string& GetFilename();
+	std::string& GetFiletype();
+	bool IsBaked();
 
 private:
 	unsigned int _ID = 0;
@@ -26,4 +28,5 @@ private:
 	int _NumOfChannels = 0;
 	int _width = 0;
 	int _height = 0;
+	bool _baked = false;
 };

@@ -184,7 +184,7 @@ void Model::Load(std::string filepath, const bool bake_on_load) {
 			glm::vec2& uv0 = vert0->uv;
 			glm::vec2& uv1 = vert1->uv;
 			glm::vec2& uv2 = vert2->uv;
-			// Edges of the triangle : postion delta. UV delta
+			// Edges of the triangle : position delta. UV delta
 			glm::vec3 deltaPos1 = v1 - v0;
 			glm::vec3 deltaPos2 = v2 - v0;
 			glm::vec2 deltaUV1 = uv1 - uv0;
@@ -216,7 +216,7 @@ void Model::Load(std::string filepath, const bool bake_on_load) {
 	//m_boundingBox.scale = (minPos * glm::vec3(-1)) + maxPos;
 	//m_boundingBox.offsetFromModelOrigin = (m_boundingBox.scale * glm::vec3(0.5)) + minPos;
 
-	// Organise triangles (for raycasting)
+	// Organize triangles (for ray casting)
 	/*for (int m = 0; m < _meshes.size(); m++) {
 		Mesh* mesh = m_meshes[m];;
 		for (size_t i = 0; i < mesh->indices.size(); i += 3) {
@@ -266,4 +266,9 @@ void Model::Bake() {
 	for (auto &mesh : _meshes) {
 		mesh.Bake();
 	}
+	_baked = true;
+}
+
+bool Model::IsBaked() {
+	return _baked;
 }

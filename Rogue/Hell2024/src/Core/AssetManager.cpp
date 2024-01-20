@@ -42,15 +42,15 @@ std::vector<std::future<Texture *>> load_textures_from_directory(const std::stri
 		if (info.filetype == "png" || info.filetype == "tga" || info.filetype == "jpg") {
 			auto &texture{ _textures.emplace_back(Texture{}) };
 
-			if (info.filename.substr(0, 4) != "char") {
-				_loadLogMutex.lock();
-				AssetManager::_loadLog.push_back("Loaded " + info.filename + "." + info.filetype);
-				_loadLogMutex.unlock();
-			}
-
 			loadedTextures.emplace_back(g_asset_mgr_loading_pool.submit_task(
 				[texture_ptr = &texture, path = std::move(info.fullpath)]() -> Texture * {
-					if (texture_ptr->Load(path, false)) {		
+					if (texture_ptr->Load(path)) {	
+
+						if (texture_ptr->GetFilename().substr(0, 4) != "char") {
+							_loadLogMutex.lock();
+							AssetManager::_loadLog.push_back("Loading textures/" + texture_ptr->GetFilename() + "." + texture_ptr->GetFiletype());
+							_loadLogMutex.unlock();
+						}
 						return texture_ptr;
 					}
 					std::cout << "Failed to load " << path << "\n";
@@ -93,61 +93,228 @@ int AssetManager::GetTextureIndex(const std::string& filename, bool ignoreWarnin
 	return -1;
 }
 
-void AssetManager::LoadEverythingElse() {
-	namespace fs = std::filesystem;
 
-	static auto allTextures = fs::directory_iterator("res/textures/");
-	static auto uiTextures = fs::directory_iterator("res/textures/ui");
-	static auto allModels = fs::directory_iterator("res/models/");
+Texture* AssetManager::GetTextureByIndex(const int index) {
+	if (index >= 0 && index < _textures.size()) {
+		return &_textures[index];
+	}
+	else {
+		std::cout << "Texture index '" << index << "' is out of range of _textures with size " << _textures.size() << "\n";
+		return nullptr;
+	}
+}
+
+Model* AssetManager::GetModelByIndex(const int index) {
+	if (index >= 0 && index < _models.size()) {
+		return &_models[index];
+	}
+	else {
+		std::cout << "Texture index '" << index << "' is out of range of _models with size " << _models.size() << "\n";
+		return nullptr;
+	}
+}
+
+int AssetManager::GetTextureCount() {
+	return _textures.size();
+}
+
+int AssetManager::GetModelCount() {
+	return _models.size();
+}
+
+std::unordered_map<SkinnedModel*, std::vector<std::future<Animation*>>> animations_futures;
+
+void AssetManager::LoadAssetsMultithreaded() {
+
+	static auto allTextures = std::filesystem::directory_iterator("res/textures/");
+	static auto uiTextures = std::filesystem::directory_iterator("res/textures/ui");
+	static auto allModels = std::filesystem::directory_iterator("res/models/");
+
+	// Find total number of files to load
+	for (auto& file : allTextures) {
+		auto info = Util::GetFileInfo(file);
+		if (info.filetype == "png" || info.filetype == "jpg" || info.filetype == "tga") {
+			numFilesToLoad++;
+		}
+	}
+	for (auto & file : uiTextures) {
+		auto info = Util::GetFileInfo(file);
+		if (info.filetype == "png" || info.filetype == "jpg" || info.filetype == "tga") {
+			numFilesToLoad++;
+		}
+	}
+	//for (auto& file : allModels)
+	{
+		//auto info = Util::GetFileInfo(file);
+		//if (info.filetype == "obj") {
+		//	numFilesToLoad++;
+		//}
+	}
+	// why does having the above not commented out break everything?
+
 
 	const size_t textures_count{ count_files_in("res/textures/") + count_files_in("res/textures/ui") };
-	_textures.reserve(_textures.size() + textures_count);
+	_textures.reserve(_textures.size() + textures_count);	// are you sure this is correct?
+	_loadedTextures.reserve(textures_count);				// are you sure this is correct?
 
-	_loadedTextures.reserve(textures_count);
+	const auto models_count{ count_files_in("res/models/") };
+	_models.reserve(_models.size() + models_count);
 
 	if (auto loaded{ load_textures_from_directory("res/textures/ui") }; !loaded.empty()) {
-		_loadedTextures.insert(_loadedTextures.end(), std::make_move_iterator(loaded.begin()), std::make_move_iterator(loaded.end())); 
+		_loadedTextures.insert(_loadedTextures.end(), std::make_move_iterator(loaded.begin()), std::make_move_iterator(loaded.end()));
 	}
 	if (auto loaded{ load_textures_from_directory("res/textures/") }; !loaded.empty()) {
 		_loadedTextures.insert(_loadedTextures.end(), std::make_move_iterator(loaded.begin()), std::make_move_iterator(loaded.end()));
 	}
 
-	const auto models_count{ count_files_in("res/models/") };
-	_models.reserve(_models.size() + models_count);
-
-	constexpr bool bake_on_load{ false };
-
-	for (const auto &entry : allModels) {
+	for (const auto& entry : allModels) {
 		auto info = Util::GetFileInfo(entry);
 		if (info.filetype == "obj") {
-			auto &model{ _models.emplace_back(Model()) };
+			auto& model{ _models.emplace_back(Model()) };
 			g_asset_mgr_loading_pool.detach_task(
-				[&model, path = std::move(info.fullpath)] () mutable {
-					// We need this shit cuz it's concurency cout
-					constexpr bool bake_on_load{ false };
-					const auto message{ (std::stringstream{} << "[" << std::setw(6)
-						<< std::this_thread::get_id() << "] Loading " << path << "\n").str()
-					};
-					std::cout << message;
-					model.Load(std::move(path), bake_on_load);
-				}
+				[&model, path = std::move(info.fullpath)]() mutable {
+
+				constexpr bool bake_on_load{ false };
+				const auto message{ (std::stringstream{} << "[" << std::setw(6)
+					<< std::this_thread::get_id() << "] Loading " << path << "\n").str()
+				};
+				std::cout << message;
+				model.Load(std::move(path), bake_on_load);
+
+				_loadLogMutex.lock();
+				AssetManager::_loadLog.push_back("Loading models/" + model._name + ".obj");
+				_loadLogMutex.unlock();
+			}
 			);
 		}
 	}
 
-	g_asset_mgr_loading_pool.wait();
-	for (auto& model : _models) {
-		model.Bake();
+
+	static const auto load_model_animations = [](std::vector<std::string>&& animations) {
+
+
+		std::vector<std::future<Animation*>> futureAnimations;
+		futureAnimations.reserve(animations.size());
+		for (auto&& animation : animations) {
+			futureAnimations.emplace_back(g_asset_mgr_loading_pool.submit_task([anim = std::move(animation)] {
+				auto animation{ FbxImporter::LoadAnimation(anim) };
+				std::cout << "[" << std::setw(6) << std::this_thread::get_id() << "] "
+					<< "Loaded animation: " << anim << "\n";
+
+
+				_loadLogMutex.lock();
+				AssetManager::_loadLog.push_back("Loading " + anim);
+				_loadLogMutex.unlock();
+
+
+				return animation;
+			}));
+		}
+		return std::move(futureAnimations);
+	};
+
+
+
+	struct skinned_model_path {
+		std::string path;
+		std::vector<std::string> animations;
+	};
+
+	std::vector<skinned_model_path> model_paths{
+		skinned_model_path{ "models/UniSexGuy2.fbx", std::vector<std::string>{
+			"animations/Character_Glock_Walk.fbx",
+				"animations/Character_Glock_Kneel.fbx",
+				"animations/Character_Glock_Idle.fbx",
+				"animations/Character_AKS74U_Walk.fbx",
+				"animations/Character_AKS74U_Kneel.fbx",
+				"animations/Character_AKS74U_Idle.fbx",
+		} },
+			skinned_model_path{ "models/AKS74U.fbx", std::vector<std::string>{
+				"animations/AKS74U_Spawn.fbx",
+				"animations/AKS74U_DebugTest.fbx",
+				"animations/AKS74U_Fire1.fbx",
+				"animations/AKS74U_Fire2.fbx",
+				"animations/AKS74U_Fire3.fbx",
+				"animations/AKS74U_Idle.fbx",
+				"animations/AKS74U_Walk.fbx",
+				"animations/AKS74U_Reload.fbx",
+				"animations/AKS74U_ReloadEmpty.fbx",
+				"animations/AKS74U_Draw.fbx",
+			} },
+			skinned_model_path{ "models/Glock.fbx", std::vector<std::string>{
+				"animations/Glock_Spawn.fbx",
+				"animations/Glock_DebugTest.fbx",
+				"animations/Glock_Fire1.fbx",
+				"animations/Glock_Fire2.fbx",
+				"animations/Glock_Fire3.fbx",
+				"animations/Glock_Idle.fbx",
+				"animations/Glock_Walk.fbx",
+				"animations/Glock_Reload.fbx",
+				"animations/Glock_ReloadEmpty.fbx",
+				"animations/Glock_Draw.fbx",
+			} },
+			skinned_model_path{ "models/Knife.fbx", std::vector<std::string>{
+				"animations/Knife_Idle.fbx",
+				"animations/Knife_Walk.fbx",
+				"animations/Knife_Draw.fbx",
+				"animations/Knife_Swing1.fbx",
+				"animations/Knife_Swing2.fbx",
+				"animations/Knife_Swing3.fbx",
+			} },
+	};
+
+	animations_futures.reserve(model_paths.size());
+
+
+
+	_skinnedModels.reserve(model_paths.size());
+	for (auto&& [path, animations] : model_paths) {
+		auto& model = _skinnedModels.emplace_back(SkinnedModel());
+		g_asset_mgr_loading_pool.detach_task([model_ptr = &model, path] {
+
+
+			_loadLogMutex.lock();
+			AssetManager::_loadLog.push_back("Loading " + path);
+			_loadLogMutex.unlock();
+
+			if (FbxImporter::LoadSkinnedModelData(*model_ptr, path)) {
+				std::cout << "[SKINNED_MODEL] Loaded '" << path << "'\n";
+
+			}
+			else {
+				std::cout << "[SKINNED_MODEL] Loading failed '" << path << "'\n";
+			}
+		});
+		animations_futures.emplace(&model, load_model_animations(std::move(animations)));
 	}
+
+
+
+
+
+}
+
+
+
+void AssetManager::LoadEverythingElse() {
+	namespace fs = std::filesystem;
+
+
+	g_asset_mgr_loading_pool.wait();
+
+
+
+	constexpr bool bake_on_load{ false };
+
 
 
 
 	// Load assets
-	for (auto&& futureTexture : AssetManager::_loadedTextures) {
+	/*for (auto&& futureTexture : AssetManager::_loadedTextures) {
 		if (auto texture{ futureTexture.get() }; texture) {
 			texture->Bake();
 		}
-	}
+	}*/
 
 	// Build materials
 	for (auto& texture : _textures) {
@@ -182,98 +349,22 @@ void AssetManager::LoadEverythingElse() {
 	// Everything is loaded
 	//return false;
 
-	static const auto load_model_animations = [](std::vector<std::string> &&animations) {
-		std::vector<std::future<Animation*>> futureAnimations;
-		futureAnimations.reserve(animations.size());
-		for (auto &&animation : animations) {
-			futureAnimations.emplace_back(g_asset_mgr_loading_pool.submit_task([anim = std::move(animation)] {
-				auto animation{ FbxImporter::LoadAnimation(anim) };
-				std::cout << "[" << std::setw(6) << std::this_thread::get_id() << "] "
-					<< "Loaded animation: " << anim << "\n";
-				return animation;
-			}));
-		}
-		return std::move(futureAnimations);
-	};
-	static const auto emplace_animations = [](auto &model, auto &&futures) {
+	static const auto emplace_animations = [](auto& model, auto&& futures) {
 		model.m_animations.reserve(futures.size());
-		for (auto &&future : futures) {
+		for (auto&& future : futures) {
 			if (auto animation{ future.get() }; animation) {
 				model.m_animations.emplace_back(animation);
 			}
 		}
 	};
 
-	struct skinned_model_path {
-		std::string path;
-		std::vector<std::string> animations;
-	};
-
-	std::vector<skinned_model_path> model_paths{
-		skinned_model_path{ "models/UniSexGuy2.fbx", std::vector<std::string>{
-			"animations/Character_Glock_Walk.fbx",
-			"animations/Character_Glock_Kneel.fbx",
-			"animations/Character_Glock_Idle.fbx",
-			"animations/Character_AKS74U_Walk.fbx",
-			"animations/Character_AKS74U_Kneel.fbx",
-			"animations/Character_AKS74U_Idle.fbx",
-		} },
-		skinned_model_path{ "models/AKS74U.fbx", std::vector<std::string>{
-			"animations/AKS74U_Spawn.fbx",
-			"animations/AKS74U_DebugTest.fbx",
-			"animations/AKS74U_Fire1.fbx",
-			"animations/AKS74U_Fire2.fbx",
-			"animations/AKS74U_Fire3.fbx",
-			"animations/AKS74U_Idle.fbx",
-			"animations/AKS74U_Walk.fbx",
-			"animations/AKS74U_Reload.fbx",
-			"animations/AKS74U_ReloadEmpty.fbx",
-			"animations/AKS74U_Draw.fbx",
-		} },
-		skinned_model_path{ "models/Glock.fbx", std::vector<std::string>{
-			"animations/Glock_Spawn.fbx",
-			"animations/Glock_DebugTest.fbx",
-			"animations/Glock_Fire1.fbx",
-			"animations/Glock_Fire2.fbx",
-			"animations/Glock_Fire3.fbx",
-			"animations/Glock_Idle.fbx",
-			"animations/Glock_Walk.fbx",
-			"animations/Glock_Reload.fbx",
-			"animations/Glock_ReloadEmpty.fbx",
-			"animations/Glock_Draw.fbx",
-		} },
-		skinned_model_path{ "models/Knife.fbx", std::vector<std::string>{
-			"animations/Knife_Idle.fbx",
-			"animations/Knife_Walk.fbx",
-			"animations/Knife_Draw.fbx",
-			"animations/Knife_Swing1.fbx",
-			"animations/Knife_Swing2.fbx",
-			"animations/Knife_Swing3.fbx",
-		} },
-	};
-
-	std::unordered_map<SkinnedModel*, std::vector<std::future<Animation*>>> animations_futures;
-	animations_futures.reserve(model_paths.size());
-
-	_skinnedModels.reserve(model_paths.size());
-	for (auto &&[path, animations] : model_paths) {
-		auto &model = _skinnedModels.emplace_back(SkinnedModel());
-		g_asset_mgr_loading_pool.detach_task([model_ptr = &model, path] {
-			if (FbxImporter::LoadSkinnedModelData(*model_ptr, path)) {
-				std::cout << "[SKINNED_MODEL] Loaded '" << path << "'\n";
-			} else {
-				std::cout << "[SKINNED_MODEL] Loading failed '" << path << "'\n";
-			}
-		});
-		animations_futures.emplace(&model, load_model_animations(std::move(animations)));
-	}
-
-	g_asset_mgr_loading_pool.wait();
-
-	for (auto &&[model_ptr, future_animations] : animations_futures) {
+	for (auto&& [model_ptr, future_animations] : animations_futures) {
 		FbxImporter::BakeSkinnedModel(*model_ptr);
 		emplace_animations(*model_ptr, std::move(future_animations));
 	}
+
+
+	
 
 /*	SkinnedModel& wife = _skinnedModels.emplace_back(SkinnedModel());
 	FbxImporter::LoadSkinnedModel("models/Wife.fbx", wife);

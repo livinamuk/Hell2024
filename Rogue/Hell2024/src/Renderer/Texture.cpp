@@ -33,7 +33,7 @@ Texture::Texture(const std::string_view filepath) {
 	Load(filepath);
 }
 
-bool Texture::Load(const std::string_view filepath, const bool bake) {
+bool Texture::Load(const std::string_view filepath) {
 	if (!Util::FileExists(filepath)) {
 		std::cout << filepath << " does not exist.\n";
 		return false;
@@ -201,14 +201,13 @@ bool Texture::Load(const std::string_view filepath, const bool bake) {
 		stbi_set_flip_vertically_on_load(false);
 		_data = stbi_load(filepath.data(), &_width, &_height, &_NumOfChannels, 0);
 	}
-
-	if (bake) {
-		return Bake();
-	}
 	return true;
 }
 
 bool Texture::Bake() {
+
+	_baked = true;
+
 	if (_CMP_texture != nullptr) {
 		auto &cmpTexture{ *_CMP_texture };
 		glGenTextures(1, &_ID);
@@ -278,4 +277,12 @@ int Texture::GetHeight() {
 
 std::string& Texture::GetFilename() {
 	return _filename;
+}
+
+std::string& Texture::GetFiletype() {
+	return _filetype;
+}
+
+bool Texture::IsBaked() {
+	return _baked;
 }
