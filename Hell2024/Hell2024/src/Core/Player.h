@@ -69,6 +69,10 @@ public:
 	void CreateCharacterController(glm::vec3 position);
 	void WipeYVelocityToZeroIfHeadHitCeiling();
 
+	void ShowPickUpText(std::string text);
+	void PickUpAKS74U();
+	void PickUpAKS74UAmmo();
+
 	ShadowMap _shadowMap;
 	float _muzzleFlashCounter = 0;
 

@@ -264,7 +264,7 @@ void Scene::LoadHardCodedObjects() {
         aks74u.SetMeshMaterialByMeshName("MagRelease_low", "AKS74U_2");
         aks74u.SetMeshMaterialByMeshName("Magazine_Housing_low", "AKS74U_3");
         aks74u.SetMeshMaterialByMeshName("BarrelTip_low", "AKS74U_4");
-        aks74u.collectable = true;
+        aks74u.SetPickUpType(PickUpType::AKS74U);
 
         GameObject& pictureFrame = _gameObjects.emplace_back();
         pictureFrame.SetPosition(0.1f, 1.5f, 2.5f);
@@ -381,7 +381,6 @@ void Scene::LoadHardCodedObjects() {
             smallChestOfDrawers.SetName("SmallDrawersHis");
             smallChestOfDrawers.SetPosition(0.1f, 0.1f, 4.45f);
             smallChestOfDrawers.SetRotationY(NOOSE_PI / 2);
-            smallChestOfDrawers.EnableCollision();
             smallChestOfDrawers.SetRaycastShapeFromModel(AssetManager::GetModel("SmallChestOfDrawersFrame"));
             smallChestOfDrawers.SetOpenState(OpenState::NONE, 0, 0, 0);
             smallChestOfDrawers.SetAudioOnOpen("DrawerOpen.wav", 1.0f);

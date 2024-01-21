@@ -7,7 +7,7 @@ enum class OpenState { NONE, CLOSED, CLOSING, OPEN, OPENING };
 enum class OpenAxis { NONE, TRANSLATE_X, TRANSLATE_Y, TRANSLATE_Z, ROTATION_POS_X, ROTATION_POS_Y, ROTATION_POS_Z, ROTATION_NEG_X, ROTATION_NEG_Y, ROTATION_NEG_Z };
 enum class InteractType { NONE, TEXT, QUESTION, PICKUP, CALLBACK_ONLY };
 enum class ModelMatrixMode { GAME_TRANSFORM, PHYSX_TRANSFORM };
-
+enum class PickUpType {NONE, GLOCK, GLOCK_AMMO, SHOTGUN, SHOTGUN_AMMO, AKS74U, AKS74U_AMMO };
 
 /*struct BoundingBox {
 	float xLow = 0;
@@ -33,18 +33,13 @@ public:
 	float _maxOpenAmount = 0;
 	float _minOpenAmount = 0;
 	float _openSpeed = 0;
-	bool collectable = false;
-	bool collected = false;
-
 
 private:
-	std::function<void(void)> _interactCallback = nullptr;
 
-
-
-
-	//InteractType _interactType = InteractType::NONE;
-	
+	PickUpType _pickupType;
+	bool _collected = false;
+	float _pickupCoolDownTime = 0;
+		
 	ModelMatrixMode _modelMatrixMode = ModelMatrixMode::GAME_TRANSFORM;
 	BoundingBox _boundingBox;
 
@@ -72,8 +67,6 @@ public:
 	void SetAudioOnOpen(std::string filename, float volume);
 	void SetAudioOnClose(std::string filename, float volume);
 	void SetInteract(InteractType type, std::string text, std::function<void(void)> callback);
-	//void SetPickUpQuestion(std::string text);
-	//void SetPickUpCallback(callback_function callback);
 	void SetOpenState(OpenState openState, float speed, float min, float max);
 	void SetPosition(glm::vec3 position);
 	void SetPositionX(float position);
@@ -86,13 +79,9 @@ public:
 	float GetRotationX();
 	float GetRotationY();
 	float GetRotationZ();
-	//glm::vec3 GetPosition();
-	//glm::mat4 GetRotationMatrix();
 	void SetScale(glm::vec3 scale);
 	void SetScale(float scale);
 	void SetScaleX(float scale);
-	//void SetInteractText(std::string text);
-	//void SetPickUpText(std::string text);
 	void SetName(std::string name);
 	void SetParentName(std::string name);
 	std::string GetParentName();
@@ -101,23 +90,20 @@ public:
 	void Interact();
 	void Update(float deltaTime);
 	void SetModel(const std::string& name);
-	//void SetBoundingBoxFromMesh(int meshIndex);
-	//VkTransformMatrixKHR GetVkTransformMatrixKHR();
 	void SetMeshMaterial(const char* name, int meshIndex = -1);
-	//Material* GetMaterial(int meshIndex);
-	void PickUp();
 	void SetCollectedState(bool value);
 	BoundingBox GetBoundingBox();
-	void EnableCollision();
-	void DisableCollision();
-	bool HasCollisionsEnabled();
-	bool IsCollected();
 	const InteractType& GetInteractType();
 	OpenState& GetOpenState();
-	//void SetMaterialType(MaterialType materialType, int meshIndex = -1);
 	void SetTransform(Transform& transform);
 	void SetInteractToAffectAnotherObject(std::string objectName);
 	void SetMeshMaterialByMeshName(std::string meshName, std::string materialName);
+	void PickUp();
+	void SetPickUpType(PickUpType pickupType);
+	void DisablePickUp();
+	bool IsCollectable();
+	bool IsCollected();
+	PickUpType GetPickUpType();
 
 	void CreateRigidBody(glm::mat4 matrix, bool kinematic);
 	void AddCollisionShape(PxShape* shape, PhysicsFilterData physicsFilterData);

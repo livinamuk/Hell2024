@@ -6,6 +6,7 @@
 #include "../Common.h"
 #include "../Util.hpp"
 #include "AnimatedGameObject.h"
+#include "Config.hpp"
 
 int Player::GetCurrentWeaponClipAmmo() {
 	if (_currentWeaponIndex == Weapon::GLOCK) {
@@ -50,7 +51,7 @@ Player::Player(glm::vec3 position, glm::vec3 rotation) {
 	_weaponInventory[Weapon::KNIFE] = true;
 	_weaponInventory[Weapon::GLOCK] = true;
 	_weaponInventory[Weapon::SHOTGUN] = false;
-	_weaponInventory[Weapon::AKS74U] = true;
+	_weaponInventory[Weapon::AKS74U] = false;
 	_weaponInventory[Weapon::MP7] = false;
 
 
@@ -58,7 +59,11 @@ Player::Player(glm::vec3 position, glm::vec3 rotation) {
 }
 
 void Player::SetWeapon(Weapon weapon) {
-	_currentWeaponIndex = (int)weapon;
+	if (_currentWeaponIndex != weapon) {
+		_currentWeaponIndex = (int)weapon;
+		_needsAmmoReloaded = false;
+		_weaponAction = WeaponAction::DRAW_BEGIN;
+	}
 }
 
 PxSweepCallback* CreateSweepBuffer() {
@@ -88,6 +93,33 @@ void Player::WipeYVelocityToZeroIfHeadHitCeiling() {
 		//_yVelocity = 0;
 		//std::cout << "HIT HEAD " << Util::Vec3ToString(rayOrigin) << "\n";
 	}*/
+}
+
+void Player::ShowPickUpText(std::string text) {
+	_pickUpText = text;
+	_pickUpTextTimer = Config::pickup_text_time;
+}
+
+void Player::PickUpAKS74U() {
+	if (_weaponInventory[Weapon::AKS74U] == false) {
+		ShowPickUpText("PICKED UP AKS74U");
+		Audio::PlayAudio("ItemPickUp.wav", 1.0f);
+		_weaponInventory[Weapon::AKS74U] = true;
+		_inventory.aks74uAmmo.clip = AKS74U_MAG_SIZE;
+		_inventory.aks74uAmmo.total = AKS74U_MAG_SIZE * 2;
+		if (_currentWeaponIndex == GLOCK || _currentWeaponIndex == KNIFE) {
+			SetWeapon(Weapon::AKS74U);
+		}
+	}
+	else {
+		PickUpAKS74UAmmo();
+	}
+}
+
+void Player::PickUpAKS74UAmmo() {
+	ShowPickUpText("PICKED UP AKS74U AMMO");
+	Audio::PlayAudio("ItemPickUp.wav", 1.0f);
+	_inventory.aks74uAmmo.total += AKS74U_MAG_SIZE * 3;
 }
 
 void Player::Update(float deltaTime) {
@@ -192,11 +224,9 @@ void Player::Update(float deltaTime) {
 		_isGrounded = false;
 	}
 
-	//WipeYVelocityToZeroIfHeadHitCeiling();
-
 	// Gravity		
 	if (_isGrounded) {
-		_yVelocity = -0.01f;
+		_yVelocity = -0.01f; // can't be 0, or the _isGrounded check next frame will fail
 	}
 	else {
 		_yVelocity -= 0.50f * deltaTime;
@@ -305,7 +335,7 @@ void Player::Update(float deltaTime) {
 	// Check for game object pick up collision
 	for (GameObject & gameObject: Scene::_gameObjects) {
 
-		if (gameObject.collectable && !gameObject.collected) {
+		if (gameObject.IsCollectable() && !gameObject.IsCollected()) {
 
 			glm::vec3 worldPositionOfPickUp = glm::vec4(gameObject._transform.position, 1.0f);
 			float allowedPickupMinDistance = 0.6f;
@@ -314,14 +344,10 @@ void Player::Update(float deltaTime) {
 			float distanceToPickUp = glm::distance(a, b);
 
 			if (distanceToPickUp < allowedPickupMinDistance) {
-				_pickUpText = "PICKED UP AKS74U";
-				_pickUpTextTimer = 2.0f;
-				Audio::PlayAudio("ItemPickUp.wav", 1.0f);
-				gameObject.collected = true;
-
-				_weaponInventory[Weapon::AKS74U] = true;
-				std::cout << "this code ran\n";
-				//SetWeapon(Weapon::AKS74U);
+				if (gameObject.GetPickUpType() == PickUpType::AKS74U) {
+					PickUpAKS74U();
+				}
+				gameObject.PickUp();
 			}
 		}		
 	}

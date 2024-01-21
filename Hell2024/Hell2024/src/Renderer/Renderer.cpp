@@ -1409,7 +1409,7 @@ void DrawScene(Shader& shader) {
     // Render game objects
     for (GameObject& gameObject : Scene::_gameObjects) {
 
-        if (gameObject.collected) {
+        if (gameObject.IsCollectable() && gameObject.IsCollected()) {
             continue;
         }
 
@@ -1715,7 +1715,7 @@ void DrawShadowMapScene(Shader& shader) {
     }
     for (GameObject& gameObject : Scene::_gameObjects) {
 
-        if (gameObject.collected) {
+        if (gameObject.IsCollected()) {
             continue;
         }
 

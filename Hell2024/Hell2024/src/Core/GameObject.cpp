@@ -2,6 +2,7 @@
 #include "GameObject.h"
 #include "../Util.hpp"
 #include "Scene.h"
+#include "Config.hpp"
 //#include "Callbacks.hpp"
 
 GameObject::GameObject() {
@@ -134,6 +135,17 @@ void GameObject::Interact() {
 }
 
 void GameObject::Update(float deltaTime) {
+	
+	if (_pickupType != PickUpType::NONE) {
+		if (_pickupCoolDownTime > 0) {
+			_pickupCoolDownTime -= deltaTime;
+		}
+		if (_pickupCoolDownTime <= 0) {
+			_pickupCoolDownTime = 0;
+			_collected = false;
+		}
+	}
+
 	// Open/Close if applicable
 	if (_openState != OpenState::NONE) {
 
@@ -434,23 +446,9 @@ Material* GameObject::GetMaterial(int meshIndex) {
 
 //#include "GameData.h"
 
-void GameObject::PickUp() {
-	//GameData::AddInventoryItem(GetName());
-	//Audio::PlayAudio("ItemPickUp.wav", 0.5f);
-	//_collected = true;
-//	std::cout << "Picked up \"" << GetName() << "\"\n";
-//	std::cout << "_collected \"" << _collected << "\"\n";
-	//std::cout << "Picked up \"" << _transform.position.x << " " <<_transform.position.y << " " << _transform.position.z << " " << "\"\n";
-}
 
 void GameObject::SetCollectedState(bool value) {
 	//_collected = value;
-}
-
-void GameObject::SetInteract(InteractType type, std::string text, std::function<void(void)> callback) {
-	//_interactType = type;
-	//_interactText = text;
-	_interactCallback = callback;
 }
 
 
@@ -458,22 +456,12 @@ BoundingBox GameObject::GetBoundingBox() {
 	return _boundingBox;
 }
 
-void GameObject::EnableCollision() {
-	//_collisionEnabled = true;
-}
-
-void GameObject::DisableCollision() {
-	//_collisionEnabled = false;
-}
-
-bool GameObject::HasCollisionsEnabled() {
-	return true;
-	//return _collisionEnabled;
-}
-
 bool GameObject::IsCollected() {
-	//return _collected;
-	return true;
+	return _collected;
+}
+
+PickUpType GameObject::GetPickUpType() {
+	return _pickupType;
 }
 
 const InteractType& GameObject::GetInteractType() {
@@ -718,4 +706,17 @@ std::vector<Triangle> GameObject::GetTris() {
 	result.push_back(triD);
 
 	return result;
+}
+
+void GameObject::PickUp() {
+	_collected = true;
+	_pickupCoolDownTime = Config::item_respawn_time;
+}
+
+void GameObject::SetPickUpType(PickUpType pickupType) {
+	_pickupType = pickupType;
+}
+
+bool GameObject::IsCollectable() {
+	return (_pickupType != PickUpType::NONE);
 }
