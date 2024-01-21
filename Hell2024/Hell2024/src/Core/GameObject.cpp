@@ -104,9 +104,6 @@ std::string GameObject::GetParentName() {
 	return _parentName;
 }
 
-void GameObject::SetScriptName(std::string name) {
-	_scriptName = name;
-}
 bool GameObject::IsInteractable() {
 	if (_openState == OpenState::CLOSED ||
 		_openState == OpenState::OPEN ||
@@ -175,127 +172,6 @@ void GameObject::Update(float deltaTime) {
 				_openState = OpenState::CLOSED;
 				_openTransform.position.z = 0;
 			}
-
-		}
-
-
-		// Rotation
-		/*if (_openAxis == OpenAxis::ROTATION_NEG_Y) {
-			if (_openState == OpenState::OPENING) {
-				_openTransform.rotation.y -= _openSpeed * deltaTime;
-			}
-			if (_openState == OpenState::CLOSING) {
-				_openTransform.rotation.y += _openSpeed * deltaTime;
-			}
-			if (_openTransform.rotation.y < _maxOpenAmount) {
-				_openTransform.rotation.y = _maxOpenAmount;
-				_openState = OpenState::OPEN;
-			}
-			if (_openTransform.rotation.y > _minOpenAmount) {
-				_openTransform.rotation.y = _minOpenAmount;
-				_openState = OpenState::CLOSED;
-			}
-		}*/
-		/*if (_openAxis == OpenAxis::ROTATION_POS_Y) {
-			if (_openState == OpenState::OPENING) {
-				_transform.rotation.y += _openSpeed * deltaTime;
-			}
-			if (_openState == OpenState::CLOSING) {
-				_transform.rotation.y -= _openSpeed * deltaTime;
-			}
-			if (_transform.rotation.y > _maxOpenAmount) {
-				_transform.rotation.y = _maxOpenAmount;
-				_openState = OpenState::OPEN;
-			}
-			if (_transform.rotation.y < _minOpenAmount) {
-				_transform.rotation.y = _minOpenAmount;
-				_openState = OpenState::CLOSED;
-			}
-		}
-		if (_openAxis == OpenAxis::ROTATION_NEG_X) {
-			if (_openState == OpenState::OPENING) {
-				_transform.rotation.x -= _openSpeed * deltaTime;
-			}
-			if (_openState == OpenState::CLOSING) {
-				_transform.rotation.x += _openSpeed * deltaTime;
-			}
-			if (_transform.rotation.x < _maxOpenAmount) {
-				_transform.rotation.x = _maxOpenAmount;
-				_openState = OpenState::OPEN;
-				//GameData::_toiletLidUp = false;
-			}
-			if (_transform.rotation.x > _minOpenAmount) {
-				_transform.rotation.x = _minOpenAmount;
-				_openState = OpenState::CLOSED;
-				//GameData::_toiletLidUp = true;
-			}
-		}
-		if (_openAxis == OpenAxis::ROTATION_POS_X) {
-			if (_openState == OpenState::OPENING) {
-				_transform.rotation.x += _openSpeed * deltaTime;
-			}
-			if (_openState == OpenState::CLOSING) {
-				_transform.rotation.x -= _openSpeed * deltaTime;
-			}
-			if (_transform.rotation.x > _maxOpenAmount) {
-				_transform.rotation.x = _maxOpenAmount;
-				_openState = OpenState::OPEN;
-			}
-			if (_transform.rotation.x < _minOpenAmount) {
-				_transform.rotation.x = _minOpenAmount;
-				_openState = OpenState::CLOSED;
-			}
-		}
-		// Position
-		else if (_openAxis == OpenAxis::TRANSLATE_Z) {
-			if (_openState == OpenState::OPENING) {
-				_transform.position.z += _openSpeed * deltaTime;
-			}
-			if (_openState == OpenState::CLOSING) {
-				_transform.position.z -= _openSpeed * deltaTime;
-			}
-			if (_transform.position.z > _maxOpenAmount) {
-				_transform.position.z = _maxOpenAmount;
-				_openState = OpenState::OPEN;
-			}
-			if (_transform.position.z < 0) {
-				_transform.position.z = 0;
-				_openState = OpenState::CLOSED;
-			}
-		}*/
-	}
-
-	
-	else if (_scriptName == "OpenableDrawer") {
-		if (_openState == OpenState::OPENING) {
-			_transform.position.z += _openSpeed * deltaTime;
-		}
-		if (_openState == OpenState::CLOSING) {
-			_transform.position.z -= _openSpeed * deltaTime;
-		}
-		if (_transform.position.z > _maxOpenAmount) {
-			_transform.position.z = _maxOpenAmount;
-			_openState = OpenState::OPEN;
-		}
-		if (_transform.position.z < 0) {
-			_transform.position.z = 0;
-			_openState = OpenState::CLOSED;
-		}
-	}
-	else if (_scriptName == "OpenableCabinet") {
-		if (_openState == OpenState::OPENING) {
-			_transform.rotation.y += _openSpeed * deltaTime;
-		}
-		if (_openState == OpenState::CLOSING) {
-			_transform.rotation.y -= _openSpeed * deltaTime;
-		}
-		if (_transform.rotation.y > _maxOpenAmount) {
-			_transform.rotation.y = _maxOpenAmount;
-			_openState = OpenState::OPEN;
-		}
-		if (_transform.rotation.y < _minOpenAmount) {
-			_transform.rotation.y = _minOpenAmount;
-			_openState = OpenState::CLOSED;
 		}
 	}
 
@@ -462,6 +338,23 @@ bool GameObject::IsCollected() {
 
 PickUpType GameObject::GetPickUpType() {
 	return _pickupType;
+}
+
+void GameObject::CreateEditorPhysicsObject() {
+
+	if (_editorRaycastBody) {
+		_editorRaycastBody->release();
+	}
+	if (_editorRaycastShape) {
+		_editorRaycastShape->release();
+	}
+	if (!_model->_triangleMesh) {
+		_model->CreateTriangleMesh();
+	}
+	PxShapeFlags shapeFlags(PxShapeFlag::eSCENE_QUERY_SHAPE);
+	_editorRaycastShape = Physics::CreateShapeFromTriangleMesh(_model->_triangleMesh, shapeFlags);
+	_editorRaycastBody = Physics::CreateEditorRigidStatic(_transform, _editorRaycastShape);
+	_editorRaycastBody->userData = new PhysicsObjectData(PhysicsObjectType::GAME_OBJECT, this);
 }
 
 const InteractType& GameObject::GetInteractType() {

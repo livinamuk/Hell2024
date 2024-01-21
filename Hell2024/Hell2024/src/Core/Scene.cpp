@@ -427,7 +427,6 @@ void Scene::LoadHardCodedObjects() {
             smallChestOfDrawer_1.SetMeshMaterial("Drawers");
             smallChestOfDrawer_1.SetParentName("SmallDrawersHis");
             smallChestOfDrawer_1.SetName("TopDraw");
-            smallChestOfDrawer_1.SetScriptName("OpenableDrawer");
             smallChestOfDrawer_1.SetOpenState(OpenState::CLOSED, 2.183f, 0, 0.2f);
             //smallChestOfDrawer_1.SetAudioOnOpen("DrawerOpen.wav", DRAWER_VOLUME);
             //smallChestOfDrawer_1.SetAudioOnClose("DrawerOpen.wav", DRAWER_VOLUME);
@@ -440,7 +439,6 @@ void Scene::LoadHardCodedObjects() {
             smallChestOfDrawer_2.SetModel("SmallDrawerSecond");
             smallChestOfDrawer_2.SetMeshMaterial("Drawers");
             smallChestOfDrawer_2.SetParentName("SmallDrawersHis");
-            smallChestOfDrawer_2.SetScriptName("OpenableDrawer");
             // smallChestOfDrawer_2.SetOpenState(OpenState::CLOSED, 2.183f, 0, 0.2f);
              //smallChestOfDrawer_2.SetAudioOnOpen("DrawerOpen.wav", DRAWER_VOLUME);
              //smallChestOfDrawer_2.SetAudioOnClose("DrawerOpen.wav", DRAWER_VOLUME);
@@ -451,7 +449,6 @@ void Scene::LoadHardCodedObjects() {
             smallChestOfDrawer_3.SetModel("SmallDrawerThird");
             smallChestOfDrawer_3.SetMeshMaterial("Drawers");
             smallChestOfDrawer_3.SetParentName("SmallDrawersHis");
-            smallChestOfDrawer_3.SetScriptName("OpenableDrawer");
             //  smallChestOfDrawer_3.SetOpenState(OpenState::CLOSED, 2.183f, 0, 0.2f);
               // smallChestOfDrawer_3.SetAudioOnOpen("DrawerOpen.wav", DRAWER_VOLUME);
               // smallChestOfDrawer_3.SetAudioOnClose("DrawerOpen.wav", DRAWER_VOLUME);
@@ -462,7 +459,6 @@ void Scene::LoadHardCodedObjects() {
             smallChestOfDrawer_4.SetModel("SmallDrawerFourth");
             smallChestOfDrawer_4.SetMeshMaterial("Drawers");
             smallChestOfDrawer_4.SetParentName("SmallDrawersHis");
-            smallChestOfDrawer_4.SetScriptName("OpenableDrawer");
             //  smallChestOfDrawer_4.SetOpenState(OpenState::CLOSED, 2.183f, 0, 0.2f);
               // smallChestOfDrawer_4.SetAudioOnOpen("DrawerOpen.wav", DRAWER_VOLUME);
               // smallChestOfDrawer_4.SetAudioOnClose("DrawerOpen.wav", DRAWER_VOLUME);
@@ -927,6 +923,14 @@ void Scene::RecreateAllPhysicsObjects() {
 	for (Window& window : _windows) {
         window.CreatePhysicsObjects();
 	}
+
+
+    // Editor objects
+    for (GameObject& gameObject : _gameObjects) {
+        gameObject.CreateEditorPhysicsObject();
+    }
+
+
 }
 
 void Scene::RemoveAllDecalsFromWindow(Window* window) {    

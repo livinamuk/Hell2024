@@ -9,25 +9,14 @@ enum class InteractType { NONE, TEXT, QUESTION, PICKUP, CALLBACK_ONLY };
 enum class ModelMatrixMode { GAME_TRANSFORM, PHYSX_TRANSFORM };
 enum class PickUpType {NONE, GLOCK, GLOCK_AMMO, SHOTGUN, SHOTGUN_AMMO, AKS74U, AKS74U_AMMO };
 
-/*struct BoundingBox {
-	float xLow = 0;
-	float xHigh = 0;
-	float zLow = 0;
-	float zHigh = 0;
-};*/
-
 struct GameObject {
 public:
 	Model* _model = nullptr;
-
-
-
 	std::vector<int> _meshMaterialIndices;
 	Transform _transform;
 	Transform _openTransform;
 	std::string _name = "undefined";
 	std::string _parentName = "undefined";
-	std::string _scriptName = "undefined";
 	OpenState _openState = OpenState::NONE;
 	OpenAxis _openAxis = OpenAxis::NONE;
 	float _maxOpenAmount = 0;
@@ -36,7 +25,7 @@ public:
 
 private:
 
-	PickUpType _pickupType;
+	PickUpType _pickupType = PickUpType::NONE;
 	bool _collected = false;
 	float _pickupCoolDownTime = 0;
 		
@@ -47,6 +36,9 @@ private:
 	std::vector<PxShape*> _collisionShapes;
 	PxRigidStatic* _raycastBody = NULL;
 	PxShape* _raycastShape = NULL;
+
+	PxRigidStatic* _editorRaycastBody = NULL;
+	PxShape* _editorRaycastShape = NULL;
 
 	struct AudioEffects {
 		AudioEffectInfo onOpen;
@@ -104,6 +96,7 @@ public:
 	bool IsCollectable();
 	bool IsCollected();
 	PickUpType GetPickUpType();
+	void CreateEditorPhysicsObject();
 
 	void CreateRigidBody(glm::mat4 matrix, bool kinematic);
 	void AddCollisionShape(PxShape* shape, PhysicsFilterData physicsFilterData);

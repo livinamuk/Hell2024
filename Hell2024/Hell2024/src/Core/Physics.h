@@ -44,9 +44,11 @@ namespace Physics {
 	PxScene* GetScene();
 	PxPhysics* GetPhysics();
 	PxMaterial* GetDefaultMaterial();
+	PxScene* GetEditorScene();
 	PxShape* CreateBoxShape(float width, float height, float depth, Transform shapeOffset = Transform(), PxMaterial* material = NULL);
 	PxRigidDynamic* CreateRigidDynamic(Transform transform, PhysicsFilterData filterData, PxShape* shape, Transform shapeOffset = Transform());
 	PxRigidStatic* CreateRigidStatic(Transform transform, PhysicsFilterData physicsFilterData, PxShape* shape, Transform shapeOffset = Transform());
+	PxRigidStatic* CreateEditorRigidStatic(Transform transform, PxShape* shap);
 	PxRigidDynamic* CreateRigidDynamic(glm::mat4 matrix, PhysicsFilterData filterData, PxShape* shape);
 	PxRigidDynamic* CreateRigidDynamic(glm::mat4 matrix, bool kinematic);
 	PxShape* CreateShapeFromTriangleMesh(PxTriangleMesh* triangleMesh, PxShapeFlags shapeFlags, PxMaterial* material = NULL, float scale = 1);

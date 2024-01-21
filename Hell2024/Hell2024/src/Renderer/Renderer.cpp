@@ -175,7 +175,7 @@ std::vector<glm::mat4> _aks74uMatrices;
 
 
 enum RenderMode { COMPOSITE, DIRECT_LIGHT, INDIRECT_LIGHT, POINT_CLOUD, MODE_COUNT } _mode;
-enum DebugLineRenderMode { SHOW_NO_LINES, PHYSX_ALL, PHYSX_RAYCAST, PHYSX_COLLISION, RAYTRACE_LAND, DEBUG_LINE_MODE_COUNT} _debugLineRenderMode;
+enum DebugLineRenderMode { SHOW_NO_LINES, PHYSX_ALL, PHYSX_RAYCAST, PHYSX_COLLISION, RAYTRACE_LAND, PHYSX_EDITOR, DEBUG_LINE_MODE_COUNT} _debugLineRenderMode;
 
 void DrawHud(Player* player);
 void DrawScene(Shader& shader);
@@ -1038,6 +1038,10 @@ void LightingPass(Player* player) {
         TextBlitter::_debugTextToBilt += "Line Mode: COMPUTE RAY WORLD\n";
     }
 
+    else if (_debugLineRenderMode == DebugLineRenderMode::PHYSX_EDITOR) {
+        TextBlitter::_debugTextToBilt += "Line Mode: PHYSX EDITOR\n";
+    }
+
     
   
     gBuffer.Bind();
@@ -1242,15 +1246,22 @@ void DebugPass(Player* player) {
 
         if (_debugLineRenderMode == DebugLineRenderMode::PHYSX_ALL ||
             _debugLineRenderMode == DebugLineRenderMode::PHYSX_COLLISION ||
-            _debugLineRenderMode == DebugLineRenderMode::PHYSX_RAYCAST) {
+            _debugLineRenderMode == DebugLineRenderMode::PHYSX_RAYCAST ||
+            _debugLineRenderMode == DebugLineRenderMode::PHYSX_EDITOR) {
 
             _lines.clear();
             _shaders.solidColor.Use();
             _shaders.solidColor.SetBool("uniformColor", false);
             _shaders.solidColor.SetMat4("model", glm::mat4(1));
-            auto& renderBuffer = scene->getRenderBuffer();
-            for (unsigned int i = 0; i < renderBuffer.getNbLines(); i++) {
-                auto pxLine = renderBuffer.getLines()[i];
+            auto* renderBuffer = &scene->getRenderBuffer();
+
+            if (_debugLineRenderMode == DebugLineRenderMode::PHYSX_EDITOR) {
+                renderBuffer = &scene->getRenderBuffer();
+                color = PURPLE;
+            }
+
+            for (unsigned int i = 0; i < renderBuffer->getNbLines(); i++) {
+                auto pxLine = renderBuffer->getLines()[i];
                 Line line;
                 line.p1.pos = Util::PxVec3toGlmVec3(pxLine.pos0);
                 line.p2.pos = Util::PxVec3toGlmVec3(pxLine.pos1);
@@ -2393,33 +2404,33 @@ void RenderShadowMaps() {
 	glDepthMask(true);
 	glDisable(GL_BLEND);
 	glDisable(GL_CULL_FACE);
+    glEnable(GL_DEPTH_TEST);
+    glViewport(0, 0, SHADOW_MAP_SIZE, SHADOW_MAP_SIZE);
 
     for (Player& player : Scene::_players) {
-
-		glEnable(GL_DEPTH_TEST);
-		glViewport(0, 0, SHADOW_MAP_SIZE, SHADOW_MAP_SIZE);
-		glBindFramebuffer(GL_FRAMEBUFFER, player._shadowMap._ID);
-		glClear(GL_DEPTH_BUFFER_BIT);
-
-		std::vector<glm::mat4> projectionTransforms;
-        glm::vec3 position = player.GetViewPos();
-		glm::mat4 shadowProj = glm::perspective(glm::radians(90.0f), (float)SHADOW_MAP_SIZE / (float)SHADOW_MAP_SIZE, SHADOW_NEAR_PLANE, SHADOW_FAR_PLANE);
-		projectionTransforms.clear();
-		projectionTransforms.push_back(shadowProj * glm::lookAt(position, position + glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
-		projectionTransforms.push_back(shadowProj * glm::lookAt(position, position + glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
-		projectionTransforms.push_back(shadowProj * glm::lookAt(position, position + glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f)));
-		projectionTransforms.push_back(shadowProj * glm::lookAt(position, position + glm::vec3(0.0f, -1.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f)));
-		projectionTransforms.push_back(shadowProj * glm::lookAt(position, position + glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
-		projectionTransforms.push_back(shadowProj * glm::lookAt(position, position + glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
-		_shaders.shadowMap.SetMat4("shadowMatrices[0]", projectionTransforms[0]);
-		_shaders.shadowMap.SetMat4("shadowMatrices[1]", projectionTransforms[1]);
-		_shaders.shadowMap.SetMat4("shadowMatrices[2]", projectionTransforms[2]);
-		_shaders.shadowMap.SetMat4("shadowMatrices[3]", projectionTransforms[3]);
-		_shaders.shadowMap.SetMat4("shadowMatrices[4]", projectionTransforms[4]);
-		_shaders.shadowMap.SetMat4("shadowMatrices[5]", projectionTransforms[5]);
-		_shaders.shadowMap.SetVec3("lightPosition", position);
-		_shaders.shadowMap.SetMat4("model", glm::mat4(1));
-		DrawShadowMapScene(_shaders.shadowMap);
+        if (player.MuzzleFlashIsRequired()) {
+	        glBindFramebuffer(GL_FRAMEBUFFER, player._shadowMap._ID);
+	        glClear(GL_DEPTH_BUFFER_BIT);
+	        std::vector<glm::mat4> projectionTransforms;
+            glm::vec3 position = player.GetViewPos();
+	        glm::mat4 shadowProj = glm::perspective(glm::radians(90.0f), (float)SHADOW_MAP_SIZE / (float)SHADOW_MAP_SIZE, SHADOW_NEAR_PLANE, SHADOW_FAR_PLANE);
+	        projectionTransforms.clear();
+	        projectionTransforms.push_back(shadowProj * glm::lookAt(position, position + glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
+	        projectionTransforms.push_back(shadowProj * glm::lookAt(position, position + glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
+	        projectionTransforms.push_back(shadowProj * glm::lookAt(position, position + glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f)));
+	        projectionTransforms.push_back(shadowProj * glm::lookAt(position, position + glm::vec3(0.0f, -1.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f)));
+	        projectionTransforms.push_back(shadowProj * glm::lookAt(position, position + glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
+	        projectionTransforms.push_back(shadowProj * glm::lookAt(position, position + glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
+	        _shaders.shadowMap.SetMat4("shadowMatrices[0]", projectionTransforms[0]);
+	        _shaders.shadowMap.SetMat4("shadowMatrices[1]", projectionTransforms[1]);
+	        _shaders.shadowMap.SetMat4("shadowMatrices[2]", projectionTransforms[2]);
+	        _shaders.shadowMap.SetMat4("shadowMatrices[3]", projectionTransforms[3]);
+	        _shaders.shadowMap.SetMat4("shadowMatrices[4]", projectionTransforms[4]);
+	        _shaders.shadowMap.SetMat4("shadowMatrices[5]", projectionTransforms[5]);
+	        _shaders.shadowMap.SetVec3("lightPosition", position);
+	        _shaders.shadowMap.SetMat4("model", glm::mat4(1));
+	        DrawShadowMapScene(_shaders.shadowMap);
+        }
     }
 
 

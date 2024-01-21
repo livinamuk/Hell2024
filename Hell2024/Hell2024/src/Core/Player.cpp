@@ -242,7 +242,6 @@ void Player::Update(float deltaTime) {
 	_characterController->move(PxVec3(displacement.x, _yVelocity , displacement.z), minDist, deltaTime, data);
 	_position = Util::PxVec3toGlmVec3(_characterController->getFootPosition());
 	
-
 	// Footstep audio
 	static float m_footstepAudioTimer = 0;
 	static float footstepAudioLoopLength = 0.5;

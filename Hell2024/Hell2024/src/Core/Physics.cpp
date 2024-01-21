@@ -29,6 +29,7 @@ PxPvd* _pvd = NULL;
 PxPhysics* _physics = NULL;
 PxDefaultCpuDispatcher* _dispatcher = NULL;
 PxScene* _scene = NULL;
+PxScene* _editorScene = NULL;
 PxMaterial* _defaultMaterial = NULL;
 ContactReportCallback   _contactReportCallback;
 PxRigidStatic* _groundPlane = NULL;
@@ -249,6 +250,8 @@ void Physics::Init() {
     _scene->setVisualizationParameter(PxVisualizationParameter::eCOLLISION_SHAPES, 2.0f);
 
 
+    _editorScene = _physics->createScene(sceneDesc);
+
     PxPvdSceneClient* pvdClient = _scene->getScenePvdClient();
     if (pvdClient) {
         pvdClient->setScenePvdFlag(PxPvdSceneFlag::eTRANSMIT_CONSTRAINTS, true);
@@ -308,6 +311,9 @@ void Physics::StepPhysics(float deltaTime) {
 
 PxScene* Physics::GetScene() {
     return _scene;
+}
+PxScene* Physics::GetEditorScene() {
+    return _editorScene;
 }
 
 PxPhysics* Physics::GetPhysics() {
@@ -394,8 +400,24 @@ PxRigidStatic* Physics::CreateRigidStatic(Transform transform, PhysicsFilterData
 
     body->attachShape(*shape);
     _scene->addActor(*body);
+    
     return body;
 }
+
+PxRigidStatic* Physics::CreateEditorRigidStatic(Transform transform, PxShape* shape) {
+    PxQuat quat = Util::GlmQuatToPxQuat(glm::quat(transform.rotation));
+    PxTransform trans = PxTransform(PxVec3(transform.position.x, transform.position.y, transform.position.z), quat);
+    PxRigidStatic* body = _physics->createRigidStatic(trans);
+    PxFilterData filterData;
+    filterData.word0 = (PxU32)RAYCAST_ENABLED;
+    filterData.word1 = (PxU32)NO_COLLISION;
+    filterData.word2 = (PxU32)NO_COLLISION;
+    shape->setQueryFilterData(filterData);       // ray casts
+     _editorScene->addActor(*body);
+    return body;
+}
+
+
 
 PxRigidDynamic* Physics::CreateRigidDynamic(glm::mat4 matrix, PhysicsFilterData physicsFilterData, PxShape* shape) {
     PxFilterData filterData;
