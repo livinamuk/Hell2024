@@ -19,6 +19,22 @@ void ProcessBullets();
 
 void Scene::Update(float deltaTime) {
 
+    GameObject* ak = GetGameObjectByName("AKS74U_Carlos");
+   // ak->_transform.rotation = glm::vec3(0, 0, 0);
+    if (Input::KeyPressed(HELL_KEY_SPACE) && false) {
+        std::cout << "updating game object: " << ak->_name << "\n";
+        //ak->_editorRaycastBody->setGlobalPose(PxTransform(Util::GlmMat4ToPxMat44(ak->GetModelMatrix())));
+
+        Transform transform = ak->_transform;
+		PxQuat quat = Util::GlmQuatToPxQuat(glm::quat(transform.rotation));
+		PxTransform trans = PxTransform(PxVec3(transform.position.x, transform.position.y, transform.position.z), quat);
+
+		//ak->_editorRaycastBody->setGlobalPose(PxTransform(Util::GlmMat4ToPxMat44(trans.to_mat4())));
+		ak->_editorRaycastBody->setGlobalPose(trans);
+
+    }
+
+
     SetPlayerGroundedStates();
     ProcessBullets();
 
@@ -270,8 +286,9 @@ void Scene::LoadHardCodedObjects() {
         pictureFrame.SetPosition(0.1f, 1.5f, 2.5f);
         pictureFrame.SetScale(0.01f);
         pictureFrame.SetRotationY(HELL_PI / 2);
-        pictureFrame.SetModel("PictureFrame_1");
-        pictureFrame.SetMeshMaterial("LongFrame");
+		pictureFrame.SetModel("PictureFrame_1");
+		pictureFrame.SetMeshMaterial("LongFrame");
+		pictureFrame.SetName("PictureFrame");
 
         float cushionHeight = 0.555f;
         Transform shapeOffset;

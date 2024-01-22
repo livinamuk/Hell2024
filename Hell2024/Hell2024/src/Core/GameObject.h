@@ -23,6 +23,10 @@ public:
 	float _minOpenAmount = 0;
 	float _openSpeed = 0;
 
+
+	PxRigidStatic* _editorRaycastBody = NULL;
+	PxShape* _editorRaycastShape = NULL;
+
 private:
 
 	PickUpType _pickupType = PickUpType::NONE;
@@ -37,8 +41,6 @@ private:
 	PxRigidStatic* _raycastBody = NULL;
 	PxShape* _raycastShape = NULL;
 
-	PxRigidStatic* _editorRaycastBody = NULL;
-	PxShape* _editorRaycastShape = NULL;
 
 	struct AudioEffects {
 		AudioEffectInfo onOpen;

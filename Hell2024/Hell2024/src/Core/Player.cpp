@@ -117,7 +117,7 @@ void Player::PickUpAKS74U() {
 }
 
 void Player::PickUpAKS74UAmmo() {
-	ShowPickUpText("PICKED UP AKS74U AMMO");
+	ShowPickUpText("PICKED UP SOME AMMO");
 	Audio::PlayAudio("ItemPickUp.wav", 1.0f);
 	_inventory.aks74uAmmo.total += AKS74U_MAG_SIZE * 3;
 }

@@ -251,6 +251,9 @@ void Physics::Init() {
 
 
     _editorScene = _physics->createScene(sceneDesc);
+    _editorScene->setVisualizationParameter(PxVisualizationParameter::eSCALE, 1.0f);
+    _editorScene->setVisualizationParameter(PxVisualizationParameter::eCOLLISION_SHAPES, 2.0f);
+
 
     PxPvdSceneClient* pvdClient = _scene->getScenePvdClient();
     if (pvdClient) {
@@ -266,7 +269,6 @@ void Physics::Init() {
 
 
 
-    //std::cout << "creating ground plane..\n";
     _groundPlane = PxCreatePlane(*_physics, PxPlane(0, 1, 0, 0.0f), *_defaultMaterial);
     _scene->addActor(*_groundPlane);
     _groundPlane->getShapes(&_groundShape, 1);
@@ -276,30 +278,7 @@ void Physics::Init() {
     filterData.word2 = CollisionGroup::BULLET_CASING | CollisionGroup::GENERIC_BOUNCEABLE | CollisionGroup::PLAYER;
     _groundShape->setQueryFilterData(filterData);
     _groundShape->setSimulationFilterData(filterData); // sim is for ragz   
-    //std::cout << "created ground plane..\n";
-
-    //EnableRayCastingForShape(shape);
 }
-
-/*
-void Physics::RemoveGroundPlaneFilterData() {
-    PxFilterData filterData;
-    filterData.word0 = 0;
-    filterData.word1 = 0;
-    filterData.word2 = 0;
-    _groundShape->setQueryFilterData(filterData);
-    _groundShape->setSimulationFilterData(filterData);
-}
-
-void Physics::AddGroundPlaneFilterData() {
-    PxFilterData filterData;
-    filterData.word0 = RaycastGroup::RAYCAST_DISABLED; // must be disabled or it causes crash in scene::update when it tries to retrieve rigid body flags from this actor
-    filterData.word1 = CollisionGroup::ENVIROMENT_OBSTACLE;
-    filterData.word2 = CollisionGroup::BULLET_CASING | CollisionGroup::GENERIC_BOUNCEABLE |	CollisionGroup::PLAYER;
-    _groundShape->setQueryFilterData(filterData);
-    _groundShape->setSimulationFilterData(filterData); // sim is for ragz
-}*/
-
 
 void Physics::StepPhysics(float deltaTime) {
     //float maxSimulateTime = (1.0f / 60.0f) * 4.0f;
@@ -335,13 +314,12 @@ PxShape* Physics::CreateBoxShape(float width, float height, float depth, Transfo
     return shape;
 }
 
-PxShape* Physics::CreateShapeFromTriangleMesh(PxTriangleMesh* triangleMesh, PxShapeFlags shapeFlags2, PxMaterial* material, float scale) {
+PxShape* Physics::CreateShapeFromTriangleMesh(PxTriangleMesh* triangleMesh, PxShapeFlags shapeFlags2, PxMaterial* material, glm::vec3 scale) {
     if (material == NULL) {
         material = _defaultMaterial;
     }
     PxMeshGeometryFlags flags(~PxMeshGeometryFlag::eTIGHT_BOUNDS | ~PxMeshGeometryFlag::eDOUBLE_SIDED);
-    PxTriangleMeshGeometry geometry(triangleMesh, PxMeshScale(scale), flags);
-
+    PxTriangleMeshGeometry geometry(triangleMesh, PxMeshScale(PxVec3(scale.x, scale.y, scale.z)), flags);
 
     PxShapeFlags shapeFlags(PxShapeFlag::eSCENE_QUERY_SHAPE); // Most importantly NOT eSIMULATION_SHAPE. PhysX does not allow for tri mesh.
     return _physics->createShape(geometry, *material, shapeFlags);
@@ -406,14 +384,18 @@ PxRigidStatic* Physics::CreateRigidStatic(Transform transform, PhysicsFilterData
 
 PxRigidStatic* Physics::CreateEditorRigidStatic(Transform transform, PxShape* shape) {
     PxQuat quat = Util::GlmQuatToPxQuat(glm::quat(transform.rotation));
-    PxTransform trans = PxTransform(PxVec3(transform.position.x, transform.position.y, transform.position.z), quat);
-    PxRigidStatic* body = _physics->createRigidStatic(trans);
-    PxFilterData filterData;
-    filterData.word0 = (PxU32)RAYCAST_ENABLED;
-    filterData.word1 = (PxU32)NO_COLLISION;
-    filterData.word2 = (PxU32)NO_COLLISION;
-    shape->setQueryFilterData(filterData);       // ray casts
-     _editorScene->addActor(*body);
+	PxTransform trans = PxTransform(PxVec3(transform.position.x, transform.position.y, transform.position.z), quat);
+
+	PxRigidStatic* body = _physics->createRigidStatic(trans);
+	//PxRigidStatic* body = _physics->createRigidStatic(PxTransform());
+	body->attachShape(*shape);
+    //PxFilterData filterData;
+    //filterData.word0 = (PxU32)RAYCAST_ENABLED;
+    //filterData.word1 = (PxU32)NO_COLLISION;
+    //filterData.word2 = (PxU32)NO_COLLISION;
+	//shape->setQueryFilterData(filterData);       // ray casts
+	//body->setActorFlag(PxActorFlag::eVISUALIZATION, true);
+	_editorScene->addActor(*body);
     return body;
 }
 
