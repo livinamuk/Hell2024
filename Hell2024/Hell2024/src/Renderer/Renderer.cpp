@@ -1256,7 +1256,11 @@ void DebugPass(Player* player) {
             auto* renderBuffer = &scene->getRenderBuffer();
 
             if (_debugLineRenderMode == DebugLineRenderMode::PHYSX_EDITOR) {
-                renderBuffer = &scene->getRenderBuffer();
+
+                Physics::GetEditorScene()->simulate(1/60.0f);
+                Physics::GetEditorScene()->fetchResults(true);
+
+                renderBuffer = &Physics::GetEditorScene()->getRenderBuffer();
                 color = PURPLE;
             }
 

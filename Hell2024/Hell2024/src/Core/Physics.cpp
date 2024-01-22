@@ -251,6 +251,9 @@ void Physics::Init() {
 
 
     _editorScene = _physics->createScene(sceneDesc);
+    _editorScene->setVisualizationParameter(PxVisualizationParameter::eSCALE, 1.0f);
+    _editorScene->setVisualizationParameter(PxVisualizationParameter::eCOLLISION_SHAPES, 2.0f);
+
 
     PxPvdSceneClient* pvdClient = _scene->getScenePvdClient();
     if (pvdClient) {
@@ -268,6 +271,7 @@ void Physics::Init() {
 
     //std::cout << "creating ground plane..\n";
     _groundPlane = PxCreatePlane(*_physics, PxPlane(0, 1, 0, 0.0f), *_defaultMaterial);
+  //  _editorScene->addActor(*_groundPlane);
     _scene->addActor(*_groundPlane);
     _groundPlane->getShapes(&_groundShape, 1);
     PxFilterData filterData;
@@ -344,7 +348,7 @@ PxShape* Physics::CreateShapeFromTriangleMesh(PxTriangleMesh* triangleMesh, PxSh
 
 
     PxShapeFlags shapeFlags(PxShapeFlag::eSCENE_QUERY_SHAPE); // Most importantly NOT eSIMULATION_SHAPE. PhysX does not allow for tri mesh.
-    return _physics->createShape(geometry, *material, shapeFlags);
+    return _physics->createShape(geometry, *material, false, shapeFlags);
 }
 
 PxShape* Physics::CreateShapeFromConvexMesh(PxConvexMesh* convexMesh, PxMaterial* material, float /*scale*/) {
