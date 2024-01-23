@@ -90,7 +90,8 @@ void DebugMenu::Init() {
 	
 	}
 	// Editor
-	auto& editor = _menu.AddItem("Floor Plan", MenuItemFlag::OPEN_FLOOR_PLAN, nullptr);
+	auto& editor = _menu.AddItem("Editor", MenuItemFlag::OPEN_EDITOR, nullptr);
+	auto& floorplan = _menu.AddItem("Floor Plan", MenuItemFlag::OPEN_FLOOR_PLAN, nullptr);
 
 	_menu.AddItem("", MenuItemFlag::UNDEFINED, nullptr);
 	_menu.AddItem("Revert to map file", MenuItemFlag::LOAD_MAP, nullptr);

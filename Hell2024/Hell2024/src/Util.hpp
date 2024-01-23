@@ -23,13 +23,13 @@ namespace Util {
 		return { vec.x, vec.y, vec.z };
 	}
 
-    inline PxVec3 GlmVec3toPxVec3(glm::vec3 vec) {
-        return { vec.x, vec.y, vec.z };
-    }
+	inline PxVec3 GlmVec3toPxVec3(glm::vec3 vec) {
+		return { vec.x, vec.y, vec.z };
+	}
 
-    inline PxQuat GlmQuatToPxQuat(glm::quat quat) {
-        return { quat.x, quat.y, quat.z, quat.w };
-    }
+	inline PxQuat GlmQuatToPxQuat(glm::quat quat) {
+		return { quat.x, quat.y, quat.z, quat.w };
+	}
 
     inline PhysXRayResult CastPhysXRay(glm::vec3 rayOrigin, glm::vec3 rayDirection, float rayLength) {
 

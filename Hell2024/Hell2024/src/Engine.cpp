@@ -117,7 +117,7 @@ void Engine::Run() {
     double lastFrame = glfwGetTime();
     double thisFrame = lastFrame;
     double deltaTimeAccumulator = 0.0;
-	double fixedDeltaTime = 1.0 / 60.0;
+    double fixedDeltaTime = 1.0 / 60.0;
 
     while (GL::WindowIsOpen() && GL::WindowHasNotBeenForceClosed()) {
 
@@ -135,6 +135,12 @@ void Engine::Run() {
 			}
 		}
 
+		if (Input::KeyDown(HELL_KEY_M)) {
+			for (int i = 0; i < 1000; i++) {
+				std::cout << "shit\n";
+			}
+		}
+
         lastFrame = thisFrame;
         thisFrame = glfwGetTime();
         double deltaTime = thisFrame - lastFrame;
@@ -146,9 +152,6 @@ void Engine::Run() {
 	
         Audio::Update();
         if (_engineMode == EngineMode::Game) {
-
-            //static int frameNumber = 0;
-            //std::cout << "FRAME: " << frameNumber++ << "\n";
 
             while (deltaTimeAccumulator >= fixedDeltaTime) {
                 deltaTimeAccumulator -= fixedDeltaTime;

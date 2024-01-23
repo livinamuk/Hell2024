@@ -107,7 +107,7 @@ void Player::PickUpAKS74U() {
 }
 
 void Player::PickUpAKS74UAmmo() {
-	ShowPickUpText("PICKED UP AKS74U AMMO");
+	ShowPickUpText("PICKED UP SOME AMMO");
 	Audio::PlayAudio("ItemPickUp.wav", 1.0f);
 	_inventory.aks74uAmmo.total += AKS74U_MAG_SIZE * 3;
 }
@@ -203,28 +203,31 @@ void Player::Update(float deltaTime) {
 			_isMoving = true;
 		}
 	}
+	float fixedDeltaTime = (1.0f / 60.0f);
 
-	// Adjust displacement for deltatime and movement speed
+	// Normalize displacement vector and include player speed
 	float len = length(displacement);
 	if (len != 0.0) {
 		float speed = crouching ? _crouchingSpeed : _walkingSpeed;
-		displacement = (displacement / len) * speed* deltaTime;
+		displacement = (displacement / len) * speed * deltaTime;
 	}
 
 	// Jump
 	if (Input::KeyPressed(HELL_KEY_SPACE) && !_ignoreControl && _isGrounded) {
-		_yVelocity = 6.5f * deltaTime;
+		_yVelocity = 4.75f; // magic value for jump strength
 		_isGrounded = false;
 	}
 
 	// Gravity		
 	if (_isGrounded) {
-		_yVelocity = -0.01f; // can't be 0, or the _isGrounded check next frame will fail
+		_yVelocity = -0.1f; // can't be 0, or the _isGrounded check next frame will fail
 	}
 	else {
-		_yVelocity -= 0.50f * deltaTime;
+		float gravity = 15.75f; // 9.8 feels like the moon
+		_yVelocity -= gravity * deltaTime;
 	}
-		
+	float yDisplacement = _yVelocity * deltaTime;
+
 	// Move PhysX character controller
 	PxFilterData filterData;
 	filterData.word0 = 0;
@@ -232,7 +235,7 @@ void Player::Update(float deltaTime) {
 	PxControllerFilters data;
 	data.mFilterData = &filterData;
 	PxF32 minDist = 0.001f;
-	_characterController->move(PxVec3(displacement.x, _yVelocity , displacement.z), minDist, deltaTime, data);
+	_characterController->move(PxVec3(displacement.x, yDisplacement, displacement.z), minDist, fixedDeltaTime, data);
 	_position = Util::PxVec3toGlmVec3(_characterController->getFootPosition());
 	
 	// Footstep audio

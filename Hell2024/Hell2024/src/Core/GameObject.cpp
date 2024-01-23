@@ -3,6 +3,7 @@
 #include "../Util.hpp"
 #include "Scene.h"
 #include "Config.hpp"
+#include "Input.h"
 //#include "Callbacks.hpp"
 
 GameObject::GameObject() {
@@ -193,13 +194,45 @@ void GameObject::Update(float deltaTime) {
 			_raycastBody->setGlobalPose(_collisionBody->getGlobalPose());
 		}
 	}
-
 	// Pointers
 	if (_raycastBody) {
 		PhysicsObjectData* physicsObjectData = (PhysicsObjectData*)_raycastBody->userData;
 		physicsObjectData->type = GAME_OBJECT;
 		physicsObjectData->parent = this;
 	}
+}
+
+void GameObject::UpdateEditorPhysicsObject() {
+	if (_editorRaycastBody) {
+		if (_modelMatrixMode == ModelMatrixMode::GAME_TRANSFORM) {
+			PxQuat quat = Util::GlmQuatToPxQuat(GetWorldRotation());
+			PxVec3 position = Util::GlmVec3toPxVec3(GetWorldPosition());
+			PxTransform transform = PxTransform(position, quat);
+			_editorRaycastBody->setGlobalPose(transform);
+		}
+		else if (_modelMatrixMode == ModelMatrixMode::PHYSX_TRANSFORM && _collisionBody) {
+			_editorRaycastBody->setGlobalPose(_collisionBody->getGlobalPose());
+		}
+	}
+}
+
+glm::vec3 GameObject::GetWorldPosition() {
+	return Util::GetTranslationFromMatrix(GetGameWorldMatrix());
+}
+
+glm::quat GameObject::GetWorldRotation() {
+
+	glm::quat result = glm::quat(0, 0, 0, 1);
+	if (_parentName != "undefined") {
+		GameObject* parent = Scene::GetGameObjectByName(_parentName);
+		if (parent) {
+			result = parent->GetWorldRotation() * glm::quat(_transform.rotation) * glm::quat(_openTransform.rotation);
+		}
+	}
+	else {
+		result = glm::quat(_transform.rotation);
+	}
+	return result;
 }
 
 glm::mat4 GameObject::GetGameWorldMatrix() {
@@ -352,7 +385,7 @@ void GameObject::CreateEditorPhysicsObject() {
 		_model->CreateTriangleMesh();
 	}
 	PxShapeFlags shapeFlags(PxShapeFlag::eSCENE_QUERY_SHAPE);
-	_editorRaycastShape = Physics::CreateShapeFromTriangleMesh(_model->_triangleMesh, shapeFlags);
+	_editorRaycastShape = Physics::CreateShapeFromTriangleMesh(_model->_triangleMesh, shapeFlags, Physics::GetDefaultMaterial(), _transform.scale);
 	_editorRaycastBody = Physics::CreateEditorRigidStatic(_transform, _editorRaycastShape);
 	_editorRaycastBody->userData = new PhysicsObjectData(PhysicsObjectType::GAME_OBJECT, this);
 
