@@ -226,7 +226,7 @@ void Player::Update(float deltaTime) {
 
 	// Check if the player is airborne
 	if (_isAirborne) {
-		std::cout << "airborne for " << deltaTime << " seconds \n";
+		std::cout << "player's height is: " << _position.y << std::endl;
 		// check if they are in a SCENE_MESH
 		if (_cameraRayResult.physicsObjectType == SCENE_MESH) {
 			_isAirborne = true;
