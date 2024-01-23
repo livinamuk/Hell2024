@@ -267,7 +267,19 @@ void DebugMenu::PressedEnter() {
 	}
 	// Add Door
 	else if (flag == MenuItemFlag::ADD_DOOR) {
-		cout << "You need to write this code mate\n";
+		cout << "you need to write this code mate\n";
+		/* 'Door::Door': no appropriate default constructor available
+		Door& door = Scene::_doors.emplace_back();
+		door.position = glm::vec3(3.15f, 0.1f, 3.6f);
+		door.rotation = HELL_PI * 0.5f;
+		door.CreatePhysicsObject();
+		_parentMenuItem = _currentMenuItem;
+		_currentMenuItem = &_DoorsMenu;
+		_selectionIndex = 0;
+		_selectedDoorIndex = Scene::_doors.size() - 1;
+		_DoorsMenu.name = "DOOR " + std::to_string(_selectedDoorIndex);
+		Audio::PlayAudio(AUDIO_SELECT, 1.00f);
+		*/
 	}
 	// This part will be the Doors
 	else if (flag == MenuItemFlag::EDIT_DOOR) {
