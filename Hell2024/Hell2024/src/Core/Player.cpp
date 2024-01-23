@@ -74,25 +74,15 @@ bool Player::MuzzleFlashIsRequired() {
 	return (_muzzleFlashCounter > 0);
 }
 
-
 void Player::WipeYVelocityToZeroIfHeadHitCeiling() {
-	/*
-	glm::vec3 rayOrigin = _position + glm::vec3(0, 1.5, 0);
-	glm::vec3 rayDirection = glm::vec3(0, 1, 0);
-	PxReal rayLength = 0.5f;
-	PxScene* scene = Physics::GetScene();
-	PxVec3 origin = PxVec3(rayOrigin.x, rayOrigin.y, rayOrigin.z);
-	PxVec3 unitDir = PxVec3(rayDirection.x, rayDirection.y, rayDirection.z);
-	PxRaycastBuffer hit;
-	const PxHitFlags outputFlags = PxHitFlag::ePOSITION;
-	PxQueryFilterData filterData = PxQueryFilterData();
-	filterData.data.word0 = RaycastGroup::RAYCAST_ENABLED;
-	filterData.data.word2 = CollisionGroup::ENVIROMENT_OBSTACLE;
-
-	if (scene->raycast(origin, unitDir, rayLength, hit, outputFlags, filterData)) {
-		//_yVelocity = 0;
-		//std::cout << "HIT HEAD " << Util::Vec3ToString(rayOrigin) << "\n";
-	}*/
+	// check if the player is jumping out the ceiling in Scene::_ceilings
+	for (const Ceiling& ceiling : Scene::_ceilings) {
+		// cout << _position.y << endl;
+		// if the players y pos is the same as the height then set the y velocity to 0
+		if (_position.y >= ceiling.height - 1.5f) {
+			_yVelocity = 0;
+		}
+	}
 }
 
 void Player::ShowPickUpText(std::string text) {
@@ -188,6 +178,9 @@ void Player::Update(float deltaTime) {
 	_forward = glm::vec3(_inverseViewMatrix[2]);
 	_front = glm::normalize(glm::vec3(_forward.x, 0, _forward.z));
 	_viewPos = _inverseViewMatrix[3];
+
+	// if the players head hits the ceiling then set the y velocity to 0
+	// WipeYVelocityToZeroIfHeadHitCeiling();
 
 	// WSAD movement
 	_isMoving = false;
@@ -612,7 +605,16 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
 				std::string aninName = "Knife_Swing" + std::to_string(random_number);
 				_firstPersonWeapon.PlayAnimation(aninName, 1.5f);
 				Audio::PlayAudio("Knife.wav", 1.0f); 
-				SpawnBullet(0);
+
+				glm::vec3 a = glm::vec3(_viewPos.x, 0, _viewPos.z); // get the direction where they are looking
+
+				glm::vec3 c = glm::vec3(_cameraRayResult.hitPosition.x, 0, _cameraRayResult.hitPosition.z); // get the distance to the object
+
+				float distanceToHit = glm::distance(a, c); // get the distance to the object
+
+				if (distanceToHit < 1.0f) {
+					SpawnBullet(0);
+				}
 			}
 		}
 		if (_weaponAction == FIRE && _firstPersonWeapon.IsAnimationComplete()) {
