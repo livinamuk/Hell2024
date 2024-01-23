@@ -150,7 +150,7 @@ void GameObject::Update(float deltaTime) {
 		if (_openState == OpenState::OPENING) {
 
 			float speed = 3.0f;
-			float maxOpenDistance = 0.3f;
+			float maxOpenDistance = 0.25f;
 
 			if (_openTransform.position.z < maxOpenDistance) {
 				_openTransform.position.z += deltaTime * speed;
@@ -158,6 +158,7 @@ void GameObject::Update(float deltaTime) {
 			
 			if (_openTransform.position.z >= maxOpenDistance) {
 				_openState = OpenState::OPEN;
+				_openTransform.position.z = std::min(_openTransform.position.z, maxOpenDistance);
 			}
 		}
 
@@ -389,7 +390,7 @@ void GameObject::CreateEditorPhysicsObject() {
 	_editorRaycastBody = Physics::CreateEditorRigidStatic(_transform, _editorRaycastShape);
 	_editorRaycastBody->userData = new PhysicsObjectData(PhysicsObjectType::GAME_OBJECT, this);
 
-	std::cout << "created editor object for GameObject with model " << _model->_name << "\n";
+	//std::cout << "created editor object for GameObject with model " << _model->_name << "\n";
 }
 
 const InteractType& GameObject::GetInteractType() {

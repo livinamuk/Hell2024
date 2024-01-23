@@ -54,6 +54,8 @@ void Model::Load(std::string filepath, const bool bake_on_load) {
 	_filename = filepath.substr(filepath.rfind("/") + 1);
 	_name = _filename.substr(0, _filename.length() - 4);
 
+	//std::cout << "makign new model with name " << _name << "\n";
+
 	if (!Util::FileExists(filepath.c_str()))
 		std::cout << filepath << " does not exist!\n";
 

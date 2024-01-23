@@ -127,31 +127,42 @@ std::unordered_map<SkinnedModel*, std::vector<std::future<Animation*>>> animatio
 void AssetManager::LoadAssetsMultithreaded() {
 
 	static auto allTextures = std::filesystem::directory_iterator("res/textures/");
-	static auto uiTextures = std::filesystem::directory_iterator("res/textures/ui");
+	static auto uiTextures = std::filesystem::directory_iterator("res/textures/ui/");
 	static auto allModels = std::filesystem::directory_iterator("res/models/");
+	static auto allModels2 = std::filesystem::directory_iterator("res/models/");
 
 	// Find total number of files to load
-	for (auto& file : allTextures) {
-		auto info = Util::GetFileInfo(file);
+	std::vector<std::string> fileNames;
+	for (const auto& file : allTextures) {
+		const auto info = Util::GetFileInfo(file);
 		if (info.filetype == "png" || info.filetype == "jpg" || info.filetype == "tga") {
 			numFilesToLoad++;
+			fileNames.push_back("texture " + info.filename + "." + info.filetype);
 		}
 	}
-	for (auto & file : uiTextures) {
-		auto info = Util::GetFileInfo(file);
+	for (const auto & file : uiTextures) {
+		const auto info = Util::GetFileInfo(file);
 		if (info.filetype == "png" || info.filetype == "jpg" || info.filetype == "tga") {
 			numFilesToLoad++;
+			fileNames.push_back("ui texture " + info.filename + "." + info.filetype);
 		}
 	}
-	//for (auto& file : allModels)
-	{
-		//auto info = Util::GetFileInfo(file);
-		//if (info.filetype == "obj") {
+	for (const auto& file : allModels2) {
+		const auto info = Util::GetFileInfo(file);
+		if (info.filetype == "obj") {
+			numFilesToLoad++;
+			fileNames.push_back("model " + info.filename + "." + info.filetype);
+		}
+		//if (info.filetype == "fbx") {
 		//	numFilesToLoad++;
+		//	fileNames.push_back("model " + info.filename + "." + info.filetype);
 		//}
 	}
-	// why does having the above not commented out break everything?
-
+	
+	for (int i = 0; i < fileNames.size(); i++) {
+		//std::cout << i << ": " << fileNames[i] << "\n";
+	}
+	
 
 	const size_t textures_count{ count_files_in("res/textures/") + count_files_in("res/textures/ui") };
 	_textures.reserve(_textures.size() + textures_count);	// are you sure this is correct?
@@ -169,16 +180,18 @@ void AssetManager::LoadAssetsMultithreaded() {
 
 	for (const auto& entry : allModels) {
 		auto info = Util::GetFileInfo(entry);
+
+		//std::cout << "SHIT: " << info.filename << "\n";
+
 		if (info.filetype == "obj") {
 			auto& model{ _models.emplace_back(Model()) };
+
 			g_asset_mgr_loading_pool.detach_task(
 				[&model, path = std::move(info.fullpath)]() mutable {
 
 				constexpr bool bake_on_load{ false };
-				const auto message{ (std::stringstream{} << "[" << std::setw(6)
-					<< std::this_thread::get_id() << "] Loading " << path << "\n").str()
-				};
-				std::cout << message;
+				const auto message{ (std::stringstream{} << "[" << std::setw(6)	<< std::this_thread::get_id() << "] Loading " << path << "\n").str()};
+				//std::cout << message;
 				model.Load(std::move(path), bake_on_load);
 
 				_loadLogMutex.lock();
@@ -190,6 +203,18 @@ void AssetManager::LoadAssetsMultithreaded() {
 	}
 
 
+
+
+
+}
+
+
+
+void AssetManager::LoadEverythingElse() {
+
+
+
+
 	static const auto load_model_animations = [](std::vector<std::string>&& animations) {
 
 
@@ -198,9 +223,7 @@ void AssetManager::LoadAssetsMultithreaded() {
 		for (auto&& animation : animations) {
 			futureAnimations.emplace_back(g_asset_mgr_loading_pool.submit_task([anim = std::move(animation)] {
 				auto animation{ FbxImporter::LoadAnimation(anim) };
-				std::cout << "[" << std::setw(6) << std::this_thread::get_id() << "] "
-					<< "Loaded animation: " << anim << "\n";
-
+				//std::cout << "[" << std::setw(6) << std::this_thread::get_id() << "] " << "Loaded animation: " << anim << "\n";
 
 				_loadLogMutex.lock();
 				AssetManager::_loadLog.push_back("Loading " + anim);
@@ -230,8 +253,6 @@ void AssetManager::LoadAssetsMultithreaded() {
 				"animations/Character_AKS74U_Idle.fbx",
 		} },
 			skinned_model_path{ "models/AKS74U.fbx", std::vector<std::string>{
-				"animations/AKS74U_Spawn.fbx",
-				"animations/AKS74U_DebugTest.fbx",
 				"animations/AKS74U_Fire1.fbx",
 				"animations/AKS74U_Fire2.fbx",
 				"animations/AKS74U_Fire3.fbx",
@@ -243,7 +264,6 @@ void AssetManager::LoadAssetsMultithreaded() {
 			} },
 			skinned_model_path{ "models/Glock.fbx", std::vector<std::string>{
 				"animations/Glock_Spawn.fbx",
-				"animations/Glock_DebugTest.fbx",
 				"animations/Glock_Fire1.fbx",
 				"animations/Glock_Fire2.fbx",
 				"animations/Glock_Fire3.fbx",
@@ -261,6 +281,14 @@ void AssetManager::LoadAssetsMultithreaded() {
 				"animations/Knife_Swing2.fbx",
 				"animations/Knife_Swing3.fbx",
 			} },
+			skinned_model_path{ "models/Shotgun.fbx", std::vector<std::string>{
+				"animations/Shotgun_Idle.fbx",
+				"animations/Shotgun_Walk.fbx",
+				"animations/Shotgun_Draw.fbx",
+				"animations/Shotgun_Fire1.fbx",
+				"animations/Shotgun_Fire2.fbx",
+				"animations/Shotgun_Fire3.fbx",
+			} }
 	};
 
 	animations_futures.reserve(model_paths.size());
@@ -278,7 +306,7 @@ void AssetManager::LoadAssetsMultithreaded() {
 			_loadLogMutex.unlock();
 
 			if (FbxImporter::LoadSkinnedModelData(*model_ptr, path)) {
-				std::cout << "[SKINNED_MODEL] Loaded '" << path << "'\n";
+				//std::cout << "[SKINNED_MODEL] Loaded '" << path << "'\n";
 
 			}
 			else {
@@ -292,11 +320,7 @@ void AssetManager::LoadAssetsMultithreaded() {
 
 
 
-}
 
-
-
-void AssetManager::LoadEverythingElse() {
 	namespace fs = std::filesystem;
 
 
@@ -363,6 +387,7 @@ void AssetManager::LoadEverythingElse() {
 		emplace_animations(*model_ptr, std::move(future_animations));
 	}
 
+	g_asset_mgr_loading_pool.wait();
 
 	
 
@@ -418,6 +443,14 @@ Model* AssetManager::GetModel(const std::string& name) {
 			return &model;
 	}
 	std::cout << "Could not get model with name \"" << name << "\", it does not exist\n";
+
+
+	std::cout << " there are " << _models.size() << " models\n";
+	for (int i = 0; i < _models.size(); i++) {
+		std::cout << "  " << i << ": " << _models[i]._name << " \n";
+
+	}
+
 	return nullptr;
 }
 

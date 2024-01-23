@@ -32,6 +32,6 @@ namespace AssetManager {
 	inline std::vector<Extent2Di> _charExtents;
 	inline GLuint _textureArray;
 
-	inline std::vector<std::string> _loadLog = { "We are all alone on life's journey, held captive by the limitations of human consciousness.\n" };
+	inline std::vector<std::string> _loadLog;// = { "We are all alone on life's journey, held captive by the limitations of human consciousness.\n" };
 	inline std::vector<std::future<Texture*>> _loadedTextures;
 }

@@ -35,8 +35,6 @@ Player::Player(glm::vec3 position, glm::vec3 rotation) {
 
 	Respawn(position, rotation);
 
-	_weaponInventory.resize(Weapon::WEAPON_COUNT);
-
 	_characterModel.SetSkinnedModel("UniSexGuy2");
 	_characterModel.SetMeshMaterial("CC_Base_Body", "UniSexGuyBody");
 	_characterModel.SetMeshMaterial("CC_Base_Eye", "UniSexGuyBody");
@@ -48,11 +46,6 @@ Player::Player(glm::vec3 position, glm::vec3 rotation) {
 
 	_shadowMap.Init();
 	
-	_weaponInventory[Weapon::KNIFE] = true;
-	_weaponInventory[Weapon::GLOCK] = true;
-	_weaponInventory[Weapon::SHOTGUN] = false;
-	_weaponInventory[Weapon::AKS74U] = false;
-	_weaponInventory[Weapon::MP7] = false;
 
 
 	CreateCharacterController(_position);
@@ -448,13 +441,16 @@ void Player::Interact() {
 
 void Player::Respawn(glm::vec3 position, glm::vec3 rotation) {
 
-	if (_weaponInventory.size()) {
-		_weaponInventory[Weapon::KNIFE] = true;
-		_weaponInventory[Weapon::GLOCK] = true;
-		_weaponInventory[Weapon::SHOTGUN] = false;
-		_weaponInventory[Weapon::AKS74U] = false;
-		_weaponInventory[Weapon::MP7] = false;
+	if (_weaponInventory.empty()) {
+		_weaponInventory.resize(Weapon::WEAPON_COUNT);
 	}
+
+	// Loadout on spawn
+	_weaponInventory[Weapon::KNIFE] = true;
+	_weaponInventory[Weapon::GLOCK] = true;
+	_weaponInventory[Weapon::SHOTGUN] = false;
+	_weaponInventory[Weapon::AKS74U] = false;
+	_weaponInventory[Weapon::MP7] = false;
 
 	SetWeapon(Weapon::GLOCK);
 	_weaponAction = SPAWNING;

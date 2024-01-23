@@ -27,6 +27,8 @@ void NextViewportMode();
 
 void Engine::Run() {
 
+	std::cout << "We are all alone on life's journey, held captive by the limitations of human consciousness.\n";
+
 	GL::Init(1920 * 1.5f, 1080 * 1.5f);
 
 	Renderer::InitMinimumToRenderLoadingFrame();
@@ -55,8 +57,15 @@ void Engine::Run() {
 
         //std::cout << AssetManager::numFilesToLoad << " " << AssetManager::_loadLog.size() << "\n";
 
-		if (AssetManager::_loadLog.size() == 200) { // remember the first 2 lines of _loadLog are that welcome msg, and not actual files
+		if (AssetManager::_loadLog.size() == AssetManager::numFilesToLoad) { // remember the first 2 lines of _loadLog are that welcome msg, and not actual files
 			break;
+		}
+
+
+		if (Input::KeyPressed(GLFW_KEY_SPACE)) {
+			for (int i = 0; i < AssetManager::_loadLog.size(); i++) {
+				//std::cout << i << ": " << AssetManager::_loadLog[i] << "\n";
+			}
 		}
     }
 
@@ -209,7 +218,6 @@ void Engine::Run() {
 
 void Engine::Init() {
 
-    std::cout << "We are all alone on life's journey, held captive by the limitations of human consciousness.\n";
 
     Input::Init();
     Physics::Init();

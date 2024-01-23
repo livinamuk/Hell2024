@@ -456,8 +456,6 @@ void Scene::LoadHardCodedObjects() {
             smallChestOfDrawer_1.SetParentName("SmallDrawersHis");
             smallChestOfDrawer_1.SetName("TopDraw");
             smallChestOfDrawer_1.SetOpenState(OpenState::CLOSED, 2.183f, 0, 0.2f);
-            //smallChestOfDrawer_1.SetAudioOnOpen("DrawerOpen.wav", DRAWER_VOLUME);
-            //smallChestOfDrawer_1.SetAudioOnClose("DrawerOpen.wav", DRAWER_VOLUME);
             smallChestOfDrawer_1.SetOpenAxis(OpenAxis::TRANSLATE_Z);
             smallChestOfDrawer_1.SetRaycastShapeFromModel(AssetManager::GetModel("SmallDrawerTop"));
 
@@ -467,30 +465,27 @@ void Scene::LoadHardCodedObjects() {
             smallChestOfDrawer_2.SetModel("SmallDrawerSecond");
             smallChestOfDrawer_2.SetMeshMaterial("Drawers");
             smallChestOfDrawer_2.SetParentName("SmallDrawersHis");
-            // smallChestOfDrawer_2.SetOpenState(OpenState::CLOSED, 2.183f, 0, 0.2f);
-             //smallChestOfDrawer_2.SetAudioOnOpen("DrawerOpen.wav", DRAWER_VOLUME);
-             //smallChestOfDrawer_2.SetAudioOnClose("DrawerOpen.wav", DRAWER_VOLUME);
-            smallChestOfDrawer_2.SetOpenAxis(OpenAxis::TRANSLATE_Z);
+			smallChestOfDrawer_2.SetName("SecondDraw");
+			smallChestOfDrawer_2.SetOpenState(OpenState::CLOSED, 2.183f, 0, 0.2f);
+			smallChestOfDrawer_2.SetOpenAxis(OpenAxis::TRANSLATE_Z);
             smallChestOfDrawer_2.SetRaycastShapeFromModel(AssetManager::GetModel("SmallDrawerSecond"));
 
             GameObject& smallChestOfDrawer_3 = _gameObjects.emplace_back();
             smallChestOfDrawer_3.SetModel("SmallDrawerThird");
             smallChestOfDrawer_3.SetMeshMaterial("Drawers");
-            smallChestOfDrawer_3.SetParentName("SmallDrawersHis");
-            //  smallChestOfDrawer_3.SetOpenState(OpenState::CLOSED, 2.183f, 0, 0.2f);
-              // smallChestOfDrawer_3.SetAudioOnOpen("DrawerOpen.wav", DRAWER_VOLUME);
-              // smallChestOfDrawer_3.SetAudioOnClose("DrawerOpen.wav", DRAWER_VOLUME);
-            smallChestOfDrawer_3.SetOpenAxis(OpenAxis::TRANSLATE_Z);
+			smallChestOfDrawer_3.SetParentName("SmallDrawersHis");
+			smallChestOfDrawer_3.SetName("ThirdDraw");
+			smallChestOfDrawer_3.SetOpenState(OpenState::CLOSED, 2.183f, 0, 0.2f);
+			smallChestOfDrawer_3.SetOpenAxis(OpenAxis::TRANSLATE_Z);
             smallChestOfDrawer_3.SetRaycastShapeFromModel(AssetManager::GetModel("SmallDrawerThird"));
 
             GameObject& smallChestOfDrawer_4 = _gameObjects.emplace_back();
             smallChestOfDrawer_4.SetModel("SmallDrawerFourth");
             smallChestOfDrawer_4.SetMeshMaterial("Drawers");
-            smallChestOfDrawer_4.SetParentName("SmallDrawersHis");
-            //  smallChestOfDrawer_4.SetOpenState(OpenState::CLOSED, 2.183f, 0, 0.2f);
-              // smallChestOfDrawer_4.SetAudioOnOpen("DrawerOpen.wav", DRAWER_VOLUME);
-              // smallChestOfDrawer_4.SetAudioOnClose("DrawerOpen.wav", DRAWER_VOLUME);
-            smallChestOfDrawer_4.SetOpenAxis(OpenAxis::TRANSLATE_Z);
+			smallChestOfDrawer_4.SetParentName("SmallDrawersHis");
+			smallChestOfDrawer_4.SetName("ForthDraw");
+			smallChestOfDrawer_4.SetOpenState(OpenState::CLOSED, 2.183f, 0, 0.2f);
+			smallChestOfDrawer_4.SetOpenAxis(OpenAxis::TRANSLATE_Z);
             smallChestOfDrawer_4.SetRaycastShapeFromModel(AssetManager::GetModel("SmallDrawerFourth"));
         }
 
@@ -609,7 +604,7 @@ void Scene::LoadHardCodedObjects() {
 	aks74u.SetMeshMaterialByIndex(9, "AKS74U_3"); // possibly incorrect.
     */
 
-
+    /*
    auto _skinnedModel = AssetManager::GetSkinnedModel("AKS74U");
 	for (int i = 0; i < _skinnedModel->m_meshEntries.size(); i++) {
 		auto& mesh = _skinnedModel->m_meshEntries[i];
@@ -618,7 +613,7 @@ void Scene::LoadHardCodedObjects() {
 		//	_materialIndices[i] = AssetManager::GetMaterialIndex(materialName);
 			//return;
 		//}
-	}
+	}*/
     
 
     for (Light& light : Scene::_lights) {
@@ -918,8 +913,8 @@ void Scene::RecreateAllPhysicsObjects() {
     }
     for (Ceiling& ceiling : _ceilings) {
         for (Vertex& vertex : ceiling.vertices) {
-            vertices.push_back(PxVec3(vertex.position.x, vertex.position.y, vertex.position.z));
-            indices.push_back(indices.size());
+           // vertices.push_back(PxVec3(vertex.position.x, vertex.position.y, vertex.position.z));
+           // indices.push_back(indices.size());
         }
     }
 
