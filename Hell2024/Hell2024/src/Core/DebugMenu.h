@@ -21,6 +21,9 @@ namespace DebugMenu {
 		ADD_WINDOW, 
 		EDIT_WINDOW,
 		REMOVE_WINDOW,
+		ADD_DOOR,
+		EDIT_DOOR,
+		REMOVE_DOOR,
 		EDIT_GAME_OBJECT,
 		REMOVE_GAME_OBJECT,
 		ADD_LIGHT,
@@ -69,5 +72,7 @@ namespace DebugMenu {
 	void UpdateWindowMenuPointers();
 	void UpdateGameObjectMenuPointers();
 	void UpdateLightObjectMenuPointers();
+	void UpdateDoorObjectMenuPointers();
+
 };
 

@@ -22,10 +22,12 @@ namespace DebugMenu {
 	MenuItem _windowMenu;
 	MenuItem _gameObjectsMenu;
 	MenuItem _lightsMenu;
+	MenuItem _DoorsMenu;
 
 	int _selectedWindowIndex = -1;
 	int _selectedGameObjectIndex = -1;
 	int _selectedLightIndex = -1;
+	int _selectedDoorIndex = -1;
 
 }
 
@@ -50,7 +52,7 @@ void DebugMenu::Init() {
 		// Add object
 		auto& addObject = scene.AddItem("Add object",MenuItemFlag::UNDEFINED, nullptr); {
 			addObject.AddItem("Game Object",MenuItemFlag::UNDEFINED, nullptr);
-			addObject.AddItem("Door",MenuItemFlag::UNDEFINED, nullptr);
+			addObject.AddItem("Door",MenuItemFlag::ADD_DOOR, nullptr);
 			addObject.AddItem("Window",MenuItemFlag::ADD_WINDOW, nullptr);
 			addObject.AddItem("Light",MenuItemFlag::ADD_LIGHT, nullptr);
 		}
@@ -65,7 +67,10 @@ void DebugMenu::Init() {
 			}
 
 			auto& editDoors = editObjects.AddItem("Doors", MenuItemFlag::UNDEFINED, nullptr); {
-
+				for (int i = 0; i < Scene::_doors.size(); i++) {
+					Door& door = Scene::_doors[i];
+					editDoors.AddItem("Door " + std::to_string(i), MenuItemFlag::EDIT_DOOR, nullptr);
+				}
 			}
 
 			auto& editWindows = editObjects.AddItem("Windows",MenuItemFlag::UNDEFINED, nullptr); {
@@ -108,6 +113,7 @@ void DebugMenu::Init() {
 	_selectedWindowIndex = -1;
 	_selectedGameObjectIndex = -1;
 	_selectedLightIndex = -1;
+	_selectedDoorIndex = -1;
 }
 
 void DebugMenu::UpdateWindowMenuPointers() {
@@ -146,6 +152,18 @@ void DebugMenu::UpdateLightObjectMenuPointers() {
 	*/
 }
 
+void DebugMenu::UpdateDoorObjectMenuPointers() {
+	_DoorsMenu.subMenu.clear();
+	_DoorsMenu.AddItem("X Position", MenuItemFlag::FLOAT, &Scene::_doors[_selectedDoorIndex].position.x);
+	_DoorsMenu.AddItem("Y Position", MenuItemFlag::FLOAT, &Scene::_doors[_selectedDoorIndex].position.y);
+	_DoorsMenu.AddItem("Z Position", MenuItemFlag::FLOAT, &Scene::_doors[_selectedDoorIndex].position.z);
+	_DoorsMenu.AddItem("", MenuItemFlag::EDIT_DOOR, nullptr);
+	/*
+	* Again the index for the door for the DebugMenu doesn't get updated
+	* _DoorsMenu.AddItem("Remove", MenuItemFlag::REMOVE_DOOR, nullptr);
+	*/
+}
+
 void DebugMenu::Update() {
 
 	if (_selectedWindowIndex != -1) {
@@ -156,6 +174,9 @@ void DebugMenu::Update() {
 	}
 	if (_selectedLightIndex != -1) {
 		UpdateLightObjectMenuPointers();
+	}
+	if (_selectedDoorIndex != -1) {
+		UpdateDoorObjectMenuPointers();
 	}
 
 	if (!IsOpen()) {
@@ -244,6 +265,26 @@ void DebugMenu::PressedEnter() {
 		Scene::_windows.erase(Scene::_windows.begin() + _selectedWindowIndex);
 		Scene::RecreateDataStructures();
 	}
+	// Add Door
+	else if (flag == MenuItemFlag::ADD_DOOR) {
+		cout << "You need to write this code mate\n";
+	}
+	// This part will be the Doors
+	else if (flag == MenuItemFlag::EDIT_DOOR) {
+		Door& door = Scene::_doors[_selectedDoorIndex];
+		_parentMenuItem = _currentMenuItem;
+		_currentMenuItem = &_DoorsMenu;
+		_selectedDoorIndex = _selectionIndex;
+		_DoorsMenu.name = "DOOR " + std::to_string(_selectedDoorIndex);
+		_selectionIndex = 0;
+		Audio::PlayAudio(AUDIO_SELECT, 1.00f);
+	}
+	// Remove Door
+	else if (flag == MenuItemFlag::REMOVE_DOOR) {
+		Door& door = Scene::_doors[_selectedDoorIndex];
+		Scene::_doors.erase(Scene::_doors.begin() + _selectedDoorIndex);
+		Scene::RecreateDataStructures();
+	}
 	// Edit a game object
 	else if (flag == MenuItemFlag::EDIT_GAME_OBJECT) {
 		std::cout << "Selected EDIT_GAME_OBJECT and _selectionIndex was " << _selectionIndex << "\n";
@@ -265,11 +306,11 @@ void DebugMenu::PressedEnter() {
 		Scene::RecreateDataStructures();
 		*/
 	}
-
+	// Add Light
 	else if (flag == MenuItemFlag::ADD_LIGHT) {
 		std::cout << "you need to write this code mate\n";
 	}
-
+	// Edit Light
 	else if (flag == MenuItemFlag::EDIT_LIGHT) {
 		std::cout << "Selected EDIT_LIGHT and _selectetionIndex was " << _selectionIndex << "\n";
 		_parentMenuItem = _currentMenuItem;
@@ -279,7 +320,7 @@ void DebugMenu::PressedEnter() {
 		_selectionIndex = 0;
 		Audio::PlayAudio(AUDIO_SELECT, 1.0f);
 	}
-
+	// Remove Light
 	else if (flag == MenuItemFlag::REMOVE_LIGHT) {
 		/*
 		Light& light = Scene::_lights[_selectedLightIndex];
@@ -287,8 +328,6 @@ void DebugMenu::PressedEnter() {
 		Scene::UnloadLightSetup(_selectedLightIndex);
 		*/
 	}
-
-
 
 }
 
@@ -339,7 +378,6 @@ void DebugMenu::IncreaseValue() {
 		Scene::RecreateDataStructures();
 	}
 
-
 	if (_currentMenuItem == &_gameObjectsMenu) {
 		GameObject& gameObject = Scene::_gameObjects[_selectedGameObjectIndex];
 		if (flag == MenuItemFlag::FLOAT) {
@@ -349,6 +387,13 @@ void DebugMenu::IncreaseValue() {
 
 	if (_currentMenuItem == &_lightsMenu) {
 		Light& light = Scene::_lights[_selectedLightIndex];
+		if (flag == MenuItemFlag::FLOAT) {
+			*(float*)ptr += 0.1f;
+		}
+	}
+
+	if (_currentMenuItem == &_DoorsMenu) {
+		Door& door = Scene::_doors[_selectedWindowIndex];
 		if (flag == MenuItemFlag::FLOAT) {
 			*(float*)ptr += 0.1f;
 		}
@@ -380,6 +425,13 @@ void DebugMenu::DecreaseValue() {
 
 	if (_currentMenuItem == &_lightsMenu) {
 		Light& light = Scene::_lights[_selectedLightIndex];
+		if (flag == MenuItemFlag::FLOAT) {
+			*(float*)ptr -= 0.1f;
+		}
+	}
+
+	if (_currentMenuItem == &_DoorsMenu) {
+		Door& door = Scene::_doors[_selectedDoorIndex];
 		if (flag == MenuItemFlag::FLOAT) {
 			*(float*)ptr -= 0.1f;
 		}
@@ -450,6 +502,14 @@ const std::string DebugMenu::GetTextRight() {
 
 	if (_selectedLightIndex != -1) {
 		UpdateLightObjectMenuPointers();
+	}
+
+	if (_selectedGameObjectIndex != -1) {
+		UpdateGameObjectMenuPointers();
+	}
+
+	if (_selectedDoorIndex != -1) {
+		UpdateDoorObjectMenuPointers();
 	}
 
 	std::string result;
