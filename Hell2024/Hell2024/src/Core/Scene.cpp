@@ -918,8 +918,8 @@ void Scene::RecreateAllPhysicsObjects() {
     }
     for (Ceiling& ceiling : _ceilings) {
         for (Vertex& vertex : ceiling.vertices) {
-            //vertices.push_back(PxVec3(vertex.position.x, vertex.position.y, vertex.position.z));
-            //indices.push_back(indices.size());
+            vertices.push_back(PxVec3(vertex.position.x, vertex.position.y, vertex.position.z));
+            indices.push_back(indices.size());
         }
     }
 
