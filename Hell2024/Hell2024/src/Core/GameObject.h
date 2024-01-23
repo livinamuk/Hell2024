@@ -56,6 +56,12 @@ public:
 	GameObject();
 	glm::mat4 GetModelMatrix();
 	std::string GetName();
+
+	glm::vec3 GetWorldPosition();
+	glm::quat GetWorldRotation();
+	void UpdateEditorPhysicsObject();
+
+
 	void SetOpenAxis(OpenAxis openAxis);
 	void SetAudioOnInteract(std::string filename, float volume);
 	void SetAudioOnOpen(std::string filename, float volume);

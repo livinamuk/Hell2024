@@ -17,6 +17,7 @@ namespace DebugMenu {
 
 		// Actions
 		OPEN_FLOOR_PLAN,
+		OPEN_EDITOR,
 		ADD_WINDOW, 
 		EDIT_WINDOW,
 		REMOVE_WINDOW,

@@ -134,16 +134,27 @@ void Scene::Update(float deltaTime) {
     ProcessPhysicsCollisions();
 }
 
+void Scene::Update3DEditorScene() {
+
+	for (GameObject& gameObject : _gameObjects) {
+		gameObject.UpdateEditorPhysicsObject();
+	}
+
+	Physics::GetEditorScene()->simulate(1 / 60.0f);
+	Physics::GetEditorScene()->fetchResults(true);
+
+}
+
 
 void SetPlayerGroundedStates() {
-	for (Player& player : Scene::_players) {
-		player._isGrounded = false;
-		for (auto& report : Physics::_characterCollisionReports) {
-			if (report.characterController == player._characterController && report.hitNormal.y > 0.5f) {
-				player._isGrounded = true;
-			}
-		}
-	}
+    for (Player& player : Scene::_players) {
+        player._isGrounded = false;
+        for (auto& report : Physics::_characterCollisionReports) {
+            if (report.characterController == player._characterController && report.hitNormal.y > 0.5f) {
+                player._isGrounded = true;
+            }
+        }
+    }
 }
 
 void ProcessBullets() {

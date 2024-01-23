@@ -189,6 +189,7 @@ namespace Scene {
    // void NewScene();
     void CleanUp();
     void Update(float deltaTime);
+    void Update3DEditorScene();
     void LoadLightSetup(int index);
     GameObject* GetGameObjectByName(std::string);
     AnimatedGameObject* GetAnimatedGameObjectByName(std::string);

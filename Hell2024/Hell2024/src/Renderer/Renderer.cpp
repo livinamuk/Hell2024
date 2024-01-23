@@ -700,7 +700,7 @@ void Renderer::RenderFrame(Player* player) {
 	TextBlitter::_debugTextToBilt += "View pos: " + Util::Vec3ToString(player->GetViewPos()) + "\n";
 	TextBlitter::_debugTextToBilt += "View rot: " + Util::Vec3ToString(player->GetViewRotation()) + "\n";
 	//TextBlitter::_debugTextToBilt += "Grounded: " + std::to_string(Scene::_players[0]._isGrounded) + "\n";
-	//TextBlitter::_debugTextToBilt += "Y vel: " + std::to_string(Scene::_players[0]._yVelocity) + "\n";
+	TextBlitter::_debugTextToBilt += "Y vel: " + std::to_string(Scene::_players[0]._yVelocity) + "\n";
     //TextBlitter::_debugTextToBilt = "";
     
     if (!_toggles.drawDebugText) {
@@ -1255,12 +1255,10 @@ void DebugPass(Player* player) {
             _shaders.solidColor.SetMat4("model", glm::mat4(1));
             auto* renderBuffer = &scene->getRenderBuffer();
 
-            if (_debugLineRenderMode == DebugLineRenderMode::PHYSX_EDITOR) {
+            if (_debugLineRenderMode == DebugLineRenderMode::PHYSX_EDITOR) {   
 
-                if (Input::KeyPressed(HELL_KEY_SPACE)) {
-                    Physics::GetEditorScene()->simulate(1 / 60.0f);
-                    Physics::GetEditorScene()->fetchResults(true);
-                }
+                Scene::Update3DEditorScene();
+
 
                 renderBuffer = &Physics::GetEditorScene()->getRenderBuffer();
                 color = PURPLE;
