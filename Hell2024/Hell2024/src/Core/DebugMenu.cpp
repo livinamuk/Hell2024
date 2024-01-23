@@ -21,9 +21,11 @@ namespace DebugMenu {
 
 	MenuItem _windowMenu;
 	MenuItem _gameObjectsMenu;
+	MenuItem _lightsMenu;
 
 	int _selectedWindowIndex = -1;
 	int _selectedGameObjectIndex = -1;
+	int _selectedLightIndex = -1;
 
 }
 
@@ -50,7 +52,7 @@ void DebugMenu::Init() {
 			addObject.AddItem("Game Object",MenuItemFlag::UNDEFINED, nullptr);
 			addObject.AddItem("Door",MenuItemFlag::UNDEFINED, nullptr);
 			addObject.AddItem("Window",MenuItemFlag::ADD_WINDOW, nullptr);
-			addObject.AddItem("Light",MenuItemFlag::UNDEFINED, nullptr);
+			addObject.AddItem("Light",MenuItemFlag::ADD_LIGHT, nullptr);
 		}
 		// Edit objects
 		auto& editObjects = scene.AddItem("Edit objects",MenuItemFlag::UNDEFINED, nullptr); {
@@ -74,7 +76,9 @@ void DebugMenu::Init() {
 			}
 
 			auto& editLights = editObjects.AddItem("Lights", MenuItemFlag::UNDEFINED, nullptr); {
-
+				for (int i = 0; i < Scene::_lights.size(); i++) {
+					editLights.AddItem("Light " + std::to_string(i), MenuItemFlag::EDIT_LIGHT, nullptr);
+				}
 			}
 
 		}
@@ -102,6 +106,7 @@ void DebugMenu::Init() {
 	_parentMenuItem = nullptr;
 	_selectedWindowIndex = -1;
 	_selectedGameObjectIndex = -1;
+	_selectedLightIndex = -1;
 }
 
 void DebugMenu::UpdateWindowMenuPointers() {
@@ -126,6 +131,19 @@ void DebugMenu::UpdateGameObjectMenuPointers() {
 	_gameObjectsMenu.AddItem("Remove", MenuItemFlag::REMOVE_GAME_OBJECT, nullptr);
 }
 
+void DebugMenu::UpdateLightObjectMenuPointers() {
+	_lightsMenu.subMenu.clear();
+	_lightsMenu.AddItem("X Position", MenuItemFlag::FLOAT, &Scene::_lights[_selectedLightIndex].position.x);
+	_lightsMenu.AddItem("Y Position", MenuItemFlag::FLOAT, &Scene::_lights[_selectedLightIndex].position.y);
+	_lightsMenu.AddItem("Z Position", MenuItemFlag::FLOAT, &Scene::_lights[_selectedLightIndex].position.z);
+	_lightsMenu.AddItem("", MenuItemFlag::UNDEFINED, nullptr);
+	_lightsMenu.AddItem("Strength", MenuItemFlag::FLOAT, &Scene::_lights[_selectedLightIndex].strength);
+	_lightsMenu.AddItem("Radius", MenuItemFlag::FLOAT, &Scene::_lights[_selectedLightIndex].radius);
+	/*
+	Doesn't display the right light index after removing
+	_lightsMenu.AddItem("Remove", MenuItemFlag::REMOVE_LIGHT, nullptr);
+	*/
+}
 
 void DebugMenu::Update() {
 
@@ -134,6 +152,9 @@ void DebugMenu::Update() {
 	}
 	if (_selectedGameObjectIndex != -1) {
 		UpdateGameObjectMenuPointers();
+	}
+	if (_selectedLightIndex != -1) {
+		UpdateLightObjectMenuPointers();
 	}
 
 	if (!IsOpen()) {
@@ -244,6 +265,30 @@ void DebugMenu::PressedEnter() {
 		*/
 	}
 
+	else if (flag == MenuItemFlag::ADD_LIGHT) {
+		std::cout << "you need to write this code mate\n";
+	}
+
+	else if (flag == MenuItemFlag::EDIT_LIGHT) {
+		std::cout << "Selected EDIT_LIGHT and _selectetionIndex was " << _selectionIndex << "\n";
+		_parentMenuItem = _currentMenuItem;
+		_currentMenuItem = &_lightsMenu;
+		_selectedLightIndex = _selectionIndex;
+		_lightsMenu.name = "LIGHT " + std::to_string(_selectedLightIndex);
+		_selectionIndex = 0;
+		Audio::PlayAudio(AUDIO_SELECT, 1.0f);
+	}
+
+	else if (flag == MenuItemFlag::REMOVE_LIGHT) {
+		/*
+		Light& light = Scene::_lights[_selectedLightIndex];
+		Scene::_lights.erase(Scene::_lights.begin() + _selectedLightIndex);
+		Scene::UnloadLightSetup(_selectedLightIndex);
+		*/
+	}
+
+
+
 }
 
 void DebugMenu::NavigateBack() {
@@ -301,6 +346,13 @@ void DebugMenu::IncreaseValue() {
 		}
 	}
 
+	if (_currentMenuItem == &_lightsMenu) {
+		Light& light = Scene::_lights[_selectedLightIndex];
+		if (flag == MenuItemFlag::FLOAT) {
+			*(float*)ptr += 0.1f;
+		}
+	}
+
 }
 
 void DebugMenu::DecreaseValue() {
@@ -324,6 +376,14 @@ void DebugMenu::DecreaseValue() {
 			*(float*)ptr -= 0.1f;
 		}
 	}
+
+	if (_currentMenuItem == &_lightsMenu) {
+		Light& light = Scene::_lights[_selectedLightIndex];
+		if (flag == MenuItemFlag::FLOAT) {
+			*(float*)ptr -= 0.1f;
+		}
+	}
+
 }
 
 void DebugMenu::ResetValue() {
@@ -385,6 +445,10 @@ const std::string DebugMenu::GetTextRight() {
 
 	if (_selectedWindowIndex != -1) {
 		UpdateWindowMenuPointers();
+	}
+
+	if (_selectedLightIndex != -1) {
+		UpdateLightObjectMenuPointers();
 	}
 
 	std::string result;

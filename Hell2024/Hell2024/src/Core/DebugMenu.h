@@ -22,6 +22,9 @@ namespace DebugMenu {
 		REMOVE_WINDOW,
 		EDIT_GAME_OBJECT,
 		REMOVE_GAME_OBJECT,
+		ADD_LIGHT,
+		REMOVE_LIGHT, // Doesn't Update the LIGHT # after removing 
+		EDIT_LIGHT,
 		SAVE_MAP,
 		LOAD_MAP
 	};
@@ -64,5 +67,6 @@ namespace DebugMenu {
 
 	void UpdateWindowMenuPointers();
 	void UpdateGameObjectMenuPointers();
+	void UpdateLightObjectMenuPointers();
 };
 
