@@ -213,15 +213,36 @@ void Player::Update(float deltaTime) {
 	}
 
 	// Jump
-	if (Input::KeyPressed(HELL_KEY_SPACE) && !_ignoreControl && _isGrounded) {
+	if (Input::KeyPressed(HELL_KEY_SPACE) && !_ignoreControl && _isGrounded && !_isAirborne) {
 		_yVelocity = 4.75f; // magic value for jump strength
 		_isGrounded = false;
+		_isAirborne = true;
 	}
 
 	// Gravity		
 	if (_isGrounded) {
 		_yVelocity = -0.1f; // can't be 0, or the _isGrounded check next frame will fail
 	}
+
+	// Check if the player is airborne
+	if (_isAirborne) {
+		std::cout << "airborne for " << deltaTime << " seconds \n";
+		// check if they are in a SCENE_MESH
+		if (_cameraRayResult.physicsObjectType == SCENE_MESH) {
+			_isAirborne = true;
+			_isGrounded = false;
+		}
+		// make the player fall
+		float gravity = 15.75f; // 9.8 feels like the moon
+		_yVelocity -= gravity * deltaTime;
+		// check if they are on the ground
+		if (_yVelocity < 0.0f && _cameraRayResult.physicsObjectType == SCENE_MESH) {
+			_isAirborne = false;
+			_isGrounded = true;
+		}
+	}
+
+
 	else {
 		float gravity = 15.75f; // 9.8 feels like the moon
 		_yVelocity -= gravity * deltaTime;

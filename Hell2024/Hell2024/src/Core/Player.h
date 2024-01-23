@@ -79,6 +79,7 @@ public:
 	bool MuzzleFlashIsRequired();
 
 	bool _isGrounded = true;
+	bool _isAirborne = false;
 
 	std::string _pickUpText = "";
 	float _pickUpTextTimer = 0;

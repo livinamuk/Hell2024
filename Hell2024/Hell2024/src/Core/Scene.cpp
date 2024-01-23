@@ -14,6 +14,7 @@
 
 float door2X = 2.05f;
 
+void SetPlayerAirbourneStates();
 void SetPlayerGroundedStates();
 void ProcessBullets();
 
@@ -145,6 +146,16 @@ void Scene::Update3DEditorScene() {
 
 }
 
+void SetPlayerAirbourneStates() {
+    for (Player& player : Scene::_players) {
+        player._isAirborne = false;
+        for (auto& report : Physics::_characterCollisionReports) {
+            if (report.characterController == player._characterController && report.hitNormal.y < 0.5f) {
+                player._isAirborne = true;
+            }
+        }
+    }
+}
 
 void SetPlayerGroundedStates() {
     for (Player& player : Scene::_players) {
@@ -240,6 +251,7 @@ void ProcessBullets() {
 	}
     Scene::_bullets.clear();
 }
+
 void Scene::LoadHardCodedObjects() {
 
 	PickUp& glockAmmoA = _pickUps.emplace_back();
