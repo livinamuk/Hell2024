@@ -33,6 +33,8 @@
 #include "../Effects/MuzzleFlash.h"
 #include "../Core/DebugMenu.h"
 
+#include "../Core/GameState.hpp"
+
 std::vector<glm::vec3> debugPoints;
 
 
@@ -85,6 +87,7 @@ struct Shaders {
 	Shader glassComposite;
 	Shader blurVertical;
 	Shader blurHorizontal;
+	Shader outline;
     ComputeShader compute;
 	ComputeShader pointCloud;
 	ComputeShader propogateLight;
@@ -383,6 +386,7 @@ void Renderer::Init() {
 	_shaders.bulletDecals.Load("bullet_decals.vert", "bullet_decals.frag");
 	_shaders.glass.Load("glass.vert", "glass.frag");
 	_shaders.glassComposite.Load("glass_composite.vert", "glass_composite.frag");
+	_shaders.outline.Load("outline.vert", "outline.frag");
 	_shaders.skybox.Load("skybox.vert", "skybox.frag");
 	_shaders.computeTest.Load("res/shaders/test.comp");
     
@@ -595,6 +599,26 @@ void Renderer::RenderFrame(Player* player) {
     GBuffer& gBuffer = playerRenderTarget.gBuffer;
     PresentFrameBuffer& presentFrameBuffer = playerRenderTarget.presentFrameBuffer;
 
+	glm::mat4 projection = Renderer::GetProjectionMatrix(_depthOfFieldScene); // 1.0 for weapon, 0.9 for scene.
+	glm::mat4 view = player->GetViewMatrix();
+
+	// Calculate mouse ray
+	double xpos = Input::GetMouseX();
+	double ypos = Input::GetMouseY();
+	float SCR_WIDTH = GL::GetWindowWidth();
+    float SCR_SHEIGHT = GL::GetWindowHeight();
+	float x = (2.0f * xpos) / SCR_WIDTH - 1.0f;
+	float y = 1.0f - (2.0f * ypos) / SCR_SHEIGHT;
+	float z = 1.0f;
+	glm::vec3 ray_nds = glm::vec3(x, y, z);
+    glm::vec4 ray_clip = glm::vec4(ray_nds.x, ray_nds.y, ray_nds.z, 1.0f);
+    glm::vec4 ray_eye = glm::inverse(projection) * ray_clip;
+	ray_eye = glm::vec4(ray_eye.x, ray_eye.y, ray_eye.z, 0.0f);
+    glm::vec4 inv_ray_wor = (inverse(view) * ray_eye);
+    glm::vec3 ray_wor = glm::vec3(inv_ray_wor.x, inv_ray_wor.y, inv_ray_wor.z);
+	ray_wor = normalize(ray_wor);
+	GameState::_mouseRay = ray_wor;
+
 	_shaders.UI.Use();
 	_shaders.UI.SetVec3("overrideColor", WHITE);
 
@@ -675,6 +699,11 @@ void Renderer::RenderFrame(Player* player) {
     // Render any debug shit, like the point cloud, prorogation grid, misc points, lines, etc
     DebugPass(player);
 
+    // Render editor mode UI if needed?
+    if (GameState::_engineMode == EngineMode::EDITOR) {
+        RenderEditorMode();
+    }
+
     // Render UI
     presentFrameBuffer.Bind();
     glDrawBuffer(GL_COLOR_ATTACHMENT1);
@@ -701,6 +730,15 @@ void Renderer::RenderFrame(Player* player) {
 	TextBlitter::_debugTextToBilt += "View rot: " + Util::Vec3ToString(player->GetViewRotation()) + "\n";
 	//TextBlitter::_debugTextToBilt += "Grounded: " + std::to_string(Scene::_players[0]._isGrounded) + "\n";
 	TextBlitter::_debugTextToBilt += "Y vel: " + std::to_string(Scene::_players[0]._yVelocity) + "\n";
+	TextBlitter::_debugTextToBilt += "Mouse ray: " + Util::Vec3ToString(GameState::_mouseRay) + "\n";
+
+	TextBlitter::_debugTextToBilt += "X: " + std::to_string(Input::GetMouseX()) +"\n";
+	TextBlitter::_debugTextToBilt += "Y: " + std::to_string(Input::GetMouseY()) +"\n";
+
+	TextBlitter::_debugTextToBilt += "Win width: " + std::to_string(GL::GetWindowWidth()) + "\n";
+	TextBlitter::_debugTextToBilt += "Win height: " + std::to_string(GL::GetWindowHeight()) + "\n";
+    
+
     //TextBlitter::_debugTextToBilt = "";
     
     if (!_toggles.drawDebugText) {
@@ -747,6 +785,83 @@ void Renderer::RenderFrame(Player* player) {
     for (Light& light : Scene::_lights) {
         light.isDirty = false;
     }
+}
+
+void Renderer::RenderEditorMode() {
+
+
+    Scene::Update3DEditorScene();
+
+	glm::mat4 projection = glm::perspective(1.0f, 1920.0f / 1080.0f, NEAR_PLANE, FAR_PLANE);
+	glm::mat4 view = Scene::_players[0].GetViewMatrix();
+
+	_shaders.outline.Use();
+	_shaders.outline.SetMat4("projection", projection);
+	_shaders.outline.SetMat4("view", view);
+
+    glm::vec3 rayOrigin = Scene::_players[0].GetViewPos();
+    glm::vec3 rayDirection = GameState::_mouseRay;
+	auto result = Util::CastPhysXRay(rayOrigin, rayDirection , 100, true);
+
+	if (!result.hitFound) {
+		std::cout << "hit not found\n";
+        return;
+    }
+
+    std::cout << "hit found\n";
+
+    // ray was found, is it a game object?
+
+	GameObject* couch = Scene::GetGameObjectByName("Sofa");
+	std::vector<GameObject*> selectedObjects;
+    //selectedObjects.push_back(couch);
+
+
+    if (result.physicsObjectType == PhysicsObjectType::GAME_OBJECT) {
+        if (result.parent) {
+            GameObject* hitObject = (GameObject*)result.parent;
+            selectedObjects.push_back(hitObject);
+        }
+    }
+
+   
+	glDisable(GL_DEPTH_TEST);
+	glEnable(GL_STENCIL_TEST);
+	glStencilMask(0xff);
+	glClearStencil(0);
+	glClear(GL_STENCIL_BUFFER_BIT);
+	glStencilOp(GL_REPLACE, GL_REPLACE, GL_REPLACE);
+	glStencilFunc(GL_ALWAYS, 1, 1);
+	glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);    
+	for (auto* gameObject : selectedObjects) {
+		_shaders.outline.SetMat4("model", gameObject->GetModelMatrix());
+		for (int i = 0; i < gameObject->_meshMaterialIndices.size(); i++) {
+			gameObject->_model->_meshes[i].Draw();
+		}
+	}
+
+
+
+	glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
+	glStencilMask(0x00);
+	glEnable(GL_STENCIL_TEST);
+	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+	glDisable(GL_DEPTH_TEST);
+
+	_shaders.outline.SetBool("offset", true);
+	for (auto* gameObject : selectedObjects) {
+		_shaders.outline.SetMat4("model", gameObject->GetModelMatrix());
+		for (int i = 0; i < gameObject->_meshMaterialIndices.size(); i++) {
+			gameObject->_model->_meshes[i].Draw();
+		}
+	}
+   
+        
+	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+	glDepthMask(GL_TRUE);
+	glDisable(GL_STENCIL_TEST);
+
+	_shaders.outline.SetBool("offset", false);
 }
 
 
@@ -1796,6 +1911,7 @@ void Renderer::HotloadShaders() {
 	_shaders.glass.Load("glass.vert", "glass.frag");
 	_shaders.glassComposite.Load("glass_composite.vert", "glass_composite.frag");
 	_shaders.skybox.Load("skybox.vert", "skybox.frag");
+	_shaders.outline.Load("outline.vert", "outline.frag");
 
     _shaders.compute.Load("res/shaders/compute.comp");
     _shaders.pointCloud.Load("res/shaders/point_cloud.comp");
@@ -2090,7 +2206,7 @@ void Renderer::RenderUI(float viewportWidth, float viewportHeight) {
     //float viewportWidth = (float)_renderWidth;
     //float viewportHeight = (float)_renderHeight;
     if (_viewportMode == SPLITSCREEN) {
-        viewportHeight *= 0.5f;
+      //  viewportHeight *= 0.5f;
     }
 
     for (UIRenderInfo& uiRenderInfo : _UIRenderInfos) {

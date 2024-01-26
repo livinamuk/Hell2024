@@ -388,6 +388,9 @@ void GameObject::CreateEditorPhysicsObject() {
 	PxShapeFlags shapeFlags(PxShapeFlag::eSCENE_QUERY_SHAPE);
 	_editorRaycastShape = Physics::CreateShapeFromTriangleMesh(_model->_triangleMesh, shapeFlags, Physics::GetDefaultMaterial(), _transform.scale);
 	_editorRaycastBody = Physics::CreateEditorRigidStatic(_transform, _editorRaycastShape);
+	if (_editorRaycastBody->userData) {
+		delete _editorRaycastBody->userData;
+	}
 	_editorRaycastBody->userData = new PhysicsObjectData(PhysicsObjectType::GAME_OBJECT, this);
 
 	//std::cout << "created editor object for GameObject with model " << _model->_name << "\n";

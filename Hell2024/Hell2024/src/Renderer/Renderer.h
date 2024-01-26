@@ -14,6 +14,7 @@ namespace Renderer {
 	void RenderUI(float viewportWidth, float viewportHeight);
 	void HotloadShaders();
 	void WipeShadowMaps();
+	void RenderEditorMode();
 
 	void QueueLineForDrawing(Line line);
 	void QueuePointForDrawing(Point point);

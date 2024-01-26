@@ -11,14 +11,12 @@
 #include "Core/Scene.h"
 #include "Core/Physics.h"
 #include "Core/DebugMenu.h"
+#include "Core/GameState.hpp"
 
 // Profiling stuff
 //#define TracyGpuCollect
 //#include "tracy/Tracy.hpp"
 //#include "tracy/TracyOpenGL.hpp"
-
-enum class EngineMode { Game, Editor } _engineMode;
-int _currentPlayer = 0;
 
 void ToggleEditor();
 void ToggleFullscreen();
@@ -131,12 +129,12 @@ void Engine::Run() {
     while (GL::WindowIsOpen() && GL::WindowHasNotBeenForceClosed()) {
 
         if (Editor::WasForcedOpen()) {
-            _engineMode = EngineMode::Editor;
+            GameState::_engineMode = EngineMode::FLOORPLAN;
         }
 
         // Only the current player can be controlled by keyboard/mouse
 		for (int i = 0; i < Scene::_playerCount; i++) {
-			if (i != _currentPlayer || DebugMenu::IsOpen()) {
+			if (i != GameState::_currentPlayer || DebugMenu::IsOpen()) {
 				Scene::_players[i]._ignoreControl = true;
 			}
 			else {
@@ -160,7 +158,8 @@ void Engine::Run() {
         DebugMenu::Update();
 	
         Audio::Update();
-        if (_engineMode == EngineMode::Game) {
+        if (GameState::_engineMode == EngineMode::GAME ||
+            GameState::_engineMode == EngineMode::EDITOR) {
 
             while (deltaTimeAccumulator >= fixedDeltaTime) {
                 deltaTimeAccumulator -= fixedDeltaTime;
@@ -175,7 +174,7 @@ void Engine::Run() {
             }
 
         }
-        else if (_engineMode == EngineMode::Editor) {
+        else if (GameState::_engineMode == EngineMode::FLOORPLAN) {
 
             LazyKeyPressesEditor();
             Editor::Update(deltaTime);
@@ -183,21 +182,27 @@ void Engine::Run() {
 
         // Render
         TextBlitter::Update(deltaTime);
-		if (_engineMode == EngineMode::Game) {
+		if (GameState::_engineMode == EngineMode::GAME ||
+            GameState::_engineMode == EngineMode::EDITOR) {
 
-			GL::DisableCursor();
-            
+			if (GameState::_engineMode == EngineMode::GAME) {
+				GL::DisableCursor();
+			}
+			if (GameState::_engineMode == EngineMode::EDITOR) {
+				GL::ShowCursor();
+			}
+
             if (Renderer::_viewportMode != FULLSCREEN) {
                 for (Player& player : Scene::_players) {
                     Renderer::RenderFrame(&player);
                 }
             }
             else {
-                Renderer::RenderFrame(&Scene::_players[_currentPlayer]);
+                Renderer::RenderFrame(&Scene::_players[GameState::_currentPlayer]);
             }
 
         }
-		else if (_engineMode == EngineMode::Editor) {
+		else if (GameState::_engineMode == EngineMode::FLOORPLAN) {
 
 			GL::ShowCursor();
 
@@ -326,43 +331,43 @@ void Engine::LazyKeyPressesEditor() {
 }
 
 void ToggleEditor() {
-    if (_engineMode == EngineMode::Game) {
+    if (GameState::_engineMode == EngineMode::GAME) {
         //GL::ShowCursor();
-        _engineMode = EngineMode::Editor;
+        GameState::_engineMode = EngineMode::FLOORPLAN;
     }
     else {
         //GL::DisableCursor();
-        _engineMode = EngineMode::Game;
+        GameState::_engineMode = EngineMode::GAME;
     }
     Audio::PlayAudio(AUDIO_SELECT, 1.00f);
 }
 void ToggleFullscreen() {
     GL::ToggleFullscreen();
-    Renderer::RecreateFrameBuffers(_currentPlayer);
+    Renderer::RecreateFrameBuffers(GameState::_currentPlayer);
     Audio::PlayAudio(AUDIO_SELECT, 1.00f);
 }
 
 void NextPlayer() {
-    _currentPlayer++;
-    if (_currentPlayer == Scene::_playerCount) {
-        _currentPlayer = 0;
-    }
+	GameState::_currentPlayer++;
+	if (GameState::_currentPlayer == Scene::_playerCount) {
+		GameState::_currentPlayer = 0;
+	}
 	if (Renderer::_viewportMode == FULLSCREEN) {
-		Renderer::RecreateFrameBuffers(_currentPlayer);
-	}    
-    Audio::PlayAudio(AUDIO_SELECT, 1.00f);
-    std::cout << "Current player is: " << _currentPlayer << "\n"; 
+		Renderer::RecreateFrameBuffers(GameState::_currentPlayer);
+	}
+	Audio::PlayAudio(AUDIO_SELECT, 1.00f);
+	std::cout << "Current player is: " << GameState::_currentPlayer << "\n";
 }
 
 void NextViewportMode() {
-    int currentViewportMode = Renderer::_viewportMode;
-    currentViewportMode++;
-    if (currentViewportMode == ViewportMode::VIEWPORTMODE_COUNT) {
-        currentViewportMode = 0;
-    }
-    Renderer::_viewportMode = (ViewportMode)currentViewportMode;
-    Audio::PlayAudio(AUDIO_SELECT, 1.00f);
+	int currentViewportMode = Renderer::_viewportMode;
+	currentViewportMode++;
+	if (currentViewportMode == ViewportMode::VIEWPORTMODE_COUNT) {
+		currentViewportMode = 0;
+	}
+	Renderer::_viewportMode = (ViewportMode)currentViewportMode;
+	Audio::PlayAudio(AUDIO_SELECT, 1.00f);
 
-    Renderer::RecreateFrameBuffers(_currentPlayer);
-    std::cout << "Current player: " << _currentPlayer << "\n";
+	Renderer::RecreateFrameBuffers(GameState::_currentPlayer);
+	std::cout << "Current player: " << GameState::_currentPlayer << "\n";
 }

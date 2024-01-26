@@ -31,9 +31,14 @@ namespace Util {
 		return { quat.x, quat.y, quat.z, quat.w };
 	}
 
-    inline PhysXRayResult CastPhysXRay(glm::vec3 rayOrigin, glm::vec3 rayDirection, float rayLength) {
+    inline PhysXRayResult CastPhysXRay(glm::vec3 rayOrigin, glm::vec3 rayDirection, float rayLength, bool gizmoLand = false) {
 
         PxScene* scene = Physics::GetScene();
+
+        if (gizmoLand) {
+            scene = Physics::GetEditorScene();
+        }
+
         PxVec3 origin = PxVec3(rayOrigin.x, rayOrigin.y, rayOrigin.z);
         PxVec3 unitDir = PxVec3(rayDirection.x, rayDirection.y, rayDirection.z);
         PxReal maxDistance = rayLength;

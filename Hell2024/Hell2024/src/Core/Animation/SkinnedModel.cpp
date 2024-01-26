@@ -188,6 +188,8 @@ void SkinnedModel::UpdateBoneTransformsFromAnimation(float animTime, Animation* 
             Util::StrCmp("camera_end", NodeName) ||
             Util::StrCmp("Camera_$AssimpFbx$_PostRotation", NodeName) ||
             Util::StrCmp("Camera", NodeName)) {
+
+
             //std::cout << i << ": " << NodeName << "\n";
             //std::cout << Util::Mat4ToString(GlobalTransformation) << "\n\n";
 

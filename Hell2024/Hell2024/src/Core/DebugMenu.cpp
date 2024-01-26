@@ -5,6 +5,8 @@
 #include "Scene.h"
 #include "Config.hpp"
 #include "Editor.h"
+#include "../Renderer/Renderer.h"
+#include "GameState.hpp"
 #include <format>
 
 #define AUDIO_SELECT "SELECT.wav"
@@ -91,7 +93,8 @@ void DebugMenu::Init() {
 	}
 	// Editor
 	_menu.AddItem("", MenuItemFlag::UNDEFINED, nullptr);
-	auto& editor = _menu.AddItem("Gizmo Mode", MenuItemFlag::OPEN_EDITOR, nullptr);
+	auto& gameMode = _menu.AddItem("Game Mode", MenuItemFlag::OPEN_GAME_MODE, nullptr);
+	auto& editor = _menu.AddItem("Editor Mode", MenuItemFlag::OPEN_EDITOR_MODE, nullptr);
 	auto& floorplan = _menu.AddItem("Floor Plan", MenuItemFlag::OPEN_FLOOR_PLAN, nullptr);
 
 	_menu.AddItem("", MenuItemFlag::UNDEFINED, nullptr);
@@ -203,6 +206,19 @@ void DebugMenu::PressedEnter() {
 	else if (flag == MenuItemFlag::OPEN_FLOOR_PLAN) {
 		_isOpen = false;
 		Editor::ForcedOpen();
+		Audio::PlayAudio(AUDIO_SELECT, 1.00f);
+	}
+	// Open game mode
+	else if (flag == MenuItemFlag::OPEN_GAME_MODE) {
+		_isOpen = false;
+		GameState::_engineMode = EngineMode::GAME;
+		Audio::PlayAudio(AUDIO_SELECT, 1.00f);
+	}
+	// Open editor mode
+	else if (flag == MenuItemFlag::OPEN_EDITOR_MODE) {
+		_isOpen = false;
+		GameState::_engineMode = EngineMode::EDITOR;
+		Renderer::_viewportMode == FULLSCREEN;
 		Audio::PlayAudio(AUDIO_SELECT, 1.00f);
 	}
 	// Load map

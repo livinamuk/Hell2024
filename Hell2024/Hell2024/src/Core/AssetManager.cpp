@@ -281,14 +281,14 @@ void AssetManager::LoadEverythingElse() {
 				"animations/Knife_Swing2.fbx",
 				"animations/Knife_Swing3.fbx",
 			} },
-			skinned_model_path{ "models/Shotgun.fbx", std::vector<std::string>{
+			/*skinned_model_path{"models/Shotgun.fbx", std::vector<std::string>{
 				"animations/Shotgun_Idle.fbx",
 				"animations/Shotgun_Walk.fbx",
 				"animations/Shotgun_Draw.fbx",
 				"animations/Shotgun_Fire1.fbx",
 				"animations/Shotgun_Fire2.fbx",
 				"animations/Shotgun_Fire3.fbx",
-			} }
+			} }*/
 	};
 
 	animations_futures.reserve(model_paths.size());

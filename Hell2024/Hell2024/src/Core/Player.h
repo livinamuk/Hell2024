@@ -72,6 +72,8 @@ public:
 	void ShowPickUpText(std::string text);
 	void PickUpAKS74U();
 	void PickUpAKS74UAmmo();
+	void CastMouseRay();
+	void DropAKS7UMag();
 
 	ShadowMap _shadowMap;
 	float _muzzleFlashCounter = 0;
@@ -89,6 +91,8 @@ private:
 	void SpawnBullet(float variance);
 	bool CanFire();
 	bool CanReload();
+
+	bool _needsToDropAKMag = false;
 
 	glm::vec3 _position = glm::vec3(0);
 	glm::vec3 _rotation = glm::vec3(-0.1f, -HELL_PI * 0.5f, 0);

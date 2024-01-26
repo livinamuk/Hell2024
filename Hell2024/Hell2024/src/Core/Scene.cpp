@@ -273,6 +273,29 @@ void Scene::LoadHardCodedObjects() {
 
     if (true) {
 
+
+		PhysicsFilterData magFilterData;
+        magFilterData.raycastGroup = RAYCAST_DISABLED;
+        magFilterData.collisionGroup = CollisionGroup::GENERIC_BOUNCEABLE;
+        magFilterData.collidesWith = CollisionGroup(ENVIROMENT_OBSTACLE | GENERIC_BOUNCEABLE);
+		float magDensity = 750.0f;
+
+
+		GameObject& mag = _gameObjects.emplace_back();
+        mag.SetPosition(3.8f, 0.7f, 3.75f);
+        mag.SetRotationX(-1.7f);
+        mag.SetRotationY(0.0f);
+        mag.SetRotationZ(-1.6f);
+        mag.SetModel("AKS74UMag");
+        mag.SetName("AKS74UMag");
+        mag.SetMeshMaterial("AKS74U_3");
+        mag.CreateRigidBody(mag.GetGameWorldMatrix(), false);
+        mag.SetRaycastShapeFromModel(AssetManager::GetModel("AKS74UMag"));
+        mag.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("AKS74UMag_ConvexMesh")->_meshes[0], magFilterData);
+        mag.SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
+        mag.UpdateRigidBodyMassAndInertia(magDensity);
+
+
 		GameObject& aks74u = _gameObjects.emplace_back();
 		aks74u.SetPosition(1.8f, 0.7f, 0.75f);
 		aks74u.SetRotationX(-1.7f);
@@ -585,15 +608,17 @@ void Scene::LoadHardCodedObjects() {
          */
 
 
-/*
+    /*
 	AnimatedGameObject& aks74u = _animatedGameObjects.emplace_back(AnimatedGameObject());
-	aks74u.SetName("AKS74U");
-	aks74u.SetSkinnedModel("AKS74U");
-	aks74u.PlayAnimation("AKS74U_Idle", 0.5f);
+	aks74u.SetName("Shotgun");
+	aks74u.SetSkinnedModel("Shotgun");
+	aks74u.PlayAnimation("Shotgun_Idle", 0.5f);
 	aks74u.SetMaterial("Hands");
 	aks74u.SetPosition(glm::vec3(2, 1.75f, 3.5));
 	aks74u.SetScale(0.01f);
+    */
 
+    /*
 	aks74u.SetMeshMaterialByIndex(2, "AKS74U_3");
 	aks74u.SetMeshMaterialByIndex(3, "AKS74U_3"); // possibly incorrect. this is the follower
 	aks74u.SetMeshMaterialByIndex(4, "AKS74U_1");

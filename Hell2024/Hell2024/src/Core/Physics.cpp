@@ -386,11 +386,11 @@ PxRigidStatic* Physics::CreateEditorRigidStatic(Transform transform, PxShape* sh
 	PxRigidStatic* body = _physics->createRigidStatic(trans);
 	//PxRigidStatic* body = _physics->createRigidStatic(PxTransform());
 	body->attachShape(*shape);
-    //PxFilterData filterData;
-    //filterData.word0 = (PxU32)RAYCAST_ENABLED;
-    //filterData.word1 = (PxU32)NO_COLLISION;
-    //filterData.word2 = (PxU32)NO_COLLISION;
-	//shape->setQueryFilterData(filterData);       // ray casts
+    PxFilterData filterData;
+    filterData.word0 = (PxU32)RAYCAST_ENABLED;
+    filterData.word1 = (PxU32)NO_COLLISION;
+    filterData.word2 = (PxU32)NO_COLLISION;
+	shape->setQueryFilterData(filterData);       // ray casts
 	//body->setActorFlag(PxActorFlag::eVISUALIZATION, true);
 	_editorScene->addActor(*body);
     return body;
