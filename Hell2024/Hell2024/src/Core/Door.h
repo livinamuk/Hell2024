@@ -14,10 +14,10 @@ struct Door {
     void CleanUp();
     glm::mat4 GetFrameModelMatrix();
     glm::mat4 GetDoorModelMatrix();
-    glm::vec3 GetVertFrontLeftForEditor(float padding = 0);
-    glm::vec3 GetVertFrontRightForEditor(float padding = 0);
-    glm::vec3 GetVertBackLeftForEditor(float padding = 0);
-    glm::vec3 GetVertBackRightForEditor(float padding = 0);
+    glm::vec3 GetFloorplanVertFrontLeft(float padding = 0);
+    glm::vec3 GetFloorplanVertFrontRight(float padding = 0);
+    glm::vec3 GetFloorplanVertBackLeft(float padding = 0);
+    glm::vec3 GetFloorplanVertBackRight(float padding = 0);
 
     glm::vec3 GetFrontLeftCorner();
     glm::vec3 GetFrontRightCorner();

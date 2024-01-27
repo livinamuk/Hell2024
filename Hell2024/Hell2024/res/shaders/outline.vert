@@ -9,7 +9,7 @@ uniform mat4 model;
 uniform vec3 color;
 uniform bool uniformColor;
 
-uniform	bool offset;
+uniform	int offset;
 
 out vec3 Color;
 
@@ -25,8 +25,8 @@ void main() {
 	gl_Position = projection * view * model *vec4(aPos, 1.0);
 
 	
-
-	if (offset) {
+	
+	if (offset == 1) {
 		gl_Position.x += 0.05;	
-	}
+	}	
 }

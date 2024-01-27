@@ -4,6 +4,7 @@
 #include <thread>
 
 #include "../Util.hpp"
+#include "../EngineState.hpp"
 #include "AssetManager.h"
 #include "../Renderer/Renderer.h"
 #include "Input.h"
@@ -661,7 +662,7 @@ void Scene::SaveMap(std::string mapPath) {
 void Scene::CreatePlayers() {
     _players.clear();
     _players.push_back(Player(glm::vec3(4.0f, 0.1f, 3.6f), glm::vec3(-0.17, 1.54f, 0)));
-	if (_playerCount == 2) {
+	if (EngineState::GetPlayerCount() == 2) {
 		//_players.push_back(Player(glm::vec3(9.39f, 0.1f, 1.6f), glm::vec3(-0.25, 1.53f, 0)));
 		_players.push_back(Player(glm::vec3(2.1f, 0.1f, 9.6f), glm::vec3(-0.25, 0.0f, 0.0f)));
         _players[1]._ignoreControl = true;
@@ -804,18 +805,18 @@ void Scene::CreatePointCloud() {
     for (int i = 0; i < _cloudPoints.size(); i++) {
         glm::vec2 p = { _cloudPoints[i].position.x, _cloudPoints[i].position.z };
         for (Door& door : Scene::_doors) {
-            // Ignroe if is point is above or below door
+            // Ignore if is point is above or below door
             if (_cloudPoints[i].position.y < door.position.y ||
                 _cloudPoints[i].position.y > door.position.y + DOOR_HEIGHT) {
                 continue;
             }
             // Check if it is inside the fucking door
-            glm::vec2 p3 = { door.GetVertFrontLeftForEditor().x, door.GetVertFrontLeftForEditor().z };
-            glm::vec2 p2 = { door.GetVertFrontRightForEditor().x, door.GetVertFrontRightForEditor().z };
-            glm::vec2 p1 = { door.GetVertBackRightForEditor().x, door.GetVertBackRightForEditor().z };
-            glm::vec2 p4 = { door.GetVertBackLeftForEditor().x, door.GetVertBackLeftForEditor().z };
-            glm::vec2 p5 = { door.GetVertFrontRightForEditor().x, door.GetVertFrontRightForEditor().z };
-            glm::vec2 p6 = { door.GetVertBackRightForEditor().x, door.GetVertBackRightForEditor().z };
+            glm::vec2 p3 = { door.GetFloorplanVertFrontLeft().x, door.GetFloorplanVertFrontLeft().z };
+            glm::vec2 p2 = { door.GetFloorplanVertFrontRight().x, door.GetFloorplanVertFrontRight().z };
+            glm::vec2 p1 = { door.GetFloorplanVertBackRight().x, door.GetFloorplanVertBackRight().z };
+            glm::vec2 p4 = { door.GetFloorplanVertBackLeft().x, door.GetFloorplanVertBackLeft().z };
+            glm::vec2 p5 = { door.GetFloorplanVertFrontRight().x, door.GetFloorplanVertFrontRight().z };
+            glm::vec2 p6 = { door.GetFloorplanVertBackRight().x, door.GetFloorplanVertBackRight().z };
             if (Util::PointIn2DTriangle(p, p1, p2, p3) || Util::PointIn2DTriangle(p, p4, p5, p6)) {
                 _cloudPoints.erase(_cloudPoints.begin() + i);
                 i--;
@@ -1182,11 +1183,11 @@ void Wall::CreateMesh() {
         for (Door& door : Scene::_doors) {
 
             // Left side
-            glm::vec3 v1(door.GetVertFrontLeftForEditor(0.05f));
-            glm::vec3 v2(door.GetVertBackRightForEditor(0.05f));
+            glm::vec3 v1(door.GetFloorplanVertFrontLeft(0.05f));
+            glm::vec3 v2(door.GetFloorplanVertBackRight(0.05f));
             // Right side
-            glm::vec3 v3(door.GetVertBackLeftForEditor(0.05f));
-            glm::vec3 v4(door.GetVertFrontRightForEditor(0.05f));
+            glm::vec3 v3(door.GetFloorplanVertBackLeft(0.05f));
+            glm::vec3 v4(door.GetFloorplanVertFrontRight(0.05f));
             // If an intersection is found closer than one u have already then store it
             glm::vec3 tempIntersectionPoint;
             if (Util::LineIntersects(v1, v2, cursor, wallEnd, tempIntersectionPoint)) {

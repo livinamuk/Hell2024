@@ -7,7 +7,7 @@
 #include "../Util.hpp"
 #include "AnimatedGameObject.h"
 #include "Config.hpp"
-#include "GameState.hpp"
+#include "../EngineState.hpp"
 
 int Player::GetCurrentWeaponClipAmmo() {
 	if (_currentWeaponIndex == Weapon::GLOCK) {
@@ -137,7 +137,7 @@ void Player::Update(float deltaTime) {
 	_muzzleFlashCounter = std::max(_muzzleFlashCounter, 0.0f);
 
 	// Mouselook
-	if (GameState::_engineMode == EngineMode::GAME) {
+	if (EngineState::GetEngineMode() == GAME) {
 		if (!_ignoreControl && GL::WindowHasFocus()) {
 			float mouseSensitivity = 0.002f;
 			_rotation.x += -Input::GetMouseOffsetY() * mouseSensitivity;

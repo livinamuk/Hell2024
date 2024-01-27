@@ -139,7 +139,7 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <ClCompile Include="src\Core\Animation\SkinnedModel.cpp" />
     <ClCompile Include="src\Core\AssetManager.cpp" />
     <ClCompile Include="src\Core\Door.cpp" />
-    <ClCompile Include="src\Core\Editor.cpp" />
+    <ClCompile Include="src\Core\Floorplan.cpp" />
     <ClCompile Include="src\Core\AnimatedGameObject.cpp" />
     <ClCompile Include="src\Core\FbxImporter.cpp" />
     <ClCompile Include="src\Core\File.cpp" />
@@ -180,12 +180,12 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <ClInclude Include="src\Core\AssetManager.h" />
     <ClInclude Include="src\Core\Audio.hpp" />
     <ClInclude Include="src\Core\Door.h" />
-    <ClInclude Include="src\Core\Editor.h" />
+    <ClInclude Include="src\Core\Floorplan.h" />
     <ClInclude Include="src\Core\AnimatedGameObject.h" />
     <ClInclude Include="src\Core\FbxImporter.h" />
     <ClInclude Include="src\Core\File.h" />
     <ClInclude Include="src\Core\GameObject.h" />
-    <ClInclude Include="src\Core\GameState.hpp" />
+    <ClInclude Include="src\EngineState.hpp" />
     <ClInclude Include="src\Core\GL.h" />
     <ClInclude Include="src\Core\Input.h" />
     <ClInclude Include="src\Core\keycodes.h" />

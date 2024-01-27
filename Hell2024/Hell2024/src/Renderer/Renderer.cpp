@@ -18,7 +18,7 @@
 #include "../Core/Scene.h"
 #include "../Core/AssetManager.h"
 #include "../Core/TextBlitter.h"
-#include "../Core/Editor.h"
+#include "../Core/Floorplan.h"
 #include "Model.h"
 #include "NumberBlitter.h"
 #include "../Timer.hpp"
@@ -32,11 +32,9 @@
 #include "../Core/AnimatedGameObject.h"
 #include "../Effects/MuzzleFlash.h"
 #include "../Core/DebugMenu.h"
-
-#include "../Core/GameState.hpp"
+#include "../EngineState.hpp"
 
 std::vector<glm::vec3> debugPoints;
-
 
 struct RenderTarget {
     GLuint fbo = { 0 };
@@ -101,11 +99,6 @@ struct SSBOs {
     GLuint rtMesh = 0;
     GLuint rtInstances = 0;
     GLuint dirtyPointCloudIndices = 0;
-    //GLuint dirtyGridChunks = 0; // 4x4x4
-   // GLuint atomicCounter = 0;
-    //GLuint propogationList = 0; // contains coords of all dirty grid points
-   // GLuint indirectDispatchSize = 0;
-   // GLuint floorVertices = 0;
     GLuint dirtyGridCoordinates = 0;
     GLuint instanceMatrices = 0;
 } _ssbos;
@@ -602,23 +595,6 @@ void Renderer::RenderFrame(Player* player) {
 	glm::mat4 projection = Renderer::GetProjectionMatrix(_depthOfFieldScene); // 1.0 for weapon, 0.9 for scene.
 	glm::mat4 view = player->GetViewMatrix();
 
-	// Calculate mouse ray
-	double xpos = Input::GetMouseX();
-	double ypos = Input::GetMouseY();
-	float SCR_WIDTH = GL::GetWindowWidth();
-    float SCR_SHEIGHT = GL::GetWindowHeight();
-	float x = (2.0f * xpos) / SCR_WIDTH - 1.0f;
-	float y = 1.0f - (2.0f * ypos) / SCR_SHEIGHT;
-	float z = 1.0f;
-	glm::vec3 ray_nds = glm::vec3(x, y, z);
-    glm::vec4 ray_clip = glm::vec4(ray_nds.x, ray_nds.y, ray_nds.z, 1.0f);
-    glm::vec4 ray_eye = glm::inverse(projection) * ray_clip;
-	ray_eye = glm::vec4(ray_eye.x, ray_eye.y, ray_eye.z, 0.0f);
-    glm::vec4 inv_ray_wor = (inverse(view) * ray_eye);
-    glm::vec3 ray_wor = glm::vec3(inv_ray_wor.x, inv_ray_wor.y, inv_ray_wor.z);
-	ray_wor = normalize(ray_wor);
-	GameState::_mouseRay = ray_wor;
-
 	_shaders.UI.Use();
 	_shaders.UI.SetVec3("overrideColor", WHITE);
 
@@ -700,7 +676,7 @@ void Renderer::RenderFrame(Player* player) {
     DebugPass(player);
 
     // Render editor mode UI if needed?
-    if (GameState::_engineMode == EngineMode::EDITOR) {
+    if (EngineState::GetEngineMode() == EngineMode::EDITOR) {
         RenderEditorMode();
     }
 
@@ -730,7 +706,7 @@ void Renderer::RenderFrame(Player* player) {
 	TextBlitter::_debugTextToBilt += "View rot: " + Util::Vec3ToString(player->GetViewRotation()) + "\n";
 	//TextBlitter::_debugTextToBilt += "Grounded: " + std::to_string(Scene::_players[0]._isGrounded) + "\n";
 	TextBlitter::_debugTextToBilt += "Y vel: " + std::to_string(Scene::_players[0]._yVelocity) + "\n";
-	TextBlitter::_debugTextToBilt += "Mouse ray: " + Util::Vec3ToString(GameState::_mouseRay) + "\n";
+	//TextBlitter::_debugTextToBilt += "Mouse ray: " + Util::Vec3ToString(EngineState::_mouseRay) + "\n";
 
 	TextBlitter::_debugTextToBilt += "X: " + std::to_string(Input::GetMouseX()) +"\n";
 	TextBlitter::_debugTextToBilt += "Y: " + std::to_string(Input::GetMouseY()) +"\n";
@@ -756,13 +732,13 @@ void Renderer::RenderFrame(Player* player) {
 
 
     // Blit that smaller FBO into the main frame buffer 
-    if (_viewportMode == FULLSCREEN) {
+    if (EngineState::GetViewportMode() == FULLSCREEN) {
         glBindFramebuffer(GL_READ_FRAMEBUFFER, playerRenderTarget.presentFrameBuffer.GetID());
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
         glReadBuffer(GL_COLOR_ATTACHMENT1);
         glBlitFramebuffer(0, 0, playerRenderTarget.presentFrameBuffer.GetWidth(), playerRenderTarget.presentFrameBuffer.GetHeight(), 0, 0, GL::GetWindowWidth(), GL::GetWindowHeight(), GL_COLOR_BUFFER_BIT, GL_NEAREST);
     }
-    else if (_viewportMode == SPLITSCREEN) {
+    else if (EngineState::GetViewportMode() == SPLITSCREEN) {
 
         if (GetPlayerIndexFromPlayerPointer(player) == 0) {
             glBindFramebuffer(GL_READ_FRAMEBUFFER, playerRenderTarget.presentFrameBuffer.GetID());
@@ -789,7 +765,6 @@ void Renderer::RenderFrame(Player* player) {
 
 void Renderer::RenderEditorMode() {
 
-
     Scene::Update3DEditorScene();
 
 	glm::mat4 projection = glm::perspective(1.0f, 1920.0f / 1080.0f, NEAR_PLANE, FAR_PLANE);
@@ -800,7 +775,7 @@ void Renderer::RenderEditorMode() {
 	_shaders.outline.SetMat4("view", view);
 
     glm::vec3 rayOrigin = Scene::_players[0].GetViewPos();
-    glm::vec3 rayDirection = GameState::_mouseRay;
+    glm::vec3 rayDirection = Util::GetMouseRay(projection, view, GL::GetWindowWidth(), GL::GetWindowHeight(), Input::GetMouseX(), Input::GetMouseY());
 	auto result = Util::CastPhysXRay(rayOrigin, rayDirection , 100, true);
 
 	if (!result.hitFound) {
@@ -848,7 +823,14 @@ void Renderer::RenderEditorMode() {
 	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 	glDisable(GL_DEPTH_TEST);
 
-	_shaders.outline.SetBool("offset", true);
+	_shaders.outline.SetInt("offset", 1);
+	for (auto* gameObject : selectedObjects) {
+		_shaders.outline.SetMat4("model", gameObject->GetModelMatrix());
+		for (int i = 0; i < gameObject->_meshMaterialIndices.size(); i++) {
+			gameObject->_model->_meshes[i].Draw();
+		}
+	}
+	_shaders.outline.SetInt("offset", 2);
 	for (auto* gameObject : selectedObjects) {
 		_shaders.outline.SetMat4("model", gameObject->GetModelMatrix());
 		for (int i = 0; i < gameObject->_meshMaterialIndices.size(); i++) {
@@ -861,7 +843,7 @@ void Renderer::RenderEditorMode() {
 	glDepthMask(GL_TRUE);
 	glDisable(GL_STENCIL_TEST);
 
-	_shaders.outline.SetBool("offset", false);
+	_shaders.outline.SetInt("offset", 0);
 }
 
 
@@ -1052,7 +1034,7 @@ void DrawHud(Player* player) {
 	float viewportWidth = gBuffer.GetWidth();
 	float viewportHeight = gBuffer.GetHeight();
 
-    if (Renderer::_viewportMode == SPLITSCREEN) {
+    if (EngineState::GetViewportMode() == SPLITSCREEN) {
         slashYPos = gBuffer.GetHeight() - 70.0f;
         scale = 1.05f;
     }
@@ -1448,10 +1430,10 @@ void Renderer::RecreateFrameBuffers(int currentPlayer) {
 
     float width = (float)_renderWidth;
     float height = (float)_renderHeight;
-    int playerCount = Scene::_playerCount;
+    int playerCount = EngineState::GetPlayerCount();
 
     // Adjust for splitscreen
-    if (_viewportMode == SPLITSCREEN) {
+    if (EngineState::GetViewportMode() == SPLITSCREEN) {
         height *= 0.5f;
     }
 
@@ -1940,8 +1922,8 @@ void Renderer::RenderEditorFrame() {
     glEnable(GL_DEPTH_TEST);
 
     _shaders.editorTextured.Use();
-    _shaders.editorTextured.SetMat4("projection", Editor::GetProjectionMatrix());
-    _shaders.editorTextured.SetMat4("view", Editor::GetViewMatrix());
+    _shaders.editorTextured.SetMat4("projection", Floorplan::GetProjectionMatrix());
+    _shaders.editorTextured.SetMat4("view", Floorplan::GetViewMatrix());
     Transform t;
     t.position.y = -3.5f;
     _shaders.editorTextured.SetMat4("model", t.to_mat4());
@@ -1952,8 +1934,8 @@ void Renderer::RenderEditorFrame() {
     }
 
     _shaders.editorSolidColor.Use();
-    _shaders.editorSolidColor.SetMat4("projection", Editor::GetProjectionMatrix());
-    _shaders.editorSolidColor.SetMat4("view", Editor::GetViewMatrix());
+    _shaders.editorSolidColor.SetMat4("projection", Floorplan::GetProjectionMatrix());
+    _shaders.editorSolidColor.SetMat4("view", Floorplan::GetViewMatrix());
     _shaders.editorSolidColor.SetBool("uniformColor", false);
 
     RenderImmediate();
@@ -2205,7 +2187,7 @@ void Renderer::RenderUI(float viewportWidth, float viewportHeight) {
 
     //float viewportWidth = (float)_renderWidth;
     //float viewportHeight = (float)_renderHeight;
-    if (_viewportMode == SPLITSCREEN) {
+    if (EngineState::GetViewportMode() == SPLITSCREEN) {
       //  viewportHeight *= 0.5f;
     }
 
@@ -2256,7 +2238,7 @@ glm::mat4 Renderer::GetProjectionMatrix(float depthOfField) {
     float width = (float)GL::GetWindowWidth();
     float height = (float)GL::GetWindowHeight();
 
-    if (_viewportMode == SPLITSCREEN) {
+    if (EngineState::GetViewportMode() == SPLITSCREEN) {
         height *= 0.5f;
     }
 

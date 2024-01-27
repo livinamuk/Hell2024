@@ -31,6 +31,20 @@ namespace Util {
 		return { quat.x, quat.y, quat.z, quat.w };
 	}
 
+    inline glm::vec3 GetMouseRay(glm::mat4 projection, glm::mat4 view, int windowWidth, int windowHeight, int mouseX, int mouseY) {
+		float x = (2.0f * mouseX) / (float)windowWidth - 1.0f;
+		float y = 1.0f - (2.0f * mouseY) / (float)windowHeight;
+		float z = 1.0f;
+		glm::vec3 ray_nds = glm::vec3(x, y, z);
+		glm::vec4 ray_clip = glm::vec4(ray_nds.x, ray_nds.y, ray_nds.z, 1.0f);
+		glm::vec4 ray_eye = glm::inverse(projection) * ray_clip;
+		ray_eye = glm::vec4(ray_eye.x, ray_eye.y, ray_eye.z, 0.0f);
+		glm::vec4 inv_ray_wor = (inverse(view) * ray_eye);
+		glm::vec3 ray_wor = glm::vec3(inv_ray_wor.x, inv_ray_wor.y, inv_ray_wor.z);
+		ray_wor = normalize(ray_wor);
+		return ray_wor;
+    }
+
     inline PhysXRayResult CastPhysXRay(glm::vec3 rayOrigin, glm::vec3 rayDirection, float rayLength, bool gizmoLand = false) {
 
         PxScene* scene = Physics::GetScene();

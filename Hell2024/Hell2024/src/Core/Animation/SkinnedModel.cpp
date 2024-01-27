@@ -225,9 +225,7 @@ void SkinnedModel::UpdateBoneTransformsFromAnimation(float animTime, Animation* 
         animatedTransforms.local[i] = m_BoneInfo[i].FinalTransformation;
         animatedTransforms.worldspace[i] = m_BoneInfo[i].ModelSpace_AnimatedTransform;
         animatedTransforms.names[i] = m_BoneInfo[i].BoneName;
-        animatedTransforms.inverseBindTransform[i] = m_BoneInfo[i].BoneOffset;
-       // Transforms[i] = m_BoneInfo[i].FinalTransformation;
-       // DebugAnimatedTransforms[i] = m_BoneInfo[i].ModelSpace_AnimatedTransform;
+        //animatedTransforms.inverseBindTransform[i] = m_BoneInfo[i].BoneOffset;
     }
 }
 

@@ -158,8 +158,6 @@ struct PickUp {
 
 namespace Scene {
 
-    // Perhaps this isn't the best place to store this?
-    inline int _playerCount = 2;
     inline PxTriangleMesh* _sceneTriangleMesh = NULL;
     inline PxRigidStatic* _sceneRigidDynamic = NULL;
     inline PxShape* _sceneShape = NULL;

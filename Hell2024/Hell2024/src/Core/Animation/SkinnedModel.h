@@ -19,13 +19,13 @@ struct AnimatedTransforms {
     std::vector<glm::mat4> local;
     std::vector<glm::mat4> worldspace;
     std::vector<std::string> names; // temp for debugging
-    std::vector<glm::mat4> inverseBindTransform; // temp for debugging
+    //std::vector<glm::mat4> inverseBindTransform; // temp for debugging
 
     void Resize(int size) {
         local.resize(size);
         worldspace.resize(size);
         names.resize(size);
-        inverseBindTransform.resize(size);
+        //inverseBindTransform.resize(size);
     }
 };
 

@@ -43,7 +43,6 @@ namespace Renderer {
 	//std::vector<int> UpdateDirtyPointCloudIndices();
 	//std::vector<glm::uvec4> UpdateDirtyGridChunks();
 
-	inline ViewportMode _viewportMode = FULLSCREEN;
 
 	inline int _method = 1;
 	inline bool _shadowMapsAreDirty = true;

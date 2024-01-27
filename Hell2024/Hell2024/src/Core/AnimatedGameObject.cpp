@@ -1,7 +1,7 @@
 #include "AnimatedGameObject.h"
 #include "Player.h"
 #include "Audio.hpp"
-#include "Editor.h"
+#include "Floorplan.h"
 #include "../Util.hpp"
 #include "Input.h"
 #include "AssetManager.h"

@@ -13,6 +13,7 @@
 #include "Math.h"
 #pragma warning(pop)
 
+enum EngineMode { GAME = 0, FLOORPLAN, EDITOR };
 enum ViewportMode {FULLSCREEN = 0, SPLITSCREEN, VIEWPORTMODE_COUNT};
 enum Weapon { KNIFE = 0, GLOCK, SHOTGUN, AKS74U, MP7, WEAPON_COUNT };
 enum WeaponAction { IDLE = 0, FIRE, RELOAD, RELOAD_FROM_EMPTY, DRAW_BEGIN, DRAWING, SPAWNING };

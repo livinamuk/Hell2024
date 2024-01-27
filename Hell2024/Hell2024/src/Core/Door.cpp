@@ -84,19 +84,19 @@ glm::mat4 Door::GetDoorModelMatrix() {
     return GetFrameModelMatrix() * doorTransform.to_mat4();
 }
 
-glm::vec3 Door::GetVertFrontLeftForEditor(float padding) {
+glm::vec3 Door::GetFloorplanVertFrontLeft(float padding) {
     return GetFrameModelMatrix() * glm::vec4(DOOR_EDITOR_DEPTH + padding, 0, (-DOOR_WIDTH / 2), 1.0f);
 }
 
-glm::vec3 Door::GetVertFrontRightForEditor(float padding) {
+glm::vec3 Door::GetFloorplanVertFrontRight(float padding) {
     return GetFrameModelMatrix() * glm::vec4(DOOR_EDITOR_DEPTH + padding, 0, (DOOR_WIDTH / 2), 1.0f);
 }
 
-glm::vec3 Door::GetVertBackLeftForEditor(float padding) {
+glm::vec3 Door::GetFloorplanVertBackLeft(float padding) {
     return GetFrameModelMatrix() * glm::vec4(-DOOR_EDITOR_DEPTH - padding, 0, (DOOR_WIDTH / 2), 1.0f);
 }
 
-glm::vec3 Door::GetVertBackRightForEditor(float padding) {
+glm::vec3 Door::GetFloorplanVertBackRight(float padding) {
     return GetFrameModelMatrix() * glm::vec4(-DOOR_EDITOR_DEPTH - padding, 0, (-DOOR_WIDTH / 2), 1.0f);
 }
 

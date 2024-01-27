@@ -1,4 +1,4 @@
-#include "Editor.h"
+#include "Floorplan.h"
 #include "Input.h"
 #include "GL.h"
 #include "../Util.hpp"
@@ -6,7 +6,7 @@
 #include "../Core/TextBlitter.h"
 #include "../Renderer/Renderer.h"
 
-namespace Editor {
+namespace Floorplan {
     glm::mat4 _projection = glm::mat4(1);
     glm::mat4 _view = glm::mat4(1);
     float _mapWidth = 24;   // These are a double up of what you already have in Renderer.cpp. Think of a better way.
@@ -40,7 +40,7 @@ namespace Editor {
     enum Action {IDLE = 0, CREATING_WALL, FINISHED_WALL, DRAGGING_WALL_VERTEX, DRAGGING_DOOR, CREATING_FLOOR, DRAGGING_FLOOR_VERTEX} _action;
     Line _createLine;
 
-    enum EditorMode {WALLS = 0, FLOOR, CEILING, MODE_COUNT } _mode;
+    enum FloorplanMode {WALLS = 0, FLOOR, CEILING, MODE_COUNT } _mode;
 
     void WallsModeUpdate();
     void FloorModeUpdate();
@@ -58,21 +58,21 @@ glm::vec3 GetLineMidPoint(Line& line) {
 }
 
 bool MouseOverDoor(Door& door) {
-    glm::vec2 p = { Editor::_mouseX, Editor::_mouseZ };
-    glm::vec2 p3 = { door.GetVertFrontLeftForEditor().x, door.GetVertFrontLeftForEditor().z };
-    glm::vec2 p2 = { door.GetVertFrontRightForEditor().x, door.GetVertFrontRightForEditor().z };
-    glm::vec2 p1 = { door.GetVertBackRightForEditor().x, door.GetVertBackRightForEditor().z };
-    glm::vec2 p4 = { door.GetVertBackLeftForEditor().x, door.GetVertBackLeftForEditor().z };
-    glm::vec2 p5 = { door.GetVertFrontRightForEditor().x, door.GetVertFrontRightForEditor().z };
-    glm::vec2 p6 = { door.GetVertBackRightForEditor().x, door.GetVertBackRightForEditor().z };
+    glm::vec2 p = { Floorplan::_mouseX, Floorplan::_mouseZ };
+    glm::vec2 p3 = { door.GetFloorplanVertFrontLeft().x, door.GetFloorplanVertFrontLeft().z };
+    glm::vec2 p2 = { door.GetFloorplanVertFrontRight().x, door.GetFloorplanVertFrontRight().z };
+    glm::vec2 p1 = { door.GetFloorplanVertBackRight().x, door.GetFloorplanVertBackRight().z };
+    glm::vec2 p4 = { door.GetFloorplanVertBackLeft().x, door.GetFloorplanVertBackLeft().z };
+    glm::vec2 p5 = { door.GetFloorplanVertFrontRight().x, door.GetFloorplanVertFrontRight().z };
+    glm::vec2 p6 = { door.GetFloorplanVertBackRight().x, door.GetFloorplanVertBackRight().z };
     return Util::PointIn2DTriangle(p, p1, p2, p3) || Util::PointIn2DTriangle(p, p4, p5, p6);
 }
 
-void Editor::Init() {
+void Floorplan::Init() {
 
 }
 
-void Editor::Update(float /*deltaTime*/) {
+void Floorplan::Update(float /*deltaTime*/) {
 
     if (Input::KeyPressed(HELL_KEY_N)) {
         Scene::CleanUp();
@@ -135,7 +135,7 @@ void Editor::Update(float /*deltaTime*/) {
     }    
 }
 
-void Editor::WallsModeUpdate() {
+void Floorplan::WallsModeUpdate() {
 
     _hoveredVertex.hoverFound = false;
 
@@ -272,7 +272,7 @@ void Editor::WallsModeUpdate() {
     break_out: {}
 }
 
-void Editor::FloorModeUpdate() {
+void Floorplan::FloorModeUpdate() {
 
     _hoveredVertex.hoverFound = false;
 
@@ -366,20 +366,20 @@ void Editor::FloorModeUpdate() {
     floor_update_break_out: {}
 }
 
-void Editor::CeilingModeUpdate() {
+void Floorplan::CeilingModeUpdate() {
 
     //break_out: {}
 }
 
-void Editor::PrepareRenderFrame() {
+void Floorplan::PrepareRenderFrame() {
 
-    if (_mode == Editor::WALLS) {
+    if (_mode == Floorplan::WALLS) {
         TextBlitter::_debugTextToBilt = "Mode: WALLS\n";
     }
-    if (_mode == Editor::FLOOR) {
+    if (_mode == Floorplan::FLOOR) {
         TextBlitter::_debugTextToBilt = "Mode: FLOOR\n";
     }
-    if (_mode == Editor::CEILING) {
+    if (_mode == Floorplan::CEILING) {
         TextBlitter::_debugTextToBilt = "Mode: CEILING\n";
     }
 
@@ -405,7 +405,7 @@ void Editor::PrepareRenderFrame() {
         Renderer::QueueLineForDrawing(Line(glm::vec3(0, gridY, z), glm::vec3(_mapDepth, gridY, z), GRID_COLOR));
     }
     
-    if (_mode == EditorMode::WALLS) {
+    if (_mode == FloorplanMode::WALLS) {
 
         // Walls
         for (Wall& wall : Scene::_walls) {
@@ -439,7 +439,7 @@ void Editor::PrepareRenderFrame() {
         }
     }
 
-    if (_mode == EditorMode::FLOOR) {
+    if (_mode == FloorplanMode::FLOOR) {
 
         if (_action == CREATING_FLOOR) {
             float x1 = std::min(_creatingFloorBegin.x, _creatingFloorEnd.x);
@@ -479,53 +479,53 @@ void Editor::PrepareRenderFrame() {
     // Doors
     for (Door& door : Scene::_doors) {
         glm::vec3 color = LIGHT_BLUE;
-        if (_mode == EditorMode::WALLS) {
+        if (_mode == FloorplanMode::WALLS) {
             if (MouseOverDoor(door)) {
                 color = WHITE;
             }
-            Renderer::QueuePointForDrawing(Point(door.GetVertFrontLeftForEditor(0.0f), LIGHT_BLUE));
-            Renderer::QueuePointForDrawing(Point(door.GetVertFrontRightForEditor(0.0f), LIGHT_BLUE));
-            Renderer::QueuePointForDrawing(Point(door.GetVertBackLeftForEditor(0.0f), LIGHT_BLUE));
-            Renderer::QueuePointForDrawing(Point(door.GetVertBackRightForEditor(0.0f), LIGHT_BLUE));
+            Renderer::QueuePointForDrawing(Point(door.GetFloorplanVertFrontLeft(0.0f), LIGHT_BLUE));
+            Renderer::QueuePointForDrawing(Point(door.GetFloorplanVertFrontRight(0.0f), LIGHT_BLUE));
+            Renderer::QueuePointForDrawing(Point(door.GetFloorplanVertBackLeft(0.0f), LIGHT_BLUE));
+            Renderer::QueuePointForDrawing(Point(door.GetFloorplanVertBackRight(0.0f), LIGHT_BLUE));
         }
         Triangle triA;
         triA.color = color;
-        triA.p3 = door.GetVertFrontLeftForEditor(0);
-        triA.p2 = door.GetVertFrontRightForEditor(0);
-        triA.p1 = door.GetVertBackRightForEditor(0);
+        triA.p3 = door.GetFloorplanVertFrontLeft(0);
+        triA.p2 = door.GetFloorplanVertFrontRight(0);
+        triA.p1 = door.GetFloorplanVertBackRight(0);
         Triangle triB;
         triB.color = color;
-        triB.p1 = door.GetVertBackLeftForEditor(0);
-        triB.p2 = door.GetVertFrontRightForEditor(0);
-        triB.p3 = door.GetVertBackRightForEditor(0);
+        triB.p1 = door.GetFloorplanVertBackLeft(0);
+        triB.p2 = door.GetFloorplanVertFrontRight(0);
+        triB.p3 = door.GetFloorplanVertBackRight(0);
         Renderer::QueueTriangleForSolidRendering(triA);
         Renderer::QueueTriangleForSolidRendering(triB);
     }
 }
 
-glm::mat4 Editor::GetProjectionMatrix() {
+glm::mat4 Floorplan::GetProjectionMatrix() {
     return _projection;
 }
-glm::mat4 Editor::GetViewMatrix() {
+glm::mat4 Floorplan::GetViewMatrix() {
     return _view;
 }
 
-void Editor::NextMode() {
-    _mode = (EditorMode)(int(_mode) + 1);
+void Floorplan::NextMode() {
+    _mode = (FloorplanMode)(int(_mode) + 1);
     if (_mode == MODE_COUNT)
-        _mode = (EditorMode)0;
+        _mode = (FloorplanMode)0;
     _action = IDLE;
 }
 
-void Editor::PreviousMode() {
+void Floorplan::PreviousMode() {
     if (int(_mode) == 0)
-        _mode = EditorMode(int(MODE_COUNT) - 1);
+        _mode = FloorplanMode(int(MODE_COUNT) - 1);
     else
-        _mode = (EditorMode)(int(_mode) - 1);
+        _mode = (FloorplanMode)(int(_mode) - 1);
     _action = IDLE;
 }
 
-bool Editor::WasForcedOpen() {
+bool Floorplan::WasForcedOpen() {
 	if (_wasForcedOpen) {
 		_wasForcedOpen = false;
 		return true;
@@ -533,6 +533,6 @@ bool Editor::WasForcedOpen() {
 	return false;
 }
 
-void Editor::ForcedOpen() {
+void Floorplan::ForcedOpen() {
     _wasForcedOpen = true;
 }
