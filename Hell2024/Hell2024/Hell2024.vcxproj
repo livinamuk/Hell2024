@@ -143,6 +143,7 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <ClCompile Include="src\Core\AnimatedGameObject.cpp" />
     <ClCompile Include="src\Core\FbxImporter.cpp" />
     <ClCompile Include="src\Core\File.cpp" />
+    <ClCompile Include="src\Core\Filesystem\FilesystemManager.cpp" />
     <ClCompile Include="src\Core\GameObject.cpp" />
     <ClCompile Include="src\Core\GL.cpp" />
     <ClCompile Include="src\Core\Input.cpp" />
@@ -184,6 +185,7 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <ClInclude Include="src\Core\AnimatedGameObject.h" />
     <ClInclude Include="src\Core\FbxImporter.h" />
     <ClInclude Include="src\Core\File.h" />
+    <ClInclude Include="src\Core\Filesystem\FilesystemManager.h" />
     <ClInclude Include="src\Core\GameObject.h" />
     <ClInclude Include="src\EngineState.hpp" />
     <ClInclude Include="src\Core\GL.h" />

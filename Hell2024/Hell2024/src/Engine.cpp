@@ -12,10 +12,12 @@
 #include "Core/Scene.h"
 #include "Core/Physics.h"
 #include "Core/DebugMenu.h"
+#include "Core/Filesystem/FilesystemManager.h"
 
 void ToggleFullscreen();
 
 void Engine::Run() {
+    FilesystemManager::Initialize("Hell2024");
 
 	std::cout << "We are all alone on life's journey, held captive by the limitations of human consciousness.\n";
 
