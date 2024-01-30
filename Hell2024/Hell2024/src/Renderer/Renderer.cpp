@@ -29,6 +29,7 @@
 #include <future>
 #include <algorithm>
 
+#include "../Core/Filesystem/FilesystemManager.h"
 #include "../Core/AnimatedGameObject.h"
 #include "../Effects/MuzzleFlash.h"
 #include "../Core/DebugMenu.h"
@@ -381,7 +382,7 @@ void Renderer::Init() {
 	_shaders.glassComposite.Load("glass_composite.vert", "glass_composite.frag");
 	_shaders.outline.Load("outline.vert", "outline.frag");
 	_shaders.skybox.Load("skybox.vert", "skybox.frag");
-	_shaders.computeTest.Load("res/shaders/test.comp");
+	_shaders.computeTest.Load("res://shaders/test.comp");
     
 	_shaders.blurVertical.Load("blurVertical.vert", "blur.frag");
 	_shaders.blurHorizontal.Load("blurHorizontal.vert", "blur.frag");
@@ -1895,10 +1896,10 @@ void Renderer::HotloadShaders() {
 	_shaders.skybox.Load("skybox.vert", "skybox.frag");
 	_shaders.outline.Load("outline.vert", "outline.frag");
 
-    _shaders.compute.Load("res/shaders/compute.comp");
-    _shaders.pointCloud.Load("res/shaders/point_cloud.comp");
-	_shaders.propogateLight.Load("res/shaders/propogate_light.comp");
-	_shaders.computeTest.Load("res/shaders/test.comp");
+    _shaders.compute.Load("res://shaders/compute.comp");
+    _shaders.pointCloud.Load("res://shaders/point_cloud.comp");
+	_shaders.propogateLight.Load("res://shaders/propogate_light.comp");
+	_shaders.computeTest.Load("res://shaders/test.comp");
 }
 
 void Renderer::RenderEditorFrame() {
@@ -2638,9 +2639,9 @@ void InitCompute() {
     glGenBuffers(1, &_ssbos.rtInstances);
     glGenBuffers(1, &_ssbos.dirtyPointCloudIndices);
 
-    _shaders.compute.Load("res/shaders/compute.comp");
-    _shaders.pointCloud.Load("res/shaders/point_cloud.comp");
-    _shaders.propogateLight.Load("res/shaders/propogate_light.comp");
+    _shaders.compute.Load("res://shaders/compute.comp");
+    _shaders.pointCloud.Load("res://shaders/point_cloud.comp");
+    _shaders.propogateLight.Load("res://shaders/propogate_light.comp");
     
     Scene::CreatePointCloud();
     Renderer::CreatePointCloudBuffer();

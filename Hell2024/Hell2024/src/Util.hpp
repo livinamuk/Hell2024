@@ -1,4 +1,3 @@
-#include <fstream>
 #include <sstream>
 #include <iostream>
 #include <string>
@@ -230,16 +229,6 @@ namespace Util {
         static std::mt19937 rng(dev());
         std::uniform_int_distribution<std::mt19937::result_type> dist6(min, max);
         return dist6(rng);
-    }
-
-    inline std::string ReadTextFromFile(std::string path) {
-        std::ifstream file(path);
-        std::string str;
-        std::string line;
-        while (std::getline(file, line)) {
-            str += line + "\n";
-        }
-        return str;
     }
 
     inline std::string Vec3ToString(glm::vec3 v) {

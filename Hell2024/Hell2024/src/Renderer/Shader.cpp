@@ -1,4 +1,5 @@
-#include "Shader.h" 
+#include "Shader.h"
+#include "../Core/Filesystem/FilesystemManager.h"
 #include "../Util.hpp"
 #include "../Common.h"
 
@@ -26,8 +27,8 @@ void Shader::Load(std::string vertexPath, std::string fragmentPath) {
 
     //std::cout << "Loading: " << vertexPath << " " << fragmentPath << "\n";
 
-    std::string vertexSource = Util::ReadTextFromFile("res/shaders/" + vertexPath);
-    std::string fragmentSource = Util::ReadTextFromFile("res/shaders/" + fragmentPath);
+    const auto vertexSource = FS::ReadText("res://shaders/" + vertexPath);
+    const auto fragmentSource = FS::ReadText("res://shaders/" + fragmentPath);
 
     const char* vShaderCode = vertexSource.c_str();
     const char* fShaderCode = fragmentSource.c_str();
@@ -64,9 +65,9 @@ void Shader::Load(std::string vertexPath, std::string fragmentPath) {
 
 void Shader::Load(std::string vertexPath, std::string fragmentPath, std::string geomPath)
 {
-    std::string vertexSource = Util::ReadTextFromFile("res/shaders/" + vertexPath);
-    std::string fragmentSource = Util::ReadTextFromFile("res/shaders/" + fragmentPath);
-    std::string geometrySource = Util::ReadTextFromFile("res/shaders/" + geomPath);
+    const auto vertexSource = FS::ReadText("res://shaders/" + vertexPath);
+    const auto fragmentSource = FS::ReadText("res://shaders/" + fragmentPath);
+    const auto geometrySource = FS::ReadText("res://shaders/" + geomPath);
 
     const char* vShaderCode = vertexSource.c_str();
     const char* fShaderCode = fragmentSource.c_str();
@@ -134,19 +135,12 @@ void Shader::SetVec3(const std::string& name, const glm::vec3& value) {
 // COMPUTE //
 
 void ComputeShader::Load(std::string computePath) {
-    std::string computeCode;
-    std::ifstream cShaderFile;
-    cShaderFile.exceptions(std::ifstream::failbit | std::ifstream::badbit);
-    try {
-        cShaderFile.open(computePath);
-        std::stringstream cShaderStream;
-        cShaderStream << cShaderFile.rdbuf();
-        cShaderFile.close();
-        computeCode = cShaderStream.str();
+    const std::string computeCode = FS::ReadText(computePath);
+    if (computeCode.empty()) {
+        std::cout << "ERROR: Compute shader (" << computePath << ") not found!\n";
+        return;
     }
-    catch (std::ifstream::failure& e) {
-        std::cout << "ERROR::SHADER::FILE_NOT_SUCCESSFULLY_READ: " << e.what() << std::endl;
-    }
+
     const char* cShaderCode = computeCode.c_str();
     unsigned int compute;
     compute = glCreateShader(GL_COMPUTE_SHADER);
