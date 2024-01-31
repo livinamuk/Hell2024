@@ -4,6 +4,8 @@
 
 #pragma warning(push, 0)
 #include "PxPhysicsAPI.h"
+#include "geometry/PxGeometryHelpers.h"
+
 #pragma warning(pop)
 
 //#pragma warning( disable : 6495 ) // Always initialize a member variable
@@ -45,10 +47,11 @@ namespace Physics {
 	PxPhysics* GetPhysics();
 	PxMaterial* GetDefaultMaterial();
 	PxScene* GetEditorScene();
+	PxScene* GetGizmoXTranslateScene();
 	PxShape* CreateBoxShape(float width, float height, float depth, Transform shapeOffset = Transform(), PxMaterial* material = NULL);
 	PxRigidDynamic* CreateRigidDynamic(Transform transform, PhysicsFilterData filterData, PxShape* shape, Transform shapeOffset = Transform());
 	PxRigidStatic* CreateRigidStatic(Transform transform, PhysicsFilterData physicsFilterData, PxShape* shape, Transform shapeOffset = Transform());
-	PxRigidStatic* CreateEditorRigidStatic(Transform transform, PxShape* shap);
+	PxRigidStatic* CreateEditorRigidStatic(Transform transform, PxShape* shap, PxScene* scene);
 	PxRigidDynamic* CreateRigidDynamic(glm::mat4 matrix, PhysicsFilterData filterData, PxShape* shape);
 	PxRigidDynamic* CreateRigidDynamic(glm::mat4 matrix, bool kinematic);
 	PxShape* CreateShapeFromTriangleMesh(PxTriangleMesh* triangleMesh, PxShapeFlags shapeFlags, PxMaterial* material = NULL, glm::vec3 scale = glm::vec3(1));
@@ -57,6 +60,7 @@ namespace Physics {
 	void DisableRigidBodyDebugLines(PxRigidBody* rigidBody);
 	std::vector<CollisionReport>& GetCollisions();
 	void ClearCollisionLists();
+	void UpdateGizmoScenes();
 
 	inline std::vector<CollisionReport> _collisionReports;
 	inline std::vector<CharacterCollisionReport> _characterCollisionReports;

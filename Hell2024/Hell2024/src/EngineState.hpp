@@ -21,19 +21,9 @@ namespace EngineState {
 	inline EngineMode GetEngineMode() {
 		return _engineMode;
 	}
-
-
-	/*void ToggleEditor() {
-		if (GameState::_engineMode == EngineMode::GAME) {
-			//GL::ShowCursor();
-			GameState::_engineMode = EngineMode::FLOORPLAN;
-		}
-		else {
-			//GL::DisableCursor();
-			GameState::_engineMode = EngineMode::GAME;
-		}
-		Audio::PlayAudio(AUDIO_SELECT, 1.00f);
-	}*/
+	inline void SetEngineMode(EngineMode mode) {
+		_engineMode = mode;
+	}
 
 	inline void NextPlayer() {
 		_currentPlayer++;

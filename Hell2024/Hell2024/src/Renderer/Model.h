@@ -8,9 +8,8 @@ struct BoundingBox {
 	glm::vec3 offsetFromModelOrigin;
 };
 
-class Model
-{
-public:
+struct Model {
+
 	void Load(std::string filepath, const bool bake_on_load = true);
 	void Draw();
 	void CreateTriangleMesh();
@@ -19,12 +18,12 @@ public:
 
 	std::vector<Mesh> _meshes;
 	std::vector<Triangle> _triangles;;
-	//std::vector<int> _meshIndices;
 	std::vector<std::string> _meshNames;
 	PxTriangleMesh* _triangleMesh;
 	std::string _name;
 	std::string _filename;
 	BoundingBox _boundingBox;
+
 private:
 	bool _baked = false;
 };

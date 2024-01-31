@@ -89,15 +89,14 @@ namespace Util {
             result.hitActor = hit.block.actor;
 
             if (hit.block.actor->userData) {
-
                 PhysicsObjectData* physicsObjectData = (PhysicsObjectData*)hit.block.actor->userData;
                 result.physicsObjectType = physicsObjectData->type;
                 result.parent = physicsObjectData->parent;
-
             }
             else {
                 result.physicsObjectType = UNDEFINED;
-             //   std::cout << "no user data\n";
+                result.hitFound = false;
+                std::cout << "no user data found on ray hit\n";
             }
 
             /*EntityData* hitEntityData = (EntityData*)hit.block.actor->userData;
@@ -486,6 +485,13 @@ namespace Util {
     inline glm::vec3 GetTranslationFromMatrix(glm::mat4 matrix) {
         return glm::vec3(matrix[3][0], matrix[3][1], matrix[3][2]);
     }
+
+	inline void RemoveScaleFromMatrix(glm::mat4& matrix) {
+		matrix[0][3] = 1.0f;
+		matrix[1][3] = 1.0f;
+		matrix[2][3] = 1.0f;
+	}
+
 
     inline void InterpolateQuaternion(glm::quat& Out, const glm::quat& Start, const glm::quat& End, float pFactor) {
         // calc cosine theta

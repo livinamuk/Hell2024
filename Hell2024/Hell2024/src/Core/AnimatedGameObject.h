@@ -20,6 +20,7 @@ public:
 	void SetMeshMaterial(std::string meshName, std::string materialName);
 	void SetMeshMaterialByIndex(int meshIndex, std::string materialName);
 	void SetMaterial(std::string materialName);
+	glm::mat4 GetBoneWorldMatrixFromBoneName(std::string name);
 
 	std::string GetName();
 	glm::mat4 GetModelMatrix();

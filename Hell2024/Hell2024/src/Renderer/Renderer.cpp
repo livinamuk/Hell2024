@@ -171,7 +171,7 @@ std::vector<glm::mat4> _aks74uMatrices;
 
 
 enum RenderMode { COMPOSITE, DIRECT_LIGHT, INDIRECT_LIGHT, POINT_CLOUD, MODE_COUNT } _mode;
-enum DebugLineRenderMode { SHOW_NO_LINES, PHYSX_ALL, PHYSX_RAYCAST, PHYSX_COLLISION, RAYTRACE_LAND, PHYSX_EDITOR, DEBUG_LINE_MODE_COUNT} _debugLineRenderMode;
+enum DebugLineRenderMode { SHOW_NO_LINES, PHYSX_ALL, PHYSX_RAYCAST, PHYSX_COLLISION, RAYTRACE_LAND, PHYSX_EDITOR, GIZMO_X_TRANSLATE, DEBUG_LINE_MODE_COUNT} _debugLineRenderMode;
 
 void DrawHud(Player* player);
 void DrawScene(Shader& shader);
@@ -763,87 +763,200 @@ void Renderer::RenderFrame(Player* player) {
     }
 }
 
+struct Gizmo {
+
+	PxRigidStatic* _editorRaycastBodyXTranslate = NULL;
+	PxShape* _editorRaycastShapeXTranslate = NULL;
+
+    void InitPhysXObjects() {
+        glm::vec3 scale = glm::vec3(0.02f);
+        Model* model = AssetManager::GetModel("Gizmo_XTranslate");
+		if (!model->_triangleMesh) {
+            model->CreateTriangleMesh();
+		}
+		PxShapeFlags shapeFlags(PxShapeFlag::eSCENE_QUERY_SHAPE);
+        _editorRaycastShapeXTranslate = Physics::CreateShapeFromTriangleMesh(model->_triangleMesh, shapeFlags, Physics::GetDefaultMaterial(), scale);
+        if (!_editorRaycastShapeXTranslate) {
+            std::cout << "_editorRaycastShapeXTranslate was NULL\n";
+		}
+		_editorRaycastBodyXTranslate = Physics::CreateEditorRigidStatic(Transform(), _editorRaycastShapeXTranslate, Physics::GetGizmoXTranslateScene());
+    }
+
+    void Update() {
+
+    }
+};
+
+Gizmo _gizmoXTranslate;
+PxRigidStatic* selectedPhysXObject = nullptr;
+
+void RenderGameObjectOutline(Shader& shader, GameObject* gameObject) {
+
+	shader.SetInt("offsetY", 0); // reset y offset
+	shader.SetInt("offsetX", 1);
+    shader.SetMat4("model", gameObject->GetModelMatrix());
+	for (int i = 0; i < gameObject->_meshMaterialIndices.size(); i++) {
+		gameObject->_model->_meshes[i].Draw();
+	}
+    shader.SetInt("offsetX", -1);
+    shader.SetMat4("model", gameObject->GetModelMatrix());
+	for (int i = 0; i < gameObject->_meshMaterialIndices.size(); i++) {
+		gameObject->_model->_meshes[i].Draw();
+	}
+    shader.SetInt("offsetX", 0); // reset x offset
+    shader.SetInt("offsetY", 1);
+    shader.SetMat4("model", gameObject->GetModelMatrix());
+	for (int i = 0; i < gameObject->_meshMaterialIndices.size(); i++) {
+		gameObject->_model->_meshes[i].Draw();
+	}
+    shader.SetInt("offsetY", -1);
+    shader.SetMat4("model", gameObject->GetModelMatrix());
+	for (int i = 0; i < gameObject->_meshMaterialIndices.size(); i++) {
+		gameObject->_model->_meshes[i].Draw();
+	}
+}
+
 void Renderer::RenderEditorMode() {
+
+	if (!_gizmoXTranslate._editorRaycastBodyXTranslate) {
+        _gizmoXTranslate.InitPhysXObjects();
+	}
 
     Scene::Update3DEditorScene();
 
 	glm::mat4 projection = glm::perspective(1.0f, 1920.0f / 1080.0f, NEAR_PLANE, FAR_PLANE);
 	glm::mat4 view = Scene::_players[0].GetViewMatrix();
 
+	int playerIndex = GetPlayerIndexFromPlayerPointer(&Scene::_players[0]);
+	PlayerRenderTarget& playerRenderTarget = GetPlayerRenderTarget(playerIndex);
+	GBuffer& gBuffer = playerRenderTarget.gBuffer;
+	PresentFrameBuffer& presentFrameBuffer = playerRenderTarget.presentFrameBuffer;
+
 	_shaders.outline.Use();
 	_shaders.outline.SetMat4("projection", projection);
 	_shaders.outline.SetMat4("view", view);
-
+	_shaders.outline.SetFloat("viewportWidth", presentFrameBuffer.GetWidth());
+	_shaders.outline.SetFloat("viewportHeight", presentFrameBuffer.GetHeight());
+    
     glm::vec3 rayOrigin = Scene::_players[0].GetViewPos();
     glm::vec3 rayDirection = Util::GetMouseRay(projection, view, GL::GetWindowWidth(), GL::GetWindowHeight(), Input::GetMouseX(), Input::GetMouseY());
 	auto result = Util::CastPhysXRay(rayOrigin, rayDirection , 100, true);
 
+
+	GameObject* hoveredObject = nullptr;
+	GameObject* selectedObject = nullptr;
+
 	if (!result.hitFound) {
-		std::cout << "hit not found\n";
-        return;
+        hoveredObject = nullptr;
+       // std::cout << "hit not found\n";
     }
-
-    std::cout << "hit found\n";
-
-    // ray was found, is it a game object?
-
-	GameObject* couch = Scene::GetGameObjectByName("Sofa");
-	std::vector<GameObject*> selectedObjects;
-    //selectedObjects.push_back(couch);
-
-
-    if (result.physicsObjectType == PhysicsObjectType::GAME_OBJECT) {
-        if (result.parent) {
-            GameObject* hitObject = (GameObject*)result.parent;
-            selectedObjects.push_back(hitObject);
+	else {
+	//	std::cout << "hit found\n";
+		if (result.physicsObjectType == PhysicsObjectType::GAME_OBJECT) {
+			if (result.parent) {
+          //      std::cout << "parent was valid\n";
+				GameObject* hitObject = (GameObject*)result.parent;
+				hoveredObject = hitObject;
+			}
+            else {
+			//	std::cout << "parent was invalid\n";
+            }
+		}
+        // Click to select an object
+        if (Input::LeftMouseDown()) {
+            selectedPhysXObject = (PxRigidStatic*)result.hitActor;
         }
     }
 
+    // Get game object pointer from PxRigidStatic pointer
+    for (auto& gameObject : Scene::_gameObjects) {
+        if (gameObject._editorRaycastBody == selectedPhysXObject) {
+            selectedObject = &gameObject;
+        }
+    }
+
+
    
-	glDisable(GL_DEPTH_TEST);
-	glEnable(GL_STENCIL_TEST);
-	glStencilMask(0xff);
-	glClearStencil(0);
-	glClear(GL_STENCIL_BUFFER_BIT);
-	glStencilOp(GL_REPLACE, GL_REPLACE, GL_REPLACE);
-	glStencilFunc(GL_ALWAYS, 1, 1);
-	glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);    
-	for (auto* gameObject : selectedObjects) {
-		_shaders.outline.SetMat4("model", gameObject->GetModelMatrix());
-		for (int i = 0; i < gameObject->_meshMaterialIndices.size(); i++) {
-			gameObject->_model->_meshes[i].Draw();
+	if (hoveredObject) {
+		// Render outline mask
+        glDisable(GL_DEPTH_TEST);
+        glEnable(GL_STENCIL_TEST);
+        glStencilMask(0xff);
+        glClearStencil(0);
+        glClear(GL_STENCIL_BUFFER_BIT);
+        glStencilOp(GL_REPLACE, GL_REPLACE, GL_REPLACE);
+        glStencilFunc(GL_ALWAYS, 1, 1);
+		glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+        _shaders.outline.SetInt("offsetX", 0); // reset x offset
+        _shaders.outline.SetInt("offsetY", 0); // reset y offset
+        _shaders.outline.SetMat4("model", hoveredObject->GetModelMatrix());
+        for (int i = 0; i < hoveredObject->_meshMaterialIndices.size(); i++) {
+            hoveredObject->_model->_meshes[i].Draw();
+        }
+        // Render outline
+        glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
+        glStencilMask(0x00);
+        glEnable(GL_STENCIL_TEST);
+        glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+		glDisable(GL_DEPTH_TEST);
+		_shaders.outline.SetVec3("Color", WHITE);
+        RenderGameObjectOutline(_shaders.outline, hoveredObject);
+    }
+
+	if (selectedObject) {
+		// Render outline mask
+		glDisable(GL_DEPTH_TEST);
+		glEnable(GL_STENCIL_TEST);
+		glStencilMask(0xff);
+		glClearStencil(0);
+		glClear(GL_STENCIL_BUFFER_BIT);
+		glStencilOp(GL_REPLACE, GL_REPLACE, GL_REPLACE);
+		glStencilFunc(GL_ALWAYS, 1, 1);
+		glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+        _shaders.outline.SetInt("offsetX", 0); // reset x offset
+        _shaders.outline.SetInt("offsetY", 0); // reset y offset
+		_shaders.outline.SetMat4("model", selectedObject->GetModelMatrix());
+		for (int i = 0; i < selectedObject->_meshMaterialIndices.size(); i++) {
+			selectedObject->_model->_meshes[i].Draw();
 		}
+		// Render outline
+		glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
+		glStencilMask(0x00);
+		glEnable(GL_STENCIL_TEST);
+		glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+		glDisable(GL_DEPTH_TEST);
+		_shaders.outline.SetVec3("Color", YELLOW);
+		RenderGameObjectOutline(_shaders.outline, selectedObject);
 	}
-
-
-
-	glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
-	glStencilMask(0x00);
-	glEnable(GL_STENCIL_TEST);
-	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-	glDisable(GL_DEPTH_TEST);
-
-	_shaders.outline.SetInt("offset", 1);
-	for (auto* gameObject : selectedObjects) {
-		_shaders.outline.SetMat4("model", gameObject->GetModelMatrix());
-		for (int i = 0; i < gameObject->_meshMaterialIndices.size(); i++) {
-			gameObject->_model->_meshes[i].Draw();
-		}
-	}
-	_shaders.outline.SetInt("offset", 2);
-	for (auto* gameObject : selectedObjects) {
-		_shaders.outline.SetMat4("model", gameObject->GetModelMatrix());
-		for (int i = 0; i < gameObject->_meshMaterialIndices.size(); i++) {
-			gameObject->_model->_meshes[i].Draw();
-		}
-	}
-   
         
+    // Cleanup
 	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 	glDepthMask(GL_TRUE);
 	glDisable(GL_STENCIL_TEST);
+    _shaders.outline.SetInt("offsetX", 0); // reset x offset
+    _shaders.outline.SetInt("offsetY", 0); // reset y offset
 
-	_shaders.outline.SetInt("offset", 0);
+	// Render gizmo    
+    if (selectedObject) {
+        _shaders.outline.SetVec3("Color", GREEN);
+        static Model* Gizmo_XTranslate = AssetManager::GetModel("Gizmo_XTranslate");
+        glm::vec3 scale = glm::vec3(0.02f);
+        glm::mat4 m = glm::translate(glm::mat4(1), selectedObject->GetWorldPosition());
+        m = glm::scale(m, scale);
+
+        Transform test;
+        test.position.x += 0.1f;
+
+        _shaders.outline.SetMat4("model", m * test.to_mat4());
+        Gizmo_XTranslate->Draw();
+    }
+
+    // Update PhysX gizmo world poses
+    if (selectedObject) {
+        glm::mat4 m = glm::translate(glm::mat4(1), selectedObject->GetWorldPosition());
+        PxTransform pose = PxTransform(Util::GlmMat4ToPxMat44(m));
+        _gizmoXTranslate._editorRaycastBodyXTranslate->setGlobalPose(pose);
+    }
 }
 
 
@@ -1133,11 +1246,13 @@ void LightingPass(Player* player) {
     }
     else if (_debugLineRenderMode == DebugLineRenderMode::RAYTRACE_LAND) {
         TextBlitter::_debugTextToBilt += "Line Mode: COMPUTE RAY WORLD\n";
-    }
-
-    else if (_debugLineRenderMode == DebugLineRenderMode::PHYSX_EDITOR) {
-        TextBlitter::_debugTextToBilt += "Line Mode: PHYSX EDITOR\n";
-    }
+	}
+	else if (_debugLineRenderMode == DebugLineRenderMode::PHYSX_EDITOR) {
+		TextBlitter::_debugTextToBilt += "Line Mode: PHYSX EDITOR\n";
+	}
+	else if (_debugLineRenderMode == DebugLineRenderMode::GIZMO_X_TRANSLATE) {
+		TextBlitter::_debugTextToBilt += "Line Mode: GIZMO X TRANSLATE\n";
+	}
 
     
   
@@ -1212,6 +1327,7 @@ void DebugPass(Player* player) {
     //GBuffer& gBuffer = playerRenderTarget.gBuffer;
     PresentFrameBuffer& presentFrameBuffer = playerRenderTarget.presentFrameBuffer;
 
+
     presentFrameBuffer.Bind();
     glDrawBuffer(GL_COLOR_ATTACHMENT1);
     glViewport(0, 0, presentFrameBuffer.GetWidth(), presentFrameBuffer.GetHeight());
@@ -1277,7 +1393,18 @@ void DebugPass(Player* player) {
     //                                          //
     //  !!! DEBUG POINTS ARE RENDERED HERE !!!  //   
     //                                          //  and they work, so don't fret, just got for it
-   
+    
+    /*
+    AnimatedGameObject* ak = Scene::GetAnimatedGameObjectByName("AKS74U");
+    glm::mat4 matrix = ak->GetBoneWorldMatrixFromBoneName("Magazine");
+    glm::mat4 magWorldMatrix = ak->GetModelMatrix() * matrix;
+    glm::vec3 testPoint = Util::GetTranslationFromMatrix(magWorldMatrix);
+    debugPoints.push_back(testPoint);*/
+
+    // BROKEN!!!
+    for (GameObject& gameObject : Scene::_gameObjects) {
+        //debugPoints.push_back(gameObject.GetWorldSpaceOABBCenter());
+    }
 
     for (Window& window : Scene::_windows) {
 
@@ -1292,7 +1419,6 @@ void DebugPass(Player* player) {
     for (auto& pos : debugPoints) {
         Point point;
         point.pos = pos;
-        point.pos.y = 0.0125f;
         point.color = RED;
         Renderer::QueuePointForDrawing(point);
     }
@@ -1344,7 +1470,8 @@ void DebugPass(Player* player) {
         if (_debugLineRenderMode == DebugLineRenderMode::PHYSX_ALL ||
             _debugLineRenderMode == DebugLineRenderMode::PHYSX_COLLISION ||
             _debugLineRenderMode == DebugLineRenderMode::PHYSX_RAYCAST ||
-            _debugLineRenderMode == DebugLineRenderMode::PHYSX_EDITOR) {
+            _debugLineRenderMode == DebugLineRenderMode::PHYSX_EDITOR ||
+            _debugLineRenderMode == DebugLineRenderMode::GIZMO_X_TRANSLATE) {
 
             _lines.clear();
             _shaders.solidColor.Use();
@@ -1352,14 +1479,19 @@ void DebugPass(Player* player) {
             _shaders.solidColor.SetMat4("model", glm::mat4(1));
             auto* renderBuffer = &scene->getRenderBuffer();
 
-            if (_debugLineRenderMode == DebugLineRenderMode::PHYSX_EDITOR) {   
+			if (_debugLineRenderMode == DebugLineRenderMode::PHYSX_EDITOR) {
+				Scene::Update3DEditorScene();
+				renderBuffer = &Physics::GetEditorScene()->getRenderBuffer();
+				color = PURPLE;
+			}
+			if (_debugLineRenderMode == DebugLineRenderMode::GIZMO_X_TRANSLATE) {
+				Physics::UpdateGizmoScenes();
+				renderBuffer = &Physics::GetGizmoXTranslateScene()->getRenderBuffer();
+				color = RED;
 
-                Scene::Update3DEditorScene();
-
-
-                renderBuffer = &Physics::GetEditorScene()->getRenderBuffer();
-                color = PURPLE;
-            }
+				PxActorTypeFlags flags;
+				auto count = Physics::GetGizmoXTranslateScene()->getNbActors(flags);
+			}
 
             for (unsigned int i = 0; i < renderBuffer->getNbLines(); i++) {
                 auto pxLine = renderBuffer->getLines()[i];
@@ -1526,11 +1658,28 @@ void DrawScene(Shader& shader) {
         }
 
         shader.SetMat4("model", gameObject.GetModelMatrix());
+
+        // Test render green mag REMOVEEEEEEEEEEEEEEEEEEEEEEEEEE
+		/*if (gameObject.GetName() == "TEST_MAG") {
+            Player* player = &Scene::_players[0];
+            if (player->GetCurrentWeaponIndex() == AKS74U) {
+                AnimatedGameObject& ak2 = player->GetFirstPersonWeapon();
+                glm::mat4 matrix = ak2.GetBoneWorldMatrixFromBoneName("Magazine");
+                glm::mat4 magWorldMatrix = ak2.GetModelMatrix() * player->GetWeaponSwayMatrix() * matrix;
+                shader.SetMat4("model", magWorldMatrix);
+            }
+		}*/
         for (int i = 0; i < gameObject._meshMaterialIndices.size(); i++) {
             AssetManager::BindMaterialByIndex(gameObject._meshMaterialIndices[i]);
+			// Test render green mag REMOVEEEEEEEEEEEEEEEEEEEEEEEEEE
+            //if (gameObject.GetName() == "TEST_MAG") {
+            //   AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("PresentC"));
+            //}
+
             gameObject._model->_meshes[i].Draw();
         }
 
+        // Add Christmas bows to Christmas cubes
         if (gameObject.GetName() == "Present") {
 			AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("Gold"));
             AssetManager::GetModel("ChristmasBow")->Draw();
@@ -1803,14 +1952,16 @@ void DrawAnimatedScene(Shader& shader, Player* player) {
         DrawAnimatedObject(shader, &animatedObject);
     }
 
-    glDisable(GL_CULL_FACE);
-    shader.SetFloat("projectionMatrixIndex", 1.0f);
-    shader.SetMat4("projection", Renderer::GetProjectionMatrix(_depthOfFieldWeapon)); // 1.0 for weapon, 0.9 for scene.
-    DrawAnimatedObject(shader, &player->GetFirstPersonWeapon());
-    shader.SetFloat("projectionMatrixIndex", 0.0f);
-    glEnable(GL_CULL_FACE);
-
-    shader.SetBool("isAnimated", false);
+    // Render player weapon
+  //  if (EngineState::GetEngineMode() == GAME) {
+        glDisable(GL_CULL_FACE);
+        shader.SetFloat("projectionMatrixIndex", 1.0f);
+        shader.SetMat4("projection", Renderer::GetProjectionMatrix(_depthOfFieldWeapon)); // 1.0 for weapon, 0.9 for scene.
+        DrawAnimatedObject(shader, &player->GetFirstPersonWeapon());
+        shader.SetFloat("projectionMatrixIndex", 0.0f);
+        glEnable(GL_CULL_FACE);
+        shader.SetBool("isAnimated", false);
+  //  }
 }
 
 void DrawShadowMapScene(Shader& shader) {

@@ -30,6 +30,7 @@ PxPhysics* _physics = NULL;
 PxDefaultCpuDispatcher* _dispatcher = NULL;
 PxScene* _scene = NULL;
 PxScene* _editorScene = NULL;
+PxScene* _gizmoXTranslateScene = NULL;
 PxMaterial* _defaultMaterial = NULL;
 ContactReportCallback   _contactReportCallback;
 PxRigidStatic* _groundPlane = NULL;
@@ -249,10 +250,13 @@ void Physics::Init() {
     _scene->setVisualizationParameter(PxVisualizationParameter::eSCALE, 1.0f);
     _scene->setVisualizationParameter(PxVisualizationParameter::eCOLLISION_SHAPES, 2.0f);
 
+	_editorScene = _physics->createScene(sceneDesc);
+	_editorScene->setVisualizationParameter(PxVisualizationParameter::eSCALE, 1.0f);
+	_editorScene->setVisualizationParameter(PxVisualizationParameter::eCOLLISION_SHAPES, 2.0f);
 
-    _editorScene = _physics->createScene(sceneDesc);
-    _editorScene->setVisualizationParameter(PxVisualizationParameter::eSCALE, 1.0f);
-    _editorScene->setVisualizationParameter(PxVisualizationParameter::eCOLLISION_SHAPES, 2.0f);
+	_gizmoXTranslateScene = _physics->createScene(sceneDesc);
+    _gizmoXTranslateScene->setVisualizationParameter(PxVisualizationParameter::eSCALE, 1.0f);
+    _gizmoXTranslateScene->setVisualizationParameter(PxVisualizationParameter::eCOLLISION_SHAPES, 2.0f);
 
 
     PxPvdSceneClient* pvdClient = _scene->getScenePvdClient();
@@ -289,7 +293,11 @@ PxScene* Physics::GetScene() {
     return _scene;
 }
 PxScene* Physics::GetEditorScene() {
-    return _editorScene;
+	return _editorScene;
+}
+
+PxScene* Physics::GetGizmoXTranslateScene() {
+	return _gizmoXTranslateScene;
 }
 
 PxPhysics* Physics::GetPhysics() {
@@ -314,8 +322,9 @@ PxShape* Physics::CreateBoxShape(float width, float height, float depth, Transfo
 PxShape* Physics::CreateShapeFromTriangleMesh(PxTriangleMesh* triangleMesh, PxShapeFlags shapeFlags2, PxMaterial* material, glm::vec3 scale) {
     if (material == NULL) {
         material = _defaultMaterial;
-    }
-    PxMeshGeometryFlags flags(~PxMeshGeometryFlag::eTIGHT_BOUNDS | ~PxMeshGeometryFlag::eDOUBLE_SIDED);
+	}
+	PxMeshGeometryFlags flags(~PxMeshGeometryFlag::eTIGHT_BOUNDS | ~PxMeshGeometryFlag::eDOUBLE_SIDED);
+	//PxMeshGeometryFlags flags(~PxMeshGeometryFlag::eDOUBLE_SIDED);
     PxTriangleMeshGeometry geometry(triangleMesh, PxMeshScale(PxVec3(scale.x, scale.y, scale.z)), flags);
 
     PxShapeFlags shapeFlags(PxShapeFlag::eSCENE_QUERY_SHAPE); // Most importantly NOT eSIMULATION_SHAPE. PhysX does not allow for tri mesh.
@@ -379,7 +388,7 @@ PxRigidStatic* Physics::CreateRigidStatic(Transform transform, PhysicsFilterData
     return body;
 }
 
-PxRigidStatic* Physics::CreateEditorRigidStatic(Transform transform, PxShape* shape) {
+PxRigidStatic* Physics::CreateEditorRigidStatic(Transform transform, PxShape* shape, PxScene* scene) {
     PxQuat quat = Util::GlmQuatToPxQuat(glm::quat(transform.rotation));
 	PxTransform trans = PxTransform(PxVec3(transform.position.x, transform.position.y, transform.position.z), quat);
 
@@ -392,7 +401,7 @@ PxRigidStatic* Physics::CreateEditorRigidStatic(Transform transform, PxShape* sh
     filterData.word2 = (PxU32)NO_COLLISION;
 	shape->setQueryFilterData(filterData);       // ray casts
 	//body->setActorFlag(PxActorFlag::eVISUALIZATION, true);
-	_editorScene->addActor(*body);
+    scene->addActor(*body);
     return body;
 }
 
@@ -429,6 +438,11 @@ std::vector<CollisionReport>& Physics::GetCollisions() {
 void Physics::ClearCollisionLists() {
     _collisionReports.clear();
     _characterCollisionReports.clear();
+}
+
+void Physics::UpdateGizmoScenes() {
+	_gizmoXTranslateScene->simulate(1 / 60.0f);
+    _gizmoXTranslateScene->fetchResults(true);
 }
 
 physx::PxRigidActor* Physics::GetGroundPlane() {

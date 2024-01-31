@@ -68,8 +68,11 @@ bool Player::MuzzleFlashIsRequired() {
 	return (_muzzleFlashCounter > 0);
 }
 
+glm::mat4 Player::GetWeaponSwayMatrix() {
+	return _weaponSwayMatrix;
+}
 
-void Player::WipeYVelocityToZeroIfHeadHitCeiling() {
+//void Player::WipeYVelocityToZeroIfHeadHitCeiling() {
 	/*
 	glm::vec3 rayOrigin = _position + glm::vec3(0, 1.5, 0);
 	glm::vec3 rayDirection = glm::vec3(0, 1, 0);
@@ -87,7 +90,7 @@ void Player::WipeYVelocityToZeroIfHeadHitCeiling() {
 		//_yVelocity = 0;
 		//std::cout << "HIT HEAD " << Util::Vec3ToString(rayOrigin) << "\n";
 	}*/
-}
+//}
 
 void Player::ShowPickUpText(std::string text) {
 	_pickUpText = text;
@@ -116,8 +119,91 @@ void Player::PickUpAKS74UAmmo() {
 	_inventory.aks74uAmmo.total += AKS74U_MAG_SIZE * 3;
 }
 
+struct OverlapResult {
+	std::vector<PxActor*> hits;
+	bool HitsFound() {
+		return hits.size();
+	}
+};
+
+OverlapResult OverlapTest(const PxGeometry& overlapShape, const PxTransform& shapePose, PxU32 collisionGroup) {
+	PxQueryFilterData overlapFilterData = PxQueryFilterData();
+	overlapFilterData.data.word1 = collisionGroup;
+	PxGeometryQueryFlags queryFlags;
+	const PxU32 bufferSize = 256;
+	PxOverlapHit hitBuffer[bufferSize];
+	PxOverlapBuffer buf(hitBuffer, bufferSize); 
+	OverlapResult result;
+	if (Physics::GetScene()->overlap(overlapShape, shapePose, buf, overlapFilterData, 0, 0, queryFlags)) {
+		for (int i = 0; i < buf.getNbTouches(); i++) {
+			PxActor* hit = buf.getTouch(i).actor;
+			// Check for duplicates
+			bool found = false;
+			for (const PxActor* foundHit : result.hits) {
+				if (foundHit == hit) {
+					found = true;
+					break;
+				}
+			}
+			if (!found) {
+				result.hits.push_back(hit);
+			}
+		}
+	}
+	return result;
+}
+
 void Player::Update(float deltaTime) {
 
+	if (!_ignoreControl) {
+		const PxGeometry& overlapShape = GetCharacterControllerShape()->getGeometry();
+		const PxTransform& shapePose = _characterController->getActor()->getGlobalPose();
+
+		OverlapResult overlapResult = OverlapTest(overlapShape, shapePose, CollisionGroup::GENERIC_BOUNCEABLE);
+
+		if (overlapResult.hits.size()) {
+			//std::cout << overlapResult.hits.size() << "\n";
+			for (auto* hit : overlapResult.hits) {
+				if (hit->userData) {
+					PhysicsObjectData* physicsObjectData = (PhysicsObjectData*)hit->userData;
+					PhysicsObjectType physicsObjectType = physicsObjectData->type;
+					GameObject* parent = (GameObject*)physicsObjectData->parent;
+					if (physicsObjectType == GAME_OBJECT) {
+						std::cout << parent->GetName() << "\n";
+					}
+				}
+				else {
+					std::cout << "no user data found on ray hit\n";
+				}
+			}
+		}
+		else {
+			std::cout << "no overlap bro\n";
+		}
+	}
+
+
+		/*
+		//
+		const PxGeometry& overlapShape = GetCharacterControllerShape()->getGeometry();
+		const PxTransform& shapePose = _characterController->getActor()->getGlobalPose();
+		OverlapResult overlapResult = OverlapTest(overlapShape, shapePose, CollisionGroup::GENERIC_BOUNCEABLE);
+		
+			for (auto* hit : overlapResult.hits) {
+				if (hit->userData) {
+					PhysicsObjectData* physicsObjectData = (PhysicsObjectData*)hit->userData;
+					PhysicsObjectType physicsObjectType = physicsObjectData->type;
+					GameObject* parent = (GameObject*)physicsObjectData->parent;
+					if (physicsObjectType == GAME_OBJECT) {
+						std::cout << parent->GetName() << "\n";
+					}
+					else {
+						std::cout << "no user data found on ray hit\n";
+					}
+				}
+			}
+	//}
+*/
 
 	if (Input::KeyDown(HELL_KEY_U)) {
 		DropAKS7UMag();
@@ -289,7 +375,9 @@ void Player::Update(float deltaTime) {
 		}
 	}
 
-	UpdateFirstPersonWeaponLogicAndAnimations(deltaTime);
+	if (EngineState::GetEngineMode() == GAME) {
+		UpdateFirstPersonWeaponLogicAndAnimations(deltaTime);
+	}
 
 	if (_muzzleFlashTimer >= 0) {
 		_muzzleFlashTimer += deltaTime * 20;
@@ -725,14 +813,15 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
 	if (_currentWeaponIndex == Weapon::AKS74U) {
 
 		// Drop the mag
-		if (_needsToDropAKMag && _weaponAction == RELOAD_FROM_EMPTY && _firstPersonWeapon.AnimationIsPastPercentage(28.125f)) {
+		if (_needsToDropAKMag && _weaponAction == RELOAD_FROM_EMPTY && _firstPersonWeapon.AnimationIsPastPercentage(16.9f)) {
 			_needsToDropAKMag = false;
 			DropAKS7UMag();
 		}
 
 		// Give reload ammo
 		if (_weaponAction == RELOAD || _weaponAction == RELOAD_FROM_EMPTY) {
-			if (_needsAmmoReloaded && _firstPersonWeapon.AnimationIsPastPercentage(38.0f)) {
+		//	if (_needsAmmoReloaded && _firstPersonWeapon.AnimationIsPastPercentage(38.0f)) {
+			if (_needsAmmoReloaded && _firstPersonWeapon.AnimationIsPastPercentage(10.0f)) {
 				int ammoToGive = std::min(AKS74U_MAG_SIZE, _inventory.aks74uAmmo.total);
 				_inventory.aks74uAmmo.clip = ammoToGive;
 				_inventory.aks74uAmmo.total -= ammoToGive;
@@ -879,6 +968,7 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
 		for (auto& transform : _firstPersonWeapon._animatedTransforms.local) {
 			transform = swayTransform * transform;
 		}
+		_weaponSwayMatrix = swayTransform;
 	}
 }
 
@@ -994,22 +1084,45 @@ void Player::DropAKS7UMag() {
 	float magDensity = 750.0f;
 
 	GameObject& mag = Scene::_gameObjects.emplace_back();
-	mag.SetPosition(GetViewPos() + glm::vec3(0, -0.2f, 0));
-	mag.SetRotationX(-1.7f);
-	mag.SetRotationY(0.0f);
-	mag.SetRotationZ(-1.6f);
+//	mag.SetPosition(GetViewPos() + glm::vec3(0, -0.2f, 0));
+//	mag.SetRotationX(-1.7f);
+	//mag.SetRotationY(0.0f);
+	//mag.SetRotationZ(-1.6f);
+
+	//mag.SetModel("AKS74UMag2");
 	mag.SetModel("AKS74UMag");
 	mag.SetName("AKS74UMag");
 	mag.SetMeshMaterial("AKS74U_3");
-	mag.CreateRigidBody(mag.GetGameWorldMatrix(), false);
+
+
+
+
+
+	AnimatedGameObject& ak2 = GetFirstPersonWeapon();
+	glm::mat4 matrix = ak2.GetBoneWorldMatrixFromBoneName("Magazine");
+	glm::mat4 magWorldMatrix = ak2.GetModelMatrix() * GetWeaponSwayMatrix() * matrix;
+
+	/*PxMat44 pxMat = Util::GlmMat4ToPxMat44(magWorldMatrix);
+	PxTransform pxTrans = PxTransform(pxMat);
+	mag._collisionBody->setGlobalPose(pxTrans);
+
+	*/
+
+
+
+	//mag.CreateRigidBody(mag.GetGameWorldMatrix(), false);
+	mag.CreateRigidBody(magWorldMatrix, false);
 	mag.SetRaycastShapeFromModel(AssetManager::GetModel("AKS74UMag"));
 	mag.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("AKS74UMag_ConvexMesh")->_meshes[0], magFilterData);
 	mag.SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
 	mag.UpdateRigidBodyMassAndInertia(magDensity);
 	mag.CreateEditorPhysicsObject();
 
+	//mag.SetScale(0.1f);
+
+	// what, is this smart??????????? and neccessary????????
 	for (auto& gameObject : Scene::_gameObjects) {
-		gameObject.CreateEditorPhysicsObject();
+		//gameObject.CreateEditorPhysicsObject();
 	}
 
 	std::cout << "dropped ak mag\n";
@@ -1051,9 +1164,15 @@ bool Player::CursorShouldBeInterect() {
 #define PLAYER_CAPSULE_HEIGHT 0.6f
 #define PLAYER_CAPSULE_RADIUS 0.1f
 
+PxShape* Player::GetCharacterControllerShape() {
+	PxShape* shape;
+	_characterController->getActor()->getShapes(&shape, 1);
+	return shape;
+}
 
-//CCTHitCallback _cctHitCallback;
-
+PxRigidDynamic* Player::GetCharacterControllerActor() {
+	return _characterController->getActor();
+}
 
 void Player::CreateCharacterController(glm::vec3 position) {
 

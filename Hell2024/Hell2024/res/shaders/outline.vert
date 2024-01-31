@@ -6,27 +6,17 @@ layout (location = 1) in vec3 aColor;
 uniform mat4 projection;
 uniform mat4 view;
 uniform mat4 model;
-uniform vec3 color;
-uniform bool uniformColor;
-
-uniform	int offset;
-
-out vec3 Color;
+uniform float viewportWidth;
+uniform float viewportHeight;
+uniform	int offsetX;
+uniform	int offsetY;
 
 void main() {
 
-	if (uniformColor)
-		Color = color;
-	else
-		Color = aColor;
+	gl_Position = projection * view * model *vec4(aPos, 1.0);	
+	float pixelWidth = 2.0 / viewportWidth;
+	float pixelHeight = 2.0 / viewportHeight;
+	gl_Position.x += pixelWidth * gl_Position.z * offsetX;	
+	gl_Position.y += pixelHeight * gl_Position.z * offsetY;		
 
-
-
-	gl_Position = projection * view * model *vec4(aPos, 1.0);
-
-	
-	
-	if (offset == 1) {
-		gl_Position.x += 0.05;	
-	}	
 }

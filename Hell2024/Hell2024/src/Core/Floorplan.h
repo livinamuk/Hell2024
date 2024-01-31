@@ -14,7 +14,5 @@ namespace Floorplan {
 	glm::mat4 GetViewMatrix();	
 	void NextMode();
 	void PreviousMode();
-	bool WasForcedOpen();
-	void ForcedOpen();
 
 }

@@ -87,6 +87,16 @@ void AnimatedGameObject::SetMaterial(std::string materialName) {
     }
 }
 
+glm::mat4 AnimatedGameObject::GetBoneWorldMatrixFromBoneName(std::string name) {
+	for (int i = 0; i < _animatedTransforms.names.size(); i++) {
+        if (_animatedTransforms.names[i] == name) {
+            return _animatedTransforms.worldspace[i];
+        }
+    }
+    std::cout << "GetBoneWorldMatrixFromBoneName() failed to find name " << name << "\n";
+    return glm::mat4();
+}
+
 void AnimatedGameObject::PlayAnimation(std::string animationName, float speed) {
 
     // Find the matching animation name if it exists

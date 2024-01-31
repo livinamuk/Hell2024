@@ -1,8 +1,7 @@
 #pragma once
 #include "keycodes.h"
 
-namespace Input
-{
+namespace Input {
 	void Init();
 	void Update();
 	bool KeyPressed(unsigned int keycode);
@@ -16,7 +15,7 @@ namespace Input
 	bool MouseWheelUp();
 	bool MouseWheelDown();
 	int GetMouseWheelValue();
-	void PreventRightMouseHold();
 	int GetMouseX();
 	int GetMouseY();
+	void PreventRightMouseHold();
 }

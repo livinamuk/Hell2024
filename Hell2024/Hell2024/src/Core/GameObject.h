@@ -24,6 +24,9 @@ public:
 	float _openSpeed = 0;
 
 
+	// make this private again some how PLEEEEEEEEEEEEEEEEEEEEEASE when you have time. no rush.
+	PxRigidBody* _collisionBody = NULL;
+
 	PxRigidStatic* _editorRaycastBody = NULL;
 	PxShape* _editorRaycastShape = NULL;
 
@@ -35,8 +38,6 @@ private:
 		
 	ModelMatrixMode _modelMatrixMode = ModelMatrixMode::GAME_TRANSFORM;
 	BoundingBox _boundingBox;
-
-	PxRigidBody* _collisionBody = NULL;
 	std::vector<PxShape*> _collisionShapes;
 	PxRigidStatic* _raycastBody = NULL;
 	PxShape* _raycastShape = NULL;
@@ -61,6 +62,10 @@ public:
 	glm::quat GetWorldRotation();
 	void UpdateEditorPhysicsObject();
 
+	glm::vec3 GetWorldSpaceOABBCenter();
+	//void SetModelScaleWhenUsingPhysXTransform(glm::vec3 scale);
+
+	glm::vec3 _scaleWhenUsingPhysXTransform = glm::vec3(1);
 
 	void SetOpenAxis(OpenAxis openAxis);
 	void SetAudioOnInteract(std::string filename, float volume);

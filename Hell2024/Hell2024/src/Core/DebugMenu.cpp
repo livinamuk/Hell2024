@@ -125,6 +125,9 @@ void DebugMenu::UpdateWindowMenuPointers() {
 
 void DebugMenu::UpdateGameObjectMenuPointers() {
 	_gameObjectsMenu.subMenu.clear();
+	_gameObjectsMenu.AddItem("Name", MenuItemFlag::STRING, &Scene::_gameObjects[_selectedGameObjectIndex]._name);
+	_gameObjectsMenu.AddItem("Parent Name", MenuItemFlag::STRING, &Scene::_gameObjects[_selectedGameObjectIndex]._parentName);
+	_gameObjectsMenu.AddItem("", MenuItemFlag::UNDEFINED, nullptr);
 	_gameObjectsMenu.AddItem("X Position", MenuItemFlag::FLOAT, &Scene::_gameObjects[_selectedGameObjectIndex]._transform.position.x);
 	_gameObjectsMenu.AddItem("Y Position", MenuItemFlag::FLOAT, &Scene::_gameObjects[_selectedGameObjectIndex]._transform.position.y);
 	_gameObjectsMenu.AddItem("Z Position", MenuItemFlag::FLOAT, &Scene::_gameObjects[_selectedGameObjectIndex]._transform.position.z);
@@ -479,8 +482,11 @@ const std::string DebugMenu::GetTextRight() {
 		if (flag == MenuItemFlag::UNDEFINED) {
 			result += "\n";
 		}
-		else if (flag ==MenuItemFlag::FLOAT) {
+		else if (flag == MenuItemFlag::FLOAT) {
 			result += leftBracket + FloatToString(*(float*)ptr) + rightBracket + "\n";
+		}
+		else if (flag == MenuItemFlag::STRING) {
+			result += leftBracket + *(std::string*)ptr + rightBracket + "\n";
 		}
 	}
 	return result;

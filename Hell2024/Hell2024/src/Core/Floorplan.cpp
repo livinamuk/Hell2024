@@ -5,6 +5,7 @@
 #include "../Core/Scene.h"
 #include "../Core/TextBlitter.h"
 #include "../Renderer/Renderer.h"
+#include "../EngineState.hpp"
 
 namespace Floorplan {
     glm::mat4 _projection = glm::mat4(1);
@@ -79,10 +80,14 @@ void Floorplan::Update(float /*deltaTime*/) {
     }
 	if (Input::KeyPressed(HELL_KEY_O)) {
 		Scene::LoadMap("map.txt");
-    }
-    if (Input::KeyPressed(HELL_KEY_P)) {
-        Scene::SaveMap("map.txt");
-    }
+	}
+	if (Input::KeyPressed(HELL_KEY_P)) {
+		Scene::SaveMap("map.txt");
+	}
+	if (Input::KeyPressed(HELL_KEY_TAB)) {
+		Audio::PlayAudio(AUDIO_SELECT, 1.00f);
+        EngineState::SetEngineMode(GAME);
+	}
 
     // Zoom
     float screenWidth = (float)GL::GetWindowWidth();
@@ -523,16 +528,4 @@ void Floorplan::PreviousMode() {
     else
         _mode = (FloorplanMode)(int(_mode) - 1);
     _action = IDLE;
-}
-
-bool Floorplan::WasForcedOpen() {
-	if (_wasForcedOpen) {
-		_wasForcedOpen = false;
-		return true;
-	}
-	return false;
-}
-
-void Floorplan::ForcedOpen() {
-    _wasForcedOpen = true;
 }

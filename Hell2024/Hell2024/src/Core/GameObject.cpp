@@ -195,11 +195,20 @@ void GameObject::Update(float deltaTime) {
 			_raycastBody->setGlobalPose(_collisionBody->getGlobalPose());
 		}
 	}
-	// Pointers
+
+	// Update raycast object PhysX pointer
 	if (_raycastBody) {
-		PhysicsObjectData* physicsObjectData = (PhysicsObjectData*)_raycastBody->userData;
-		physicsObjectData->type = GAME_OBJECT;
-		physicsObjectData->parent = this;
+		if (_raycastBody->userData) {
+			delete _raycastBody->userData;
+		}
+		_raycastBody->userData = new PhysicsObjectData(PhysicsObjectType::GAME_OBJECT, this);
+	}
+	// Update collision object PhysX pointer
+	if (_collisionBody) {
+		if (_collisionBody->userData) {
+			delete _collisionBody->userData;
+		}
+		_collisionBody->userData = new PhysicsObjectData(PhysicsObjectType::GAME_OBJECT, this);
 	}
 }
 
@@ -214,6 +223,12 @@ void GameObject::UpdateEditorPhysicsObject() {
 		else if (_modelMatrixMode == ModelMatrixMode::PHYSX_TRANSFORM && _collisionBody) {
 			_editorRaycastBody->setGlobalPose(_collisionBody->getGlobalPose());
 		}
+		// Repair broken pointer 
+		// (this happens when a mag pushes a new GameObject into the _gameObjects std::vector)
+		if (_editorRaycastBody->userData) {
+			delete _editorRaycastBody->userData;
+		}
+		_editorRaycastBody->userData = new PhysicsObjectData(PhysicsObjectType::GAME_OBJECT, this);
 	}
 }
 
@@ -273,9 +288,18 @@ void GameObject::SetAudioOnOpen(std::string filename, float volume) {
 	_audio.onOpen = { filename, volume };
 }
 
+glm::vec3 GameObject::GetWorldSpaceOABBCenter() {
+	return GetWorldPosition() + _boundingBox.offsetFromModelOrigin;
+}
+
 void GameObject::SetAudioOnClose(std::string filename, float volume) {
 	_audio.onClose = { filename, volume };
 }
+
+/*
+void GameObject::SetModelScaleWhenUsingPhysXTransform(glm::vec3 scale)
+{
+}*/
 
 void GameObject::SetAudioOnInteract(std::string filename, float volume) {
 	_audio.onInteract = { filename, volume };
@@ -387,7 +411,7 @@ void GameObject::CreateEditorPhysicsObject() {
 	}
 	PxShapeFlags shapeFlags(PxShapeFlag::eSCENE_QUERY_SHAPE);
 	_editorRaycastShape = Physics::CreateShapeFromTriangleMesh(_model->_triangleMesh, shapeFlags, Physics::GetDefaultMaterial(), _transform.scale);
-	_editorRaycastBody = Physics::CreateEditorRigidStatic(_transform, _editorRaycastShape);
+	_editorRaycastBody = Physics::CreateEditorRigidStatic(_transform, _editorRaycastShape, Physics::GetEditorScene());
 	if (_editorRaycastBody->userData) {
 		delete _editorRaycastBody->userData;
 	}

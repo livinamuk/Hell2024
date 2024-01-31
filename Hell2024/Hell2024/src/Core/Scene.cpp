@@ -35,6 +35,8 @@ void Scene::Update(float deltaTime) {
 
     }
 
+    
+
 
     SetPlayerGroundedStates();
     ProcessBullets();
@@ -274,6 +276,21 @@ void Scene::LoadHardCodedObjects() {
 
     if (true) {
 
+		GameObject& mag2 = _gameObjects.emplace_back();
+        mag2.SetPosition(3.8f, 5.7f, 3.75f);
+        mag2.SetRotationX(-1.7f);
+        mag2.SetRotationY(0.0f);
+        mag2.SetRotationZ(-1.6f);
+        mag2.SetScale(0.01f);
+        mag2.SetModel("AKS74UMag2");
+        mag2.SetName("TEST_MAG");
+        mag2.SetMeshMaterial("AKS74U_3");
+     //   mag2.CreateRigidBody(mag.GetGameWorldMatrix(), false);
+      //  mag2.SetRaycastShapeFromModel(AssetManager::GetModel("AKS74UMag"));
+       // mag2.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("AKS74UMag_ConvexMesh")->_meshes[0], magFilterData);
+       // mag2.SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
+       /// mag2.UpdateRigidBodyMassAndInertia(magDensity);
+
 
 		PhysicsFilterData magFilterData;
         magFilterData.raycastGroup = RAYCAST_DISABLED;
@@ -281,7 +298,7 @@ void Scene::LoadHardCodedObjects() {
         magFilterData.collidesWith = CollisionGroup(ENVIROMENT_OBSTACLE | GENERIC_BOUNCEABLE);
 		float magDensity = 750.0f;
 
-
+        /*
 		GameObject& mag = _gameObjects.emplace_back();
         mag.SetPosition(3.8f, 0.7f, 3.75f);
         mag.SetRotationX(-1.7f);
@@ -295,10 +312,17 @@ void Scene::LoadHardCodedObjects() {
         mag.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("AKS74UMag_ConvexMesh")->_meshes[0], magFilterData);
         mag.SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
         mag.UpdateRigidBodyMassAndInertia(magDensity);
+        */
 
+
+
+		PhysicsFilterData akFilterData;
+        akFilterData.raycastGroup = RAYCAST_ENABLED;
+        akFilterData.collisionGroup = CollisionGroup::GENERIC_BOUNCEABLE;
+        akFilterData.collidesWith = CollisionGroup(ENVIROMENT_OBSTACLE | GENERIC_BOUNCEABLE);
 
 		GameObject& aks74u = _gameObjects.emplace_back();
-		aks74u.SetPosition(1.8f, 0.7f, 0.75f);
+		aks74u.SetPosition(1.8f, 1.7f, 0.75f);
 		aks74u.SetRotationX(-1.7f);
 		aks74u.SetRotationY(0.0f);
 		aks74u.SetRotationZ(-1.6f);
@@ -316,6 +340,36 @@ void Scene::LoadHardCodedObjects() {
         aks74u.SetMeshMaterialByMeshName("Magazine_Housing_low", "AKS74U_3");
         aks74u.SetMeshMaterialByMeshName("BarrelTip_low", "AKS74U_4");
         aks74u.SetPickUpType(PickUpType::AKS74U);
+
+		Transform transform; 
+		transform.position = glm::vec3(1.8f, 1.7f, 0.75f);
+        float halfExtent = 0.1;
+		PxShape* collisionShape = Physics::CreateBoxShape(halfExtent, halfExtent, halfExtent);
+		PxShape* raycastShape = Physics::CreateBoxShape(halfExtent, halfExtent, halfExtent);
+
+		PhysicsFilterData filterData;
+		filterData.raycastGroup = RAYCAST_DISABLED;
+		filterData.collisionGroup = CollisionGroup::GENERIC_BOUNCEABLE;
+		filterData.collidesWith = (CollisionGroup)(ENVIROMENT_OBSTACLE | GENERIC_BOUNCEABLE);
+
+        aks74u.CreateRigidBody(transform.to_mat4(), false);
+        aks74u.AddCollisionShape(collisionShape, filterData);
+        aks74u. SetRaycastShape(raycastShape);
+        aks74u.SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
+        aks74u.UpdateRigidBodyMassAndInertia(20.0f);
+
+        /*
+        float halfExtent = 0.2;
+		PxShape* collisionShape = Physics::CreateBoxShape(halfExtent, halfExtent, halfExtent);
+		PxShape* raycastShape = Physics::CreateBoxShape(halfExtent, halfExtent, halfExtent);
+
+
+		aks74u.CreateRigidBody(aks74u.GetModelMatrix(), false);
+		aks74u.AddCollisionShape(collisionShape, akFilterData);
+        aks74u.SetRaycastShape(raycastShape);
+        aks74u.SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
+        aks74u.UpdateRigidBodyMassAndInertia(20.0f);*/
+
 
         GameObject& pictureFrame = _gameObjects.emplace_back();
         pictureFrame.SetPosition(0.1f, 1.5f, 2.5f);
@@ -445,18 +499,14 @@ void Scene::LoadHardCodedObjects() {
             smallChestOfDrawers.CreateRigidBody(smallChestOfDrawers.GetGameWorldMatrix(), true);
             smallChestOfDrawers.AddCollisionShapeFromBoundingBox(smallChestOfDrawers._model->_boundingBox, filterData3);
 
-
-
-
-
-
             PhysicsFilterData filterData2;
             filterData2.raycastGroup = RAYCAST_DISABLED;
             filterData2.collisionGroup = CollisionGroup::GENERIC_BOUNCEABLE;
             filterData2.collidesWith = CollisionGroup(ENVIROMENT_OBSTACLE | GENERIC_BOUNCEABLE);
 
-            GameObject& lamp = _gameObjects.emplace_back();
-            lamp.SetModel("Lamp");
+			GameObject& lamp = _gameObjects.emplace_back();
+			lamp.SetModel("Lamp");
+			lamp.SetName("Lamp");
             lamp.SetMeshMaterial("Lamp");
             lamp.SetPosition(-.105f, 0.88, 0.25f);
             lamp.SetParentName("SmallDrawersHis");
@@ -559,20 +609,31 @@ void Scene::LoadHardCodedObjects() {
 
 
 
-    /*
-        AnimatedGameObject& enemy = _animatedGameObjects.emplace_back(AnimatedGameObject());
-        enemy.SetName("Enemy");
-        enemy.SetSkinnedModel("UniSexGuy2");
-        enemy.SetMeshMaterial("CC_Base_Body", "UniSexGuyBody");
-        enemy.SetMeshMaterial("CC_Base_Eye", "UniSexGuyBody");
-        enemy.SetMeshMaterial("Biker_Jeans", "UniSexGuyJeans");
-        enemy.SetMeshMaterial("CC_Base_Eye", "UniSexGuyEyes");
-        enemy.SetMeshMaterialByIndex(1, "UniSexGuyHead");
-        enemy.PlayAndLoopAnimation("Character_Glock_Walk", 1.0f);
-        enemy.SetScale(0.01f);
-        enemy.SetPosition(glm::vec3(1.5f, 0.1f, 2));
-        enemy.SetRotationX(HELL_PI / 2);
+    /* THIS IS THE AK U WERE TESTING WITH ON STREAM WHEN DOING THE STILL UNFINISHED AK MAG DROP THING
+        AnimatedGameObject& aks74u = _animatedGameObjects.emplace_back(AnimatedGameObject());
 
+        aks74u.SetName("AKS74U");
+        aks74u.SetSkinnedModel("AKS74U");
+        aks74u.SetMeshMaterial("manniquen1_2.001", "Hands");
+        aks74u.SetMeshMaterial("manniquen1_2", "Hands");
+        aks74u.SetMeshMaterialByIndex(2, "AKS74U_3");
+        aks74u.SetMeshMaterialByIndex(3, "AKS74U_3"); // possibly incorrect. this is the follower
+        aks74u.SetMeshMaterialByIndex(4, "AKS74U_1");
+        aks74u.SetMeshMaterialByIndex(5, "AKS74U_4");
+        aks74u.SetMeshMaterialByIndex(6, "AKS74U_0");
+        aks74u.SetMeshMaterialByIndex(7, "AKS74U_2");
+        aks74u.SetMeshMaterialByIndex(8, "AKS74U_1");  // Bolt_low. Possibly wrong
+        aks74u.SetMeshMaterialByIndex(9, "AKS74U_3"); // possibly incorrect.
+     
+
+		aks74u.SetMeshMaterialByIndex(1, "AKS74U_3");
+	//	aks74u.PlayAndLoopAnimation("AKS74U_ReloadEmpty", 0.1f);
+		aks74u.PlayAndLoopAnimation("AKS74U_Idle", 0.1f);
+        aks74u.SetScale(0.01f);
+        aks74u.SetPosition(glm::vec3(2.5f, 1.5f, 3));
+        aks74u.SetRotationY(HELL_PI * 0.5f);   */
+
+        /*
 
         AnimatedGameObject& enemy2 = _animatedGameObjects.emplace_back(AnimatedGameObject());
         enemy2.SetName("Wife");

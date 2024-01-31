@@ -16,7 +16,7 @@ inline void SetNormalsAndTangentsFromVertices(Vertex* vert0, Vertex* vert1, Vert
 	glm::vec2& uv0 = vert0->uv;
 	glm::vec2& uv1 = vert1->uv;
 	glm::vec2& uv2 = vert2->uv;
-	// Edges of the triangle : postion delta. UV delta
+	// Edges of the triangle : position delta. UV delta
 	glm::vec3 deltaPos1 = v1 - v0;
 	glm::vec3 deltaPos2 = v2 - v0;
 	glm::vec2 deltaUV1 = uv1 - uv0;

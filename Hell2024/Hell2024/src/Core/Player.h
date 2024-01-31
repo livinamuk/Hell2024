@@ -67,7 +67,9 @@ public:
 	float GetRadius();
 	bool CursorShouldBeInterect();
 	void CreateCharacterController(glm::vec3 position);
-	void WipeYVelocityToZeroIfHeadHitCeiling();
+	//void WipeYVelocityToZeroIfHeadHitCeiling();
+	PxShape* GetCharacterControllerShape();
+	PxRigidDynamic* GetCharacterControllerActor();
 
 	void ShowPickUpText(std::string text);
 	void PickUpAKS74U();
@@ -79,6 +81,7 @@ public:
 	float _muzzleFlashCounter = 0;
 
 	bool MuzzleFlashIsRequired();
+	glm::mat4 GetWeaponSwayMatrix();
 
 	bool _isGrounded = true;
 
@@ -92,6 +95,7 @@ private:
 	bool CanFire();
 	bool CanReload();
 
+	glm::mat4 _weaponSwayMatrix = glm::mat4(1);
 	bool _needsToDropAKMag = false;
 
 	glm::vec3 _position = glm::vec3(0);
