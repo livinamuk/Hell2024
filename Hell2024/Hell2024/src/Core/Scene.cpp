@@ -9,7 +9,7 @@
 #include "../Renderer/Renderer.h"
 #include "Input.h"
 #include "File.h"
-#include "Player.h"
+ #include "Player.h"
 #include "Audio.hpp"
 #include "TextBlitter.h"
 
@@ -326,9 +326,9 @@ void Scene::LoadHardCodedObjects() {
 		aks74u.SetRotationX(-1.7f);
 		aks74u.SetRotationY(0.0f);
 		aks74u.SetRotationZ(-1.6f);
-        aks74u.SetModel("AKS74U_Carlos");
+		//aks74u.SetModel("AKS74U_Carlos_ConvexMesh");
+		aks74u.SetModel("AKS74U_Carlos");
         aks74u.SetName("AKS74U_Carlos");
-        aks74u.SetScale(0.01f);
         aks74u.SetMeshMaterial("Ceiling");
         aks74u.SetMeshMaterialByMeshName("FrontSight_low", "AKS74U_0");
         aks74u.SetMeshMaterialByMeshName("Receiver_low", "AKS74U_1");
@@ -341,34 +341,17 @@ void Scene::LoadHardCodedObjects() {
         aks74u.SetMeshMaterialByMeshName("BarrelTip_low", "AKS74U_4");
         aks74u.SetPickUpType(PickUpType::AKS74U);
 
-		Transform transform; 
-		transform.position = glm::vec3(1.8f, 1.7f, 0.75f);
-        float halfExtent = 0.1;
-		PxShape* collisionShape = Physics::CreateBoxShape(halfExtent, halfExtent, halfExtent);
-		PxShape* raycastShape = Physics::CreateBoxShape(halfExtent, halfExtent, halfExtent);
-
-		PhysicsFilterData filterData;
-		filterData.raycastGroup = RAYCAST_DISABLED;
-		filterData.collisionGroup = CollisionGroup::GENERIC_BOUNCEABLE;
-		filterData.collidesWith = (CollisionGroup)(ENVIROMENT_OBSTACLE | GENERIC_BOUNCEABLE);
-
-        aks74u.CreateRigidBody(transform.to_mat4(), false);
-        aks74u.AddCollisionShape(collisionShape, filterData);
-        aks74u. SetRaycastShape(raycastShape);
+        // physics shit for ak weapon pickup
+		PhysicsFilterData filterData666;
+        filterData666.raycastGroup = RAYCAST_DISABLED;
+        filterData666.collisionGroup = CollisionGroup::GENERIC_BOUNCEABLE;
+        filterData666.collidesWith = (CollisionGroup)(ENVIROMENT_OBSTACLE | GENERIC_BOUNCEABLE);     
+        aks74u.CreateRigidBody(aks74u._transform.to_mat4(), false);
+		aks74u.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("AKS74U_Carlos_ConvexMesh")->_meshes[0], filterData666);
+		aks74u.SetRaycastShapeFromModel(AssetManager::GetModel("AKS74U_Carlos"));
         aks74u.SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
-        aks74u.UpdateRigidBodyMassAndInertia(20.0f);
+        aks74u.UpdateRigidBodyMassAndInertia(50.0f);
 
-        /*
-        float halfExtent = 0.2;
-		PxShape* collisionShape = Physics::CreateBoxShape(halfExtent, halfExtent, halfExtent);
-		PxShape* raycastShape = Physics::CreateBoxShape(halfExtent, halfExtent, halfExtent);
-
-
-		aks74u.CreateRigidBody(aks74u.GetModelMatrix(), false);
-		aks74u.AddCollisionShape(collisionShape, akFilterData);
-        aks74u.SetRaycastShape(raycastShape);
-        aks74u.SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
-        aks74u.UpdateRigidBodyMassAndInertia(20.0f);*/
 
 
         GameObject& pictureFrame = _gameObjects.emplace_back();

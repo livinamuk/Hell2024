@@ -586,9 +586,7 @@ void GameObject::SetModelMatrixMode(ModelMatrixMode modelMatrixMode) {
 }
 
 void GameObject::SetPhysicsTransform(glm::mat4 worldMatrix) {
-
-	std::cout << "cunt\n" << Util::Mat4ToString(worldMatrix) << "\n";
-
+	std::cout << Util::Mat4ToString(worldMatrix) << "\n";
 	_collisionBody->setGlobalPose(PxTransform(Util::GlmMat4ToPxMat44(worldMatrix)));
 }
 
@@ -667,6 +665,8 @@ std::vector<Triangle> GameObject::GetTris() {
 void GameObject::PickUp() {
 	_collected = true;
 	_pickupCoolDownTime = Config::item_respawn_time;
+	PxMat44 matrix = Util::GlmMat4ToPxMat44(_transform.to_mat4());
+	_collisionBody->setGlobalPose(PxTransform(matrix));
 }
 
 void GameObject::SetPickUpType(PickUpType pickupType) {

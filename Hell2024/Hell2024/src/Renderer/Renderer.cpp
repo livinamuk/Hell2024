@@ -936,6 +936,9 @@ void Renderer::RenderEditorMode() {
     _shaders.outline.SetInt("offsetX", 0); // reset x offset
     _shaders.outline.SetInt("offsetY", 0); // reset y offset
 
+
+    return;
+
 	// Render gizmo    
     if (selectedObject) {
         _shaders.outline.SetVec3("Color", GREEN);

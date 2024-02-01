@@ -156,8 +156,25 @@ OverlapResult OverlapTest(const PxGeometry& overlapShape, const PxTransform& sha
 void Player::Update(float deltaTime) {
 
 	if (!_ignoreControl) {
-		const PxGeometry& overlapShape = GetCharacterControllerShape()->getGeometry();
-		const PxTransform& shapePose = _characterController->getActor()->getGlobalPose();
+
+		float width = 0.4;
+		float height = 2.7;
+		float depth = 0.4;
+		PxShape* shape = Physics::GetPhysics()->createShape(PxBoxGeometry(width, height, depth), *Physics::GetDefaultMaterial(), true);
+		
+		
+		const PxGeometry& overlapShape = shape->getGeometry();// GetCharacterControllerShape()->getGeometry();
+
+		/*
+		if (distanceToPickUp < allowedPickupMinDistance) {
+			if (gameObject.GetPickUpType() == PickUpType::AKS74U) {
+				PickUpAKS74U();
+			}
+			gameObject.PickUp();*/
+
+
+		const PxTransform shapePose(PxVec3(_position.x, _position.y - 1.0f, _position.z));
+		//const PxTransform& shapePose = _characterController->getActor()->getGlobalPose();
 
 		OverlapResult overlapResult = OverlapTest(overlapShape, shapePose, CollisionGroup::GENERIC_BOUNCEABLE);
 
@@ -169,16 +186,32 @@ void Player::Update(float deltaTime) {
 					PhysicsObjectType physicsObjectType = physicsObjectData->type;
 					GameObject* parent = (GameObject*)physicsObjectData->parent;
 					if (physicsObjectType == GAME_OBJECT) {
-						std::cout << parent->GetName() << "\n";
+
+					//	std::cout << parent->GetName() << "\n";
+
+						// Weapon pickups
+						if (!parent->IsCollected() && parent->GetName() == "AKS74U_Carlos") {
+							PickUpAKS74U();
+							parent->PickUp();
+						}
 					}
+
+
+
+
+
+
+
+
+
 				}
 				else {
-					std::cout << "no user data found on ray hit\n";
+			//		std::cout << "no user data found on ray hit\n";
 				}
 			}
 		}
 		else {
-			std::cout << "no overlap bro\n";
+		//	std::cout << "no overlap bro\n";
 		}
 	}
 
@@ -426,7 +459,7 @@ void Player::Update(float deltaTime) {
 		}
 	}
 
-
+	/*
 	// Check for game object pick up collision
 	for (GameObject & gameObject: Scene::_gameObjects) {
 
@@ -445,7 +478,7 @@ void Player::Update(float deltaTime) {
 				gameObject.PickUp();
 			}
 		}		
-	}
+	}*/
 
 	// Check for pick up "collision"
 	for (PickUp& pickUp : Scene::_pickUps) {
