@@ -53,7 +53,11 @@ void Shader::Load(std::string vertexPath, std::string fragmentPath) {
         if (_ID != -1) {
             glDeleteProgram(_ID);
         }
-        _ID = tempID;
+		_ID = tempID;
+		//std::cout << "shader SUCCESFULLY compiled " << vertexPath << " " << fragmentPath << "\n";
+	} 
+    else {
+		std::cout << "shader failed to compile " << vertexPath << " " << fragmentPath << "\n";
     }
 
     glDeleteShader(vertex);

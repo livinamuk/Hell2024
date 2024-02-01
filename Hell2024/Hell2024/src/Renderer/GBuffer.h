@@ -17,6 +17,7 @@ public:
 	unsigned int _gLightingTexture = { 0 };
 	unsigned int _gGlassTexture = { 0 };
 	unsigned int _gGlassCompositeTemporary = { 0 };
+	unsigned int _gWorldSpacePosition = { 0 };
 	unsigned int _gEmissive = { 0 };
 
 private:

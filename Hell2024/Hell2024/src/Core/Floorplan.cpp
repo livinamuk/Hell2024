@@ -94,8 +94,8 @@ void Floorplan::Update(float /*deltaTime*/) {
     float screenHeight = (float)GL::GetWindowHeight();
     float scrollSpeedZoomFactor = 1000.0f / _zoom;
     _zoom *= (1 + ((float)-Input::GetMouseWheelValue() / -5));
-    _zoom = std::max(_zoom, 20.0f);
-    _zoom = std::min(_zoom, 2000.0f);
+    _zoom = std::max(_zoom, 2.0f);
+    _zoom = std::min(_zoom, 200000.0f);
 
     // Scroll
     float _scrollSpeed = 0.1f;
@@ -401,14 +401,15 @@ void Floorplan::PrepareRenderFrame() {
     TextBlitter::_debugTextToBilt += "Doors: " + std::to_string(Scene::_doors.size()) + "\n";
     TextBlitter::_debugTextToBilt += "CloudPoints: " + std::to_string(Scene::_cloudPoints.size()) + "\n";
 
+    /*
     // Draw grid
-    float gridY = -5.0f;
+    float gridY = -0.1f;
     for (float x = 0; x <= _mapWidth + _gridSpacing / 2; x += _gridSpacing) {
         Renderer::QueueLineForDrawing(Line(glm::vec3(x, gridY, 0), glm::vec3(x, gridY, _mapWidth), GRID_COLOR));
     }
     for (float z = 0; z <= _mapDepth + _gridSpacing / 2; z += _gridSpacing) {
         Renderer::QueueLineForDrawing(Line(glm::vec3(0, gridY, z), glm::vec3(_mapDepth, gridY, z), GRID_COLOR));
-    }
+    }*/
     
     if (_mode == FloorplanMode::WALLS) {
 

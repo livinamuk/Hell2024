@@ -9,7 +9,7 @@ namespace Renderer {
 	void Init();
 	void RenderLoadingFrame();
 	void RenderFrame(Player* player);
-	void RenderEditorFrame();
+	void RenderFloorplanFrame();
 	void RenderDebugMenu();
 	void RenderUI(float viewportWidth, float viewportHeight);
 	void HotloadShaders();

@@ -19,6 +19,7 @@ layout (binding = 5) uniform samplerCube shadowMap[16];
 
 layout (binding = 22) uniform samplerCube player1_shadowMap;
 layout (binding = 23) uniform samplerCube player2_shadowMap;
+layout (binding = 31) uniform sampler2D worldSpacePositionTexture;
 
 uniform mat4 projectionScene;
 uniform mat4 projectionWeapon;
@@ -285,6 +286,8 @@ void main() {
     // Get world position
     float projectionMatrixIndex = rma.a;
     mat4 inverseProjection = (projectionMatrixIndex == 0) ? inverseProjectionWeapon : inverseProjectionScene;
+    projectionMatrixIndex = 0;
+
 	float z = texture(depthTexture, TexCoords).x * 2.0f - 1.0f;
     vec2 clipSpaceTexCoord = TexCoords;
 	vec4 clipSpacePosition = vec4(TexCoords * 2.0 - 1.0, z, 1.0);
@@ -292,6 +295,9 @@ void main() {
     viewSpacePosition /= viewSpacePosition.w;
     vec4 worldSpacePosition = inverseView * viewSpacePosition;    
     vec3 WorldPos = worldSpacePosition.xyz;
+
+    WorldPos = texture2D(worldSpacePositionTexture, TexCoords).rgb;
+
 
     // Get more stuff    
     float roughness = rma.r;
@@ -348,6 +354,10 @@ void main() {
     adjustedIndirectLighting *= (0.4) * vec3(factor); 
     adjustedIndirectLighting = max(adjustedIndirectLighting, vec3(0));
     adjustedIndirectLighting *= baseColor * 1.5;
+
+    
+
+
   //  adjustedIndirectLighting *= 0.8;
     
    //  float contrast2 = 2.0;
@@ -361,6 +371,7 @@ void main() {
     vec3 composite = directLighting  + (adjustedIndirectLighting);
   //  vec3 composite = directLighting  + (indirectLighting * texture(basecolorTexture, TexCoords).rgb);
     FragColor.rgb = vec3(composite);
+
 
     // Final color
     if (mode == 0) {
@@ -380,7 +391,8 @@ void main() {
         FragColor.a = 1;
     }
 
-
+    
+       // FragColor.rgb = indirectLighting;
     
         float d = distance(viewPos, WorldPos);
         float alpha = getFogFactor(d);
@@ -454,5 +466,11 @@ void main() {
 
    // FragColor.rgb = normal;
  //  float originalZ = gl_FragCoord.z / gl_FragCoord.w;
- // FragColor.rgb = vec3(originalZ);
+ // FragColor.rgb = vec3(WorldPos);
+
+//vec3 test =   texture2D(worldSpacePositionTexture, TexCoords).rgb;
+ // FragColor.rgb = vec3(test);
+ // FragColor.rgb = vec3(directLighting);
+   
+ /// FragColor.rgb = vec3(WorldPos);
 }

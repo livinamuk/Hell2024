@@ -197,7 +197,7 @@ void Engine::Run() {
         // Floor plan
 		else if (EngineState::GetEngineMode() == FLOORPLAN) {
             Floorplan::PrepareRenderFrame();
-            Renderer::RenderEditorFrame();
+            Renderer::RenderFloorplanFrame();
         }
         if (DebugMenu::IsOpen()) {
             Renderer::RenderDebugMenu();
@@ -320,7 +320,11 @@ void Engine::LazyKeyPressesEditor() {
     if (Input::KeyPressed(GLFW_KEY_Z)) {
         Floorplan::PreviousMode();
         Audio::PlayAudio(AUDIO_SELECT, 1.00f);
-    }
+	}	
+    if (Input::KeyPressed(GLFW_KEY_H)) {
+		Renderer::HotloadShaders();
+	}
+
 }
 
 void ToggleFullscreen() {
