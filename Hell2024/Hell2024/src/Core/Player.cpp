@@ -129,12 +129,11 @@ struct OverlapResult {
 OverlapResult OverlapTest(const PxGeometry& overlapShape, const PxTransform& shapePose, PxU32 collisionGroup) {
 	PxQueryFilterData overlapFilterData = PxQueryFilterData();
 	overlapFilterData.data.word1 = collisionGroup;
-	PxGeometryQueryFlags queryFlags;
 	const PxU32 bufferSize = 256;
 	PxOverlapHit hitBuffer[bufferSize];
 	PxOverlapBuffer buf(hitBuffer, bufferSize); 
 	OverlapResult result;
-	if (Physics::GetScene()->overlap(overlapShape, shapePose, buf, overlapFilterData, 0, 0, queryFlags)) {
+	if (Physics::GetScene()->overlap(overlapShape, shapePose, buf, overlapFilterData)) {
 		for (int i = 0; i < buf.getNbTouches(); i++) {
 			PxActor* hit = buf.getTouch(i).actor;
 			// Check for duplicates
