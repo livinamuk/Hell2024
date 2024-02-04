@@ -241,6 +241,17 @@ namespace Util {
         return str;
     }
 
+    inline std::vector<std::byte> ReadBinaryFromFile(const std::string &path) {
+        if (std::ifstream file{ path, std::ios::ate | std::ios::binary }; file.is_open()) {
+            const auto size{ file.tellg() };
+            std::vector<std::byte> binary(size);
+            file.seekg(0);
+            file.read(reinterpret_cast<char *>(binary.data()), size);
+            return binary;
+        }
+        return {};
+    }
+
     inline std::string Vec3ToString(glm::vec3 v) {
         return std::string("(" + std::format("{:.2f}", v.x) + ", " + std::format("{:.2f}", v.y) + ", " + std::format("{:.2f}", v.z) + ")");
     }
