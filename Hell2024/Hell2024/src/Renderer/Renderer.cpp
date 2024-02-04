@@ -333,7 +333,7 @@ void DrawFullScreenQuad() {
 
 void Renderer::InitMinimumToRenderLoadingFrame() {
 
-	_shaders.UI.Load("ui.vert", "ui.frag");
+	_shaders.UI.Load("res/shaders/ui.vert", "res/shaders/ui.frag");
 
 	// Menu FBO
 	_menuRenderTarget.Create(_renderWidth, _renderHeight);
@@ -363,28 +363,28 @@ void Renderer::Init() {
     glGenBuffers(1, &_pointLineVBO);
     glPointSize(2);
 
-    _shaders.solidColor.Load("solid_color.vert", "solid_color.frag");
-    _shaders.shadowMap.Load("shadowmap.vert", "shadowmap.frag", "shadowmap.geom");
-    _shaders.editorSolidColor.Load("editor_solid_color.vert", "editor_solid_color.frag");
-    _shaders.composite.Load("composite.vert", "composite.frag");
-    _shaders.fxaa.Load("fxaa.vert", "fxaa.frag");
-    _shaders.animatedQuad.Load("animated_quad.vert", "animated_quad.frag");
-    _shaders.depthOfField.Load("depth_of_field.vert", "depth_of_field.frag");
-    _shaders.debugViewPointCloud.Load("debug_view_point_cloud.vert", "debug_view_point_cloud.frag");
-    _shaders.geometry.Load("geometry.vert", "geometry.frag");
-    _shaders.geometry_instanced.Load("geometry_instanced.vert", "geometry_instanced.frag");
-    _shaders.lighting.Load("lighting.vert", "lighting.frag");
-    _shaders.debugViewPropgationGrid.Load("debug_view_propogation_grid.vert", "debug_view_propogation_grid.frag");
-	_shaders.editorTextured.Load("editor_textured.vert", "editor_textured.frag");
-	_shaders.bulletDecals.Load("bullet_decals.vert", "bullet_decals.frag");
-	_shaders.glass.Load("glass.vert", "glass.frag");
-	_shaders.glassComposite.Load("glass_composite.vert", "glass_composite.frag");
-	_shaders.outline.Load("outline.vert", "outline.frag");
-	_shaders.skybox.Load("skybox.vert", "skybox.frag");
+    _shaders.solidColor.Load("res/shaders/solid_color.vert", "res/shaders/solid_color.frag");
+    _shaders.shadowMap.Load("res/shaders/shadowmap.vert", "res/shaders/shadowmap.frag", "res/shaders/shadowmap.geom");
+    _shaders.editorSolidColor.Load("res/shaders/editor_solid_color.vert", "res/shaders/editor_solid_color.frag");
+    _shaders.composite.Load("res/shaders/composite.vert", "res/shaders/composite.frag");
+    _shaders.fxaa.Load("res/shaders/fxaa.vert", "res/shaders/fxaa.frag");
+    _shaders.animatedQuad.Load("res/shaders/animated_quad.vert", "res/shaders/animated_quad.frag");
+    _shaders.depthOfField.Load("res/shaders/depth_of_field.vert", "res/shaders/depth_of_field.frag");
+    _shaders.debugViewPointCloud.Load("res/shaders/debug_view_point_cloud.vert", "res/shaders/debug_view_point_cloud.frag");
+    _shaders.geometry.Load("res/shaders/geometry.vert", "res/shaders/geometry.frag");
+    _shaders.geometry_instanced.Load("res/shaders/geometry_instanced.vert", "res/shaders/geometry_instanced.frag");
+    _shaders.lighting.Load("res/shaders/lighting.vert", "res/shaders/lighting.frag");
+    _shaders.debugViewPropgationGrid.Load("res/shaders/debug_view_propogation_grid.vert", "res/shaders/debug_view_propogation_grid.frag");
+	_shaders.editorTextured.Load("res/shaders/editor_textured.vert", "res/shaders/editor_textured.frag");
+	_shaders.bulletDecals.Load("res/shaders/bullet_decals.vert", "res/shaders/bullet_decals.frag");
+	_shaders.glass.Load("res/shaders/glass.vert", "res/shaders/glass.frag");
+	_shaders.glassComposite.Load("res/shaders/glass_composite.vert", "res/shaders/glass_composite.frag");
+	_shaders.outline.Load("res/shaders/outline.vert", "res/shaders/outline.frag");
+	_shaders.skybox.Load("res/shaders/skybox.vert", "res/shaders/skybox.frag");
 	_shaders.computeTest.Load("res/shaders/test.comp");
     
-	_shaders.blurVertical.Load("blurVertical.vert", "blur.frag");
-	_shaders.blurHorizontal.Load("blurHorizontal.vert", "blur.frag");
+	_shaders.blurVertical.Load("res/shaders/blurVertical.vert", "res/shaders/blur.frag");
+	_shaders.blurHorizontal.Load("res/shaders/blurHorizontal.vert", "res/shaders/blur.frag");
     
     _cubeMesh = MeshUtil::CreateCube(1.0f, 1.0f, true);
 
@@ -2032,24 +2032,24 @@ void Renderer::HotloadShaders() {
 
     std::cout << "Hotloaded shaders\n";
 
-    _shaders.solidColor.Load("solid_color.vert", "solid_color.frag");
-    _shaders.UI.Load("ui.vert", "ui.frag");
-    _shaders.editorSolidColor.Load("editor_solid_color.vert", "editor_solid_color.frag");
-    _shaders.composite.Load("composite.vert", "composite.frag");
-    _shaders.fxaa.Load("fxaa.vert", "fxaa.frag");
-    _shaders.animatedQuad.Load("animated_quad.vert", "animated_quad.frag");
-    _shaders.depthOfField.Load("depth_of_field.vert", "depth_of_field.frag");
-    _shaders.debugViewPointCloud.Load("debug_view_point_cloud.vert", "debug_view_point_cloud.frag");
-    _shaders.geometry.Load("geometry.vert", "geometry.frag");
-    _shaders.lighting.Load("lighting.vert", "lighting.frag");
-    _shaders.debugViewPropgationGrid.Load("debug_view_propogation_grid.vert", "debug_view_propogation_grid.frag");
-    _shaders.editorTextured.Load("editor_textured.vert", "editor_textured.frag");
-    _shaders.bulletDecals.Load("bullet_decals.vert", "bullet_decals.frag");
-    _shaders.geometry_instanced.Load("geometry_instanced.vert", "geometry_instanced.frag");
-	_shaders.glass.Load("glass.vert", "glass.frag");
-	_shaders.glassComposite.Load("glass_composite.vert", "glass_composite.frag");
-	_shaders.skybox.Load("skybox.vert", "skybox.frag");
-	_shaders.outline.Load("outline.vert", "outline.frag");
+    _shaders.solidColor.Load("res/shaders/solid_color.vert", "res/shaders/solid_color.frag");
+    _shaders.UI.Load("res/shaders/ui.vert", "res/shaders/ui.frag");
+    _shaders.editorSolidColor.Load("res/shaders/editor_solid_color.vert", "res/shaders/editor_solid_color.frag");
+    _shaders.composite.Load("res/shaders/composite.vert", "res/shaders/composite.frag");
+    _shaders.fxaa.Load("res/shaders/fxaa.vert", "res/shaders/fxaa.frag");
+    _shaders.animatedQuad.Load("res/shaders/animated_quad.vert", "res/shaders/animated_quad.frag");
+    _shaders.depthOfField.Load("res/shaders/depth_of_field.vert", "res/shaders/depth_of_field.frag");
+    _shaders.debugViewPointCloud.Load("res/shaders/debug_view_point_cloud.vert", "res/shaders/debug_view_point_cloud.frag");
+    _shaders.geometry.Load("res/shaders/geometry.vert", "res/shaders/geometry.frag");
+    _shaders.lighting.Load("res/shaders/lighting.vert", "res/shaders/lighting.frag");
+    _shaders.debugViewPropgationGrid.Load("res/shaders/debug_view_propogation_grid.vert", "res/shaders/debug_view_propogation_grid.frag");
+    _shaders.editorTextured.Load("res/shaders/editor_textured.vert", "res/shaders/editor_textured.frag");
+    _shaders.bulletDecals.Load("res/shaders/bullet_decals.vert", "res/shaders/bullet_decals.frag");
+    _shaders.geometry_instanced.Load("res/shaders/geometry_instanced.vert", "res/shaders/geometry_instanced.frag");
+	_shaders.glass.Load("res/shaders/glass.vert", "res/shaders/glass.frag");
+	_shaders.glassComposite.Load("res/shaders/glass_composite.vert", "res/shaders/glass_composite.frag");
+	_shaders.skybox.Load("res/shaders/skybox.vert", "res/shaders/skybox.frag");
+	_shaders.outline.Load("res/shaders/outline.vert", "res/shaders/outline.frag");
 
     _shaders.compute.Load("res/shaders/compute.comp");
     _shaders.pointCloud.Load("res/shaders/point_cloud.comp");
