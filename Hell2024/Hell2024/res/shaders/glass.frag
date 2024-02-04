@@ -10,6 +10,7 @@ layout (binding = 1) uniform sampler2D normalTexture;
 layout (binding = 2) uniform sampler2D rmaTexture;
 layout (binding = 3) uniform sampler2D depthTexture;
 layout (binding = 4) uniform sampler2D finalLighting;
+layout (binding = 7) uniform sampler2D brdfTexture;
 
 uniform float screenWidth;
 uniform float screenHeight;
@@ -152,5 +153,10 @@ void main() {
   // color += (roughness * 0.5) ;
    //color = vec3(roughness);
 
+   
+    vec3 brdf = texture(brdfTexture, TexCoords).rgb;
+   
+
+   
     FragColor = vec4(color, 1.0f);
 }

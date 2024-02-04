@@ -7,9 +7,9 @@ in vec3 TexCoords;
 
 void main() {		
     FragColor.rgb = texture(cubeMap, TexCoords).rgb;
-      FragColor.rgb *= 0.3f;
-      FragColor.g *= 0.5;
-      FragColor.b *= 0.1;
-   // FragColor.rgb = TexCoords;
+    FragColor.rgb *= 0.3;
+    FragColor.g *= 0.5;
+    FragColor.b *= 0.1;
     FragColor.a = 1.0;
+    //   FragColor.rgb = texture(cubeMap, TexCoords).rgb;
 }

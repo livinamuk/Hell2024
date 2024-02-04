@@ -119,124 +119,62 @@ void Player::PickUpAKS74UAmmo() {
 	_inventory.aks74uAmmo.total += AKS74U_MAG_SIZE * 3;
 }
 
-struct OverlapResult {
-	std::vector<PxActor*> hits;
-	bool HitsFound() {
-		return hits.size();
+
+
+
+
+void Player::CheckForItemPickOverlaps() {
+
+	if (_ignoreControl) {
+		return;
 	}
-};
 
-OverlapResult OverlapTest(const PxGeometry& overlapShape, const PxTransform& shapePose, PxU32 collisionGroup) {
-	PxQueryFilterData overlapFilterData = PxQueryFilterData();
-	overlapFilterData.data.word1 = collisionGroup;
-	PxGeometryQueryFlags queryFlags;
-	const PxU32 bufferSize = 256;
-	PxOverlapHit hitBuffer[bufferSize];
-	PxOverlapBuffer buf(hitBuffer, bufferSize); 
-	OverlapResult result;
-	if (Physics::GetScene()->overlap(overlapShape, shapePose, buf, overlapFilterData, 0, 0, queryFlags)) {
-		for (int i = 0; i < buf.getNbTouches(); i++) {
-			PxActor* hit = buf.getTouch(i).actor;
-			// Check for duplicates
-			bool found = false;
-			for (const PxActor* foundHit : result.hits) {
-				if (foundHit == hit) {
-					found = true;
-					break;
-				}
-			}
-			if (!found) {
-				result.hits.push_back(hit);
-			}
-		}
-	}
-	return result;
-}
+	float width = 0.4;
+	float height = 2.7;
+	float depth = 0.4;
+	PxShape* shape = Physics::GetPhysics()->createShape(PxBoxGeometry(width, height, depth), *Physics::GetDefaultMaterial(), true);
 
-void Player::Update(float deltaTime) {
+	const PxGeometry& overlapShape = shape->getGeometry();// 
+	//const PxGeometry& overlapShape = GetCharacterControllerShape()->getGeometry();
 
-	if (!_ignoreControl) {
+	const PxTransform shapePose(PxVec3(_position.x, _position.y - 1.0f, _position.z));
+	//const PxTransform& shapePose = _characterController->getActor()->getGlobalPose();
 
-		float width = 0.4;
-		float height = 2.7;
-		float depth = 0.4;
-		PxShape* shape = Physics::GetPhysics()->createShape(PxBoxGeometry(width, height, depth), *Physics::GetDefaultMaterial(), true);
-		
-		
-		const PxGeometry& overlapShape = shape->getGeometry();// GetCharacterControllerShape()->getGeometry();
+	OverlapReport overlapReport = Physics::OverlapTest(overlapShape, shapePose, CollisionGroup::GENERIC_BOUNCEABLE);
 
-		/*
-		if (distanceToPickUp < allowedPickupMinDistance) {
-			if (gameObject.GetPickUpType() == PickUpType::AKS74U) {
-				PickUpAKS74U();
-			}
-			gameObject.PickUp();*/
-
-
-		const PxTransform shapePose(PxVec3(_position.x, _position.y - 1.0f, _position.z));
-		//const PxTransform& shapePose = _characterController->getActor()->getGlobalPose();
-
-		OverlapResult overlapResult = OverlapTest(overlapShape, shapePose, CollisionGroup::GENERIC_BOUNCEABLE);
-
-		if (overlapResult.hits.size()) {
-			//std::cout << overlapResult.hits.size() << "\n";
-			for (auto* hit : overlapResult.hits) {
-				if (hit->userData) {
-					PhysicsObjectData* physicsObjectData = (PhysicsObjectData*)hit->userData;
-					PhysicsObjectType physicsObjectType = physicsObjectData->type;
-					GameObject* parent = (GameObject*)physicsObjectData->parent;
-					if (physicsObjectType == GAME_OBJECT) {
+	if (overlapReport.hits.size()) {
+		//std::cout << overlapResult.hits.size() << "\n";
+		for (auto* hit : overlapReport.hits) {
+			if (hit->userData) {
+				PhysicsObjectData* physicsObjectData = (PhysicsObjectData*)hit->userData;
+				PhysicsObjectType physicsObjectType = physicsObjectData->type;
+				GameObject* parent = (GameObject*)physicsObjectData->parent;
+				if (physicsObjectType == GAME_OBJECT) {
 
 					//	std::cout << parent->GetName() << "\n";
 
 						// Weapon pickups
-						if (!parent->IsCollected() && parent->GetName() == "AKS74U_Carlos") {
-							PickUpAKS74U();
-							parent->PickUp();
-						}
+					if (!parent->IsCollected() && parent->GetName() == "AKS74U_Carlos") {
+						PickUpAKS74U();
+						parent->PickUp();
 					}
-
-
-
-
-
-
-
-
-
-				}
-				else {
-			//		std::cout << "no user data found on ray hit\n";
 				}
 			}
-		}
-		else {
-		//	std::cout << "no overlap bro\n";
+			else {
+				//		std::cout << "no user data found on ray hit\n";
+			}
 		}
 	}
+	else {
+		//	std::cout << "no overlap bro\n";
+	}
+}
 
 
-		/*
-		//
-		const PxGeometry& overlapShape = GetCharacterControllerShape()->getGeometry();
-		const PxTransform& shapePose = _characterController->getActor()->getGlobalPose();
-		OverlapResult overlapResult = OverlapTest(overlapShape, shapePose, CollisionGroup::GENERIC_BOUNCEABLE);
-		
-			for (auto* hit : overlapResult.hits) {
-				if (hit->userData) {
-					PhysicsObjectData* physicsObjectData = (PhysicsObjectData*)hit->userData;
-					PhysicsObjectType physicsObjectType = physicsObjectData->type;
-					GameObject* parent = (GameObject*)physicsObjectData->parent;
-					if (physicsObjectType == GAME_OBJECT) {
-						std::cout << parent->GetName() << "\n";
-					}
-					else {
-						std::cout << "no user data found on ray hit\n";
-					}
-				}
-			}
-	//}
-*/
+void Player::Update(float deltaTime) {
+
+	CheckForItemPickOverlaps();
+
 
 	if (Input::KeyDown(HELL_KEY_U)) {
 		DropAKS7UMag();
@@ -1216,7 +1154,9 @@ void Player::CreateCharacterController(glm::vec3 position) {
 	desc->radius = PLAYER_CAPSULE_RADIUS;
 	desc->position = PxExtendedVec3(position.x, position.y + (PLAYER_CAPSULE_HEIGHT / 2) + (PLAYER_CAPSULE_RADIUS * 2), position.z);
 	desc->material = material;
-	desc->stepOffset = 0.1f;
+	desc->stepOffset = 0.1f; 
+	desc->contactOffset = 0.001;
+	desc->scaleCoeff = .99f;
 	desc->reportCallback = &Physics::_cctHitCallback;
 	_characterController = Physics::_characterControllerManager->createController(*desc);
 

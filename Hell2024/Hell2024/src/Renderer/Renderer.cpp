@@ -86,6 +86,8 @@ struct Shaders {
 	Shader blurVertical;
 	Shader blurHorizontal;
 	Shader outline;
+	Shader envMapShader;
+	Shader brdf;
     ComputeShader compute;
 	ComputeShader pointCloud;
 	ComputeShader propogateLight;
@@ -173,6 +175,7 @@ std::vector<glm::mat4> _aks74uMatrices;
 enum RenderMode { COMPOSITE, DIRECT_LIGHT, INDIRECT_LIGHT, POINT_CLOUD, MODE_COUNT } _mode;
 enum DebugLineRenderMode { SHOW_NO_LINES, PHYSX_ALL, PHYSX_RAYCAST, PHYSX_COLLISION, RAYTRACE_LAND, PHYSX_EDITOR, GIZMO_X_TRANSLATE, DEBUG_LINE_MODE_COUNT} _debugLineRenderMode;
 
+void RenderEnviromentMaps();
 void DrawHud(Player* player);
 void DrawScene(Shader& shader);
 void DrawAnimatedScene(Shader& shader, Player* player);
@@ -200,6 +203,85 @@ void GlassPass(Player* player);
 void BlitDebugTexture(GLint fbo, GLenum colorAttachment, GLint srcWidth, GLint srcHeight);
 void DrawQuad(int viewportWidth, int viewPortHeight, int textureWidth, int textureHeight, int xPos, int yPos, bool centered = false, float scale = 1.0f, int xSize = -1, int ySize = -1);
 void SkyBoxPass(Player* player);
+void CreateBRDFTexture();
+
+unsigned int _brdfLUTTexture;
+
+
+// renderQuad() renders a 1x1 XY quad in NDC
+// -----------------------------------------
+unsigned int quadVAO = 0;
+unsigned int quadVBO;
+void renderQuad()
+{
+	if (quadVAO == 0)
+	{
+		float quadVertices[] = {
+			// positions        // texture Coords
+			-1.0f,  1.0f, 0.0f, 0.0f, 1.0f,
+			-1.0f, -1.0f, 0.0f, 0.0f, 0.0f,
+			 1.0f,  1.0f, 0.0f, 1.0f, 1.0f,
+			 1.0f, -1.0f, 0.0f, 1.0f, 0.0f,
+		};
+		// setup plane VAO
+		glGenVertexArrays(1, &quadVAO);
+		glGenBuffers(1, &quadVBO);
+		glBindVertexArray(quadVAO);
+		glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
+		glEnableVertexAttribArray(0);
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+		glEnableVertexAttribArray(1);
+		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+	}
+	glBindVertexArray(quadVAO);
+	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+	glBindVertexArray(0);
+}
+
+
+void CreateBRDFTexture() {
+
+	// pbr: setup framebuffer
+	// ----------------------
+	unsigned int captureFBO;
+	unsigned int captureRBO;
+	glGenFramebuffers(1, &captureFBO);
+	glGenRenderbuffers(1, &captureRBO);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, captureFBO);
+	glBindRenderbuffer(GL_RENDERBUFFER, captureRBO);
+	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, 512, 512);
+	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, captureRBO);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+	// pbr: generate a 2D LUT from the BRDF equations used.
+	// ----------------------------------------------------
+	glGenTextures(1, &_brdfLUTTexture);
+
+	// pre-allocate enough memory for the LUT texture.
+	glBindTexture(GL_TEXTURE_2D, _brdfLUTTexture);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RG16F, 512, 512, 0, GL_RG, GL_FLOAT, 0);
+	// be sure to set wrapping mode to GL_CLAMP_TO_EDGE
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+	// then re-configure capture framebuffer object and render screen-space quad with BRDF shader.
+	glBindFramebuffer(GL_FRAMEBUFFER, captureFBO);
+	glBindRenderbuffer(GL_RENDERBUFFER, captureRBO);
+	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, 512, 512);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, _brdfLUTTexture, 0);
+
+	glViewport(0, 0, 512, 512);
+	_shaders.brdf.Use();
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	renderQuad();
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
 
 
 int GetPlayerIndexFromPlayerPointer(Player* player) {
@@ -213,6 +295,127 @@ int GetPlayerIndexFromPlayerPointer(Player* player) {
 
 PlayerRenderTarget& GetPlayerRenderTarget(int playerIndex) {
 	return _playerRenderTargets[playerIndex];
+}
+
+
+
+struct EnvMap {
+
+	unsigned int ID = 0;
+	unsigned int depthTex = 0;
+	unsigned int colorTex = 0;
+
+	void Init() {
+
+		glGenFramebuffers(1, &ID);
+		glGenTextures(1, &depthTex);
+		glGenTextures(1, &colorTex);
+
+		glBindTexture(GL_TEXTURE_CUBE_MAP, depthTex);
+		for (unsigned int i = 0; i < 6; ++i) {
+			glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_DEPTH_COMPONENT, ENV_MAP_SIZE, ENV_MAP_SIZE, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+			glGenerateMipmap(GL_TEXTURE_2D);
+		}
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glBindFramebuffer(GL_FRAMEBUFFER, ID);
+		glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, depthTex, 0);
+
+		glBindTexture(GL_TEXTURE_CUBE_MAP, colorTex);
+		for (unsigned int i = 0; i < 6; ++i) {
+			glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB, ENV_MAP_SIZE, ENV_MAP_SIZE, 0, GL_RGB, GL_FLOAT, nullptr);
+			glGenerateMipmap(GL_TEXTURE_2D);
+		}
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
+		glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, colorTex, 0);
+		glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
+		glBindTexture(GL_TEXTURE_CUBE_MAP, colorTex);
+		glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
+
+		auto fboStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+		if (fboStatus == 36053)
+			std::cout << "FRAMEBUFFER: complete\n";
+		if (fboStatus == 36054)
+			std::cout << "FRAMEBUFFER: incomplete attachment\n";
+		if (fboStatus == 36057)
+			std::cout << "FRAMEBUFFER: incomplete dimensions\n";
+		if (fboStatus == 36055)
+			std::cout << "FRAMEBUFFER: missing attachment\n";
+		if (fboStatus == 36061)
+			std::cout << "FRAMEBUFFER: unsupported\n";
+		auto glstatus = glGetError();
+		if (glstatus != GL_NO_ERROR) {
+			std::cout << "Error in GL call: " << glstatus << std::endl;
+		}
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	}
+};
+
+EnvMap _envMap;
+
+void RenderEnviromentMaps() {
+    
+    static bool runOnceOnly = true;
+
+    if (!runOnceOnly) {
+       return;
+    }
+
+    if (_envMap.ID == 0) {
+        _envMap.Init();
+    }
+
+	// Render cubemap
+	glm::mat4 captureProjection = glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, 10.0f);
+	glm::mat4 captureViews[] = {
+		glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(1.0f,  0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
+		glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(-1.0f,  0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
+		glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f,  1.0f,  0.0f), glm::vec3(0.0f,  0.0f,  1.0f)),
+		glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f,  0.0f), glm::vec3(0.0f,  0.0f, -1.0f)),
+		glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f,  0.0f,  1.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
+		glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f,  0.0f, -1.0f), glm::vec3(0.0f, -1.0f,  0.0f))
+	};
+	_shaders.envMapShader.Use();
+    _shaders.envMapShader.SetMat4("projection", captureProjection);
+	glViewport(0, 0, ENV_MAP_SIZE, ENV_MAP_SIZE);
+	glBindFramebuffer(GL_FRAMEBUFFER, _envMap.ID);
+	glClearColor(0, 0, 0, 0);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glEnable(GL_DEPTH_TEST);
+	Transform captureTransform;
+	captureTransform.position = glm::vec3(3.1f, WALL_HEIGHT * 0.5f + 0.1f, 3.5f);
+	for (unsigned int i = 0; i < 6; ++i) {
+        _shaders.envMapShader.SetMat4("captureViewMatrix[" + std::to_string(i) + "]", captureProjection * captureViews[i] * glm::inverse(captureTransform.to_mat4()));
+	}
+
+	// Update lights
+	auto& lights = Scene::_lights;
+	for (int i = 0; i < lights.size(); i++) {
+		if (i >= 16) break;
+		glActiveTexture(GL_TEXTURE5 + i);
+		glBindTexture(GL_TEXTURE_CUBE_MAP, _shadowMaps[i]._depthTexture);
+		_shaders.envMapShader.SetVec3("lights[" + std::to_string(i) + "].position", lights[i].position);
+		_shaders.envMapShader.SetVec3("lights[" + std::to_string(i) + "].color", lights[i].color);
+		_shaders.envMapShader.SetFloat("lights[" + std::to_string(i) + "].radius", lights[i].radius);
+		_shaders.envMapShader.SetFloat("lights[" + std::to_string(i) + "].strength", lights[i].strength);
+	}
+	_shaders.envMapShader.SetInt("lightsCount", std::min((int)lights.size(), 16));
+
+	DrawScene(_shaders.envMapShader);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, _envMap.colorTex);
+	glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
+
+    runOnceOnly = false;
+
+	glFlush();
 }
 
 void GlassPass(Player* player) {
@@ -279,6 +482,10 @@ void GlassPass(Player* player) {
 
 	glActiveTexture(GL_TEXTURE6);
 	glBindTexture(GL_TEXTURE_2D, gBuffer._gDepthTexture);
+	glActiveTexture(GL_TEXTURE7);
+	glBindTexture(GL_TEXTURE_2D, _brdfLUTTexture);
+
+    
 
 
     glDisable(GL_DEPTH_TEST);
@@ -381,6 +588,9 @@ void Renderer::Init() {
 	_shaders.glassComposite.Load("glass_composite.vert", "glass_composite.frag");
 	_shaders.outline.Load("outline.vert", "outline.frag");
 	_shaders.skybox.Load("skybox.vert", "skybox.frag");
+	_shaders.envMapShader.Load("envMap.vert", "envMap.frag", "envMap.geom");
+	_shaders.brdf.Load("brdf.vert", "brdf.frag");
+    
 	_shaders.computeTest.Load("res/shaders/test.comp");
     
 	_shaders.blurVertical.Load("blurVertical.vert", "blur.frag");
@@ -409,6 +619,8 @@ void Renderer::Init() {
     FindProbeCoordsWithinMapBounds();
 
     InitCompute();
+
+    CreateBRDFTexture();
 }
 
 void Renderer::RenderLoadingFrame() {
@@ -607,7 +819,8 @@ void Renderer::RenderFrame(Player* player) {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     if (playerIndex == 0) {
-        RenderShadowMaps();
+		RenderShadowMaps();
+		RenderEnviromentMaps();
         CalculateDirtyCloudPoints();
         CalculateDirtyProbeCoords();
         ComputePass(); // Fills the indirect lighting data structures
@@ -1108,6 +1321,7 @@ void SkyBoxPass(Player* player) {
     _shaders.skybox.SetMat4("model", skyBoxTransform.to_mat4());
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_CUBE_MAP, _skyboxTexture.ID);
+	//glBindTexture(GL_TEXTURE_CUBE_MAP, _envMap.colorTex);
 	glBindVertexArray(_cubeVao);
 	glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
 //	glClear(GL_DEPTH_BUFFER_BIT);
@@ -1276,6 +1490,10 @@ void LightingPass(Player* player) {
 	glBindTexture(GL_TEXTURE_3D, _progogationGridTexture);
 	glActiveTexture(GL_TEXTURE31);
 	glBindTexture(GL_TEXTURE_2D, gBuffer._gWorldSpacePosition);
+	glActiveTexture(GL_TEXTURE30);
+	glBindTexture(GL_TEXTURE_2D, _brdfLUTTexture);
+	glActiveTexture(GL_TEXTURE29);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, _envMap.colorTex);
 
     // Update lights
     auto& lights = Scene::_lights;
@@ -2050,6 +2268,7 @@ void Renderer::HotloadShaders() {
 	_shaders.glassComposite.Load("glass_composite.vert", "glass_composite.frag");
 	_shaders.skybox.Load("skybox.vert", "skybox.frag");
 	_shaders.outline.Load("outline.vert", "outline.frag");
+	_shaders.envMapShader.Load("envMap.vert", "envMap.frag", "envMap.geom");
 
     _shaders.compute.Load("res/shaders/compute.comp");
     _shaders.pointCloud.Load("res/shaders/point_cloud.comp");
@@ -2332,7 +2551,6 @@ void Renderer::RenderFloorplanFrame() {
 	glBlitFramebuffer(0, 0, presentFrameBuffer.GetWidth(), presentFrameBuffer.GetHeight(), 0, 0, GL::GetWindowWidth(), GL::GetWindowHeight(), GL_COLOR_BUFFER_BIT, GL_NEAREST);
 
 
-    glFlush();
 
 
 

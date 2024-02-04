@@ -448,3 +448,29 @@ void Physics::UpdateGizmoScenes() {
 physx::PxRigidActor* Physics::GetGroundPlane() {
     return _groundPlane;
 }
+
+OverlapReport Physics::OverlapTest(const PxGeometry& overlapShape, const PxTransform& shapePose, PxU32 collisionGroup) {
+	PxQueryFilterData overlapFilterData = PxQueryFilterData();
+	overlapFilterData.data.word1 = collisionGroup;
+	const PxU32 bufferSize = 256;
+	PxOverlapHit hitBuffer[bufferSize];
+	PxOverlapBuffer buf(hitBuffer, bufferSize);
+    OverlapReport result;
+	if (Physics::GetScene()->overlap(overlapShape, shapePose, buf, overlapFilterData)) {
+		for (int i = 0; i < buf.getNbTouches(); i++) {
+			PxActor* hit = buf.getTouch(i).actor;
+			// Check for duplicates
+			bool found = false;
+			for (const PxActor* foundHit : result.hits) {
+				if (foundHit == hit) {
+					found = true;
+					break;
+				}
+			}
+			if (!found) {
+				result.hits.push_back(hit);
+			}
+		}
+	}
+	return result;
+}

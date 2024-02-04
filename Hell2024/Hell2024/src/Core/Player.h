@@ -94,6 +94,7 @@ private:
 	void SpawnBullet(float variance);
 	bool CanFire();
 	bool CanReload();
+	void CheckForItemPickOverlaps();
 
 	glm::mat4 _weaponSwayMatrix = glm::mat4(1);
 	bool _needsToDropAKMag = false;

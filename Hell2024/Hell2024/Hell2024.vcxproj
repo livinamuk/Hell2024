@@ -232,6 +232,9 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <None Include="res\shaders\editor_solid_color.vert" />
     <None Include="res\shaders\editor_textured.frag" />
     <None Include="res\shaders\editor_textured.vert" />
+    <None Include="res\shaders\envMap.frag" />
+    <None Include="res\shaders\envMap.geom" />
+    <None Include="res\shaders\envMap.vert" />
     <None Include="res\shaders\geometry.frag" />
     <None Include="res\shaders\geometry.vert" />
     <None Include="res\shaders\geometry_instanced.frag" />
