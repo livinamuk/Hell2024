@@ -1,5 +1,6 @@
 #include "File.h"
 #include "../Common.h"
+#include "../Core/Filesystem/FilesystemManager.h"
 #include "rapidjson/document.h"
 #include <rapidjson/filereadstream.h>
 #include <rapidjson/istreamwrapper.h>
@@ -8,8 +9,7 @@
 #include <rapidjson/ostreamwrapper.h>
 #include <rapidjson/prettywriter.h>
 #include <filesystem>
-#include <sstream> 
-#include <fstream>
+#include <sstream>
 #include <string>
 #include <iostream>
 #include "../Core/Scene.h"
@@ -228,12 +228,11 @@ void File::SaveMap(std::string mapName) {
 	rapidjson::PrettyWriter<rapidjson::StringBuffer> writer(strbuf);
 	document.Accept(writer);
 
-	std::string data = strbuf.GetString();
-	std::ofstream out("res/maps/" + mapName);
-	out << data;
-	out.close();
+	if (FS::WriteText("res://maps/" + mapName, strbuf.GetString())) {
+		std::cout << "[ERROR] Failed to save map 'res/maps/" << mapName << "'.\n";
+	}
 
-	std::cout << "Saved res/maps/" << mapName << "\n";
+	std::cout << "Saved res://maps/" << mapName << "\n";
 
 	Scene::RecreateDataStructures();
 }
