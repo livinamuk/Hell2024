@@ -82,36 +82,36 @@ void Scene::Update(float deltaTime) {
         gameObject.Update(deltaTime);
     }
 
-    //Flicker light 2
-    if (_lights.size() > 2) {
-        static float totalTime = 0;
-        float frequency = 20.f;
-        float amplitude = 0.5f;
-        totalTime += deltaTime;
-        Scene::_lights[2].strength = 1.0f + sin(totalTime * frequency) * amplitude;
-    }
+  //  //Flicker light 2
+  //  if (_lights.size() > 2) {
+  //      static float totalTime = 0;
+  //      float frequency = 20.f;
+  //      float amplitude = 0.5f;
+  //      totalTime += deltaTime;
+  //      Scene::_lights[2].strength = 1.0f + sin(totalTime * frequency) * amplitude;
+  //  }
 
-    // Move light 0 in a figure 8
-    static bool figure8Light = false;
-    if (Input::KeyPressed(HELL_KEY_P)) {
-        figure8Light = !figure8Light;
-		Audio::PlayAudio(AUDIO_SELECT, 1.0f);
-        _lights[0].isDirty = true;
-    }
+  //  // Move light 0 in a figure 8
+  //  static bool figure8Light = false;
+  //  if (Input::KeyPressed(HELL_KEY_P)) {
+  //      figure8Light = !figure8Light;
+		//Audio::PlayAudio(AUDIO_SELECT, 1.0f);
+  //      _lights[0].isDirty = true;
+  //  }
 
-    glm::vec3 lightPos = glm::vec3(2.8, 2.2, 3.6);
+  //  glm::vec3 lightPos = glm::vec3(2.8, 2.2, 3.6);
 
-    Light& light = _lights[0];
-    if (figure8Light) {
-        static float time = 0;
-        time += (deltaTime / 2);
-        glm::vec3 newPos = lightPos;
-        lightPos.x = lightPos.x + (cos(time)) * 2;
-        lightPos.y = lightPos.y;
-        lightPos.z = lightPos.z + (sin(2 * time) / 2) * 2;
-        light.isDirty = true;
-    }
-    light.position = lightPos;
+  //  Light& light = _lights[0];
+  //  if (figure8Light) {
+  //      static float time = 0;
+  //      time += (deltaTime / 2);
+  //      glm::vec3 newPos = lightPos;
+  //      lightPos.x = lightPos.x + (cos(time)) * 2;
+  //      lightPos.y = lightPos.y;
+  //      lightPos.z = lightPos.z + (sin(2 * time) / 2) * 2;
+  //      light.isDirty = true;
+  //  }
+  //  light.position = lightPos;
 
     for (Door& door : _doors) {
         door.Update(deltaTime);
@@ -261,8 +261,6 @@ void Scene::LoadHardCodedObjects() {
     _ceilings.emplace_back(0.1f, 3.1f, 3.7f, 4.1f, 2.5f, AssetManager::GetMaterialIndex("Ceiling"));
     _ceilings.emplace_back(4.7f, 3.1f, 6.1f, 4.1f, 2.5f, AssetManager::GetMaterialIndex("Ceiling"));
     _ceilings.emplace_back(6.2f, 0.1f, 11.3f, 3.0f, 2.5f, AssetManager::GetMaterialIndex("Ceiling"));
-
-    LoadLightSetup(2);
 
     /*
 	GameObject& shard = _gameObjects.emplace_back();
@@ -730,6 +728,9 @@ void Scene::CleanUp() {
 	for (Window& window : _windows) {
         window.CleanUp();
 	}
+    for (Light& light : _lights) {
+        light.CleanUp();
+    }
     _bulletCasings.clear();
     _decals.clear();
     _walls.clear();
@@ -877,41 +878,6 @@ void Scene::AddWall(Wall& wall) {
 
 void Scene::AddFloor(Floor& floor) {
     _floors.push_back(floor);
-}
-
-void Scene::LoadLightSetup(int index) {
-
-    if (index == 2) {
-        _lights.clear();
-        Light lightD;
-        lightD.position = glm::vec3(2.8, 2.2, 3.6);
-        lightD.strength = 0.3f;
-        lightD.radius = 7;
-        _lights.push_back(lightD);
-
-        Light lightB;
-        lightB.position = glm::vec3(2.05, 2, 9.0);
-        lightB.radius = 3.0f;
-        lightB.strength = 5.0f * 0.25f;;
-        lightB.radius = 4;
-        lightB.color = RED;
-        _lights.push_back(lightB);
-
-        Light lightA;
-        lightA.position = glm::vec3(11, 2.0, 6.0);
-        lightA.strength = 1.0f * 0.25f;
-        lightA.radius = 2;
-        lightA.color = LIGHT_BLUE;
-        _lights.push_back(lightA);
-
-        Light lightC;
-        lightC.position = glm::vec3(8.75, 2.2, 1.55);
-        lightC.strength = 0.3f;
-		lightC.radius = 6;
-        //lightC.color = RED;
-        //lightC.strength = 5.0f * 0.25f;;
-        _lights.push_back(lightC);
-    }
 }
 
 GameObject* Scene::GetGameObjectByName(std::string name) {

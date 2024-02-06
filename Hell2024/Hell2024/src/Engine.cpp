@@ -265,19 +265,16 @@ void Engine::LazyKeyPresses() {
 	}
     if (Input::KeyPressed(HELL_KEY_1)) {
         Renderer::WipeShadowMaps();
-        Scene::LoadLightSetup(1);
         Scene::CreatePointCloud();
         Audio::PlayAudio(AUDIO_SELECT, 1.00f);
     }
     if (Input::KeyPressed(HELL_KEY_2)) {
         Renderer::WipeShadowMaps();
-        Scene::LoadLightSetup(0);
         Scene::CreatePointCloud();
         Audio::PlayAudio(AUDIO_SELECT, 1.00f);
     }
     if (Input::KeyPressed(HELL_KEY_3)) {
         Renderer::WipeShadowMaps();
-        Scene::LoadLightSetup(2);
         Scene::CreatePointCloud();
         Audio::PlayAudio(AUDIO_SELECT, 1.00f);
     }

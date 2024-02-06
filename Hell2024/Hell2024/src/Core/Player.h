@@ -106,6 +106,8 @@ private:
 	float _currentViewHeight = _viewHeightStanding;
 	float _walkingSpeed = 4 * 1.25f;
 	float _crouchingSpeed = 2 * 1.25f;
+	float _PlayerTorgue = 0.0f;
+	float _PlayerSpeed = 0.0f;
 	glm::mat4 _viewMatrix = glm::mat4(1);
 	glm::mat4 _inverseViewMatrix = glm::mat4(1);
 	glm::vec3 _viewPos = glm::vec3(0);
@@ -113,10 +115,11 @@ private:
 	glm::vec3 _forward = glm::vec3(0);
 	glm::vec3 _up = glm::vec3(0);
 	glm::vec3 _right = glm::vec3(0);
-	float _breatheAmplitude = 0.00052f;
-	float _breatheFrequency = 8;
-	float _headBobAmplitude = 0.00505f;
-	float _headBobFrequency = 25.0f;
+	glm::vec3 displacement = glm::vec3(0);
+	float _breatheAmplitude = 0.00352f;
+	float _breatheFrequency = 1;
+	float _headBobAmplitude = 0.01505f;
+	float _headBobFrequency = 10;
 	bool _isMoving = false;
 	float _muzzleFlashTimer = -1;
 	float _muzzleFlashRotation = 0;

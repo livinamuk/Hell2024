@@ -145,12 +145,14 @@ void DebugMenu::UpdateLightObjectMenuPointers() {
 	_lightsMenu.AddItem("Y Position", MenuItemFlag::FLOAT, &Scene::_lights[_selectedLightIndex].position.y);
 	_lightsMenu.AddItem("Z Position", MenuItemFlag::FLOAT, &Scene::_lights[_selectedLightIndex].position.z);
 	_lightsMenu.AddItem("", MenuItemFlag::UNDEFINED, nullptr);
+	_lightsMenu.AddItem("Color R", MenuItemFlag::FLOAT, &Scene::_lights[_selectedLightIndex].color.x);
+	_lightsMenu.AddItem("Color G", MenuItemFlag::FLOAT, &Scene::_lights[_selectedLightIndex].color.y);
+	_lightsMenu.AddItem("Color B", MenuItemFlag::FLOAT, &Scene::_lights[_selectedLightIndex].color.z);
+	_lightsMenu.AddItem("", MenuItemFlag::UNDEFINED, nullptr);
 	_lightsMenu.AddItem("Strength", MenuItemFlag::FLOAT, &Scene::_lights[_selectedLightIndex].strength);
 	_lightsMenu.AddItem("Radius", MenuItemFlag::FLOAT, &Scene::_lights[_selectedLightIndex].radius);
-	/*
-	Doesn't display the right light index after removing
+	_lightsMenu.AddItem("", MenuItemFlag::UNDEFINED, nullptr);
 	_lightsMenu.AddItem("Remove", MenuItemFlag::REMOVE_LIGHT, nullptr);
-	*/
 }
 
 void DebugMenu::Update() {
@@ -264,6 +266,7 @@ void DebugMenu::PressedEnter() {
 		window.CleanUp();
 		Scene::_windows.erase(Scene::_windows.begin() + _selectedWindowIndex);
 		Scene::RecreateDataStructures();
+		DebugMenu::NavigateBack();
 	}
 	// Edit a game object
 	else if (flag == MenuItemFlag::EDIT_GAME_OBJECT) {
@@ -287,7 +290,18 @@ void DebugMenu::PressedEnter() {
 		*/
 	}
 	else if (flag == MenuItemFlag::ADD_LIGHT) {
-		std::cout << "you need to write this code mate\n";
+		Light& lightA = Scene::_lights.emplace_back();
+		lightA.color = glm::vec3(1, 1, 1);
+		lightA.position = glm::vec3(3.15f, 2.2f, 3.6f);
+		lightA.CreateLightSource();
+		_parentMenuItem = _currentMenuItem;
+		_currentMenuItem = &_lightsMenu;
+		_selectionIndex = 0;
+		_selectedLightIndex = Scene::_lights.size() - 1;
+		std::cout << Scene::_lights.size() << "\n";
+		_lightsMenu.name = "LIGHT " + std::to_string(_selectedLightIndex);
+		Audio::PlayAudio(AUDIO_SELECT, 1.00f);
+		std::cout << "You trying to add a new light with index was " << _selectedWindowIndex << "\n";
 	}
 	else if (flag == MenuItemFlag::EDIT_LIGHT) {
 		std::cout << "Selected EDIT_LIGHT and _selectetionIndex was " << _selectionIndex << "\n";
@@ -300,11 +314,10 @@ void DebugMenu::PressedEnter() {
 	}
 
 	else if (flag == MenuItemFlag::REMOVE_LIGHT) {
-		/*
-		Light& light = Scene::_lights[_selectedLightIndex];
+		Light& lightA = Scene::_lights[_selectedLightIndex];
 		Scene::_lights.erase(Scene::_lights.begin() + _selectedLightIndex);
-		Scene::UnloadLightSetup(_selectedLightIndex);
-		*/
+		Scene::RecreateDataStructures();
+		DebugMenu::NavigateBack();
 	}
 
 }
