@@ -515,7 +515,7 @@ void Player::Respawn(glm::vec3 position, glm::vec3 rotation) {
 	// Loadout on spawn
 	_weaponInventory[Weapon::KNIFE] = true;
 	_weaponInventory[Weapon::GLOCK] = true;
-	_weaponInventory[Weapon::SHOTGUN] = false;
+	_weaponInventory[Weapon::SHOTGUN] = true;
 	_weaponInventory[Weapon::AKS74U] = false;
 	_weaponInventory[Weapon::MP7] = false;
 

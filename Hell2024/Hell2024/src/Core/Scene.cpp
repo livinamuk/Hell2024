@@ -748,7 +748,7 @@ void Scene::CreatePlayers() {
     _players.push_back(Player(glm::vec3(4.0f, 0.1f, 3.6f), glm::vec3(-0.17, 1.54f, 0)));
 	if (EngineState::GetPlayerCount() == 2) {
 		//_players.push_back(Player(glm::vec3(9.39f, 0.1f, 1.6f), glm::vec3(-0.25, 1.53f, 0)));
-		_players.push_back(Player(glm::vec3(2.1f, 0.1f, 9.6f), glm::vec3(-0.25, 0.0f, 0.0f)));
+		_players.push_back(Player(glm::vec3(2.1f, 0.1f, 9.5f), glm::vec3(-0.25, 0.0f, 0.0f)));
         _players[1]._ignoreControl = true;
     }
 }
