@@ -218,8 +218,8 @@ void Player::Update(float deltaTime) {
 	_currentViewHeight = Util::FInterpTo(_currentViewHeight, viewHeightTarget, deltaTime, _crouchDownSpeed);
 
 	// Breathe bob
-	static float totalTime;
-	totalTime += 0.0075f;
+	static float totalTime = 0.0f;
+	totalTime += deltaTime * 0.5f;
 	Transform breatheTransform;
 	breatheTransform.position.x = cos(totalTime * _breatheFrequency) * _breatheAmplitude * 1;
 	breatheTransform.position.y = sin(totalTime * _breatheFrequency) * _breatheAmplitude * 2;
@@ -515,7 +515,7 @@ void Player::Respawn(glm::vec3 position, glm::vec3 rotation) {
 	// Loadout on spawn
 	_weaponInventory[Weapon::KNIFE] = true;
 	_weaponInventory[Weapon::GLOCK] = true;
-	_weaponInventory[Weapon::SHOTGUN] = true;
+	_weaponInventory[Weapon::SHOTGUN] = false;
 	_weaponInventory[Weapon::AKS74U] = false;
 	_weaponInventory[Weapon::MP7] = false;
 

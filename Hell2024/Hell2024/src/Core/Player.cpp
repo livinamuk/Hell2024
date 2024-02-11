@@ -219,7 +219,7 @@ void Player::Update(float deltaTime) {
 
 	// Breathe bob
 	static float totalTime;
-	totalTime += 0.0075f;
+    totalTime += deltaTime / 2.25f;// 0.0075f;
 	Transform breatheTransform;
 	breatheTransform.position.x = cos(totalTime * _breatheFrequency) * _breatheAmplitude * 1;
 	breatheTransform.position.y = sin(totalTime * _breatheFrequency) * _breatheAmplitude * 2;
