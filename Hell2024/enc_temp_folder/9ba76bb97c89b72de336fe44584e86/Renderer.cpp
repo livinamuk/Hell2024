@@ -2214,7 +2214,7 @@ void DrawAnimatedScene(Shader& shader, Player* player) {
     // Render other players
     for (Player& otherPlayer : Scene::_players) {
         if (&otherPlayer != player) {
-            DrawAnimatedObject(shader, &otherPlayer._characterModel);
+            //DrawAnimatedObject(shader, &otherPlayer._characterModel);
         }
     }
 
@@ -2234,7 +2234,7 @@ void DrawAnimatedScene(Shader& shader, Player* player) {
         glEnable(GL_CULL_FACE);
     }
     // Debug: draw first person weapon for other players
-    /*for (Player& otherPlayer : Scene::_players) {
+    for (Player& otherPlayer : Scene::_players) {
         if (&otherPlayer != player) {
             glDisable(GL_CULL_FACE);
             shader.SetFloat("projectionMatrixIndex", 1.0f);
@@ -2243,7 +2243,7 @@ void DrawAnimatedScene(Shader& shader, Player* player) {
             shader.SetFloat("projectionMatrixIndex", 0.0f);
             glEnable(GL_CULL_FACE);
         }
-    }*/
+    }
     shader.SetBool("isAnimated", false);
 }
 
