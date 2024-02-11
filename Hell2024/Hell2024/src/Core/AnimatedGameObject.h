@@ -1,9 +1,9 @@
 #pragma once
 #include "Animation/SkinnedModel.h"
 
-class AnimatedGameObject {
+struct AnimatedGameObject {
 
-public:
+    enum AnimationMode { BINDPOSE, ANIMATION, RAGDOLL };
 
 	void Update(float deltaTime);
 	void SetName(std::string name);
@@ -16,7 +16,8 @@ public:
 	void ToggleAnimationPause();
 	void PlayAnimation(std::string animationName, float speed);
 	void PlayAndLoopAnimation(std::string animationName, float speed);
-	void PauseAnimation();
+    void PauseAnimation();
+    void SetAnimatedTransformsToBindPose();
 	void SetMeshMaterial(std::string meshName, std::string materialName);
 	void SetMeshMaterialByIndex(int meshIndex, std::string materialName);
 	void SetMaterial(std::string materialName);
@@ -33,6 +34,7 @@ public:
 	float _currentAnimationTime = 0;
 	glm::mat4 _cameraMatrix = glm::mat4(1);
 	std::vector<int> _materialIndices;
+    AnimationMode _animationMode = BINDPOSE;
 
 	// Hacky shit
 	glm::vec3 GetGlockBarrelPostion();

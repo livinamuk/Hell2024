@@ -70,5 +70,6 @@ namespace DebugMenu {
 	void UpdateWindowMenuPointers();
 	void UpdateGameObjectMenuPointers(); 
 	void UpdateLightObjectMenuPointers();
+    int GetSelectedLightIndex();
 };
 

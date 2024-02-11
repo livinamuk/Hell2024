@@ -515,7 +515,7 @@ void Player::Respawn(glm::vec3 position, glm::vec3 rotation) {
 	// Loadout on spawn
 	_weaponInventory[Weapon::KNIFE] = true;
 	_weaponInventory[Weapon::GLOCK] = true;
-	_weaponInventory[Weapon::SHOTGUN] = false;
+	_weaponInventory[Weapon::SHOTGUN] = true;
 	_weaponInventory[Weapon::AKS74U] = false;
 	_weaponInventory[Weapon::MP7] = false;
 
@@ -627,17 +627,20 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
 			_firstPersonWeapon.SetMeshMaterialByIndex(8, "AKS74U_1");  // Bolt_low. Possibly wrong
 			_firstPersonWeapon.SetMeshMaterialByIndex(9, "AKS74U_3"); // possibly incorrect.
 
-		}
-		else if (_currentWeaponIndex == Weapon::SHOTGUN) {
-			_firstPersonWeapon.SetName("Shotgun");
-			_firstPersonWeapon.SetSkinnedModel("Shotgun");
-			_firstPersonWeapon.SetMeshMaterial("Shotgun Mesh", "Shotgun");
-			_firstPersonWeapon.SetMeshMaterial("shotgunshells", "Shell");
-		}		
-		_firstPersonWeapon.SetMeshMaterial("manniquen1_2.001", "Hands");
-		_firstPersonWeapon.SetMeshMaterial("manniquen1_2", "Hands");
-		_firstPersonWeapon.SetMeshMaterial("SK_FPSArms_Female.001", "FemaleArms");
-		_firstPersonWeapon.SetMeshMaterial("SK_FPSArms_Female", "FemaleArms");
+        }
+        else if (_currentWeaponIndex == Weapon::SHOTGUN) {
+            // TODO    
+        }
+        else if (_currentWeaponIndex == Weapon::MP7) {
+           // _firstPersonWeapon.SetName("MP7");
+           // _firstPersonWeapon.SetSkinnedModel("MP7_test");
+           // _firstPersonWeapon.SetMaterial("Glock"); // fix meeeee. remove meeee
+           // _firstPersonWeapon.PlayAndLoopAnimation("MP7_ReloadTest", 1.0f);
+        }
+        _firstPersonWeapon.SetMeshMaterial("manniquen1_2.001", "Hands");
+        _firstPersonWeapon.SetMeshMaterial("manniquen1_2", "Hands");
+        _firstPersonWeapon.SetMeshMaterial("SK_FPSArms_Female.001", "FemaleArms");
+        _firstPersonWeapon.SetMeshMaterial("SK_FPSArms_Female", "FemaleArms");
 	}
 	_firstPersonWeapon.SetScale(0.001f);
 	_firstPersonWeapon.SetRotationX(Player::GetViewRotation().x);
@@ -858,55 +861,7 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
 	/////////////////
 	//   Shotgun   //
 
-	if (_currentWeaponIndex == Weapon::SHOTGUN) {
-		// Fire
-		if (!_ignoreControl && Input::LeftMousePressed()) {
-			if (_weaponAction == DRAWING ||
-				_weaponAction == IDLE ||
-				_weaponAction == FIRE && _firstPersonWeapon.AnimationIsPastPercentage(25.0f) ||
-				_weaponAction == RELOAD && _firstPersonWeapon.AnimationIsPastPercentage(80.0f)) {
-
-				_weaponAction = FIRE;
-				int random_number = std::rand() % 3 + 1;
-				std::string aninName = "Shotgun_Fire" + std::to_string(random_number);
-				_firstPersonWeapon.PlayAnimation(aninName, 1.0f);
-				Audio::PlayAudio("Shotgun_Fire.wav", 1.0f);
-				SpawnMuzzleFlash();
-			}
-		}
-		// Reload
-		if (!_ignoreControl && Input::KeyPressed(HELL_KEY_R) && false) {
-			_weaponAction = RELOAD;
-			_firstPersonWeapon.PlayAnimation("AKS74U_Reload", 1.1f);
-			Audio::PlayAudio("AK47_Reload.wav", 1.0f);
-		}
-
-		// Return to idle
-		if (_firstPersonWeapon.IsAnimationComplete() && _weaponAction == RELOAD) {
-			_weaponAction = IDLE;
-		}
-		if (_weaponAction == FIRE && _firstPersonWeapon.IsAnimationComplete()) {
-			_weaponAction = IDLE;
-		}
-		//Idle
-		if (_weaponAction == IDLE) {
-			if (Player::IsMoving()) {
-				_firstPersonWeapon.PlayAndLoopAnimation("Shotgun_Walk", 1.0f);
-			}
-			else {
-				_firstPersonWeapon.PlayAndLoopAnimation("Shotgun_Idle", 1.0f);
-			}
-		}
-		// Draw
-		if (_weaponAction == DRAW_BEGIN) {
-			_firstPersonWeapon.PlayAnimation("Shotgun_Draw", 1.0f);
-			_weaponAction = DRAWING;
-		}
-		// Drawing
-		if (_weaponAction == DRAWING && _firstPersonWeapon.IsAnimationComplete()) {
-			_weaponAction = IDLE;
-		}
-	}
+	// To do
 	
 	// Update animated bone transforms for the first person weapon model
 	_firstPersonWeapon.Update(deltaTime);

@@ -364,8 +364,7 @@ void main() {
 
     // Direct lighting
     vec3 directLighting = vec3(0);
-   // for(int i = 0; i < lightsCount; i++) {
-    for(int i = 0; i < 1; i++) {
+    for(int i = 0; i < lightsCount; i++) {
         float shadow = ShadowCalculation(shadowMap[i], lights[i].position, WorldPos, viewPos, normal);
         vec3 ligthting = GetDirectLighting(lights[i].position, lights[i].color, lights[i].radius, lights[i].strength, normal, WorldPos, baseColor, roughness, metallic);
         directLighting += shadow * ligthting;

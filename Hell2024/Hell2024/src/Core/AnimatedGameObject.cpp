@@ -8,9 +8,20 @@
 
 void AnimatedGameObject::Update(float deltaTime) {
 
-    if (_currentAnimation) {
-        UpdateAnimation(deltaTime);
-        CalculateBoneTransforms();
+    if (_animationMode == ANIMATION) {
+        if (_currentAnimation) {
+            UpdateAnimation(deltaTime);
+            CalculateBoneTransforms();
+        }
+    }
+    else if (_animationMode == BINDPOSE && _skinnedModel) {
+        _animatedTransforms.Resize(_skinnedModel->m_NumBones);
+        for (int i = 0; i < _animatedTransforms.local.size(); i++) {
+            _animatedTransforms.local[i] = glm::mat4(1);
+        }
+        // TODO: update worldspace transforms also
+        // TODO: update worldspace transforms also
+        // TODO: update worldspace transforms also
     }
 }
 
@@ -41,6 +52,7 @@ void AnimatedGameObject::PlayAndLoopAnimation(std::string animationName, float s
             // Reset flags
             _loopAnimation = true;
             _animationIsComplete = false;
+            _animationMode = ANIMATION;
 
             // Update the speed
             _animationSpeed = speed;
@@ -97,8 +109,11 @@ glm::mat4 AnimatedGameObject::GetBoneWorldMatrixFromBoneName(std::string name) {
     return glm::mat4();
 }
 
-void AnimatedGameObject::PlayAnimation(std::string animationName, float speed) {
+void AnimatedGameObject::SetAnimatedTransformsToBindPose() {
+    _animationMode = BINDPOSE;
+}
 
+void AnimatedGameObject::PlayAnimation(std::string animationName, float speed) {    
     // Find the matching animation name if it exists
     for (int i = 0; i < _skinnedModel->m_animations.size(); i++) {
         if (_skinnedModel->m_animations[i]->_filename == animationName) {       
@@ -107,7 +122,8 @@ void AnimatedGameObject::PlayAnimation(std::string animationName, float speed) {
             _loopAnimation = false;
             _animationSpeed = speed;
             _animationPaused = false;
-            _animationIsComplete = false;
+            _animationIsComplete = false; 
+            _animationMode = ANIMATION;
             return;
         }
     }
@@ -119,7 +135,7 @@ void AnimatedGameObject::UpdateAnimation(float deltaTime) {
 
     float duration = _currentAnimation->m_duration / _currentAnimation->m_ticksPerSecond;
 
-    // Increase the animtaion time
+    // Increase the animation time
     if (!_animationPaused) {
         _currentAnimationTime += deltaTime * _animationSpeed;
     }
@@ -146,7 +162,8 @@ glm::mat4 AnimatedGameObject::GetModelMatrix() {
     
     if (_skinnedModel->_filename == "AKS74U" 
         || _skinnedModel->_filename == "Glock"
-        || _skinnedModel->_filename == "Shotgun") {
+       // || _skinnedModel->_filename == "Shotgun"
+        ) {
         correction.rotation.y = HELL_PI;
     }
 
@@ -172,6 +189,11 @@ void AnimatedGameObject::SetSkinnedModel(std::string name) {
     if (skinnedModel) {
         _skinnedModel = skinnedModel;
         _materialIndices.resize(skinnedModel->m_meshEntries.size());
+
+        /*std::cout << "SetSkinnedModel() " << name << "\n";
+        for (int i = 0; i < skinnedModel->m_meshEntries.size(); i++) {
+            std::cout << "-" << skinnedModel->m_meshEntries[i].Name << "\n";
+        }*/
     }
     else {
         std::cout << "Could not SetSkinnedModel(name) with name: \"" << name << "\", it does not exist\n";

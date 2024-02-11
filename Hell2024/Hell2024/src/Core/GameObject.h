@@ -63,6 +63,8 @@ public:
 	void UpdateEditorPhysicsObject();
 
 	glm::vec3 GetWorldSpaceOABBCenter();
+    void DisableRaycasting();
+    void EnableRaycasting();
 	//void SetModelScaleWhenUsingPhysXTransform(glm::vec3 scale);
 
 	glm::vec3 _scaleWhenUsingPhysXTransform = glm::vec3(1);

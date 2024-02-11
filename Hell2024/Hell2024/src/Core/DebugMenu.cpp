@@ -13,7 +13,6 @@
 
 namespace DebugMenu {
 
-
 	MenuItem _menu;
 	bool _isOpen = false;
 	int _selectionIndex = 0;
@@ -134,8 +133,8 @@ void DebugMenu::UpdateGameObjectMenuPointers() {
 	_gameObjectsMenu.AddItem("", MenuItemFlag::UNDEFINED, nullptr);
 	_gameObjectsMenu.AddItem("X Rotation", MenuItemFlag::FLOAT, &Scene::_gameObjects[_selectedGameObjectIndex]._transform.rotation.x);
 	_gameObjectsMenu.AddItem("Y Rotation", MenuItemFlag::FLOAT, &Scene::_gameObjects[_selectedGameObjectIndex]._transform.rotation.y);
-	_gameObjectsMenu.AddItem("Z Rotation", MenuItemFlag::FLOAT, &Scene::_gameObjects[_selectedGameObjectIndex]._transform.rotation.z);
-	_gameObjectsMenu.AddItem("", MenuItemFlag::UNDEFINED, nullptr);
+    _gameObjectsMenu.AddItem("Z Rotation", MenuItemFlag::FLOAT, &Scene::_gameObjects[_selectedGameObjectIndex]._transform.rotation.z);
+    _gameObjectsMenu.AddItem("", MenuItemFlag::UNDEFINED, nullptr);
 	_gameObjectsMenu.AddItem("Remove", MenuItemFlag::REMOVE_GAME_OBJECT, nullptr);
 }
 
@@ -146,11 +145,17 @@ void DebugMenu::UpdateLightObjectMenuPointers() {
 	_lightsMenu.AddItem("Z Position", MenuItemFlag::FLOAT, &Scene::_lights[_selectedLightIndex].position.z);
 	_lightsMenu.AddItem("", MenuItemFlag::UNDEFINED, nullptr);
 	_lightsMenu.AddItem("Strength", MenuItemFlag::FLOAT, &Scene::_lights[_selectedLightIndex].strength);
-	_lightsMenu.AddItem("Radius", MenuItemFlag::FLOAT, &Scene::_lights[_selectedLightIndex].radius);
+    _lightsMenu.AddItem("Radius", MenuItemFlag::FLOAT, &Scene::_lights[_selectedLightIndex].radius);
+    _lightsMenu.AddItem("", MenuItemFlag::UNDEFINED, nullptr);
+    _lightsMenu.AddItem("Type", MenuItemFlag::INT, &Scene::_lights[_selectedLightIndex].type);
 	/*
 	Doesn't display the right light index after removing
 	_lightsMenu.AddItem("Remove", MenuItemFlag::REMOVE_LIGHT, nullptr);
 	*/
+}
+
+int DebugMenu::GetSelectedLightIndex() {
+    return _selectedLightIndex;
 }
 
 void DebugMenu::Update() {
@@ -370,7 +375,14 @@ void DebugMenu::IncreaseValue() {
 			*(float*)ptr += 0.1f;
 		}
 		Scene::RecreateDataStructures();
-	}
+    }
+    if (_currentMenuItem == &_lightsMenu) {
+        Light& light = Scene::_lights[_selectedLightIndex];
+        if (flag == MenuItemFlag::INT) {
+            *(int*)ptr += 1;
+        }
+        Scene::RecreateDataStructures();
+    }
 }
 
 void DebugMenu::DecreaseValue() {
@@ -393,14 +405,21 @@ void DebugMenu::DecreaseValue() {
 			*(float*)ptr -= 0.1f;
 		}
 		Scene::RecreateDataStructures();
-	}	
-	if (_currentMenuItem == &_lightsMenu) {
-		Light& light = Scene::_lights[_selectedLightIndex];
-		if (flag == MenuItemFlag::FLOAT) {
-			*(float*)ptr -= 0.1f;
-		}
-		Scene::RecreateDataStructures();
-	}
+    }
+    if (_currentMenuItem == &_lightsMenu) {
+        Light& light = Scene::_lights[_selectedLightIndex];
+        if (flag == MenuItemFlag::FLOAT) {
+            *(float*)ptr -= 0.1f;
+        }
+        Scene::RecreateDataStructures();
+    }
+    if (_currentMenuItem == &_lightsMenu) {
+        Light& light = Scene::_lights[_selectedLightIndex];
+        if (flag == MenuItemFlag::INT) {
+            *(int*)ptr -= 1;
+        }
+        Scene::RecreateDataStructures();
+    }
 }
 
 void DebugMenu::ResetValue() {
@@ -455,7 +474,11 @@ const std::string DebugMenu::GetTextLeft() {
 }
 
 std::string FloatToString(float value) {
-	return std::format("{:.4f}", value);
+    return std::format("{:.4f}", value);
+}
+
+std::string IntToString(int value) {
+    return std::to_string(value);
 }
 
 const std::string DebugMenu::GetTextRight() {
@@ -481,10 +504,13 @@ const std::string DebugMenu::GetTextRight() {
 
 		if (flag == MenuItemFlag::UNDEFINED) {
 			result += "\n";
-		}
-		else if (flag == MenuItemFlag::FLOAT) {
-			result += leftBracket + FloatToString(*(float*)ptr) + rightBracket + "\n";
-		}
+        }
+        else if (flag == MenuItemFlag::FLOAT) {
+            result += leftBracket + FloatToString(*(float*)ptr) + rightBracket + "\n";
+        }
+        else if (flag == MenuItemFlag::INT) {
+            result += leftBracket + IntToString(*(int*)ptr) + rightBracket + "\n";
+        }
 		else if (flag == MenuItemFlag::STRING) {
 			result += leftBracket + *(std::string*)ptr + rightBracket + "\n";
 		}

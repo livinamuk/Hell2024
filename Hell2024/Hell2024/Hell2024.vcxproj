@@ -146,6 +146,7 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <ClCompile Include="src\Core\GameObject.cpp" />
     <ClCompile Include="src\Core\GL.cpp" />
     <ClCompile Include="src\Core\Input.cpp" />
+    <ClCompile Include="src\Core\Light.cpp" />
     <ClCompile Include="src\Core\Physics.cpp" />
     <ClCompile Include="src\Core\Player.cpp" />
     <ClCompile Include="src\Core\Scene.cpp" />
@@ -168,6 +169,7 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <ClCompile Include="src\Renderer\Texture.cpp" />
     <ClCompile Include="src\Renderer\Texture3D.cpp" />
     <ClCompile Include="vendor\glad\src\glad.c" />
+    <ClCompile Include="vendor\im3d\im3d.cpp" />
     <ClCompile Include="vendor\stb_image\stb_image.cpp" />
     <ClCompile Include="vendor\tracy\public\TracyClient.cpp" />
   </ItemGroup>
@@ -185,6 +187,8 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <ClInclude Include="src\Core\FbxImporter.h" />
     <ClInclude Include="src\Core\File.h" />
     <ClInclude Include="src\Core\GameObject.h" />
+    <ClInclude Include="src\Core\Gizmo.hpp" />
+    <ClInclude Include="src\Core\Light.h" />
     <ClInclude Include="src\EngineState.hpp" />
     <ClInclude Include="src\Core\GL.h" />
     <ClInclude Include="src\Core\Input.h" />

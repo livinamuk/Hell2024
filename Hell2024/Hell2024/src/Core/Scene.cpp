@@ -92,6 +92,7 @@ void Scene::Update(float deltaTime) {
     }
 
     // Move light 0 in a figure 8
+    /*
     static bool figure8Light = false;
     if (Input::KeyPressed(HELL_KEY_P)) {
         figure8Light = !figure8Light;
@@ -112,6 +113,7 @@ void Scene::Update(float deltaTime) {
         light.isDirty = true;
     }
     light.position = lightPos;
+    */
 
     for (Door& door : _doors) {
         door.Update(deltaTime);
@@ -262,7 +264,7 @@ void Scene::LoadHardCodedObjects() {
     _ceilings.emplace_back(4.7f, 3.1f, 6.1f, 4.1f, 2.5f, AssetManager::GetMaterialIndex("Ceiling"));
     _ceilings.emplace_back(6.2f, 0.1f, 11.3f, 3.0f, 2.5f, AssetManager::GetMaterialIndex("Ceiling"));
 
-    LoadLightSetup(2);
+   // LoadLightSetup(2);
 
     /*
 	GameObject& shard = _gameObjects.emplace_back();
@@ -590,6 +592,44 @@ void Scene::LoadHardCodedObjects() {
 
     }
 
+   /* auto glock = GetAnimatedGameObjectByName("Glock");
+    glock->SetScale(0.01f);
+    glock->SetScale(0.00f);
+    glock->SetPosition(glm::vec3(1.3f, 1.1, 3.5f));
+
+    auto mp7 = GetAnimatedGameObjectByName("MP7_test");
+    mp7->SetScale(0.01f);
+    mp7->SetScale(0.00f);
+    mp7->SetPosition(glm::vec3(2.3f, 1.1, 3.5f));
+    */
+
+    /*AnimatedGameObject& mp7 = _animatedGameObjects.emplace_back(AnimatedGameObject());
+    mp7.SetName("MP7");
+    mp7.SetSkinnedModel("MP7_test");
+    mp7.SetAnimatedTransformsToBindPose();
+    mp7.PlayAndLoopAnimation("MP7_ReloadTest", 1.0f);
+    mp7.SetMaterial("Glock");
+    mp7.SetMeshMaterial("manniquen1_2.001", "Hands");
+    mp7.SetMeshMaterial("manniquen1_2", "Hands");
+    mp7.SetMeshMaterial("SK_FPSArms_Female.001", "FemaleArms");
+    mp7.SetMeshMaterial("SK_FPSArms_Female", "FemaleArms");
+    mp7.SetScale(0.01f);
+    mp7.SetPosition(glm::vec3(2.5f, 1.5f, 4));
+    mp7.SetRotationY(HELL_PI * 0.5f);*/
+
+    /*AnimatedGameObject& glock = _animatedGameObjects.emplace_back(AnimatedGameObject());
+    glock.SetName("Glock");
+    glock.SetSkinnedModel("Glock");
+    glock.SetAnimatedTransformsToBindPose();
+    glock.PlayAndLoopAnimation("Glock_Idle", 1.0f);
+    glock.SetMaterial("Glock");
+    glock.SetMeshMaterial("manniquen1_2.001", "Hands");
+    glock.SetMeshMaterial("manniquen1_2", "Hands");
+    glock.SetMeshMaterial("SK_FPSArms_Female.001", "FemaleArms");
+    glock.SetMeshMaterial("SK_FPSArms_Female", "FemaleArms");
+    glock.SetScale(0.01f);
+    glock.SetPosition(glm::vec3(2.5f, 1.5f, 3));
+    glock.SetRotationY(HELL_PI * 0.5f);*/
 
 
     /* THIS IS THE AK U WERE TESTING WITH ON STREAM WHEN DOING THE STILL UNFINISHED AK MAG DROP THING
@@ -726,10 +766,10 @@ void Scene::CleanUp() {
     }
     for (GameObject& gameObject : _gameObjects) {
         gameObject.CleanUp();
-	}
-	for (Window& window : _windows) {
+    }
+    for (Window& window : _windows) {
         window.CleanUp();
-	}
+    }
     _bulletCasings.clear();
     _decals.clear();
     _walls.clear();
@@ -738,13 +778,18 @@ void Scene::CleanUp() {
 	_doors.clear();
     _windows.clear();
 	_gameObjects.clear();
-	_animatedGameObjects.clear();
-	_pickUps.clear();	
+    _animatedGameObjects.clear();
+    _pickUps.clear();
+    _lights.clear();
 
 	if (_sceneTriangleMesh) {
 		_sceneTriangleMesh->release();
 		_sceneShape->release();
     }
+}
+
+void Scene::AddLight(Light& light) {
+    _lights.push_back(light);
 }
 
 void Scene::AddDoor(Door& door) {
@@ -983,8 +1028,8 @@ void Scene::RecreateAllPhysicsObjects() {
     }
     for (Ceiling& ceiling : _ceilings) {
         for (Vertex& vertex : ceiling.vertices) {
-           // vertices.push_back(PxVec3(vertex.position.x, vertex.position.y, vertex.position.z));
-           // indices.push_back(indices.size());
+            vertices.push_back(PxVec3(vertex.position.x, vertex.position.y, vertex.position.z));
+            indices.push_back(indices.size());
         }
     }
 

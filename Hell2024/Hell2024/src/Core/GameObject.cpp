@@ -135,12 +135,16 @@ void GameObject::Interact() {
 void GameObject::Update(float deltaTime) {
 	
 	if (_pickupType != PickUpType::NONE) {
+
+        // Decrement pickup cooldown timer
 		if (_pickupCoolDownTime > 0) {
 			_pickupCoolDownTime -= deltaTime;
 		}
+        // Respawn item when timer is zero
 		if (_pickupCoolDownTime <= 0) {
 			_pickupCoolDownTime = 0;
 			_collected = false;
+            EnableRaycasting();
 		}
 	}
 
@@ -667,6 +671,7 @@ void GameObject::PickUp() {
 	_pickupCoolDownTime = Config::item_respawn_time;
 	PxMat44 matrix = Util::GlmMat4ToPxMat44(_transform.to_mat4());
 	_collisionBody->setGlobalPose(PxTransform(matrix));
+    DisableRaycasting();
 }
 
 void GameObject::SetPickUpType(PickUpType pickupType) {
@@ -675,4 +680,16 @@ void GameObject::SetPickUpType(PickUpType pickupType) {
 
 bool GameObject::IsCollectable() {
 	return (_pickupType != PickUpType::NONE);
+}
+
+void GameObject::DisableRaycasting() {
+    auto filterData = _raycastShape->getQueryFilterData();
+    filterData.word0 = RAYCAST_DISABLED;
+    _raycastShape->setQueryFilterData(filterData);
+}
+
+void GameObject::EnableRaycasting() {
+    auto filterData = _raycastShape->getQueryFilterData();
+    filterData.word0 = RAYCAST_ENABLED;
+    _raycastShape->setQueryFilterData(filterData);
 }

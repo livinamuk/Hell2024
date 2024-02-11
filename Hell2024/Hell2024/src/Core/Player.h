@@ -30,6 +30,9 @@ public:
 	//RayCastResult _cameraRayData;
 	AnimatedGameObject _characterModel;
 	PxController* _characterController = NULL;
+
+	PxShape* _itemPickupOverlapShape = NULL;
+	//PxRigidStatic* _itemPickupOverlapDebugBody = NULL;
 	float _yVelocity = 0;
 
 	Inventory _inventory;
@@ -70,6 +73,8 @@ public:
 	//void WipeYVelocityToZeroIfHeadHitCeiling();
 	PxShape* GetCharacterControllerShape();
 	PxRigidDynamic* GetCharacterControllerActor();
+	void CreateItemPickupOverlapShape();
+	PxShape* GetItemPickupOverlapShape();
 
 	void ShowPickUpText(std::string text);
 	void PickUpAKS74U();

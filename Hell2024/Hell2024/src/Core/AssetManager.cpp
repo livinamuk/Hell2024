@@ -242,7 +242,7 @@ void AssetManager::LoadEverythingElse() {
 		std::string path;
 		std::vector<std::string> animations;
 	};
-
+    
 	std::vector<skinned_model_path> model_paths{
 		skinned_model_path{ "models/UniSexGuy2.fbx", std::vector<std::string>{
 			"animations/Character_Glock_Walk.fbx",
@@ -261,18 +261,29 @@ void AssetManager::LoadEverythingElse() {
 				"animations/AKS74U_Reload.fbx",
 				"animations/AKS74U_ReloadEmpty.fbx",
 				"animations/AKS74U_Draw.fbx",
-			} },
-			skinned_model_path{ "models/Glock.fbx", std::vector<std::string>{
-				"animations/Glock_Spawn.fbx",
-				"animations/Glock_Fire1.fbx",
-				"animations/Glock_Fire2.fbx",
-				"animations/Glock_Fire3.fbx",
-				"animations/Glock_Idle.fbx",
-				"animations/Glock_Walk.fbx",
-				"animations/Glock_Reload.fbx",
-				"animations/Glock_ReloadEmpty.fbx",
-				"animations/Glock_Draw.fbx",
-			} },
+            } },
+            skinned_model_path{ "models/Glock.fbx", std::vector<std::string>{
+                "animations/Glock_Spawn.fbx",
+                "animations/Glock_Fire1.fbx",
+                "animations/Glock_Fire2.fbx",
+                "animations/Glock_Fire3.fbx",
+                "animations/Glock_Idle.fbx",
+                "animations/Glock_Walk.fbx",
+                "animations/Glock_Reload.fbx",
+                "animations/Glock_ReloadEmpty.fbx",
+                "animations/Glock_Draw.fbx",
+            } },
+            skinned_model_path{ "models/MP7_test.fbx", std::vector<std::string>{
+                "animations/MP7_ReloadTest.fbx",
+                //"animations/Glock_Fire1.fbx",
+                //"animations/Glock_Fire2.fbx",
+                //"animations/Glock_Fire3.fbx",
+                //"animations/Glock_Idle.fbx",
+                //"animations/Glock_Walk.fbx",
+                //"animations/Glock_Reload.fbx",
+                //"animations/Glock_ReloadEmpty.fbx",
+                //"animations/Glock_Draw.fbx",
+            } },
 			skinned_model_path{ "models/Knife.fbx", std::vector<std::string>{
 				"animations/Knife_Idle.fbx",
 				"animations/Knife_Walk.fbx",
@@ -280,15 +291,8 @@ void AssetManager::LoadEverythingElse() {
 				"animations/Knife_Swing1.fbx",
 				"animations/Knife_Swing2.fbx",
 				"animations/Knife_Swing3.fbx",
-			} },
-			/*skinned_model_path{"models/Shotgun.fbx", std::vector<std::string>{
-				"animations/Shotgun_Idle.fbx",
-				"animations/Shotgun_Walk.fbx",
-				"animations/Shotgun_Draw.fbx",
-				"animations/Shotgun_Fire1.fbx",
-				"animations/Shotgun_Fire2.fbx",
-				"animations/Shotgun_Fire3.fbx",
-			} }*/
+			} }
+			
 	};
 
 	animations_futures.reserve(model_paths.size());

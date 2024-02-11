@@ -55,6 +55,19 @@ void File::LoadMap(std::string mapName) {
 		fclose(filepoint);
 	}
 
+    if (document.HasMember("Lights")) {
+        const rapidjson::Value& objects = document["Lights"];
+        for (rapidjson::SizeType i = 0; i < objects.Size(); i++) {
+            glm::vec3 position = ReadVec3(objects[i], "position");
+            glm::vec3 color = ReadVec3(objects[i], "color");
+            float radius = ReadFloat(objects[i], "radius");
+            float strength = ReadFloat(objects[i], "strength");
+            int type = ReadInt(objects[i], "type");
+            Light light(position, color, radius, strength, type);
+            Scene::AddLight(light);
+        }
+    }
+
 	if (document.HasMember("Walls")) {
 		const rapidjson::Value& objects = document["Walls"];
 		for (rapidjson::SizeType i = 0; i < objects.Size(); i++) {
@@ -149,9 +162,20 @@ void File::SaveMap(std::string mapName) {
 	rapidjson::Value walls(rapidjson::kArrayType);
 	rapidjson::Value doors(rapidjson::kArrayType);
 	rapidjson::Value windows(rapidjson::kArrayType);
-	rapidjson::Value floors(rapidjson::kArrayType);
-	rapidjson::Value gameObjects(rapidjson::kArrayType);
+    rapidjson::Value floors(rapidjson::kArrayType);
+    rapidjson::Value gameObjects(rapidjson::kArrayType);
+    rapidjson::Value lights(rapidjson::kArrayType);
 	document.SetObject();
+
+    for (Light & light : Scene::_lights) {
+        rapidjson::Value object(rapidjson::kObjectType);
+        SaveVec3(&object, "position", light.position, allocator);
+        SaveVec3(&object, "color", light.color, allocator);
+        SaveFloat(&object, "radius", light.radius, allocator);
+        SaveFloat(&object, "strength", light.strength, allocator);
+        SaveInt(&object, "type", light.type, allocator);
+        lights.PushBack(object, allocator);
+    }
 
 	for (GameObject& gameObject : Scene::_gameObjects) {
 		rapidjson::Value object(rapidjson::kObjectType);
@@ -221,8 +245,9 @@ void File::SaveMap(std::string mapName) {
 	document.AddMember("Walls", walls, allocator);
 	document.AddMember("Floors", floors, allocator);
 	document.AddMember("Doors", doors, allocator);
-	document.AddMember("Windows", windows, allocator);
-	document.AddMember("GameObjects", gameObjects, allocator);
+    document.AddMember("Windows", windows, allocator);
+    document.AddMember("GameObjects", gameObjects, allocator);
+    document.AddMember("Lights", lights, allocator);
 
 	rapidjson::StringBuffer strbuf;
 	rapidjson::PrettyWriter<rapidjson::StringBuffer> writer(strbuf);

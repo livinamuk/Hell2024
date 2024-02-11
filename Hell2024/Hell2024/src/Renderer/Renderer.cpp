@@ -34,6 +34,8 @@
 #include "../Core/DebugMenu.h"
 #include "../EngineState.hpp"
 
+#include "../Core/Gizmo.hpp"
+
 std::vector<glm::vec3> debugPoints;
 
 struct RenderTarget {
@@ -566,6 +568,9 @@ void Renderer::InitMinimumToRenderLoadingFrame() {
 
 void Renderer::Init() {
 
+    // figure out how to put this back in Engine.cpp ya dikkhead
+    Gizmo::Init();
+
     glGenVertexArrays(1, &_pointLineVAO);
     glGenBuffers(1, &_pointLineVBO);
     glPointSize(2);
@@ -788,6 +793,12 @@ void BlurEmissiveBulbs(Player* player) {
   
 }
 
+#include "../Core/Gizmo.hpp"
+
+long MapRange(long x, long in_min, long in_max, long out_min, long out_max) {
+    return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+}
+
 void Renderer::RenderFrame(Player* player) {
 
     if (!player) {
@@ -807,6 +818,28 @@ void Renderer::RenderFrame(Player* player) {
 	glm::mat4 projection = Renderer::GetProjectionMatrix(_depthOfFieldScene); // 1.0 for weapon, 0.9 for scene.
 	glm::mat4 view = player->GetViewMatrix();
 
+
+    glm::vec3 viewPos = player->GetViewPos();
+    glm::vec3 viewDir = player->GetCameraForward();
+    float mouseX = MapRange(Input::GetMouseX(), 0, GL::GetWindowWidth(), 0, presentFrameBuffer.GetWidth());
+    float mouseY = MapRange(Input::GetMouseY(), 0, GL::GetWindowHeight(), 0, presentFrameBuffer.GetHeight());
+
+    
+
+
+
+    bool leftMouseDown = Input::LeftMouseDown();
+    Gizmo::Update(viewPos, viewDir, mouseX, mouseY, projection, view, leftMouseDown, presentFrameBuffer.GetWidth(), presentFrameBuffer.GetHeight());
+
+    if (Input::KeyPressed(HELL_KEY_SLASH)) {
+        int i = (int)(Gizmo::g_state);
+        i++;
+        if (i == 3) {
+            i = 0;
+        }
+        Gizmo::g_state = (Gizmo::State)i;
+    }
+
 	_shaders.UI.Use();
 	_shaders.UI.SetVec3("overrideColor", WHITE);
 
@@ -820,7 +853,7 @@ void Renderer::RenderFrame(Player* player) {
 
     if (playerIndex == 0) {
 		RenderShadowMaps();
-		RenderEnviromentMaps();
+		//RenderEnviromentMaps();
         CalculateDirtyCloudPoints();
         CalculateDirtyProbeCoords();
         ComputePass(); // Fills the indirect lighting data structures
@@ -831,8 +864,12 @@ void Renderer::RenderFrame(Player* player) {
     DrawBulletDecals(player);
     DrawCasingProjectiles(player);
     LightingPass(player);
-    SkyBoxPass(player);
+    
+    if (true) {
 
+    }
+
+    SkyBoxPass(player);
 
     BlurEmissiveBulbs(player);
 
@@ -896,6 +933,9 @@ void Renderer::RenderFrame(Player* player) {
     // Render UI
     presentFrameBuffer.Bind();
     glDrawBuffer(GL_COLOR_ATTACHMENT1);
+
+
+
     std::string texture = "CrosshairDot";
     if (player->CursorShouldBeInterect()) {
         texture = "CrosshairSquare";
@@ -924,8 +964,16 @@ void Renderer::RenderFrame(Player* player) {
 	TextBlitter::_debugTextToBilt += "X: " + std::to_string(Input::GetMouseX()) +"\n";
 	TextBlitter::_debugTextToBilt += "Y: " + std::to_string(Input::GetMouseY()) +"\n";
 
-	TextBlitter::_debugTextToBilt += "Win width: " + std::to_string(GL::GetWindowWidth()) + "\n";
-	TextBlitter::_debugTextToBilt += "Win height: " + std::to_string(GL::GetWindowHeight()) + "\n";
+    TextBlitter::_debugTextToBilt += "Win width: " + std::to_string(GL::GetWindowWidth()) + "\n";
+    TextBlitter::_debugTextToBilt += "Win height: " + std::to_string(GL::GetWindowHeight()) + "\n";
+    TextBlitter::_debugTextToBilt += "Selected light index: " + std::to_string(DebugMenu::GetSelectedLightIndex()) + "\n";
+
+    int selectedLightIndex = DebugMenu::GetSelectedLightIndex();
+    if (selectedLightIndex >= 0 && selectedLightIndex < Scene::_lights.size()) {
+        TextBlitter::_debugTextToBilt += "Selected light type: " + std::to_string(Scene::_lights[selectedLightIndex].type) + "\n";
+    }
+
+  
     
 
     //TextBlitter::_debugTextToBilt = "";
@@ -941,6 +989,14 @@ void Renderer::RenderFrame(Player* player) {
     glDisable(GL_DEPTH_TEST);
     glDisable(GL_CULL_FACE);
     Renderer::RenderUI(presentFrameBuffer.GetWidth(), presentFrameBuffer.GetHeight());
+
+
+    // Gizmo shit !!!
+
+    glm::mat4 sofaMatrix = Scene::GetGameObjectByName("Sofa")->GetModelMatrix();
+    glViewport(0, 0, presentFrameBuffer.GetWidth(), presentFrameBuffer.GetHeight());
+    glm::vec3 gizmoWorldPos = Gizmo::Draw(projection, view, presentFrameBuffer.GetWidth(), presentFrameBuffer.GetHeight(), sofaMatrix);
+    Scene::GetGameObjectByName("Sofa")->SetPosition(gizmoWorldPos);
 
 
 
@@ -976,6 +1032,7 @@ void Renderer::RenderFrame(Player* player) {
     }
 }
 
+/*
 struct Gizmo {
 
 	PxRigidStatic* _editorRaycastBodyXTranslate = NULL;
@@ -998,9 +1055,9 @@ struct Gizmo {
     void Update() {
 
     }
-};
+};*/
 
-Gizmo _gizmoXTranslate;
+//Gizmo _gizmoXTranslate;
 PxRigidStatic* selectedPhysXObject = nullptr;
 
 void RenderGameObjectOutline(Shader& shader, GameObject* gameObject) {
@@ -1031,9 +1088,9 @@ void RenderGameObjectOutline(Shader& shader, GameObject* gameObject) {
 
 void Renderer::RenderEditorMode() {
 
-	if (!_gizmoXTranslate._editorRaycastBodyXTranslate) {
-        _gizmoXTranslate.InitPhysXObjects();
-	}
+	//if (!_gizmoXTranslate._editorRaycastBodyXTranslate) {
+  //      _gizmoXTranslate.InitPhysXObjects();
+//	}
 
     Scene::Update3DEditorScene();
 
@@ -1148,31 +1205,6 @@ void Renderer::RenderEditorMode() {
 	glDisable(GL_STENCIL_TEST);
     _shaders.outline.SetInt("offsetX", 0); // reset x offset
     _shaders.outline.SetInt("offsetY", 0); // reset y offset
-
-
-    return;
-
-	// Render gizmo    
-    if (selectedObject) {
-        _shaders.outline.SetVec3("Color", GREEN);
-        static Model* Gizmo_XTranslate = AssetManager::GetModel("Gizmo_XTranslate");
-        glm::vec3 scale = glm::vec3(0.02f);
-        glm::mat4 m = glm::translate(glm::mat4(1), selectedObject->GetWorldPosition());
-        m = glm::scale(m, scale);
-
-        Transform test;
-        test.position.x += 0.1f;
-
-        _shaders.outline.SetMat4("model", m * test.to_mat4());
-        Gizmo_XTranslate->Draw();
-    }
-
-    // Update PhysX gizmo world poses
-    if (selectedObject) {
-        glm::mat4 m = glm::translate(glm::mat4(1), selectedObject->GetWorldPosition());
-        PxTransform pose = PxTransform(Util::GlmMat4ToPxMat44(m));
-        _gizmoXTranslate._editorRaycastBodyXTranslate->setGlobalPose(pose);
-    }
 }
 
 
@@ -1185,50 +1217,35 @@ struct CubemapTexutre {
         uint8_t id{};
     };
 
-	GLuint ID;
+	GLuint ID = 0;
 
 	void Create(std::vector<std::string>& textures) {
-		glGenTextures(1, &ID);
-		glBindTexture(GL_TEXTURE_CUBE_MAP, ID);
 
-        BS::thread_pool pool(textures.size());
-        std::vector<face_info> result(textures.size());
-
-        pool.detach_loop(size_t{}, textures.size(), [&textures, &result](const size_t i) {
-            face_info &info{ result[i] };
-		    int32_t nrChannels;
-            info.id = static_cast<uint8_t>(i);
-			info.texture = stbi_load(textures[i].c_str(), &info.width, &info.height, &nrChannels, 0);
-			if (info.texture) {
-				if (nrChannels == 4)
-					info.format = GL_RGBA;
-				if (nrChannels == 1)
-					info.format = GL_RED;
-			} else {
-				std::cout << "Failed to load cubemap\n";
-                stbi_image_free(info.texture);
-                info.texture = nullptr;
-			}
-            return info;
-        });
-        pool.wait();
-
-        for (auto info : result) {
-            if (info.texture == nullptr) {
-                continue;
+        glGenTextures(1, &ID);
+        glBindTexture(GL_TEXTURE_CUBE_MAP, ID);
+        int width, height, nrChannels;
+        for (unsigned int i = 0; i < textures.size(); i++) {
+            unsigned char* data = stbi_load(textures[i].c_str(), &width, &height, &nrChannels, 0);
+            if (data) {
+                GLint format = GL_RGB;
+                if (nrChannels == 4)
+                    format = GL_RGBA;
+                if (nrChannels == 1)
+                    format = GL_RED;
+                glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGBA, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+                stbi_image_free(data);
             }
-		    glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + info.id, 0, GL_RGBA,
-                info.width, info.height, 0, info.format, GL_UNSIGNED_BYTE, info.texture);
-
-            stbi_image_free(info.texture);
+            else {
+                std::cout << "Failed to load cubemap\n";
+                stbi_image_free(data);
+            }
         }
-
-		glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
-		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+        glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 	}
 };
 
@@ -1238,8 +1255,6 @@ CubemapTexutre _skyboxTexture;
 void SkyBoxPass(Player* player) {
 
     if (_cubeVao == 0) {
-
-
 
 		// Init cube vertices (for skybox)	
 		std::vector<glm::vec3> cubeVertices;
@@ -1624,6 +1639,14 @@ void DebugPass(Player* player) {
     glm::vec3 testPoint = Util::GetTranslationFromMatrix(magWorldMatrix);
     debugPoints.push_back(testPoint);*/
 
+
+    for (AnimatedGameObject& animatedGameObject : Scene::_animatedGameObjects) {
+
+        for (glm::mat4 transform : animatedGameObject._animatedTransforms.worldspace) {
+            //debugPoints.push_back(Util::GetTranslationFromMatrix(animatedGameObject.GetModelMatrix() * transform));
+        }
+    }
+
     // BROKEN!!!
     for (GameObject& gameObject : Scene::_gameObjects) {
         //debugPoints.push_back(gameObject.GetWorldSpaceOABBCenter());
@@ -1638,6 +1661,7 @@ void DebugPass(Player* player) {
 		//debugPoints.push_back(window.GetBackLeftCorner());
     }
 
+   
 
     for (auto& pos : debugPoints) {
         Point point;
@@ -2040,6 +2064,7 @@ void DrawScene(Shader& shader) {
         }
     }*/
 
+    
 
     shader.SetBool("outputEmissive", true);
 	// Light bulbs
@@ -2047,9 +2072,33 @@ void DrawScene(Shader& shader) {
 		Transform transform;
 		transform.position = light.position;
 		shader.SetVec3("lightColor", light.color);
-		shader.SetMat4("model", transform.to_mat4());
-		AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("Light"));
-		AssetManager::GetModel("Light1")->Draw();
+        shader.SetMat4("model", transform.to_mat4());
+
+        if (light.type == 0) {
+            AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("Light"));
+            AssetManager::GetModel("Light0_Bulb")->Draw();
+
+            // Find mount position
+            PhysXRayResult rayResult = Util::CastPhysXRay(light.position, glm::vec3(0, 1, 0), 2);
+            if (rayResult.hitFound) {
+                Transform mountTransform;
+                mountTransform.position = rayResult.hitPosition;
+                shader.SetMat4("model", mountTransform.to_mat4());
+                AssetManager::GetModel("Light0_Mount")->Draw();
+
+                // Stretch the cord
+                Transform cordTransform;
+                cordTransform.position = light.position;
+                cordTransform.scale.y = abs(rayResult.hitPosition.y - light.position.y);
+                shader.SetMat4("model", cordTransform.to_mat4());
+                AssetManager::GetModel("Light0_Cord")->Draw();
+
+            }
+        }
+        else if (light.type == 1) {
+            AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("LightWall"));
+            AssetManager::GetModel("LightWallMounted")->Draw();
+        }
 	}
 	shader.SetBool("outputEmissive", false);
 
@@ -2165,7 +2214,7 @@ void DrawAnimatedScene(Shader& shader, Player* player) {
     // Render other players
     for (Player& otherPlayer : Scene::_players) {
         if (&otherPlayer != player) {
-            DrawAnimatedObject(shader, &otherPlayer._characterModel);            
+            //DrawAnimatedObject(shader, &otherPlayer._characterModel);
         }
     }
 
@@ -2176,15 +2225,26 @@ void DrawAnimatedScene(Shader& shader, Player* player) {
     }
 
     // Render player weapon
-  //  if (EngineState::GetEngineMode() == GAME) {
+    if (EngineState::GetEngineMode() == GAME) {
         glDisable(GL_CULL_FACE);
         shader.SetFloat("projectionMatrixIndex", 1.0f);
         shader.SetMat4("projection", Renderer::GetProjectionMatrix(_depthOfFieldWeapon)); // 1.0 for weapon, 0.9 for scene.
         DrawAnimatedObject(shader, &player->GetFirstPersonWeapon());
         shader.SetFloat("projectionMatrixIndex", 0.0f);
         glEnable(GL_CULL_FACE);
-        shader.SetBool("isAnimated", false);
-  //  }
+    }
+    // Debug: draw first person weapon for other players
+    for (Player& otherPlayer : Scene::_players) {
+        if (&otherPlayer != player) {
+            glDisable(GL_CULL_FACE);
+            shader.SetFloat("projectionMatrixIndex", 1.0f);
+            shader.SetMat4("projection", Renderer::GetProjectionMatrix(_depthOfFieldWeapon)); // 1.0 for weapon, 0.9 for scene.
+            DrawAnimatedObject(shader, &otherPlayer.GetFirstPersonWeapon());
+            shader.SetFloat("projectionMatrixIndex", 0.0f);
+            glEnable(GL_CULL_FACE);
+        }
+    }
+    shader.SetBool("isAnimated", false);
 }
 
 void DrawShadowMapScene(Shader& shader) {

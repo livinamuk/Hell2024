@@ -154,6 +154,10 @@ void SkinnedModel::UpdateBoneTransformsFromAnimation(float animTime, Animation* 
         // Get the node and its um bind pose transform?
         const char* NodeName = m_joints[i].m_name;
         glm::mat4 NodeTransformation = m_joints[i].m_inverseBindTransform;
+        //std::cout << "Filename: " << _filename << "\n";
+       // if (this->_filename == "Shotgun") {
+        //    std::cout << i << ": " << NodeName << "\n";
+       // }
         
         // Calculate any animation
         if (m_animations.size() > 0)
@@ -175,6 +179,8 @@ void SkinnedModel::UpdateBoneTransformsFromAnimation(float animTime, Animation* 
                 CalcInterpolatedPosition(Translation, AnimationTime, animatedNode);
                 glm::mat4 TranslationM;
 
+                ScalingM = glm::mat4(1);
+
                 TranslationM = Util::Mat4InitTranslationTransform(Translation.x, Translation.y, Translation.z);
                 NodeTransformation = TranslationM * RotationM * ScalingM;
             }
@@ -194,7 +200,15 @@ void SkinnedModel::UpdateBoneTransformsFromAnimation(float animTime, Animation* 
             //std::cout << Util::Mat4ToString(GlobalTransformation) << "\n\n";
 
         }
-        if (Util::StrCmp("Camera", NodeName)) {
+
+        //10: Camera001_$AssimpFbx$_PreRotation
+        //    11 : Camera001_$AssimpFbx$_Rotation
+        //    12 : Camera001_$AssimpFbx$_PostRotation
+       //     13 : Camera001
+
+
+        if (Util::StrCmp("Camera", NodeName) ||
+            Util::StrCmp("Camera001", NodeName)) {
                 outCameraMatrix = GlobalTransformation;
                 outCameraMatrix[0][2] *= -1.0f; // yaw
                 outCameraMatrix[2][0] *= -1.0f; // yaw
