@@ -919,11 +919,11 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
         // Give reload ammo
         if (_weaponAction == RELOAD || _weaponAction == RELOAD_FROM_EMPTY) {
             if (_needsAmmoReloaded && _firstPersonWeapon.AnimationIsPastPercentage(50.0f)) {
-                int ammoToGive = std::min(GLOCK_CLIP_SIZE, _inventory.glockAmmo.total);
-                _inventory.glockAmmo.clip = ammoToGive;
-                _inventory.glockAmmo.total -= ammoToGive;
+                int ammoToGive = std::min(SHOTGUN_AMMO_SIZE, _inventory.shotgunAmmo.total);
+                _inventory.shotgunAmmo.clip = ammoToGive;
+                _inventory.shotgunAmmo.total -= ammoToGive;
                 _needsAmmoReloaded = false;
-                _glockSlideNeedsToBeOut = false;
+//                _glockSlideNeedsToBeOut = false;
             }
         }
         // Idle
@@ -1017,6 +1017,19 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
            _weaponAction = RELOAD_SHOTGUN_END;
            Audio::PlayAudio("Shotgun_ReloadEnd.wav", 1.0f);
        }
+
+	   if (_weaponAction == RELOAD_SHOTGUN_SINGLE_SHELL && _firstPersonWeapon.IsAnimationComplete() && GetCurrentWeaponTotalAmmo() == 0) {
+		   _firstPersonWeapon.PlayAnimation("Shotgun_ReloadEnd", 1.25f);
+		   _weaponAction = RELOAD_SHOTGUN_END;
+		   Audio::PlayAudio("Shotgun_ReloadEnd.wav", 1.0f);
+	   }
+
+	   if (_weaponAction == RELOAD_SHOTGUN_DOUBLE_SHELL && _firstPersonWeapon.IsAnimationComplete() && GetCurrentWeaponTotalAmmo() == 0) {
+		   _firstPersonWeapon.PlayAnimation("Shotgun_ReloadEnd", 1.25f);
+		   _weaponAction = RELOAD_SHOTGUN_END;
+		   Audio::PlayAudio("Shotgun_ReloadEnd.wav", 1.0f);
+	   }
+
        if (_weaponAction == RELOAD_SHOTGUN_DOUBLE_SHELL && _firstPersonWeapon.IsAnimationComplete() && GetCurrentWeaponClipAmmo() == SHOTGUN_AMMO_SIZE) {
            _firstPersonWeapon.PlayAnimation("Shotgun_ReloadEnd", 1.25f);
            _weaponAction = RELOAD_SHOTGUN_END;
