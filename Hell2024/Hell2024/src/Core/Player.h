@@ -8,6 +8,8 @@
 #define GLOCK_MAX_AMMO_SIZE 200
 #define AKS74U_MAG_SIZE 30
 #define AKS74U_MAX_AMMO_SIZE 9999
+#define SHOTGUN_AMMO_SIZE 8
+#define SHOTGUN_MAX_AMMO_SIZE 9999
 
 struct Ammo {
 	int clip = 0;
@@ -15,8 +17,9 @@ struct Ammo {
 };
 
 struct Inventory {
-	Ammo glockAmmo;
-	Ammo aks74uAmmo;
+    Ammo glockAmmo;
+    Ammo aks74uAmmo;
+    Ammo shotgunAmmo;
 };
 
 class Player {
@@ -43,7 +46,9 @@ public:
 	int GetCurrentWeaponClipAmmo();
 	int GetCurrentWeaponTotalAmmo();
 
-	bool _glockSlideNeedsToBeOut = false;
+    bool _glockSlideNeedsToBeOut = false;
+    bool _needsShotgunFirstShellAdded = false;
+    bool _needsShotgunSecondShellAdded = false; 
 
 	//void Init(glm::vec3 position);
 	void Update(float deltaTime);
@@ -77,8 +82,9 @@ public:
 	PxShape* GetItemPickupOverlapShape();
 
 	void ShowPickUpText(std::string text);
-	void PickUpAKS74U();
-	void PickUpAKS74UAmmo();
+    void PickUpAKS74U();
+    void PickUpAKS74UAmmo();
+    void PickUpShotgunAmmo();
 	void CastMouseRay();
 	void DropAKS7UMag();
 
@@ -90,13 +96,15 @@ public:
 
 	bool _isGrounded = true;
 
+    void PickUpShotgun();
+
 	std::string _pickUpText = "";
 	float _pickUpTextTimer = 0;
 
 private:
 
 	void Interact();
-	void SpawnBullet(float variance);
+	void SpawnBullet(float variance, Weapon type);
 	bool CanFire();
 	bool CanReload();
 	void CheckForItemPickOverlaps();

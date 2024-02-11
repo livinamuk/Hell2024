@@ -3023,7 +3023,7 @@ void DrawMuzzleFlashes(Player* player) {
         worldPosition = player->GetFirstPersonWeapon().GetAKS74UBarrelPostion();
     }
     else if (player->GetCurrentWeaponIndex() == SHOTGUN) {
-        worldPosition = player->GetFirstPersonWeapon().GetShotgunBarrelPostion();
+        worldPosition = player->GetFirstPersonWeapon().GetShotgunBarrelPosition();
     }
     else {
         return;

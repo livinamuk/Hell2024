@@ -76,5 +76,7 @@ void main() {
 		//attrBiTangent = normalize(cross(attrNormal,attrTangent));		
 	}
 		
+		//attrNormal = aNormal;
+
 	gl_Position = projection * view * vec4(WorldPos, 1.0);
 }

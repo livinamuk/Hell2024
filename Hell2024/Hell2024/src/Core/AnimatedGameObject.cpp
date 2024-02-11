@@ -355,19 +355,20 @@ glm::vec3 AnimatedGameObject::GetAKS74UBarrelPostion() {
     }
 }
 
-glm::vec3 AnimatedGameObject::GetShotgunBarrelPostion() {
-    if (_name == "Shotgun") {
+glm::vec3 AnimatedGameObject::GetShotgunBarrelPosition() {
+   // if (_name == "ShotgunTest") {
         int boneIndex = _skinnedModel->m_BoneMapping["Weapon"];
         glm::mat4 boneMatrix = _animatedTransforms.worldspace[boneIndex];
         Transform offset;
-        offset.position = glm::vec3(0, 0 + 1, 58);
+        offset.position = glm::vec3(82, 2, -10);
         glm::mat4 m = GetModelMatrix() * boneMatrix * offset.to_mat4();
         float x = m[3][0];
         float y = m[3][1];
         float z = m[3][2];
+     //  std::cout << "heDDDDDDDDDDDDDDDDDDDDDllon\n";
         return glm::vec3(x, y, z);
-    }
-    else {
+//    }
+ //   else {
         return glm::vec3(0);
-    }
+ //   }
 }

@@ -123,6 +123,7 @@ struct RTInstance {
 struct Bullet {
     glm::vec3 spawnPosition;
     glm::vec3 direction;
+    Weapon type;
 };
 
 

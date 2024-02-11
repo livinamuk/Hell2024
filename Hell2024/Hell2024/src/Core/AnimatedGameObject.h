@@ -40,7 +40,7 @@ struct AnimatedGameObject {
 	glm::vec3 GetGlockBarrelPostion();
 	glm::vec3 GetGlockCasingSpawnPostion();
 	glm::vec3 GetAKS74UBarrelPostion();
-	glm::vec3 GetShotgunBarrelPostion();
+	glm::vec3 GetShotgunBarrelPosition();
 	glm::vec3 GetAK74USCasingSpawnPostion();
 
 

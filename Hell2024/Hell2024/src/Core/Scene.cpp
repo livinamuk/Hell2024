@@ -164,6 +164,7 @@ void SetPlayerGroundedStates() {
 
 void ProcessBullets() {
 
+    bool glassWasHit = false;
 	for (int i = 0; i < Scene::_bullets.size(); i++) {
 		Bullet& bullet = Scene::_bullets[i];
 		PhysXRayResult rayResult = Util::CastPhysXRay(bullet.spawnPosition, bullet.direction, 1000);
@@ -173,9 +174,15 @@ void ProcessBullets() {
 				PhysicsObjectData* physicsObjectData = (PhysicsObjectData*)actor->userData;
 				if (physicsObjectData->type == GAME_OBJECT) {
 					GameObject* gameObject = (GameObject*)physicsObjectData->parent;
-					gameObject->AddForceToCollisionObject(bullet.direction, 75);
+                    float force = 75;                  
+                    if (bullet.type == SHOTGUN) {
+                        force = 20;
+                        std::cout << "spawned a shotgun bullet\n";
+                    }
+					gameObject->AddForceToCollisionObject(bullet.direction, force);
 				}
 				if (physicsObjectData->type == GLASS) {
+                    glassWasHit = true;
 					std::cout << "you shot glass\n";
 					Bullet newBullet;
 					newBullet.direction = bullet.direction;
@@ -194,8 +201,6 @@ void ProcessBullets() {
 					localNormal = glm::inverse(parentMatrix) * glm::vec4(rayResult.surfaceNormal * glm::vec3(-1), 0.0);
 					Decal decal2(localPosition, localNormal, parent, Decal::Type::GLASS);
                     Scene::_decals.push_back(decal2);
-
-					Audio::PlayAudio("GlassImpact.wav", 3.0f);
 
 					// Glass projectile
 					for (int i = 0; i < 2; i++) {
@@ -244,6 +249,9 @@ void ProcessBullets() {
 		}
 	}
     Scene::_bullets.clear();
+    if (glassWasHit) {
+        Audio::PlayAudio("GlassImpact.wav", 3.0f);
+    }
 }
 void Scene::LoadHardCodedObjects() {
 
@@ -316,20 +324,18 @@ void Scene::LoadHardCodedObjects() {
         mag.UpdateRigidBodyMassAndInertia(magDensity);
         */
 
-
-
-		PhysicsFilterData akFilterData;
+        PhysicsFilterData akFilterData;
         akFilterData.raycastGroup = RAYCAST_ENABLED;
         akFilterData.collisionGroup = CollisionGroup::GENERIC_BOUNCEABLE;
         akFilterData.collidesWith = CollisionGroup(ENVIROMENT_OBSTACLE | GENERIC_BOUNCEABLE);
 
-		GameObject& aks74u = _gameObjects.emplace_back();
-		aks74u.SetPosition(1.8f, 1.7f, 0.75f);
-		aks74u.SetRotationX(-1.7f);
-		aks74u.SetRotationY(0.0f);
-		aks74u.SetRotationZ(-1.6f);
-		//aks74u.SetModel("AKS74U_Carlos_ConvexMesh");
-		aks74u.SetModel("AKS74U_Carlos");
+        GameObject& aks74u = _gameObjects.emplace_back();
+        aks74u.SetPosition(1.8f, 1.7f, 0.75f);
+        aks74u.SetRotationX(-1.7f);
+        aks74u.SetRotationY(0.0f);
+        aks74u.SetRotationZ(-1.6f);
+        //aks74u.SetModel("AKS74U_Carlos_ConvexMesh");
+        aks74u.SetModel("AKS74U_Carlos");
         aks74u.SetName("AKS74U_Carlos");
         aks74u.SetMeshMaterial("Ceiling");
         aks74u.SetMeshMaterialByMeshName("FrontSight_low", "AKS74U_0");
@@ -344,15 +350,49 @@ void Scene::LoadHardCodedObjects() {
         aks74u.SetPickUpType(PickUpType::AKS74U);
 
         // physics shit for ak weapon pickup
-		PhysicsFilterData filterData666;
+        PhysicsFilterData filterData666;
         filterData666.raycastGroup = RAYCAST_DISABLED;
         filterData666.collisionGroup = CollisionGroup::GENERIC_BOUNCEABLE;
-        filterData666.collidesWith = (CollisionGroup)(ENVIROMENT_OBSTACLE | GENERIC_BOUNCEABLE);     
+        filterData666.collidesWith = (CollisionGroup)(ENVIROMENT_OBSTACLE | GENERIC_BOUNCEABLE);
         aks74u.CreateRigidBody(aks74u._transform.to_mat4(), false);
-		aks74u.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("AKS74U_Carlos_ConvexMesh")->_meshes[0], filterData666);
-		aks74u.SetRaycastShapeFromModel(AssetManager::GetModel("AKS74U_Carlos"));
+        aks74u.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("AKS74U_Carlos_ConvexMesh")->_meshes[0], filterData666);
+        aks74u.SetRaycastShapeFromModel(AssetManager::GetModel("AKS74U_Carlos"));
         aks74u.SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
         aks74u.UpdateRigidBodyMassAndInertia(50.0f);
+
+
+
+        GameObject& shotgunPickup = _gameObjects.emplace_back();
+        // shotgunPickup.SetPosition(2.165f, 1.5f, 6.1f);
+        shotgunPickup.SetPosition(0.2f, 0.7f, 2.1f);
+        shotgunPickup.SetRotationX(-1.5f);
+        shotgunPickup.SetRotationY(0.4f);
+        shotgunPickup.SetRotationZ(0.1f + HELL_PI);
+        shotgunPickup.SetModel("Shotgun_Isolated");
+        shotgunPickup.SetName("Shotgun_Pickup");
+        shotgunPickup.SetMeshMaterial("Shotgun");
+        shotgunPickup.SetPickUpType(PickUpType::SHOTGUN);
+        shotgunPickup.CreateRigidBody(shotgunPickup._transform.to_mat4(), false);
+        shotgunPickup.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("Shotgun_Isolated_ConvexMesh")->_meshes[0], filterData666);
+        shotgunPickup.SetRaycastShapeFromModel(AssetManager::GetModel("Shotgun_Isolated"));
+        shotgunPickup.SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
+        shotgunPickup.UpdateRigidBodyMassAndInertia(50.0f);
+       
+
+
+
+
+      /* GameObject& shotgunPickup = _gameObjects.emplace_back();
+        shotgunPickup.SetPosition(1.8f, 1.7f, 0.75f);
+        shotgunPickup.SetRotationX(-1.7f);
+        shotgunPickup.SetRotationY(0.0f);
+        shotgunPickup.SetRotationZ(-1.6f);
+        shotgunPickup.SetModel("Shotgun_Isolated");
+        shotgunPickup.SetName("Shotgun_Pickup");
+        shotgunPickup.SetMeshMaterial("Glock");
+        shotgunPickup.SetPickUpType(PickUpType::AKS74U);
+
+        */
 
 
 
@@ -617,7 +657,8 @@ void Scene::LoadHardCodedObjects() {
     mp7.SetPosition(glm::vec3(2.5f, 1.5f, 4));
     mp7.SetRotationY(HELL_PI * 0.5f);*/
 
-    /*AnimatedGameObject& glock = _animatedGameObjects.emplace_back(AnimatedGameObject());
+    /*
+    AnimatedGameObject& glock = _animatedGameObjects.emplace_back(AnimatedGameObject());
     glock.SetName("Glock");
     glock.SetSkinnedModel("Glock");
     glock.SetAnimatedTransformsToBindPose();
@@ -629,8 +670,32 @@ void Scene::LoadHardCodedObjects() {
     glock.SetMeshMaterial("SK_FPSArms_Female", "FemaleArms");
     glock.SetScale(0.01f);
     glock.SetPosition(glm::vec3(2.5f, 1.5f, 3));
-    glock.SetRotationY(HELL_PI * 0.5f);*/
+    glock.SetRotationY(HELL_PI * 0.5f);
 
+    */
+
+ /*
+    AnimatedGameObject & shotgun = _animatedGameObjects.emplace_back(AnimatedGameObject());
+    shotgun.SetName("ShotgunTest");
+    shotgun.SetSkinnedModel("Shotgun");
+    shotgun.SetAnimatedTransformsToBindPose();
+    shotgun.PlayAndLoopAnimation("Shotgun_Reload1Shell", 0.5f);
+    shotgun.SetMaterial("Shotgun");
+    shotgun.SetMeshMaterial("Arms", "Hands");
+  //  glock.SetMeshMaterial("manniquen1_2", "Hands");
+  //  glock.SetMeshMaterial("SK_FPSArms_Female.001", "FemaleArms");
+ //   glock.SetMeshMaterial("SK_FPSArms_Female", "FemaleArms");
+    shotgun.SetScale(0.02f);
+    shotgun.SetPosition(glm::vec3(2.5f, 1.5f, 4));
+    shotgun.SetRotationY(HELL_PI * 0.5f);
+    shotgun.SetMeshMaterialByIndex(2, "Shell");
+    
+
+    for (auto& mesh : shotgun._skinnedModel->m_meshEntries) {
+        std::cout << "shit         shit      " << mesh.Name << "\n";
+   }
+
+   */
 
     /* THIS IS THE AK U WERE TESTING WITH ON STREAM WHEN DOING THE STILL UNFINISHED AK MAG DROP THING
         AnimatedGameObject& aks74u = _animatedGameObjects.emplace_back(AnimatedGameObject());

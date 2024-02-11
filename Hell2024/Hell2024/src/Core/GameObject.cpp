@@ -689,6 +689,12 @@ void GameObject::DisableRaycasting() {
 }
 
 void GameObject::EnableRaycasting() {
+
+    if (!_raycastShape) {
+        std::cout << "there is no raycast shape for game object with name: " << _name << "\n";
+        return;
+    }
+
     auto filterData = _raycastShape->getQueryFilterData();
     filterData.word0 = RAYCAST_ENABLED;
     _raycastShape->setQueryFilterData(filterData);
