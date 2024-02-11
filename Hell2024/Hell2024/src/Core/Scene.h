@@ -4,6 +4,7 @@
 #include "AnimatedGameObject.h"
 #include "Door.h"
 #include "Window.h"
+#include "Light.h"
 #include "Player.h"
 #include "Physics.h"
 #include "../Effects/BulletCasing.h"
@@ -57,8 +58,6 @@ struct CloudPoint {
     glm::vec4 normal = glm::vec4(0);
     glm::vec4 directLighting = glm::vec4(0);
 };
-
-
 
 struct Wall {
     glm::vec3 begin = glm::vec3(0);
@@ -188,7 +187,6 @@ namespace Scene {
     void CleanUp();
     void Update(float deltaTime);
     void Update3DEditorScene();
-    void LoadLightSetup(int index);
     GameObject* GetGameObjectByName(std::string);
     AnimatedGameObject* GetAnimatedGameObjectByName(std::string);
     std::vector<AnimatedGameObject>& GetAnimatedGameObjects();
@@ -196,6 +194,7 @@ namespace Scene {
     void CreateMeshData();
     void AddDoor(Door& door);
     void AddWall(Wall& wall);
+    void AddLight(Light& light);
     void AddFloor(Floor& floor);
     void UpdateRTInstanceData();
     void RecreateDataStructures();

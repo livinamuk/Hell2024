@@ -223,12 +223,14 @@ void Player::Update(float deltaTime) {
 	Transform breatheTransform;
 	breatheTransform.position.x = cos(totalTime * _breatheFrequency) * _breatheAmplitude * 1;
 	breatheTransform.position.y = sin(totalTime * _breatheFrequency) * _breatheAmplitude * 2;
+	breatheTransform.position.z = cos(totalTime * _breatheFrequency) * _breatheAmplitude * -1;
 
 	// Head bob
 	Transform headBobTransform;
 	if (_isMoving) {
 		headBobTransform.position.x = cos(totalTime * _headBobFrequency) * _headBobAmplitude * 1;
 		headBobTransform.position.y = sin(totalTime * _headBobFrequency) * _headBobAmplitude * 2;
+		headBobTransform.position.z = cos(totalTime * _headBobFrequency) * _headBobAmplitude * -1;
 	}
 
 	// View matrix
@@ -245,7 +247,6 @@ void Player::Update(float deltaTime) {
 
 	// WSAD movement
 	_isMoving = false;
-	glm::vec3 displacement(0);
 	if (!_ignoreControl) {
 		if (Input::KeyDown(HELL_KEY_W)) {
 			displacement -= _front;// *speed;
@@ -263,14 +264,23 @@ void Player::Update(float deltaTime) {
 			displacement += _right;// *speed;
 			_isMoving = true;
 		}
+		if (Input::KeyPressed(HELL_KEY_W) || Input::KeyPressed(HELL_KEY_S) || Input::KeyPressed(HELL_KEY_A) || Input::KeyPressed(HELL_KEY_D))
+		{
+			_PlayerTorgue /= 3;
+		}
 	}
 	float fixedDeltaTime = (1.0f / 60.0f);
 
 	// Normalize displacement vector and include player speed
 	float len = length(displacement);
 	if (len != 0.0) {
-		float speed = crouching ? _crouchingSpeed : _walkingSpeed;
-		displacement = (displacement / len) * speed * deltaTime;
+		_PlayerSpeed = crouching ? _crouchingSpeed * _PlayerTorgue : _walkingSpeed * _PlayerTorgue;
+		_PlayerTorgue += _PlayerTorgue < 1 && _isMoving ? fixedDeltaTime * 2 : 0;
+		displacement = (displacement / len) * _PlayerSpeed * deltaTime;
+	}
+	if (_PlayerTorgue > 0 && !_isMoving)
+	{
+		_PlayerTorgue /= 1.1f;
 	}
 
 	// Jump
@@ -302,21 +312,24 @@ void Player::Update(float deltaTime) {
 	
 	// Footstep audio
 	static float m_footstepAudioTimer = 0;
-	static float footstepAudioLoopLength = 0.5;
 
 	if (!_ignoreControl) {
 		if (!_isMoving)
 			m_footstepAudioTimer = 0;
 		else {
-			if (_isMoving && m_footstepAudioTimer == 0) {
-				int random_number = std::rand() % 4 + 1;
-				std::string file = "player_step_" + std::to_string(random_number) + ".wav";
-				Audio::PlayAudio(file.c_str(), 0.5f);
-			}
-			float timerIncrement = crouching ? deltaTime * 0.75f : deltaTime;
-			m_footstepAudioTimer += timerIncrement;
-			if (m_footstepAudioTimer > footstepAudioLoopLength) {
-				m_footstepAudioTimer = 0;
+			if (_PlayerSpeed > 0.2f)
+			{
+				static float footstepAudioLoopLength = _PlayerSpeed;
+				if (_isMoving && m_footstepAudioTimer == 0) {
+					int random_number = std::rand() % 4 + 1;
+					std::string file = "player_step_" + std::to_string(random_number) + ".wav";
+					Audio::PlayAudio(file.c_str(), 0.5f);
+				}
+				float timerIncrement = crouching ? deltaTime * 0.75f : deltaTime;
+				m_footstepAudioTimer += timerIncrement;
+				if (m_footstepAudioTimer > footstepAudioLoopLength) {
+					m_footstepAudioTimer = 0;
+				}
 			}
 		}
 	}
@@ -651,12 +664,7 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
 	if (_currentWeaponIndex == Weapon::KNIFE) {
 		// Idle
 		if (_weaponAction == IDLE) {
-			if (Player::IsMoving()) {
-				_firstPersonWeapon.PlayAndLoopAnimation("Knife_Walk", 1.0f);
-			}
-			else {
-				_firstPersonWeapon.PlayAndLoopAnimation("Knife_Idle", 1.0f);
-			}
+			_firstPersonWeapon.PlayAndLoopAnimation("Knife_Walk", _PlayerSpeed / 5);
 		}
 		// Draw
 		if (_weaponAction == DRAW_BEGIN) {
@@ -704,12 +712,7 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
 		}
 		// Idle
 		if (_weaponAction == IDLE) {
-			if (Player::IsMoving()) {
-				_firstPersonWeapon.PlayAndLoopAnimation("Glock_Walk", 1.0f);
-			}
-			else {
-				_firstPersonWeapon.PlayAndLoopAnimation("Glock_Idle", 1.0f);
-			}
+			_firstPersonWeapon.PlayAndLoopAnimation("Glock_Walk", _PlayerSpeed / 5);
 		}
 		// Draw
 		if (_weaponAction == DRAW_BEGIN) {
@@ -836,12 +839,7 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
 		}
 		//Idle
 		if (_weaponAction == IDLE) {
-			if (Player::IsMoving()) {
-				_firstPersonWeapon.PlayAndLoopAnimation("AKS74U_Walk", 1.0f);
-			}
-			else {
-				_firstPersonWeapon.PlayAndLoopAnimation("AKS74U_Idle", 1.0f);
-			}
+			_firstPersonWeapon.PlayAndLoopAnimation("AKS74U_Walk", _PlayerSpeed / 5);
 		}
 		// Draw
 		if (_weaponAction == DRAW_BEGIN) {

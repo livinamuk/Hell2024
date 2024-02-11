@@ -109,6 +109,19 @@ void File::LoadMap(std::string mapName) {
 		}
 	}
 
+	if (document.HasMember("Lights")) {
+		const rapidjson::Value& objects = document["Lights"];
+		for (rapidjson::SizeType i = 0; i < objects.Size(); i++) {
+			glm::vec3 position = ReadVec3(objects[i], "position");
+			float strength = ReadFloat(objects[i], "strength");
+			glm::vec3 color = ReadVec3(objects[i], "color");
+			bool isDirty = ReadBool(objects[i], "isDirty");
+			float radius = ReadFloat(objects[i], "radius");
+			Light& light = Scene::_lights.emplace_back();
+			light.position = position; light.strength = strength;  light.color = color; light.isDirty = isDirty; light.radius = radius;
+		}
+	}
+
 	if (document.HasMember("Doors")) {
 		const rapidjson::Value& objects = document["Doors"];
 		for (rapidjson::SizeType i = 0; i < objects.Size(); i++) {
@@ -149,6 +162,7 @@ void File::SaveMap(std::string mapName) {
 	rapidjson::Value walls(rapidjson::kArrayType);
 	rapidjson::Value doors(rapidjson::kArrayType);
 	rapidjson::Value windows(rapidjson::kArrayType);
+	rapidjson::Value lights(rapidjson::kArrayType);
 	rapidjson::Value floors(rapidjson::kArrayType);
 	rapidjson::Value gameObjects(rapidjson::kArrayType);
 	document.SetObject();
@@ -193,6 +207,16 @@ void File::SaveMap(std::string mapName) {
 		windows.PushBack(object, allocator);
 	}
 
+	for (Light& light : Scene::_lights) {
+		rapidjson::Value object(rapidjson::kObjectType);
+		SaveVec3(&object, "position", light.position, allocator);
+		SaveFloat(&object, "strength", light.strength, allocator);
+		SaveVec3(&object, "color", light.color, allocator);
+		SaveBool(&object, "isDirty", light.isDirty, allocator);
+		SaveFloat(&object, "radius", light.radius, allocator);
+		lights.PushBack(object, allocator);
+	}
+
 	for (Door& door : Scene::_doors) {
 		rapidjson::Value object(rapidjson::kObjectType);
 		SaveVec3(&object, "position", door.position, allocator);
@@ -219,6 +243,7 @@ void File::SaveMap(std::string mapName) {
 	}
 
 	document.AddMember("Walls", walls, allocator);
+	document.AddMember("Lights", lights, allocator);
 	document.AddMember("Floors", floors, allocator);
 	document.AddMember("Doors", doors, allocator);
 	document.AddMember("Windows", windows, allocator);
