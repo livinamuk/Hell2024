@@ -9,6 +9,8 @@
 #include "Config.hpp"
 #include "../EngineState.hpp"
 
+
+
 int Player::GetCurrentWeaponClipAmmo() {
 	if (_currentWeaponIndex == Weapon::GLOCK) {
 		return _inventory.glockAmmo.clip;
@@ -46,10 +48,9 @@ Player::Player(glm::vec3 position, glm::vec3 rotation) {
 	_characterModel.SetRotationX(HELL_PI / 2);
 
 	_shadowMap.Init();
-	
-
 
 	CreateCharacterController(_position);
+	CreateItemPickupOverlapShape();
 }
 
 void Player::SetWeapon(Weapon weapon) {
@@ -119,41 +120,27 @@ void Player::PickUpAKS74UAmmo() {
 	_inventory.aks74uAmmo.total += AKS74U_MAG_SIZE * 3;
 }
 
-
-
-
-
 void Player::CheckForItemPickOverlaps() {
 
 	if (_ignoreControl) {
 		return;
 	}
 
-	float width = 0.4;
-	float height = 2.7;
-	float depth = 0.4;
-	PxShape* shape = Physics::GetPhysics()->createShape(PxBoxGeometry(width, height, depth), *Physics::GetDefaultMaterial(), true);
-
-	const PxGeometry& overlapShape = shape->getGeometry();// 
-	//const PxGeometry& overlapShape = GetCharacterControllerShape()->getGeometry();
-
-	const PxTransform shapePose(PxVec3(_position.x, _position.y - 1.0f, _position.z));
-	//const PxTransform& shapePose = _characterController->getActor()->getGlobalPose();
+	const PxGeometry& overlapShape = _itemPickupOverlapShape->getGeometry();
+	const PxTransform shapePose(_characterController->getActor()->getGlobalPose());
 
 	OverlapReport overlapReport = Physics::OverlapTest(overlapShape, shapePose, CollisionGroup::GENERIC_BOUNCEABLE);
 
 	if (overlapReport.hits.size()) {
-		//std::cout << overlapResult.hits.size() << "\n";
 		for (auto* hit : overlapReport.hits) {
 			if (hit->userData) {
+
 				PhysicsObjectData* physicsObjectData = (PhysicsObjectData*)hit->userData;
 				PhysicsObjectType physicsObjectType = physicsObjectData->type;
 				GameObject* parent = (GameObject*)physicsObjectData->parent;
+
 				if (physicsObjectType == GAME_OBJECT) {
-
-					//	std::cout << parent->GetName() << "\n";
-
-						// Weapon pickups
+					// Weapon pickups
 					if (!parent->IsCollected() && parent->GetName() == "AKS74U_Carlos") {
 						PickUpAKS74U();
 						parent->PickUp();
@@ -161,19 +148,27 @@ void Player::CheckForItemPickOverlaps() {
 				}
 			}
 			else {
-				//		std::cout << "no user data found on ray hit\n";
+				// std::cout << "no user data found on ray hit\n";
 			}
 		}
 	}
 	else {
-		//	std::cout << "no overlap bro\n";
+		// std::cout << "no overlap bro\n";
 	}
 }
 
 
 void Player::Update(float deltaTime) {
 
+	//if (_itemPickupOverlapDebugBody) {
+	//	_itemPickupOverlapDebugBody->setGlobalPose(_characterController->getActor()->getGlobalPose());
+	//}
+
 	CheckForItemPickOverlaps();
+
+
+	//auto pose = _characterController->getActor()->getGlobalPose();
+	//_itemPickupOverlapDebugBody->setGlobalPose(pose);
 
 
 	if (Input::KeyDown(HELL_KEY_U)) {
@@ -279,8 +274,9 @@ void Player::Update(float deltaTime) {
 	}
 
 	// Jump
-	if (Input::KeyPressed(HELL_KEY_SPACE) && !_ignoreControl && _isGrounded) {
-		_yVelocity = 4.75f; // magic value for jump strength
+    if (Input::KeyPressed(HELL_KEY_SPACE) && !_ignoreControl && _isGrounded) {
+        _yVelocity = 4.75f; // magic value for jump strength
+        _yVelocity = 4.95f; // magic value for jump strength (had to change cause you could no longer jump thru window after fixing character controller height bug)
 		_isGrounded = false;
 	}
 
@@ -1132,9 +1128,6 @@ bool Player::CursorShouldBeInterect() {
 	return false;
 }
 
-#define PLAYER_CAPSULE_HEIGHT 0.6f
-#define PLAYER_CAPSULE_RADIUS 0.1f
-
 PxShape* Player::GetCharacterControllerShape() {
 	PxShape* shape;
 	_characterController->getActor()->getShapes(&shape, 1);
@@ -1143,6 +1136,47 @@ PxShape* Player::GetCharacterControllerShape() {
 
 PxRigidDynamic* Player::GetCharacterControllerActor() {
 	return _characterController->getActor();
+}
+
+void Player::CreateItemPickupOverlapShape() {
+
+	if (_itemPickupOverlapShape) {
+		_itemPickupOverlapShape->release();
+	}
+	//if (_itemPickupOverlapDebugBody) {
+	//	_itemPickupOverlapDebugBody->release();
+	//}
+
+    float radius = PLAYER_CAPSULE_RADIUS + 0.2;
+    float halfHeight = PLAYER_CAPSULE_HEIGHT * 0.5f;
+
+	_itemPickupOverlapShape = Physics::GetPhysics()->createShape(PxCapsuleGeometry(radius, halfHeight), *Physics::GetDefaultMaterial(), true);
+
+	/*Transform transform;
+	transform.position = glm::vec3(2.5f, 0.0f, 3.5f);
+
+	PxQuat quat = Util::GlmQuatToPxQuat(glm::quat(transform.rotation));
+	PxTransform trans = PxTransform(PxVec3(transform.position.x, transform.position.y, transform.position.z), quat);
+	_itemPickupOverlapDebugBody = Physics::GetPhysics()->createRigidStatic(trans);
+
+	PxFilterData filterData;
+	filterData.word0 = RaycastGroup::RAYCAST_ENABLED;
+	filterData.word1 = CollisionGroup::NO_COLLISION;
+	filterData.word2 = CollisionGroup::NO_COLLISION;
+	_itemPickupOverlapShape->setQueryFilterData(filterData);       // ray casts
+	_itemPickupOverlapShape->setSimulationFilterData(filterData);  // collisions
+	Transform shapeOffset;
+	PxMat44 localShapeMatrix = Util::GlmMat4ToPxMat44(shapeOffset.to_mat4());
+	PxTransform localShapeTransform(localShapeMatrix);
+	_itemPickupOverlapShape->setLocalPose(localShapeTransform);
+
+	_itemPickupOverlapDebugBody->attachShape(*_itemPickupOverlapShape);
+	Physics::GetScene()->addActor(*_itemPickupOverlapDebugBody);	
+    */
+}
+
+PxShape* Player::GetItemPickupOverlapShape() {
+	return _itemPickupOverlapShape;
 }
 
 void Player::CreateCharacterController(glm::vec3 position) {
