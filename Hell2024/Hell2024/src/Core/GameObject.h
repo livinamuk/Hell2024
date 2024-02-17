@@ -74,8 +74,9 @@ public:
 	void SetAudioOnOpen(std::string filename, float volume);
 	void SetAudioOnClose(std::string filename, float volume);
 	void SetInteract(InteractType type, std::string text, std::function<void(void)> callback);
-	void SetOpenState(OpenState openState, float speed, float min, float max);
-	void SetPosition(glm::vec3 position);
+    void SetOpenState(OpenState openState, float speed, float min, float max);
+    void SetPosition(glm::vec3 position);
+    void SetRotation(glm::vec3 rotation);
 	void SetPositionX(float position);
 	void SetPositionY(float position);
 	void SetPositionZ(float position);
@@ -118,6 +119,7 @@ public:
 	void AddCollisionShapeFromConvexMesh(Mesh* mesh, PhysicsFilterData physicsFilterData);
 	void AddCollisionShapeFromBoundingBox(BoundingBox& boundignBox, PhysicsFilterData physicsFilterData);
 	void UpdateRigidBodyMassAndInertia(float density);
+    void PutRigidBodyToSleep();
 
 	void SetRaycastShapeFromMesh(Mesh* mesh);
 	void SetRaycastShapeFromModel(Model* model);

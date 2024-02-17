@@ -9,8 +9,6 @@
 #include "Config.hpp"
 #include "../EngineState.hpp"
 
-
-
 int Player::GetCurrentWeaponClipAmmo() {
 	if (_currentWeaponIndex == Weapon::GLOCK) {
 		return _inventory.glockAmmo.clip;
@@ -127,8 +125,6 @@ void Player::PickUpShotgun() {
         _weaponInventory[Weapon::SHOTGUN] = true;
         _inventory.shotgunAmmo.clip = SHOTGUN_AMMO_SIZE;
         _inventory.shotgunAmmo.total += SHOTGUN_AMMO_SIZE * 2;
-        _inventory.shotgunAmmo.clip = 3;
-        _inventory.shotgunAmmo.total = 1;
         if (_currentWeaponIndex == KNIFE || _currentWeaponIndex == GLOCK) {
             SetWeapon(Weapon::SHOTGUN);
         }
@@ -137,7 +133,6 @@ void Player::PickUpShotgun() {
         PickUpShotgunAmmo();
     }
 }
-
 
 
 void Player::PickUpAKS74UAmmo() {
@@ -151,6 +146,13 @@ void Player::PickUpShotgunAmmo() {
     Audio::PlayAudio("ItemPickUp.wav", 1.0f);
     _inventory.shotgunAmmo.total += 25; // make this a define when you see this next or else.
 }
+
+void Player::PickUpGlockAmmo() {
+    ShowPickUpText("PICKED UP GLOCK AMMO");
+    Audio::PlayAudio("ItemPickUp.wav", 1.0f);
+    _inventory.glockAmmo.total += 50; // make this a define when you see this next or else.
+}
+
 
 void Player::CheckForItemPickOverlaps() {
 
@@ -173,13 +175,19 @@ void Player::CheckForItemPickOverlaps() {
 
 				if (physicsObjectType == GAME_OBJECT) {
                     // Weapon pickups
-                    if (!parent->IsCollected() && parent->GetName() == "AKS74U_Carlos") {
+                    if (!parent->IsCollected() && parent->GetPickUpType() == PickUpType::AKS74U) {
                         PickUpAKS74U();
                         parent->PickUp();
                     }
-                    if (!parent->IsCollected() && parent->GetName() == "Shotgun_Pickup") {
+                    if (!parent->IsCollected() && parent->GetPickUpType() == PickUpType::SHOTGUN) {
                         PickUpShotgun();
                         parent->PickUp();
+                        parent->PutRigidBodyToSleep();
+                    }
+                    if (!parent->IsCollected() && parent->GetPickUpType() == PickUpType::GLOCK_AMMO) {
+                        PickUpGlockAmmo();
+                        parent->PickUp();
+                        parent->PutRigidBodyToSleep();
                     }
 				}
 			}
@@ -195,6 +203,12 @@ void Player::CheckForItemPickOverlaps() {
 
 
 void Player::Update(float deltaTime) {
+
+
+    if (Input::KeyPressed(HELL_KEY_5)) {
+        _inventory.shotgunAmmo.clip = 6;
+        _inventory.shotgunAmmo.total = 1;
+    }
 
 	//if (_itemPickupOverlapDebugBody) {
 	//	_itemPickupOverlapDebugBody->setGlobalPose(_characterController->getActor()->getGlobalPose());
@@ -276,30 +290,30 @@ void Player::Update(float deltaTime) {
 	_right = glm::vec3(_inverseViewMatrix[0]);
 	_up = glm::vec3(_inverseViewMatrix[1]);
 	_forward = glm::vec3(_inverseViewMatrix[2]);
-	_front = glm::normalize(glm::vec3(_forward.x, 0, _forward.z));
+	_movementVector = glm::normalize(glm::vec3(_forward.x, 0, _forward.z));
 	_viewPos = _inverseViewMatrix[3];
 
-	// WSAD movement
-	_isMoving = false;
-	glm::vec3 displacement(0);
-	if (!_ignoreControl) {
-		if (Input::KeyDown(HELL_KEY_W)) {
-			displacement -= _front;// *speed;
-			_isMoving = true;
-		}
-		if (Input::KeyDown(HELL_KEY_S)) {
-			displacement += _front;// *speed;
-			_isMoving = true;
-		}
-		if (Input::KeyDown(HELL_KEY_A)) {
-			displacement -= _right;// *speed;
-			_isMoving = true;
-		}
-		if (Input::KeyDown(HELL_KEY_D)) {
-			displacement += _right;// *speed;
-			_isMoving = true;
-		}
-	}
+    // WSAD movement
+    _isMoving = false;
+    glm::vec3 displacement(0);
+    if (!_ignoreControl) {
+	    if (Input::KeyDown(HELL_KEY_W)) {
+		    displacement -= _movementVector;
+		    _isMoving = true;
+	    }
+	    if (Input::KeyDown(HELL_KEY_S)) {
+		    displacement += _movementVector;
+		    _isMoving = true;
+	    }
+	    if (Input::KeyDown(HELL_KEY_A)) {
+		    displacement -= _right;
+		    _isMoving = true;
+	    }
+	    if (Input::KeyDown(HELL_KEY_D)) {
+		    displacement += _right;
+		    _isMoving = true;
+	    }
+    }
 	float fixedDeltaTime = (1.0f / 60.0f);
 
 	// Normalize displacement vector and include player speed
@@ -423,10 +437,13 @@ void Player::Update(float deltaTime) {
 	if (!_ignoreControl) {
 		if (Input::KeyDown(HELL_KEY_T) && GetCurrentWeaponIndex() == GLOCK) {
 			SpawnGlockCasing();
-		}
-		if (Input::KeyDown(HELL_KEY_T) && GetCurrentWeaponIndex() == AKS74U) {
-			SpawnAKS74UCasing();
-		}
+        }
+        if (Input::KeyDown(HELL_KEY_T) && GetCurrentWeaponIndex() == AKS74U) {
+            SpawnAKS74UCasing();
+        }
+        if (Input::KeyDown(HELL_KEY_T) && GetCurrentWeaponIndex() == SHOTGUN) {
+            SpawnShotgunShell();
+        }
 	}
 
 	/*
@@ -630,6 +647,9 @@ bool Player::CanReload() {
 		return (_inventory.glockAmmo.total > 0 && _inventory.glockAmmo.clip < GLOCK_CLIP_SIZE && _weaponAction != RELOAD && _weaponAction != RELOAD_FROM_EMPTY);
 	}
 	if (_currentWeaponIndex == Weapon::SHOTGUN) {
+        if (_weaponAction == FIRE && !_firstPersonWeapon.AnimationIsPastPercentage(50.0f)) {
+            return false;
+        }
         return (_inventory.shotgunAmmo.total > 0 && _inventory.shotgunAmmo.clip < SHOTGUN_AMMO_SIZE && _weaponAction != RELOAD_SHOTGUN_BEGIN && _weaponAction != RELOAD_SHOTGUN_END && _weaponAction != RELOAD_SHOTGUN_SINGLE_SHELL && _weaponAction != RELOAD_SHOTGUN_DOUBLE_SHELL);
 	}
 	if (_currentWeaponIndex == Weapon::AKS74U) {
@@ -677,10 +697,6 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
             _firstPersonWeapon.SetName("Shotgun");
             _firstPersonWeapon.SetSkinnedModel("Shotgun");
             _firstPersonWeapon.SetMeshMaterialByIndex(2, "Shell");
-
-            
-
-
             _firstPersonWeapon.SetMaterial("Shotgun");
         }
         else if (_currentWeaponIndex == Weapon::MP7) {
@@ -788,6 +804,7 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
 				Audio::PlayAudio(audioName, 1.0f);
 				SpawnMuzzleFlash();
 				SpawnBullet(0, Weapon::GLOCK);
+                SpawnGlockCasing();
 				_inventory.glockAmmo.clip--;
 
 			}
@@ -827,6 +844,9 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
 				_glockSlideNeedsToBeOut = false;
 			}
 		}
+        else {
+            _glockSlideNeedsToBeOut = false;
+        }
 	}
 
 
@@ -860,7 +880,8 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
 			_firstPersonWeapon.PlayAnimation(aninName, 1.625f);
 			Audio::PlayAudio(audioName, 1.0f);
 			SpawnMuzzleFlash();
-			SpawnBullet(0.025f, Weapon::AKS74U);
+            SpawnBullet(0.025f, Weapon::AKS74U);
+            SpawnAKS74UCasing();
 			_inventory.aks74uAmmo.clip--;
 		}
 		// Fire (no ammo)
@@ -912,20 +933,10 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
 
 
 	/////////////////
-	//   Shotgun HELL   //
+	//   Shotgun   //
 
     if (_currentWeaponIndex == Weapon::SHOTGUN) {
 
-        // Give reload ammo
-        if (_weaponAction == RELOAD || _weaponAction == RELOAD_FROM_EMPTY) {
-            if (_needsAmmoReloaded && _firstPersonWeapon.AnimationIsPastPercentage(50.0f)) {
-                int ammoToGive = std::min(GLOCK_CLIP_SIZE, _inventory.glockAmmo.total);
-                _inventory.glockAmmo.clip = ammoToGive;
-                _inventory.glockAmmo.total -= ammoToGive;
-                _needsAmmoReloaded = false;
-                _glockSlideNeedsToBeOut = false;
-            }
-        }
         // Idle
         if (_weaponAction == IDLE) {
             if (Player::IsMoving()) {
@@ -957,6 +968,7 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
                 for (int i = 0; i < 12; i++) {
                     SpawnBullet(0.1, Weapon::SHOTGUN);
                 }
+                SpawnShotgunShell();
                 _inventory.shotgunAmmo.clip--;
 
             }
@@ -970,40 +982,25 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
         }
         // Reload
        if (Input::KeyPressed(HELL_KEY_R) && CanReload()) {
-
-          /*  if (GetCurrentWeaponClipAmmo() == 0) {
-                _weaponAction = RELOAD_FROM_EMPTY;
-                _firstPersonWeapon.PlayAnimation("Glock_ReloadEmpty", 1.0f);
-                Audio::PlayAudio("Glock_ReloadFromEmpty.wav", 1.0f);
-            }
-            else {*/
-                _firstPersonWeapon.PlayAnimation("Shotgun_ReloadWetstart", 1.0f);
-                _weaponAction = RELOAD_SHOTGUN_BEGIN;
-                Audio::PlayAudio("Shotgun_ReloadStart.wav", 1.25f);
-          //  }
-            //_needsAmmoReloaded = true;
+           _firstPersonWeapon.PlayAnimation("Shotgun_ReloadWetstart", 1.0f);
+           _weaponAction = RELOAD_SHOTGUN_BEGIN;
         }
 
        // BEGIN RELOAD THING
        if (_weaponAction == RELOAD_SHOTGUN_BEGIN && _firstPersonWeapon.IsAnimationComplete()) {
-           std::cout << " _inventory.shotgunAmmo.total: " << _inventory.shotgunAmmo.total << "\n";
            bool singleShell = false;
            if (_inventory.shotgunAmmo.clip == 7 || 
                _inventory.shotgunAmmo.total == 1 ) {
                singleShell = true;
-               std::cout << "only got 1 shell left\n";
            }
 
            // Single shell
            if (singleShell) {
                _firstPersonWeapon.PlayAnimation("Shotgun_Reload1Shell", 1.5f);
                _weaponAction = RELOAD_SHOTGUN_SINGLE_SHELL;
-
-                std::cout << "reloading one shell\n";
            }
            // Double shell
            else {
-               std::cout << "reloading two shell\n";
                _firstPersonWeapon.PlayAnimation("Shotgun_Reload2Shells", 1.5f);
                _weaponAction = RELOAD_SHOTGUN_DOUBLE_SHELL;
            }
@@ -1015,19 +1012,23 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
        if (_weaponAction == RELOAD_SHOTGUN_SINGLE_SHELL && _firstPersonWeapon.IsAnimationComplete() && GetCurrentWeaponClipAmmo() == SHOTGUN_AMMO_SIZE) {
            _firstPersonWeapon.PlayAnimation("Shotgun_ReloadEnd", 1.25f);
            _weaponAction = RELOAD_SHOTGUN_END;
-           Audio::PlayAudio("Shotgun_ReloadEnd.wav", 1.0f);
        }
        if (_weaponAction == RELOAD_SHOTGUN_DOUBLE_SHELL && _firstPersonWeapon.IsAnimationComplete() && GetCurrentWeaponClipAmmo() == SHOTGUN_AMMO_SIZE) {
            _firstPersonWeapon.PlayAnimation("Shotgun_ReloadEnd", 1.25f);
            _weaponAction = RELOAD_SHOTGUN_END;
-           Audio::PlayAudio("Shotgun_ReloadEnd.wav", 1.0f);
        }
        // CONTINUE THE RELOAD THING
        if (_weaponAction == RELOAD_SHOTGUN_SINGLE_SHELL && _firstPersonWeapon.IsAnimationComplete()) {
-           _firstPersonWeapon.PlayAnimation("Shotgun_Reload1Shell", 1.5f);
-           _weaponAction = RELOAD_SHOTGUN_SINGLE_SHELL;
-           _needsShotgunFirstShellAdded = true;
-           _needsShotgunSecondShellAdded = true;
+           if (_inventory.shotgunAmmo.total > 0) {
+               _firstPersonWeapon.PlayAnimation("Shotgun_Reload1Shell", 1.5f);
+               _weaponAction = RELOAD_SHOTGUN_SINGLE_SHELL;
+               _needsShotgunFirstShellAdded = true;
+               _needsShotgunSecondShellAdded = true;
+           }
+           else {
+               _firstPersonWeapon.PlayAnimation("Shotgun_ReloadEnd", 1.25f);
+               _weaponAction = RELOAD_SHOTGUN_END;
+           }
        }
        if (_weaponAction == RELOAD_SHOTGUN_DOUBLE_SHELL && _firstPersonWeapon.IsAnimationComplete()) {
            bool singleShell = false;
@@ -1047,11 +1048,8 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
            }
            _needsShotgunFirstShellAdded = true;
            _needsShotgunSecondShellAdded = true;
-       }
+       } 
 
-
-
-     
        // Give ammo on reload
        if (_needsShotgunFirstShellAdded && _weaponAction == RELOAD_SHOTGUN_SINGLE_SHELL && _firstPersonWeapon.AnimationIsPastPercentage(35.0f)) {
            _inventory.shotgunAmmo.clip++;
@@ -1072,21 +1070,11 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
            Audio::PlayAudio("Shotgun_Reload.wav", 1.0f);
        }
 
-        if (_weaponAction == RELOAD && _firstPersonWeapon.IsAnimationComplete() ||
-            _weaponAction == RELOAD_FROM_EMPTY && _firstPersonWeapon.IsAnimationComplete() ||
+       if (_weaponAction == FIRE && _firstPersonWeapon.IsAnimationComplete() ||
+           _weaponAction == RELOAD_SHOTGUN_END && _firstPersonWeapon.IsAnimationComplete() ||
             _weaponAction == SPAWNING && _firstPersonWeapon.IsAnimationComplete()) {
             _weaponAction = IDLE;
         }
-        // Set flag to move glock slide out
-        if (GetCurrentWeaponClipAmmo() == 0) {
-            if (_weaponAction != RELOAD_FROM_EMPTY) {
-                _glockSlideNeedsToBeOut = true;
-            }
-            if (_weaponAction == RELOAD_FROM_EMPTY && !_firstPersonWeapon.AnimationIsPastPercentage(50.0f)) {
-                _glockSlideNeedsToBeOut = false;
-            }
-        }
-
     }
 
 
@@ -1102,14 +1090,15 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
 	}
 
 	// Weapon sway
-	//if (!_ignoreControl) {
-	if (true) {
+	if (!_ignoreControl) {
 		float swaySpeed = 5.0f;
 		float swayAmount = 0.8f;
 		glm::vec2 swayAmountMax(3.0f);
 		const float lerpFrac = swaySpeed * deltaTime;
-		const glm::vec2 lookDelta = glm::vec2(-Input::GetMouseOffsetX(), -Input::GetMouseOffsetY());
-
+		glm::vec2 lookDelta = glm::vec2(-Input::GetMouseOffsetX(), -Input::GetMouseOffsetY());
+        if (_currentWeaponIndex == Weapon::SHOTGUN ) {
+            lookDelta = glm::vec2(Input::GetMouseOffsetX(), -Input::GetMouseOffsetY());
+        }
 		_weaponSwayFactor  = glm::mix(_weaponSwayFactor, -(lookDelta * swayAmount), lerpFrac);
 		_weaponSwayFactor = glm::clamp(_weaponSwayFactor, -swayAmountMax, swayAmountMax);
 		_weaponSwayTargetPos = glm::mix(_weaponSwayTargetPos, glm::vec3(_weaponSwayFactor, 0), lerpFrac);
@@ -1141,7 +1130,8 @@ void Player::SpawnGlockCasing() {
 	PhysicsFilterData filterData;
 	filterData.raycastGroup = RaycastGroup::RAYCAST_DISABLED;
 	filterData.collisionGroup = CollisionGroup::BULLET_CASING;
-	filterData.collidesWith = CollisionGroup::ENVIROMENT_OBSTACLE;
+    filterData.collidesWith = CollisionGroup::ENVIROMENT_OBSTACLE;
+    filterData.collidesWith = CollisionGroup::NO_COLLISION;
 
 	PxShape* shape = Physics::CreateBoxShape(0.01f, 0.004f, 0.004f);
 	PxRigidDynamic* body = Physics::CreateRigidDynamic(transform, filterData, shape);
@@ -1158,7 +1148,40 @@ void Player::SpawnGlockCasing() {
 
 
 
+void Player::SpawnShotgunShell() {
 
+    Transform transform;
+    transform.position = _firstPersonWeapon.GetShotgunBarrelPosition();
+    transform.rotation.x = HELL_PI * 0.5f;
+    transform.rotation.y = _rotation.y + (HELL_PI * 0.5f);
+    //transform.rotation.x = HELL_PI * 0.5f;
+    //transform.rotation.y = _rotation.y + (HELL_PI * 0.5f);
+    //transform.rotation.z = HELL_PI * 0.5f;
+
+    transform.position -= _forward * 0.20f;
+    transform.position -= _up * 0.05f;
+
+    PhysicsFilterData filterData;
+    filterData.raycastGroup = RaycastGroup::RAYCAST_DISABLED;
+    filterData.collisionGroup = CollisionGroup::BULLET_CASING;
+    filterData.collidesWith = CollisionGroup::ENVIROMENT_OBSTACLE;
+    filterData.collidesWith = CollisionGroup::NO_COLLISION;
+
+    PxShape* shape = Physics::CreateBoxShape(0.03f, 0.007f, 0.007f);
+    PxRigidDynamic* body = Physics::CreateRigidDynamic(transform, filterData, shape);
+
+    PxVec3 force = Util::GlmVec3toPxVec3(glm::normalize(GetCameraRight() + glm::vec3(0.0f, Util::RandomFloat(0.7f, 1.4f), 0.0f)) * glm::vec3(0.02f));
+    body->addForce(force);
+    //body->setAngularVelocity(PxVec3(Util::RandomFloat(0.0f, 50.0f), Util::RandomFloat(0.0f, 50.0f), Util::RandomFloat(0.0f, 50.0f)));
+    //shape->release();
+
+    BulletCasing bulletCasing;
+    bulletCasing.type = SHOTGUN;
+    bulletCasing.rigidBody = body;
+    Scene::_bulletCasings.push_back(bulletCasing);
+
+    //body->userData = (void*)&Scene::_bulletCasings.back();
+}
 
 void Player::SpawnAKS74UCasing() {
 
@@ -1170,7 +1193,8 @@ void Player::SpawnAKS74UCasing() {
 	PhysicsFilterData filterData;
 	filterData.raycastGroup = RaycastGroup::RAYCAST_DISABLED;
 	filterData.collisionGroup = CollisionGroup::BULLET_CASING;
-	filterData.collidesWith = CollisionGroup::ENVIROMENT_OBSTACLE;
+    filterData.collidesWith = CollisionGroup::ENVIROMENT_OBSTACLE;
+    filterData.collidesWith = CollisionGroup::NO_COLLISION;
 
 	PxShape* shape = Physics::CreateBoxShape(0.02f, 0.004f, 0.004f);
 	PxRigidDynamic* body = Physics::CreateRigidDynamic(transform, filterData, shape);
@@ -1204,27 +1228,7 @@ void Player::SpawnBullet(float variance, Weapon type) {
 
 	bullet.direction = (glm::normalize(GetCameraForward() + offset)) * glm::vec3(-1);
 	Scene::_bullets.push_back(bullet);
-
-	if (GetCurrentWeaponIndex() == GLOCK) {
-		SpawnGlockCasing();
-	}
-	if (GetCurrentWeaponIndex() == AKS74U) {
-		SpawnAKS74UCasing();
-	}
 }
-
-/*
-void Player::CastMouseRay() {
-
-	Bullet bullet;
-	bullet.spawnPosition = GetViewPos();
-
-	bullet.direction = GameState::_mouseRay;// (glm::normalize(GetCameraForward()))* glm::vec3(-1);
-	Scene::_bullets.push_back(bullet);
-
-	Audio::PlayAudio("Glock_Fire1.wav", 1.0f);
-}*/
-
 
 void Player::DropAKS7UMag() {
 
@@ -1298,17 +1302,14 @@ float Player::GetRadius() {
 }
 
 bool Player::CursorShouldBeInterect() {
-
 	if (_cameraRayResult.physicsObjectType == DOOR) {
 		Door* door = (Door*)(_cameraRayResult.parent);
 		return door->IsInteractable(GetFeetPosition());
 	}
-
 	if (_cameraRayResult.physicsObjectType == GAME_OBJECT && _cameraRayResult.parent) {
 		GameObject* gameObject = (GameObject*)(_cameraRayResult.parent);
 		return gameObject->IsInteractable();	// TO DO: add interact distance for game objects
 	}
-
 	return false;
 }
 
@@ -1323,40 +1324,12 @@ PxRigidDynamic* Player::GetCharacterControllerActor() {
 }
 
 void Player::CreateItemPickupOverlapShape() {
-
 	if (_itemPickupOverlapShape) {
 		_itemPickupOverlapShape->release();
 	}
-	//if (_itemPickupOverlapDebugBody) {
-	//	_itemPickupOverlapDebugBody->release();
-	//}
-
     float radius = PLAYER_CAPSULE_RADIUS + 0.2;
     float halfHeight = PLAYER_CAPSULE_HEIGHT * 0.5f;
-
-	_itemPickupOverlapShape = Physics::GetPhysics()->createShape(PxCapsuleGeometry(radius, halfHeight), *Physics::GetDefaultMaterial(), true);
-
-	/*Transform transform;
-	transform.position = glm::vec3(2.5f, 0.0f, 3.5f);
-
-	PxQuat quat = Util::GlmQuatToPxQuat(glm::quat(transform.rotation));
-	PxTransform trans = PxTransform(PxVec3(transform.position.x, transform.position.y, transform.position.z), quat);
-	_itemPickupOverlapDebugBody = Physics::GetPhysics()->createRigidStatic(trans);
-
-	PxFilterData filterData;
-	filterData.word0 = RaycastGroup::RAYCAST_ENABLED;
-	filterData.word1 = CollisionGroup::NO_COLLISION;
-	filterData.word2 = CollisionGroup::NO_COLLISION;
-	_itemPickupOverlapShape->setQueryFilterData(filterData);       // ray casts
-	_itemPickupOverlapShape->setSimulationFilterData(filterData);  // collisions
-	Transform shapeOffset;
-	PxMat44 localShapeMatrix = Util::GlmMat4ToPxMat44(shapeOffset.to_mat4());
-	PxTransform localShapeTransform(localShapeMatrix);
-	_itemPickupOverlapShape->setLocalPose(localShapeTransform);
-
-	_itemPickupOverlapDebugBody->attachShape(*_itemPickupOverlapShape);
-	Physics::GetScene()->addActor(*_itemPickupOverlapDebugBody);	
-    */
+    	_itemPickupOverlapShape = Physics::GetPhysics()->createShape(PxCapsuleGeometry(radius, halfHeight), *Physics::GetDefaultMaterial(), true);
 }
 
 PxShape* Player::GetItemPickupOverlapShape() {

@@ -247,6 +247,7 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <None Include="res\shaders\glass.vert" />
     <None Include="res\shaders\outline.frag" />
     <None Include="res\shaders\outline.vert" />
+    <None Include="res\shaders\skin.comp" />
     <None Include="res\shaders\skybox.frag" />
     <None Include="res\shaders\skybox.vert" />
     <None Include="res\shaders\test.comp" />
@@ -260,6 +261,8 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <None Include="res\shaders\shadowmap.vert" />
     <None Include="res\shaders\solid_color.frag" />
     <None Include="res\shaders\solid_color.vert" />
+    <None Include="res\shaders\test.frag" />
+    <None Include="res\shaders\test.vert" />
     <None Include="res\shaders\ui.frag" />
     <None Include="res\shaders\ui.vert" />
     <None Include="res\shaders\voxelize.frag" />

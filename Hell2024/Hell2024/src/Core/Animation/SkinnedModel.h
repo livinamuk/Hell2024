@@ -55,6 +55,14 @@ struct MeshEntry {
     unsigned int BaseVertex = 0;
     unsigned int BaseIndex = 0;
     std::string Name;
+
+  /*  std::vector<glm::vec3>& Positions;
+    std::vector<glm::vec3>& Normals;
+    std::vector<glm::vec2>& TexCoords;
+    std::vector<VertexBoneData>& Bones;
+    std::vector<unsigned int>& Indices;
+    std::vector<glm::vec3>& Tangents;
+    std::vector<glm::vec3>& Bitangents;*/
 };
 
 struct VertexBoneData {
@@ -96,6 +104,7 @@ public:
     void CalcInterpolatedPosition(glm::vec3& Out, float AnimationTime, const AnimatedNode* animatedNode);
     int FindAnimatedNodeIndex(float AnimationTime, const AnimatedNode* animatedNode);        
     const AnimatedNode* FindAnimatedNode(Animation* animation, const char* NodeName);     
+
 
     std::vector<Joint> m_joints;
     std::string _filename = "undefined";

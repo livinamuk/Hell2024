@@ -1,0 +1,96 @@
+#version 430 core
+
+struct BoneData {
+	ivec4 aBoneID;
+	vec4 aBoneWeight;
+};
+
+layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
+
+layout(std430, binding = 0) buffer verticesIn {
+    float VerticesIn[];
+};
+
+layout(std430, binding = 1) buffer verticesOut {
+    float VerticesOut[];
+};
+
+layout(std430, binding = 2) buffer boneDataIn{
+    BoneData BoneDataIn[];
+};
+
+
+
+uniform mat4 skinningMats[85];
+
+void main() {
+
+    const uint index = gl_GlobalInvocationID.x;
+	
+	const uint x = index * 3;
+	const uint y = index * 3 + 1;
+	const uint z = index * 3 + 2;
+	
+	/*const uint boneIDx = i * 8;
+	const uint boneIDy = i * 8 + 1;
+	const uint boneIDz = i * 8 + 2;
+	const uint boneIDw = i * 8 + 3;
+	const uint boneWeightx = i * 8 + 4;
+	const uint boneWeighty = i * 8 + 5;
+	const uint boneWeightz = i * 8 + 6;
+	const uint boneWeightw = i * 8 + 7;
+		
+	int IDx = int(BoneDataIn[boneIDx]);
+	int IDy = int(BoneDataIn[boneIDy]);
+	int IDz = int(BoneDataIn[boneIDz]);
+	int IDw = int(BoneDataIn[boneIDw]);
+
+	ivec4 aBoneID = ivec4(IDx, IDy, IDz, IDw);
+	vec4 aBoneWeight = vec4(BoneDataIn[boneWeightx], BoneDataIn[boneWeighty], BoneDataIn[boneWeightz], BoneDataIn[boneWeightw]);
+	*/
+
+	ivec4 aBoneID = BoneDataIn[index].aBoneID;
+	vec4 aBoneWeight = BoneDataIn[index].aBoneWeight;
+
+	//aBoneID = ivec4(0,0,0,0);
+	//aBoneWeight  = vec4(1,0,0,0);
+
+	vec3 pos = vec3(VerticesIn[x], VerticesIn[y], VerticesIn[z]) * vec3(0.5, 0.5, 0.5);
+	pos.y += 50;
+
+
+
+		vec4 totalLocalPos = vec4(0.0);
+		//vec4 totalNormal = vec4(0.0);
+		//vec4 totalTangent = vec4(0.0);
+			
+		vec4 vertexPosition =  vec4(pos, 1.0);
+		//vec4 vertexNormal = vec4(aNormal, 0.0);
+		//vec4 vertexTangent = vec4(aTangent, 0.0);
+
+		for(int i=0;i<4;i++)  {
+			mat4 jointTransform = skinningMats[int(aBoneID[i])];
+			vec4 posePosition =  jointTransform  * vertexPosition * aBoneWeight[i];
+			
+			//vec4 worldNormal = jointTransform * vertexNormal * aBoneWeight[i];
+			//vec4 worldTangent = jointTransform * vertexTangent * aBoneWeight[i];
+
+			totalLocalPos += posePosition;		
+			//totalNormal += worldNormal;	
+			//totalTangent += worldTangent;	
+		}
+
+		
+	VerticesOut[x] = totalLocalPos.x;
+	VerticesOut[y] = totalLocalPos.y;
+	VerticesOut[z] = totalLocalPos.z;
+	
+//	VerticesOut[x] = pos.x;
+//	VerticesOut[y] = pos.y;
+//	VerticesOut[z] = pos.z;
+	
+		//WorldPos = (model * vec4(totalLocalPos.xyz, 1)).xyz;
+
+
+
+}

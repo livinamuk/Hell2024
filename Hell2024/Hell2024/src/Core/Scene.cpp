@@ -20,6 +20,21 @@ void ProcessBullets();
 
 void Scene::Update(float deltaTime) {
 
+    static int i = 0;
+    i++;
+
+    // Move light source 3 to the lamp
+    GameObject* lamp = GetGameObjectByName("Lamp");
+    if (lamp && i > 2) {
+        glm::mat4 lampMatrix = lamp->GetModelMatrix();
+        Transform globeTransform;
+        globeTransform.position = glm::vec3(0, 0.45f, 0);
+        glm::mat4 worldSpaceMatrix = lampMatrix * globeTransform.to_mat4();
+        Scene::_lights[3].position = Util::GetTranslationFromMatrix(worldSpaceMatrix);
+    }
+   // Scene::_lights[3].isDirty = true;
+
+
     GameObject* ak = GetGameObjectByName("AKS74U_Carlos");
    // ak->_transform.rotation = glm::vec3(0, 0, 0);
     if (Input::KeyPressed(HELL_KEY_SPACE) && false) {
@@ -50,6 +65,7 @@ void Scene::Update(float deltaTime) {
 
 	for (PickUp& pickUp : _pickUps) {
         pickUp.Update(deltaTime);
+
 	}
 
 	
@@ -88,7 +104,7 @@ void Scene::Update(float deltaTime) {
         float frequency = 20.f;
         float amplitude = 0.5f;
         totalTime += deltaTime;
-        Scene::_lights[2].strength = 1.0f + sin(totalTime * frequency) * amplitude;
+      //  Scene::_lights[2].strength = 1.0f + sin(totalTime * frequency) * amplitude;
     }
 
     // Move light 0 in a figure 8
@@ -255,14 +271,14 @@ void ProcessBullets() {
 }
 void Scene::LoadHardCodedObjects() {
 
-	PickUp& glockAmmoA = _pickUps.emplace_back();
+/*PickUp& glockAmmoA = _pickUps.emplace_back();
 	//glockAmmoA.position = glm::vec3(2.0f, 0.1f, 3.6f);
 	glockAmmoA.position = glm::vec3(0.0f, 0.676f, 0.3f);
     glockAmmoA.rotation.y = HELL_PI * 0.4f;
     glockAmmoA.type = PickUp::Type::GLOCK_AMMO;
     glockAmmoA.parentGameObjectName = "TopDraw";
-
-
+    */
+    
     _ceilings.emplace_back(door2X - 0.8f, 7.0f, door2X + 0.8f, 9.95f, 2.5f, AssetManager::GetMaterialIndex("Ceiling"));
 
     // ceilings            
@@ -363,11 +379,10 @@ void Scene::LoadHardCodedObjects() {
 
 
         GameObject& shotgunPickup = _gameObjects.emplace_back();
-        // shotgunPickup.SetPosition(2.165f, 1.5f, 6.1f);
-        shotgunPickup.SetPosition(0.2f, 0.7f, 2.1f);
-        shotgunPickup.SetRotationX(-1.5f);
-        shotgunPickup.SetRotationY(0.4f);
-        shotgunPickup.SetRotationZ(0.1f + HELL_PI);
+        shotgunPickup.SetPosition(0.2f, 0.65f, 2.1f);
+        shotgunPickup.SetRotationX(-1.55f);
+        shotgunPickup.SetRotationY(0.2f);
+        shotgunPickup.SetRotationZ(0.175f + HELL_PI);
         shotgunPickup.SetModel("Shotgun_Isolated");
         shotgunPickup.SetName("Shotgun_Pickup");
         shotgunPickup.SetMeshMaterial("Shotgun");
@@ -376,8 +391,36 @@ void Scene::LoadHardCodedObjects() {
         shotgunPickup.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("Shotgun_Isolated_ConvexMesh")->_meshes[0], filterData666);
         shotgunPickup.SetRaycastShapeFromModel(AssetManager::GetModel("Shotgun_Isolated"));
         shotgunPickup.SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
-        shotgunPickup.UpdateRigidBodyMassAndInertia(50.0f);
-       
+        shotgunPickup.UpdateRigidBodyMassAndInertia(75.0f);
+        shotgunPickup.PutRigidBodyToSleep();
+
+        GameObject& glockAmmo = _gameObjects.emplace_back();
+        glockAmmo.SetPosition(0.40f, 0.78f, 4.45f);
+        glockAmmo.SetRotationY(HELL_PI * 0.4f);
+        glockAmmo.SetModel("GlockAmmoBox");
+        glockAmmo.SetName("GlockAmmo_PickUp");
+        glockAmmo.SetMeshMaterial("GlockAmmoBox");
+        glockAmmo.SetPickUpType(PickUpType::GLOCK_AMMO);
+        glockAmmo.CreateRigidBody(glockAmmo._transform.to_mat4(), false);
+        glockAmmo.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("GlockAmmoBox_ConvexMesh")->_meshes[0], filterData666);
+        glockAmmo.SetRaycastShapeFromModel(AssetManager::GetModel("GlockAmmoBox_ConvexMesh"));
+        glockAmmo.SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
+        glockAmmo.UpdateRigidBodyMassAndInertia(150.0f);
+        glockAmmo.PutRigidBodyToSleep();
+
+
+
+
+
+        /*	PickUp& glockAmmoA = _pickUps.emplace_back();
+            //glockAmmoA.position = glm::vec3(2.0f, 0.1f, 3.6f);
+            glockAmmoA.position = glm::vec3(0.0f, 0.676f, 0.3f);
+            glockAmmoA.rotation.y = HELL_PI * 0.4f;
+            glockAmmoA.type = PickUp::Type::GLOCK_AMMO;
+            glockAmmoA.parentGameObjectName = "TopDraw";
+
+
+
 
 
 
@@ -522,7 +565,17 @@ void Scene::LoadHardCodedObjects() {
             filterData3.collisionGroup = CollisionGroup::ENVIROMENT_OBSTACLE;
             filterData3.collidesWith = CollisionGroup(GENERIC_BOUNCEABLE | BULLET_CASING | PLAYER);
             smallChestOfDrawers.CreateRigidBody(smallChestOfDrawers.GetGameWorldMatrix(), true);
-            smallChestOfDrawers.AddCollisionShapeFromBoundingBox(smallChestOfDrawers._model->_boundingBox, filterData3);
+            smallChestOfDrawers.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("SmallChestOfDrawersFrame_ConvexMesh")->_meshes[0], filterData3);
+            smallChestOfDrawers.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("SmallChestOfDrawersFrameLeftSide_ConvexMesh")->_meshes[0], filterData3);
+            smallChestOfDrawers.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("SmallChestOfDrawersFrameRightSide_ConvexMesh")->_meshes[0], filterData3);
+
+            PhysicsFilterData filterData4;
+            filterData4.raycastGroup = RAYCAST_DISABLED;
+            filterData4.collisionGroup = CollisionGroup::ENVIROMENT_OBSTACLE;
+            filterData4.collidesWith = CollisionGroup(PLAYER);
+            smallChestOfDrawers.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("SmallChestOfDrawersFrameFrontSide_ConvexMesh")->_meshes[0], filterData4);
+
+            //smallChestOfDrawers.AddCollisionShapeFromBoundingBox(smallChestOfDrawers._model->_boundingBox, filterData3);
 
             PhysicsFilterData filterData2;
             filterData2.raycastGroup = RAYCAST_DISABLED;
@@ -530,13 +583,13 @@ void Scene::LoadHardCodedObjects() {
             filterData2.collidesWith = CollisionGroup(ENVIROMENT_OBSTACLE | GENERIC_BOUNCEABLE);
 
 			GameObject& lamp = _gameObjects.emplace_back();
-			lamp.SetModel("Lamp");
+			lamp.SetModel("LampFullNoGlobe");
 			lamp.SetName("Lamp");
             lamp.SetMeshMaterial("Lamp");
             lamp.SetPosition(-.105f, 0.88, 0.25f);
             lamp.SetParentName("SmallDrawersHis");
 
-            lamp.SetRaycastShapeFromModel(AssetManager::GetModel("Lamp"));
+            lamp.SetRaycastShapeFromModel(AssetManager::GetModel("LampFull"));
             lamp.CreateRigidBody(lamp.GetGameWorldMatrix(), false);
 
             lamp.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("LampConvexMesh_0")->_meshes[0], filterData2);
@@ -557,6 +610,12 @@ void Scene::LoadHardCodedObjects() {
             smallChestOfDrawer_1.SetOpenState(OpenState::CLOSED, 2.183f, 0, 0.2f);
             smallChestOfDrawer_1.SetOpenAxis(OpenAxis::TRANSLATE_Z);
             smallChestOfDrawer_1.SetRaycastShapeFromModel(AssetManager::GetModel("SmallDrawerTop"));
+            smallChestOfDrawer_1.CreateRigidBody(smallChestOfDrawer_1.GetGameWorldMatrix(), true);
+            smallChestOfDrawer_1.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("SmallDrawerTop_ConvexMesh0")->_meshes[0], filterData2);
+            smallChestOfDrawer_1.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("SmallDrawerTop_ConvexMesh1")->_meshes[0], filterData2);
+            smallChestOfDrawer_1.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("SmallDrawerTop_ConvexMesh2")->_meshes[0], filterData2);
+            smallChestOfDrawer_1.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("SmallDrawerTop_ConvexMesh3")->_meshes[0], filterData2);
+            smallChestOfDrawer_1.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("SmallDrawerTop_ConvexMesh4")->_meshes[0], filterData2);
 
 
 
@@ -674,12 +733,12 @@ void Scene::LoadHardCodedObjects() {
 
     */
 
- /*
+    /*
     AnimatedGameObject & shotgun = _animatedGameObjects.emplace_back(AnimatedGameObject());
     shotgun.SetName("ShotgunTest");
     shotgun.SetSkinnedModel("Shotgun");
     shotgun.SetAnimatedTransformsToBindPose();
-    shotgun.PlayAndLoopAnimation("Shotgun_Reload1Shell", 0.5f);
+    shotgun.PlayAndLoopAnimation("Shotgun_Fire", 0.5f);
     shotgun.SetMaterial("Shotgun");
     shotgun.SetMeshMaterial("Arms", "Hands");
   //  glock.SetMeshMaterial("manniquen1_2", "Hands");
@@ -689,8 +748,8 @@ void Scene::LoadHardCodedObjects() {
     shotgun.SetPosition(glm::vec3(2.5f, 1.5f, 4));
     shotgun.SetRotationY(HELL_PI * 0.5f);
     shotgun.SetMeshMaterialByIndex(2, "Shell");
-    
-
+    */
+    /*
     for (auto& mesh : shotgun._skinnedModel->m_meshEntries) {
         std::cout << "shit         shit      " << mesh.Name << "\n";
    }
@@ -1195,11 +1254,15 @@ void Scene::ProcessPhysicsCollisions() {
 void Scene::RecreateDataStructures() {
 
     // Remove all scene physx objects, if they exist
-	if (_sceneTriangleMesh) {
-		_sceneTriangleMesh->release();
-		_sceneShape->release(); 
+    if (_sceneTriangleMesh) {
+        _sceneTriangleMesh->release();
+    }
+    if (_sceneShape) {
+        _sceneShape->release();
+    }
+    if (_sceneRigidDynamic) {
         _sceneRigidDynamic->release();
-	}
+    }
 
     CreateMeshData();
     CreatePointCloud();

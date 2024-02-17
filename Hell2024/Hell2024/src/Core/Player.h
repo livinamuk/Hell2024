@@ -68,8 +68,9 @@ public:
 	void UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime);
 	AnimatedGameObject& GetFirstPersonWeapon();
 	void SpawnMuzzleFlash();
-	void SpawnGlockCasing();
-	void SpawnAKS74UCasing();
+    void SpawnGlockCasing();
+    void SpawnAKS74UCasing();
+    void SpawnShotgunShell();
 	float GetMuzzleFlashTime();
 	float GetMuzzleFlashRotation();
 	float GetRadius();
@@ -85,6 +86,7 @@ public:
     void PickUpAKS74U();
     void PickUpAKS74UAmmo();
     void PickUpShotgunAmmo();
+    void PickUpGlockAmmo();
 	void CastMouseRay();
 	void DropAKS7UMag();
 
@@ -123,7 +125,7 @@ private:
 	glm::mat4 _viewMatrix = glm::mat4(1);
 	glm::mat4 _inverseViewMatrix = glm::mat4(1);
 	glm::vec3 _viewPos = glm::vec3(0);
-	glm::vec3 _front = glm::vec3(0);
+	glm::vec3 _movementVector = glm::vec3(0);
 	glm::vec3 _forward = glm::vec3(0);
 	glm::vec3 _up = glm::vec3(0);
 	glm::vec3 _right = glm::vec3(0);

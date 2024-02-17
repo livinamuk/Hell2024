@@ -15,9 +15,8 @@ namespace Gizmo {
     Shader g_LineShader;
     Shader g_PointShader;
 
-    enum State {TRANSLATE, ROTATE, SCALE};
-    
-    State g_state = TRANSLATE;
+    //enum State {TRANSLATE, ROTATE, SCALE};
+    //State g_state = TRANSLATE;
 
     inline glm::mat4 Im3dMat4ToGlmMat4(Im3d::Mat4 pxMatrix) {
         glm::mat4 matrix;
@@ -71,20 +70,17 @@ namespace Gizmo {
         return glm::vec3(matrix[3][0], matrix[3][1], matrix[3][2]);
     }
 
+    inline void NextGizmoMode() {
+        int gizmoMode = (int)Im3d::GetContext().m_gizmoMode;
+        gizmoMode++;
+        if (gizmoMode == 3) {
+            gizmoMode = 0;
+        }
+        Im3d::GetContext().m_gizmoMode = (Im3d::GizmoMode)(gizmoMode);
+    }
+
     void Update(glm::vec3 viewPos, glm::vec3 viewDir, float mouseX, float mouseY, glm::mat4 projection, glm::mat4 view, bool leftMouseDown, float viewportWidth, float viewportHeight) {
 
-      //  static Im3d::Mat4 transform = GlmMat4ToIm3dMat4(matrix);
-
-      //  static  bool onlyOncePlease = true;
-
-     //   if (onlyOncePlease) {
-     //       transform = GlmMat4ToIm3dMat4(matrix);
-        //    onlyOncePlease = false;
-     //   }
-       
-
-       // float viewportWidth = 1920 * 1.5f;
-       // float viewportHeight = 1080 * 1.5f;
         float deltaTime = 1.0f / 60.0f;
 
         Im3d::AppData& ad = Im3d::GetAppData();
@@ -97,9 +93,7 @@ namespace Gizmo {
         ad.m_projOrtho = false;// g_Example->m_camOrtho;
 
         // m_projScaleY controls how gizmos are scaled in world space to maintain a constant screen height
-       // ad.m_projScaleY = tanf(g_Example->m_camFovRad * 0.5f) * 2.0f; // or vertical fov for a perspective projection
         ad.m_projScaleY = tanf(1.0f * 0.5f) * 2.0f; // or vertical fov for a perspective projection
-
 
         // World space cursor ray from mouse position; for VR this might be the position/orientation of the HMD or a tracked controller.
         Im3d::Vec2 cursorPos = { mouseX, mouseY };
@@ -121,7 +115,7 @@ namespace Gizmo {
 
     }
 
-    glm::vec3 Draw(glm::mat4 projection, glm::mat4 view, float viewportWidth, float viewportHeight, glm::mat4 matrix) {
+    Im3d::Mat4 Draw(glm::mat4 projection, glm::mat4 view, float viewportWidth, float viewportHeight, glm::mat4 matrix) {
 
         Im3d::NewFrame();
 
@@ -145,16 +139,16 @@ namespace Gizmo {
 
 
         // Context-global gizmo modes are set via actions in the AppData::m_keyDown but could also be modified via a GUI as follows:
-        int gizmoMode = (int)Im3d::GetContext().m_gizmoMode;
+      //  int gizmoMode = (int)Im3d::GetContext().m_gizmoMode;
 
       //  Im3d::GetContext().m_gizmoMode = (Im3d::GizmoMode)gizmoMode;
        
-        Im3d::GetContext().m_gizmoMode = (Im3d::GizmoMode)(g_state);
+       // Im3d::GetContext().m_gizmoMode = (Im3d::GizmoMode)(g_state);
 
         // The ID passed to Gizmo() should be unique during a frame - to create gizmos in a loop use PushId()/PopId().
         if (Im3d::Gizmo("GizmoUnified", transform))
         {
-            int gizmoMode = 1;// (int)Im3d::GetContext().m_gizmoMode;
+           // int gizmoMode = (int)Im3d::GetContext().m_gizmoMode;
            /*gizmoMode = Im3d::GizmoMode_Translation;
             ImGui::SameLine();
             ImGui::RadioButton("Rotate (Ctrl+R)", &gizmoMode, Im3d::GizmoMode_Rotation);
@@ -229,7 +223,7 @@ namespace Gizmo {
                 break;
             default:
                 IM3D_ASSERT(false);
-                return glm::vec3(0,0,0);
+                return transform;
             };
 
             if (nullptr) {
@@ -258,7 +252,7 @@ namespace Gizmo {
 
         //  Im3d::NewFrame();
 
-        return gizmoWorldPos;
+        return transform;
     }
 
 }

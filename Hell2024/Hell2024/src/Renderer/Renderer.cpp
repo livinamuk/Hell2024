@@ -88,12 +88,14 @@ struct Shaders {
 	Shader blurVertical;
 	Shader blurHorizontal;
 	Shader outline;
-	Shader envMapShader;
-	Shader brdf;
+    Shader envMapShader;
+    Shader brdf;
+    Shader test;
     ComputeShader compute;
 	ComputeShader pointCloud;
 	ComputeShader propogateLight;
 	ComputeShader computeTest;
+    ComputeShader skin;
     //ComputeShader propogationList;
     //ComputeShader calculateIndirectDispatchSize;
 } _shaders;
@@ -172,10 +174,11 @@ int _dirtyProbeCount;
 std::vector<glm::mat4> _glockMatrices;
 std::vector<glm::mat4> _aks74uMatrices;
 
+PxRigidStatic* selectedPhysXObject = nullptr;
 
 
 enum RenderMode { COMPOSITE, DIRECT_LIGHT, INDIRECT_LIGHT, POINT_CLOUD, MODE_COUNT } _mode;
-enum DebugLineRenderMode { SHOW_NO_LINES, PHYSX_ALL, PHYSX_RAYCAST, PHYSX_COLLISION, RAYTRACE_LAND, PHYSX_EDITOR, GIZMO_X_TRANSLATE, DEBUG_LINE_MODE_COUNT} _debugLineRenderMode;
+enum DebugLineRenderMode { SHOW_NO_LINES, PHYSX_ALL, PHYSX_RAYCAST, PHYSX_COLLISION, RAYTRACE_LAND, PHYSX_EDITOR, DEBUG_LINE_MODE_COUNT} _debugLineRenderMode;
 
 void RenderEnviromentMaps();
 void DrawHud(Player* player);
@@ -595,8 +598,10 @@ void Renderer::Init() {
 	_shaders.skybox.Load("skybox.vert", "skybox.frag");
 	_shaders.envMapShader.Load("envMap.vert", "envMap.frag", "envMap.geom");
 	_shaders.brdf.Load("brdf.vert", "brdf.frag");
+    _shaders.test.Load("test.vert", "test.frag");
     
-	_shaders.computeTest.Load("res/shaders/test.comp");
+    _shaders.computeTest.Load("res/shaders/test.comp");
+    _shaders.skin.Load("res/shaders/skin.comp");
     
 	_shaders.blurVertical.Load("blurVertical.vert", "blur.frag");
 	_shaders.blurHorizontal.Load("blurHorizontal.vert", "blur.frag");
@@ -799,6 +804,39 @@ long MapRange(long x, long in_min, long in_max, long out_min, long out_max) {
     return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
 }
 
+#define if_likely(e)   if(!!(e))
+constexpr float Pi = 3.14159265359f;
+constexpr float TwoPi = 2.0f * Pi;
+constexpr float HalfPi = 0.5f * Pi;
+
+Im3d::Vec3 ToEulerXYZ(const Im3d::Mat3& _m)
+{
+    // http://www.staff.city.ac.uk/~sbbh653/publications/euler.pdf
+    Im3d::Vec3 ret;
+    if_likely(fabs(_m(2, 0)) < 1.0f)
+    {
+        ret.y = -asinf(_m(2, 0));
+        float c = 1.0f / cosf(ret.y);
+        ret.x = atan2f(_m(2, 1) * c, _m(2, 2) * c);
+        ret.z = atan2f(_m(1, 0) * c, _m(0, 0) * c);
+    }
+    else
+    {
+        ret.z = 0.0f;
+        if (!(_m(2, 0) > -1.0f))
+        {
+            ret.x = ret.z + atan2f(_m(0, 1), _m(0, 2));
+            ret.y = HalfPi;
+        }
+        else
+        {
+            ret.x = -ret.z + atan2f(-_m(0, 1), -_m(0, 2));
+            ret.y = -HalfPi;
+        }
+    }
+    return ret;
+}
+
 void Renderer::RenderFrame(Player* player) {
 
     if (!player) {
@@ -832,12 +870,7 @@ void Renderer::RenderFrame(Player* player) {
     Gizmo::Update(viewPos, viewDir, mouseX, mouseY, projection, view, leftMouseDown, presentFrameBuffer.GetWidth(), presentFrameBuffer.GetHeight());
 
     if (Input::KeyPressed(HELL_KEY_SLASH)) {
-        int i = (int)(Gizmo::g_state);
-        i++;
-        if (i == 3) {
-            i = 0;
-        }
-        Gizmo::g_state = (Gizmo::State)i;
+        Gizmo::NextGizmoMode();
     }
 
 	_shaders.UI.Use();
@@ -990,15 +1023,29 @@ void Renderer::RenderFrame(Player* player) {
     glDisable(GL_CULL_FACE);
     Renderer::RenderUI(presentFrameBuffer.GetWidth(), presentFrameBuffer.GetHeight());
 
-
     // Gizmo shit !!!
+    if (EngineState::_engineMode == EDITOR) {
+        if (selectedPhysXObject) {
 
-    glm::mat4 sofaMatrix = Scene::GetGameObjectByName("Sofa")->GetModelMatrix();
-    glViewport(0, 0, presentFrameBuffer.GetWidth(), presentFrameBuffer.GetHeight());
-    glm::vec3 gizmoWorldPos = Gizmo::Draw(projection, view, presentFrameBuffer.GetWidth(), presentFrameBuffer.GetHeight(), sofaMatrix);
-    Scene::GetGameObjectByName("Sofa")->SetPosition(gizmoWorldPos);
-
-
+            GameObject* selectedObject = nullptr;
+            for (auto& gameObject : Scene::_gameObjects) {
+                if (gameObject._editorRaycastBody == selectedPhysXObject) {
+                    selectedObject = &gameObject;
+                    break;
+                }
+            }
+            if (selectedObject) {
+                glm::mat4 matrix = selectedObject->GetModelMatrix();
+                Im3d::Mat4 gizmoMatrix = Gizmo::Draw(projection, view, presentFrameBuffer.GetWidth(), presentFrameBuffer.GetHeight(), matrix);
+                Im3d::Vec3 pos = gizmoMatrix.getTranslation();
+                Im3d::Vec3 euler = ToEulerXYZ(gizmoMatrix.getRotation());
+                Im3d::Vec3 scale = gizmoMatrix.getScale();
+                selectedObject->SetPosition(glm::vec3(pos.x, pos.y, pos.z));
+                selectedObject->SetRotation(glm::vec3(euler.x, euler.y, euler.z));
+                selectedObject->SetScale(glm::vec3(scale.x, scale.y, scale.z));
+            }
+        }
+    }
 
     // Blit that smaller FBO into the main frame buffer 
     if (EngineState::GetViewportMode() == FULLSCREEN) {
@@ -1058,7 +1105,6 @@ struct Gizmo {
 };*/
 
 //Gizmo _gizmoXTranslate;
-PxRigidStatic* selectedPhysXObject = nullptr;
 
 void RenderGameObjectOutline(Shader& shader, GameObject* gameObject) {
 
@@ -1481,12 +1527,7 @@ void LightingPass(Player* player) {
 	}
 	else if (_debugLineRenderMode == DebugLineRenderMode::PHYSX_EDITOR) {
 		TextBlitter::_debugTextToBilt += "Line Mode: PHYSX EDITOR\n";
-	}
-	else if (_debugLineRenderMode == DebugLineRenderMode::GIZMO_X_TRANSLATE) {
-		TextBlitter::_debugTextToBilt += "Line Mode: GIZMO X TRANSLATE\n";
-	}
-
-    
+	}    
   
     gBuffer.Bind();
     glDrawBuffer(GL_COLOR_ATTACHMENT3);
@@ -1639,13 +1680,24 @@ void DebugPass(Player* player) {
     glm::vec3 testPoint = Util::GetTranslationFromMatrix(magWorldMatrix);
     debugPoints.push_back(testPoint);*/
 
+    Player* player1 = &Scene::_players[0];
+    if (player1->GetCurrentWeaponIndex() == SHOTGUN) {
+        glm::vec3 point = player1->GetFirstPersonWeapon().GetShotgunBarrelPosition();
+    //    debugPoints.push_back(point);
+    }
 
-    for (AnimatedGameObject& animatedGameObject : Scene::_animatedGameObjects) {
+   // AnimatedGameObject* animatedGameObject = Scene::GetAnimatedGameObjectByName("ShotgunTest");
+   // glm::vec3 point2 =  animatedGameObject->GetShotgunBarrelPosition();
+   // debugPoints.push_back(point2);
+
+/*   for (AnimatedGameObject& animatedGameObject : Scene::_animatedGameObjects) {
 
         for (glm::mat4 transform : animatedGameObject._animatedTransforms.worldspace) {
             //debugPoints.push_back(Util::GetTranslationFromMatrix(animatedGameObject.GetModelMatrix() * transform));
         }
-    }
+
+
+    }*/ 
 
     // BROKEN!!!
     for (GameObject& gameObject : Scene::_gameObjects) {
@@ -1717,8 +1769,7 @@ void DebugPass(Player* player) {
         if (_debugLineRenderMode == DebugLineRenderMode::PHYSX_ALL ||
             _debugLineRenderMode == DebugLineRenderMode::PHYSX_COLLISION ||
             _debugLineRenderMode == DebugLineRenderMode::PHYSX_RAYCAST ||
-            _debugLineRenderMode == DebugLineRenderMode::PHYSX_EDITOR ||
-            _debugLineRenderMode == DebugLineRenderMode::GIZMO_X_TRANSLATE) {
+            _debugLineRenderMode == DebugLineRenderMode::PHYSX_EDITOR) {
 
             _lines.clear();
             _shaders.solidColor.Use();
@@ -1730,14 +1781,6 @@ void DebugPass(Player* player) {
 				Scene::Update3DEditorScene();
 				renderBuffer = &Physics::GetEditorScene()->getRenderBuffer();
 				color = PURPLE;
-			}
-			if (_debugLineRenderMode == DebugLineRenderMode::GIZMO_X_TRANSLATE) {
-				Physics::UpdateGizmoScenes();
-				renderBuffer = &Physics::GetGizmoXTranslateScene()->getRenderBuffer();
-				color = RED;
-
-				PxActorTypeFlags flags;
-				auto count = Physics::GetGizmoXTranslateScene()->getNbActors(flags);
 			}
 
             for (unsigned int i = 0; i < renderBuffer->getNbLines(); i++) {
@@ -1931,7 +1974,34 @@ void DrawScene(Shader& shader) {
 			AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("Gold"));
             AssetManager::GetModel("ChristmasBow")->Draw();
         }
-    }
+
+
+        // Add globe back to lamp
+        if (gameObject.GetName() == "Lamp") {        
+
+            glm::mat4 lampMatrix = gameObject.GetModelMatrix();
+
+            //AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("Gold"));
+            //AssetManager::GetModel("LampWire")->Draw();
+
+
+          //  AssetManager::GetModel("LampShadeFaceA")->Draw();
+          /*  AssetManager::GetModel("LampShadeFaceB")->Draw();
+            AssetManager::GetModel("LampShadeFaceC")->Draw();
+            AssetManager::GetModel("LampShadeFaceD")->Draw();
+            AssetManager::GetModel("LampShadeFaceE")->Draw();
+            AssetManager::GetModel("LampShadeFaceF")->Draw();
+
+            */
+            Transform globeTransform;
+            globeTransform.position = glm::vec3(0, 0.45f, 0);
+            shader.SetMat4("model", lampMatrix * globeTransform.to_mat4());
+            shader.SetBool("outputEmissive", true);
+            AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("Gold"));
+            AssetManager::GetModel("LampGlobe")->Draw();
+            shader.SetBool("outputEmissive", false);
+        }
+    };
 
 
 
@@ -1951,6 +2021,9 @@ void DrawScene(Shader& shader) {
             }
 
 			shader.SetMat4("model", parentMatrix * pickup.GetModelMatrix());
+
+            std::cout << "magic position: " << Util::Vec3ToString(Util::GetTranslationFromMatrix(parentMatrix * pickup.GetModelMatrix())) << "\n";
+
             
             AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("GlockAmmoBox"));
             AssetManager::GetModel("GlockAmmoBox")->Draw();
@@ -2168,9 +2241,9 @@ void DrawAnimatedObject(Shader& shader, AnimatedGameObject* animatedGameObject) 
         AssetManager::BindMaterialByIndex(animatedGameObject->_materialIndices[i]);
 
         if (maleHands) {
-			if (skinnedModel.m_meshEntries[i].Name == "SK_FPSArms_Female.001" ||
-				skinnedModel.m_meshEntries[i].Name == "SK_FPSArms_Female" ||
-				skinnedModel.m_meshEntries[i].Name == "SK_FPSArms_Female_LOD0.001") {				
+            if (skinnedModel.m_meshEntries[i].Name == "SK_FPSArms_Female.001" ||
+                skinnedModel.m_meshEntries[i].Name == "SK_FPSArms_Female" ||
+                skinnedModel.m_meshEntries[i].Name == "SK_FPSArms_Female_LOD0.001") {
                 continue;
             }
         }
@@ -2182,6 +2255,7 @@ void DrawAnimatedObject(Shader& shader, AnimatedGameObject* animatedGameObject) 
         }
         glDrawElementsBaseVertex(GL_TRIANGLES, skinnedModel.m_meshEntries[i].NumIndices, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int) * skinnedModel.m_meshEntries[i].BaseIndex), skinnedModel.m_meshEntries[i].BaseVertex);
     }
+    glFlush();
 }
 
 void DrawAnimatedScene(Shader& shader, Player* player) {
@@ -2209,7 +2283,7 @@ void DrawAnimatedScene(Shader& shader, Player* player) {
 
     shader.Use();
     shader.SetBool("isAnimated", true);
-    shader.SetMat4("model", glm::mat4(1)); 
+    shader.SetMat4("model", glm::mat4(1));
 
     // Render other players
     for (Player& otherPlayer : Scene::_players) {
@@ -2244,7 +2318,99 @@ void DrawAnimatedScene(Shader& shader, Player* player) {
             glEnable(GL_CULL_FACE);
         }
     }*/
+
+
+
+
+
+    /*
+    auto animatedGameObject = Scene::_players[1]._characterModel;
+    auto* ptr = animatedGameObject._skinnedModel;
+    auto* skinnedModel = animatedGameObject._skinnedModel;
+    int vertexCount = ptr->_vertices.size();
+    int indexCount = ptr->_indices.size();
+   
+
+    static GLuint _skinnedVao = 0;
+    static GLuint _skinnedVbo = 0;
+
+    static GLuint orginalVBO = animatedGameObject._skinnedModel->m_Buffers[POS_VB];
+    static GLuint orginalEBO = animatedGameObject._skinnedModel->m_Buffers[INDEX_BUFFER];
+    static GLuint orginalBoneDataBuffer = animatedGameObject._skinnedModel->m_Buffers[BONE_VB];
+
+    //if (Input::KeyPressed(HELL_KEY_K)) {
+
+        std::cout << "vertex count: " << vertexCount << "\n";
+
+        //int baseVertex = skinnedModel.m_meshEntries[0].BaseVertex;
+
+        if (_skinnedVao == 0) {
+            glGenVertexArrays(1, &_skinnedVao);
+            glBindVertexArray(_skinnedVao);
+            glGenBuffers(1, &_skinnedVbo);
+            glBindBuffer(GL_ARRAY_BUFFER, _skinnedVbo);
+            glBufferData(GL_ARRAY_BUFFER, vertexCount * sizeof(glm::vec3), NULL, GL_STATIC_DRAW);
+            glEnableVertexAttribArray(0);
+            glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void*)0);
+            glBindBuffer(GL_ARRAY_BUFFER, 0);
+            glBindVertexArray(0);
+        }
+
+        _shaders.skin.Use();
+
+        for (unsigned int i = 0; i < animatedGameObject._animatedTransforms.local.size(); i++) {
+            glm::mat4 matrix = animatedGameObject._animatedTransforms.local[i];
+            _shaders.skin.SetMat4("skinningMats[" + std::to_string(i) + "]", matrix);
+        }
+
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, orginalVBO);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, _skinnedVbo);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, orginalBoneDataBuffer);
+      //  glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, orginalEBO);
+        glDispatchCompute((vertexCount + 63) / 64, 1, 1);
+  //  }
+
+
+
+    // Try draw it
+
+    Transform transform;
+    transform.position = glm::vec3(2, 0.1f, 3.5f);
+    transform.rotation.x = -HELL_PI * 0.5f;
+    transform.scale = glm::vec3(0.01f);
+
+    _shaders.test.Use();
+    _shaders.test.SetMat4("projection", Renderer::GetProjectionMatrix(_depthOfFieldScene));
+    _shaders.test.SetMat4("view", player->GetViewMatrix());
+
+    
+
+    for (int x = -2;  x < 2; x++) {
+
+        for (int z = -2; z < 2; z++) {
+            
+            transform.position = glm::vec3(2 + x, 0.1f, 3.5f + z);
+            _shaders.test.SetMat4("model", transform.to_mat4());
+            
+            if (_skinnedVao != 0) {
+                glBindVertexArray(_skinnedVao);
+                glBindBuffer(GL_ARRAY_BUFFER, _skinnedVbo);
+                glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, orginalEBO);
+                for (int i = 0; i < skinnedModel->m_meshEntries.size(); i++) {
+                    glDrawElementsBaseVertex(GL_TRIANGLES, skinnedModel->m_meshEntries[i].NumIndices, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int) * skinnedModel->m_meshEntries[i].BaseIndex), skinnedModel->m_meshEntries[i].BaseVertex);
+                }
+            }
+        }
+    }
+    */
+
+  
+
+
+    // handle this better
+    shader.Use();
     shader.SetBool("isAnimated", false);
+    /////////////////////
 }
 
 void DrawShadowMapScene(Shader& shader) {
@@ -2262,6 +2428,16 @@ void DrawShadowMapScene(Shader& shader) {
     for (GameObject& gameObject : Scene::_gameObjects) {
 
         if (gameObject.IsCollected()) {
+            continue;
+        }
+
+        // Skip lamp
+        // TO DO: only skip lamp if this shadowmap is for that lamp
+        // TO DO: only skip lamp if this shadowmap is for that lamp
+        // TO DO: only skip lamp if this shadowmap is for that lamp
+        // TO DO: only skip lamp if this shadowmap is for that lamp
+        // TO DO: only skip lamp if this shadowmap is for that lamp
+        if (gameObject.GetName() == "Lamp") {
             continue;
         }
 
@@ -2328,12 +2504,14 @@ void Renderer::HotloadShaders() {
 	_shaders.glassComposite.Load("glass_composite.vert", "glass_composite.frag");
 	_shaders.skybox.Load("skybox.vert", "skybox.frag");
 	_shaders.outline.Load("outline.vert", "outline.frag");
-	_shaders.envMapShader.Load("envMap.vert", "envMap.frag", "envMap.geom");
+    _shaders.envMapShader.Load("envMap.vert", "envMap.frag", "envMap.geom");
+    _shaders.test.Load("test.vert", "test.frag");
 
     _shaders.compute.Load("res/shaders/compute.comp");
     _shaders.pointCloud.Load("res/shaders/point_cloud.comp");
-	_shaders.propogateLight.Load("res/shaders/propogate_light.comp");
-	_shaders.computeTest.Load("res/shaders/test.comp");
+    _shaders.propogateLight.Load("res/shaders/propogate_light.comp");
+    _shaders.computeTest.Load("res/shaders/test.comp");
+    _shaders.skin.Load("res/shaders/skin.comp");
 }
 
 void Renderer::RenderFloorplanFrame() {
@@ -2395,7 +2573,6 @@ void Renderer::RenderFloorplanFrame() {
 	_shaders.geometry.SetVec3("camForward", viewPos);
 
     _shaders.geometry.SetMat4("model", glm::mat4(1));
-	//DrawScene(_shaders.geometry);
 
 
 
@@ -3142,7 +3319,7 @@ void DrawCasingProjectiles(Player* player) {
     AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("BulletCasing"));
     Mesh& glockCasingmesh = AssetManager::GetModel("BulletCasing")->_meshes[0];
     DrawInstanced(glockCasingmesh, matrices);
-
+    
     // AKS74U
     matrices.clear();
     for (BulletCasing& casing : Scene::_bulletCasings) {
@@ -3154,7 +3331,16 @@ void DrawCasingProjectiles(Player* player) {
     Mesh& aks75uCasingmesh = AssetManager::GetModel("BulletCasing_AK")->_meshes[0];
     DrawInstanced(aks75uCasingmesh, matrices);
 
-
+    // SHOTGUN
+    matrices.clear();
+    for (BulletCasing& casing : Scene::_bulletCasings) {
+        if (casing.type == SHOTGUN) {
+            matrices.push_back(casing.GetModelMatrix());
+        }
+    }
+    AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("Shell"));
+    Mesh& shotgunShellMesh = AssetManager::GetModel("Shell")->_meshes[0];
+    DrawInstanced(shotgunShellMesh, matrices);
 
 	// DRAW GLASS PROJECTILES 
     // 

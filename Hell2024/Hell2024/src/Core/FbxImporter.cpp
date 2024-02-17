@@ -290,6 +290,7 @@ bool FbxImporter::InitFromScene(SkinnedModel& skinnedModel, const aiScene* pScen
 
 void FbxImporter::InitMesh(SkinnedModel& skinnedModel, unsigned int MeshIndex,
     const aiMesh* paiMesh,
+   
     std::vector<glm::vec3>& Positions,
     std::vector<glm::vec3>& Normals,
     std::vector<glm::vec2>& TexCoords,

@@ -15,4 +15,5 @@ struct BulletCasing {
     void Update(float deltaTime);
     void CollisionResponse();
     bool HasActivePhysics();
+    bool collisionsEnabled = false;
 };

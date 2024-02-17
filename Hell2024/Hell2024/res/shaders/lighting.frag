@@ -455,10 +455,9 @@ void main() {
         float alpha = getFogFactor(d);
         vec3 FogColor = vec3(0.0);
         FragColor.rgb = mix(FragColor.rgb, FogColor, alpha);
+        FragColor.rgb = mix(FragColor.rgb, Tonemap_ACES(FragColor.rgb), 1.0);		
+		//FragColor.rgb = FragColor.rgb / (FragColor.rgb + vec3(1.0));
 	    FragColor.rgb = pow(FragColor.rgb, vec3(1.0/2.2)); 
-        FragColor.rgb = mix(FragColor.rgb, Tonemap_ACES(FragColor.rgb), 1.0);
-        FragColor.rgb = mix(FragColor.rgb, Tonemap_ACES(FragColor.rgb), 0.25);
-
            // Noise
         vec2 uv = gl_FragCoord.xy / vec2(screenWidth, screenHeight);
         vec2 filmRes = vec2(screenWidth, screenHeight);
@@ -471,8 +470,7 @@ void main() {
         vec3 noise = mix(mix(noise00, noise01, rest.y), mix(noise10, noise11, rest.y), rest.x) * vec3(0.7, 0.6, 0.8);
         float noiseSpeed = 30.0;
         float x = rand(uv + rand(vec2(int(time * noiseSpeed), int(-time * noiseSpeed))));
-        float noiseFactor = 0.049;
-        FragColor.rgb = FragColor.rgb + (x * -noiseFactor) + (noiseFactor / 2);
+        float noiseFactor = 0.04;
 
 
         
@@ -483,14 +481,20 @@ void main() {
         vig = pow(vig, 0.05); // change pow for modifying the extend of the  vignette    
         FragColor.rgb *= vec3(vig);
 
+		
+        FragColor.rgb = mix(FragColor.rgb, Tonemap_ACES(FragColor.rgb), 0.995);
+		
+        FragColor.rgb = FragColor.rgb + (x * -noiseFactor) + (noiseFactor / 2);
+
         // Contrast
-	    float contrast = 1.5;
+	    float contrast = 1.15;
         vec3 finalColor = FragColor.rgb;
 	    FragColor.rgb = FragColor.rgb * contrast;
 
         // Brightness
-        FragColor.rgb -= vec3(0.085);
-
+       // FragColor.rgb -= vec3(0.085);
+		  FragColor.rgb -= vec3(0.010);
+		
 
     //FragColor.rgb = vec3(0);
 
@@ -530,5 +534,5 @@ void main() {
  // FragColor.rgb = vec3(directLighting);
    
  /// FragColor.rgb = vec3(WorldPos);
-// FragColor.rgb = normal.rgb;
+//	FragColor.rgb = baseColor.rgb;
 }
