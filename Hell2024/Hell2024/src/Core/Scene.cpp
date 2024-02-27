@@ -20,6 +20,89 @@ void ProcessBullets();
 
 void Scene::Update(float deltaTime) {
 
+    /*
+    GameObject* mag = Scene::GetGameObjectByName("AKS74UMag_TEST");
+    GameObject* mag2 = Scene::GetGameObjectByName("AKS74UMag_TEST2");
+
+    static bool test = false;
+    if (Input::RightMousePressed()) {
+        test = !test;
+    }
+
+    if (mag && test) {
+        glm::mat4 physMatrix = Util::PxMat44ToGlmMat4(mag->_collisionBody->getGlobalPose());
+        AnimatedGameObject* ak2 = Scene::GetAnimatedGameObjectByName("AKS74U_TEST");
+        glm::mat4 matrix = ak2->GetBoneWorldMatrixFromBoneName("Magazine");
+        if (matrix == glm::mat4(1)) {
+            std::cout << "bailing\n";
+            return;
+        }
+        glm::mat4 magWorldMatrix = ak2->GetModelMatrix() * matrix;
+        Transform scaleMat;
+        scaleMat.scale = glm::vec3(1.0f / ak2->GetScale().x);
+        glm::vec3 pos = magWorldMatrix[3];
+        glm::quat rot = glm::quat_cast(scaleMat.to_mat4() * magWorldMatrix);
+        PxVec3 pxPos = Util::GlmVec3toPxVec3(pos);
+        PxQuat pxRot = Util::GlmQuatToPxQuat(rot);
+
+        PxTransform transform(pxPos, pxRot);
+        mag->_collisionBody->setGlobalPose(transform);
+        mag->PutRigidBodyToSleep();
+        //std::cout << "\n" << "Pos: " << Util::Vec3ToString(pos) << "\n";
+        //std::cout << "" << "Rot: " << Util::QuatToString(rot) << "\n";
+        PxMat44 matrix2 = Util::GlmMat4ToPxMat44(magWorldMatrix);
+    }
+
+
+
+    if (mag && test && Scene::_players[0].GetCurrentWeaponIndex() == AKS74U) {
+
+        glm::mat4 physMatrix = Util::PxMat44ToGlmMat4(mag->_collisionBody->getGlobalPose());
+
+        AnimatedGameObject* ak2 = &Scene::_players[0].GetFirstPersonWeapon();
+        glm::mat4 matrix = ak2->GetBoneWorldMatrixFromBoneName("Magazine");
+
+        if (matrix == glm::mat4(1)) {
+            std::cout << "bailing\n";
+            return;
+        }
+
+        //  std::cout << "\n" << Util::Mat4ToString(matrix) << "\n";
+
+        glm::mat4 magWorldMatrix = ak2->GetModelMatrix() * matrix;// *scaleMat.to_mat4();
+        // glm::mat4 magWorldMatrix = ak2->GetModelMatrix();
+
+
+        Transform scaleMat;
+        //scaleMat.scale = glm::vec3(100);
+        scaleMat.scale = glm::vec3(1.0f / ak2->GetScale().x);
+
+        glm::quat rot = glm::quat_cast(scaleMat.to_mat4() * magWorldMatrix);
+
+        Transform transform2;
+        transform2.position = Scene::_players[0].GetCameraForward() * glm::vec3(-0.25f);
+        magWorldMatrix = transform2.to_mat4() * magWorldMatrix;
+
+        glm::vec3 pos = magWorldMatrix[3];
+
+
+        PxVec3 pxPos = Util::GlmVec3toPxVec3(pos);
+        PxQuat pxRot = Util::GlmQuatToPxQuat(rot);
+
+        PxTransform transform(pxPos, pxRot);
+        mag->_collisionBody->setGlobalPose(transform);
+        mag->PutRigidBodyToSleep();
+
+
+      //  std::cout << "\n" << "Pos: " << Util::Vec3ToString(pos) << "\n";
+      //  std::cout << "" << "Rot: " << Util::QuatToString(rot) << "\n";
+
+        PxMat44 matrix2 = Util::GlmMat4ToPxMat44(magWorldMatrix);
+        //mag->_collisionBody->setGlobalPose(PxTransform(matrix2));
+
+    }*/
+
+
     static int i = 0;
     i++;
 
@@ -281,12 +364,13 @@ void Scene::LoadHardCodedObjects() {
     
     _ceilings.emplace_back(door2X - 0.8f, 7.0f, door2X + 0.8f, 9.95f, 2.5f, AssetManager::GetMaterialIndex("Ceiling"));
 
-    // ceilings            
-    _ceilings.emplace_back(0.1f, 0.1f, 6.1f, 3.1f, 2.5f, AssetManager::GetMaterialIndex("Ceiling"));
+    // ceilings   
+
+    _ceilings.emplace_back(0.1f, 0.1f, 5.2f, 3.1f, 2.5f, AssetManager::GetMaterialIndex("Ceiling"));
     _ceilings.emplace_back(0.1f, 4.1f, 6.1f, 6.9f, 2.5f, AssetManager::GetMaterialIndex("Ceiling"));
     _ceilings.emplace_back(0.1f, 3.1f, 3.7f, 4.1f, 2.5f, AssetManager::GetMaterialIndex("Ceiling"));
     _ceilings.emplace_back(4.7f, 3.1f, 6.1f, 4.1f, 2.5f, AssetManager::GetMaterialIndex("Ceiling"));
-    _ceilings.emplace_back(6.2f, 0.1f, 11.3f, 3.0f, 2.5f, AssetManager::GetMaterialIndex("Ceiling"));
+    _ceilings.emplace_back(5.3f, 0.1f, 11.3f, 3.0f, 2.5f, AssetManager::GetMaterialIndex("Ceiling"));
 
    // LoadLightSetup(2);
 
@@ -301,28 +385,79 @@ void Scene::LoadHardCodedObjects() {
 
 
     if (true) {
+        /*
+        PhysicsFilterData magFilterData;
+        magFilterData.raycastGroup = RAYCAST_DISABLED;
+        magFilterData.collisionGroup = CollisionGroup::GENERIC_BOUNCEABLE;
+        magFilterData.collidesWith = CollisionGroup(ENVIROMENT_OBSTACLE | GENERIC_BOUNCEABLE);
+        float magDensity = 750.0f;
+        GameObject& mag2 = Scene::_gameObjects.emplace_back();
+        mag2.SetModel("AKS74UMag");
+        mag2.SetName("AKS74UMag_TEST");
+        mag2.SetMeshMaterial("AKS74U_3");
+        mag2.SetPosition(3.8f, 5.7f, 3.75f);
+        mag2.CreateRigidBody(mag2._transform.to_mat4(), false);
+        mag2.SetRaycastShapeFromModel(AssetManager::GetModel("AKS74UMag"));
+        mag2.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("AKS74UMag_ConvexMesh")->_meshes[0], magFilterData, glm::vec3(1));
+        mag2.SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
+        mag2.UpdateRigidBodyMassAndInertia(magDensity);
+        mag2.CreateEditorPhysicsObject();
 
-		GameObject& mag2 = _gameObjects.emplace_back();
+        GameObject& mag = Scene::_gameObjects.emplace_back();
+        mag.SetModel("AKS74UMag");
+        mag.SetName("AKS74UMag_TEST2");
+        mag.SetMeshMaterial("AKS74U_3");
+        mag.SetPosition(4.0f, 5.7f, 3.75f);
+        mag.CreateRigidBody(mag._transform.to_mat4(), false);
+        mag.SetRaycastShapeFromModel(AssetManager::GetModel("AKS74UMag"));
+        mag.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("AKS74UMag_ConvexMesh")->_meshes[0], magFilterData, glm::vec3(1));
+        mag.SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
+        mag.UpdateRigidBodyMassAndInertia(magDensity);
+        mag.CreateEditorPhysicsObject();
+
+        GameObject& mag3 = Scene::_gameObjects.emplace_back();
+        mag3.SetModel("AKS74UMag");
+        mag3.SetName("TEST_MAG");
+        mag3.SetMeshMaterial("AKS74U_3");
+        mag3.SetPosition(4.0f, 5.7f, 3.75f);
+        mag3.CreateRigidBody(mag3._transform.to_mat4(), false);
+        mag3.SetRaycastShapeFromModel(AssetManager::GetModel("AKS74UMag"));
+        mag3.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("AKS74UMag_ConvexMesh")->_meshes[0], magFilterData, glm::vec3(1));
+        mag3.SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
+        mag3.UpdateRigidBodyMassAndInertia(magDensity);
+        mag3.CreateEditorPhysicsObject();
+        */
+
+
+	/*	GameObject& mag2 = _gameObjects.emplace_back();
         mag2.SetPosition(3.8f, 5.7f, 3.75f);
         mag2.SetRotationX(-1.7f);
         mag2.SetRotationY(0.0f);
         mag2.SetRotationZ(-1.6f);
-        mag2.SetScale(0.01f);
-        mag2.SetModel("AKS74UMag2");
+        mag2.SetScale(1.00f);
+        mag2.SetModel("AKS74UMag");
         mag2.SetName("TEST_MAG");
         mag2.SetMeshMaterial("AKS74U_3");
+
+        PhysicsFilterData magFilterData;
+        magFilterData.raycastGroup = RAYCAST_DISABLED;
+        magFilterData.collisionGroup = CollisionGroup::GENERIC_BOUNCEABLE;
+        magFilterData.collidesWith = CollisionGroup(ENVIROMENT_OBSTACLE | GENERIC_BOUNCEABLE);
+        float magDensity = 750.0f;
+
+        mag2.CreateRigidBody(mag2._transform.to_mat4(), false);
+        mag2.SetRaycastShapeFromModel(AssetManager::GetModel("AKS74UMag"));
+        mag2.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("AKS74UMag_ConvexMesh")->_meshes[0], magFilterData, glm::vec3(1));
+        mag2.SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
+        mag2.UpdateRigidBodyMassAndInertia(magDensity);
+        mag2.CreateEditorPhysicsObject();*/
+
      //   mag2.CreateRigidBody(mag.GetGameWorldMatrix(), false);
       //  mag2.SetRaycastShapeFromModel(AssetManager::GetModel("AKS74UMag"));
        // mag2.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("AKS74UMag_ConvexMesh")->_meshes[0], magFilterData);
        // mag2.SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
        /// mag2.UpdateRigidBodyMassAndInertia(magDensity);
 
-
-		PhysicsFilterData magFilterData;
-        magFilterData.raycastGroup = RAYCAST_DISABLED;
-        magFilterData.collisionGroup = CollisionGroup::GENERIC_BOUNCEABLE;
-        magFilterData.collidesWith = CollisionGroup(ENVIROMENT_OBSTACLE | GENERIC_BOUNCEABLE);
-		float magDensity = 750.0f;
 
         /*
 		GameObject& mag = _gameObjects.emplace_back();
@@ -539,9 +674,13 @@ void Scene::LoadHardCodedObjects() {
         //tree.CreateRigidBody(sofa.GetGameWorldMatrix(), true);
 
 
-
-
-
+        /*
+        GameObject& scope = _gameObjects.emplace_back();
+        scope.SetPosition(3.75f, 1.6f, 3.2f);
+        scope.SetModel("ScopeACOG");
+        scope.SetName("ScopeACOG");
+        scope.SetMeshMaterial("Gold");
+        scope.SetScale(0.01f);*/
 
         {
             PhysicsFilterData filterData;
@@ -582,8 +721,9 @@ void Scene::LoadHardCodedObjects() {
             filterData2.collisionGroup = CollisionGroup::GENERIC_BOUNCEABLE;
             filterData2.collidesWith = CollisionGroup(ENVIROMENT_OBSTACLE | GENERIC_BOUNCEABLE);
 
-			GameObject& lamp = _gameObjects.emplace_back();
-			lamp.SetModel("LampFullNoGlobe");
+            GameObject& lamp = _gameObjects.emplace_back();
+            lamp.SetModel("LampFullNoGlobe");
+          //  lamp.SetModel("Lamp");
 			lamp.SetName("Lamp");
             lamp.SetMeshMaterial("Lamp");
             lamp.SetPosition(-.105f, 0.88, 0.25f);
@@ -716,6 +856,35 @@ void Scene::LoadHardCodedObjects() {
     mp7.SetPosition(glm::vec3(2.5f, 1.5f, 4));
     mp7.SetRotationY(HELL_PI * 0.5f);*/
 
+    
+    //////////////////////
+    //                  //
+    //      AKS74U      //
+    
+    if (false) {
+        AnimatedGameObject& aks = _animatedGameObjects.emplace_back(AnimatedGameObject());
+        aks.SetName("AKS74U_TEST");
+        aks.SetSkinnedModel("AKS74U");
+        aks.SetAnimatedTransformsToBindPose();
+        //aks.PlayAndLoopAnimation("AKS74U_ReloadEmpty", 0.2f);
+        aks.PlayAndLoopAnimation("AKS74U_Idle", 1.0f);
+        aks.SetMeshMaterial("manniquen1_2.001", "Hands");
+        aks.SetMeshMaterial("manniquen1_2", "Hands");
+        aks.SetMeshMaterial("SK_FPSArms_Female.001", "FemaleArms");
+        aks.SetMeshMaterial("SK_FPSArms_Female", "FemaleArms");
+        aks.SetMeshMaterialByIndex(2, "AKS74U_3");
+        aks.SetMeshMaterialByIndex(3, "AKS74U_3"); // possibly incorrect. this is the follower
+        aks.SetMeshMaterialByIndex(4, "AKS74U_1");
+        aks.SetMeshMaterialByIndex(5, "AKS74U_4");
+        aks.SetMeshMaterialByIndex(6, "AKS74U_0");
+        aks.SetMeshMaterialByIndex(7, "AKS74U_2");
+        aks.SetMeshMaterialByIndex(8, "AKS74U_1");  // Bolt_low. Possibly wrong
+        aks.SetMeshMaterialByIndex(9, "AKS74U_3"); // possibly incorrect.
+        aks.SetScale(0.01f);
+        aks.SetPosition(glm::vec3(2.5f, 1.5f, 3));
+        aks.SetRotationY(HELL_PI * 0.5f);
+    }
+   
     /*
     AnimatedGameObject& glock = _animatedGameObjects.emplace_back(AnimatedGameObject());
     glock.SetName("Glock");
@@ -1242,8 +1411,15 @@ void Scene::ProcessPhysicsCollisions() {
         }
 
         if (playedShellSound) {
-            Audio::PlayAudio("BulletCasingBounce.wav", Util::RandomFloat(0.2f, 0.3f));
-            break;
+
+            if (actorA->userData == (void*)&EngineState::weaponNamePointers[SHOTGUN]) {
+                Audio::PlayAudio("ShellFloorBounce.wav", Util::RandomFloat(0.2f, 0.3f));
+                break;
+            }
+            else {
+                Audio::PlayAudio("BulletCasingBounce.wav", Util::RandomFloat(0.2f, 0.3f));
+                break;
+            }
         }
     }
 

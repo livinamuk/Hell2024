@@ -42,4 +42,7 @@ namespace EngineState {
 		_viewportMode = (ViewportMode)currentViewportMode;
 		std::cout << "Current player: " << _currentPlayer << "\n";
 	}
+
+    // This is disgusting, find a better way to do this
+    inline const std::vector<Weapon> weaponNamePointers = { KNIFE, GLOCK, SHOTGUN, AKS74U, MP7, WEAPON_COUNT };
 };

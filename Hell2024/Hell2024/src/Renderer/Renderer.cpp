@@ -426,7 +426,7 @@ void RenderEnviromentMaps() {
 void GlassPass(Player* player) {
 
 
-	glm::mat4 projection = Renderer::GetProjectionMatrix(_depthOfFieldScene);
+    glm::mat4 projection = player->GetProjectionMatrix();// Renderer::GetProjectionMatrix(_depthOfFieldScene);
 	glm::mat4 view = player->GetViewMatrix();
 
 	int playerIndex = GetPlayerIndexFromPlayerPointer(player);
@@ -464,10 +464,31 @@ void GlassPass(Player* player) {
 	glBindTexture(GL_TEXTURE_2D, gBuffer._gLightingTexture);
 
 	//glDisable(GL_CULL_FACE);
+    _shaders.glass.SetBool("isWindow", true);
 	for (Window& window : Scene::_windows) {
 		_shaders.glass.SetMat4("model", window.GetModelMatrix());
         AssetManager::GetModel("Glass")->Draw();
-	}
+    }
+    _shaders.glass.SetBool("isWindow", false);
+
+
+
+    // draw the scope
+    if (player->GetCurrentWeaponIndex() == AKS74U && !player->InADS()) {
+        AnimatedGameObject* ak = &player->GetFirstPersonWeapon();
+        SkinnedModel* skinnedModel = ak->_skinnedModel;
+        int boneIndex = skinnedModel->m_BoneMapping["Weapon"];
+        if (ak->_animatedTransforms.worldspace.size()) {
+            glm::mat4 boneMatrix = ak->_animatedTransforms.worldspace[boneIndex];
+            glm::mat4 m = ak->GetModelMatrix() * boneMatrix * player->GetWeaponSwayMatrix();
+            _shaders.glass.SetMat4("model", m);
+            AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("Scope"));
+            AssetManager::GetModel("ScopeACOG")->_meshes[2].Draw();
+            AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("Scope"));
+            AssetManager::GetModel("ScopeACOG")->_meshes[3].Draw();
+        }
+    }
+
 
 
 	_shaders.glassComposite.Use();
@@ -853,7 +874,7 @@ void Renderer::RenderFrame(Player* player) {
     GBuffer& gBuffer = playerRenderTarget.gBuffer;
     PresentFrameBuffer& presentFrameBuffer = playerRenderTarget.presentFrameBuffer;
 
-	glm::mat4 projection = Renderer::GetProjectionMatrix(_depthOfFieldScene); // 1.0 for weapon, 0.9 for scene.
+    glm::mat4 projection = player->GetProjectionMatrix();// Renderer::GetProjectionMatrix(_depthOfFieldScene); // 1.0 for weapon, 0.9 for scene.
 	glm::mat4 view = player->GetViewMatrix();
 
 
@@ -915,7 +936,7 @@ void Renderer::RenderFrame(Player* player) {
         Transform cubeTransform;
         cubeTransform.scale = glm::vec3(0.025f);
         _shaders.debugViewPropgationGrid.Use();
-        _shaders.debugViewPropgationGrid.SetMat4("projection", GetProjectionMatrix(_depthOfFieldScene));
+        _shaders.debugViewPropgationGrid.SetMat4("projection", player->GetProjectionMatrix());
         _shaders.debugViewPropgationGrid.SetMat4("view", player->GetViewMatrix());
         _shaders.debugViewPropgationGrid.SetMat4("model", cubeTransform.to_mat4());
         _shaders.debugViewPropgationGrid.SetFloat("propogationGridSpacing", _propogationGridSpacing);
@@ -1140,7 +1161,7 @@ void Renderer::RenderEditorMode() {
 
     Scene::Update3DEditorScene();
 
-	glm::mat4 projection = glm::perspective(1.0f, 1920.0f / 1080.0f, NEAR_PLANE, FAR_PLANE);
+    glm::mat4 projection = Scene::_players[0].GetProjectionMatrix();// glm::perspective(1.0f, 1920.0f / 1080.0f, NEAR_PLANE, FAR_PLANE);
 	glm::mat4 view = Scene::_players[0].GetViewMatrix();
 
 	int playerIndex = GetPlayerIndexFromPlayerPointer(&Scene::_players[0]);
@@ -1365,7 +1386,7 @@ void SkyBoxPass(Player* player) {
 
 
 
-	glm::mat4 projection = glm::perspective(1.0f, 1920.0f / 1080.0f, NEAR_PLANE, FAR_PLANE);
+    glm::mat4 projection = player->GetProjectionMatrix();// glm::perspective(1.0f, 1920.0f / 1080.0f, NEAR_PLANE, FAR_PLANE);
 	glm::mat4 view = player->GetViewMatrix();
 
     glEnable(GL_DEPTH_TEST);
@@ -1457,7 +1478,7 @@ void DrawHud(Player* player) {
 }
 
 void GeometryPass(Player* player) {
-    glm::mat4 projection = Renderer::GetProjectionMatrix(_depthOfFieldScene); // 1.0 for weapon, 0.9 for scene.
+    glm::mat4 projection = player->GetProjectionMatrix();// Renderer::GetProjectionMatrix(_depthOfFieldScene); // 1.0 for weapon, 0.9 for scene.
     glm::mat4 view = player->GetViewMatrix();
     
     int playerIndex = GetPlayerIndexFromPlayerPointer(player);
@@ -1480,6 +1501,8 @@ void GeometryPass(Player* player) {
     _shaders.geometry.SetVec3("camForward", player->GetCameraForward());
     DrawAnimatedScene(_shaders.geometry, player);
     DrawScene(_shaders.geometry);
+
+
 }
 
 void LightingPass(Player* player) {
@@ -1570,10 +1593,10 @@ void LightingPass(Player* player) {
     _shaders.lighting.SetFloat("time", time);
     _shaders.lighting.SetFloat("screenWidth", gBuffer.GetWidth());
     _shaders.lighting.SetFloat("screenHeight", gBuffer.GetHeight());
-    _shaders.lighting.SetMat4("projectionScene", Renderer::GetProjectionMatrix(_depthOfFieldScene));
-    _shaders.lighting.SetMat4("projectionWeapon", Renderer::GetProjectionMatrix(_depthOfFieldWeapon));
-    _shaders.lighting.SetMat4("inverseProjectionScene", glm::inverse(Renderer::GetProjectionMatrix(_depthOfFieldScene)));
-    _shaders.lighting.SetMat4("inverseProjectionWeapon", glm::inverse(Renderer::GetProjectionMatrix(_depthOfFieldWeapon)));
+    _shaders.lighting.SetMat4("projectionScene", player->GetProjectionMatrix());
+    _shaders.lighting.SetMat4("projectionWeapon", player->GetProjectionMatrix());
+    _shaders.lighting.SetMat4("inverseProjectionScene", glm::inverse(player->GetProjectionMatrix()));
+    _shaders.lighting.SetMat4("inverseProjectionWeapon", glm::inverse(player->GetProjectionMatrix()));
     _shaders.lighting.SetMat4("view", player->GetViewMatrix());
     _shaders.lighting.SetMat4("inverseView", glm::inverse(player->GetViewMatrix()));
     _shaders.lighting.SetVec3("viewPos", player->GetViewPos());
@@ -1619,7 +1642,7 @@ void DebugPass(Player* player) {
     }
 
     _shaders.solidColor.Use();
-    _shaders.solidColor.SetMat4("projection", Renderer::GetProjectionMatrix(_depthOfFieldScene));
+    _shaders.solidColor.SetMat4("projection", player->GetProjectionMatrix());
     _shaders.solidColor.SetMat4("view", player->GetViewMatrix());
     _shaders.solidColor.SetVec3("viewPos", player->GetViewPos());
     _shaders.solidColor.SetVec3("color", glm::vec3(1, 1, 0));
@@ -1886,55 +1909,57 @@ void Renderer::RecreateFrameBuffers(int currentPlayer) {
 void DrawScene(Shader& shader) {
 
     shader.SetMat4("model", glm::mat4(1));
-    AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("Ceiling"));
-    //AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("NumGrid"));
+
+    static int ceiling2MaterialIndex = AssetManager::GetMaterialIndex("Ceiling2");
+    //static int ceiling2MaterialIndex = AssetManager::GetMaterialIndex("Gold");
+    static int trimCeilingMaterialIndex = AssetManager::GetMaterialIndex("Trims");
+    static int trimFloorMaterialIndex = AssetManager::GetMaterialIndex("Door");
+    static int ceilingMaterialIndex = AssetManager::GetMaterialIndex("Ceiling");
+    static int wallPaperMaterialIndex = AssetManager::GetMaterialIndex("WallPaper");
+
     for (Wall& wall : Scene::_walls) {
-        AssetManager::BindMaterialByIndex(wall.materialIndex);
+        //AssetManager::BindMaterialByIndex(wall.materialIndex);
+        AssetManager::BindMaterialByIndex(ceiling2MaterialIndex);
         wall.Draw();
     }
 
     for (Floor& floor : Scene::_floors) {
         AssetManager::BindMaterialByIndex(floor.materialIndex);
-        //  AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("NumGrid"));
         floor.Draw();
     }
 
-    AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("Ceiling"));
     for (Ceiling& ceiling : Scene::_ceilings) {
         //AssetManager::BindMaterialByIndex(ceiling.materialIndex);
+        AssetManager::BindMaterialByIndex(ceiling2MaterialIndex);
         ceiling.Draw();
     }
 
-    static int trimCeilingMaterialIndex = AssetManager::GetMaterialIndex("Trims");
-	static int trimFloorMaterialIndex = AssetManager::GetMaterialIndex("Door");
-	static int ceilingMaterialIndex = AssetManager::GetMaterialIndex("Ceiling");
-	static int wallPaperMaterialIndex = AssetManager::GetMaterialIndex("WallPaper");
-
     // Ceiling trims
-   AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("Ceiling"));
     for (Wall& wall : Scene::_walls) {
 		for (auto& transform : wall.ceilingTrims) {
 			shader.SetMat4("model", transform.to_mat4());
-			if (wall.materialIndex == ceilingMaterialIndex) {
+			/*if (wall.materialIndex == ceilingMaterialIndex) {
 				AssetManager::BindMaterialByIndex(ceilingMaterialIndex);
 			}
 			else if (wall.materialIndex == wallPaperMaterialIndex) {
 				AssetManager::BindMaterialByIndex(trimCeilingMaterialIndex);
-			}
+            }*/
             AssetManager::GetModel("TrimCeiling")->Draw();
         }
     } 
     // Floor trims
-    AssetManager::BindMaterialByIndex(trimFloorMaterialIndex);
+    //AssetManager::BindMaterialByIndex(trimFloorMaterialIndex);
     for (Wall& wall : Scene::_walls) {
 		for (auto& transform : wall.floorTrims) {
 			shader.SetMat4("model", transform.to_mat4());
 			if (wall.materialIndex == ceilingMaterialIndex) {
-				AssetManager::BindMaterialByIndex(ceilingMaterialIndex);
+                //AssetManager::BindMaterialByIndex(ceilingMaterialIndex);
+                //AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("Ceiling2"));
 				AssetManager::GetModel("TrimFloor2")->Draw();
 			}
 			else if (wall.materialIndex == wallPaperMaterialIndex) {
-				AssetManager::BindMaterialByIndex(trimCeilingMaterialIndex);
+                //AssetManager::BindMaterialByIndex(trimCeilingMaterialIndex);
+                //AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("Ceiling2"));
 				AssetManager::GetModel("TrimFloor")->Draw();
 			}
         }
@@ -1949,16 +1974,62 @@ void DrawScene(Shader& shader) {
 
         shader.SetMat4("model", gameObject.GetModelMatrix());
 
+
         // Test render green mag REMOVEEEEEEEEEEEEEEEEEEEEEEEEEE
-		/*if (gameObject.GetName() == "TEST_MAG") {
-            Player* player = &Scene::_players[0];
-            if (player->GetCurrentWeaponIndex() == AKS74U) {
-                AnimatedGameObject& ak2 = player->GetFirstPersonWeapon();
-                glm::mat4 matrix = ak2.GetBoneWorldMatrixFromBoneName("Magazine");
-                glm::mat4 magWorldMatrix = ak2.GetModelMatrix() * player->GetWeaponSwayMatrix() * matrix;
-                shader.SetMat4("model", magWorldMatrix);
-            }
-		}*/
+        if (gameObject.GetName() == "TEST_MAG") {
+
+           // std::cout << "fuck\n";
+
+            //AnimatedGameObject& ak2 = player->GetFirstPersonWeapon();
+            AnimatedGameObject* ak2 = Scene::GetAnimatedGameObjectByName("AKS74U_TEST");
+            glm::mat4 matrix = ak2->GetBoneWorldMatrixFromBoneName("Magazine");
+            glm::mat4 magWorldMatrix = ak2->GetModelMatrix() * matrix;
+
+            Transform t;
+            t.position.z = 0.5;
+            magWorldMatrix = t.to_mat4() * magWorldMatrix;
+
+            /*
+            if (Input::RightMousePressed()) {
+                PhysicsFilterData magFilterData;
+                magFilterData.raycastGroup = RAYCAST_DISABLED;
+                magFilterData.collisionGroup = CollisionGroup::GENERIC_BOUNCEABLE;
+                magFilterData.collidesWith = CollisionGroup(ENVIROMENT_OBSTACLE | GENERIC_BOUNCEABLE);
+                float magDensity = 750.0f;
+                GameObject& mag = Scene::_gameObjects.emplace_back();
+                mag.SetModel("AKS74UMag");
+                mag.SetName("AKS74UMag");
+                mag.SetMeshMaterial("AKS74U_3");
+                mag.CreateRigidBody(magWorldMatrix, false);
+                mag.SetRaycastShapeFromModel(AssetManager::GetModel("AKS74UMag"));
+                mag.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("AKS74UMag_ConvexMesh")->_meshes[0], magFilterData, glm::vec3(1));
+                mag.SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
+                mag.UpdateRigidBodyMassAndInertia(magDensity);
+                mag.CreateEditorPhysicsObject();
+
+                PxMat44 mat = Util::GlmMat4ToPxMat44(matrix);
+                PxTransform transform(mat);
+               // mag._collisionBody->setGlobalPose(transform);
+
+            }*/
+
+            shader.SetMat4("model", magWorldMatrix);
+            shader.SetMat4("model", t.to_mat4());
+
+
+          //  std::cout << "\n" << Util::Mat4ToString(magWorldMatrix) << "\n";
+
+            /*   Player* player = &Scene::_players[0];
+               if (player->GetCurrentWeaponIndex() == AKS74U) {
+                   AnimatedGameObject& ak2 = player->GetFirstPersonWeapon();
+                   glm::mat4 matrix = ak2.GetBoneWorldMatrixFromBoneName("Magazine");
+                   glm::mat4 magWorldMatrix = ak2.GetModelMatrix() * player->GetWeaponSwayMatrix() * matrix;
+                   shader.SetMat4("model", magWorldMatrix);
+               }*/
+        }
+
+
+
         for (int i = 0; i < gameObject._meshMaterialIndices.size(); i++) {
             AssetManager::BindMaterialByIndex(gameObject._meshMaterialIndices[i]);
 			// Test render green mag REMOVEEEEEEEEEEEEEEEEEEEEEEEEEE
@@ -1996,13 +2067,52 @@ void DrawScene(Shader& shader) {
             Transform globeTransform;
             globeTransform.position = glm::vec3(0, 0.45f, 0);
             shader.SetMat4("model", lampMatrix * globeTransform.to_mat4());
-            shader.SetBool("outputEmissive", true);
+            shader.SetBool("sampleEmissive", true);
             AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("Gold"));
             AssetManager::GetModel("LampGlobe")->Draw();
-            shader.SetBool("outputEmissive", false);
+
+            shader.SetBool("writeEmissive", false);
+            glEnable(GL_BLEND);
+            AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("Lamp2"));
+            //AssetManager::GetModel("LampShade")->Draw();
+            shader.SetBool("writeEmissive", true);
+            glDisable(GL_BLEND);
+
+            shader.SetBool("sampleEmissive", false);
         }
     };
 
+
+
+    
+
+    // draw the mount
+    Player* player = &Scene::_players[0];
+    if (player->GetCurrentWeaponIndex() == AKS74U) {
+        AnimatedGameObject* ak = &player->GetFirstPersonWeapon();
+   
+
+        SkinnedModel* skinnedModel = ak->_skinnedModel;
+
+        int boneIndex = skinnedModel->m_BoneMapping["Weapon"];
+
+        if (ak->_animatedTransforms.worldspace.size()) {
+            glm::mat4 boneMatrix = ak->_animatedTransforms.worldspace[boneIndex];
+            glm::mat4 m = ak->GetModelMatrix() * boneMatrix;
+
+            if (player->GetCurrentWeaponIndex() == AKS74U) {
+                m = m * player->GetWeaponSwayMatrix();
+            }
+
+            shader.SetMat4("model", m);
+
+
+            AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("ScopeMount"));
+            AssetManager::GetModel("ScopeACOG")->_meshes[0].Draw();
+            AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("Scope"));
+            AssetManager::GetModel("ScopeACOG")->_meshes[1].Draw();
+        }
+    }
 
 
     // Render pickups
@@ -2139,7 +2249,7 @@ void DrawScene(Shader& shader) {
 
     
 
-    shader.SetBool("outputEmissive", true);
+    shader.SetBool("sampleEmissive", true);
 	// Light bulbs
 	for (Light& light : Scene::_lights) {
 		Transform transform;
@@ -2173,7 +2283,7 @@ void DrawScene(Shader& shader) {
             AssetManager::GetModel("LightWallMounted")->Draw();
         }
 	}
-	shader.SetBool("outputEmissive", false);
+	shader.SetBool("sampleEmissive", false);
 
 }
 
@@ -2255,7 +2365,7 @@ void DrawAnimatedObject(Shader& shader, AnimatedGameObject* animatedGameObject) 
         }
         glDrawElementsBaseVertex(GL_TRIANGLES, skinnedModel.m_meshEntries[i].NumIndices, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int) * skinnedModel.m_meshEntries[i].BaseIndex), skinnedModel.m_meshEntries[i].BaseVertex);
     }
-    glFlush();
+    //glFlush();
 }
 
 void DrawAnimatedScene(Shader& shader, Player* player) {
@@ -2302,7 +2412,7 @@ void DrawAnimatedScene(Shader& shader, Player* player) {
     if (EngineState::GetEngineMode() == GAME) {
         glDisable(GL_CULL_FACE);
         shader.SetFloat("projectionMatrixIndex", 1.0f);
-        shader.SetMat4("projection", Renderer::GetProjectionMatrix(_depthOfFieldWeapon)); // 1.0 for weapon, 0.9 for scene.
+        shader.SetMat4("projection", player->GetProjectionMatrix()); // 1.0 for weapon, 0.9 for scene.
         DrawAnimatedObject(shader, &player->GetFirstPersonWeapon());
         shader.SetFloat("projectionMatrixIndex", 0.0f);
         glEnable(GL_CULL_FACE);
@@ -2590,8 +2700,6 @@ void Renderer::RenderFloorplanFrame() {
 
 
 
-
-
     Shader& shader = _shaders.geometry;
     // Render game objects
     for (GameObject& gameObject : Scene::_gameObjects) {
@@ -2602,16 +2710,6 @@ void Renderer::RenderFloorplanFrame() {
 
         shader.SetMat4("model", gameObject.GetModelMatrix());
 
-        // Test render green mag REMOVEEEEEEEEEEEEEEEEEEEEEEEEEE
-        /*if (gameObject.GetName() == "TEST_MAG") {
-            Player* player = &Scene::_players[0];
-            if (player->GetCurrentWeaponIndex() == AKS74U) {
-                AnimatedGameObject& ak2 = player->GetFirstPersonWeapon();
-                glm::mat4 matrix = ak2.GetBoneWorldMatrixFromBoneName("Magazine");
-                glm::mat4 magWorldMatrix = ak2.GetModelMatrix() * player->GetWeaponSwayMatrix() * matrix;
-                shader.SetMat4("model", magWorldMatrix);
-            }
-        }*/
         for (int i = 0; i < gameObject._meshMaterialIndices.size(); i++) {
             AssetManager::BindMaterialByIndex(gameObject._meshMaterialIndices[i]);
             gameObject._model->_meshes[i].Draw();
@@ -3086,6 +3184,7 @@ void Renderer::NextDebugLineRenderMode() {
         _debugLineRenderMode = (DebugLineRenderMode)0;
 }
 
+/*
 glm::mat4 Renderer::GetProjectionMatrix(float depthOfField) {
 
     float width = (float)GL::GetWindowWidth();
@@ -3097,7 +3196,7 @@ glm::mat4 Renderer::GetProjectionMatrix(float depthOfField) {
 
     return glm::perspective(depthOfField, width / height, NEAR_PLANE, FAR_PLANE);
 }
-
+*/
 
 void Renderer::QueueLineForDrawing(Line line) {
     _lines.push_back(line);
@@ -3219,7 +3318,7 @@ void DrawMuzzleFlashes(Player* player) {
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     /// this is sketchy. add this to player class.
-    glm::mat4 projection = Renderer::GetProjectionMatrix(_depthOfFieldWeapon); // 1.0 for weapon, 0.9 for scene.
+    glm::mat4 projection = player->GetProjectionMatrix();// Renderer::GetProjectionMatrix(_depthOfFieldWeapon); // 1.0 for weapon, 0.9 for scene.
     glm::mat4 view = player->GetViewMatrix();
     glm::vec3 viewPos = player->GetViewPos();
 
@@ -3266,7 +3365,7 @@ void DrawBulletDecals(Player* player) {
             }
         }
 
-        glm::mat4 projection = Renderer::GetProjectionMatrix(_depthOfFieldScene); // 1.0 for weapon, 0.9 for scene.
+        glm::mat4 projection = player->GetProjectionMatrix();// Renderer::GetProjectionMatrix(_depthOfFieldScene); // 1.0 for weapon, 0.9 for scene.
         glm::mat4 view = player->GetViewMatrix();
 
         _shaders.bulletDecals.Use();
@@ -3287,7 +3386,7 @@ void DrawBulletDecals(Player* player) {
 			}
 		}
 
-		glm::mat4 projection = Renderer::GetProjectionMatrix(_depthOfFieldScene); // 1.0 for weapon, 0.9 for scene.
+        glm::mat4 projection = player->GetProjectionMatrix();// Renderer::GetProjectionMatrix(_depthOfFieldScene); // 1.0 for weapon, 0.9 for scene.
 		glm::mat4 view = player->GetViewMatrix();
 
 		_shaders.bulletDecals.Use();
@@ -3303,7 +3402,7 @@ void DrawBulletDecals(Player* player) {
 
 void DrawCasingProjectiles(Player* player) {
 
-    glm::mat4 projection = Renderer::GetProjectionMatrix(_depthOfFieldScene); // 1.0 for weapon, 0.9 for scene.
+    glm::mat4 projection = player->GetProjectionMatrix();// Renderer::GetProjectionMatrix(_depthOfFieldScene); // 1.0 for weapon, 0.9 for scene.
     glm::mat4 view = player->GetViewMatrix();
     _shaders.geometry_instanced.Use();
     _shaders.geometry_instanced.SetMat4("projection", projection);
@@ -3472,7 +3571,7 @@ void Renderer::CreatePointCloudBuffer() {
 
 void DrawPointCloud(Player* player) {
     _shaders.debugViewPointCloud.Use();
-    _shaders.debugViewPointCloud.SetMat4("projection", Renderer::GetProjectionMatrix(_depthOfFieldScene));
+    _shaders.debugViewPointCloud.SetMat4("projection", player->GetProjectionMatrix());// Renderer::GetProjectionMatrix(_depthOfFieldScene));
     _shaders.debugViewPointCloud.SetMat4("view", player->GetViewMatrix());
     glDisable(GL_DEPTH_TEST);
     glBindVertexArray(_pointCloud.VAO);

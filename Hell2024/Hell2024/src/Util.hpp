@@ -245,6 +245,10 @@ namespace Util {
         return std::string("(" + std::format("{:.2f}", v.x) + ", " + std::format("{:.2f}", v.y) + ", " + std::format("{:.2f}", v.z) + ")");
     }
 
+    inline std::string QuatToString(glm::quat q) {
+        return std::string("(" + std::format("{:.2f}", q.x) + ", " + std::format("{:.2f}", q.y) + ", " + std::format("{:.2f}", q.z) + ", " + std::format("{:.2f}", q.w) + ")");
+    }
+
 
     inline std::string Mat4ToString(glm::mat4 m) {
         std::string result;

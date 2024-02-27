@@ -235,7 +235,7 @@ vec3 microfacetBRDF(in vec3 L, in vec3 V, in vec3 N, in vec3 baseColor, in float
 
 
 
-
+ // return notSpec;
 
 
   return result;
@@ -262,6 +262,17 @@ vec3 GetDirectLighting(vec3 lightPos, vec3 lightColor, float radius, float stren
 	irradiance *= lightAttenuation * lightRadiance;		
     //irradiance = clamp(irradiance, 0.0, 0.9);
 	vec3 brdf = microfacetBRDF(lightDir, viewDir, Normal, baseColor, metallic, fresnelReflect, roughness, WorldPos);
+	
+	
+
+
+//	vec3 test = vec3(1) * lightDir ;
+//	return test * test;
+
+
+
+
+
     return brdf * irradiance * clamp(lightColor, 0, 1);
 }
 
@@ -351,16 +362,19 @@ void main() {
     vec4 worldSpacePosition = inverseView * viewSpacePosition;    
     vec3 WorldPos = worldSpacePosition.xyz;
 
-    WorldPos = texture2D(worldSpacePositionTexture, TexCoords).rgb;
+   // WorldPos = texture2D(worldSpacePositionTexture, TexCoords).rgb;
 
 
     // Get more stuff    
     float roughness = rma.r;
     float metallic = rma.g;
     float ao = rma.b;
+	//
+	//roughness = max(roughness, 0.5);
+//	metallic = max(metallic, 0.5);
 
-  //  roughness = 0.99;
- //   metallic = 1;
+   // roughness = 0.99;
+   // metallic = 1;
 
     // Direct lighting
     vec3 directLighting = vec3(0);
@@ -369,6 +383,7 @@ void main() {
         vec3 ligthting = GetDirectLighting(lights[i].position, lights[i].color, lights[i].radius, lights[i].strength, normal, WorldPos, baseColor, roughness, metallic);
         directLighting += shadow * ligthting;
     }
+//	directLighting = GetDirectLighting(lights[0].position, lights[0].color, lights[0].radius, lights[0].strength, normal, WorldPos, baseColor, roughness, metallic);;
     
    //. float
    vec3 muzzleFlashLightColor =  vec3(1, 0.7799999713897705, 0.5289999842643738);
@@ -455,7 +470,8 @@ void main() {
         float alpha = getFogFactor(d);
         vec3 FogColor = vec3(0.0);
         FragColor.rgb = mix(FragColor.rgb, FogColor, alpha);
-        FragColor.rgb = mix(FragColor.rgb, Tonemap_ACES(FragColor.rgb), 1.0);		
+        FragColor.rgb = mix(FragColor.rgb, Tonemap_ACES(FragColor.rgb), 1.0);
+        FragColor.rgb = mix(FragColor.rgb, Tonemap_ACES(FragColor.rgb), 0.35);		
 		//FragColor.rgb = FragColor.rgb / (FragColor.rgb + vec3(1.0));
 	    FragColor.rgb = pow(FragColor.rgb, vec3(1.0/2.2)); 
            // Noise
@@ -534,5 +550,6 @@ void main() {
  // FragColor.rgb = vec3(directLighting);
    
  /// FragColor.rgb = vec3(WorldPos);
-//	FragColor.rgb = baseColor.rgb;
+	//FragColor.rgb = baseColor.rgb;
+	//FragColor.rgb = normal.rgb;
 }

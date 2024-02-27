@@ -60,7 +60,7 @@ namespace Physics {
 	PxRigidDynamic* CreateRigidDynamic(glm::mat4 matrix, PhysicsFilterData filterData, PxShape* shape);
 	PxRigidDynamic* CreateRigidDynamic(glm::mat4 matrix, bool kinematic);
 	PxShape* CreateShapeFromTriangleMesh(PxTriangleMesh* triangleMesh, PxShapeFlags shapeFlags, PxMaterial* material = NULL, glm::vec3 scale = glm::vec3(1));
-	PxShape* CreateShapeFromConvexMesh(PxConvexMesh* convexMesh, PxMaterial* material = NULL, float scale = 1);
+	PxShape* CreateShapeFromConvexMesh(PxConvexMesh* convexMesh, PxMaterial* material = NULL, glm::vec3 scale = glm::vec3(1));
 	void EnableRigidBodyDebugLines(PxRigidBody* rigidBody);
 	void DisableRigidBodyDebugLines(PxRigidBody* rigidBody);
 	std::vector<CollisionReport>& GetCollisions();

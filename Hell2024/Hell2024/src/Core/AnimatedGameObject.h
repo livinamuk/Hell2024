@@ -27,6 +27,7 @@ struct AnimatedGameObject {
 	glm::mat4 GetModelMatrix();
 	bool IsAnimationComplete(); 
 	bool AnimationIsPastPercentage(float percent);
+    glm::vec3 GetScale();
 
 	SkinnedModel* _skinnedModel;
 	Transform _transform;

@@ -15,8 +15,11 @@ layout(std430, binding = 0) readonly buffer decalMatrices {
 
 void main() {
 	TexCoord = aTexCoord;
-	Normal = aNormal;
 	mat4 model = DecalMatrices[gl_InstanceID]; 
+	
+	mat4 normalMatrix = transpose(inverse(model));
+	Normal = normalize((normalMatrix * vec4(aNormal, 0)).xyz);
+
 	gl_Position = projection * view * model *vec4(aPos, 1.0);
 }
 

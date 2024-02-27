@@ -63,6 +63,8 @@ void main() {
 	final += emissive;
 	FragColor = vec4(final, 1);
 
+//	FragColor.rgb = glassColor;
+
 	//float linearDepth = LinearizeDepth(TexCoords);
 	//FragColor = vec4(vec3(linearDepth), 1);
    

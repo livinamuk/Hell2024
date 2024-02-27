@@ -200,6 +200,10 @@ void AnimatedGameObject::SetSkinnedModel(std::string name) {
     }
 }
 
+glm::vec3 AnimatedGameObject::GetScale() {
+    return  _transform.scale;
+}
+
 void AnimatedGameObject::SetScale(float scale) {
     _transform.scale = glm::vec3(scale);
 }

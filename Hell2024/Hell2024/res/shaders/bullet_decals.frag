@@ -22,4 +22,5 @@ void main() {
     BaseColorOut = vec4(baseColor.rgb, 1.0f);
     NormalsOut = vec4(Normal, 1.0);
     RMAOut =  vec4(roughness, metallic, 1, 1.0);
+
 }

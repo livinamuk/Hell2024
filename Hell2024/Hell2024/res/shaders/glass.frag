@@ -15,6 +15,7 @@ layout (binding = 7) uniform sampler2D brdfTexture;
 uniform float screenWidth;
 uniform float screenHeight;
 uniform vec3 viewPos;
+uniform bool isWindow;
 
 struct Light {
 	vec3 position;
@@ -126,7 +127,9 @@ void main() {
     float roughness =  texture2D(rmaTexture, TexCoords).r;
     float metallic = 0;
 
-    baseColor += (roughness) * (0.75);
+	if (isWindow) {
+		baseColor += (roughness) * (0.25);
+	}
 
     vec2 uv = gl_FragCoord.xy / vec2(screenWidth, screenHeight);    
     vec3 blur = blur(finalLighting, uv, 1 / vec2(screenWidth, screenHeight) * 0.15).rgb;   
@@ -137,8 +140,7 @@ void main() {
        vec3 lightColor = lights[i].color;
        float radius = lights[i].radius;
        float strength = lights[i].strength;
-
-
+	   
 
        vec3 directLight = GetDirectLighting(lightPos, lightColor, radius, strength, Normal, WorldPos, baseColor, roughness, metallic);
 	   directLight.rgb = pow(directLight.rgb, vec3(1.0/2.2)); 

@@ -225,7 +225,7 @@ bool Texture::Bake() {
 			//uint32_t size1 = ((width + 3) / 4) * ((height + 3) / 4) * blockSize;
 			uint32_t size2 = cmpTexture.dwDataSize;
 			glCompressedTexImage2D(GL_TEXTURE_2D, 0, glFormat, cmpTexture.dwWidth, cmpTexture.dwHeight, 0, size2, cmpTexture.pData);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 1);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 28);
 			glGenerateMipmap(GL_TEXTURE_2D);
 			cmpTexture = {};
 		}

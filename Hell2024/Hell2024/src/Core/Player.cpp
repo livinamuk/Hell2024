@@ -242,6 +242,11 @@ void Player::Update(float deltaTime) {
 	if (EngineState::GetEngineMode() == GAME) {
 		if (!_ignoreControl && GL::WindowHasFocus()) {
 			float mouseSensitivity = 0.002f;
+
+            if (InADS()) {
+                mouseSensitivity = 0.001f;
+            }
+
 			_rotation.x += -Input::GetMouseOffsetY() * mouseSensitivity;
 			_rotation.y += -Input::GetMouseOffsetX() * mouseSensitivity;
 			_rotation.x = std::min(_rotation.x, 1.5f);
@@ -422,8 +427,8 @@ void Player::Update(float deltaTime) {
 		if (_isMoving) {
 			_characterModel.PlayAndLoopAnimation("Character_AKS74U_Walk", 1.0f);
 		}
-		else {
-			_characterModel.PlayAndLoopAnimation("Character_AKS74U_Idle", 1.0f);
+        else {
+            _characterModel.PlayAndLoopAnimation("Character_AKS74U_Idle", 1.0f);
 		}
 		if (crouching) {
 			_characterModel.PlayAndLoopAnimation("Character_AKS74U_Kneel", 1.0f);
@@ -629,7 +634,10 @@ bool Player::CanFire() {
 			_weaponAction == DRAWING && _firstPersonWeapon.AnimationIsPastPercentage(75.0f) ||
 			_weaponAction == FIRE && _firstPersonWeapon.AnimationIsPastPercentage(22.5f) ||
 			_weaponAction == RELOAD && _firstPersonWeapon.AnimationIsPastPercentage(80.0f) ||
-			_weaponAction == RELOAD_FROM_EMPTY && _firstPersonWeapon.AnimationIsPastPercentage(95.0f)
+			_weaponAction == RELOAD_FROM_EMPTY && _firstPersonWeapon.AnimationIsPastPercentage(95.0f) ||
+
+            _weaponAction == ADS_IDLE ||
+            _weaponAction == ADS_FIRE && _firstPersonWeapon.AnimationIsPastPercentage(22.0f)
 		);
 	}
 	if (_currentWeaponIndex == Weapon::MP7) {
@@ -637,6 +645,19 @@ bool Player::CanFire() {
 		return true;
 	}
 }
+
+
+bool Player::InADS() {
+    if (_weaponAction == ADS_IN ||
+        _weaponAction == ADS_OUT ||
+        _weaponAction == ADS_IDLE ||
+        _weaponAction == ADS_FIRE)
+        return true;
+    else {
+        return false;
+    }
+}
+
 
 bool Player::CanReload() {
 
@@ -715,6 +736,19 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
 	_firstPersonWeapon.SetRotationX(Player::GetViewRotation().x);
 	_firstPersonWeapon.SetRotationY(Player::GetViewRotation().y);
 	_firstPersonWeapon.SetPosition(Player::GetViewPos());
+
+    // move the weapon down if you are in ads
+    if (InADS()) {
+
+        glm::vec3 offset = GetCameraUp() * 0.0018f;
+        glm::vec3 offset2 = GetCameraForward() * 0.0018f;
+
+        glm::vec3 position = Player::GetViewPos() - offset + offset2;
+
+        _firstPersonWeapon.SetPosition(position);
+
+    }
+
 
 
 	///////////////
@@ -853,7 +887,89 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
 	////////////////
 	//   AKs74u   //
 
-	if (_currentWeaponIndex == Weapon::AKS74U) {
+    if (_currentWeaponIndex == Weapon::AKS74U) {
+
+
+        // ZOOM
+        float zoomSpeed = 0.075f;
+
+        if (Input::RightMouseDown() && _weaponAction != RELOAD && _weaponAction != RELOAD_FROM_EMPTY) {
+            _zoom -= zoomSpeed;
+        }
+        else {
+            _zoom += zoomSpeed;
+        }
+        _zoom = std::max(0.575f, _zoom);
+        _zoom = std::min(1.0f, _zoom);
+
+
+
+
+        // ADS in
+        if (Input::RightMouseDown() && CanEnterADS()) {
+            _weaponAction = ADS_IN;
+            _firstPersonWeapon.PlayAnimation("AKS74U_ADS_In", 1.75f);
+        }
+        // ADS in complete
+        if (_weaponAction == ADS_IN && _firstPersonWeapon.IsAnimationComplete()) {
+            _firstPersonWeapon.PlayAnimation("AKS74U_ADS_Idle", 1.0f);
+            _weaponAction = ADS_IDLE;
+        }
+        // ADS out
+        if (!Input::RightMouseDown()) {
+
+            if (_weaponAction == ADS_IN ||
+                _weaponAction == ADS_IDLE) {
+                _weaponAction = ADS_OUT;
+                _firstPersonWeapon.PlayAnimation("AKS74U_ADS_Out", 1.75f);
+            }
+        }
+        // ADS out complete
+        if (_weaponAction == ADS_OUT && _firstPersonWeapon.IsAnimationComplete()) {
+            _firstPersonWeapon.PlayAnimation("AKS74U_Idle", 1.0f);
+            _weaponAction = IDLE;
+        }
+        // ADS walk
+        if (_weaponAction == ADS_IDLE) {
+            if (Player::IsMoving()) {
+                _firstPersonWeapon.PlayAndLoopAnimation("AKS74U_ADS_Walk", 1.0f);
+            }
+            else {
+                _firstPersonWeapon.PlayAndLoopAnimation("AKS74U_ADS_Idle", 1.0f);
+            }
+        }
+
+
+        // ADS fire
+
+        if (Input::LeftMouseDown() && CanFire() && InADS() && _inventory.aks74uAmmo.clip > 0) {
+            _weaponAction = ADS_FIRE;
+            int random_number = std::rand() % 3 + 1;
+            //std::string aninName = "AKS74U_Fire" + std::to_string(random_number);
+            std::string audioName = "AK47_Fire" + std::to_string(random_number) + ".wav";
+
+            std::string  aninName = "AKS74U_ADS_Fire1";
+
+            _firstPersonWeapon.PlayAnimation(aninName, 1.625f);
+            Audio::PlayAudio(audioName, 1.0f);
+            SpawnMuzzleFlash();
+            SpawnBullet(0.025f, Weapon::AKS74U);
+            SpawnAKS74UCasing();
+            _inventory.aks74uAmmo.clip--;
+        }
+        // Fire (no ammo)
+        //if (Input::LeftMousePressed() && CanFire() && _inventory.aks74uAmmo.clip == 0) {
+       //     Audio::PlayAudio("Dry_Fire.wav", 0.8f);
+        //}
+
+        // Finished ADS Fire
+        if (_weaponAction == ADS_FIRE && _firstPersonWeapon.IsAnimationComplete()) {
+            _firstPersonWeapon.PlayAnimation("AKS74U_ADS_Idle", 1.0f);
+            _weaponAction = ADS_IDLE;
+        }
+
+
+
 
 		// Drop the mag
 		if (_needsToDropAKMag && _weaponAction == RELOAD_FROM_EMPTY && _firstPersonWeapon.AnimationIsPastPercentage(16.9f)) {
@@ -916,8 +1032,8 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
 			if (Player::IsMoving()) {
 				_firstPersonWeapon.PlayAndLoopAnimation("AKS74U_Walk", 1.0f);
 			}
-			else {
-				_firstPersonWeapon.PlayAndLoopAnimation("AKS74U_Idle", 1.0f);
+            else {
+                _firstPersonWeapon.PlayAndLoopAnimation("AKS74U_Idle", 1.0f);
 			}
 		}
 		// Draw
@@ -1099,6 +1215,11 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
         if (_currentWeaponIndex == Weapon::SHOTGUN ) {
             lookDelta = glm::vec2(Input::GetMouseOffsetX(), -Input::GetMouseOffsetY());
         }
+
+        if (_zoom < 0.99f) {
+            lookDelta *= glm::vec2(0.025f);
+        }
+
 		_weaponSwayFactor  = glm::mix(_weaponSwayFactor, -(lookDelta * swayAmount), lerpFrac);
 		_weaponSwayFactor = glm::clamp(_weaponSwayFactor, -swayAmountMax, swayAmountMax);
 		_weaponSwayTargetPos = glm::mix(_weaponSwayTargetPos, glm::vec3(_weaponSwayFactor, 0), lerpFrac);
@@ -1131,7 +1252,7 @@ void Player::SpawnGlockCasing() {
 	filterData.raycastGroup = RaycastGroup::RAYCAST_DISABLED;
 	filterData.collisionGroup = CollisionGroup::BULLET_CASING;
     filterData.collidesWith = CollisionGroup::ENVIROMENT_OBSTACLE;
-    filterData.collidesWith = CollisionGroup::NO_COLLISION;
+    //filterData.collidesWith = CollisionGroup::NO_COLLISION;
 
 	PxShape* shape = Physics::CreateBoxShape(0.01f, 0.004f, 0.004f);
 	PxRigidDynamic* body = Physics::CreateRigidDynamic(transform, filterData, shape);
@@ -1139,6 +1260,8 @@ void Player::SpawnGlockCasing() {
 	PxVec3 force = Util::GlmVec3toPxVec3(glm::normalize(GetCameraRight() + glm::vec3(0.0f, Util::RandomFloat(0.7f, 0.9f), 0.0f)) * glm::vec3(0.00215f));
 	body->addForce(force);
 	body->setAngularVelocity(PxVec3(Util::RandomFloat(0.0f, 100.0f), Util::RandomFloat(0.0f, 100.0f), Util::RandomFloat(0.0f, 100.0f)));
+    body->userData = (void*)&EngineState::weaponNamePointers[GLOCK];
+
 
 	BulletCasing bulletCasing;
 	bulletCasing.type = GLOCK;
@@ -1165,13 +1288,14 @@ void Player::SpawnShotgunShell() {
     filterData.raycastGroup = RaycastGroup::RAYCAST_DISABLED;
     filterData.collisionGroup = CollisionGroup::BULLET_CASING;
     filterData.collidesWith = CollisionGroup::ENVIROMENT_OBSTACLE;
-    filterData.collidesWith = CollisionGroup::NO_COLLISION;
+    //filterData.collidesWith = CollisionGroup::NO_COLLISION;
 
     PxShape* shape = Physics::CreateBoxShape(0.03f, 0.007f, 0.007f);
     PxRigidDynamic* body = Physics::CreateRigidDynamic(transform, filterData, shape);
 
     PxVec3 force = Util::GlmVec3toPxVec3(glm::normalize(GetCameraRight() + glm::vec3(0.0f, Util::RandomFloat(0.7f, 1.4f), 0.0f)) * glm::vec3(0.02f));
     body->addForce(force);
+    body->userData = (void*)&EngineState::weaponNamePointers[SHOTGUN];
     //body->setAngularVelocity(PxVec3(Util::RandomFloat(0.0f, 50.0f), Util::RandomFloat(0.0f, 50.0f), Util::RandomFloat(0.0f, 50.0f)));
     //shape->release();
 
@@ -1194,7 +1318,7 @@ void Player::SpawnAKS74UCasing() {
 	filterData.raycastGroup = RaycastGroup::RAYCAST_DISABLED;
 	filterData.collisionGroup = CollisionGroup::BULLET_CASING;
     filterData.collidesWith = CollisionGroup::ENVIROMENT_OBSTACLE;
-    filterData.collidesWith = CollisionGroup::NO_COLLISION;
+   // filterData.collidesWith = CollisionGroup::NO_COLLISION;
 
 	PxShape* shape = Physics::CreateBoxShape(0.02f, 0.004f, 0.004f);
 	PxRigidDynamic* body = Physics::CreateRigidDynamic(transform, filterData, shape);
@@ -1202,7 +1326,9 @@ void Player::SpawnAKS74UCasing() {
 	PxVec3 force = Util::GlmVec3toPxVec3(glm::normalize(GetCameraRight() + glm::vec3(0.0f, Util::RandomFloat(0.7f, 1.4f), 0.0f)) * glm::vec3(0.003f));
 	body->addForce(force);
 	body->setAngularVelocity(PxVec3(Util::RandomFloat(0.0f, 50.0f), Util::RandomFloat(0.0f, 50.0f), Util::RandomFloat(0.0f, 50.0f)));
-	//shape->release();
+    body->userData = (void*)&EngineState::weaponNamePointers[AKS74U];
+    
+    //shape->release();
 
 	BulletCasing bulletCasing;
 	bulletCasing.type = AKS74U;
@@ -1232,6 +1358,8 @@ void Player::SpawnBullet(float variance, Weapon type) {
 
 void Player::DropAKS7UMag() {
 
+    return;
+
 	PhysicsFilterData magFilterData;
 	magFilterData.raycastGroup = RAYCAST_DISABLED;
 	magFilterData.collisionGroup = CollisionGroup::GENERIC_BOUNCEABLE;
@@ -1248,10 +1376,6 @@ void Player::DropAKS7UMag() {
 	mag.SetModel("AKS74UMag");
 	mag.SetName("AKS74UMag");
 	mag.SetMeshMaterial("AKS74U_3");
-
-
-
-
 
 	AnimatedGameObject& ak2 = GetFirstPersonWeapon();
 	glm::mat4 matrix = ak2.GetBoneWorldMatrixFromBoneName("Magazine");
@@ -1359,4 +1483,26 @@ void Player::CreateCharacterController(glm::vec3 position) {
 	filterData.word2 = CollisionGroup(ITEM_PICK_UP | ENVIROMENT_OBSTACLE);
 	shape->setQueryFilterData(filterData);
 
+}
+
+glm::mat4 Player::GetProjectionMatrix() {
+    float width = (float)GL::GetWindowWidth();
+    float height = (float)GL::GetWindowHeight();
+
+    if (EngineState::GetViewportMode() == SPLITSCREEN) {
+        height *= 0.5f;
+    }
+    return glm::perspective(_zoom, width / height, NEAR_PLANE, FAR_PLANE);
+}
+
+bool Player::CanEnterADS() {
+
+    if (!InADS() && _weaponAction != RELOAD && _weaponAction != RELOAD_FROM_EMPTY ||
+        _weaponAction == RELOAD && _firstPersonWeapon.AnimationIsPastPercentage(65.0f) ||
+        _weaponAction == RELOAD_FROM_EMPTY && _firstPersonWeapon.AnimationIsPastPercentage(65.0f)) {
+        return true;
+    }
+    else {
+        return false;
+    }
 }

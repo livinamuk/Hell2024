@@ -24,7 +24,8 @@ in vec3 attrBiTangent;
 uniform float time;
 uniform float screenWidth;
 uniform float screenHeight;
-uniform bool outputEmissive;
+uniform bool writeEmissive;
+uniform bool sampleEmissive;
 uniform vec3 lightColor;
 
 uniform float projectionMatrixIndex;
@@ -46,18 +47,26 @@ void main()
         discard;
     }
 
-    if (outputEmissive) {
-        if (rma.b == 1.0) {
-            EmissiveOut = vec4(lightColor, 0);
-        } 
-        else {
-            EmissiveOut = vec4(0, 0, 0, 1);
-        }
-    } 
-    else {
-        EmissiveOut = vec4(0, 0, 0, 1);
-    }
-
+	if (sampleEmissive) {
+		if (rma.b > 0.1) {
+			//EmissiveOut = vec4(lightColor * rma.b * 1.25 * vec3(1, 0.95, 0.95), 0);
+			EmissiveOut = vec4(lightColor * rma.b, 0);
+		} 
+		else {
+			EmissiveOut = vec4(0, 0, 0, 1);
+		}
+	} 
+	else {
+		EmissiveOut = vec4(0, 0, 0, 1);
+	}
+	
+	if (!writeEmissive) {
+		EmissiveOut.rgb *= 0.75;
+		EmissiveOut.a = 0.75;
+		
+    BaseColorOut.a = 0.5;
+	}
+	
 
     WorldSpacePositionOut = vec4(WorldPos, 1.0);
    // RMAOut.rgb = vec3(1,0,0);

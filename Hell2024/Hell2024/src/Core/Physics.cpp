@@ -320,12 +320,12 @@ PxShape* Physics::CreateShapeFromTriangleMesh(PxTriangleMesh* triangleMesh, PxSh
     return _physics->createShape(geometry, *material, shapeFlags);
 }
 
-PxShape* Physics::CreateShapeFromConvexMesh(PxConvexMesh* convexMesh, PxMaterial* material, float /*scale*/) {
+PxShape* Physics::CreateShapeFromConvexMesh(PxConvexMesh* convexMesh, PxMaterial* material, glm::vec3 scale) {
     if (material == NULL) {
         material = _defaultMaterial;
     }
     PxConvexMeshGeometryFlags flags(~PxConvexMeshGeometryFlag::eTIGHT_BOUNDS);
-    PxConvexMeshGeometry geometry(convexMesh, PxMeshScale(), flags);
+    PxConvexMeshGeometry geometry(convexMesh, PxMeshScale(PxVec3(scale.x, scale.y, scale.z)), flags);
     return _physics->createShape(geometry, *material);
 }
 

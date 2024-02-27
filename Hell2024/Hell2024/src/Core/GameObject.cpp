@@ -544,7 +544,7 @@ void GameObject::CreateRigidBody(glm::mat4 matrix, bool kinematic) {
 	_collisionBody = Physics::CreateRigidDynamic(matrix, kinematic);
 }
 
-void GameObject::AddCollisionShapeFromConvexMesh(Mesh* mesh, PhysicsFilterData physicsFilterData) {
+void GameObject::AddCollisionShapeFromConvexMesh(Mesh* mesh, PhysicsFilterData physicsFilterData, glm::vec3 scale) {
 	if (!_collisionBody) {
 		std::cout << "You tried to add a ConvexMesh shape to a GameObject without a rigid body. GameObject name is '" << _name << "'\n";
 		return;
@@ -555,7 +555,7 @@ void GameObject::AddCollisionShapeFromConvexMesh(Mesh* mesh, PhysicsFilterData p
 	if (!mesh->_convexMesh) {
 		mesh->CreateConvexMesh();
 	}
-	PxShape* shape = Physics::CreateShapeFromConvexMesh(mesh->_convexMesh);
+	PxShape* shape = Physics::CreateShapeFromConvexMesh(mesh->_convexMesh, NULL, scale);
 	PxFilterData filterData;
 	filterData.word0 = (PxU32)physicsFilterData.raycastGroup;
 	filterData.word1 = (PxU32)physicsFilterData.collisionGroup;

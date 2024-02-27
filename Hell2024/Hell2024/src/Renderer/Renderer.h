@@ -38,7 +38,7 @@ namespace Renderer {
 	void RecreateFrameBuffers(int currentPlayer);
 	void CreatePointCloudBuffer();
 	void CreateTriangleWorldVertexBuffer();
-	glm::mat4 GetProjectionMatrix(float depthOfField);
+	//glm::mat4 GetProjectionMatrix(float depthOfField);
 
 	//std::vector<int> UpdateDirtyPointCloudIndices();
 	//std::vector<glm::uvec4> UpdateDirtyGridChunks();

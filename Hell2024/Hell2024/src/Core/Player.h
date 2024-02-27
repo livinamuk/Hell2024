@@ -22,6 +22,8 @@ struct Inventory {
     Ammo shotgunAmmo;
 };
 
+
+
 class Player {
 
 public:
@@ -100,8 +102,16 @@ public:
 
     void PickUpShotgun();
 
+    glm::mat4 GetProjectionMatrix();
+
+    bool CanEnterADS();
+    bool InADS();
+
 	std::string _pickUpText = "";
 	float _pickUpTextTimer = 0;
+    float _zoom = 1.0f;
+
+
 
 private:
 
