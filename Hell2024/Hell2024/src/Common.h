@@ -281,30 +281,7 @@ enum CollisionGroup {
     ITEM_PICK_UP = 16,
 };
 
-/*
-struct PhysicsObjectData {
-    PhysicsObjectData(PhysicsObjectType type, void* index) {
-		this->type = type;
-		this->index = index;
-	}
-	PhysicsObjectType type;
-	void* index;
-};*/
-
-/*
-struct RayCastResult {
-	bool found = false;
-//	float distanceToHit = 99999;
-	void* parent = nullptr;
-//	Triangle triangle;
-	PhysicsObjectType physicsObjectType = PhysicsObjectType::UNDEFINED;
-    void* hitActor;
-
-
-
-//	glm::mat4 triangeleModelMatrix = glm::mat4(1);
-//	glm::vec3 intersectionPoint = glm::vec3(0);
-//	glm::vec2 baryPosition = glm::vec2(0);
-//	glm::vec3 closestPointOnBoundingBox = glm::vec3(0, 0, 0);
-//	unsigned int rayCount = 0;
-};*/
+struct AABB {
+    glm::vec3 position = glm::vec3(0);
+    glm::vec3 extents = glm::vec3(0);
+};

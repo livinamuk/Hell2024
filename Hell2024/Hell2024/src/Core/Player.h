@@ -63,7 +63,8 @@ public:
 
 	PxShape* _itemPickupOverlapShape = NULL;
 	//PxRigidStatic* _itemPickupOverlapDebugBody = NULL;
-	float _yVelocity = 0;
+    float _yVelocity = 0;
+    Transform _weaponSwayTransform;
 
 	Inventory _inventory;
 

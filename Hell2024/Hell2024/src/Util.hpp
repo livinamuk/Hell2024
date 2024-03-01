@@ -15,6 +15,38 @@
 
 namespace Util {
 
+    inline float SquaredDistPointAABB(const glm::vec3 p, const AABB& aabb) {
+        auto check = [&](
+            const double pn,
+            const double bmin,
+            const double bmax) -> double {
+            double out = 0;
+            double v = pn;
+            if (v < bmin) {
+                double val = (bmin - v);
+                out += val * val;
+            }
+            if (v > bmax) {
+                double val = (v - bmax);
+                out += val * val;
+            }
+            return out;
+        };
+        // Squared distance
+        double sq = 0.0;
+        glm::vec3 min = aabb.position - aabb.extents;
+        glm::vec3 max = aabb.position + aabb.extents;
+        sq += check(p.x, min.x, max.x);
+        sq += check(p.y, min.y, max.y);
+        sq += check(p.z, min.z, max.z);
+        return sq;
+    }
+
+    inline bool AABBInSphere(AABB& aabb, glm::vec3 spherePosition, float sphereRadius) {
+        float squaredDistance = SquaredDistPointAABB(spherePosition, aabb);
+        return squaredDistance <= (sphereRadius * sphereRadius);
+    }
+
     inline std::string WeaponActionToString(WeaponAction weaponAction) {
 
         if (weaponAction == IDLE) {

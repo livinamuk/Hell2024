@@ -195,5 +195,6 @@ namespace Scene {
 	void RecreateAllPhysicsObjects();
 	void RemoveAllDecalsFromWindow(Window* window); 
     void CalculateLightBoundingVolumes();
+    void CheckIfLightsAreDirty();
     //Player* GetPlayerFromCharacterControler(PxController* characterController);
 }

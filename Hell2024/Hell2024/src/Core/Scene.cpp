@@ -20,6 +20,19 @@ void ProcessBullets();
 
 void Scene::Update(float deltaTime) {
 
+    if (Input::KeyPressed(HELL_KEY_1)) {
+        _players[0]._keyboardIndex = 0;
+        _players[1]._keyboardIndex = -1;
+        _players[0]._mouseIndex = 0;
+        _players[1]._mouseIndex = -1;
+    }
+    if (Input::KeyPressed(HELL_KEY_2)) {
+        _players[1]._keyboardIndex = 0;
+        _players[0]._keyboardIndex = -1;
+        _players[1]._mouseIndex = 0;
+        _players[0]._mouseIndex = -1;
+    }
+
   /*  if (Input::KeyPressed(HELL_KEY_SPACE)) {
 
         std::cout << "\n";
@@ -174,7 +187,7 @@ void Scene::Update(float deltaTime) {
     // Are lights dirty? occurs when a door opens within their radius
     // Which triggers update of the point cloud, and then propagation grid
 
-    for (const auto& door : _doors) {
+    /*for (const auto& door : _doors) {
         if (door.state != Door::State::OPENING && door.state != Door::State::CLOSING) continue;
 
         for (auto& light : _lights) {
@@ -183,8 +196,8 @@ void Scene::Update(float deltaTime) {
                 light.isDirty = true;
             }
         }
-    }
-
+    }*/
+       
     for (AnimatedGameObject& animatedGameObject : _animatedGameObjects) {
         animatedGameObject.Update(deltaTime);
     }
@@ -248,6 +261,30 @@ void Scene::Update(float deltaTime) {
 
     UpdateRTInstanceData();
     ProcessPhysicsCollisions();
+}
+
+void Scene::CheckIfLightsAreDirty() {
+    for (Light& light : Scene::_lights) {
+        light.isDirty = false;
+        for (GameObject& gameObject : Scene::_gameObjects) {
+            if (gameObject.HasMovedSinceLastFrame()) {
+                if (Util::AABBInSphere(gameObject._aabb, light.position, light.radius)) {
+                    light.isDirty = true;
+                    break;
+                }
+            }
+        }
+        if (!light.isDirty) {
+            for (Door& door : Scene::_doors) {
+                if (door.HasMovedSinceLastFrame()) {
+                    if (Util::AABBInSphere(door._aabb, light.position, light.radius)) {
+                        light.isDirty = true;
+                        break;
+                    }
+                }
+            }
+        }
+    }
 }
 
 void Scene::Update3DEditorScene() {
@@ -714,6 +751,8 @@ void Scene::LoadHardCodedObjects() {
             filterData.collisionGroup = CollisionGroup::NO_COLLISION;
             filterData.collidesWith = CollisionGroup::NO_COLLISION;
 
+
+
             GameObject& smallChestOfDrawers = _gameObjects.emplace_back();
             smallChestOfDrawers.SetModel("SmallChestOfDrawersFrame");
             smallChestOfDrawers.SetMeshMaterial("Drawers");
@@ -733,6 +772,25 @@ void Scene::LoadHardCodedObjects() {
             smallChestOfDrawers.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("SmallChestOfDrawersFrame_ConvexMesh")->_meshes[0], filterData3);
             smallChestOfDrawers.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("SmallChestOfDrawersFrameLeftSide_ConvexMesh")->_meshes[0], filterData3);
             smallChestOfDrawers.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("SmallChestOfDrawersFrameRightSide_ConvexMesh")->_meshes[0], filterData3);
+
+
+
+            GameObject& smallChestOfDrawers2 = _gameObjects.emplace_back();
+            smallChestOfDrawers2.SetModel("SmallChestOfDrawersFrame");
+            smallChestOfDrawers2.SetMeshMaterial("Drawers");
+            smallChestOfDrawers2.SetName("SmallDrawersHers");
+            smallChestOfDrawers2.SetPosition(8.9, 0.1f, 8.3f);
+            smallChestOfDrawers2.SetRotationY(NOOSE_PI);
+            smallChestOfDrawers2.SetRaycastShapeFromModel(AssetManager::GetModel("SmallChestOfDrawersFrame"));
+            smallChestOfDrawers2.SetOpenState(OpenState::NONE, 0, 0, 0);
+            smallChestOfDrawers2.SetAudioOnOpen("DrawerOpen.wav", 1.0f);
+            smallChestOfDrawers2.SetAudioOnClose("DrawerOpen.wav", 1.0f);
+            smallChestOfDrawers2.CreateRigidBody(smallChestOfDrawers2.GetGameWorldMatrix(), true);
+            smallChestOfDrawers2.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("SmallChestOfDrawersFrame_ConvexMesh")->_meshes[0], filterData3);
+            smallChestOfDrawers2.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("SmallChestOfDrawersFrameLeftSide_ConvexMesh")->_meshes[0], filterData3);
+            smallChestOfDrawers2.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("SmallChestOfDrawersFrameRightSide_ConvexMesh")->_meshes[0], filterData3);
+
+
 
             PhysicsFilterData filterData4;
             filterData4.raycastGroup = RAYCAST_DISABLED;

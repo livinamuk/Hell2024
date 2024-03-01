@@ -30,6 +30,9 @@ public:
 	PxRigidStatic* _editorRaycastBody = NULL;
 	PxShape* _editorRaycastShape = NULL;
 
+    PxRigidStatic* _raycastBody = NULL;
+    PxShape* _raycastShape = NULL;
+
 private:
 
 	PickUpType _pickupType = PickUpType::NONE;
@@ -39,8 +42,6 @@ private:
 	ModelMatrixMode _modelMatrixMode = ModelMatrixMode::GAME_TRANSFORM;
 	BoundingBox _boundingBox;
 	std::vector<PxShape*> _collisionShapes;
-	PxRigidStatic* _raycastBody = NULL;
-	PxShape* _raycastShape = NULL;
 
 
 	struct AudioEffects {
@@ -65,6 +66,10 @@ public:
 	glm::vec3 GetWorldSpaceOABBCenter();
     void DisableRaycasting();
     void EnableRaycasting();
+
+    AABB _aabb;
+    AABB _aabbPreviousFrame;
+
 	//void SetModelScaleWhenUsingPhysXTransform(glm::vec3 scale);
 
 	glm::vec3 _scaleWhenUsingPhysXTransform = glm::vec3(1);
@@ -130,10 +135,13 @@ public:
 	glm::mat4 GetGameWorldMatrix(); // aka not the physx matrix
 	void AddForceToCollisionObject(glm::vec3 direction, float strength);
 
-	void CleanUp();
+    void CleanUp();
+    bool HasMovedSinceLastFrame();
 
 	std::vector<Triangle> GetTris();
 
-private: 
+private:
+    bool _wasPickedUpLastFrame = false;
+    bool _wasRespawnedUpLastFrame = false;
 	//glm::mat4 CalculateModelMatrix(ModelMatrixMode modelMatrixMode);
 };

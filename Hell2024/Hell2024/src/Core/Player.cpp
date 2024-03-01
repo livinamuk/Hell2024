@@ -1215,10 +1215,9 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
         float SWAY_AMOUNT = 0.125f;
         float SMOOTH_AMOUNT = 4.0f;
         float SWAY_MIN_X = -2.25f;
-        float SWAY_MAX_X = xMax;//;
+        float SWAY_MAX_X = xMax;
         float SWAY_MIN_Y = -2;
         float SWAY_MAX_Y = 0.95f;
-
 
         float xOffset = -(float)InputMulti::GetMouseXOffset(_mouseIndex);
         float yOffset = (float)InputMulti::GetMouseYOffset(_mouseIndex);
@@ -1227,53 +1226,21 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
             xOffset *= -1;
         }
 
-
-        float swayAmount = 1;
         float movementX = -xOffset * SWAY_AMOUNT;
         float movementY = -yOffset * SWAY_AMOUNT;
-
-
 
         movementX = std::min(movementX, SWAY_MAX_X);
         movementX = std::max(movementX, SWAY_MIN_X);
         movementY = std::min(movementY, SWAY_MAX_Y);
         movementY = std::max(movementY, SWAY_MIN_Y);
 
-        glm::vec3 finalPosition = glm::vec3(movementX, movementY, 0);
-
-        static float xPos = 0;
-        static float yPos = 0;
-        xPos = Util::FInterpTo(xPos, movementX, deltaTime, SMOOTH_AMOUNT);
-        yPos = Util::FInterpTo(yPos, movementY, deltaTime, SMOOTH_AMOUNT);
-
-        static Transform t;
-        t.position = glm::vec3(xPos, yPos, 0);
-        glm::mat4 swayTransform = t.to_mat4();
+        _weaponSwayTransform.position.x = Util::FInterpTo(_weaponSwayTransform.position.x, movementX, deltaTime, SMOOTH_AMOUNT);
+        _weaponSwayTransform.position.y = Util::FInterpTo(_weaponSwayTransform.position.y, movementY, deltaTime, SMOOTH_AMOUNT);
+        _weaponSwayMatrix = _weaponSwayTransform.to_mat4();
 
         for (auto& transform : _firstPersonWeapon._animatedTransforms.local) {
-            transform = swayTransform * transform;
+            transform = _weaponSwayMatrix * transform;
         }
-
-        _weaponSwayMatrix = t.to_mat4();
-
-      /*
-
-        if (_zoom < 0.99f) {
-            lookDelta *= glm::vec2(0.025f);
-            swayAmountMax *= 0.05;
-            _weaponSwayFactor.x = std::min(_weaponSwayFactor.x, swayAmountMax.x);
-            _weaponSwayFactor.y = std::min(_weaponSwayFactor.y, swayAmountMax.y);
-        }
-
-		_weaponSwayFactor  = glm::mix(_weaponSwayFactor, -(lookDelta * swayAmount), lerpFrac);
-		_weaponSwayFactor = glm::clamp(_weaponSwayFactor, -swayAmountMax, swayAmountMax);
-		_weaponSwayTargetPos = glm::mix(_weaponSwayTargetPos, glm::vec3(_weaponSwayFactor, 0), lerpFrac);
-
-		const glm::mat4 swayTransform = glm::translate(glm::mat4(1.0f), _weaponSwayTargetPos);
-		for (auto& transform : _firstPersonWeapon._animatedTransforms.local) {
-			transform = swayTransform * transform;
-		}
-		_weaponSwayMatrix = swayTransform;*/
 	}
 }
 

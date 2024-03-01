@@ -173,6 +173,7 @@ void Engine::Run() {
             for (Player& player : Scene::_players) {
                 player.Update(deltaTime);
             }
+            Scene::CheckIfLightsAreDirty();
             InputMulti::ResetMouseOffsets();
         }
 
@@ -271,24 +272,6 @@ void Engine::LazyKeyPresses() {
 		Renderer::ToggleDebugText();
 		Audio::PlayAudio(AUDIO_SELECT, 1.00f);
 	}
-    if (Input::KeyPressed(HELL_KEY_1)) {
-        Renderer::WipeShadowMaps();
-        Scene::LoadLightSetup(1);
-        Scene::CreatePointCloud();
-        Audio::PlayAudio(AUDIO_SELECT, 1.00f);
-    }
-    if (Input::KeyPressed(HELL_KEY_2)) {
-        Renderer::WipeShadowMaps();
-        Scene::LoadLightSetup(0);
-        Scene::CreatePointCloud();
-        Audio::PlayAudio(AUDIO_SELECT, 1.00f);
-    }
-    if (Input::KeyPressed(HELL_KEY_3)) {
-        Renderer::WipeShadowMaps();
-        Scene::LoadLightSetup(2);
-        Scene::CreatePointCloud();
-        Audio::PlayAudio(AUDIO_SELECT, 1.00f);
-    }
     if (Input::KeyPressed(GLFW_KEY_C)) {
         EngineState::NextPlayer();
 		if (EngineState::GetViewportMode() == FULLSCREEN) {

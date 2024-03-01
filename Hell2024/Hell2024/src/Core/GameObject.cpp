@@ -138,10 +138,11 @@ void GameObject::Interact() {
 
 void GameObject::Update(float deltaTime) {
 
+    _wasPickedUpLastFrame = false;
+    _wasRespawnedUpLastFrame = false;
 
     if (_name == "GlockAmmo_PickUp") {
-
-   
+           
         GameObject* topDraw = Scene::GetGameObjectByName("TopDraw");
         if (topDraw) {
 
@@ -200,10 +201,11 @@ void GameObject::Update(float deltaTime) {
 			_pickupCoolDownTime -= deltaTime;
 		}
         // Respawn item when timer is zero
-		if (_pickupCoolDownTime <= 0) {
+        if (_pickupCoolDownTime < 0) {
 			_pickupCoolDownTime = 0;
 			_collected = false;
             EnableRaycasting();
+            _wasPickedUpLastFrame = true;
 		}
 	}
 
@@ -274,6 +276,13 @@ void GameObject::Update(float deltaTime) {
 		}
 		_collisionBody->userData = new PhysicsObjectData(PhysicsObjectType::GAME_OBJECT, this);
 	}
+
+    // AABB
+    if (_raycastBody) {
+        _aabbPreviousFrame = _aabb;
+        _aabb.extents = Util::PxVec3toGlmVec3(_raycastBody->getWorldBounds().getExtents());
+        _aabb.position = Util::PxVec3toGlmVec3(_raycastBody->getWorldBounds().getCenter());
+    }
 }
 
 void GameObject::UpdateEditorPhysicsObject() {
@@ -744,6 +753,7 @@ void GameObject::PickUp() {
 
 	_collisionBody->setGlobalPose(PxTransform(matrix));
     DisableRaycasting();
+    _wasPickedUpLastFrame = true;
 }
 
 void GameObject::PutRigidBodyToSleep() {
@@ -774,4 +784,12 @@ void GameObject::EnableRaycasting() {
     auto filterData = _raycastShape->getQueryFilterData();
     filterData.word0 = RAYCAST_ENABLED;
     _raycastShape->setQueryFilterData(filterData);
+}
+
+bool GameObject::HasMovedSinceLastFrame() {
+    return (
+        _wasPickedUpLastFrame ||
+        _wasRespawnedUpLastFrame ||
+        _aabb.position != _aabbPreviousFrame.position && _aabb.extents != _aabbPreviousFrame.extents
+    );
 }

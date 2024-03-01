@@ -25,8 +25,8 @@ void Door::Update(float deltaTime) {
     float openSpeed = 5.208f;
     if (state == OPENING) {
         openRotation -= openSpeed * deltaTime;
-        if (openRotation < -1.9f) {
-            openRotation = -1.9f;
+        if (openRotation < -1.8f) {
+            openRotation = -1.8f;
             state = OPEN;
         }
     }
@@ -52,6 +52,13 @@ void Door::Update(float deltaTime) {
         PxMat44 m2 = Util::GlmMat4ToPxMat44(modelMatrix);
         PxTransform transform2 = PxTransform(m2);
         raycastBody->setGlobalPose(transform2);
+    }
+
+    // AABB
+    if (raycastBody) {
+        _aabbPreviousFrame = _aabb;
+        _aabb.extents = Util::PxVec3toGlmVec3(raycastBody->getWorldBounds().getExtents());
+        _aabb.position = Util::PxVec3toGlmVec3(raycastBody->getWorldBounds().getCenter());
     }
 }
 
@@ -185,4 +192,8 @@ void Door::InitPxTriangleMesh() {
 
 glm::vec3 Door::GetWorldDoorWayCenter() {
     return position + glm::vec3(0, 1.3f, 0);
+}
+
+bool Door::HasMovedSinceLastFrame() {
+    return (_aabb.position != _aabbPreviousFrame.position && _aabb.extents != _aabbPreviousFrame.extents);
 }
