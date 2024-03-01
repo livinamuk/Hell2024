@@ -2,6 +2,7 @@
 #include "keycodes.h"
 
 namespace Input {
+
 	void Init();
 	void Update();
 	bool KeyPressed(unsigned int keycode);

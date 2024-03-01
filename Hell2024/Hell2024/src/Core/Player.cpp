@@ -1,6 +1,7 @@
 #include "Player.h"
 #include "../Core/Audio.hpp"
 #include "../Core/Input.h"
+#include "../Core/InputMulti.h"
 #include "../Core/GL.h"
 #include "../Core/Scene.h"
 #include "../Common.h"
@@ -160,6 +161,12 @@ void Player::CheckForItemPickOverlaps() {
 		return;
 	}
 
+  /*  if (Input::KeyPressed(HELL_KEY_SPACE)) {
+        for (auto& floor : Scene::_floors) {
+            std::cout << Util::Vec3ToString(floor.v1.position) << " " << Util::Vec3ToString(floor.v2.position) << " " << Util::Vec3ToString(floor.v3.position) << " " << Util::Vec3ToString(floor.v4.position) << "\n";
+        }
+    }*/
+
 	const PxGeometry& overlapShape = _itemPickupOverlapShape->getGeometry();
 	const PxTransform shapePose(_characterController->getActor()->getGlobalPose());
 
@@ -204,28 +211,8 @@ void Player::CheckForItemPickOverlaps() {
 
 void Player::Update(float deltaTime) {
 
-
-    if (Input::KeyPressed(HELL_KEY_5)) {
-        _inventory.shotgunAmmo.clip = 6;
-        _inventory.shotgunAmmo.total = 1;
-    }
-
-	//if (_itemPickupOverlapDebugBody) {
-	//	_itemPickupOverlapDebugBody->setGlobalPose(_characterController->getActor()->getGlobalPose());
-	//}
-
 	CheckForItemPickOverlaps();
-
-
-	//auto pose = _characterController->getActor()->getGlobalPose();
-	//_itemPickupOverlapDebugBody->setGlobalPose(pose);
-
-
-	if (Input::KeyDown(HELL_KEY_U)) {
-		DropAKS7UMag();
-	}
-	
-			
+    			
 	if (_pickUpTextTimer > 0) {
 		_pickUpTextTimer -= deltaTime;
 	}
@@ -242,13 +229,13 @@ void Player::Update(float deltaTime) {
 	if (EngineState::GetEngineMode() == GAME) {
 		if (!_ignoreControl && GL::WindowHasFocus()) {
 			float mouseSensitivity = 0.002f;
-
             if (InADS()) {
                 mouseSensitivity = 0.001f;
             }
-
-			_rotation.x += -Input::GetMouseOffsetY() * mouseSensitivity;
-			_rotation.y += -Input::GetMouseOffsetX() * mouseSensitivity;
+            float xOffset = (float)InputMulti::GetMouseXOffset(_mouseIndex);
+            float yOffset = (float)InputMulti::GetMouseYOffset(_mouseIndex);
+			_rotation.x += -yOffset * mouseSensitivity;
+			_rotation.y += -xOffset * mouseSensitivity;
 			_rotation.x = std::min(_rotation.x, 1.5f);
 			_rotation.x = std::max(_rotation.x, -1.5f);
 		}
@@ -264,7 +251,7 @@ void Player::Update(float deltaTime) {
 
 	// Crouching
 	bool crouching = false;
-	if (!_ignoreControl && Input::KeyDown(HELL_KEY_LEFT_CONTROL_GLFW)) {
+	if (!_ignoreControl && PressingCrouch()) {
 		crouching = true;
 	}
 
@@ -302,19 +289,19 @@ void Player::Update(float deltaTime) {
     _isMoving = false;
     glm::vec3 displacement(0);
     if (!_ignoreControl) {
-	    if (Input::KeyDown(HELL_KEY_W)) {
+	    if (PressingWalkForward()) {
 		    displacement -= _movementVector;
 		    _isMoving = true;
 	    }
-	    if (Input::KeyDown(HELL_KEY_S)) {
+	    if (PressingWalkBackward()) {
 		    displacement += _movementVector;
 		    _isMoving = true;
 	    }
-	    if (Input::KeyDown(HELL_KEY_A)) {
+	    if (PressingWalkLeft()) {
 		    displacement -= _right;
 		    _isMoving = true;
 	    }
-	    if (Input::KeyDown(HELL_KEY_D)) {
+	    if (PressingWalkRight()) {
 		    displacement += _right;
 		    _isMoving = true;
 	    }
@@ -329,7 +316,7 @@ void Player::Update(float deltaTime) {
 	}
 
 	// Jump
-    if (Input::KeyPressed(HELL_KEY_SPACE) && !_ignoreControl && _isGrounded) {
+    if (PressedJump() && !_ignoreControl && _isGrounded) {
         _yVelocity = 4.75f; // magic value for jump strength
         _yVelocity = 4.95f; // magic value for jump strength (had to change cause you could no longer jump thru window after fixing character controller height bug)
 		_isGrounded = false;
@@ -356,28 +343,24 @@ void Player::Update(float deltaTime) {
 	_position = Util::PxVec3toGlmVec3(_characterController->getFootPosition());
 	
 	// Footstep audio
-	static float m_footstepAudioTimer = 0;
-	static float footstepAudioLoopLength = 0.5;
-
 	if (!_ignoreControl) {
 		if (!_isMoving)
-			m_footstepAudioTimer = 0;
+			_footstepAudioTimer = 0;
 		else {
-			if (_isMoving && m_footstepAudioTimer == 0) {
+			if (_isMoving && _footstepAudioTimer == 0) {
 				int random_number = std::rand() % 4 + 1;
 				std::string file = "player_step_" + std::to_string(random_number) + ".wav";
 				Audio::PlayAudio(file.c_str(), 0.5f);
 			}
 			float timerIncrement = crouching ? deltaTime * 0.75f : deltaTime;
-			m_footstepAudioTimer += timerIncrement;
-			if (m_footstepAudioTimer > footstepAudioLoopLength) {
-				m_footstepAudioTimer = 0;
+			_footstepAudioTimer += timerIncrement;
+			if (_footstepAudioTimer > _footstepAudioLoopLength) {
+				_footstepAudioTimer = 0;
 			}
 		}
 	}
 	// Next weapon
-	if (!_ignoreControl && Input::KeyPressed(HELL_KEY_Q)) {
-
+	if (!_ignoreControl && PressedNextWeapon()) {
 
 		_needsToDropAKMag = false;
 
@@ -439,7 +422,7 @@ void Player::Update(float deltaTime) {
 	_characterModel.SetRotationY(_rotation.y + HELL_PI);
 
 	// Debug casing spawn
-	if (!_ignoreControl) {
+	/*if (!_ignoreControl) {
 		if (Input::KeyDown(HELL_KEY_T) && GetCurrentWeaponIndex() == GLOCK) {
 			SpawnGlockCasing();
         }
@@ -449,7 +432,7 @@ void Player::Update(float deltaTime) {
         if (Input::KeyDown(HELL_KEY_T) && GetCurrentWeaponIndex() == SHOTGUN) {
             SpawnShotgunShell();
         }
-	}
+	}*/
 
 	/*
 	// Check for game object pick up collision
@@ -545,9 +528,9 @@ int Player::GetCurrentWeaponIndex() {
 
 void Player::Interact() {
 
-	if (Input::KeyPressed(HELL_KEY_E)) {
+	if (PressedInteract()) {
 		if (_cameraRayResult.physicsObjectType == DOOR) {
-			std::cout << "you pressed interact on a door \n";
+			//std::cout << "you pressed interact on a door \n";
 			Door* door = (Door*)(_cameraRayResult.parent);
 			if (!door->IsInteractable(GetFeetPosition())) {
 				return;
@@ -582,7 +565,7 @@ void Player::Respawn(glm::vec3 position, glm::vec3 rotation) {
 	_position = position;
 	_rotation = rotation;
 	_inventory.glockAmmo.clip = GLOCK_CLIP_SIZE;
-    _inventory.glockAmmo.total = 80;
+    _inventory.glockAmmo.total = 20;
     _inventory.aks74uAmmo.clip = 0;
     _inventory.aks74uAmmo.total = 0;
     _inventory.shotgunAmmo.clip = 0;
@@ -737,20 +720,7 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
 	_firstPersonWeapon.SetRotationY(Player::GetViewRotation().y);
 	_firstPersonWeapon.SetPosition(Player::GetViewPos());
 
-    // move the weapon down if you are in ads
-    if (InADS()) {
-
-        glm::vec3 offset = GetCameraUp() * 0.0018f;
-        glm::vec3 offset2 = GetCameraForward() * 0.0018f;
-
-        glm::vec3 position = Player::GetViewPos() - offset + offset2;
-
-        _firstPersonWeapon.SetPosition(position);
-
-    }
-
-
-
+    
 	///////////////
 	//   Knife   //
 
@@ -774,7 +744,7 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
 			_weaponAction = IDLE;
 		}
 		// Fire
-		if (Input::LeftMousePressed() && CanFire()) {
+		if (PressedFire() && CanFire()) {
 			if (_weaponAction == DRAWING ||
 				_weaponAction == IDLE ||
 				_weaponAction == FIRE && _firstPersonWeapon.AnimationIsPastPercentage(25.0f) ||
@@ -827,7 +797,7 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
 			_weaponAction = IDLE;
 		}
 		// Fire
-		if (Input::LeftMousePressed() && CanFire()) {
+		if (PressedFire() && CanFire()) {
 			// Has ammo
 			if (_inventory.glockAmmo.clip > 0) {				
 				_weaponAction = FIRE;
@@ -851,7 +821,7 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
 			_weaponAction = IDLE;
 		}
 		// Reload
-		if (Input::KeyPressed(HELL_KEY_R) && CanReload()) {
+		if (PressedReload() && CanReload()) {
 			if (GetCurrentWeaponClipAmmo() == 0) {
 				_weaponAction = RELOAD_FROM_EMPTY;
 				_firstPersonWeapon.PlayAnimation("Glock_ReloadEmpty", 1.0f);
@@ -890,25 +860,55 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
     if (_currentWeaponIndex == Weapon::AKS74U) {
 
 
-        // ZOOM
-        float zoomSpeed = 0.075f;
+        if (!_ignoreControl) {
 
-        if (Input::RightMouseDown() && _weaponAction != RELOAD && _weaponAction != RELOAD_FROM_EMPTY) {
-            _zoom -= zoomSpeed;
+            static float current = 0;
+            constexpr float max = 0.0018f;
+            constexpr float speed = 20.0f;
+            float zoomSpeed = 0.075f;
+
+            if (_weaponAction == ADS_IN ||
+                _weaponAction == ADS_IDLE ||
+                _weaponAction == ADS_FIRE
+                ) {
+                current = Util::FInterpTo(current, max, deltaTime, speed);
+                _zoom -= zoomSpeed;
+            }
+            else {
+                current = Util::FInterpTo(current, 0, deltaTime, speed);
+                _zoom += zoomSpeed;
+            }
+            //current = max
+
+           // std::cout << Util::WeaponActionToString(_weaponAction) << " " << current << "\n";
+
+
+            // move the weapon down if you are in ads
+            if (InADS()) {
+
+
+                glm::vec3 offset = GetCameraUp() * current;
+                glm::vec3 offset2 = GetCameraForward() * current;
+
+                glm::vec3 position = Player::GetViewPos() - offset + offset2;
+
+                _firstPersonWeapon.SetPosition(position);
+
+            }
         }
-        else {
-            _zoom += zoomSpeed;
-        }
+
+        // ZOOM
         _zoom = std::max(0.575f, _zoom);
         _zoom = std::min(1.0f, _zoom);
 
 
+        float adsInOutSpeed = 3.0f;
 
 
         // ADS in
-        if (Input::RightMouseDown() && CanEnterADS()) {
+        if (PressingADS() && CanEnterADS()) {
             _weaponAction = ADS_IN;
-            _firstPersonWeapon.PlayAnimation("AKS74U_ADS_In", 1.75f);
+            _firstPersonWeapon.PlayAnimation("AKS74U_ADS_In", adsInOutSpeed);
         }
         // ADS in complete
         if (_weaponAction == ADS_IN && _firstPersonWeapon.IsAnimationComplete()) {
@@ -916,12 +916,12 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
             _weaponAction = ADS_IDLE;
         }
         // ADS out
-        if (!Input::RightMouseDown()) {
+        if (!PressingADS()) {
 
             if (_weaponAction == ADS_IN ||
                 _weaponAction == ADS_IDLE) {
                 _weaponAction = ADS_OUT;
-                _firstPersonWeapon.PlayAnimation("AKS74U_ADS_Out", 1.75f);
+                _firstPersonWeapon.PlayAnimation("AKS74U_ADS_Out", adsInOutSpeed);
             }
         }
         // ADS out complete
@@ -939,10 +939,8 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
             }
         }
 
-
         // ADS fire
-
-        if (Input::LeftMouseDown() && CanFire() && InADS() && _inventory.aks74uAmmo.clip > 0) {
+        if (PressingFire() && CanFire() && InADS() && _inventory.aks74uAmmo.clip > 0) {
             _weaponAction = ADS_FIRE;
             int random_number = std::rand() % 3 + 1;
             //std::string aninName = "AKS74U_Fire" + std::to_string(random_number);
@@ -957,15 +955,15 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
             SpawnAKS74UCasing();
             _inventory.aks74uAmmo.clip--;
         }
-        // Fire (no ammo)
-        //if (Input::LeftMousePressed() && CanFire() && _inventory.aks74uAmmo.clip == 0) {
-       //     Audio::PlayAudio("Dry_Fire.wav", 0.8f);
-        //}
-
         // Finished ADS Fire
         if (_weaponAction == ADS_FIRE && _firstPersonWeapon.IsAnimationComplete()) {
             _firstPersonWeapon.PlayAnimation("AKS74U_ADS_Idle", 1.0f);
             _weaponAction = ADS_IDLE;
+        }
+        // Not finished ADS Fire but player HAS LET GO OF RIGHT MOUSE
+        if (_weaponAction == ADS_FIRE && !PressingADS()) {
+            _weaponAction = ADS_OUT;
+            _firstPersonWeapon.PlayAnimation("AKS74U_ADS_Out", adsInOutSpeed);
         }
 
 
@@ -988,7 +986,7 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
 			}
 		}
 		// Fire (has ammo)
-		if (Input::LeftMouseDown() && CanFire() && _inventory.aks74uAmmo.clip > 0) {
+		if (PressingFire() && CanFire() && _inventory.aks74uAmmo.clip > 0) {
 			_weaponAction = FIRE;
 			int random_number = std::rand() % 3 + 1;
 			std::string aninName = "AKS74U_Fire" + std::to_string(random_number);
@@ -1001,11 +999,11 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
 			_inventory.aks74uAmmo.clip--;
 		}
 		// Fire (no ammo)
-		if (Input::LeftMousePressed() && CanFire() && _inventory.aks74uAmmo.clip == 0) {
+		if (PressedFire() && CanFire() && _inventory.aks74uAmmo.clip == 0) {
 			Audio::PlayAudio("Dry_Fire.wav", 0.8f);
 		}
 		// Reload	
-		if (Input::KeyPressed(HELL_KEY_R) && CanReload()) {						
+		if (PressedReload() && CanReload()) {						
 			if (GetCurrentWeaponClipAmmo() == 0) {
 				_firstPersonWeapon.PlayAnimation("AKS74U_ReloadEmpty", 1.0f);
 				Audio::PlayAudio("AK47_ReloadEmpty.wav", 1.0f);
@@ -1020,8 +1018,8 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
 			_needsAmmoReloaded = true;
 		}
 		// Return to idle
-		if (_firstPersonWeapon.IsAnimationComplete() && _weaponAction == RELOAD ||
-			_firstPersonWeapon.IsAnimationComplete() && _weaponAction == RELOAD_FROM_EMPTY) {
+		if (_weaponAction == RELOAD && _firstPersonWeapon.IsAnimationComplete() ||
+            _weaponAction == RELOAD_FROM_EMPTY && _firstPersonWeapon.IsAnimationComplete()) {
 			_weaponAction = IDLE;
 		}
 		if (_weaponAction == FIRE && _firstPersonWeapon.AnimationIsPastPercentage(50.0f)) {
@@ -1072,7 +1070,7 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
             _weaponAction = IDLE;
         }
         // Fire
-        if (Input::LeftMousePressed() && CanFire()) {
+        if (PressedFire() && CanFire()) {
             // Has ammo
             if (_inventory.shotgunAmmo.clip > 0) {
                 _weaponAction = FIRE;
@@ -1097,7 +1095,7 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
             _weaponAction = IDLE;
         }
         // Reload
-       if (Input::KeyPressed(HELL_KEY_R) && CanReload()) {
+       if (PressedReload() && CanReload()) {
            _firstPersonWeapon.PlayAnimation("Shotgun_ReloadWetstart", 1.0f);
            _weaponAction = RELOAD_SHOTGUN_BEGIN;
         }
@@ -1207,17 +1205,64 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
 
 	// Weapon sway
 	if (!_ignoreControl) {
-		float swaySpeed = 5.0f;
-		float swayAmount = 0.8f;
-		glm::vec2 swayAmountMax(3.0f);
-		const float lerpFrac = swaySpeed * deltaTime;
-		glm::vec2 lookDelta = glm::vec2(-Input::GetMouseOffsetX(), -Input::GetMouseOffsetY());
-        if (_currentWeaponIndex == Weapon::SHOTGUN ) {
-            lookDelta = glm::vec2(Input::GetMouseOffsetX(), -Input::GetMouseOffsetY());
+
+        float xMax = 4.0;
+
+        if (_zoom < 0.99f) {
+            xMax = 2.0f;
         }
+
+        float SWAY_AMOUNT = 0.125f;
+        float SMOOTH_AMOUNT = 4.0f;
+        float SWAY_MIN_X = -2.25f;
+        float SWAY_MAX_X = xMax;//;
+        float SWAY_MIN_Y = -2;
+        float SWAY_MAX_Y = 0.95f;
+
+
+        float xOffset = -(float)InputMulti::GetMouseXOffset(_mouseIndex);
+        float yOffset = (float)InputMulti::GetMouseYOffset(_mouseIndex);
+
+        if (GetCurrentWeaponIndex() == SHOTGUN) {
+            xOffset *= -1;
+        }
+
+
+        float swayAmount = 1;
+        float movementX = -xOffset * SWAY_AMOUNT;
+        float movementY = -yOffset * SWAY_AMOUNT;
+
+
+
+        movementX = std::min(movementX, SWAY_MAX_X);
+        movementX = std::max(movementX, SWAY_MIN_X);
+        movementY = std::min(movementY, SWAY_MAX_Y);
+        movementY = std::max(movementY, SWAY_MIN_Y);
+
+        glm::vec3 finalPosition = glm::vec3(movementX, movementY, 0);
+
+        static float xPos = 0;
+        static float yPos = 0;
+        xPos = Util::FInterpTo(xPos, movementX, deltaTime, SMOOTH_AMOUNT);
+        yPos = Util::FInterpTo(yPos, movementY, deltaTime, SMOOTH_AMOUNT);
+
+        static Transform t;
+        t.position = glm::vec3(xPos, yPos, 0);
+        glm::mat4 swayTransform = t.to_mat4();
+
+        for (auto& transform : _firstPersonWeapon._animatedTransforms.local) {
+            transform = swayTransform * transform;
+        }
+
+        _weaponSwayMatrix = t.to_mat4();
+
+      /*
 
         if (_zoom < 0.99f) {
             lookDelta *= glm::vec2(0.025f);
+            swayAmountMax *= 0.05;
+            _weaponSwayFactor.x = std::min(_weaponSwayFactor.x, swayAmountMax.x);
+            _weaponSwayFactor.y = std::min(_weaponSwayFactor.y, swayAmountMax.y);
         }
 
 		_weaponSwayFactor  = glm::mix(_weaponSwayFactor, -(lookDelta * swayAmount), lerpFrac);
@@ -1228,7 +1273,7 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
 		for (auto& transform : _firstPersonWeapon._animatedTransforms.local) {
 			transform = swayTransform * transform;
 		}
-		_weaponSwayMatrix = swayTransform;
+		_weaponSwayMatrix = swayTransform;*/
 	}
 }
 
@@ -1260,8 +1305,9 @@ void Player::SpawnGlockCasing() {
 	PxVec3 force = Util::GlmVec3toPxVec3(glm::normalize(GetCameraRight() + glm::vec3(0.0f, Util::RandomFloat(0.7f, 0.9f), 0.0f)) * glm::vec3(0.00215f));
 	body->addForce(force);
 	body->setAngularVelocity(PxVec3(Util::RandomFloat(0.0f, 100.0f), Util::RandomFloat(0.0f, 100.0f), Util::RandomFloat(0.0f, 100.0f)));
-    body->userData = (void*)&EngineState::weaponNamePointers[GLOCK];
+    body->userData = (void*)&CasingType::BULLET_CASING;
 
+ // std::cout << 
 
 	BulletCasing bulletCasing;
 	bulletCasing.type = GLOCK;
@@ -1295,7 +1341,8 @@ void Player::SpawnShotgunShell() {
 
     PxVec3 force = Util::GlmVec3toPxVec3(glm::normalize(GetCameraRight() + glm::vec3(0.0f, Util::RandomFloat(0.7f, 1.4f), 0.0f)) * glm::vec3(0.02f));
     body->addForce(force);
-    body->userData = (void*)&EngineState::weaponNamePointers[SHOTGUN];
+    body->userData = (void*)&CasingType::SHOTGUN_SHELL;
+
     //body->setAngularVelocity(PxVec3(Util::RandomFloat(0.0f, 50.0f), Util::RandomFloat(0.0f, 50.0f), Util::RandomFloat(0.0f, 50.0f)));
     //shape->release();
 
@@ -1326,8 +1373,9 @@ void Player::SpawnAKS74UCasing() {
 	PxVec3 force = Util::GlmVec3toPxVec3(glm::normalize(GetCameraRight() + glm::vec3(0.0f, Util::RandomFloat(0.7f, 1.4f), 0.0f)) * glm::vec3(0.003f));
 	body->addForce(force);
 	body->setAngularVelocity(PxVec3(Util::RandomFloat(0.0f, 50.0f), Util::RandomFloat(0.0f, 50.0f), Util::RandomFloat(0.0f, 50.0f)));
-    body->userData = (void*)&EngineState::weaponNamePointers[AKS74U];
-    
+    //body->userData = (void*)&EngineState::weaponNamePointers[AKS74U];
+    body->userData = (void*)&CasingType::BULLET_CASING;
+
     //shape->release();
 
 	BulletCasing bulletCasing;
@@ -1503,6 +1551,201 @@ bool Player::CanEnterADS() {
         return true;
     }
     else {
+        return false;
+    }
+}
+
+WeaponAction& Player::GetWeaponAction() {
+    return _weaponAction;
+}
+
+
+bool Player::PressingWalkForward() {
+    if (_inputType == InputType::KEYBOARD_AND_MOUSE) {
+        return InputMulti::KeyDown(_keyboardIndex, _mouseIndex, _controls.WALK_FORWARD);
+    }
+    else {
+        // return InputMulti::ButtonDown(_controllerIndex, _controls.WALK_FORWARD);
+        return false;
+    }
+}
+
+bool Player::PressingWalkBackward() {
+    if (_inputType == InputType::KEYBOARD_AND_MOUSE) {
+        return InputMulti::KeyDown(_keyboardIndex, _mouseIndex, _controls.WALK_BACKWARD);
+    }
+    else {
+        //return InputMulti::ButtonDown(_controllerIndex, _controls.WALK_BACKWARD);
+        return false;
+    }
+}
+
+bool Player::PressingWalkLeft() {
+    if (_inputType == InputType::KEYBOARD_AND_MOUSE) {
+        return InputMulti::KeyDown(_keyboardIndex, _mouseIndex, _controls.WALK_LEFT);
+    }
+    else {
+        //return InputMulti::ButtonDown(_controllerIndex, _controls.WALK_LEFT);        
+        return false;
+    }
+}
+
+bool Player::PressingWalkRight() {
+    if (_inputType == InputType::KEYBOARD_AND_MOUSE) {
+        return InputMulti::KeyDown(_keyboardIndex, _mouseIndex, _controls.WALK_RIGHT);
+    }
+    else {
+        //return InputMulti::ButtonDown(_controllerIndex, _controls.WALK_RIGHT);
+        return false;
+    }
+}
+
+bool Player::PressingCrouch() {
+    if (_inputType == InputType::KEYBOARD_AND_MOUSE) {
+        return InputMulti::KeyDown(_keyboardIndex, _mouseIndex, _controls.CROUCH);
+    }
+    else {
+        //return InputMulti::ButtonDown(_controllerIndex, _controls.CROUCH);
+        return false;
+    }
+}
+
+bool Player::PressedWalkForward() {
+    if (_inputType == InputType::KEYBOARD_AND_MOUSE) {
+        return InputMulti::KeyPressed(_keyboardIndex, _mouseIndex, _controls.WALK_FORWARD);
+    }
+    else {
+        //return InputMulti::ButtonPressed(_controllerIndex, _controls.WALK_FORWARD);
+        return false;
+    }
+}
+
+bool Player::PressedWalkBackward() {
+    if (_inputType == InputType::KEYBOARD_AND_MOUSE) {
+        return InputMulti::KeyPressed(_keyboardIndex, _mouseIndex, _controls.WALK_BACKWARD);
+    }
+    else {
+        //return InputMulti::ButtonPressed(_controllerIndex, _controls.WALK_BACKWARD);
+        return false;
+    }
+}
+
+bool Player::PressedWalkLeft() {
+    if (_inputType == InputType::KEYBOARD_AND_MOUSE) {
+        return InputMulti::KeyPressed(_keyboardIndex, _mouseIndex, _controls.WALK_LEFT);
+    }
+    else {
+        // return InputMulti::ButtonPressed(_controllerIndex, _controls.WALK_LEFT);
+        return false;
+    }
+}
+
+bool Player::PressedWalkRight() {
+    if (_inputType == InputType::KEYBOARD_AND_MOUSE) {
+        return InputMulti::KeyPressed(_keyboardIndex, _mouseIndex, _controls.WALK_RIGHT);
+    }
+    else {
+        //return InputMulti::ButtonPressed(_controllerIndex, _controls.WALK_RIGHT);
+        return false;
+    }
+}
+
+bool Player::PressedInteract() {
+    if (_inputType == InputType::KEYBOARD_AND_MOUSE) {
+        return InputMulti::KeyPressed(_keyboardIndex, _mouseIndex, _controls.INTERACT);
+    }
+    else {
+        //return InputMulti::ButtonPressed(_controllerIndex, _controls.INTERACT);
+        return false;
+    }
+}
+
+bool Player::PressedReload() {
+    if (_inputType == InputType::KEYBOARD_AND_MOUSE) {
+        return InputMulti::KeyPressed(_keyboardIndex, _mouseIndex, _controls.RELOAD);
+    }
+    else {
+        //return InputMulti::ButtonPressed(_controllerIndex, _controls.RELOAD);
+        return false;
+    }
+}
+
+bool Player::PressedFire() {
+    if (_inputType == InputType::KEYBOARD_AND_MOUSE) {
+        return InputMulti::KeyPressed(_keyboardIndex, _mouseIndex, _controls.FIRE);
+    }
+    else {
+        //return InputMulti::ButtonPressed(_controllerIndex, _controls.FIRE);
+        return false;
+    }
+}
+
+bool Player::PressingFire() {
+    if (_inputType == InputType::KEYBOARD_AND_MOUSE) {
+        return InputMulti::KeyDown(_keyboardIndex, _mouseIndex, _controls.FIRE);
+    }
+    else {
+        // return InputMulti::ButtonDown(_controllerIndex, _controls.FIRE);
+        return false;
+    }
+}
+
+bool Player::PressedJump() {
+    if (_inputType == InputType::KEYBOARD_AND_MOUSE) {
+        return InputMulti::KeyPressed(_keyboardIndex, _mouseIndex, _controls.JUMP);
+    }
+    else {
+        //return InputMulti::ButtonPressed(_controllerIndex, _controls.JUMP);
+        return false;
+    }
+}
+
+bool Player::PressedCrouch() {
+    if (_inputType == InputType::KEYBOARD_AND_MOUSE) {
+        return InputMulti::KeyPressed(_keyboardIndex, _mouseIndex, _controls.CROUCH);
+    }
+    else {
+        // return InputMulti::ButtonPressed(_controllerIndex, _controls.CROUCH);
+        return false;
+    }
+}
+
+bool Player::PressedNextWeapon() {
+    if (_inputType == InputType::KEYBOARD_AND_MOUSE) {
+        return InputMulti::KeyPressed(_keyboardIndex, _mouseIndex, _controls.NEXT_WEAPON);
+    }
+    else {
+        //return InputMulti::ButtonPressed(_controllerIndex, _controls.NEXT_WEAPON);
+        return false;
+    }
+}
+
+bool Player::PressingADS() {
+    if (_inputType == InputType::KEYBOARD_AND_MOUSE) {
+        return InputMulti::KeyDown(_keyboardIndex, _mouseIndex, _controls.ADS);
+    }
+    else {
+        // return InputMulti::ButtonDown(_controllerIndex, _controls.ADS);
+        return false;
+    }
+}
+
+bool Player::PressedADS() {
+    if (_inputType == InputType::KEYBOARD_AND_MOUSE) {
+        return InputMulti::KeyPressed(_keyboardIndex, _mouseIndex, _controls.ADS);
+    }
+    else {
+        // return InputMulti::ButtonPressed(_controllerIndex, _controls.ADS);    
+        return false;
+    }
+}
+
+bool Player::PressedEscape() {
+    if (_inputType == InputType::KEYBOARD_AND_MOUSE) {
+        return InputMulti::KeyPressed(_keyboardIndex, _mouseIndex, _controls.ESCAPE);
+    }
+    else {
+        // return InputMulti::ButtonPressed(_controllerIndex, _controls.ESCAPE);
         return false;
     }
 }

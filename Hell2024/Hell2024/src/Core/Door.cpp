@@ -182,3 +182,7 @@ void Door::InitPxTriangleMesh() {
     s_triangleMesh = Physics::CreateTriangleMesh(vertices.size(), vertices.data(), indices.size() / 3, indices.data());
 }
 */
+
+glm::vec3 Door::GetWorldDoorWayCenter() {
+    return position + glm::vec3(0, 1.3f, 0);
+}

@@ -15,6 +15,58 @@
 
 namespace Util {
 
+    inline std::string WeaponActionToString(WeaponAction weaponAction) {
+
+        if (weaponAction == IDLE) {
+            return "IDLE";
+        }
+        else if (weaponAction == FIRE) {
+            return "FIRE";
+        }
+        else if (weaponAction == RELOAD) {
+            return "RELOAD";
+        }
+        else if (weaponAction == RELOAD_FROM_EMPTY) {
+            return "RELOAD_FROM_EMPTY";
+        }
+        else if (weaponAction == DRAW_BEGIN) {
+            return "DRAW_BEGIN";
+        }
+        else if (weaponAction == DRAWING) {
+            return "DRAWING";
+        }
+        else if (weaponAction == SPAWNING) {
+            return "SPAWNING";
+        }
+        else if (weaponAction == RELOAD_SHOTGUN_BEGIN) {
+            return "RELOAD_SHOTGUN_BEGIN";
+        }
+        else if (weaponAction == RELOAD_SHOTGUN_SINGLE_SHELL) {
+            return "RELOAD_SHOTGUN_SINGLE_SHELL";
+        }
+        else if (weaponAction == RELOAD_SHOTGUN_DOUBLE_SHELL) {
+            return "RELOAD_SHOTGUN_DOUBLE_SHELL";
+        }
+        else if (weaponAction == RELOAD_SHOTGUN_END) {
+            return "RELOAD_SHOTGUN_END";
+        }
+        else if (weaponAction == ADS_IN) {
+            return "ADS_IN";
+        }
+        else if (weaponAction == ADS_OUT) {
+            return "ADS_OUT";
+        }
+        else if (weaponAction == ADS_IDLE) {
+            return "ADS_IDLE";
+        }
+        else if (weaponAction == ADS_FIRE) {
+            return "ADS_FIRE";
+        }
+        else {
+            return "UNKNOWN WEAPON ACTION";
+        }
+    }
+
 	inline glm::vec3 PxVec3toGlmVec3(PxVec3 vec) {
 		return { vec.x, vec.y, vec.z };
 	}
@@ -318,6 +370,34 @@ namespace Util {
         glm::vec3 pos1 = triangle.p2;
         glm::vec3 pos2 = triangle.p3;
         return glm::normalize(glm::cross(pos1 - pos0, pos2 - pos0));
+    }
+
+    inline void SetNormalsAndTangentsFromVertices(Vertex* vert0, Vertex* vert1, Vertex* vert2) {
+        // Shortcuts for UVs
+        glm::vec3& v0 = vert0->position;
+        glm::vec3& v1 = vert1->position;
+        glm::vec3& v2 = vert2->position;
+        glm::vec2& uv0 = vert0->uv;
+        glm::vec2& uv1 = vert1->uv;
+        glm::vec2& uv2 = vert2->uv;
+        // Edges of the triangle : position delta. UV delta
+        glm::vec3 deltaPos1 = v1 - v0;
+        glm::vec3 deltaPos2 = v2 - v0;
+        glm::vec2 deltaUV1 = uv1 - uv0;
+        glm::vec2 deltaUV2 = uv2 - uv0;
+        float r = 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV1.y * deltaUV2.x);
+        glm::vec3 tangent = (deltaPos1 * deltaUV2.y - deltaPos2 * deltaUV1.y) * r;
+        glm::vec3 bitangent = (deltaPos2 * deltaUV1.x - deltaPos1 * deltaUV2.x) * r;
+        glm::vec3 normal = NormalFromTriangle(vert0->position, vert1->position, vert2->position);
+        vert0->normal = normal;
+        vert1->normal = normal;
+        vert2->normal = normal;
+        vert0->tangent = tangent;
+        vert1->tangent = tangent;
+        vert2->tangent = tangent;
+        vert0->bitangent = bitangent;
+        vert1->bitangent = bitangent;
+        vert2->bitangent = bitangent;
     }
 
     inline float GetMaxXPointOfTri(Triangle& tri) {

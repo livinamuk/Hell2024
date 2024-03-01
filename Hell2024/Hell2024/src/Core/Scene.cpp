@@ -20,6 +20,18 @@ void ProcessBullets();
 
 void Scene::Update(float deltaTime) {
 
+  /*  if (Input::KeyPressed(HELL_KEY_SPACE)) {
+
+        std::cout << "\n";
+
+        for (GameObject& gameObject : _gameObjects) {
+            std::cout << gameObject.GetName() << "\n";
+            for (Mesh& mesh : gameObject._model->_meshes) {
+                std::cout << "-" << mesh.indices.size() << "\n";
+            }
+        }
+    }*/
+
     /*
     GameObject* mag = Scene::GetGameObjectByName("AKS74UMag_TEST");
     GameObject* mag2 = Scene::GetGameObjectByName("AKS74UMag_TEST2");
@@ -276,13 +288,13 @@ void ProcessBullets() {
                     float force = 75;                  
                     if (bullet.type == SHOTGUN) {
                         force = 20;
-                        std::cout << "spawned a shotgun bullet\n";
+                        //std::cout << "spawned a shotgun bullet\n";
                     }
 					gameObject->AddForceToCollisionObject(bullet.direction, force);
 				}
 				if (physicsObjectData->type == GLASS) {
                     glassWasHit = true;
-					std::cout << "you shot glass\n";
+					//std::cout << "you shot glass\n";
 					Bullet newBullet;
 					newBullet.direction = bullet.direction;
 					newBullet.spawnPosition = rayResult.hitPosition + (bullet.direction * glm::vec3(0.5f));
@@ -310,7 +322,9 @@ void ProcessBullets() {
 						else {
 							transform.position = rayResult.hitPosition + (rayResult.surfaceNormal * glm::vec3(0.03));
 						}
-						PhysicsFilterData filterData;
+                        // this code below is for the ugly as fuck glass shards
+                        // come up with something better pls
+						/*PhysicsFilterData filterData;
 						filterData.raycastGroup = RaycastGroup::RAYCAST_DISABLED;
 						filterData.collisionGroup = CollisionGroup::NO_COLLISION;
 						filterData.collidesWith = CollisionGroup::ENVIROMENT_OBSTACLE;
@@ -326,13 +340,14 @@ void ProcessBullets() {
 						PxVec3 force = Util::GlmVec3toPxVec3(forceGLM) * 0.001f;;
 						body->addForce(force);
 						body->setAngularVelocity(PxVec3(Util::RandomFloat(0.0f, 50.0f), Util::RandomFloat(0.0f, 50.0f), Util::RandomFloat(0.0f, 50.0f)));
-					
+					    
 
 						BulletCasing bulletCasing;
 						bulletCasing.type = MP7;
 						bulletCasing.rigidBody = body;
 						Scene::_bulletCasings.push_back(bulletCasing);
-						std::cout << "shard spawned\n";
+						//std::cout << "shard spawned\n";
+                        */
 					}
 				}
 				else {
@@ -362,7 +377,7 @@ void Scene::LoadHardCodedObjects() {
     glockAmmoA.parentGameObjectName = "TopDraw";
     */
     
-    _ceilings.emplace_back(door2X - 0.8f, 7.0f, door2X + 0.8f, 9.95f, 2.5f, AssetManager::GetMaterialIndex("Ceiling"));
+   // _ceilings.emplace_back(door2X - 0.8f, 7.0f, door2X + 0.8f, 9.95f, 2.5f, AssetManager::GetMaterialIndex("Ceiling"));
 
     // ceilings   
 
@@ -370,7 +385,18 @@ void Scene::LoadHardCodedObjects() {
     _ceilings.emplace_back(0.1f, 4.1f, 6.1f, 6.9f, 2.5f, AssetManager::GetMaterialIndex("Ceiling"));
     _ceilings.emplace_back(0.1f, 3.1f, 3.7f, 4.1f, 2.5f, AssetManager::GetMaterialIndex("Ceiling"));
     _ceilings.emplace_back(4.7f, 3.1f, 6.1f, 4.1f, 2.5f, AssetManager::GetMaterialIndex("Ceiling"));
-    _ceilings.emplace_back(5.3f, 0.1f, 11.3f, 3.0f, 2.5f, AssetManager::GetMaterialIndex("Ceiling"));
+ //   _ceilings.emplace_back(5.3f, 0.1f, 11.3f, 3.0f, 2.5f, AssetManager::GetMaterialIndex("Ceiling"));
+
+    for (Floor& floor : Scene::_floors) {
+        float minX = std::min(std::min(std::min(floor.v1.position.x, floor.v2.position.x), floor.v3.position.x), floor.v4.position.x);
+        float maxX = std::max(std::max(std::max(floor.v1.position.x, floor.v2.position.x), floor.v3.position.x), floor.v4.position.x);
+        float minZ = std::min(std::min(std::min(floor.v1.position.z, floor.v2.position.z), floor.v3.position.z), floor.v4.position.z);
+        float maxZ = std::max(std::max(std::max(floor.v1.position.z, floor.v2.position.z), floor.v3.position.z), floor.v4.position.z);
+        _ceilings.emplace_back(minX, minZ, maxX, maxZ, 2.5f, AssetManager::GetMaterialIndex("Ceiling"));
+    }
+
+
+   // std::cout << Scene::_floors.size() << " FLOOOOOOOOOOORS\n";
 
    // LoadLightSetup(2);
 
@@ -722,8 +748,8 @@ void Scene::LoadHardCodedObjects() {
             filterData2.collidesWith = CollisionGroup(ENVIROMENT_OBSTACLE | GENERIC_BOUNCEABLE);
 
             GameObject& lamp = _gameObjects.emplace_back();
-            lamp.SetModel("LampFullNoGlobe");
-          //  lamp.SetModel("Lamp");
+          //  lamp.SetModel("LampFullNoGlobe");
+            lamp.SetModel("Lamp");
 			lamp.SetName("Lamp");
             lamp.SetMeshMaterial("Lamp");
             lamp.SetPosition(-.105f, 0.88, 0.25f);
@@ -1042,8 +1068,13 @@ void Scene::CreatePlayers() {
 	if (EngineState::GetPlayerCount() == 2) {
 		//_players.push_back(Player(glm::vec3(9.39f, 0.1f, 1.6f), glm::vec3(-0.25, 1.53f, 0)));
 		_players.push_back(Player(glm::vec3(2.1f, 0.1f, 9.5f), glm::vec3(-0.25, 0.0f, 0.0f)));
-        _players[1]._ignoreControl = true;
+        //_players[1]._ignoreControl = true;
     }
+
+    _players[0]._keyboardIndex = 0;
+    _players[1]._keyboardIndex = -1;
+    _players[0]._mouseIndex = 0;
+    _players[1]._mouseIndex = -1;
 }
 
 
@@ -1412,7 +1443,7 @@ void Scene::ProcessPhysicsCollisions() {
 
         if (playedShellSound) {
 
-            if (actorA->userData == (void*)&EngineState::weaponNamePointers[SHOTGUN]) {
+            if (actorA->userData == (void*)&CasingType::SHOTGUN_SHELL) {
                 Audio::PlayAudio("ShellFloorBounce.wav", Util::RandomFloat(0.2f, 0.3f));
                 break;
             }
@@ -1446,6 +1477,113 @@ void Scene::RecreateDataStructures() {
     Renderer::CreatePointCloudBuffer();
     Renderer::CreateTriangleWorldVertexBuffer();
     RecreateAllPhysicsObjects();
+    CalculateLightBoundingVolumes();
+}
+
+/*bool AnyHit(glm::vec3 origin, glm::vec3 direction, float distance) {
+
+    RTMesh& mesh = Scene::_rtMesh[0]; // This is the main world
+
+    std::cout << " mesh.baseVertex: " << mesh.baseVertex << "\n";
+    std::cout << " mesh.vertexCount: " << mesh.vertexCount << "\n";
+
+    for (unsigned int i = mesh.baseVertex; i < mesh.baseVertex + mesh.vertexCount; i += 3) {
+        glm::vec3 p1 = Scene::_rtVertices[i + 0];
+        glm::vec3 p2 = Scene::_rtVertices[i + 1];
+        glm::vec3 p3 = Scene::_rtVertices[i + 2];
+        auto result = Util::RayTriangleIntersectTest(p1, p2, p3, origin, direction);
+        if (result.found && result.distance < distance) {
+            return true;
+        }
+    }
+    return false;
+}*/
+
+
+
+void Scene::CalculateLightBoundingVolumes() {
+
+    return;
+
+    std::vector<Triangle> triangles;
+
+    RTMesh& mesh = Scene::_rtMesh[0]; // This is the main world
+    for (unsigned int i = mesh.baseVertex; i < mesh.baseVertex + mesh.vertexCount; i += 3) {
+        Triangle triangle;
+        triangle.p1 = Scene::_rtVertices[i + 0];
+        triangle.p2 = Scene::_rtVertices[i + 1];
+        triangle.p3 = Scene::_rtVertices[i + 2];
+        triangles.push_back(triangle);
+    }
+
+    //for (int i = 0; i < Scene::_lights.size(); i++) {
+    {
+        int i = 0;
+
+        Light& light = Scene::_lights[i];
+        light.boundingVolumes.clear();
+
+        // Find the room the light is in
+        for (int j = 0; j < Scene::_floors.size(); j++) {
+            Floor& floor = _floors[j];            
+            if (floor.PointIsAboveThisFloor(light.position)) {
+                std::cout << "LIGHT " << i << " is in room " << j << "\n";
+                break;
+            }
+        }
+        // Find which rooms it can see into
+        for (int k = 0; k < Scene::_windows.size(); k++) {
+
+            Window& window = _windows[k];
+
+            glm::vec3 origin = light.position;
+            glm::vec3 direction = glm::normalize(window.GetWorldSpaceCenter() - light.position);
+            float distance = glm::distance(window.GetWorldSpaceCenter(), light.position);
+            distance = std::min(distance, light.radius);
+            if (Util::RayTracing::AnyHit(triangles, origin, direction, 0.01f, distance)) {
+                //std::cout << " -can NOT see through window " << k << "\n";
+            } 
+            else {
+                std::cout << " -can see through window " << k << "\n";
+                // Find which room this is
+                glm::vec3 queryPoint = window.position + (direction * glm::vec3(0.2f));
+                for (int j = 0; j < Scene::_floors.size(); j++) {
+                    Floor& floor = _floors[j];
+                    if (floor.PointIsAboveThisFloor(queryPoint)) {
+                        std::cout << "  and into room " << j << "\n";
+                        break;
+                    }
+                }
+            }
+        }
+
+        for (int k = 0; k < Scene::_doors.size(); k++) {
+
+            Door& door = _doors[k];
+
+            glm::vec3 origin = light.position;
+            glm::vec3 direction = glm::normalize(door.GetWorldDoorWayCenter() - light.position);
+            float distance = glm::distance(door.GetWorldDoorWayCenter(), light.position);
+
+            if (distance > light.radius) {
+                if (Util::RayTracing::AnyHit(triangles, origin, direction, 0.01f, distance)) {
+                    //
+                }
+                else {
+                    std::cout << " -can see through door " << k << "\n";
+                    // Find which room this is
+                    glm::vec3 queryPoint = door.position + (direction * glm::vec3(0.2f));
+                    for (int j = 0; j < Scene::_floors.size(); j++) {
+                        Floor& floor = _floors[j];
+                        if (floor.PointIsAboveThisFloor(queryPoint)) {
+                            std::cout << "  and into room " << j << "\n";
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
 void Scene::CreateMeshData() {
@@ -1903,89 +2041,6 @@ void Wall::Draw() {
     glBindVertexArray(VAO);
     glDrawArrays(GL_TRIANGLES, 0, vertices.size());
 }
-
-
-
-///////////////
-//           // 
-//   Floor   //
-
-Floor::Floor(float x1, float z1, float x2, float z2, float height, int materialIndex, float textureScale) {
-    this->materialIndex = materialIndex;
-    this->textureScale = textureScale;
-
-    v1.position = glm::vec3(x1, height, z1);
-    v2.position = glm::vec3(x1, height, z2);
-    v3.position = glm::vec3(x2, height, z2);
-    v4.position = glm::vec3(x2, height, z1);
-
-    // remove these. you are only using them to create the bathroom ceiling. 
-    this->x1 = x1;
-    this->z1 = z1;
-    this->x2 = x2;
-    this->z2 = z2;
-    this->height = height;
-
-    CreateMesh();
-}
-
-Floor::Floor(glm::vec3 pos1, glm::vec3 pos2, glm::vec3 pos3, glm::vec3 pos4, int materialIndex, float textureScale) {
-    this->materialIndex = materialIndex;
-    this->textureScale = textureScale;
-    v1.position = pos1;
-    v2.position = pos2;
-    v3.position = pos3;
-    v4.position = pos4;
-    CreateMesh();
-}
-
-void Floor::Draw() {
-    glBindVertexArray(VAO);
-    glDrawArrays(GL_TRIANGLES, 0, vertices.size());
-}
-
-void Floor::CreateMesh() {
-
-    glm::vec3 normal = NormalFromThreePoints(v1.position, v2.position, v3.position);
-    v1.normal = normal;
-    v2.normal = normal;
-    v3.normal = normal;
-    v4.normal = normal;
-    v1.uv = glm::vec2(v1.position.x, v1.position.z) / textureScale;
-    v2.uv = glm::vec2(v2.position.x, v2.position.z) / textureScale;
-    v3.uv = glm::vec2(v3.position.x, v3.position.z) / textureScale;
-    v4.uv = glm::vec2(v4.position.x, v4.position.z) / textureScale;
-    SetNormalsAndTangentsFromVertices(&v1, &v2, &v3);
-    SetNormalsAndTangentsFromVertices(&v3, &v4, &v1);
-    vertices.clear();
-    vertices.push_back(v1);
-    vertices.push_back(v2);
-    vertices.push_back(v3);
-    vertices.push_back(v3);
-    vertices.push_back(v4);
-    vertices.push_back(v1);
-
-    if (VAO != 0) {
-        glDeleteVertexArrays(1, &VAO);
-        glDeleteBuffers(1, &VBO);
-    }
-    glGenVertexArrays(1, &VAO);
-    glGenBuffers(1, &VBO);
-    glBindVertexArray(VAO);
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Vertex), &vertices[0], GL_STATIC_DRAW);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)0);
-    glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, normal));
-    glEnableVertexAttribArray(2);
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, uv));
-    glEnableVertexAttribArray(3);
-    glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, tangent));
-    glEnableVertexAttribArray(4);
-    glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, bitangent));
-}
-
 
 ///////////////////
 //               //

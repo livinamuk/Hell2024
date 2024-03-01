@@ -3,6 +3,7 @@
 #include "AnimatedGameObject.h"
 #include "Physics.h"
 #include "../Renderer/ShadowMap.h"
+#include "keycodes.h"
 
 #define GLOCK_CLIP_SIZE 12
 #define GLOCK_MAX_AMMO_SIZE 200
@@ -22,13 +23,37 @@ struct Inventory {
     Ammo shotgunAmmo;
 };
 
+enum InputType {
+    KEYBOARD_AND_MOUSE,
+    CONTROLLER
+};
 
+struct PlayerControls {
+    unsigned int WALK_FORWARD = HELL_KEY_W;
+    unsigned int WALK_BACKWARD = HELL_KEY_S;
+    unsigned int WALK_LEFT = HELL_KEY_A;
+    unsigned int WALK_RIGHT = HELL_KEY_D;
+    unsigned int INTERACT = HELL_KEY_E;
+    unsigned int RELOAD = HELL_KEY_R;
+    unsigned int FIRE = HELL_MOUSE_LEFT;
+    unsigned int ADS = HELL_MOUSE_RIGHT;
+    unsigned int JUMP = HELL_KEY_SPACE;
+    unsigned int CROUCH = HELL_KEY_WIN_CONTROL; // different mapping to the standard glfw HELL_KEY_LEFT_CONTROL
+    unsigned int NEXT_WEAPON = HELL_KEY_Q;
+    unsigned int MELEE = HELL_KEY_J;
+    unsigned int ESCAPE = HELL_KEY_WIN_ESCAPE;
+};
 
 class Player {
 
 public:
 	float _radius = 0.1f;
 	bool _ignoreControl = false;
+    
+    int _mouseIndex = -1;
+    int _keyboardIndex = -1;
+    InputType _inputType = KEYBOARD_AND_MOUSE;
+    PlayerControls _controls;
 
 	PhysXRayResult _cameraRayResult;
 
@@ -97,6 +122,7 @@ public:
 
 	bool MuzzleFlashIsRequired();
 	glm::mat4 GetWeaponSwayMatrix();
+    WeaponAction& GetWeaponAction();
 
 	bool _isGrounded = true;
 
@@ -111,7 +137,26 @@ public:
 	float _pickUpTextTimer = 0;
     float _zoom = 1.0f;
 
-
+    bool PressingWalkForward();
+    bool PressingWalkBackward();
+    bool PressingWalkLeft();
+    bool PressingWalkRight();
+    bool PressingCrouch();
+    bool PressedWalkForward();
+    bool PressedWalkBackward();
+    bool PressedWalkLeft();
+    bool PressedWalkRight();
+    bool PressedInteract();
+    bool PressedReload();
+    bool PressedFire();
+    bool PressingFire();
+    bool PressedJump();
+    bool PressedCrouch();
+    bool PressedNextWeapon();
+    bool PressingADS();
+    bool PressedADS();
+    bool PressedEscape();
+    bool PressedWindowsEnter();
 
 private:
 
@@ -123,6 +168,9 @@ private:
 
 	glm::mat4 _weaponSwayMatrix = glm::mat4(1);
 	bool _needsToDropAKMag = false;
+
+    float _footstepAudioTimer = 0;
+    float _footstepAudioLoopLength = 0.5;
 
 	glm::vec3 _position = glm::vec3(0);
 	glm::vec3 _rotation = glm::vec3(-0.1f, -HELL_PI * 0.5f, 0);

@@ -3,6 +3,11 @@
 
 struct Light {
 
+    struct BoundingVolume {
+        glm::vec3 min {0};
+        glm::vec3 max {0};
+    };
+
     Light() {
 
     }
@@ -20,4 +25,6 @@ struct Light {
     bool isDirty = false;
     float radius = 6.0f;
     int type = 0;
+
+    std::vector<BoundingVolume> boundingVolumes;
 };

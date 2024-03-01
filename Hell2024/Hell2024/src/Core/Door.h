@@ -32,6 +32,7 @@ struct Door {
     PxShape* raycastShape = NULL;
 
     void CreatePhysicsObject();
+    glm::vec3 GetWorldDoorWayCenter();
 
    // static void InitPxTriangleMesh();
   //  static PxTriangleMesh* s_triangleMesh;

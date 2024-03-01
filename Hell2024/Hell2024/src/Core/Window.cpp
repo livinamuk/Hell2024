@@ -120,3 +120,7 @@ glm::vec3 Window::GetBackRightCorner() {
 	glm::vec4 worldSpaceResult = GetModelMatrix() * result;
 	return worldSpaceResult;
 }
+
+glm::vec3 Window::GetWorldSpaceCenter() {
+    return position + glm::vec3(0, 1.5f, 0);
+}

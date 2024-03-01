@@ -1011,7 +1011,19 @@ void Renderer::RenderFrame(Player* player) {
 
 	TextBlitter::_debugTextToBilt += "View pos: " + Util::Vec3ToString(player->GetViewPos()) + "\n";
 	TextBlitter::_debugTextToBilt += "View rot: " + Util::Vec3ToString(player->GetViewRotation()) + "\n";
-	//TextBlitter::_debugTextToBilt += "Grounded: " + std::to_string(Scene::_players[0]._isGrounded) + "\n";
+    TextBlitter::_debugTextToBilt += "Weapon Action: " + Util::WeaponActionToString(Scene::_players[0].GetWeaponAction()) + "\n";
+    
+    for (int j = 0; j < Scene::_floors.size(); j++) {
+        Floor& floor = Scene::_floors[j];
+        if (floor.PointIsAboveThisFloor(Scene::_players[0].GetFeetPosition())) {
+            TextBlitter::_debugTextToBilt += "Floor: " + std::to_string(j) + "\n";
+            break;
+        }
+    }
+
+    /*
+    
+    //TextBlitter::_debugTextToBilt += "Grounded: " + std::to_string(Scene::_players[0]._isGrounded) + "\n";
 	TextBlitter::_debugTextToBilt += "Y vel: " + std::to_string(Scene::_players[0]._yVelocity) + "\n";
 	//TextBlitter::_debugTextToBilt += "Mouse ray: " + Util::Vec3ToString(EngineState::_mouseRay) + "\n";
 
@@ -1025,7 +1037,7 @@ void Renderer::RenderFrame(Player* player) {
     int selectedLightIndex = DebugMenu::GetSelectedLightIndex();
     if (selectedLightIndex >= 0 && selectedLightIndex < Scene::_lights.size()) {
         TextBlitter::_debugTextToBilt += "Selected light type: " + std::to_string(Scene::_lights[selectedLightIndex].type) + "\n";
-    }
+    }*/
 
   
     
@@ -1709,6 +1721,13 @@ void DebugPass(Player* player) {
     //    debugPoints.push_back(point);
     }
 
+    /*for (Window& window : Scene::_windows) {
+        debugPoints.push_back(window.GetWorldSpaceCenter());
+    }
+    for (Door& door: Scene::_doors) {
+        debugPoints.push_back(door.GetWorldDoorWayCenter());
+    }*/
+
    // AnimatedGameObject* animatedGameObject = Scene::GetAnimatedGameObjectByName("ShotgunTest");
    // glm::vec3 point2 =  animatedGameObject->GetShotgunBarrelPosition();
    // debugPoints.push_back(point2);
@@ -2068,6 +2087,7 @@ void DrawScene(Shader& shader) {
             globeTransform.position = glm::vec3(0, 0.45f, 0);
             shader.SetMat4("model", lampMatrix * globeTransform.to_mat4());
             shader.SetBool("sampleEmissive", true);
+            shader.SetVec3("lightColor", Scene::_lights[0].color);
             AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("Gold"));
             AssetManager::GetModel("LampGlobe")->Draw();
 
@@ -2178,76 +2198,6 @@ void DrawScene(Shader& shader) {
         shader.SetMat4("model", matrix);
         AssetManager::GetModel("AKS74U_Isolated")->Draw();
     }
-
-
-    // Draw physics objects
-    /*
-    // remove everything below here soon
-    PxScene* scene = Physics::GetScene();
-    PxU32 nbActors = scene->getNbActors(PxActorTypeFlag::eRIGID_DYNAMIC | PxActorTypeFlag::eRIGID_STATIC);
-    if (nbActors)
-    {
-        std::vector<PxRigidActor*> actors(nbActors);
-        scene->getActors(PxActorTypeFlag::eRIGID_DYNAMIC | PxActorTypeFlag::eRIGID_STATIC, reinterpret_cast<PxActor**>(&actors[0]), nbActors);
-        
-        for (PxRigidActor* actor : actors) {
-
-            if (!actor) {
-                std::cout << "you have an null ptr actor mate, and " << nbActors << " total actors\n";
-                continue;
-            }
-
-            const PxU32 nbShapes = actor->getNbShapes();
-            PxShape* shapes[32];
-            actor->getShapes(shapes, nbShapes);
-
-            for (PxU32 j = 0; j < nbShapes; j++) {
-                const PxGeometry& geom = shapes[j]->getGeometry();
-
-                auto& shape = shapes[j];
-                if (shape->getQueryFilterData().word3 == PhysicsObjectType::CUBE ) {
-                  //  shape->getQueryFilterData().word3 == PhysicsObjectType::CASING_PROJECTILE) {
-
-                //if (geom.getType() == PxGeometryType::eBOX) {
-              
-                    //const PxMat44 shapePose(PxShapeExt::getGlobalPose(*shapes[j], *actor));
-                    
-                    const PxBoxGeometry& boxGeom = static_cast<const PxBoxGeometry&>(geom);
-                    Transform localTransform;
-                    localTransform.scale = glm::vec3(boxGeom.halfExtents.x, boxGeom.halfExtents.y, boxGeom.halfExtents.z);
-                    localTransform.scale *= glm::vec3(2.0f);
-
-                    glm::mat4 model = Util::PxMat44ToGlmMat4(actor->getGlobalPose()) * localTransform.to_mat4();
-                    shader.SetMat4("model", model);
-                    AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("Ceiling"));
-                   // AssetManager::GetModel("Cube").Draw();
-                }
-            }
-        }
-    }
-    */
-
-/*
-    Player& player = Scene::_players[0];
-    const glm::vec3& origin = player.GetViewPos();
-    const glm::vec3& direction = player.GetCameraForward() * glm::vec3(-1, -1, -1);;
-    PhysXRayResult rayResult = Util::CastPhysXRay(origin, direction, 250);
-       
-    static int count = 0;
-
-    // Check for any hits
-    if (rayResult.hitFound) {
-        count++;
-        //std::cout << count << " you hit a cube bro\n";
-
-        if (Input::LeftMousePressed()) {
-            PxVec3 force = PxVec3(direction.x, direction.y, direction.z) * 100;
-            PxRigidDynamic* actor = (PxRigidDynamic*)rayResult.hitActor;
-            actor->addForce(force);
-        }
-    }*/
-
-    
 
     shader.SetBool("sampleEmissive", true);
 	// Light bulbs
@@ -2535,6 +2485,16 @@ void DrawShadowMapScene(Shader& shader) {
     for (Ceiling& ceiling : Scene::_ceilings) {
         ceiling.Draw();
     }
+
+    for (Door& door : Scene::_doors) {
+        shader.SetMat4("model", door.GetFrameModelMatrix());
+        auto* doorFrameModel = AssetManager::GetModel("DoorFrame");
+        doorFrameModel->Draw();
+        shader.SetMat4("model", door.GetDoorModelMatrix());
+        auto* doorModel = AssetManager::GetModel("Door");
+        doorModel->Draw();
+    }
+
     for (GameObject& gameObject : Scene::_gameObjects) {
 
         if (gameObject.IsCollected()) {
@@ -2555,15 +2515,6 @@ void DrawShadowMapScene(Shader& shader) {
         for (int i = 0; i < gameObject._meshMaterialIndices.size(); i++) {
             gameObject._model->_meshes[i].Draw();
         }
-    }
-
-    for (Door& door : Scene::_doors) {
-        shader.SetMat4("model", door.GetFrameModelMatrix());
-        auto* doorFrameModel = AssetManager::GetModel("DoorFrame");
-        doorFrameModel->Draw();
-        shader.SetMat4("model", door.GetDoorModelMatrix());
-        auto* doorModel = AssetManager::GetModel("Door");
-        doorModel->Draw();
     }
 }
 
@@ -3459,6 +3410,9 @@ void DrawCasingProjectiles(Player* player) {
 
 void RenderShadowMaps() {
 
+    if (!Input::KeyPressed(HELL_KEY_SPACE)) {
+      //  return;
+    }
 
 	// Render player shadowmaps (muzzle flashes)
 	_shaders.shadowMap.Use();
@@ -3470,7 +3424,7 @@ void RenderShadowMaps() {
     glEnable(GL_DEPTH_TEST);
     glViewport(0, 0, SHADOW_MAP_SIZE, SHADOW_MAP_SIZE);
 
-    for (Player& player : Scene::_players) {
+    /*for (Player& player : Scene::_players) {
         if (player.MuzzleFlashIsRequired()) {
 	        glBindFramebuffer(GL_FRAMEBUFFER, player._shadowMap._ID);
 	        glClear(GL_DEPTH_BUFFER_BIT);
@@ -3494,7 +3448,7 @@ void RenderShadowMaps() {
 	        _shaders.shadowMap.SetMat4("model", glm::mat4(1));
 	        DrawShadowMapScene(_shaders.shadowMap);
         }
-    }
+    }*/
 
 
 

@@ -5,6 +5,7 @@
 #include "Core/GL.h"
 #include "Core/Player.h"
 #include "Core/Input.h"
+#include "Core/InputMulti.h"
 #include "Core/AssetManager.h"
 #include "Core/Audio.hpp"
 #include "Core/Floorplan.h"
@@ -40,8 +41,8 @@ void Engine::Run() {
 		if (Input::KeyPressed(GLFW_KEY_ESCAPE)) {
 			return;
 		}
-		GL::ProcessInput();
-		Input::Update();
+        GL::ProcessInput();
+        Input::Update();
         Renderer::RenderLoadingFrame();
         GL::SwapBuffersPollEvents();
 
@@ -114,21 +115,24 @@ void Engine::Run() {
 
     while (GL::WindowIsOpen() && GL::WindowHasNotBeenForceClosed()) {
                
+        if (DebugMenu::IsOpen()) {
+            Scene::_players[0]._ignoreControl = true;
+            Scene::_players[1]._ignoreControl = true;
+        }
+        else {
+            Scene::_players[0]._ignoreControl = false;
+            Scene::_players[1]._ignoreControl = false;
+        }
+
         // Only the current player can be controlled by keyboard/mouse
-		for (int i = 0; i < EngineState::GetPlayerCount(); i++) {
+		/*for (int i = 0; i < EngineState::GetPlayerCount(); i++) {
 			if (i != EngineState::GetCurrentPlayer() || DebugMenu::IsOpen()) {
 				Scene::_players[i]._ignoreControl = true;
 			}
 			else {
 				Scene::_players[i]._ignoreControl = false;
 			}
-		}
-
-		if (Input::KeyDown(HELL_KEY_M)) {
-			for (int i = 0; i < 1000; i++) {
-				std::cout << "shit\n";
-			}
-		}
+		}*/
 
         lastFrame = thisFrame;
         thisFrame = glfwGetTime();
@@ -153,6 +157,7 @@ void Engine::Run() {
         Input::Update();
         DebugMenu::Update();	
         Audio::Update();
+
         if (EngineState::GetEngineMode() == GAME ||
             EngineState::GetEngineMode() == EDITOR) {
 
@@ -164,11 +169,13 @@ void Engine::Run() {
             LazyKeyPresses();
             Scene::Update(deltaTime);
 
+            InputMulti::Update();
             for (Player& player : Scene::_players) {
                 player.Update(deltaTime);
             }
-
+            InputMulti::ResetMouseOffsets();
         }
+
         else if (EngineState::GetEngineMode() == FLOORPLAN) {
 
             LazyKeyPressesEditor();
@@ -212,7 +219,8 @@ void Engine::Run() {
 void Engine::Init() {
 
 
-    Input::Init();
+    Input::Init(); 
+    InputMulti::Init();
     Physics::Init();
 
     Audio::Init();

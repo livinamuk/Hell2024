@@ -20,14 +20,16 @@ bool _leftMouseDownLastFrame = false;
 bool _rightMouseDownLastFrame = false;
 bool _preventRightMouseHoldTillNextClick = false;
 
+
 void Input::Init() {
+
     double x, y;
     GLFWwindow* window = GL::GetWindowPtr();
     glfwGetCursorPos(window, &x, &y);
     _mouseOffsetX = x;
     _mouseOffsetY = y;
     _mouseX = x;
-    _mouseY = y;
+    _mouseY = y;   
 }
 
 void Input::Update() {

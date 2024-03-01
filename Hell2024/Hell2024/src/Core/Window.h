@@ -24,4 +24,6 @@ public:
 	glm::vec3 GetBackLeftCorner();
 	glm::vec3 GetBackRightCorner();
 
+    glm::vec3 GetWorldSpaceCenter();
+
 };
