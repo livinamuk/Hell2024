@@ -22,15 +22,15 @@ void Scene::Update(float deltaTime) {
 
     if (Input::KeyPressed(HELL_KEY_1)) {
         _players[0]._keyboardIndex = 0;
-        _players[1]._keyboardIndex = -1;
+        _players[1]._keyboardIndex = 1;
         _players[0]._mouseIndex = 0;
-        _players[1]._mouseIndex = -1;
+        _players[1]._mouseIndex = 1;
     }
     if (Input::KeyPressed(HELL_KEY_2)) {
         _players[1]._keyboardIndex = 0;
-        _players[0]._keyboardIndex = -1;
+        _players[0]._keyboardIndex = 1;
         _players[1]._mouseIndex = 0;
-        _players[0]._mouseIndex = -1;
+        _players[0]._mouseIndex = 1;
     }
 
   /*  if (Input::KeyPressed(HELL_KEY_SPACE)) {
@@ -1130,9 +1130,9 @@ void Scene::CreatePlayers() {
     }
 
     _players[0]._keyboardIndex = 0;
-    _players[1]._keyboardIndex = -1;
+    _players[1]._keyboardIndex = 1;
     _players[0]._mouseIndex = 0;
-    _players[1]._mouseIndex = -1;
+    _players[1]._mouseIndex = 1;
 }
 
 

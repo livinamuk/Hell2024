@@ -279,7 +279,6 @@ namespace TextBlitter {
 				xcursor += texWidth + _charSpacing;
 			}
 		}
-		blitXYs.clear();
 		_debugTextToBilt = "";
 	}
 
@@ -331,4 +330,8 @@ int TextBlitter::GetTextWidth(const std::string& text) {
 
 int TextBlitter::GetLineHeight() {
 	return _lineHeight;
+}
+
+void TextBlitter::ClearAllText() {
+    blitXYs.clear();
 }

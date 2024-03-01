@@ -16,4 +16,5 @@ namespace TextBlitter {
 	bool QuestionIsOpen();
 	int GetLineHeight();
 	int GetTextWidth(const std::string& text);
+    void ClearAllText();
 }

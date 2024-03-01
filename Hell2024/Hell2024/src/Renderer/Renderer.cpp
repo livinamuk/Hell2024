@@ -1022,13 +1022,13 @@ void Renderer::RenderFrame(Player* player) {
 
 	TextBlitter::_debugTextToBilt += "View pos: " + Util::Vec3ToString(player->GetViewPos()) + "\n";
 	TextBlitter::_debugTextToBilt += "View rot: " + Util::Vec3ToString(player->GetViewRotation()) + "\n";
-    TextBlitter::_debugTextToBilt += "Weapon Action: " + Util::WeaponActionToString(Scene::_players[0].GetWeaponAction()) + "\n";
+    TextBlitter::_debugTextToBilt += "Weapon Action: " + Util::WeaponActionToString(Scene::_players[playerIndex].GetWeaponAction()) + "\n";
     
-    for (int i = 0; i < Scene::_lights.size(); i++) {
+    /*for (int i = 0; i < Scene::_lights.size(); i++) {
         if (Scene::_lights[i].isDirty) {
             TextBlitter::_debugTextToBilt += "LIGHT " + std::to_string(i) + " is dirty \n";
         }      
-    }
+    }*/
 
     /*for (int j = 0; j < Scene::_floors.size(); j++) {
         Floor& floor = Scene::_floors[j];
@@ -1065,12 +1065,23 @@ void Renderer::RenderFrame(Player* player) {
         TextBlitter::_debugTextToBilt = "";
     }
 
-    TextBlitter::BlitAtPosition(player->_pickUpText, 60, presentFrameBuffer.GetHeight() - 60, false, 1.0f);
+    
+   // TextBlitter::_debugTextToBilt = "Health: 100";
+   // TextBlitter::_debugTextToBilt += "\nKills: 0";
+    
+
+    if (EngineState::GetViewportMode() == FULLSCREEN) {
+        TextBlitter::BlitAtPosition(player->_pickUpText, 60, presentFrameBuffer.GetHeight() - 60, false, 1.0f);
+    }
+    else if (EngineState::GetViewportMode() == SPLITSCREEN) {
+        TextBlitter::BlitAtPosition(player->_pickUpText, 40, presentFrameBuffer.GetHeight() - 35, false, 1.0f);
+    }
 
     glBindFramebuffer(GL_FRAMEBUFFER, presentFrameBuffer.GetID());
     glViewport(0, 0, presentFrameBuffer.GetWidth(), presentFrameBuffer.GetHeight());
     glDisable(GL_DEPTH_TEST);
     glDisable(GL_CULL_FACE);
+    TextBlitter::Update(1.0f / 60.0f);
     Renderer::RenderUI(presentFrameBuffer.GetWidth(), presentFrameBuffer.GetHeight());
 
     // Gizmo shit !!!
@@ -1127,6 +1138,8 @@ void Renderer::RenderFrame(Player* player) {
     for (Light& light : Scene::_lights) {
         light.isDirty = false;
     }
+
+    TextBlitter::ClearAllText();
 }
 
 /*
@@ -1532,6 +1545,25 @@ void GeometryPass(Player* player) {
     DrawScene(_shaders.geometry);
 
 
+    // draw the scope
+    if (player->GetCurrentWeaponIndex() == AKS74U) {
+        AnimatedGameObject* ak = &player->GetFirstPersonWeapon();
+        SkinnedModel* skinnedModel = ak->_skinnedModel;
+        int boneIndex = skinnedModel->m_BoneMapping["Weapon"];
+        if (ak->_animatedTransforms.worldspace.size()) {
+            glm::mat4 boneMatrix = ak->_animatedTransforms.worldspace[boneIndex];
+            glm::mat4 m = ak->GetModelMatrix() * boneMatrix;
+
+            if (player->GetCurrentWeaponIndex() == AKS74U) {
+                m = m * player->GetWeaponSwayMatrix();
+            }
+            _shaders.geometry.SetMat4("model", m);
+            AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("ScopeMount"));
+            AssetManager::GetModel("ScopeACOG")->_meshes[0].Draw();
+            AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("Scope"));
+            AssetManager::GetModel("ScopeACOG")->_meshes[1].Draw();
+        }
+    }
 }
 
 void LightingPass(Player* player) {
@@ -2152,37 +2184,11 @@ void DrawScene(Shader& shader) {
 
     
 
-    // draw the mount
-    Player* player = &Scene::_players[0];
-    if (player->GetCurrentWeaponIndex() == AKS74U) {
-        AnimatedGameObject* ak = &player->GetFirstPersonWeapon();
-   
-
-        SkinnedModel* skinnedModel = ak->_skinnedModel;
-
-        int boneIndex = skinnedModel->m_BoneMapping["Weapon"];
-
-        if (ak->_animatedTransforms.worldspace.size()) {
-            glm::mat4 boneMatrix = ak->_animatedTransforms.worldspace[boneIndex];
-            glm::mat4 m = ak->GetModelMatrix() * boneMatrix;
-
-            if (player->GetCurrentWeaponIndex() == AKS74U) {
-                m = m * player->GetWeaponSwayMatrix();
-            }
-
-            shader.SetMat4("model", m);
-
-
-            AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("ScopeMount"));
-            AssetManager::GetModel("ScopeACOG")->_meshes[0].Draw();
-            AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("Scope"));
-            AssetManager::GetModel("ScopeACOG")->_meshes[1].Draw();
-        }
-    }
+    
 
 
     // Render pickups
-    for (PickUp& pickup : Scene::_pickUps) {
+    /*for (PickUp& pickup : Scene::_pickUps) {
 
         if (pickup.pickedUp) {
             continue;
@@ -2204,7 +2210,7 @@ void DrawScene(Shader& shader) {
             AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("GlockAmmoBox"));
             AssetManager::GetModel("GlockAmmoBox")->Draw();
         }
-    }
+    }*/
 
 
 

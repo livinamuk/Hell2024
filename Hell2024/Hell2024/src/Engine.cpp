@@ -187,7 +187,6 @@ void Engine::Run() {
 		//                  //
 		//      RENDER      //
 
-        TextBlitter::Update(deltaTime);
 		if (EngineState::GetEngineMode() == GAME ||
             EngineState::GetEngineMode() == EDITOR) {
             

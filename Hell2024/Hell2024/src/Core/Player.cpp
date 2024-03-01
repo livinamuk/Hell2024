@@ -192,9 +192,32 @@ void Player::CheckForItemPickOverlaps() {
                         parent->PutRigidBodyToSleep();
                     }
                     if (!parent->IsCollected() && parent->GetPickUpType() == PickUpType::GLOCK_AMMO) {
-                        PickUpGlockAmmo();
-                        parent->PickUp();
-                        parent->PutRigidBodyToSleep();
+
+                       /* GameObject* topDrawer = Scene::GetGameObjectByName("TopDraw");
+                        //GameObject* wholeDrawers = Scene::GetGameObjectByName("SmallDrawerTop");
+
+                        const PxGeometry& overlapShape = parent->_raycastShape->getGeometry();
+
+                        PxVec3 ammoPos = parent->_raycastBody->getGlobalPose().p;
+                        PxVec3 offset = PxVec3(0, -0.05, 0);
+                        PxTransform transform(ammoPos + offset);
+
+                        auto report = Physics::OverlapTest(overlapShape, transform, CollisionGroup::ENVIROMENT_OBSTACLE);
+
+                        if (report.HitsFound()) {
+                            // ammo collied with geometry;
+                            std::cout << "ammo colliding with geo\n";
+                        }
+                        */
+                        //if (Scene::GetGameObjectByName("SmallDrawerTop")->GetOpenState() == OpenState::OPEN) {
+
+                            
+                              //  parent->GetWorldPosition();
+
+                            PickUpGlockAmmo();
+                            parent->PickUp();
+                            parent->PutRigidBodyToSleep();
+                       // }
                     }
 				}
 			}

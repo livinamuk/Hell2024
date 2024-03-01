@@ -378,6 +378,9 @@ void Floorplan::CeilingModeUpdate() {
 
 void Floorplan::PrepareRenderFrame() {
 
+    TextBlitter::Update(1.0f / 60.0f);
+    TextBlitter::ClearAllText();
+
     if (_mode == Floorplan::WALLS) {
         TextBlitter::_debugTextToBilt = "Mode: WALLS\n";
     }

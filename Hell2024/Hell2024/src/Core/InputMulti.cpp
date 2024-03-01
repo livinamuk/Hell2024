@@ -102,6 +102,7 @@ void InputMulti::Init() {
         std::cout << "Failed to register window class\n";
         return;
     }
+
     HWND eventWindow = CreateWindowEx(0, windowClass.lpszClassName, NULL, 0, 0, 0, 0, 0, HWND_MESSAGE, NULL, hInstance, NULL);
     if (!eventWindow) {
         std::cout << "Failed to register window class\n";
@@ -118,6 +119,11 @@ void InputMulti::Init() {
         _keyboardStates.push_back(KeyboardState());
     }
 }
+
+#define GLFW_EXPOSE_NATIVE_WIN32
+#define GLFW_EXPOSE_NATIVE_WGL
+#define GLFW_NATIVE_INCLUDE_NONE
+#include <GLFW/glfw3native.h>
 
 void InputMulti::Update()
 {
@@ -156,7 +162,9 @@ void InputMulti::Update()
     }
 
     // Out of window focus? then remove any detected input
-    if (glfwGetWindowAttrib(GL::GetWindowPtr(), GLFW_FOCUSED) == 0) {
+    HWND activeWindow = GetActiveWindow();
+    HWND myWindow = glfwGetWin32Window(GL::GetWindowPtr());
+    if ((void*)myWindow != (void*)activeWindow) {
         for (KeyboardState& state : _keyboardStates) {
             for (int i = 0; i < 350; i++) {
                 state.keyPressed[i] = false;
