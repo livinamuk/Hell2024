@@ -21,6 +21,7 @@ struct AnimatedGameObject {
 	void SetMeshMaterial(std::string meshName, std::string materialName);
 	void SetMeshMaterialByIndex(int meshIndex, std::string materialName);
 	void SetMaterial(std::string materialName);
+    void UpdateBoneTransformsFromBindPose();
 	glm::mat4 GetBoneWorldMatrixFromBoneName(std::string name);
 
 	std::string GetName();
@@ -44,6 +45,8 @@ struct AnimatedGameObject {
 	glm::vec3 GetShotgunBarrelPosition();
 	glm::vec3 GetAK74USCasingSpawnPostion();
 
+    std::vector<glm::mat4> _debugTransformsA;
+    std::vector<glm::mat4> _debugTransformsB;
 
 private:
 

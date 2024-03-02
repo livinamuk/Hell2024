@@ -212,7 +212,7 @@ void GameObject::Update(float deltaTime) {
 	// Open/Close if applicable
 	if (_openState != OpenState::NONE) {
 
-		if (_openState == OpenState::OPENING) {
+		if (_openState == OpenState::OPENING && _openAxis != OpenAxis::ROTATION_POS_X && _openAxis != OpenAxis::ROTATION_NEG_X) {
 
 			float speed = 3.0f;
 			float maxOpenDistance = 0.25f;
@@ -227,7 +227,7 @@ void GameObject::Update(float deltaTime) {
 			}
 		}
 
-		if (_openState == OpenState::CLOSING) {
+		if (_openState == OpenState::CLOSING && _openAxis != OpenAxis::ROTATION_POS_X && _openAxis != OpenAxis::ROTATION_NEG_X) {
 
 			float speed = 3.0f;
 
@@ -241,6 +241,50 @@ void GameObject::Update(float deltaTime) {
 			}
 		}
 
+
+
+
+        // toilet hardcoded shit
+
+        float maxOpenValue = HELL_PI * -0.5f - 0.0374f;
+        float maxOpenValueSeat = HELL_PI * 0.5f + 0.0374f;
+        float speed = 10.0f;
+        if (_openState == OpenState::OPENING && _openAxis == OpenAxis::ROTATION_POS_X) {
+            _openTransform.rotation.x -= deltaTime * speed;
+            if (_openTransform.rotation.x < maxOpenValue) {
+                _openState = OpenState::OPEN;
+            }
+            if (_openTransform.rotation.x < maxOpenValue) {
+                _openTransform.rotation.x = maxOpenValue;
+            }
+        }
+
+        if (_openState == OpenState::CLOSING && _openAxis == OpenAxis::ROTATION_POS_X) {
+            _openTransform.rotation.x += deltaTime * speed;
+            if (_openTransform.rotation.x > 0) {
+                _openState = OpenState::CLOSED;
+            }
+            _openTransform.rotation.x = std::min(_openTransform.rotation.x, 0.0f);
+        }
+
+
+        if (_openState == OpenState::OPENING && _openAxis == OpenAxis::ROTATION_NEG_X) {
+            _openTransform.rotation.x += deltaTime * speed;
+            if (_openTransform.rotation.x > maxOpenValueSeat) {
+                _openState = OpenState::OPEN;
+            }
+            if (_openTransform.rotation.x > maxOpenValueSeat) {
+                _openTransform.rotation.x = maxOpenValueSeat;
+            }
+        }
+
+        if (_openState == OpenState::CLOSING && _openAxis == OpenAxis::ROTATION_NEG_X) {
+            _openTransform.rotation.x -= deltaTime * speed;
+            if (_openTransform.rotation.x < 0) {
+                _openState = OpenState::CLOSED;
+            }
+            _openTransform.rotation.x = std::max(_openTransform.rotation.x, 0.0f);
+        }
 	}
 
 	if (_modelMatrixMode == ModelMatrixMode::GAME_TRANSFORM) {

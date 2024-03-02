@@ -12,6 +12,13 @@
 #include <assimp/matrix3x3.h>
 #include <assimp/matrix4x4.h>
 #include "Core/Physics.h"
+#include "rapidjson/document.h"
+#include <rapidjson/filereadstream.h>
+#include <rapidjson/istreamwrapper.h>
+#include <rapidjson/writer.h>
+#include <rapidjson/stringbuffer.h>
+#include <rapidjson/ostreamwrapper.h>
+#include <rapidjson/prettywriter.h>
 
 namespace Util {
 
@@ -801,5 +808,59 @@ namespace Util {
         has_pos = (d1 > 0) || (d2 > 0) || (d3 > 0);
         return !(has_neg && has_pos);
     }
-}
 
+    inline PxMat44 PxMat4FromJSONArray(rapidjson::GenericArray<false, rapidjson::Value> const arr) {
+        PxMat44 m;
+        m[0][0] = arr[0].GetFloat();
+        m[0][1] = arr[1].GetFloat();
+        m[0][2] = arr[2].GetFloat();
+        m[0][3] = arr[3].GetFloat();
+        m[1][0] = arr[4].GetFloat();
+        m[1][1] = arr[5].GetFloat();
+        m[1][2] = arr[6].GetFloat();
+        m[1][3] = arr[7].GetFloat();
+        m[2][0] = arr[8].GetFloat();
+        m[2][1] = arr[9].GetFloat();
+        m[2][2] = arr[10].GetFloat();
+        m[2][3] = arr[11].GetFloat();
+        m[3][0] = arr[12].GetFloat();
+        m[3][1] = arr[13].GetFloat();
+        m[3][2] = arr[14].GetFloat();
+        m[3][3] = arr[15].GetFloat();
+        return m;
+    }
+
+    inline glm::mat4 Mat4FromJSONArray(rapidjson::GenericArray<false, rapidjson::Value> const arr) {
+        glm::mat4 m;
+        m[0][0] = arr[0].GetFloat();
+        m[0][1] = arr[1].GetFloat();
+        m[0][2] = arr[2].GetFloat();
+        m[0][3] = arr[3].GetFloat();
+        m[1][0] = arr[4].GetFloat();
+        m[1][1] = arr[5].GetFloat();
+        m[1][2] = arr[6].GetFloat();
+        m[1][3] = arr[7].GetFloat();
+        m[2][0] = arr[8].GetFloat();
+        m[2][1] = arr[9].GetFloat();
+        m[2][2] = arr[10].GetFloat();
+        m[2][3] = arr[11].GetFloat();
+        m[3][0] = arr[12].GetFloat();
+        m[3][1] = arr[13].GetFloat();
+        m[3][2] = arr[14].GetFloat();
+        m[3][3] = arr[15].GetFloat();
+        return m;
+    }
+
+    inline glm::vec3 Vec3FromJSONArray(rapidjson::GenericArray<false, rapidjson::Value> const arr) {
+        return glm::vec3(arr[0].GetFloat(), arr[1].GetFloat(), arr[2].GetFloat());
+    }
+
+    inline PxVec3 PxVec3FromJSONArray(rapidjson::GenericArray<false, rapidjson::Value> const arr) {
+        return PxVec3(arr[0].GetFloat(), arr[1].GetFloat(), arr[2].GetFloat());
+    }
+
+    inline PxQuat PxQuatFromJSONArray(rapidjson::GenericArray<false, rapidjson::Value> const arr) {
+        return PxQuat(arr[0].GetFloat(), arr[1].GetFloat(), arr[2].GetFloat(), arr[3].GetFloat());
+    }
+
+}

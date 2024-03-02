@@ -376,3 +376,37 @@ glm::vec3 AnimatedGameObject::GetShotgunBarrelPosition() {
         return glm::vec3(0);
  //   }
 }
+
+void AnimatedGameObject::UpdateBoneTransformsFromBindPose() {
+
+    // Traverse the tree 
+    auto& joints = _skinnedModel->m_joints;
+
+    for (int i = 0; i < joints.size(); i++) {
+
+        // Get the node and its um bind pose transform?
+        const char* NodeName = joints[i].m_name;
+        glm::mat4 NodeTransformation = joints[i].m_inverseBindTransform;
+
+        unsigned int parentIndex = joints[i].m_parentIndex;
+
+        glm::mat4 ParentTransformation = (parentIndex == -1) ? glm::mat4(1) : joints[parentIndex].m_currentFinalTransform;
+        glm::mat4 GlobalTransformation = ParentTransformation * NodeTransformation;
+
+        joints[i].m_currentFinalTransform = GlobalTransformation;
+
+        if (_skinnedModel->m_BoneMapping.find(NodeName) != _skinnedModel->m_BoneMapping.end()) {
+            unsigned int BoneIndex = _skinnedModel->m_BoneMapping[NodeName];
+            _skinnedModel->m_BoneInfo[BoneIndex].FinalTransformation = GlobalTransformation * _skinnedModel->m_BoneInfo[BoneIndex].BoneOffset;
+            _skinnedModel->m_BoneInfo[BoneIndex].ModelSpace_AnimatedTransform = GlobalTransformation;
+        }
+    }
+
+    _debugTransformsA.resize(joints.size());
+    _debugTransformsB.resize(joints.size());
+
+    for (unsigned int i = 0; i < _skinnedModel->m_NumBones; i++) {
+        _debugTransformsA[i] = _skinnedModel->m_BoneInfo[i].FinalTransformation;
+        _debugTransformsB[i] = _skinnedModel->m_BoneInfo[i].ModelSpace_AnimatedTransform;
+    }
+}

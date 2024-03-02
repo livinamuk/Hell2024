@@ -68,6 +68,17 @@ void File::LoadMap(std::string mapName) {
         }
     }
 
+
+    if (document.HasMember("SpawnPoints")) {
+        const rapidjson::Value& objects = document["SpawnPoints"];
+        for (rapidjson::SizeType i = 0; i < objects.Size(); i++) {
+            glm::vec3 position = ReadVec3(objects[i], "position");
+            glm::vec3 rotation = ReadVec3(objects[i], "rotation");
+            SpawnPoint spawnPoint {position, rotation};
+            Scene::_spawnPoints.push_back(spawnPoint);
+        }
+    }
+
 	if (document.HasMember("Walls")) {
 		const rapidjson::Value& objects = document["Walls"];
 		for (rapidjson::SizeType i = 0; i < objects.Size(); i++) {
@@ -165,7 +176,15 @@ void File::SaveMap(std::string mapName) {
     rapidjson::Value floors(rapidjson::kArrayType);
     rapidjson::Value gameObjects(rapidjson::kArrayType);
     rapidjson::Value lights(rapidjson::kArrayType);
+    rapidjson::Value spawnPoints(rapidjson::kArrayType);
 	document.SetObject();
+
+    for (SpawnPoint& spawnPoint: Scene::_spawnPoints) {
+        rapidjson::Value object(rapidjson::kObjectType);
+        SaveVec3(&object, "position", spawnPoint.position, allocator);
+        SaveVec3(&object, "rotation", spawnPoint.rotation, allocator);
+        spawnPoints.PushBack(object, allocator);
+    }
 
     for (Light & light : Scene::_lights) {
         rapidjson::Value object(rapidjson::kObjectType);
@@ -248,6 +267,7 @@ void File::SaveMap(std::string mapName) {
     document.AddMember("Windows", windows, allocator);
     document.AddMember("GameObjects", gameObjects, allocator);
     document.AddMember("Lights", lights, allocator);
+    document.AddMember("SpawnPoints", spawnPoints, allocator);
 
 	rapidjson::StringBuffer strbuf;
 	rapidjson::PrettyWriter<rapidjson::StringBuffer> writer(strbuf);

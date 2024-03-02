@@ -61,6 +61,11 @@ struct CloudPoint {
 };
 
 
+struct SpawnPoint {
+    glm::vec3 position = glm::vec3(0);
+    glm::vec3 rotation = glm::vec3(0);
+};
+
 
 struct Wall {
     glm::vec3 begin = glm::vec3(0);
@@ -153,6 +158,7 @@ namespace Scene {
     inline PxShape* _sceneShape = NULL;
 
     inline std::vector<PickUp> _pickUps;
+    inline std::vector<SpawnPoint> _spawnPoints;
     inline std::vector<Bullet> _bullets;
     inline std::vector<BulletCasing> _bulletCasings;
     inline std::vector<Decal> _decals;

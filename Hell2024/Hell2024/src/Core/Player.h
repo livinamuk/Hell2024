@@ -4,6 +4,7 @@
 #include "Physics.h"
 #include "../Renderer/ShadowMap.h"
 #include "keycodes.h"
+#include "Ragdoll.h"
 
 #define GLOCK_CLIP_SIZE 12
 #define GLOCK_MAX_AMMO_SIZE 200
@@ -49,6 +50,7 @@ class Player {
 public:
 	float _radius = 0.1f;
 	bool _ignoreControl = false;
+    Ragdoll _ragdoll;
     
     int _mouseIndex = -1;
     int _keyboardIndex = -1;
@@ -77,6 +79,9 @@ public:
     bool _glockSlideNeedsToBeOut = false;
     bool _needsShotgunFirstShellAdded = false;
     bool _needsShotgunSecondShellAdded = false; 
+
+    int _health = 100;
+    float _outsideDamageTimer = 0;
 
 	//void Init(glm::vec3 position);
 	void Update(float deltaTime);
@@ -158,6 +163,9 @@ public:
     bool PressedADS();
     bool PressedEscape();
     bool PressedWindowsEnter();
+    glm::vec3 GetCameraRotation();
+    void GiveAKS74UScope();
+    bool _hasAKS74UScope = false;
 
 private:
 

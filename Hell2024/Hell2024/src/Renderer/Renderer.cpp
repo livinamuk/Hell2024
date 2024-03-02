@@ -483,9 +483,8 @@ void GlassPass(Player* player) {
     _shaders.glass.SetBool("isWindow", false);
 
 
-
     // draw the scope
-    if (player->GetCurrentWeaponIndex() == AKS74U && !player->InADS()) {
+    if (player->GetCurrentWeaponIndex() == AKS74U && !player->InADS() && player->_hasAKS74UScope) {
         AnimatedGameObject* ak = &player->GetFirstPersonWeapon();
         SkinnedModel* skinnedModel = ak->_skinnedModel;
         int boneIndex = skinnedModel->m_BoneMapping["Weapon"];
@@ -1066,8 +1065,8 @@ void Renderer::RenderFrame(Player* player) {
     }
 
     
-   // TextBlitter::_debugTextToBilt = "Health: 100";
-   // TextBlitter::_debugTextToBilt += "\nKills: 0";
+    TextBlitter::_debugTextToBilt = "Health: " + std::to_string(player->_health);
+    TextBlitter::_debugTextToBilt += "\nKills: 0";
     
 
     if (EngineState::GetViewportMode() == FULLSCREEN) {
@@ -1546,7 +1545,7 @@ void GeometryPass(Player* player) {
 
 
     // draw the scope
-    if (player->GetCurrentWeaponIndex() == AKS74U) {
+    if (player->GetCurrentWeaponIndex() == AKS74U && player->_hasAKS74UScope) {
         AnimatedGameObject* ak = &player->GetFirstPersonWeapon();
         SkinnedModel* skinnedModel = ak->_skinnedModel;
         int boneIndex = skinnedModel->m_BoneMapping["Weapon"];
@@ -1770,6 +1769,32 @@ void DebugPass(Player* player) {
     glm::mat4 magWorldMatrix = ak->GetModelMatrix() * matrix;
     glm::vec3 testPoint = Util::GetTranslationFromMatrix(magWorldMatrix);
     debugPoints.push_back(testPoint);*/
+
+    AnimatedGameObject* nurseGuy = Scene::GetAnimatedGameObjectByName("NURSEGUY");
+    AnimatedGameObject* unisexGuy = Scene::GetAnimatedGameObjectByName("UNISEXGUY");
+
+    nurseGuy->UpdateBoneTransformsFromBindPose();
+    unisexGuy->UpdateBoneTransformsFromBindPose();
+
+    for (glm::mat4& transform : nurseGuy->_debugTransformsB) {
+        glm::vec3 point = nurseGuy->_transform.to_mat4() * transform * glm::vec4(0, 0, 0, 1.0);
+        debugPoints.push_back(point);
+    }
+    for (glm::mat4& transform : unisexGuy->_debugTransformsB) {
+        glm::vec3 point = unisexGuy->_transform.to_mat4() * transform * glm::vec4(0, 0, 0, 1.0);
+        debugPoints.push_back(point);
+    }
+
+    for (glm::mat4& transform : nurseGuy->_animatedTransforms.worldspace) {
+
+      //  glm::vec3 point = nurseGuy->_transform.to_mat4() * transform * glm::vec4(0, 0, 0, 1.0);
+        // std::cout << Util::Mat4ToString(transform) << "\n";
+      //  debugPoints.push_back(point);
+    }
+
+
+
+
 
     Player* player1 = &Scene::_players[0];
     if (player1->GetCurrentWeaponIndex() == SHOTGUN) {
@@ -2299,6 +2324,74 @@ void DrawAnimatedObject(Shader& shader, AnimatedGameObject* animatedGameObject) 
         std::cout << "You tried to draw an AnimatedGameObject with a nullptr skinned model\n";
         return;
     }
+
+
+    if (animatedGameObject->GetName() == "TESTGUY2") {
+
+        for (int i = 0; i < animatedGameObject->_animatedTransforms.names.size(); i++) {
+
+            std::string boneName = animatedGameObject->_animatedTransforms.names[i];
+
+
+            Ragdoll& ragdoll = Scene::_players[0]._ragdoll;
+
+            for (RigidComponent& rigid : ragdoll._rigidComponents) {
+
+                if (boneName == rigid.name) {
+
+                    glm::mat4 rigidMatrix = Util::PxMat44ToGlmMat4(rigid.pxRigidBody->getGlobalPose());
+
+                 
+
+                    //std::cout << "\n" << boneName << "\n";
+                    //std::cout << Util::Mat4ToString(rigidMatrix) << "\n";
+
+                   // otherPlayer._characterModel._skinnedModel->
+                    SkinnedModel* skinnedModel = animatedGameObject->_skinnedModel;
+
+                    unsigned int BoneIndex = skinnedModel->m_BoneMapping[boneName];
+
+                    glm::mat4 boneOffset = skinnedModel->m_BoneInfo[BoneIndex].BoneOffset;
+
+                    animatedGameObject->_animatedTransforms.local[i] = rigidMatrix * boneOffset;
+
+                    // Transform transform;
+                    // transform.scale = glm::vec3(0.01f);
+                    animatedGameObject->_transform.position = glm::vec3(0);
+                    animatedGameObject->_transform.rotation = glm::vec3(0);
+                    animatedGameObject->_transform.scale = glm::vec3(0.1f);
+
+                }
+
+            }
+
+            //otherPlayer._characterModel._animatedTransforms
+
+        }
+        //
+
+    }
+
+
+
+
+
+
+
+
+    
+
+
+
+
+
+
+
+
+
+
+
+
 
     std::vector<glm::mat4> tempSkinningMats;
     for (unsigned int i = 0; i < animatedGameObject->_animatedTransforms.local.size(); i++) {
@@ -3202,13 +3295,16 @@ void Renderer::NextDebugLineRenderMode() {
         _debugLineRenderMode = (DebugLineRenderMode)(int(_debugLineRenderMode) + 1);
     }
     if (_debugLineRenderMode == PHYSX_COLLISION) {
-        _debugLineRenderMode = (DebugLineRenderMode)(int(_debugLineRenderMode) + 1);
+   //     _debugLineRenderMode = (DebugLineRenderMode)(int(_debugLineRenderMode) + 1);
     }
     if (_debugLineRenderMode == RAYTRACE_LAND) {
         _debugLineRenderMode = (DebugLineRenderMode)(int(_debugLineRenderMode) + 1);
     }
     if (_debugLineRenderMode == PHYSX_EDITOR) {
         _debugLineRenderMode = (DebugLineRenderMode)(int(_debugLineRenderMode) + 1);
+    }
+    if (_debugLineRenderMode == BOUNDING_BOXES) {
+   //     _debugLineRenderMode = (DebugLineRenderMode)(int(_debugLineRenderMode) + 1);
     }
 
     if (_debugLineRenderMode == DEBUG_LINE_MODE_COUNT) {

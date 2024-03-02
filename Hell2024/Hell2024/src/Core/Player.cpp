@@ -191,6 +191,11 @@ void Player::CheckForItemPickOverlaps() {
                         parent->PickUp();
                         parent->PutRigidBodyToSleep();
                     }
+                    if (!parent->IsCollected() && parent->GetPickUpType() == PickUpType::AKS74U_SCOPE) {
+                        GiveAKS74UScope();
+                        parent->PickUp();
+                        parent->PutRigidBodyToSleep();
+                    }
                     if (!parent->IsCollected() && parent->GetPickUpType() == PickUpType::GLOCK_AMMO) {
 
                        /* GameObject* topDrawer = Scene::GetGameObjectByName("TopDraw");
@@ -234,6 +239,23 @@ void Player::CheckForItemPickOverlaps() {
 
 void Player::Update(float deltaTime) {
 
+    // Take damage outside
+    bool outside = true;
+    for (Floor& floor : Scene::_floors) {
+        if (floor.PointIsAboveThisFloor(_position)) {
+            outside = false;
+            break;
+        }
+    }
+    if (outside) {
+        _outsideDamageTimer += deltaTime;
+    }
+    if (_outsideDamageTimer > 0.25) {
+        _health -= 4;
+        _outsideDamageTimer = 0;
+        //Audio::PlayAudio("Pain.wav", 1.0f);
+    }
+
 	CheckForItemPickOverlaps();
     			
 	if (_pickUpTextTimer > 0) {
@@ -264,13 +286,19 @@ void Player::Update(float deltaTime) {
 		}
 	}
 
-	float amt = 0.02f;
-	if (Input::KeyDown(HELL_KEY_MINUS)) {
-		_viewHeightStanding -= amt;
-	}
-	if (Input::KeyDown(HELL_KEY_EQUAL)) {
-		_viewHeightStanding += amt;
-	}
+    float amt = 0.02f;
+    if (Input::KeyDown(HELL_KEY_MINUS)) {
+        _viewHeightStanding -= amt;
+    }
+    if (Input::KeyDown(HELL_KEY_EQUAL)) {
+        _viewHeightStanding += amt;
+    }
+    if (Input::KeyDown(HELL_KEY_8)) {
+        _viewHeightStanding -= amt * 100;
+    }
+    if (Input::KeyDown(HELL_KEY_9)) {
+        _viewHeightStanding += amt * 100;
+    }
 
 	// Crouching
 	bool crouching = false;
@@ -364,6 +392,7 @@ void Player::Update(float deltaTime) {
 	PxF32 minDist = 0.001f;
 	_characterController->move(PxVec3(displacement.x, yDisplacement, displacement.z), minDist, fixedDeltaTime, data);
 	_position = Util::PxVec3toGlmVec3(_characterController->getFootPosition());
+
 	
 	// Footstep audio
 	if (!_ignoreControl) {
@@ -562,7 +591,7 @@ void Player::Interact() {
 		}
 		if (_cameraRayResult.physicsObjectType == GAME_OBJECT) {
 			GameObject* gameObject = (GameObject*)(_cameraRayResult.parent);
-			if (!gameObject->IsInteractable()) {
+			if (gameObject && !gameObject->IsInteractable()) {
 				return;
 			}
 			gameObject->Interact();
@@ -576,6 +605,9 @@ void Player::Respawn(glm::vec3 position, glm::vec3 rotation) {
 		_weaponInventory.resize(Weapon::WEAPON_COUNT);
 	}
 
+    _hasAKS74UScope = false;
+    _health = 100;
+
 	// Loadout on spawn
 	_weaponInventory[Weapon::KNIFE] = true;
 	_weaponInventory[Weapon::GLOCK] = true;
@@ -585,7 +617,13 @@ void Player::Respawn(glm::vec3 position, glm::vec3 rotation) {
 
 	SetWeapon(Weapon::GLOCK);
 	_weaponAction = SPAWNING;
-	_position = position;
+
+    if (_characterController) {
+        PxExtendedVec3 globalPose = PxExtendedVec3(position.x, position.y, position.z);
+        _characterController->setFootPosition(globalPose);
+    }
+    _position = position;
+
 	_rotation = rotation;
 	_inventory.glockAmmo.clip = GLOCK_CLIP_SIZE;
     _inventory.glockAmmo.total = 20;
@@ -692,7 +730,14 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
 
 	// Debug test spawn logic (respawns at same pos/rot)
 	if (!_ignoreControl && Input::KeyPressed(HELL_KEY_J)) {
-		Respawn(_position, _rotation);
+
+        int index = Util::RandomInt(0, Scene::_spawnPoints.size() - 1);
+
+        std::cout << "INDEX WAS: " << index << "\n";
+
+        SpawnPoint& spawnPoint = Scene::_spawnPoints[index];
+        Respawn(spawnPoint.position, spawnPoint.rotation);
+        //Respawn(_position, _rotation);
 	}
 
 	// Switching weapon? Well change all the shit you need to then
@@ -1466,7 +1511,9 @@ float Player::GetRadius() {
 bool Player::CursorShouldBeInterect() {
 	if (_cameraRayResult.physicsObjectType == DOOR) {
 		Door* door = (Door*)(_cameraRayResult.parent);
-		return door->IsInteractable(GetFeetPosition());
+        if (door) {
+            return door->IsInteractable(GetFeetPosition());
+        }
 	}
 	if (_cameraRayResult.physicsObjectType == GAME_OBJECT && _cameraRayResult.parent) {
 		GameObject* gameObject = (GameObject*)(_cameraRayResult.parent);
@@ -1738,4 +1785,14 @@ bool Player::PressedEscape() {
         // return InputMulti::ButtonPressed(_controllerIndex, _controls.ESCAPE);
         return false;
     }
+}
+
+glm::vec3 Player::GetCameraRotation() {
+    return _rotation;
+}
+
+void Player::GiveAKS74UScope() {
+    _hasAKS74UScope = true;
+    ShowPickUpText("PICKED UP AKS74U SCOPE");
+    Audio::PlayAudio("ItemPickUp.wav", 1.0f);
 }

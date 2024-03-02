@@ -41,7 +41,8 @@ enum WeaponAction {
 #define INTERACT_DISTANCE 2.5f
 
 #define NEAR_PLANE 0.005f
-#define FAR_PLANE 50.0f
+//#define FAR_PLANE 50.0f
+#define FAR_PLANE 500.0f
 
 #define NOOSE_PI 3.14159265359f
 #define NOOSE_HALF_PI 1.57079632679f
@@ -250,7 +251,7 @@ struct Material {
 };
 
 enum RaycastGroup { RAYCAST_DISABLED = 0, RAYCAST_ENABLED };
-enum PhysicsObjectType { UNDEFINED = 0, GAME_OBJECT, GLASS, DOOR, SCENE_MESH};
+enum PhysicsObjectType { UNDEFINED = 0, GAME_OBJECT, GLASS, DOOR, SCENE_MESH, RAGDOLL_RIGID};
 
 struct PhysicsObjectData {
     PhysicsObjectData(PhysicsObjectType type, void* parent) {

@@ -243,15 +243,21 @@ void AssetManager::LoadEverythingElse() {
 		std::vector<std::string> animations;
 	};
     
-	std::vector<skinned_model_path> model_paths{
-		skinned_model_path{ "models/UniSexGuy2.fbx", std::vector<std::string>{
-			"animations/Character_Glock_Walk.fbx",
-				"animations/Character_Glock_Kneel.fbx",
-				"animations/Character_Glock_Idle.fbx",
-				"animations/Character_AKS74U_Walk.fbx",
-				"animations/Character_AKS74U_Kneel.fbx",
-				"animations/Character_AKS74U_Idle.fbx",
-		} },
+    std::vector<skinned_model_path> model_paths{
+        skinned_model_path{ "models/UniSexGuy2.fbx", std::vector<std::string>{
+            "animations/Character_Glock_Walk.fbx",
+                "animations/Character_Glock_Kneel.fbx",
+                "animations/Character_Glock_Idle.fbx",
+                "animations/Character_AKS74U_Walk.fbx",
+                "animations/Character_AKS74U_Kneel.fbx",
+                "animations/Character_AKS74U_Idle.fbx",
+        } },
+            skinned_model_path{ "models/UniSexGuyScaled.fbx", std::vector<std::string>{
+                    "animations/UnisexGuy_Glock_Idle.fbx",
+            } },
+            skinned_model_path{ "models/NurseGuy.fbx", std::vector<std::string>{
+                    "animations/NurseGuy_Glock_Idle.fbx",
+            } },
 			skinned_model_path{ "models/AKS74U.fbx", std::vector<std::string>{
 				"animations/AKS74U_Fire1.fbx",
 				"animations/AKS74U_Fire2.fbx",

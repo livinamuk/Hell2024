@@ -1136,6 +1136,7 @@ public:
         if (member != MemberEnd())
             return member->value;
         else {
+            std::cout << "FAILED DOING SOMEETHING WITH: " << name.GetString() << "\n";
             RAPIDJSON_ASSERT(false);    // see above note
 
             // This will generate -Wexit-time-destructors in clang
