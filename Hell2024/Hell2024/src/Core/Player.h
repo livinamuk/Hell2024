@@ -80,8 +80,11 @@ public:
     bool _needsShotgunSecondShellAdded = false; 
 
     int _health = 100;
+    float _damageColorTimer = 1.0f;
     float _outsideDamageTimer = 0;
     float _outsideDamageAudioTimer = 0;
+
+    void GiveDamageColor();
 
 	//void Init(glm::vec3 position);
 	void Update(float deltaTime);
@@ -122,6 +125,7 @@ public:
     void PickUpGlockAmmo();
 	void CastMouseRay();
 	void DropAKS7UMag();
+    void CheckForKnifeHit();
 
 	ShadowMap _shadowMap;
 	float _muzzleFlashCounter = 0;

@@ -509,11 +509,17 @@ void GlassPass(Player* player) {
     float contrastAmount = 1;
 
 
-    if (player->_isOutside) {
+    if (!player->_isDead && player->_isOutside) {
         colorTint = RED;
         colorTint.g = player->_outsideDamageAudioTimer;
         colorTint.b = player->_outsideDamageAudioTimer;
+    }
 
+    if (!player->_isDead && player->_damageColorTimer < 1.0f) {
+        colorTint.g = player->_damageColorTimer + 0.75;
+        colorTint.b = player->_damageColorTimer + 0.75;
+        colorTint.g = std::min(colorTint.g, 1.0f);
+        colorTint.b = std::min(colorTint.b, 1.0f);
     }
 
     if (player->_isDead) {
@@ -530,6 +536,8 @@ void GlassPass(Player* player) {
             float val = (player->_timeSinceDeath - waitTime) * 10;
             colorTint.r -= val;
         }
+       // std::cout << "contrastAmount: " << contrastAmount << "\n";
+       // std::cout << "colorTint:      " << Util::Vec3ToString(colorTint) << "\n";
     }
     else {
 

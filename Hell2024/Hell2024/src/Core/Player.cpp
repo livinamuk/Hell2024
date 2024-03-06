@@ -43,25 +43,6 @@ Player::Player(glm::vec3 position, glm::vec3 rotation) {
 
     Respawn();
 
-    //position, rotation
-    
-    /*
-    bool needsRespawn = true;
-
-    while (needsRespawn) {
-        needsRespawn = false;
-        Respawn(position, rotation);
-        for (auto& otherPlayer : Scene::_players) {
-            if (this != &otherPlayer) {
-                if (abs(position.x - otherPlayer._position.x < 1) && abs(position.y - otherPlayer._position.y < 1) && abs(position.z - otherPlayer._position.z < 1)) {
-                    needsRespawn = true;
-                    break;
-                }
-            }
-        }
-    }*/
-
-
 	_characterModel.SetSkinnedModel("UniSexGuyScaled");
     _characterModel.SetMeshMaterial("CC_Base_Body", "UniSexGuyBody");
     _characterModel.SetMeshMaterial("CC_Base_Eye", "UniSexGuyBody");
@@ -230,6 +211,22 @@ void Player::CheckForItemPickOverlaps() {
                     }
                     if (!parent->IsCollected() && parent->GetPickUpType() == PickUpType::GLOCK_AMMO) {
 
+                        GameObject* topDrawer = Scene::GetGameObjectByName("TopDraw");
+
+                        auto ammoPose = parent->_collisionBody->getGlobalPose();
+                        auto ammoY = ammoPose.p.y;
+
+                        if (ammoY > 0.4f && topDrawer->_openState == OpenState::OPEN) {
+                            PickUpGlockAmmo();
+                            parent->PickUp();
+                            parent->PutRigidBodyToSleep();
+                        }
+                        else if (ammoY <= 0.4f) {
+                            PickUpGlockAmmo();
+                            parent->PickUp();
+                            parent->PutRigidBodyToSleep();
+                        }
+
                        /* GameObject* topDrawer = Scene::GetGameObjectByName("TopDraw");
                         //GameObject* wholeDrawers = Scene::GetGameObjectByName("SmallDrawerTop");
 
@@ -251,9 +248,7 @@ void Player::CheckForItemPickOverlaps() {
                             
                               //  parent->GetWorldPosition();
 
-                            PickUpGlockAmmo();
-                            parent->PickUp();
-                            parent->PutRigidBodyToSleep();
+                 
                        // }
                     }
 				}
@@ -271,23 +266,30 @@ void Player::CheckForItemPickOverlaps() {
 
 void Player::Update(float deltaTime) {
 
+    // Damage color
+    _damageColorTimer += deltaTime * 0.5f;
+    _damageColorTimer = std::min(1.0f, _damageColorTimer);
+
     // Death timer
     if (_isDead) {
         _timeSinceDeath += deltaTime;
+        _ignoreControl = true;
     }
     else {
         _timeSinceDeath = 0;
     }
 
     // Pressed Respawn
+    bool autoRespawn = true;
     if (_isDead && _timeSinceDeath > 3.25) {
         if (PressedFire() ||
             PressedReload() ||
             PressedCrouch() ||
             PressedInteract() ||
             PressedJump() ||
-            PressedNextWeapon()
-            ) {
+            PressedNextWeapon() ||
+            autoRespawn)
+        {
             Respawn();
             Audio::PlayAudio("RE_Beep.wav", 0.75);
         }
@@ -314,13 +316,24 @@ void Player::Update(float deltaTime) {
     else {
         _outsideDamageAudioTimer = 0.84f;
     }
-    if (_outsideDamageAudioTimer > 0.85f) {
+    if (_outsideDamageAudioTimer > 0.85f && !_isDead) {
         _outsideDamageAudioTimer = 0.0f;
         Audio::PlayAudio("Pain.wav", 1.0f);
     }
     if (_outsideDamageTimer > 0.15f) {
         _outsideDamageTimer = 0.0f;
         _health -= 1;
+    }
+    if (!_isDead && _isOutside && _health <= 0) {
+        Kill();
+        _health = 0;
+
+        glm::vec3 deathPosition = { GetFeetPosition().x, 0.0, GetFeetPosition().z };
+
+        AnimatedGameObject* dyingGuy = Scene::GetAnimatedGameObjectByName("DyingGuy");
+        dyingGuy->SetRotationY(_rotation.y + HELL_PI);
+        dyingGuy->SetPosition(deathPosition);
+        dyingGuy->PlayAnimation("DyingGuy_Death", 1.0f);
     }
 
 	CheckForItemPickOverlaps();
@@ -656,6 +669,10 @@ void Player::Update(float deltaTime) {
 			Audio::PlayAudio("ItemPickUp.wav", 1.0f);
 		}
 	}
+
+    if (_isDead) {
+        _health = 0;
+    }
 }
 
 glm::mat4 Player::GetViewMatrix() {
@@ -725,6 +742,7 @@ void Player::Interact() {
 void Player::Respawn() {
 
     _isDead = false;
+    _ignoreControl = false;
 
     int index = Util::RandomInt(0, Scene::_spawnPoints.size() - 1);
     SpawnPoint& spawnPoint = Scene::_spawnPoints[index];
@@ -787,10 +805,10 @@ void Player::Respawn() {
 
 bool Player::CanFire() {
 
-	if (_ignoreControl) {
-		return false;
-	}	
-	if (_currentWeaponIndex == Weapon::KNIFE) {
+    if (_ignoreControl || _isDead) {
+        return false;
+    }
+    if (_currentWeaponIndex == Weapon::KNIFE) {
 		return true;
 	}
 	if (_currentWeaponIndex == Weapon::GLOCK) {
@@ -976,7 +994,8 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
 				std::string aninName = "Knife_Swing" + std::to_string(random_number);
 				_firstPersonWeapon.PlayAnimation(aninName, 1.5f);
 				Audio::PlayAudio("Knife.wav", 1.0f); 
-				SpawnBullet(0, Weapon::KNIFE);
+				//SpawnBullet(0, Weapon::KNIFE);
+                CheckForKnifeHit();
 			}
 		}
 		if (_weaponAction == FIRE && _firstPersonWeapon.IsAnimationComplete()) {
@@ -1494,7 +1513,8 @@ void Player::SpawnGlockCasing() {
 	PxVec3 force = Util::GlmVec3toPxVec3(glm::normalize(GetCameraRight() + glm::vec3(0.0f, Util::RandomFloat(0.7f, 0.9f), 0.0f)) * glm::vec3(0.00215f));
 	body->addForce(force);
 	body->setAngularVelocity(PxVec3(Util::RandomFloat(0.0f, 100.0f), Util::RandomFloat(0.0f, 100.0f), Util::RandomFloat(0.0f, 100.0f)));
-    body->userData = (void*)&CasingType::BULLET_CASING;
+    //body->userData = (void*)&CasingType::BULLET_CASING;
+    body->userData = (void*)&EngineState::weaponNamePointers[GLOCK];
 
  // std::cout << 
 
@@ -1530,7 +1550,8 @@ void Player::SpawnShotgunShell() {
 
     PxVec3 force = Util::GlmVec3toPxVec3(glm::normalize(GetCameraRight() + glm::vec3(0.0f, Util::RandomFloat(0.7f, 1.4f), 0.0f)) * glm::vec3(0.02f));
     body->addForce(force);
-    body->userData = (void*)&CasingType::SHOTGUN_SHELL;
+    //body->userData = (void*)&CasingType::SHOTGUN_SHELL;
+    body->userData = (void*)&EngineState::weaponNamePointers[SHOTGUN];
 
     //body->setAngularVelocity(PxVec3(Util::RandomFloat(0.0f, 50.0f), Util::RandomFloat(0.0f, 50.0f), Util::RandomFloat(0.0f, 50.0f)));
     //shape->release();
@@ -1562,8 +1583,9 @@ void Player::SpawnAKS74UCasing() {
 	PxVec3 force = Util::GlmVec3toPxVec3(glm::normalize(GetCameraRight() + glm::vec3(0.0f, Util::RandomFloat(0.7f, 1.4f), 0.0f)) * glm::vec3(0.003f));
 	body->addForce(force);
 	body->setAngularVelocity(PxVec3(Util::RandomFloat(0.0f, 50.0f), Util::RandomFloat(0.0f, 50.0f), Util::RandomFloat(0.0f, 50.0f)));
-    //body->userData = (void*)&EngineState::weaponNamePointers[AKS74U];
-    body->userData = (void*)&CasingType::BULLET_CASING;
+    //body->userData = (void*)&CasingType::BULLET_CASING;
+    body->userData = (void*)&EngineState::weaponNamePointers[AKS74U];
+
 
     //shape->release();
 
@@ -1975,7 +1997,11 @@ void Player::HideAKS74UMesh() {
     _characterModel.AddSkippedMeshIndexByName("BarrelTip_low");
 }
 
-void Player::Kill() {
+void Player::Kill()  {
+
+    PxExtendedVec3 globalPose = PxExtendedVec3(-1, 0.1, -1);
+    _characterController->setFootPosition(globalPose);
+
     std::cout << _playerName << " was killed\n";
     _characterModel._animationMode = AnimatedGameObject::AnimationMode::RAGDOLL;
 
@@ -1987,7 +2013,79 @@ void Player::Kill() {
     HideShotgunMesh();
     HideAKS74UMesh();
 
-    Audio::PlayAudio("Death0.wav", 1.0f);
+    for (RigidComponent& rigid : _characterModel._ragdoll._rigidComponents) {
+        rigid.pxRigidBody->wakeUp();
+    }
+    Audio::PlayAudio("Death0.wav", 1.0f);}
 
-    std::cout << " and their animation mode is now " << _characterModel._animationMode << "\n";
+void Player::CheckForKnifeHit() {
+
+    for (Player& otherPlayer : Scene::_players) {
+        // skip self
+        if (&otherPlayer == this)
+            continue;
+
+        if (!otherPlayer._isDead) {
+
+            bool knifeHit = false;
+
+            glm::vec3 myPos = GetViewPos();
+            glm::vec3 theirPos = otherPlayer.GetViewPos();
+            glm::vec3 forward = GetCameraForward() * glm::vec3(-1);
+
+            glm::vec3 v = glm::normalize(myPos - theirPos);
+            float distToEnemy = glm::distance(myPos, theirPos);
+
+            float dotProduct = glm::dot(forward, v);
+            std::cout << dotProduct << "\n";
+            if (dotProduct < -0.65 && distToEnemy < 1.0f) {
+                knifeHit = true;
+            }
+
+            if (knifeHit) {          
+                // apply damage
+                if (otherPlayer._health > 0) {
+                    otherPlayer._health -= 20;// +rand() % 50;
+
+                    otherPlayer.GiveDamageColor();
+
+                    // Are they dead???
+                    if (otherPlayer._health <= 0 && !otherPlayer._isDead)
+                    {
+                        otherPlayer._health = 0;
+                        std::string file = "Death0.wav";
+                        Audio::PlayAudio(file.c_str(), 1.0f);
+
+                        otherPlayer.Kill();
+                        _killCount++;
+
+                        Player* otherPlayer = NULL;
+                        if (this == &Scene::_players[0]) {
+                            otherPlayer = &Scene::_players[1];
+                        }
+                        else {
+                            otherPlayer = &Scene::_players[0];
+                        }
+
+                        glm::vec3 deathPosition = { otherPlayer->GetFeetPosition().x, 0.1, otherPlayer->GetFeetPosition().z };
+                        deathPosition += (otherPlayer->_movementVector * 0.25f);
+
+                        AnimatedGameObject* dyingGuy = Scene::GetAnimatedGameObjectByName("DyingGuy");
+                        dyingGuy->SetRotationY(GetViewRotation().y);
+                        dyingGuy->SetPosition(deathPosition);
+                        dyingGuy->PlayAnimation("DyingGuy_Death", 1.0f);
+
+                    }
+                }
+                // Audio
+                std::string file = "FLY_Bullet_Impact_Flesh_0" + std::to_string(rand() % 8 + 1) + ".wav";
+                Audio::PlayAudio(file.c_str(), 0.5f);
+            }
+        }
+    }
+}
+
+
+void Player::GiveDamageColor() {
+    _damageColorTimer = 0.0f;
 }

@@ -44,7 +44,7 @@ namespace EngineState {
 	}
 
     // This is disgusting, find a better way to do this
-    //inline const std::vector<Weapon> weaponNamePointers = { KNIFE, GLOCK, SHOTGUN, AKS74U, MP7, WEAPON_COUNT };
+    inline const std::vector<Weapon> weaponNamePointers = { KNIFE, GLOCK, SHOTGUN, AKS74U, MP7, WEAPON_COUNT };
 };
 
 namespace CasingType {

@@ -75,9 +75,17 @@ void main() {
 	tint.x = max(tint.x, 0);
 	tint.y = max(tint.y, 0);
 	tint.z = max(tint.z, 0);
+	//tint.x = min(tint.x, 1);
+	//tint.y = min(tint.y, 1);
+	//tint.z = min(tint.z, 1);
 
 	FragColor.rgb *= tint;
     contrastAdjust(FragColor, contrastAmount);
+	
+	
+	FragColor.x = max(FragColor.x, 0);
+
+	FragColor.a = 1.0;
 
 //	FragColor.rgb = glassColor;
 

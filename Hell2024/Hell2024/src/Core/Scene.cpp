@@ -20,16 +20,23 @@ void ProcessBullets();
 
 void Scene::Update(float deltaTime) {
 
+    /*
+    glm::vec3 p1Pos = Scene::_players[0].GetViewPos();
+    glm::vec3 p2Pos = Scene::_players[1].GetViewPos();
+    glm::vec3 forward = Scene::_players[0].GetCameraForward() * glm::vec3(- 1);
 
-
+    glm::vec3 v = glm::normalize(p1Pos - p2Pos);
+    float dotProduct = glm::dot(forward, v);
+    std::cout << dotProduct << "\n";
+    */
 
     // Debug test spawn logic (respawns at same pos/rot)
-    if (Input::KeyPressed(HELL_KEY_J)) {
+    if (Input::KeyPressed(HELL_KEY_J) && false) {
         Scene::_players[0].Respawn();
         Scene::_players[1].Respawn();
     }
 
-    if (Input::KeyPressed(HELL_KEY_K)) {
+    if (Input::KeyPressed(HELL_KEY_K) && false) {
 
         if (Scene::_players[0]._isDead) {
             Scene::_players[0].Respawn();
@@ -378,6 +385,7 @@ void ProcessBullets() {
                         Player* parentPlayerHit = (Player*)physicsObjectData->parent;
                         if (!parentPlayerHit->_isDead) {
 
+                            parentPlayerHit->GiveDamageColor();
                             parentPlayerHit->_health -= 15;
                             parentPlayerHit->_health = std::max(0, parentPlayerHit->_health);
 
@@ -1173,7 +1181,7 @@ void Scene::LoadHardCodedObjects() {
     dyingGuy.SetAnimationModeToBindPose();
     dyingGuy.PlayAndLoopAnimation("DyingGuy_Death", 1.0f);
     dyingGuy.SetMaterial("Glock");
-    dyingGuy.SetPosition(glm::vec3(1.5f, 0.1f, 3));
+    dyingGuy.SetPosition(glm::vec3(1.5f, -10.1f, 3));
     dyingGuy.SetRotationX(HELL_PI * 0.5f);
     dyingGuy.SetMeshMaterial("CC_Base_Body", "UniSexGuyBody");
     dyingGuy.SetMeshMaterial("CC_Base_Eye", "UniSexGuyBody");
@@ -1796,8 +1804,10 @@ void Scene::ProcessPhysicsCollisions() {
 
         if (playedShellSound) {
 
-            if (actorA->userData == (void*)&CasingType::SHOTGUN_SHELL) {
-                Audio::PlayAudio("ShellFloorBounce.wav", Util::RandomFloat(0.2f, 0.3f));
+          //  if (actorA->userData == (void*)&CasingType::SHOTGUN_SHELL) {
+
+            if (actorA->userData == (void*)&EngineState::weaponNamePointers[SHOTGUN]) {
+                Audio::PlayAudio("ShellFloorBounce.wav", Util::RandomFloat(0.1f, 0.2f));
                 break;
             }
             else {

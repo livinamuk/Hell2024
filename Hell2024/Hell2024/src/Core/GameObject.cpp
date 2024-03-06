@@ -215,7 +215,7 @@ void GameObject::Update(float deltaTime) {
 		if (_openState == OpenState::OPENING && _openAxis != OpenAxis::ROTATION_POS_X && _openAxis != OpenAxis::ROTATION_NEG_X) {
 
 			float speed = 3.0f;
-			float maxOpenDistance = 0.25f;
+            float maxOpenDistance = 0.25f;
 
 			if (_openTransform.position.z < maxOpenDistance) {
 				_openTransform.position.z += deltaTime * speed;

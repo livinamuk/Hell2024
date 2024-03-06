@@ -472,7 +472,7 @@ void main() {
         FragColor.rgb = mix(FragColor.rgb, Tonemap_ACES(FragColor.rgb), 0.35);		
 		//FragColor.rgb = FragColor.rgb / (FragColor.rgb + vec3(1.0));
 	    FragColor.rgb = pow(FragColor.rgb, vec3(1.0/2.2)); 
-
+		
 		// Noise
         vec2 uv = gl_FragCoord.xy / vec2(screenWidth, screenHeight);
         vec2 filmRes = vec2(screenWidth, screenHeight);
@@ -551,4 +551,6 @@ void main() {
  /// FragColor.rgb = vec3(WorldPos);
 	//FragColor.rgb = baseColor.rgb;
 	//FragColor.rgb = normal.rgb;
+
+
 }
