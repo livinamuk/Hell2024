@@ -12,7 +12,8 @@ SkinnedModel::SkinnedModel()
 SkinnedModel::~SkinnedModel() {
 }
 
-void SkinnedModel::UpdateBoneTransformsFromBindPose(std::vector<glm::mat4>& Transforms, std::vector<glm::mat4>& DebugAnimatedTransforms) {
+//void SkinnedModel::UpdateBoneTransformsFromBindPose(std::vector<glm::mat4>& Transforms, std::vector<glm::mat4>& DebugAnimatedTransforms) {
+void SkinnedModel::UpdateBoneTransformsFromBindPose(AnimatedTransforms& animatedTransforms) {
     // Traverse the tree 
     for (int i = 0; i < m_joints.size(); i++)
     {
@@ -34,12 +35,14 @@ void SkinnedModel::UpdateBoneTransformsFromBindPose(std::vector<glm::mat4>& Tran
         }
     }
 
-    Transforms.resize(m_joints.size());
-    DebugAnimatedTransforms.resize(m_joints.size());
+    animatedTransforms.local.resize(m_joints.size());
+    animatedTransforms.worldspace.resize(m_joints.size());
+    animatedTransforms.names.resize(m_joints.size());
 
     for (unsigned int i = 0; i < m_NumBones; i++) {
-        Transforms[i] = m_BoneInfo[i].FinalTransformation;
-        DebugAnimatedTransforms[i] = m_BoneInfo[i].ModelSpace_AnimatedTransform;
+        animatedTransforms.local[i] = m_BoneInfo[i].FinalTransformation;
+        animatedTransforms.worldspace[i] = m_BoneInfo[i].ModelSpace_AnimatedTransform;
+        animatedTransforms.names[i] = m_BoneInfo[i].BoneName;
     }
 }
 

@@ -14,10 +14,11 @@
 #include "../Util.hpp"
 
 std::string FindParentJointName(std::string query) {
-    return query.substr(query.rfind("|") + 1);
+    std::string result = query.substr(query.rfind("|") + 1);
+    return result;
 }
 
-void Ragdoll::LoadFromJSON(std::string filename) {
+void Ragdoll::LoadFromJSON(std::string filename, PxU32 collisionGroup) {
 
     FILE* filepoint;
     errno_t err;
@@ -46,6 +47,8 @@ void Ragdoll::LoadFromJSON(std::string filename) {
             rigidComponent.ID = entity.value["id"].GetInt();
             rigidComponent.name = components["NameComponent"].GetObject()["members"].GetObject()["value"].GetString();
             rigidComponent.restMatrix = Util::Mat4FromJSONArray(components["RestComponent"].GetObject()["members"].GetObject()["matrix"].GetObject()["values"].GetArray());
+                       
+            
             rigidComponent.scaleAbsoluteVector = Util::Vec3FromJSONArray(components["ScaleComponent"].GetObject()["members"].GetObject()["absolute"].GetObject()["values"].GetArray());
             rigidComponent.capsuleRadius = components["GeometryDescriptionComponent"].GetObject()["members"].GetObject()["radius"].GetFloat();
             rigidComponent.capsuleLength = components["GeometryDescriptionComponent"].GetObject()["members"].GetObject()["length"].GetFloat();
@@ -53,13 +56,23 @@ void Ragdoll::LoadFromJSON(std::string filename) {
             rigidComponent.boxExtents = Util::Vec3FromJSONArray(components["GeometryDescriptionComponent"].GetObject()["members"].GetObject()["extents"].GetObject()["values"].GetArray());
             rigidComponent.offset = Util::Vec3FromJSONArray(components["GeometryDescriptionComponent"].GetObject()["members"].GetObject()["offset"].GetObject()["values"].GetArray());
             rigidComponent.rotation = Util::PxQuatFromJSONArray(components["GeometryDescriptionComponent"].GetObject()["members"].GetObject()["rotation"].GetObject()["values"].GetArray());
+
+            //Transform transform;
+           // transform.rotation.x = -HELL_PI * 0.5f;
+
+            PxQuat newQ = { rigidComponent.rotation.z,rigidComponent.rotation.x,rigidComponent.rotation.y,rigidComponent.rotation.w };
+           // rigidComponent.rotation = newQ;
+
             rigidComponent.mass = components["RigidComponent"].GetObject()["members"].GetObject()["mass"].GetFloat();
             rigidComponent.friction = components["RigidComponent"].GetObject()["members"].GetObject()["friction"].GetFloat();
             rigidComponent.restitution = components["RigidComponent"].GetObject()["members"].GetObject()["restitution"].GetFloat();
             rigidComponent.linearDamping = components["RigidComponent"].GetObject()["members"].GetObject()["linearDamping"].GetFloat();
             rigidComponent.angularDamping = components["RigidComponent"].GetObject()["members"].GetObject()["angularDamping"].GetFloat();
             rigidComponent.sleepThreshold = components["RigidComponent"].GetObject()["members"].GetObject()["sleepThreshold"].GetFloat();
-            rigidComponent.correspondingJointName = FindParentJointName(components["NameComponent"].GetObject()["members"].GetObject()["path"].GetString());
+
+            std::string sourceTransform = components["MarkerUIComponent"].GetObject()["members"].GetObject()["sourceTransform"].GetString();
+            sourceTransform = FindParentJointName(sourceTransform);
+            rigidComponent.correspondingJointName = sourceTransform;
 
             rigidComponent.angularMass = Util::PxVec3FromJSONArray(components["RigidComponent"].GetObject()["members"].GetObject()["angularMass"].GetObject()["values"].GetArray());
 
@@ -72,10 +85,16 @@ void Ragdoll::LoadFromJSON(std::string filename) {
             JointComponent jointComponent;
             jointComponent.name = components["NameComponent"].GetObject()["members"].GetObject()["value"].GetString();
 
+
             if (jointComponent.name.find("Absolute") != -1) {
                 continue;
             } 
-            std::cout << "\nLOADING " << jointComponent.name << "\n";
+           // std::cout << "\nLOADING " << jointComponent.name << "\n";
+
+
+          //  std::string shortestPath = components["NameComponent"].GetObject()["members"].GetObject()["shortestPath"].GetString();
+          //  std::cout << "CCCCCCCCCCCCCCCCCCCCCCCUNT     " << jointComponent.name << ": " << shortestPath << "\n";
+
 
 
             jointComponent.parentID = components["JointComponent"].GetObject()["members"].GetObject()["parent"].GetObject()["value"].GetInt();
@@ -89,6 +108,17 @@ void Ragdoll::LoadFromJSON(std::string filename) {
             jointComponent.drive_enabled = components["DriveComponent"].GetObject()["members"].GetObject()["enabled"].GetBool();
             jointComponent.target = Util::Mat4FromJSONArray(components["DriveComponent"].GetObject()["members"].GetObject()["target"].GetObject()["values"].GetArray());
 
+          /*  Transform transform;
+            transform.rotation.x = -HELL_PI * 0.5f;
+
+            glm::mat4 parentFrm = Util::PxMat44ToGlmMat4(jointComponent.parentFrame);
+            parentFrm = parentFrm * transform.to_mat4();
+            jointComponent.parentFrame = Util::GlmMat4ToPxMat44(parentFrm);
+
+            glm::mat4 childFrm = Util::PxMat44ToGlmMat4(jointComponent.childFrame);
+            childFrm = childFrm * transform.to_mat4();
+            jointComponent.childFrame = Util::GlmMat4ToPxMat44(childFrm);
+            */
 
           //  std::cout << "angularDamping\n";
            // jointComponent.limit_angularDampening = components["LimitComponent"].GetObject()["members"].GetObject()["angularDamping"].GetFloat();
@@ -126,55 +156,21 @@ void Ragdoll::LoadFromJSON(std::string filename) {
          //   std::cout << "enabled\n";
            // jointComponent.joint_enabled = components["LimitComponent"].GetObject()["members"].GetObject()["enabled"].GetBool();
 
-            _jointComponents.push_back(jointComponent);
+
+                _jointComponents.push_back(jointComponent);
         }
     }
 
     PxScene* scene = Physics::GetScene();
 
     Transform spawnTransform;
-    spawnTransform.position = glm::vec3(3, 0.1, 3);
 
-
-
-    // Fix the joint parent and child frame scales
-
-    for (JointComponent& joint : _jointComponents) {
-        joint.childFrame[3][0] *= 0.01f;
-        joint.childFrame[3][1] *= 0.01f;
-        joint.childFrame[3][2] *= 0.01f;
-        joint.parentFrame[3][0] *= 0.01f;
-        joint.parentFrame[3][1] *= 0.01f;
-        joint.parentFrame[3][2] *= 0.01f;
+    for (JointComponent& joint : _jointComponents)  {
+        joint.name = joint.name.substr(8);
+        joint.name = joint.name.substr(0, joint.name.size() - 8);
     }
 
-
-
-    for (RigidComponent& rigid : _rigidComponents)
-    {
-        // Remove the rMarker_ from every rigid name
-        rigid.name = rigid.name.substr(8);
-
-
-        // Scale the rigids cause they are fucked right now
-        rigid.scaleAbsoluteVector *= 0.01f;
-
-       // std::cout << "\n" << rigid.name << "\n";
-       // std::cout << Util::Mat4ToString(rigid.restMatrix) << "\n";
-
-        rigid.restMatrix[3][0] *= 0.01f;
-        rigid.restMatrix[3][1] *= 0.01f;
-        rigid.restMatrix[3][2] *= 0.01f;
-
-     //   Transform transform;
-     //   transform.scale = glm::vec3(0.01f);
-     //   rigid.restMatrix = transform.to_mat4() * rigid.restMatrix;
-
-        rigid.offset.x *= 0.01f;
-        rigid.offset.y *= 0.01f;
-        rigid.offset.z *= 0.01f;
-
-
+    for (RigidComponent& rigid : _rigidComponents) {
         // Skip the scene rigid (it's outputted in the JSON export)
         if (rigid.name == "rSceneShape")
             continue;
@@ -240,16 +236,17 @@ void Ragdoll::LoadFromJSON(std::string filename) {
         rigid.pxRigidBody->getShapes(&shape, 1);
         shape->setLocalPose(offsetTranslation.transform(offsetRotation));
 
-        if (rigid.correspondingJointName == "mixamorig:Head" ||
-            rigid.correspondingJointName == "mixamorig:Neck")
-        {
+        if (rigid.name == "rMarker_CC_Base_FacialBone") {
             rigid.pxRigidBody->setName("RAGDOLL_HEAD");
+        }
+        if (rigid.name == "rMarker_CC_Base_NeckTwist01") {
+            rigid.pxRigidBody->setName("RAGDOLL_NECK");
         }
 
         PxRigidBodyExt::setMassAndUpdateInertia(*rigid.pxRigidBody, rigid.mass);
 
         PxFilterData filterData;
-        filterData.word0 = RaycastGroup::RAYCAST_ENABLED;
+        filterData.word0 = collisionGroup;// RaycastGroup::RAYCAST_ENABLED& RaycastGroup::PLAYER_1_RAGDOLL;
         filterData.word1 = CollisionGroup::GENERIC_BOUNCEABLE;
         filterData.word2 = CollisionGroup::ENVIROMENT_OBSTACLE;
         shape->setQueryFilterData(filterData);
@@ -267,7 +264,7 @@ void Ragdoll::LoadFromJSON(std::string filename) {
 
     std::cout << "\nRIGID IDS\n";
     for (RigidComponent& rigid : _rigidComponents) {
-        std::cout << rigid.name << " ID: " << rigid.ID << "\n";
+        std::cout << rigid.name << " ID: " << rigid.ID << "     " << rigid.correspondingJointName << "\n";
     }
 
     std::cout << "\nJOINT IDS\n";
@@ -436,4 +433,15 @@ void Ragdoll::LoadFromJSON(std::string filename) {
             }
         }
     }
+}
+
+RigidComponent* Ragdoll::GetRigidByName(std::string& name) {
+    //std::cout << "m_rigidComponents size: " << m_rigidComponents.size() << "\n";
+    for (RigidComponent& rigidComponent : _rigidComponents) {
+        //std::cout << "rigidComponent: " << rigidComponent.correspondingJointName << "\n";
+        if (rigidComponent.correspondingJointName == name) {
+            return &rigidComponent;
+        }
+    }
+    return nullptr;
 }

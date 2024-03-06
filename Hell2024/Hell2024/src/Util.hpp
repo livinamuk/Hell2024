@@ -136,13 +136,9 @@ namespace Util {
 		return ray_wor;
     }
 
-    inline PhysXRayResult CastPhysXRay(glm::vec3 rayOrigin, glm::vec3 rayDirection, float rayLength, bool gizmoLand = false) {
+    inline PhysXRayResult CastPhysXRay(glm::vec3 rayOrigin, glm::vec3 rayDirection, float rayLength, PxU32 collisionFlags) {
 
         PxScene* scene = Physics::GetScene();
-
-        if (gizmoLand) {
-            scene = Physics::GetEditorScene();
-        }
 
         PxVec3 origin = PxVec3(rayOrigin.x, rayOrigin.y, rayOrigin.z);
         PxVec3 unitDir = PxVec3(rayDirection.x, rayDirection.y, rayDirection.z);
@@ -152,7 +148,7 @@ namespace Util {
         const PxHitFlags outputFlags = PxHitFlag::ePOSITION | PxHitFlag::eNORMAL;
         // Only ray cast against objects with the GROUP_RAYCAST flag
         PxQueryFilterData filterData = PxQueryFilterData();
-        filterData.data.word0 = RaycastGroup::RAYCAST_ENABLED;
+        filterData.data.word0 = collisionFlags;
 
         // Defaults
         PhysXRayResult result;
@@ -334,6 +330,9 @@ namespace Util {
 
     inline std::string Vec3ToString(glm::vec3 v) {
         return std::string("(" + std::format("{:.2f}", v.x) + ", " + std::format("{:.2f}", v.y) + ", " + std::format("{:.2f}", v.z) + ")");
+    }
+    inline std::string Vec3ToString10(glm::vec3 v) {
+        return std::string("(" + std::format("{:.10f}", v.x) + ", " + std::format("{:.10f}", v.y) + ", " + std::format("{:.10f}", v.z) + ")");
     }
 
     inline std::string QuatToString(glm::quat q) {

@@ -176,6 +176,8 @@ std::vector<glm::mat4> _aks74uMatrices;
 
 PxRigidStatic* selectedPhysXObject = nullptr;
 
+glm::vec3 debugBonePosition = glm::vec3(-1, -1, -1);
+
 
 enum RenderMode { COMPOSITE, DIRECT_LIGHT, INDIRECT_LIGHT, POINT_CLOUD, MODE_COUNT } _mode;
 enum DebugLineRenderMode { 
@@ -502,6 +504,43 @@ void GlassPass(Player* player) {
 
 
 	_shaders.glassComposite.Use();
+
+    glm::vec3 colorTint = glm::vec3(1, 1, 1);
+    float contrastAmount = 1;
+
+
+    if (player->_isOutside) {
+        colorTint = RED;
+        colorTint.g = player->_outsideDamageAudioTimer;
+        colorTint.b = player->_outsideDamageAudioTimer;
+
+    }
+
+    if (player->_isDead) {
+
+        // Make it red
+        if (player->_timeSinceDeath > 0) {
+            colorTint.g *= 0.25f;
+            colorTint.b *= 0.25f;
+            contrastAmount = 1.2f;
+        }
+        // Darken it after 3 seconds
+        float waitTime = 3;
+        if (player->_timeSinceDeath > waitTime) {
+            float val = (player->_timeSinceDeath - waitTime) * 10;
+            colorTint.r -= val;
+        }
+    }
+    else {
+
+    }
+
+    _shaders.glassComposite.SetVec3("screenTint", colorTint);
+    _shaders.glassComposite.SetFloat("contrastAmount", contrastAmount);
+
+
+
+    
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, gBuffer._gLightingTexture);
 	glActiveTexture(GL_TEXTURE1);
@@ -998,13 +1037,19 @@ void Renderer::RenderFrame(Player* player) {
     presentFrameBuffer.Bind();
     glDrawBuffer(GL_COLOR_ATTACHMENT1);
 
-
-
-    std::string texture = "CrosshairDot";
-    if (player->CursorShouldBeInterect()) {
-        texture = "CrosshairSquare";
+    // Crosshair
+    if (!player->_isDead) {     
+        std::string texture = "CrosshairDot";
+        if (player->CursorShouldBeInterect()) {
+            texture = "CrosshairSquare";
+        }
+        QueueUIForRendering(texture, presentFrameBuffer.GetWidth() / 2, presentFrameBuffer.GetHeight() / 2, true, WHITE);
     }
-    QueueUIForRendering(texture, presentFrameBuffer.GetWidth() / 2, presentFrameBuffer.GetHeight() / 2, true, WHITE);
+
+
+    if (player->_isDead && player->_timeSinceDeath > 3.25f) {
+        QueueUIForRendering("PressStart", presentFrameBuffer.GetWidth() / 2, presentFrameBuffer.GetHeight() / 2, true, WHITE);
+    }
 
     /*if (Scene::_cameraRayData.found) {
         if (Scene::_cameraRayData.raycastObjectType == RaycastObjectType::WALLS) {
@@ -1066,7 +1111,19 @@ void Renderer::RenderFrame(Player* player) {
 
     
     TextBlitter::_debugTextToBilt = "Health: " + std::to_string(player->_health);
-    TextBlitter::_debugTextToBilt += "\nKills: 0";
+    TextBlitter::_debugTextToBilt += "\nKills: " + std::to_string(player->_killCount);
+    
+    TextBlitter::_debugTextToBilt += "\n"; 
+
+
+  //  TextBlitter::_debugTextToBilt = "AnimationMode: " + std::to_string(player->_characterModel._animationMode);
+
+    /*
+    AnimatedGameObject* player1model = &Scene::_players[0]._characterModel;
+    TextBlitter::_debugTextToBilt += "\nSkipped index count: " + std::to_string(player1model->_skippedMeshIndices.size());
+    for (auto& index : player1model->_skippedMeshIndices) {
+        TextBlitter::_debugTextToBilt += "\nSkipping: " + std::to_string(index) + ": " + player1model->_skinnedModel->m_meshEntries[index].Name;
+    }*/
     
 
     if (EngineState::GetViewportMode() == FULLSCREEN) {
@@ -1498,7 +1555,8 @@ void DrawHud(Player* player) {
 	int Player::GetCurrentWeaponTotalAmmo() {
     */
 
-    if (player->GetCurrentWeaponIndex() == Weapon::KNIFE) {
+    if (player->GetCurrentWeaponIndex() == Weapon::KNIFE ||
+        player->_isDead) {
         return;
     }
 
@@ -1770,43 +1828,49 @@ void DebugPass(Player* player) {
     glm::vec3 testPoint = Util::GetTranslationFromMatrix(magWorldMatrix);
     debugPoints.push_back(testPoint);*/
 
-    AnimatedGameObject* nurseGuy = Scene::GetAnimatedGameObjectByName("NURSEGUY");
+
+
+    /*
     AnimatedGameObject* unisexGuy = Scene::GetAnimatedGameObjectByName("UNISEXGUY");
+    if (unisexGuy) {
+        for (glm::mat4& transform : unisexGuy->_animatedTransforms.worldspace) {
+            glm::vec3 point = unisexGuy->_transform.to_mat4() * transform * glm::vec4(0, 0, 0, 1.0);
+            //debugPoints.push_back(point);
+        }
+        for (auto& pos : debugPoints) {
+            Point point;
+            point.pos = pos;
+            point.color = YELLOW;
+            Renderer::QueuePointForDrawing(point);
+        }
+        glDisable(GL_DEPTH_TEST);
+        glDisable(GL_CULL_FACE);
+        RenderImmediate();
+        debugPoints.clear();
+    }*/
 
-    nurseGuy->UpdateBoneTransformsFromBindPose();
+
+    /*
+    Point point;
+    point.pos = debugBonePosition;
+    point.color = YELLOW;
+    Renderer::QueuePointForDrawing(point);
+    glDisable(GL_DEPTH_TEST);
+    glDisable(GL_CULL_FACE);
+    RenderImmediate();
+    debugPoints.clear();
+    */
+
+    /*
     unisexGuy->UpdateBoneTransformsFromBindPose();
-
-    for (glm::mat4& transform : nurseGuy->_debugTransformsB) {
-        glm::vec3 point = nurseGuy->_transform.to_mat4() * transform * glm::vec4(0, 0, 0, 1.0);
-        debugPoints.push_back(point);
-    }
-    for (glm::mat4& transform : unisexGuy->_debugTransformsB) {
+    for (glm::mat4& transform : unisexGuy->_animatedTransforms.worldspace) {
         glm::vec3 point = unisexGuy->_transform.to_mat4() * transform * glm::vec4(0, 0, 0, 1.0);
-        debugPoints.push_back(point);
-    }
-
-    for (glm::mat4& transform : nurseGuy->_animatedTransforms.worldspace) {
-
-      //  glm::vec3 point = nurseGuy->_transform.to_mat4() * transform * glm::vec4(0, 0, 0, 1.0);
-        // std::cout << Util::Mat4ToString(transform) << "\n";
       //  debugPoints.push_back(point);
     }
 
-
-
-
-
-    Player* player1 = &Scene::_players[0];
-    if (player1->GetCurrentWeaponIndex() == SHOTGUN) {
-        glm::vec3 point = player1->GetFirstPersonWeapon().GetShotgunBarrelPosition();
-    //    debugPoints.push_back(point);
-    }
-
-    /*for (Window& window : Scene::_windows) {
-        debugPoints.push_back(window.GetWorldSpaceCenter());
-    }
-    for (Door& door: Scene::_doors) {
-        debugPoints.push_back(door.GetWorldDoorWayCenter());
+    for (glm::mat4& transform : unisexGuy->_debugTransformsB) {
+        glm::vec3 point = unisexGuy->_transform.to_mat4() * transform * glm::vec4(0, 0, 0, 1.0);
+       // debugPoints.push_back(point);
     }*/
 
    // AnimatedGameObject* animatedGameObject = Scene::GetAnimatedGameObjectByName("ShotgunTest");
@@ -1821,6 +1885,26 @@ void DebugPass(Player* player) {
 
 
     }*/ 
+
+    /*
+    AnimatedGameObject* unisexGuy = &Scene::_players[1]._characterModel;
+    if (unisexGuy) {
+        for (glm::mat4& transform : unisexGuy->_animatedTransforms.worldspace) {
+            glm::vec3 point = unisexGuy->_transform.to_mat4() * transform * glm::vec4(0, 0, 0, 1.0);
+            debugPoints.push_back(point);
+        }
+        for (auto& pos : debugPoints) {
+            Point point;
+            point.pos = pos;
+            point.color = YELLOW;
+            Renderer::QueuePointForDrawing(point);
+        }
+        glDisable(GL_DEPTH_TEST);
+        glDisable(GL_CULL_FACE);
+        RenderImmediate();
+        debugPoints.clear();
+    }*/
+
 
     // BROKEN!!!
     for (GameObject& gameObject : Scene::_gameObjects) {
@@ -1848,6 +1932,7 @@ void DebugPass(Player* player) {
     glDisable(GL_CULL_FACE);
     RenderImmediate();
     debugPoints.clear();
+
 
 
     //////////////////////////////////////////////////////////////////////////////////////////////
@@ -2266,7 +2351,7 @@ void DrawScene(Shader& shader) {
 	}
 
     // This is a hack. Fix this.
-    AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("Glock"));
+    /*AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("Glock"));
     for (auto& matrix : _glockMatrices) {
         shader.SetMat4("model", matrix);
         AssetManager::GetModel("Glock_Isolated")->Draw();
@@ -2274,7 +2359,7 @@ void DrawScene(Shader& shader) {
     for (auto& matrix : _aks74uMatrices) {
         shader.SetMat4("model", matrix);
         AssetManager::GetModel("AKS74U_Isolated")->Draw();
-    }
+    }*/
 
     shader.SetBool("sampleEmissive", true);
 	// Light bulbs
@@ -2289,7 +2374,8 @@ void DrawScene(Shader& shader) {
             AssetManager::GetModel("Light0_Bulb")->Draw();
 
             // Find mount position
-            PhysXRayResult rayResult = Util::CastPhysXRay(light.position, glm::vec3(0, 1, 0), 2);
+            PxU32 raycastFlags = RaycastGroup::RAYCAST_ENABLED;
+            PhysXRayResult rayResult = Util::CastPhysXRay(light.position, glm::vec3(0, 1, 0), 2, raycastFlags);
             if (rayResult.hitFound) {
                 Transform mountTransform;
                 mountTransform.position = rayResult.hitPosition;
@@ -2318,6 +2404,7 @@ void DrawAnimatedObject(Shader& shader, AnimatedGameObject* animatedGameObject) 
 
     if (!animatedGameObject) {
         std::cout << "You tried to draw an nullptr AnimatedGameObject\n";
+        std::cout << "You tried to draw an nullptr AnimatedGameObject\n";
         return;
     }
     if (!animatedGameObject->_skinnedModel) {
@@ -2325,69 +2412,29 @@ void DrawAnimatedObject(Shader& shader, AnimatedGameObject* animatedGameObject) 
         return;
     }
 
-
-    if (animatedGameObject->GetName() == "TESTGUY2") {
-
-        for (int i = 0; i < animatedGameObject->_animatedTransforms.names.size(); i++) {
-
-            std::string boneName = animatedGameObject->_animatedTransforms.names[i];
-
-
-            Ragdoll& ragdoll = Scene::_players[0]._ragdoll;
-
-            for (RigidComponent& rigid : ragdoll._rigidComponents) {
-
-                if (boneName == rigid.name) {
-
-                    glm::mat4 rigidMatrix = Util::PxMat44ToGlmMat4(rigid.pxRigidBody->getGlobalPose());
-
-                 
-
-                    //std::cout << "\n" << boneName << "\n";
-                    //std::cout << Util::Mat4ToString(rigidMatrix) << "\n";
-
-                   // otherPlayer._characterModel._skinnedModel->
-                    SkinnedModel* skinnedModel = animatedGameObject->_skinnedModel;
-
-                    unsigned int BoneIndex = skinnedModel->m_BoneMapping[boneName];
-
-                    glm::mat4 boneOffset = skinnedModel->m_BoneInfo[BoneIndex].BoneOffset;
-
-                    animatedGameObject->_animatedTransforms.local[i] = rigidMatrix * boneOffset;
-
-                    // Transform transform;
-                    // transform.scale = glm::vec3(0.01f);
-                    animatedGameObject->_transform.position = glm::vec3(0);
-                    animatedGameObject->_transform.rotation = glm::vec3(0);
-                    animatedGameObject->_transform.scale = glm::vec3(0.1f);
-
-                }
-
-            }
-
-            //otherPlayer._characterModel._animatedTransforms
-
-        }
-        //
-
+    // Dont draw dead guy if nobody is dead
+    if (animatedGameObject->GetName() == "DyingGuy" && !Scene::_players[0]._isDead && !Scene::_players[1]._isDead) {
+        return;
     }
 
 
+    /*
+    if (animatedGameObject->GetName() == "UNISEXGUY") {
+        if (Input::KeyPressed(HELL_KEY_L)) {
 
+            std::cout << "\nBONE NAMES\n";
+            for (int i = 0; i < animatedGameObject->_animatedTransforms.names.size(); i++) {
+                std::string boneName = animatedGameObject->_animatedTransforms.names[i];
+                std::cout << " " << boneName << "\n";
+            }
 
-
-
-
-
-    
-
-
-
-
-
-
-
-
+            std::cout << "\nMESH NAMES\n";
+            for (int i = 0; i < animatedGameObject->_skinnedModel->m_meshEntries.size(); i++) {
+                std::string name = animatedGameObject->_skinnedModel->m_meshEntries[i].Name;
+                std::cout << i <<  ": " << name << "\n";
+            }
+        }
+    }*/
 
 
 
@@ -2399,7 +2446,14 @@ void DrawAnimatedObject(Shader& shader, AnimatedGameObject* animatedGameObject) 
         shader.SetMat4("skinningMats[" + std::to_string(i) + "]", matrix);
         tempSkinningMats.push_back(matrix);
     }
-    shader.SetMat4("model", animatedGameObject->GetModelMatrix());
+
+    if (animatedGameObject->_hasRagdoll && animatedGameObject->_animationMode == AnimatedGameObject::AnimationMode::RAGDOLL) {
+        shader.SetMat4("model", glm::mat4(1));
+    }
+    else {
+        shader.SetMat4("model", animatedGameObject->GetModelMatrix());
+    }
+
 
     /*
     if (animatedGameObject->GetName() == "Glock") {
@@ -2443,6 +2497,20 @@ void DrawAnimatedObject(Shader& shader, AnimatedGameObject* animatedGameObject) 
     SkinnedModel& skinnedModel = *animatedGameObject->_skinnedModel;
     glBindVertexArray(skinnedModel.m_VAO);
     for (int i = 0; i < skinnedModel.m_meshEntries.size(); i++) {
+
+       // std::cout << "idnex: " << animatedGameObject->_skippedMeshIndices[0] << "\n";
+
+        bool skipMesh = false;
+        for (int j = 0; j < animatedGameObject->_skippedMeshIndices.size(); j++) {
+            if (i == animatedGameObject->_skippedMeshIndices[j]) {
+                skipMesh = true;
+            }
+        }
+        if (skipMesh) {
+            continue;
+        }
+
+
         AssetManager::BindMaterialByIndex(animatedGameObject->_materialIndices[i]);
 
         if (maleHands) {
@@ -2465,10 +2533,25 @@ void DrawAnimatedObject(Shader& shader, AnimatedGameObject* animatedGameObject) 
 
 void DrawAnimatedScene(Shader& shader, Player* player) {
 
+    // Hack to hide the dead guy model if the current player is dead
+    // otherwise it's possible to see it on screen
+    // because the player cam when dead is pinned to the ragdoll head
+    // and not the head of the dying guy animation
+    AnimatedGameObject* dyingGuy = Scene::GetAnimatedGameObjectByName("DyingGuy");
+    if (dyingGuy) {
+        if (player->_isDead) {
+            dyingGuy->SetScale(0.001f);
+        }
+        else {
+            dyingGuy->SetScale(1.000f);
+        }
+    }
+
     // This is a temporary hack so multiple animated game objects can have glocks which are queued to be rendered later by DrawScene()
     _glockMatrices.clear();
     _aks74uMatrices.clear();
 
+    /*
     for (Player& otherPlayer : Scene::_players) {
         if (&otherPlayer != player) {
             for (int i = 0; i < otherPlayer._characterModel._animatedTransforms.worldspace.size(); i++) {
@@ -2484,7 +2567,7 @@ void DrawAnimatedScene(Shader& shader, Player* player) {
                 }
             }
         }
-    }
+    }*/
 
     shader.Use();
     shader.SetBool("isAnimated", true);
@@ -2492,9 +2575,27 @@ void DrawAnimatedScene(Shader& shader, Player* player) {
 
     // Render other players
     for (Player& otherPlayer : Scene::_players) {
-        if (&otherPlayer != player) {
+        if (&otherPlayer != player && !otherPlayer._isDead) {
             DrawAnimatedObject(shader, &otherPlayer._characterModel);
         }
+
+
+
+        if (Input::KeyPressed(HELL_KEY_L)) {
+
+            std::cout << "\nBONE TRANSFORMS\n";
+            for (int i = 0; i < otherPlayer._characterModel._animatedTransforms.names.size(); i++) {
+
+                glm::mat4 matrix = otherPlayer._characterModel._animatedTransforms.worldspace[i];
+                std::string& name = otherPlayer._characterModel._animatedTransforms.names[i];
+
+                std::cout << i << ": " << name << "\n";
+               // std::cout << Util::Mat4ToString(matrix) << "\n";
+
+            }
+
+        }
+
     }
 
     shader.SetMat4("model", glm::mat4(1));
@@ -2504,7 +2605,7 @@ void DrawAnimatedScene(Shader& shader, Player* player) {
     }
 
     // Render player weapon
-    if (EngineState::GetEngineMode() == GAME) {
+    if (EngineState::GetEngineMode() == GAME && !player->_isDead) {
         glDisable(GL_CULL_FACE);
         shader.SetFloat("projectionMatrixIndex", 1.0f);
         shader.SetMat4("projection", player->GetProjectionMatrix()); // 1.0 for weapon, 0.9 for scene.

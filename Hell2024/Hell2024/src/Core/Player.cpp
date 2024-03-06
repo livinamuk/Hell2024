@@ -41,16 +41,48 @@ Player::Player() {
 
 Player::Player(glm::vec3 position, glm::vec3 rotation) {
 
-	Respawn(position, rotation);
+    Respawn();
 
-	_characterModel.SetSkinnedModel("UniSexGuy2");
-	_characterModel.SetMeshMaterial("CC_Base_Body", "UniSexGuyBody");
-	_characterModel.SetMeshMaterial("CC_Base_Eye", "UniSexGuyBody");
-	_characterModel.SetMeshMaterial("Biker_Jeans", "UniSexGuyJeans");
-	_characterModel.SetMeshMaterial("CC_Base_Eye", "UniSexGuyEyes");
-	_characterModel.SetMeshMaterialByIndex(1, "UniSexGuyHead");
-	_characterModel.SetScale(0.01f);
-	_characterModel.SetRotationX(HELL_PI / 2);
+    //position, rotation
+    
+    /*
+    bool needsRespawn = true;
+
+    while (needsRespawn) {
+        needsRespawn = false;
+        Respawn(position, rotation);
+        for (auto& otherPlayer : Scene::_players) {
+            if (this != &otherPlayer) {
+                if (abs(position.x - otherPlayer._position.x < 1) && abs(position.y - otherPlayer._position.y < 1) && abs(position.z - otherPlayer._position.z < 1)) {
+                    needsRespawn = true;
+                    break;
+                }
+            }
+        }
+    }*/
+
+
+	_characterModel.SetSkinnedModel("UniSexGuyScaled");
+    _characterModel.SetMeshMaterial("CC_Base_Body", "UniSexGuyBody");
+    _characterModel.SetMeshMaterial("CC_Base_Eye", "UniSexGuyBody");
+    _characterModel.SetMeshMaterial("Biker_Jeans", "UniSexGuyJeans");
+    _characterModel.SetMeshMaterial("CC_Base_Eye", "UniSexGuyEyes");
+    _characterModel.SetMeshMaterial("Glock", "Glock");
+    _characterModel.SetMeshMaterial("SM_Knife_01", "Knife");
+    _characterModel.SetMeshMaterial("Shotgun_Mesh", "Shotgun");
+    _characterModel.SetMeshMaterialByIndex(13, "UniSexGuyHead");
+    _characterModel.SetMeshMaterial("FrontSight_low", "AKS74U_0");
+    _characterModel.SetMeshMaterial("Receiver_low", "AKS74U_1");
+    _characterModel.SetMeshMaterial("BoltCarrier_low", "AKS74U_1");
+    _characterModel.SetMeshMaterial("SafetySwitch_low", "AKS74U_0");
+    _characterModel.SetMeshMaterial("MagRelease_low", "AKS74U_0");
+    _characterModel.SetMeshMaterial("Pistol_low", "AKS74U_2");
+    _characterModel.SetMeshMaterial("Trigger_low", "AKS74U_1");
+    _characterModel.SetMeshMaterial("Magazine_Housing_low", "AKS74U_3");
+    _characterModel.SetMeshMaterial("BarrelTip_low", "AKS74U_4");
+
+	//_characterModel.SetScale(0.01f);
+	//_characterModel.SetRotationX(HELL_PI / 2);
 
 	_shadowMap.Init();
 
@@ -239,21 +271,56 @@ void Player::CheckForItemPickOverlaps() {
 
 void Player::Update(float deltaTime) {
 
+    // Death timer
+    if (_isDead) {
+        _timeSinceDeath += deltaTime;
+    }
+    else {
+        _timeSinceDeath = 0;
+    }
+
+    // Pressed Respawn
+    if (_isDead && _timeSinceDeath > 3.25) {
+        if (PressedFire() ||
+            PressedReload() ||
+            PressedCrouch() ||
+            PressedInteract() ||
+            PressedJump() ||
+            PressedNextWeapon()
+            ) {
+            Respawn();
+            Audio::PlayAudio("RE_Beep.wav", 0.75);
+        }
+    }
+
+    // Ragdoll rigid userdata
+    for (RigidComponent& rigid : _characterModel._ragdoll._rigidComponents) {
+        PhysicsObjectData* physicsObjectData = (PhysicsObjectData*)rigid.pxRigidBody->userData;
+        physicsObjectData->parent = this;
+    }
+
     // Take damage outside
-    bool outside = true;
+    _isOutside = true;
     for (Floor& floor : Scene::_floors) {
         if (floor.PointIsAboveThisFloor(_position)) {
-            outside = false;
+            _isOutside = false;
             break;
         }
     }
-    if (outside) {
+    if (_isOutside) {
         _outsideDamageTimer += deltaTime;
+        _outsideDamageAudioTimer += deltaTime;
     }
-    if (_outsideDamageTimer > 0.25) {
-        _health -= 4;
-        _outsideDamageTimer = 0;
-        //Audio::PlayAudio("Pain.wav", 1.0f);
+    else {
+        _outsideDamageAudioTimer = 0.84f;
+    }
+    if (_outsideDamageAudioTimer > 0.85f) {
+        _outsideDamageAudioTimer = 0.0f;
+        Audio::PlayAudio("Pain.wav", 1.0f);
+    }
+    if (_outsideDamageTimer > 0.15f) {
+        _outsideDamageTimer = 0.0f;
+        _health -= 1;
     }
 
 	CheckForItemPickOverlaps();
@@ -328,7 +395,22 @@ void Player::Update(float deltaTime) {
 	Transform camTransform;
 	camTransform.position = _position + glm::vec3(0, _currentViewHeight, 0);
 	camTransform.rotation = _rotation;
-	_viewMatrix = glm::inverse(headBobTransform.to_mat4() * breatheTransform.to_mat4() * camTransform.to_mat4());
+
+    if (!_isDead) {
+        _viewMatrix = glm::inverse(headBobTransform.to_mat4() * breatheTransform.to_mat4() * camTransform.to_mat4());
+    }
+    // Kill cam
+    else {
+
+        for (RigidComponent& rigidComponent : _characterModel._ragdoll._rigidComponents) {
+            if (rigidComponent.name == "rMarker_CC_Base_FacialBone") {
+                PxMat44 globalPose = rigidComponent.pxRigidBody->getGlobalPose();
+                _viewMatrix = glm::inverse(Util::PxMat44ToGlmMat4(globalPose));
+                break;
+            }
+        }
+    }
+
 	_inverseViewMatrix = glm::inverse(_viewMatrix);
 	_right = glm::vec3(_inverseViewMatrix[0]);
 	_up = glm::vec3(_inverseViewMatrix[1]);
@@ -442,36 +524,75 @@ void Player::Update(float deltaTime) {
 
 	// Interact
 	if (!_ignoreControl) {
-		_cameraRayResult = Util::CastPhysXRay(GetViewPos(), GetCameraForward() * glm::vec3(-1), 100);
+        //PxU32 raycastFlags = RaycastGroup::RAYCAST_ENABLED | ~RaycastGroup::PLAYER_1_RAGDOLL | ~RaycastGroup::PLAYER_2_RAGDOLL;
+        //_cameraRayResult = Util::CastPhysXRay(GetViewPos(), GetCameraForward() * glm::vec3(-1), 100, raycastFlags);
+        _cameraRayResult = Util::CastPhysXRay(GetViewPos(), GetCameraForward() * glm::vec3(-1), 100, _interactFlags);
 		Interact();
 	}
 
-	// Character model animation
-	if (_currentWeaponIndex == GLOCK) {
-		if (_isMoving) {
-			_characterModel.PlayAndLoopAnimation("Character_Glock_Walk", 1.0f);
-		}
-		else {
-			_characterModel.PlayAndLoopAnimation("Character_Glock_Idle", 1.0f);
-		}
-		if (crouching) {
-			_characterModel.PlayAndLoopAnimation("Character_Glock_Kneel", 1.0f);
-		}
-	}
-	if (_currentWeaponIndex == AKS74U) {
-		if (_isMoving) {
-			_characterModel.PlayAndLoopAnimation("Character_AKS74U_Walk", 1.0f);
-		}
-        else {
-            _characterModel.PlayAndLoopAnimation("Character_AKS74U_Idle", 1.0f);
-		}
-		if (crouching) {
-			_characterModel.PlayAndLoopAnimation("Character_AKS74U_Kneel", 1.0f);
-		}
-	}
-	_characterModel.SetPosition(GetFeetPosition());// +glm::vec3(0.0f, 0.1f, 0.0f));
-	_characterModel.Update(deltaTime);
-	_characterModel.SetRotationY(_rotation.y + HELL_PI);
+    // Character model animation
+    if (!_isDead) {
+        if (_currentWeaponIndex == KNIFE) {
+            if (_isMoving) {
+                _characterModel.PlayAndLoopAnimation("UnisexGuy_Knife_Walk", 1.0f);
+            }
+            else {
+                _characterModel.PlayAndLoopAnimation("UnisexGuy_Knife_Idle", 1.0f);
+            }
+            if (crouching) {
+                _characterModel.PlayAndLoopAnimation("UnisexGuy_Knife_Crouch", 1.0f);
+            }
+        }
+        if (_currentWeaponIndex == GLOCK) {
+            if (_isMoving) {
+                _characterModel.PlayAndLoopAnimation("UnisexGuy_Glock_Walk", 1.0f);
+            }
+            else {
+                _characterModel.PlayAndLoopAnimation("UnisexGuy_Glock_Idle", 1.0f);
+            }
+            if (crouching) {
+                _characterModel.PlayAndLoopAnimation("UnisexGuy_Glock_Crouch", 1.0f);
+            }
+        }
+        if (_currentWeaponIndex == AKS74U) {
+            if (_isMoving) {
+                _characterModel.PlayAndLoopAnimation("UnisexGuy_AKS74U_Walk", 1.0f);
+            }
+            else {
+                _characterModel.PlayAndLoopAnimation("UnisexGuy_AKS74U_Idle", 1.0f);
+            }
+            if (crouching) {
+                _characterModel.PlayAndLoopAnimation("UnisexGuy_AKS74U_Crouch", 1.0f);
+            }
+        }
+        if (_currentWeaponIndex == SHOTGUN) {
+            if (_isMoving) {
+                _characterModel.PlayAndLoopAnimation("UnisexGuy_Shotgun_Walk", 1.0f);
+            }
+            else {
+                _characterModel.PlayAndLoopAnimation("UnisexGuy_Shotgun_Idle", 1.0f);
+            }
+            if (crouching) {
+                _characterModel.PlayAndLoopAnimation("UnisexGuy_Shotgun_Crouch", 1.0f);
+            }
+        }
+        _characterModel.SetPosition(GetFeetPosition());// +glm::vec3(0.0f, 0.1f, 0.0f));
+        _characterModel.Update(deltaTime);
+        _characterModel.SetRotationY(_rotation.y + HELL_PI);
+    }
+    else {
+        // THIS IS WHERE YOU SKIN THE MESH TO THE RAGDOLL BUT IT IS CURRENTLY BROKEN
+        // THIS IS WHERE YOU SKIN THE MESH TO THE RAGDOLL BUT IT IS CURRENTLY BROKEN
+        // THIS IS WHERE YOU SKIN THE MESH TO THE RAGDOLL BUT IT IS CURRENTLY BROKEN
+        // THIS IS WHERE YOU SKIN THE MESH TO THE RAGDOLL BUT IT IS CURRENTLY BROKEN
+        // THIS IS WHERE YOU SKIN THE MESH TO THE RAGDOLL BUT IT IS CURRENTLY BROKEN
+        // THIS IS WHERE YOU SKIN THE MESH TO THE RAGDOLL BUT IT IS CURRENTLY BROKEN
+        // THIS IS WHERE YOU SKIN THE MESH TO THE RAGDOLL BUT IT IS CURRENTLY BROKEN
+        // THIS IS WHERE YOU SKIN THE MESH TO THE RAGDOLL BUT IT IS CURRENTLY BROKEN
+        // THIS IS WHERE YOU SKIN THE MESH TO THE RAGDOLL BUT IT IS CURRENTLY BROKEN
+        // 
+        //_characterModel.UpdateBoneTransformsFromRagdoll();
+    }
 
 	// Debug casing spawn
 	/*if (!_ignoreControl) {
@@ -594,12 +715,30 @@ void Player::Interact() {
 			if (gameObject && !gameObject->IsInteractable()) {
 				return;
 			}
-			gameObject->Interact();
+            if (gameObject) {
+                gameObject->Interact();
+            }
 		}
 	}
 }
 
-void Player::Respawn(glm::vec3 position, glm::vec3 rotation) {
+void Player::Respawn() {
+
+    _isDead = false;
+
+    int index = Util::RandomInt(0, Scene::_spawnPoints.size() - 1);
+    SpawnPoint& spawnPoint = Scene::_spawnPoints[index];
+
+    // Check you didn't just spawn on another player
+    for (auto& otherPlayer : Scene::_players) {
+        if (this != &otherPlayer) {
+            float distanceToOtherPlayer = glm::distance(spawnPoint.position, otherPlayer._position);
+            if (distanceToOtherPlayer < 1.0f) {
+                Respawn();
+                return;
+            }
+        }
+    }
 
 	if (_weaponInventory.empty()) {
 		_weaponInventory.resize(Weapon::WEAPON_COUNT);
@@ -619,12 +758,12 @@ void Player::Respawn(glm::vec3 position, glm::vec3 rotation) {
 	_weaponAction = SPAWNING;
 
     if (_characterController) {
-        PxExtendedVec3 globalPose = PxExtendedVec3(position.x, position.y, position.z);
+        PxExtendedVec3 globalPose = PxExtendedVec3(spawnPoint.position.x, spawnPoint.position.y, spawnPoint.position.z);
         _characterController->setFootPosition(globalPose);
     }
-    _position = position;
+    _position = spawnPoint.position;
 
-	_rotation = rotation;
+	_rotation = spawnPoint.rotation;
 	_inventory.glockAmmo.clip = GLOCK_CLIP_SIZE;
     _inventory.glockAmmo.total = 20;
     _inventory.aks74uAmmo.clip = 0;
@@ -639,7 +778,11 @@ void Player::Respawn(glm::vec3 position, glm::vec3 rotation) {
 	_firstPersonWeapon.SetMeshMaterial("manniquen1_2", "Hands");
 	_firstPersonWeapon.SetMeshMaterial("SK_FPSArms_Female.001", "FemaleArms");
 	_firstPersonWeapon.SetMeshMaterial("SK_FPSArms_Female", "FemaleArms");
+
+
 	Audio::PlayAudio("Glock_Equip.wav", 0.5f);
+
+
 }
 
 bool Player::CanFire() {
@@ -728,17 +871,12 @@ bool Player::CanReload() {
 
 void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
 
-	// Debug test spawn logic (respawns at same pos/rot)
-	if (!_ignoreControl && Input::KeyPressed(HELL_KEY_J)) {
-
-        int index = Util::RandomInt(0, Scene::_spawnPoints.size() - 1);
-
-        std::cout << "INDEX WAS: " << index << "\n";
-
-        SpawnPoint& spawnPoint = Scene::_spawnPoints[index];
-        Respawn(spawnPoint.position, spawnPoint.rotation);
-        //Respawn(_position, _rotation);
-	}
+    if (_weaponAction == SPAWNING) {
+        _characterModel.WipeAllSkippedMeshIndices();
+        HideKnifeMesh();
+        HideShotgunMesh();
+        HideAKS74UMesh();
+    }
 
 	// Switching weapon? Well change all the shit you need to then
 	if (_weaponAction == DRAW_BEGIN) {
@@ -746,11 +884,19 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
 			_firstPersonWeapon.SetName("Knife");
 			_firstPersonWeapon.SetSkinnedModel("Knife");
 			_firstPersonWeapon.SetMeshMaterial("SM_Knife_01", "Knife");
+            _characterModel.WipeAllSkippedMeshIndices();
+            HideGlockMesh();
+            HideShotgunMesh();
+            HideAKS74UMesh();
 		}
 		else if (_currentWeaponIndex == Weapon::GLOCK) {
 			_firstPersonWeapon.SetName("Glock");
 			_firstPersonWeapon.SetSkinnedModel("Glock");
-			_firstPersonWeapon.SetMaterial("Glock");
+            _firstPersonWeapon.SetMaterial("Glock");
+            _characterModel.WipeAllSkippedMeshIndices();
+            HideKnifeMesh();
+            HideShotgunMesh();
+            HideAKS74UMesh();
 		}
 		else if (_currentWeaponIndex == Weapon::AKS74U) {
 			_firstPersonWeapon.SetName("AKS74U");
@@ -762,7 +908,11 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
 			_firstPersonWeapon.SetMeshMaterialByIndex(6, "AKS74U_0");
 			_firstPersonWeapon.SetMeshMaterialByIndex(7, "AKS74U_2");
 			_firstPersonWeapon.SetMeshMaterialByIndex(8, "AKS74U_1");  // Bolt_low. Possibly wrong
-			_firstPersonWeapon.SetMeshMaterialByIndex(9, "AKS74U_3"); // possibly incorrect.
+            _firstPersonWeapon.SetMeshMaterialByIndex(9, "AKS74U_3"); // possibly incorrect.
+            _characterModel.WipeAllSkippedMeshIndices();
+            HideKnifeMesh();
+            HideGlockMesh();
+            HideShotgunMesh();
 
         }
         else if (_currentWeaponIndex == Weapon::SHOTGUN) {
@@ -770,6 +920,10 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
             _firstPersonWeapon.SetSkinnedModel("Shotgun");
             _firstPersonWeapon.SetMeshMaterialByIndex(2, "Shell");
             _firstPersonWeapon.SetMaterial("Shotgun");
+            _characterModel.WipeAllSkippedMeshIndices();
+            HideKnifeMesh();
+            HideGlockMesh();
+            HideAKS74UMesh();
         }
         else if (_currentWeaponIndex == Weapon::MP7) {
            // _firstPersonWeapon.SetName("MP7");
@@ -974,7 +1128,7 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
 
 
         // ADS in
-        if (PressingADS() && CanEnterADS()) {
+        if (PressingADS() && CanEnterADS() && _hasAKS74UScope) {
             _weaponAction = ADS_IN;
             _firstPersonWeapon.PlayAnimation("AKS74U_ADS_In", adsInOutSpeed);
         }
@@ -1019,7 +1173,7 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
             _firstPersonWeapon.PlayAnimation(aninName, 1.625f);
             Audio::PlayAudio(audioName, 1.0f);
             SpawnMuzzleFlash();
-            SpawnBullet(0.025f, Weapon::AKS74U);
+            SpawnBullet(0.02, Weapon::AKS74U);
             SpawnAKS74UCasing();
             _inventory.aks74uAmmo.clip--;
         }
@@ -1062,7 +1216,7 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
 			_firstPersonWeapon.PlayAnimation(aninName, 1.625f);
 			Audio::PlayAudio(audioName, 1.0f);
 			SpawnMuzzleFlash();
-            SpawnBullet(0.025f, Weapon::AKS74U);
+            SpawnBullet(0.05f, Weapon::AKS74U);
             SpawnAKS74UCasing();
 			_inventory.aks74uAmmo.clip--;
 		}
@@ -1429,12 +1583,14 @@ void Player::SpawnBullet(float variance, Weapon type) {
 	Bullet bullet;
 	bullet.spawnPosition = GetViewPos();
     bullet.type = type;
+    bullet.raycastFlags = _bulletFlags;// RaycastGroup::RAYCAST_ENABLED;
 
-	glm::vec3 offset;
+
+    glm::vec3 offset = glm::vec3(0);
 	offset.x = Util::RandomFloat(-(variance * 0.5f), variance * 0.5f);
 	offset.y = Util::RandomFloat(-(variance * 0.5f), variance * 0.5f);
 	offset.z = Util::RandomFloat(-(variance * 0.5f), variance * 0.5f);
-
+        
 	bullet.direction = (glm::normalize(GetCameraForward() + offset)) * glm::vec3(-1);
 	Scene::_bullets.push_back(bullet);
 }
@@ -1537,8 +1693,8 @@ void Player::CreateItemPickupOverlapShape() {
 		_itemPickupOverlapShape->release();
 	}
     float radius = PLAYER_CAPSULE_RADIUS + 0.2;
-    float halfHeight = PLAYER_CAPSULE_HEIGHT * 0.5f;
-    	_itemPickupOverlapShape = Physics::GetPhysics()->createShape(PxCapsuleGeometry(radius, halfHeight), *Physics::GetDefaultMaterial(), true);
+    float halfHeight = PLAYER_CAPSULE_HEIGHT * 0.75f;
+    _itemPickupOverlapShape = Physics::GetPhysics()->createShape(PxCapsuleGeometry(radius, halfHeight), *Physics::GetDefaultMaterial(), true);
 }
 
 PxShape* Player::GetItemPickupOverlapShape() {
@@ -1795,4 +1951,43 @@ void Player::GiveAKS74UScope() {
     _hasAKS74UScope = true;
     ShowPickUpText("PICKED UP AKS74U SCOPE");
     Audio::PlayAudio("ItemPickUp.wav", 1.0f);
+}
+
+
+void Player::HideKnifeMesh() {
+    _characterModel.AddSkippedMeshIndexByName("SM_Knife_01");
+}
+void Player::HideGlockMesh() {
+    _characterModel.AddSkippedMeshIndexByName("Glock");
+}
+void Player::HideShotgunMesh() {
+    _characterModel.AddSkippedMeshIndexByName("Shotgun_Mesh");
+}
+void Player::HideAKS74UMesh() {
+    _characterModel.AddSkippedMeshIndexByName("FrontSight_low");
+    _characterModel.AddSkippedMeshIndexByName("Receiver_low");
+    _characterModel.AddSkippedMeshIndexByName("BoltCarrier_low");
+    _characterModel.AddSkippedMeshIndexByName("SafetySwitch_low");
+    _characterModel.AddSkippedMeshIndexByName("MagRelease_low");
+    _characterModel.AddSkippedMeshIndexByName("Pistol_low");
+    _characterModel.AddSkippedMeshIndexByName("Trigger_low");
+    _characterModel.AddSkippedMeshIndexByName("Magazine_Housing_low");
+    _characterModel.AddSkippedMeshIndexByName("BarrelTip_low");
+}
+
+void Player::Kill() {
+    std::cout << _playerName << " was killed\n";
+    _characterModel._animationMode = AnimatedGameObject::AnimationMode::RAGDOLL;
+
+    _isDead = true;
+
+    _characterModel.WipeAllSkippedMeshIndices();
+    HideKnifeMesh();
+    HideGlockMesh();
+    HideShotgunMesh();
+    HideAKS74UMesh();
+
+    Audio::PlayAudio("Death0.wav", 1.0f);
+
+    std::cout << " and their animation mode is now " << _characterModel._animationMode << "\n";
 }

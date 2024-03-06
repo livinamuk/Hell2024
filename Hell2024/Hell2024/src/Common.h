@@ -250,7 +250,13 @@ struct Material {
     int _rma = 0;
 };
 
-enum RaycastGroup { RAYCAST_DISABLED = 0, RAYCAST_ENABLED };
+enum RaycastGroup { 
+    RAYCAST_DISABLED = 0,
+    RAYCAST_ENABLED = 1, 
+    PLAYER_1_RAGDOLL = 2, 
+    PLAYER_2_RAGDOLL = 4
+};
+
 enum PhysicsObjectType { UNDEFINED = 0, GAME_OBJECT, GLASS, DOOR, SCENE_MESH, RAGDOLL_RIGID};
 
 struct PhysicsObjectData {

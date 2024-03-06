@@ -20,15 +20,44 @@ void ProcessBullets();
 
 void Scene::Update(float deltaTime) {
 
+
+
+
+    // Debug test spawn logic (respawns at same pos/rot)
+    if (Input::KeyPressed(HELL_KEY_J)) {
+        Scene::_players[0].Respawn();
+        Scene::_players[1].Respawn();
+    }
+
     if (Input::KeyPressed(HELL_KEY_K)) {
-        SpawnPoint spawnPoint;
+
+        if (Scene::_players[0]._isDead) {
+            Scene::_players[0].Respawn();
+        }
+        if (Scene::_players[1]._isDead) {
+            Scene::_players[1].Respawn();
+        }
+    }
+
+
+    if (Input::KeyPressed(HELL_KEY_K)) {
+
+       // Scene::_players[1]._isDead = false;
+     //   Scene::_players[1]._characterModel._animationMode = AnimatedGameObject::ANIMATION;
+       // Scene::_players[1]._characterController->setFootPosition(PxExtendedVec3(3.0f, 0.1f, 3.5f));
+
+    }
+
+    // Set spawn point
+    if (Input::KeyPressed(HELL_KEY_K) && false) {
+       SpawnPoint spawnPoint;
         spawnPoint.position = Scene::_players[0].GetFeetPosition();
         spawnPoint.rotation = Scene::_players[0].GetCameraRotation();
         _spawnPoints.push_back(spawnPoint);
-
         std::cout << "Position: " << Util::Vec3ToString(spawnPoint.position) << "\n";
         std::cout << "Rotation: " << Util::Vec3ToString(spawnPoint.rotation) << "\n";
     }
+
 
 
     if (Input::KeyPressed(HELL_KEY_1)) {
@@ -210,6 +239,12 @@ void Scene::Update(float deltaTime) {
     }*/
        
     for (AnimatedGameObject& animatedGameObject : _animatedGameObjects) {
+
+        // if this is the dying guy, then only calculate its animation if one of the players is actually dead
+        if (animatedGameObject.GetName() == "DyingGuy" && !Scene::_players[0]._isDead && !Scene::_players[1]._isDead) {
+            continue;
+        }
+
         animatedGameObject.Update(deltaTime);
     }
 
@@ -323,10 +358,13 @@ void SetPlayerGroundedStates() {
 
 void ProcessBullets() {
 
+    bool fleshWasHit = false;
     bool glassWasHit = false;
 	for (int i = 0; i < Scene::_bullets.size(); i++) {
 		Bullet& bullet = Scene::_bullets[i];
-		PhysXRayResult rayResult = Util::CastPhysXRay(bullet.spawnPosition, bullet.direction, 1000);
+        PxU32 raycastFlags = bullet.raycastFlags;// RaycastGroup::RAYCAST_ENABLED;
+
+		PhysXRayResult rayResult = Util::CastPhysXRay(bullet.spawnPosition, bullet.direction, 1000, raycastFlags);
 		if (rayResult.hitFound) {
 			PxRigidDynamic* actor = (PxRigidDynamic*)rayResult.hitActor;
 			if (actor->userData) {
@@ -334,12 +372,61 @@ void ProcessBullets() {
 
 				PhysicsObjectData* physicsObjectData = (PhysicsObjectData*)actor->userData;
 				
-                if (physicsObjectData->type == RAGDOLL_RIGID) {
-                    float strength = 750000;
-                    if (bullet.type == SHOTGUN) {
-                        strength = 200000;
+                // A ragdoll was hit
+                if (physicsObjectData->type == RAGDOLL_RIGID) {        
+                    if (actor->userData) {
+                        Player* parentPlayerHit = (Player*)physicsObjectData->parent;
+                        if (!parentPlayerHit->_isDead) {
+
+                            parentPlayerHit->_health -= 15;
+                            parentPlayerHit->_health = std::max(0, parentPlayerHit->_health);
+
+                            if (actor->getName() == "RAGDOLL_HEAD") {
+                                parentPlayerHit->_health = 0;
+                            }
+                            else if (actor->getName() == "RAGDOLL_NECK") {
+                                parentPlayerHit->_health = 0;
+                            }
+                            else {
+                                fleshWasHit = true;
+                            }
+
+                            if (parentPlayerHit->_health == 0) {
+                                parentPlayerHit->Kill();
+                                if (parentPlayerHit != &Scene::_players[0]) {
+                                    Scene::_players[0]._killCount++;
+
+                                    glm::vec3 deathPosition = { parentPlayerHit->GetFeetPosition().x, 0.1, parentPlayerHit->GetFeetPosition().z };
+                                    deathPosition += (Scene::_players[0]._movementVector * 0.25f);
+
+                                    AnimatedGameObject* dyingGuy = Scene::GetAnimatedGameObjectByName("DyingGuy");
+                                    dyingGuy->SetRotationY(Scene::_players[0].GetViewRotation().y);
+                                    dyingGuy->SetPosition(deathPosition);
+                                    dyingGuy->PlayAnimation("DyingGuy_Death", 1.0f);
+                                }
+                                if (parentPlayerHit != &Scene::_players[1]) {
+                                    Scene::_players[1]._killCount++;
+
+                                    glm::vec3 deathPosition = { parentPlayerHit->GetFeetPosition().x, 0.1, parentPlayerHit->GetFeetPosition().z };
+                                    deathPosition += (Scene::_players[1]._movementVector * 0.25f);
+
+                                    AnimatedGameObject* dyingGuy = Scene::GetAnimatedGameObjectByName("DyingGuy");
+                                    dyingGuy->SetRotationY(Scene::_players[1].GetViewRotation().y);
+                                    dyingGuy->SetPosition(deathPosition);
+                                    dyingGuy->PlayAnimation("DyingGuy_Death", 1.0f);
+                                }
+                            }
+                        }
                     }
-                    std::cout << "you shot a ragdoll rigid\n";
+
+               
+
+                    float strength = 0.75;
+                    if (bullet.type == SHOTGUN) {
+                        strength = 0.20;
+                    }
+                    strength *= 5;
+                   // std::cout << "you shot a ragdoll rigid\n";
                     PxVec3 force = PxVec3(bullet.direction.x, bullet.direction.y, bullet.direction.z) * strength;
                     actor->addForce(force);
                 }
@@ -364,6 +451,7 @@ void ProcessBullets() {
 					Bullet newBullet;
 					newBullet.direction = bullet.direction;
 					newBullet.spawnPosition = rayResult.hitPosition + (bullet.direction * glm::vec3(0.5f));
+                    newBullet.raycastFlags = bullet.raycastFlags;
                     Scene::_bullets.push_back(newBullet);
 
 					// Front glass bullet decal
@@ -416,7 +504,7 @@ void ProcessBullets() {
                         */
 					}
 				}
-				else {
+				else if (physicsObjectData->type != RAGDOLL_RIGID) {
 					// Bullet decal
 					PxRigidBody* parent = actor;
 					glm::mat4 parentMatrix = Util::PxMat44ToGlmMat4(actor->getGlobalPose());
@@ -429,8 +517,14 @@ void ProcessBullets() {
 		}
 	}
     Scene::_bullets.clear();
+
     if (glassWasHit) {
         Audio::PlayAudio("GlassImpact.wav", 3.0f);
+    }
+    if (fleshWasHit) {
+        int random_number = std::rand() % 8 + 1;
+        std::string file = "FLY_Bullet_Impact_Flesh_0" + std::to_string(random_number) + ".wav";
+        Audio::PlayAudio(file.c_str(), 0.9f);
     }
 }
 void Scene::LoadHardCodedObjects() {
@@ -606,10 +700,16 @@ void Scene::LoadHardCodedObjects() {
 
 
         GameObject& shotgunPickup = _gameObjects.emplace_back();
-        shotgunPickup.SetPosition(0.2f, 0.65f, 2.1f);
-        shotgunPickup.SetRotationX(-1.55f);
-        shotgunPickup.SetRotationY(0.2f);
-        shotgunPickup.SetRotationZ(0.175f + HELL_PI);
+        //shotgunPickup.SetPosition(0.2f, 0.65f, 2.1f);        
+        //shotgunPickup.SetRotationX(-1.55f);
+        //shotgunPickup.SetRotationY(0.2f);
+        //shotgunPickup.SetRotationZ(0.175f + HELL_PI);
+
+        shotgunPickup.SetPosition(11.07, 0.65f, 4.025f);
+        shotgunPickup.SetRotationX(1.5916);
+        shotgunPickup.SetRotationY(3.4f);
+        shotgunPickup.SetRotationZ(-0.22);
+
         shotgunPickup.SetModel("Shotgun_Isolated");
         shotgunPickup.SetName("Shotgun_Pickup");
         shotgunPickup.SetMeshMaterial("Shotgun");
@@ -782,35 +882,7 @@ void Scene::LoadHardCodedObjects() {
         tree.SetName("ChristmasTree");
         tree.SetMeshMaterial("Tree");
 
-        GameObject& toilet = _gameObjects.emplace_back();
-        toilet.SetPosition(11.2f, 0.1f, 3.65f);
-        toilet.SetModel("Toilet");
-        toilet.SetName("Toilet");
-        toilet.SetMeshMaterial("Toilet");
-        toilet.SetRaycastShapeFromModel(AssetManager::GetModel("Toilet"));
-        toilet.SetRotationY(HELL_PI * 0.5f);
-
-
-        GameObject& toiletSeat = _gameObjects.emplace_back();
-        toiletSeat.SetModel("ToiletSeat");
-        toiletSeat.SetPosition(0, 0.40727, -0.2014);
-        toiletSeat.SetName("ToiletSeat");
-        toiletSeat.SetMeshMaterial("Toilet");
-        toiletSeat.SetParentName("Toilet");
-        toiletSeat.SetOpenState(OpenState::CLOSED, 2.183f, 0, 0.2f);
-        toiletSeat.SetOpenAxis(OpenAxis::ROTATION_NEG_X);
-        toiletSeat.SetRaycastShapeFromModel(AssetManager::GetModel("ToiletSeat"));
     
-        GameObject& toiletLid = _gameObjects.emplace_back();
-        toiletLid.SetPosition(0, 0.40727, -0.2014);
-        toiletLid.SetModel("ToiletLid");
-        toiletLid.SetName("ToiletLid");
-        toiletLid.SetMeshMaterial("Toilet");
-        toiletLid.SetParentName("Toilet");
-        toiletLid.SetOpenState(OpenState::CLOSED, 2.183f, 0, 0.2f);
-        toiletLid.SetOpenAxis(OpenAxis::ROTATION_POS_X);
-        toiletLid.SetRaycastShapeFromModel(AssetManager::GetModel("ToiletLid"));
-
 
         //tree.CreateRigidBody(sofa.GetGameWorldMatrix(), true);
 
@@ -848,8 +920,10 @@ void Scene::LoadHardCodedObjects() {
             filterData3.collidesWith = CollisionGroup(GENERIC_BOUNCEABLE | BULLET_CASING | PLAYER);
             smallChestOfDrawers.CreateRigidBody(smallChestOfDrawers.GetGameWorldMatrix(), true);
             smallChestOfDrawers.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("SmallChestOfDrawersFrame_ConvexMesh")->_meshes[0], filterData3);
+            smallChestOfDrawers.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("SmallChestOfDrawersFrame_ConvexMesh1")->_meshes[0], filterData3);
             smallChestOfDrawers.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("SmallChestOfDrawersFrameLeftSide_ConvexMesh")->_meshes[0], filterData3);
             smallChestOfDrawers.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("SmallChestOfDrawersFrameRightSide_ConvexMesh")->_meshes[0], filterData3);
+
 
 
             GameObject& smallChestOfDrawers2 = _gameObjects.emplace_back();
@@ -864,6 +938,7 @@ void Scene::LoadHardCodedObjects() {
             smallChestOfDrawers2.SetAudioOnClose("DrawerOpen.wav", 1.0f);
             smallChestOfDrawers2.CreateRigidBody(smallChestOfDrawers2.GetGameWorldMatrix(), true);
             smallChestOfDrawers2.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("SmallChestOfDrawersFrame_ConvexMesh")->_meshes[0], filterData3);
+            smallChestOfDrawers2.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("SmallChestOfDrawersFrame_ConvexMesh1")->_meshes[0], filterData3);
             smallChestOfDrawers2.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("SmallChestOfDrawersFrameLeftSide_ConvexMesh")->_meshes[0], filterData3);
             smallChestOfDrawers2.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("SmallChestOfDrawersFrameRightSide_ConvexMesh")->_meshes[0], filterData3);
            
@@ -897,6 +972,41 @@ void Scene::LoadHardCodedObjects() {
             lamp.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("LampConvexMesh_2")->_meshes[0], filterData2);
             lamp.SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
             lamp.UpdateRigidBodyMassAndInertia(20.0f);
+
+
+
+
+
+            GameObject& toilet = _gameObjects.emplace_back();
+            toilet.SetPosition(11.2f, 0.1f, 3.65f);
+            toilet.SetModel("Toilet");
+            toilet.SetName("Toilet");
+            toilet.SetMeshMaterial("Toilet");
+            toilet.SetRaycastShapeFromModel(AssetManager::GetModel("Toilet"));
+            toilet.SetRotationY(HELL_PI * 0.5f);
+            toilet.CreateRigidBody(toilet.GetGameWorldMatrix(), false);
+            toilet.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("Toilet_ConvexMesh")->_meshes[0], filterData3);
+
+
+            GameObject& toiletSeat = _gameObjects.emplace_back();
+            toiletSeat.SetModel("ToiletSeat");
+            toiletSeat.SetPosition(0, 0.40727, -0.2014);
+            toiletSeat.SetName("ToiletSeat");
+            toiletSeat.SetMeshMaterial("Toilet");
+            toiletSeat.SetParentName("Toilet");
+            toiletSeat.SetOpenState(OpenState::CLOSED, 2.183f, 0, 0.2f);
+            toiletSeat.SetOpenAxis(OpenAxis::ROTATION_NEG_X);
+            toiletSeat.SetRaycastShapeFromModel(AssetManager::GetModel("ToiletSeat"));
+
+            GameObject& toiletLid = _gameObjects.emplace_back();
+            toiletLid.SetPosition(0, 0.40727, -0.2014);
+            toiletLid.SetModel("ToiletLid");
+            toiletLid.SetName("ToiletLid");
+            toiletLid.SetMeshMaterial("Toilet");
+            toiletLid.SetParentName("Toilet");
+            toiletLid.SetOpenState(OpenState::CLOSED, 2.183f, 0, 0.2f);
+            toiletLid.SetOpenAxis(OpenAxis::ROTATION_POS_X);
+            toiletLid.SetRaycastShapeFromModel(AssetManager::GetModel("ToiletLid"));
 
 
             //  lamp.userData = new PhysicsObjectData(PhysicsObjectType::GAME_OBJECT, &_gameObjects[_gameObjects.size()-1]);
@@ -1025,7 +1135,7 @@ void Scene::LoadHardCodedObjects() {
         AnimatedGameObject& aks = _animatedGameObjects.emplace_back(AnimatedGameObject());
         aks.SetName("AKS74U_TEST");
         aks.SetSkinnedModel("AKS74U");
-        aks.SetAnimatedTransformsToBindPose();
+        aks.SetAnimationModeToBindPose();
         //aks.PlayAndLoopAnimation("AKS74U_ReloadEmpty", 0.2f);
         aks.PlayAndLoopAnimation("AKS74U_Idle", 1.0f);
         aks.SetMeshMaterial("manniquen1_2.001", "Hands");
@@ -1046,7 +1156,7 @@ void Scene::LoadHardCodedObjects() {
     }
 
 
-    AnimatedGameObject& nurse = _animatedGameObjects.emplace_back(AnimatedGameObject());
+    /*AnimatedGameObject& nurse = _animatedGameObjects.emplace_back(AnimatedGameObject());
     nurse.SetName("NURSEGUY");
     nurse.SetSkinnedModel("NurseGuy");
     nurse.SetAnimatedTransformsToBindPose();
@@ -1055,17 +1165,79 @@ void Scene::LoadHardCodedObjects() {
     //  glock.SetScale(0.01f);
     nurse.SetPosition(glm::vec3(1.5f, 0.1f, 3));
     // glock.SetRotationY(HELL_PI * 0.5f);
+    */
+
+    AnimatedGameObject& dyingGuy = _animatedGameObjects.emplace_back(AnimatedGameObject());
+    dyingGuy.SetName("DyingGuy");
+    dyingGuy.SetSkinnedModel("DyingGuy");
+    dyingGuy.SetAnimationModeToBindPose();
+    dyingGuy.PlayAndLoopAnimation("DyingGuy_Death", 1.0f);
+    dyingGuy.SetMaterial("Glock");
+    dyingGuy.SetPosition(glm::vec3(1.5f, 0.1f, 3));
+    dyingGuy.SetRotationX(HELL_PI * 0.5f);
+    dyingGuy.SetMeshMaterial("CC_Base_Body", "UniSexGuyBody");
+    dyingGuy.SetMeshMaterial("CC_Base_Eye", "UniSexGuyBody");
+    dyingGuy.SetMeshMaterial("Biker_Jeans", "UniSexGuyJeans");
+    dyingGuy.SetMeshMaterial("CC_Base_Eye", "UniSexGuyEyes");
+    dyingGuy.SetMeshMaterial("Glock", "Glock");
+    dyingGuy.SetMeshMaterial("SM_Knife_01", "Knife");
+    dyingGuy.SetMeshMaterial("Shotgun_Mesh", "Shotgun");
+    dyingGuy.SetMeshMaterialByIndex(13, "UniSexGuyHead");
+
+    /*
+
+    AnimatedGameObject& unisexGuy = _animatedGameObjects.emplace_back(AnimatedGameObject());
+    unisexGuy.SetName("UNISEXGUY");
+    unisexGuy.SetSkinnedModel("UniSexGuyScaled");
+    //unisexGuy.SetAnimationModeToBindPose();
+    unisexGuy.PlayAndLoopAnimation("Character_Glock_Walk", 1.0f);
+    //unisexGuy.PlayAndLoopAnimation("Character_Glock_Walk", 1.0f); 
+    //unisexGuy.PlayAndLoopAnimation("UnisexGuy_Death", 1.0f);
+    //unisexGuy.SetRotationX(HELL_PI * 0.5f);
+    unisexGuy.SetMaterial("NumGrid");
+    unisexGuy.SetPosition(glm::vec3(3.0f, 0.1f, 3));
+    unisexGuy.SetMeshMaterial("CC_Base_Body", "UniSexGuyBody");
+    unisexGuy.SetMeshMaterial("CC_Base_Eye", "UniSexGuyBody");
+    unisexGuy.SetMeshMaterial("Biker_Jeans", "UniSexGuyJeans");
+    unisexGuy.SetMeshMaterial("CC_Base_Eye", "UniSexGuyEyes");
+    unisexGuy.SetMeshMaterial("Glock", "Glock");
+    unisexGuy.SetMeshMaterial("SM_Knife_01", "Knife");
+    unisexGuy.SetMeshMaterial("Shotgun_Mesh", "Shotgun");
+    unisexGuy.SetMeshMaterialByIndex(13, "UniSexGuyHead");
 
 
-    AnimatedGameObject& glock = _animatedGameObjects.emplace_back(AnimatedGameObject());
-    glock.SetName("UNISEXGUY");
-    glock.SetSkinnedModel("UniSexGuyScaled");
-    glock.SetAnimatedTransformsToBindPose();
-    //glock.PlayAndLoopAnimation("UnisexGuy_Glock_Idle", 1.0f);
-    glock.SetMaterial("Glock");
-    //  glock.SetScale(0.01f);
-    glock.SetPosition(glm::vec3(3.0f, 0.1f, 3));
-    // glock.SetRotationY(HELL_PI * 0.5f);
+
+    PxU32 ragdollCollisionGroupFlags = RaycastGroup::RAYCAST_ENABLED;
+    unisexGuy.LoadRagdoll("UnisexGuy4.rag", ragdollCollisionGroupFlags);
+
+    unisexGuy.PrintMeshNames();
+
+    unisexGuy.AddSkippedMeshIndexByName("Glock");
+    unisexGuy.AddSkippedMeshIndexByName("SM_Knife_01");
+    unisexGuy.AddSkippedMeshIndexByName("Shotgun_Mesh");
+
+
+    unisexGuy.SetMeshMaterial("FrontSight_low", "AKS74U_0");
+    unisexGuy.SetMeshMaterial("Receiver_low", "AKS74U_1");
+    unisexGuy.SetMeshMaterial("BoltCarrier_low", "AKS74U_1");
+    unisexGuy.SetMeshMaterial("SafetySwitch_low", "AKS74U_0");
+    unisexGuy.SetMeshMaterial("MagRelease_low", "AKS74U_0");
+    unisexGuy.SetMeshMaterial("Pistol_low", "AKS74U_2");
+    unisexGuy.SetMeshMaterial("Trigger_low", "AKS74U_1");
+    unisexGuy.SetMeshMaterial("Magazine_Housing_low", "AKS74U_3");
+    unisexGuy.SetMeshMaterial("BarrelTip_low", "AKS74U_4");
+
+    
+    unisexGuy.AddSkippedMeshIndexByName("FrontSight_low");
+    unisexGuy.AddSkippedMeshIndexByName("Receiver_low");
+    unisexGuy.AddSkippedMeshIndexByName("BoltCarrier_low");
+    unisexGuy.AddSkippedMeshIndexByName("SafetySwitch_low");
+    unisexGuy.AddSkippedMeshIndexByName("MagRelease_low");
+    unisexGuy.AddSkippedMeshIndexByName("Pistol_low");
+    unisexGuy.AddSkippedMeshIndexByName("Trigger_low");
+    unisexGuy.AddSkippedMeshIndexByName("Magazine_Housing_low");
+    unisexGuy.AddSkippedMeshIndexByName("BarrelTip_low");
+   */
 
     /*
     AnimatedGameObject& glock = _animatedGameObjects.emplace_back(AnimatedGameObject());
@@ -1232,7 +1404,25 @@ void Scene::CreatePlayers() {
     _players[0]._mouseIndex = 0;
     _players[1]._mouseIndex = 1;
 
-    _players[0]._ragdoll.LoadFromJSON("UnisexGuy3.rag");
+
+    PxU32 p1RagdollCollisionGroupFlags = RaycastGroup::PLAYER_1_RAGDOLL;
+    PxU32 p2RagdollCollisionGroupFlags = RaycastGroup::PLAYER_2_RAGDOLL;
+
+    _players[0]._characterModel.LoadRagdoll("UnisexGuy4.rag", p1RagdollCollisionGroupFlags);
+    _players[1]._characterModel.LoadRagdoll("UnisexGuy4.rag", p2RagdollCollisionGroupFlags);
+
+    _players[0]._interactFlags = RaycastGroup::RAYCAST_ENABLED;
+    _players[0]._interactFlags &= ~RaycastGroup::PLAYER_1_RAGDOLL;
+
+    _players[1]._interactFlags = RaycastGroup::RAYCAST_ENABLED;
+    _players[1]._interactFlags &= ~RaycastGroup::PLAYER_2_RAGDOLL;
+
+    _players[0]._bulletFlags = RaycastGroup::RAYCAST_ENABLED | RaycastGroup::PLAYER_2_RAGDOLL;
+    _players[1]._bulletFlags = RaycastGroup::RAYCAST_ENABLED | RaycastGroup::PLAYER_1_RAGDOLL;
+
+    _players[0]._playerName = "Orion";
+    _players[1]._playerName = "CrustyAssCracker";
+    
 }
 
 
@@ -1252,6 +1442,10 @@ void Scene::CleanUp() {
     for (Window& window : _windows) {
         window.CleanUp();
     }
+    for (AnimatedGameObject& animatedGameObject : _animatedGameObjects) {
+        animatedGameObject.DestroyRagdoll();
+    }
+
     _spawnPoints.clear();
     _bulletCasings.clear();
     _decals.clear();

@@ -252,11 +252,30 @@ void AssetManager::LoadEverythingElse() {
                 "animations/Character_AKS74U_Kneel.fbx",
                 "animations/Character_AKS74U_Idle.fbx",
         } },
-            skinned_model_path{ "models/UniSexGuyScaled.fbx", std::vector<std::string>{
-                    "animations/UnisexGuy_Glock_Idle.fbx",
+            skinned_model_path{ "models/DyingGuy.fbx", std::vector<std::string>{
+                "animations/DyingGuy_Death.fbx",
             } },
-            skinned_model_path{ "models/NurseGuy.fbx", std::vector<std::string>{
-                    "animations/NurseGuy_Glock_Idle.fbx",
+            skinned_model_path{ "models/UniSexGuyScaled.fbx", std::vector<std::string>{
+
+                    //"animations/UnisexGuy_Death.fbx",
+                    //"animations/UnisexGuy_Dance.fbx",
+
+                    "animations/UnisexGuy_Knife_Idle.fbx",
+                    "animations/UnisexGuy_Knife_Crouch.fbx",
+                    "animations/UnisexGuy_Knife_Walk.fbx",
+                    "animations/UnisexGuy_Knife_Attack.fbx",
+
+                    "animations/UnisexGuy_Glock_Idle.fbx",
+                    "animations/UnisexGuy_Glock_Walk.fbx",
+                    "animations/UnisexGuy_Glock_Crouch.fbx",
+
+                    "animations/UnisexGuy_Shotgun_Idle.fbx",
+                    "animations/UnisexGuy_Shotgun_Crouch.fbx",
+                    "animations/UnisexGuy_Shotgun_Walk.fbx",
+
+                    "animations/UnisexGuy_AKS74U_Idle.fbx",
+                    "animations/UnisexGuy_AKS74U_Crouch.fbx",
+                    "animations/UnisexGuy_AKS74U_Walk.fbx",
             } },
 			skinned_model_path{ "models/AKS74U.fbx", std::vector<std::string>{
 				"animations/AKS74U_Fire1.fbx",

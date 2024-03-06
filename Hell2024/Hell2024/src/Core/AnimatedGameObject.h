@@ -1,5 +1,6 @@
 #pragma once
 #include "Animation/SkinnedModel.h"
+#include "Ragdoll.h"
 
 struct AnimatedGameObject {
 
@@ -17,11 +18,12 @@ struct AnimatedGameObject {
 	void PlayAnimation(std::string animationName, float speed);
 	void PlayAndLoopAnimation(std::string animationName, float speed);
     void PauseAnimation();
-    void SetAnimatedTransformsToBindPose();
+    void SetAnimationModeToBindPose();
 	void SetMeshMaterial(std::string meshName, std::string materialName);
 	void SetMeshMaterialByIndex(int meshIndex, std::string materialName);
 	void SetMaterial(std::string materialName);
     void UpdateBoneTransformsFromBindPose();
+    void UpdateBoneTransformsFromRagdoll();
 	glm::mat4 GetBoneWorldMatrixFromBoneName(std::string name);
 
 	std::string GetName();
@@ -37,6 +39,7 @@ struct AnimatedGameObject {
 	glm::mat4 _cameraMatrix = glm::mat4(1);
 	std::vector<int> _materialIndices;
     AnimationMode _animationMode = BINDPOSE;
+    Ragdoll _ragdoll;
 
 	// Hacky shit
 	glm::vec3 GetGlockBarrelPostion();
@@ -45,8 +48,18 @@ struct AnimatedGameObject {
 	glm::vec3 GetShotgunBarrelPosition();
 	glm::vec3 GetAK74USCasingSpawnPostion();
 
+    void LoadRagdoll(std::string filename, PxU32 ragdollCollisionFlags);
+    void SetRagdollToCurrentAniamtionState();
+    void SetAnimatedModeToRagdoll();
+    void DestroyRagdoll();
+    void WipeAllSkippedMeshIndices();
+    void AddSkippedMeshIndexByName(std::string meshName);
+    void PrintMeshNames();
+
     std::vector<glm::mat4> _debugTransformsA;
     std::vector<glm::mat4> _debugTransformsB;
+    bool _hasRagdoll = false;
+    std::vector<unsigned int> _skippedMeshIndices;
 
 private:
 

@@ -51,7 +51,7 @@ void main() {
 			totalTangent += worldTangent;	
 		}
 	
-		//totalLocalPos = vec4(aPos, 1.0);
+	//	totalLocalPos = vec4(aPos, 1.0);
 		WorldPos = (model * vec4(totalLocalPos.xyz, 1)).xyz;
 
 		

@@ -32,6 +32,13 @@ uniform float screenHeight;
 uniform float time;
 uniform int mode;
 uniform float propogationGridSpacing;
+uniform vec3 screenTint;
+uniform float contrastAmount;
+  
+void contrastAdjust( inout vec4 color, in float c) {
+    float t = 0.5 - c * 0.5; 
+    color.rgb = color.rgb * c + t;
+}
 
 float LinearizeDepth(vec2 uv) {
 	float n = 1.0; // camera z near
@@ -62,6 +69,15 @@ void main() {
 	
 	final += emissive;
 	FragColor = vec4(final, 1);
+
+	float contrast = min(contrastAmount, 5.0);
+	vec3 tint = screenTint;
+	tint.x = max(tint.x, 0);
+	tint.y = max(tint.y, 0);
+	tint.z = max(tint.z, 0);
+
+	FragColor.rgb *= tint;
+    contrastAdjust(FragColor, contrastAmount);
 
 //	FragColor.rgb = glassColor;
 
