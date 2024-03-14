@@ -4,6 +4,7 @@
 #include "Scene.h"
 #include "Config.hpp"
 #include "Input.h"
+#include "../EngineState.hpp"
 //#include "Callbacks.hpp"
 
 GameObject::GameObject() {
@@ -76,6 +77,14 @@ float GameObject::GetRotationZ() {
 
 void GameObject::SetScale(glm::vec3 scale) {
 	_transform.scale = glm::vec3(scale);
+
+    // Scale physx objects
+    if (_raycastObject.rigid) {
+        // commented out below coz it fucked the phyx pointers of everything
+        //UpdateRaycastObject();
+    }
+    // below needs it also
+    // std::vector<PxShape*> _collisionShapes;
 }
 
 void GameObject::SetScale(float scale) {
@@ -205,6 +214,7 @@ void GameObject::Update(float deltaTime) {
 			_pickupCoolDownTime = 0;
 			_collected = false;
             EnableRaycasting();
+            LoadSavedState();
             _wasPickedUpLastFrame = true;
 		}
 	}
@@ -287,31 +297,34 @@ void GameObject::Update(float deltaTime) {
         }
 	}
 
-	if (_modelMatrixMode == ModelMatrixMode::GAME_TRANSFORM) {
+    // Editor or has no physics
+	if (_modelMatrixMode == ModelMatrixMode::GAME_TRANSFORM || EngineState::GetEngineMode() == EngineMode::EDITOR) {
 		_modelMatrix = GetGameWorldMatrix();
 		if (_collisionBody) {
+            PutRigidBodyToSleep();
 			_collisionBody->setGlobalPose(PxTransform(Util::GlmMat4ToPxMat44(_modelMatrix)));
 		}
-		if (_raycastBody) {
-			_raycastBody->setGlobalPose(PxTransform(Util::GlmMat4ToPxMat44(_modelMatrix)));
+		if (_raycastObject.rigid) {
+            _raycastObject.rigid->setGlobalPose(PxTransform(Util::GlmMat4ToPxMat44(_modelMatrix)));
 		}
 	}
+    // Has physics object
 	else if (_modelMatrixMode == ModelMatrixMode::PHYSX_TRANSFORM && _collisionBody) {
 		Transform transform;
 		transform.scale = _transform.scale;
 		_modelMatrix = Util::PxMat44ToGlmMat4(_collisionBody->getGlobalPose()) * transform.to_mat4();
 
-		if (_raycastBody) {
-			_raycastBody->setGlobalPose(_collisionBody->getGlobalPose());
+		if (_raycastObject.rigid) {
+            _raycastObject.rigid->setGlobalPose(_collisionBody->getGlobalPose());
 		}
 	}
 
 	// Update raycast object PhysX pointer
-	if (_raycastBody) {
-		if (_raycastBody->userData) {
-			delete _raycastBody->userData;
+	if (_raycastObject.rigid) {
+		if (_raycastObject.rigid->userData) {
+			delete _raycastObject.rigid->userData;
 		}
-		_raycastBody->userData = new PhysicsObjectData(PhysicsObjectType::GAME_OBJECT, this);
+        _raycastObject.rigid->userData = new PhysicsObjectData(PhysicsObjectType::GAME_OBJECT, this);
 	}
 	// Update collision object PhysX pointer
 	if (_collisionBody) {
@@ -322,15 +335,20 @@ void GameObject::Update(float deltaTime) {
 	}
 
     // AABB
-    if (_raycastBody) {
+    if (_raycastObject.rigid) {
         _aabbPreviousFrame = _aabb;
-        _aabb.extents = Util::PxVec3toGlmVec3(_raycastBody->getWorldBounds().getExtents());
-        _aabb.position = Util::PxVec3toGlmVec3(_raycastBody->getWorldBounds().getCenter());
+        _aabb.extents = Util::PxVec3toGlmVec3(_raycastObject.rigid->getWorldBounds().getExtents());
+        _aabb.position = Util::PxVec3toGlmVec3(_raycastObject.rigid->getWorldBounds().getCenter());
     }
 }
 
+
+void GameObject::SetWakeOnStart(bool value) {
+    _wakeOnStart = value;
+}
+
 void GameObject::UpdateEditorPhysicsObject() {
-	if (_editorRaycastBody) {
+	/*if (_editorRaycastBody) {
 		if (_modelMatrixMode == ModelMatrixMode::GAME_TRANSFORM) {
 			PxQuat quat = Util::GlmQuatToPxQuat(GetWorldRotation());
 			PxVec3 position = Util::GlmVec3toPxVec3(GetWorldPosition());
@@ -346,7 +364,7 @@ void GameObject::UpdateEditorPhysicsObject() {
 			delete _editorRaycastBody->userData;
 		}
 		_editorRaycastBody->userData = new PhysicsObjectData(PhysicsObjectType::GAME_OBJECT, this);
-	}
+	}*/
 }
 
 glm::vec3 GameObject::GetWorldPosition() {
@@ -369,7 +387,8 @@ glm::quat GameObject::GetWorldRotation() {
 }
 
 glm::mat4 GameObject::GetGameWorldMatrix() {
-	glm::mat4 result = glm::mat4(1);
+
+    glm::mat4 result = glm::mat4(1);
 	if (_parentName != "undefined") {
 		GameObject* parent = Scene::GetGameObjectByName(_parentName);
 		if (parent) {
@@ -515,6 +534,7 @@ PickUpType GameObject::GetPickUpType() {
 	return _pickupType;
 }
 
+/*
 void GameObject::CreateEditorPhysicsObject() {
 
 	if (_editorRaycastBody) {
@@ -535,7 +555,7 @@ void GameObject::CreateEditorPhysicsObject() {
 	_editorRaycastBody->userData = new PhysicsObjectData(PhysicsObjectType::GAME_OBJECT, this);
 
 	//std::cout << "created editor object for GameObject with model " << _model->_name << "\n";
-}
+}*/
 
 const InteractType& GameObject::GetInteractType() {
 	return InteractType::NONE;
@@ -588,6 +608,11 @@ void GameObject::AddCollisionShape(PxShape* shape, PhysicsFilterData physicsFilt
 	shape = shape;
 	_collisionShapes.push_back(shape);
 	_collisionBody->attachShape(*shape);
+}
+
+
+void GameObject::DisableRespawnOnPickup() {
+    _respawns = false;
 }
 
 void GameObject::CreateRigidBody(glm::mat4 matrix, bool kinematic) {
@@ -645,8 +670,8 @@ void GameObject::SetRaycastShapeFromMesh(Mesh* mesh) {
 	if (!mesh) {
 		return;
 	}
-	if (_raycastBody) {
-		_raycastBody->release();
+	if (_raycastObject.rigid) {
+        _raycastObject.rigid->release();
 	}
 	if (!mesh->_triangleMesh) {
 		mesh->CreateTriangleMesh();
@@ -656,45 +681,66 @@ void GameObject::SetRaycastShapeFromMesh(Mesh* mesh) {
 	filterData.collisionGroup = CollisionGroup::NO_COLLISION;
 	filterData.collidesWith = CollisionGroup::NO_COLLISION;
 	PxShapeFlags shapeFlags(PxShapeFlag::eSCENE_QUERY_SHAPE); // Most importantly NOT eSIMULATION_SHAPE. PhysX does not allow for tri mesh.
-	_raycastShape = Physics::CreateShapeFromTriangleMesh(mesh->_triangleMesh, shapeFlags);
-	_raycastBody = Physics::CreateRigidStatic(Transform(), filterData, _raycastShape);
-	_raycastBody->userData = new PhysicsObjectData(PhysicsObjectType::GAME_OBJECT, this);
+    _raycastObject.shape = Physics::CreateShapeFromTriangleMesh(mesh->_triangleMesh, shapeFlags);
+    _raycastObject.rigid = Physics::CreateRigidStatic(Transform(), filterData, _raycastObject.shape);
+    _raycastObject.rigid->userData = new PhysicsObjectData(PhysicsObjectType::GAME_OBJECT, this);
 }
 
-void GameObject::SetRaycastShapeFromModel(Model* model) {
-	if (!model) {
+void GameObject::UpdateRaycastObject() {
+
+    // REMOVE THIS! ITS A HACK CAUSE YOU HAVEN'T GOT THIS WORKING WHEN THE SHAPE IS NOT A TRI MESH
+    if (_model && _model->_name == "SmallCube") {
+        return;
+    }
+
+    if (_raycastObject.rigid) {
+        _raycastObject.rigid->release();
+    }
+    if (!_raycastObject.model->_triangleMesh) {
+        _raycastObject.model->CreateTriangleMesh();
+    }
+    
+    PhysicsFilterData filterData;
+    filterData.raycastGroup = RAYCAST_ENABLED;
+    filterData.collisionGroup = CollisionGroup::NO_COLLISION;
+    filterData.collidesWith = CollisionGroup::NO_COLLISION;
+    PxShapeFlags shapeFlags(PxShapeFlag::eSCENE_QUERY_SHAPE); // Most importantly NOT eSIMULATION_SHAPE. PhysX does not allow for tri mesh.
+    _raycastObject.shape = Physics::CreateShapeFromTriangleMesh(_raycastObject.model->_triangleMesh, shapeFlags, Physics::GetDefaultMaterial(), _transform.scale);
+    _raycastObject.rigid = Physics::CreateRigidStatic(Transform(), filterData, _raycastObject.shape);
+    _raycastObject.rigid->userData = new PhysicsObjectData(PhysicsObjectType::GAME_OBJECT, this);
+
+
+    // check all this is necessary
+    if (_collisionBody) {
+        PutRigidBodyToSleep();
+        _collisionBody->setGlobalPose(PxTransform(Util::GlmMat4ToPxMat44(_modelMatrix)));
+    }
+    if (_raycastObject.rigid) {
+        _raycastObject.rigid->setGlobalPose(PxTransform(Util::GlmMat4ToPxMat44(_modelMatrix)));
+    }
+}
+
+void GameObject::SetRaycastShapeFromModel(Model* model) {	
+    if (!model) {
 		return;
 	}
-	if (_raycastBody) {
-		_raycastBody->release();
-	}
-	if (!model->_triangleMesh) {
-		//std::cout << "SetRaycastShapeFromModel() for game object '" << this->_name << "' with model '" << model->_name << "'\n";
-		model->CreateTriangleMesh();
-	}
-	PhysicsFilterData filterData;
-	filterData.raycastGroup = RAYCAST_ENABLED;
-	filterData.collisionGroup = CollisionGroup::NO_COLLISION;
-	filterData.collidesWith = CollisionGroup::NO_COLLISION;
-	PxShapeFlags shapeFlags(PxShapeFlag::eSCENE_QUERY_SHAPE); // Most importantly NOT eSIMULATION_SHAPE. PhysX does not allow for tri mesh.
-	_raycastShape = Physics::CreateShapeFromTriangleMesh(model->_triangleMesh, shapeFlags);
-	_raycastBody = Physics::CreateRigidStatic(Transform(), filterData, _raycastShape);
-	_raycastBody->userData = new PhysicsObjectData(PhysicsObjectType::GAME_OBJECT, this);
+    _raycastObject.model = model;
+    UpdateRaycastObject();
 }
 
 void GameObject::SetRaycastShape(PxShape* shape) {
 	if (!shape) {
 		return;
 	}
-	if (_raycastBody) {
-		_raycastBody->release();
+	if (_raycastObject.rigid) {
+        _raycastObject.rigid->release();
 	}
 	PhysicsFilterData filterData;
 	filterData.raycastGroup = RAYCAST_ENABLED;
 	filterData.collisionGroup = CollisionGroup::NO_COLLISION;
 	filterData.collidesWith = CollisionGroup::NO_COLLISION;
-	_raycastBody = Physics::CreateRigidStatic(Transform(), filterData, shape);
-	_raycastBody->userData = new PhysicsObjectData(PhysicsObjectType::GAME_OBJECT, this);
+    _raycastObject.rigid = Physics::CreateRigidStatic(Transform(), filterData, shape);
+    _raycastObject.rigid->userData = new PhysicsObjectData(PhysicsObjectType::GAME_OBJECT, this);
 
 }
 
@@ -719,18 +765,18 @@ void GameObject::CleanUp() {
 			}
 		}
 	}
-	if (_raycastBody) {
-		_raycastBody->release();
+    if (_raycastObject.rigid) {
+        _raycastObject.rigid->release();
     }
-    if (_raycastShape) {
-        _raycastShape->release();
+    if (_raycastObject.shape) {
+        _raycastObject.shape->release();
     }
-    if (_editorRaycastBody) {
+   /* if (_editorRaycastBody) {
         _editorRaycastBody->release();
     }
     if (_editorRaycastShape) {
         _editorRaycastShape->release();
-    }
+    }*/
 }
 
 std::vector<Triangle> GameObject::GetTris() {
@@ -786,22 +832,44 @@ std::vector<Triangle> GameObject::GetTris() {
 }
 
 void GameObject::PickUp() {
-	_collected = true;
-	_pickupCoolDownTime = Config::item_respawn_time;
-	PxMat44 matrix = Util::GlmMat4ToPxMat44(_transform.to_mat4());
 
-    if (_name == "GlockAmmo_PickUp") {
-        GameObject* topDraw = Scene::GetGameObjectByName("TopDraw");
-        matrix = Util::GlmMat4ToPxMat44(_transform.to_mat4() * topDraw->_openTransform.to_mat4());
+    if (_respawns) {
+        _collected = true;
+        _pickupCoolDownTime = Config::item_respawn_time;
+        Transform transform;
+        transform.position.y = -100;
+        ((PxRigidDynamic*)_collisionBody)->putToSleep();
+        _collisionBody->setGlobalPose(PxTransform(Util::GlmMat4ToPxMat44(transform.to_mat4())));
+        DisableRaycasting();
+        _wasPickedUpLastFrame = true;
     }
+    else {
+        for (int i = 0; i < Scene::_gameObjects.size(); i++) {
+            if (this == &Scene::_gameObjects[i]) {
 
-	_collisionBody->setGlobalPose(PxTransform(matrix));
-    DisableRaycasting();
-    _wasPickedUpLastFrame = true;
+                // Remove any bullet decals attached to this rigid
+                for (int j = 0; j < Scene::_decals.size(); j++) {
+                    if (Scene::_decals[j].parent == (PxRigidBody*)_raycastObject.rigid) {                        
+                        Scene::_decals.erase(Scene::_decals.begin() + j);
+                        j--;
+                    }
+                }
+
+                // Cleanup
+                _collisionBody->release();
+                _raycastObject.shape->release();
+                _raycastObject.rigid->release();
+                Scene::_gameObjects.erase(Scene::_gameObjects.begin() + i);
+                break;
+            }
+        }
+    }
 }
 
 void GameObject::PutRigidBodyToSleep() {
-    ((PxRigidDynamic*)_collisionBody)->putToSleep();
+    if (_collisionBody) {
+        ((PxRigidDynamic*)_collisionBody)->putToSleep();
+    }
 }
 
 void GameObject::SetPickUpType(PickUpType pickupType) {
@@ -813,21 +881,21 @@ bool GameObject::IsCollectable() {
 }
 
 void GameObject::DisableRaycasting() {
-    auto filterData = _raycastShape->getQueryFilterData();
+    auto filterData = _raycastObject.shape->getQueryFilterData();
     filterData.word0 = RAYCAST_DISABLED;
-    _raycastShape->setQueryFilterData(filterData);
+    _raycastObject.shape->setQueryFilterData(filterData);
 }
 
 void GameObject::EnableRaycasting() {
 
-    if (!_raycastShape) {
+    if (!_raycastObject.shape) {
         std::cout << "there is no raycast shape for game object with name: " << _name << "\n";
         return;
     }
 
-    auto filterData = _raycastShape->getQueryFilterData();
+    auto filterData = _raycastObject.shape->getQueryFilterData();
     filterData.word0 = RAYCAST_ENABLED;
-    _raycastShape->setQueryFilterData(filterData);
+    _raycastObject.shape->setQueryFilterData(filterData);
 }
 
 bool GameObject::HasMovedSinceLastFrame() {
@@ -837,3 +905,59 @@ bool GameObject::HasMovedSinceLastFrame() {
         _aabb.position != _aabbPreviousFrame.position && _aabb.extents != _aabbPreviousFrame.extents
     );
 }
+
+void GameObject::LoadSavedState() {
+
+    // Collision body
+    if (_collisionBody) {
+        PxMat44 matrix = Util::GlmMat4ToPxMat44(_transform.to_mat4());
+        _collisionBody->setGlobalPose(PxTransform(matrix));
+        if (_wakeOnStart) {
+            _collisionBody->addForce(PxVec3(0,0,0));
+        }
+        else {
+            ((PxRigidDynamic*)_collisionBody)->putToSleep();
+        }
+    }
+
+    // Open state
+    _openTransform = Transform();
+
+    // Pickup
+    if (_pickupType != PickUpType::NONE) {
+        _pickupCoolDownTime = 0;
+        _wasPickedUpLastFrame = false;
+        _collected = false;
+    }
+
+}
+/*
+void GameObject::EnableRaycasting() {
+    PxFilterData filterData = _raycastObject.shape->getQueryFilterData();
+    filterData.word0 = RAYCAST_ENABLED;
+    _raycastObject.shape->setQueryFilterData(filterData);       // ray casts
+    _raycastObject.shape->setSimulationFilterData(filterData);  // collisions
+}
+
+
+void GameObject::DisableRaycasting() {
+    PxFilterData filterData = _raycastObject.shape->getQueryFilterData();
+    filterData.word0 = RAYCAST_DISABLED;
+    _raycastObject.shape->setQueryFilterData(filterData);       // ray casts
+    _raycastObject.shape->setSimulationFilterData(filterData);  // collisions
+}
+
+void GameObject::SetCollisionGroup(CollisionGroup collisionGroup) {
+    PxFilterData filterData = _raycastObject.shape->getQueryFilterData();
+    filterData.word1 = collisionGroup;
+    _raycastObject.shape->setQueryFilterData(filterData);       // ray casts
+    _raycastObject.shape->setSimulationFilterData(filterData);  // collisions
+
+}
+
+void GameObject::SetCollidesWithGroup(PxU32 collisionGroup) {
+    PxFilterData filterData = _raycastObject.shape->getQueryFilterData();
+    filterData.word1 = collisionGroup;
+    _raycastObject.shape->setQueryFilterData(filterData);       // ray casts
+    _raycastObject.shape->setSimulationFilterData(filterData);  // collisions
+}*/

@@ -15,6 +15,24 @@ namespace Gizmo {
     Shader g_LineShader;
     Shader g_PointShader;
 
+    Im3d::Mat4 g_transform = (1.0f);
+
+    bool _inUse = false;
+
+
+    inline bool HasHover() {
+        Im3d::Context& ctx = Im3d::GetContext();
+        return (ctx.m_hotId != 0);
+    }
+
+    inline bool InUse() {
+        return _inUse;
+    }
+
+    inline Im3d::Mat4& GetTransform() {
+        return g_transform;
+    }
+
     //enum State {TRANSLATE, ROTATE, SCALE};
     //State g_state = TRANSLATE;
 
@@ -70,16 +88,21 @@ namespace Gizmo {
         return glm::vec3(matrix[3][0], matrix[3][1], matrix[3][2]);
     }
 
-    inline void NextGizmoMode() {
-        int gizmoMode = (int)Im3d::GetContext().m_gizmoMode;
-        gizmoMode++;
-        if (gizmoMode == 3) {
-            gizmoMode = 0;
-        }
-        Im3d::GetContext().m_gizmoMode = (Im3d::GizmoMode)(gizmoMode);
+    inline float Radians(float _degrees) { 
+        return _degrees * (HELL_PI / 180.0f); 
     }
 
-    void Update(glm::vec3 viewPos, glm::vec3 viewDir, float mouseX, float mouseY, glm::mat4 projection, glm::mat4 view, bool leftMouseDown, float viewportWidth, float viewportHeight) {
+    Im3d::Mat4 Update(glm::vec3 viewPos, glm::vec3 viewDir, float mouseX, float mouseY, glm::mat4 projection, glm::mat4 view, bool leftMouseDown, float viewportWidth, float viewportHeight, glm::mat4 matrix) {
+
+        if (Input::KeyPressed(HELL_KEY_W)) {
+            Im3d::GetContext().m_gizmoMode = Im3d::GizmoMode::GizmoMode_Translation;
+        }
+        if (Input::KeyPressed(HELL_KEY_E)) {
+            Im3d::GetContext().m_gizmoMode = Im3d::GizmoMode::GizmoMode_Rotation;
+        }
+        if (Input::KeyPressed(HELL_KEY_R)) {
+            Im3d::GetContext().m_gizmoMode = Im3d::GizmoMode::GizmoMode_Scale;
+        }
 
         float deltaTime = 1.0f / 60.0f;
 
@@ -87,93 +110,38 @@ namespace Gizmo {
 
         ad.m_deltaTime = deltaTime;
         ad.m_viewportSize = Im3d::Vec2((float)viewportWidth, (float)viewportHeight);
-        ad.m_viewOrigin = { viewPos.x, viewPos.y, viewPos.z }; // for VR use the head position
+        ad.m_viewOrigin = { viewPos.x, viewPos.y, viewPos.z };
         ad.m_viewDirection = { viewDir.x, viewDir.y, viewDir.z };
-        ad.m_worldUp = Im3d::Vec3(0.0f, 1.0f, 0.0f); // used internally for generating orthonormal bases
-        ad.m_projOrtho = false;// g_Example->m_camOrtho;
+        ad.m_worldUp = Im3d::Vec3(0.0f, 1.0f, 0.0f); 
+        ad.m_projOrtho = false;
+        ad.m_projScaleY = tanf(1.0f * 0.5f) * 2.0f; // controls how gizmos are scaled in world space to maintain a constant screen height or vertical fov for a perspective projection
 
-        // m_projScaleY controls how gizmos are scaled in world space to maintain a constant screen height
-        ad.m_projScaleY = tanf(1.0f * 0.5f) * 2.0f; // or vertical fov for a perspective projection
-
-        // World space cursor ray from mouse position; for VR this might be the position/orientation of the HMD or a tracked controller.
+        // World space cursor ray from mouse position
         Im3d::Vec2 cursorPos = { mouseX, mouseY };
+        glm::vec3 mouseRay = GetMouseRay(projection, view, viewportWidth, viewportHeight, mouseX, mouseY);
         cursorPos.x = (cursorPos.x / ad.m_viewportSize.x) * 2.0f - 1.0f;
         cursorPos.y = (cursorPos.y / ad.m_viewportSize.y) * 2.0f - 1.0f;
         cursorPos.y = -cursorPos.y; // window origin is top-left, ndc is bottom-left
-        Im3d::Vec3 rayOrigin, rayDirection;
-        rayOrigin = ad.m_viewOrigin;
-
-        glm::vec3 mouseRay = GetMouseRay(projection, view, viewportWidth, viewportHeight, mouseX, mouseY);
-        rayDirection = { mouseRay.x, mouseRay.y, mouseRay.z };
-
-        ad.m_cursorRayOrigin = rayOrigin;
-        ad.m_cursorRayDirection = rayDirection;
-
+        ad.m_cursorRayOrigin = { viewPos.x, viewPos.y, viewPos.z };
+        ad.m_cursorRayDirection = { mouseRay.x, mouseRay.y, mouseRay.z };
         // Fill the key state array; using GetAsyncKeyState here but this could equally well be done via the window proc.
         // All key states have an equivalent (and more descriptive) 'Action_' enum.
-        ad.m_keyDown[Im3d::Mouse_Left/*Im3d::Action_Select*/] = leftMouseDown;
-
-    }
-
-    Im3d::Mat4 Draw(glm::mat4 projection, glm::mat4 view, float viewportWidth, float viewportHeight, glm::mat4 matrix) {
+        ad.m_keyDown[Im3d::Mouse_Left] = leftMouseDown;
+        bool shiftDown = Input::KeyDown(HELL_KEY_LEFT_SHIFT_GLFW);
+        ad.m_snapTranslation = !shiftDown ? 0.05f : 0.0f;
+        ad.m_snapRotation = !shiftDown ? Radians(45.0f * 0.5f) : 0.0f;
+        ad.m_snapScale = !shiftDown ? 0.05f : 0.0f;
 
         Im3d::NewFrame();
-
-        // give shit to the library
-
-        Im3d::Context& ctx = Im3d::GetContext();
-        Im3d::AppData& ad = Im3d::GetAppData();
-
-
-
-        // this needs expanding upon and refactoring !!!
-        // this needs expanding upon and refactoring !!!
-        // this needs expanding upon and refactoring !!!
-        // this needs expanding upon and refactoring !!!
-
-        static Im3d::Mat4 transform = (1.0f);
-        transform = GlmMat4ToIm3dMat4(matrix);
-
-
-
-
-
-        // Context-global gizmo modes are set via actions in the AppData::m_keyDown but could also be modified via a GUI as follows:
-      //  int gizmoMode = (int)Im3d::GetContext().m_gizmoMode;
-
-      //  Im3d::GetContext().m_gizmoMode = (Im3d::GizmoMode)gizmoMode;
-       
-       // Im3d::GetContext().m_gizmoMode = (Im3d::GizmoMode)(g_state);
-
-        // The ID passed to Gizmo() should be unique during a frame - to create gizmos in a loop use PushId()/PopId().
-        if (Im3d::Gizmo("GizmoUnified", transform))
-        {
-           // int gizmoMode = (int)Im3d::GetContext().m_gizmoMode;
-           /*gizmoMode = Im3d::GizmoMode_Translation;
-            ImGui::SameLine();
-            ImGui::RadioButton("Rotate (Ctrl+R)", &gizmoMode, Im3d::GizmoMode_Rotation);
-            ImGui::SameLine();
-            ImGui::RadioButton("Scale (Ctrl+S)", &gizmoMode, Im3d::GizmoMode_Scale);*/ 
-         
-
-
-        }
-
-
-        ///////////////////////////
-
-     /*  Im3d::PushDrawState();
-        Im3d::SetSize(2.0f);
-        Im3d::BeginLineLoop();
-        Im3d::Vertex(0.0f, 0.0f, 0.0f, Im3d::Color_Magenta);
-        Im3d::Vertex(1.0f, 1.0f, 0.0f, Im3d::Color_Yellow);
-        Im3d::Vertex(2.0f, 2.0f, 0.0f, Im3d::Color_Cyan);
-        Im3d::End();
-        Im3d::PopDrawState();*/ 
-
+        g_transform = GlmMat4ToIm3dMat4(matrix);
+        _inUse = Im3d::Gizmo("GizmoUnified", g_transform);
         Im3d::EndFrame();
+        return g_transform;
+    }
 
+    void Draw(glm::mat4 projection, glm::mat4 view, float viewportWidth, float viewportHeight) {
 
+      
        // float viewportWidth = 1920 * 1.5f;
       //  float viewportHeight = 1080 * 1.5f;
 
@@ -223,7 +191,7 @@ namespace Gizmo {
                 break;
             default:
                 IM3D_ASSERT(false);
-                return transform;
+                return;
             };
 
             if (nullptr) {
@@ -246,13 +214,6 @@ namespace Gizmo {
 
             (glDrawArrays(prim, 0, (GLsizei)drawList.m_vertexCount));
         }
-
-        glm::mat4 gizmoWorldMatrix = Im3dMat4ToGlmMat4(transform);
-        glm::vec3 gizmoWorldPos = GetTranslationFromMatrix666(gizmoWorldMatrix);
-
-        //  Im3d::NewFrame();
-
-        return transform;
     }
 
 }

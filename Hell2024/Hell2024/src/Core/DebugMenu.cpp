@@ -227,11 +227,11 @@ void DebugMenu::PressedEnter() {
 		_isOpen = false;
 		EngineState::_engineMode = EngineMode::EDITOR;
 		EngineState::_viewportMode == FULLSCREEN;
-		Audio::PlayAudio(AUDIO_SELECT, 1.00f);
+        Renderer::EnteredEditorMode();
 	}
 	// Load map
 	else if (flag == MenuItemFlag::LOAD_MAP) {
-		Scene::LoadMap("map.txt");
+        Scene::LoadMap("map.txt");
 		Audio::PlayAudio(AUDIO_SELECT, 1.00f);
 	}
 	// Save map

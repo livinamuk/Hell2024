@@ -116,6 +116,21 @@ void Player::ShowPickUpText(std::string text) {
 	_pickUpTextTimer = Config::pickup_text_time;
 }
 
+
+
+void Player::PickUpGlock() {
+    if (_weaponInventory[Weapon::GLOCK] == false) {
+        ShowPickUpText("PICKED UP GLOCK");
+        Audio::PlayAudio("ItemPickUp.wav", 1.0f);
+        _weaponInventory[Weapon::GLOCK] = true;
+        _inventory.glockAmmo.clip = GLOCK_CLIP_SIZE;
+        _inventory.glockAmmo.total = GLOCK_CLIP_SIZE * 2;
+    }
+    else {
+        PickUpGlockAmmo();
+    }
+}
+
 void Player::PickUpAKS74U() {
     if (_weaponInventory[Weapon::AKS74U] == false) {
         ShowPickUpText("PICKED UP AKS74U");
@@ -199,15 +214,29 @@ void Player::CheckForItemPickOverlaps() {
                         PickUpAKS74U();
                         parent->PickUp();
                     }
+                    if (!parent->IsCollected() && parent->GetPickUpType() == PickUpType::GLOCK) {
+                        PickUpGlock();
+                        parent->PickUp();
+                    }
                     if (!parent->IsCollected() && parent->GetPickUpType() == PickUpType::SHOTGUN) {
                         PickUpShotgun();
                         parent->PickUp();
-                        parent->PutRigidBodyToSleep();
+                        // Think about this brother. Next time you see it of course. Not now.
+                        // Think about this brother. Next time you see it of course. Not now.
+                        // Think about this brother. Next time you see it of course. Not now.
+                        if (parent->_respawns) {
+                            parent->PutRigidBodyToSleep();
+                        }
                     }
                     if (!parent->IsCollected() && parent->GetPickUpType() == PickUpType::AKS74U_SCOPE) {
                         GiveAKS74UScope();
                         parent->PickUp();
-                        parent->PutRigidBodyToSleep();
+                        // Think about this brother. Next time you see it of course. Not now.
+                        // Think about this brother. Next time you see it of course. Not now.
+                        // Think about this brother. Next time you see it of course. Not now.
+                        if (parent->_respawns) {
+                            parent->PutRigidBodyToSleep();
+                        }
                     }
                     if (!parent->IsCollected() && parent->GetPickUpType() == PickUpType::GLOCK_AMMO) {
 
@@ -263,6 +292,25 @@ void Player::CheckForItemPickOverlaps() {
 	}
 }
 
+void Player::UpdateRagdoll() {
+
+    // Collision only if dead
+    if (_isDead) {
+      //  _characterModel._ragdoll.EnableCollision();
+    }
+    else {
+        // BROKEN
+        // BROKEN
+        // BROKEN
+        // BROKEN
+       // _characterModel._ragdoll.DisableCollision();
+    }
+    // Updated user data pointer
+    for (RigidComponent& rigid : _characterModel._ragdoll._rigidComponents) {
+        PhysicsObjectData* physicsObjectData = (PhysicsObjectData*)rigid.pxRigidBody->userData;
+        physicsObjectData->parent = this;
+    }
+}
 
 void Player::Update(float deltaTime) {
 
@@ -280,7 +328,8 @@ void Player::Update(float deltaTime) {
     }
 
     // Pressed Respawn
-    bool autoRespawn = true;
+    bool autoRespawn = false;
+    autoRespawn = true;
     if (_isDead && _timeSinceDeath > 3.25) {
         if (PressedFire() ||
             PressedReload() ||
@@ -295,11 +344,8 @@ void Player::Update(float deltaTime) {
         }
     }
 
-    // Ragdoll rigid userdata
-    for (RigidComponent& rigid : _characterModel._ragdoll._rigidComponents) {
-        PhysicsObjectData* physicsObjectData = (PhysicsObjectData*)rigid.pxRigidBody->userData;
-        physicsObjectData->parent = this;
-    }
+    UpdateRagdoll();
+
 
     // Take damage outside
     _isOutside = true;
@@ -328,12 +374,16 @@ void Player::Update(float deltaTime) {
         Kill();
         _health = 0;
 
+        /*
         glm::vec3 deathPosition = { GetFeetPosition().x, 0.0, GetFeetPosition().z };
-
         AnimatedGameObject* dyingGuy = Scene::GetAnimatedGameObjectByName("DyingGuy");
         dyingGuy->SetRotationY(_rotation.y + HELL_PI);
         dyingGuy->SetPosition(deathPosition);
-        dyingGuy->PlayAnimation("DyingGuy_Death", 1.0f);
+        dyingGuy->PlayAnimation("DyingGuy_Death", 1.0f);*/
+    }
+    // If you're dead, reset the 
+    if (_isDead) {
+        _outsideDamageTimer = 0;
     }
 
 	CheckForItemPickOverlaps();
@@ -373,12 +423,12 @@ void Player::Update(float deltaTime) {
     if (Input::KeyDown(HELL_KEY_EQUAL)) {
         _viewHeightStanding += amt;
     }
-    if (Input::KeyDown(HELL_KEY_8)) {
+    /*if (Input::KeyDown(HELL_KEY_8)) {
         _viewHeightStanding -= amt * 100;
     }
     if (Input::KeyDown(HELL_KEY_9)) {
         _viewHeightStanding += amt * 100;
-    }
+    }*/
 
 	// Crouching
 	bool crouching = false;
@@ -416,7 +466,7 @@ void Player::Update(float deltaTime) {
     else {
 
         for (RigidComponent& rigidComponent : _characterModel._ragdoll._rigidComponents) {
-            if (rigidComponent.name == "rMarker_CC_Base_FacialBone") {
+            if (rigidComponent.name == "rMarker_CC_Base_Head") {
                 PxMat44 globalPose = rigidComponent.pxRigidBody->getGlobalPose();
                 _viewMatrix = glm::inverse(Util::PxMat44ToGlmMat4(globalPose));
                 break;
@@ -604,7 +654,7 @@ void Player::Update(float deltaTime) {
         // THIS IS WHERE YOU SKIN THE MESH TO THE RAGDOLL BUT IT IS CURRENTLY BROKEN
         // THIS IS WHERE YOU SKIN THE MESH TO THE RAGDOLL BUT IT IS CURRENTLY BROKEN
         // 
-        //_characterModel.UpdateBoneTransformsFromRagdoll();
+        _characterModel.UpdateBoneTransformsFromRagdoll();
     }
 
 	// Debug casing spawn
@@ -675,6 +725,17 @@ void Player::Update(float deltaTime) {
     }
 }
 
+
+void Player::ForceSetViewMatrix(glm::mat4 viewMatrix) {
+    _viewMatrix = viewMatrix;
+    _inverseViewMatrix = glm::inverse(_viewMatrix);
+    _right = glm::vec3(_inverseViewMatrix[0]);
+    _up = glm::vec3(_inverseViewMatrix[1]);
+    _forward = glm::vec3(_inverseViewMatrix[2]);
+    _movementVector = glm::normalize(glm::vec3(_forward.x, 0, _forward.z));
+    _viewPos = _inverseViewMatrix[3];
+}
+
 glm::mat4 Player::GetViewMatrix() {
 	return  glm::mat4(glm::mat3(_firstPersonWeapon._cameraMatrix)) * _viewMatrix;;
 }
@@ -739,10 +800,15 @@ void Player::Interact() {
 	}
 }
 
+void Player::SetPosition(glm::vec3 position) {
+    _characterController->setFootPosition(PxExtendedVec3(position.x, position.y, position.z));
+}
+
 void Player::Respawn() {
 
     _isDead = false;
     _ignoreControl = false;
+    _characterModel._ragdoll.DisableCollision();
 
     int index = Util::RandomInt(0, Scene::_spawnPoints.size() - 1);
     SpawnPoint& spawnPoint = Scene::_spawnPoints[index];
@@ -960,6 +1026,13 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
 	_firstPersonWeapon.SetRotationY(Player::GetViewRotation().y);
 	_firstPersonWeapon.SetPosition(Player::GetViewPos());
 
+    if (_isDead) {
+        _characterModel.WipeAllSkippedMeshIndices();
+        HideKnifeMesh();
+        HideGlockMesh();
+        HideShotgunMesh();
+        HideAKS74UMesh();
+    }
     
 	///////////////
 	//   Knife   //
@@ -1606,6 +1679,7 @@ void Player::SpawnBullet(float variance, Weapon type) {
 	bullet.spawnPosition = GetViewPos();
     bullet.type = type;
     bullet.raycastFlags = _bulletFlags;// RaycastGroup::RAYCAST_ENABLED;
+    bullet.parentPlayersViewRotation = GetCameraRotation();
 
 
     glm::vec3 offset = glm::vec3(0);
@@ -1649,14 +1723,15 @@ void Player::DropAKS7UMag() {
 	*/
 
 
-
+    /*
 	//mag.CreateRigidBody(mag.GetGameWorldMatrix(), false);
 	mag.CreateRigidBody(magWorldMatrix, false);
 	mag.SetRaycastShapeFromModel(AssetManager::GetModel("AKS74UMag"));
 	mag.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("AKS74UMag_ConvexMesh")->_meshes[0], magFilterData);
 	mag.SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
 	mag.UpdateRigidBodyMassAndInertia(magDensity);
-	mag.CreateEditorPhysicsObject();
+	//mag.CreateEditorPhysicsObject();
+    */
 
 	//mag.SetScale(0.1f);
 
@@ -1964,6 +2039,54 @@ bool Player::PressedEscape() {
         return false;
     }
 }
+bool Player::PressedFullscreen() {
+    if (_inputType == InputType::KEYBOARD_AND_MOUSE) {
+        return InputMulti::KeyPressed(_keyboardIndex, _mouseIndex, _controls.DEBUG_FULLSCREEN);
+    }
+    else {
+        // return InputMulti::ButtonPressed(_controllerIndex, _controls.ESCAPE);
+        return false;
+    }
+}
+
+bool Player::PressedOne() {
+    if (_inputType == InputType::KEYBOARD_AND_MOUSE) {
+        return InputMulti::KeyPressed(_keyboardIndex, _mouseIndex, _controls.DEBUG_ONE);
+    }
+    else {
+        // return InputMulti::ButtonPressed(_controllerIndex, _controls.ESCAPE);
+        return false;
+    }
+}
+
+bool Player::PressedTwo() {
+    if (_inputType == InputType::KEYBOARD_AND_MOUSE) {
+        return InputMulti::KeyPressed(_keyboardIndex, _mouseIndex, _controls.DEBUG_TWO);
+    }
+    else {
+        // return InputMulti::ButtonPressed(_controllerIndex, _controls.ESCAPE);
+        return false;
+    }
+}
+
+bool Player::PressedThree() {
+    if (_inputType == InputType::KEYBOARD_AND_MOUSE) {
+        return InputMulti::KeyPressed(_keyboardIndex, _mouseIndex, _controls.DEBUG_THREE);
+    }
+    else {
+        // return InputMulti::ButtonPressed(_controllerIndex, _controls.ESCAPE);
+        return false;
+    }
+}
+bool Player::PressedFour() {
+    if (_inputType == InputType::KEYBOARD_AND_MOUSE) {
+        return InputMulti::KeyPressed(_keyboardIndex, _mouseIndex, _controls.DEBUG_FOUR);
+    }
+    else {
+        // return InputMulti::ButtonPressed(_controllerIndex, _controls.ESCAPE);
+        return false;
+    }
+}
 
 glm::vec3 Player::GetCameraRotation() {
     return _rotation;
@@ -1997,7 +2120,102 @@ void Player::HideAKS74UMesh() {
     _characterModel.AddSkippedMeshIndexByName("BarrelTip_low");
 }
 
+void Player::DrawWeapons() {
+
+    glm::vec3 spawnPos = GetFeetPosition() + glm::vec3(0, 1.5f, 0);
+
+    if (_weaponInventory[Weapon::AKS74U]) {
+        GameObject& weapon = Scene::_gameObjects.emplace_back();
+        weapon.SetPosition(spawnPos);
+        weapon.SetRotationX(-1.7f);
+        weapon.SetRotationY(0.0f);
+        weapon.SetRotationZ(-1.6f);
+        weapon.SetModel("AKS74U_Carlos");
+        weapon.SetName("AKS74U_Carlos");
+        weapon.SetMeshMaterial("Ceiling");
+        weapon.SetMeshMaterialByMeshName("FrontSight_low", "AKS74U_0");
+        weapon.SetMeshMaterialByMeshName("Receiver_low", "AKS74U_1");
+        weapon.SetMeshMaterialByMeshName("BoltCarrier_low", "AKS74U_1");
+        weapon.SetMeshMaterialByMeshName("SafetySwitch_low", "AKS74U_1");
+        weapon.SetMeshMaterialByMeshName("Pistol_low", "AKS74U_2");
+        weapon.SetMeshMaterialByMeshName("Trigger_low", "AKS74U_2");
+        weapon.SetMeshMaterialByMeshName("MagRelease_low", "AKS74U_2");
+        weapon.SetMeshMaterialByMeshName("Magazine_Housing_low", "AKS74U_3");
+        weapon.SetMeshMaterialByMeshName("BarrelTip_low", "AKS74U_4");
+        weapon.SetPickUpType(PickUpType::AKS74U);
+        weapon.SetWakeOnStart(true);
+        PhysicsFilterData filterData666;
+        filterData666.raycastGroup = RAYCAST_DISABLED;
+        filterData666.collisionGroup = CollisionGroup::GENERIC_BOUNCEABLE;
+        filterData666.collidesWith = (CollisionGroup)(ENVIROMENT_OBSTACLE | GENERIC_BOUNCEABLE);
+        weapon.CreateRigidBody(weapon._transform.to_mat4(), false);
+        weapon.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("AKS74U_Carlos_ConvexMesh")->_meshes[0], filterData666);
+        weapon.SetRaycastShapeFromModel(AssetManager::GetModel("AKS74U_Carlos"));
+        weapon.SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
+        weapon.UpdateRigidBodyMassAndInertia(50.0f);
+        weapon.DisableRespawnOnPickup();
+        PxMat44 mat = Util::GlmMat4ToPxMat44(weapon._transform.to_mat4());
+        weapon._collisionBody->setGlobalPose(PxTransform(mat));
+    }
+
+    if (_weaponInventory[Weapon::SHOTGUN]) {        
+        GameObject& weapon = Scene::_gameObjects.emplace_back();
+        weapon.SetPosition(spawnPos);
+        weapon.SetRotationX(-1.7f);
+        weapon.SetRotationY(0.0f);
+        weapon.SetRotationZ(-1.6f);
+        weapon.SetModel("Shotgun_Isolated");
+        weapon.SetName("Shotgun_Pickup");
+        weapon.SetMeshMaterial("Shotgun");
+        weapon.SetPickUpType(PickUpType::SHOTGUN);
+        weapon.SetWakeOnStart(true);
+        PhysicsFilterData filterData666;
+        filterData666.raycastGroup = RAYCAST_DISABLED;
+        filterData666.collisionGroup = CollisionGroup::GENERIC_BOUNCEABLE;
+        filterData666.collidesWith = (CollisionGroup)(ENVIROMENT_OBSTACLE | GENERIC_BOUNCEABLE);
+        weapon.CreateRigidBody(weapon._transform.to_mat4(), false);
+        weapon.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("Shotgun_Isolated_ConvexMesh")->_meshes[0], filterData666);
+        weapon.SetRaycastShapeFromModel(AssetManager::GetModel("Shotgun_Isolated"));
+        weapon.SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
+        weapon.UpdateRigidBodyMassAndInertia(50.0f);
+        weapon.DisableRespawnOnPickup();
+        PxMat44 mat = Util::GlmMat4ToPxMat44(weapon._transform.to_mat4());
+        weapon._collisionBody->setGlobalPose(PxTransform(mat));
+    }
+
+    if (_weaponInventory[Weapon::GLOCK]) {
+        GameObject& weapon = Scene::_gameObjects.emplace_back();
+        weapon.SetPosition(spawnPos);
+        weapon.SetRotationX(-1.7f);
+        weapon.SetRotationY(0.0f);
+        weapon.SetRotationZ(-1.6f);
+        weapon.SetModel("Glock_Isolated");
+        weapon.SetName("GLOCKGLOCK");
+        weapon.SetMeshMaterial("Glock");
+        weapon.SetPickUpType(PickUpType::GLOCK);
+        weapon.SetWakeOnStart(true);
+        PhysicsFilterData filterData666;
+        filterData666.raycastGroup = RAYCAST_DISABLED;
+        filterData666.collisionGroup = CollisionGroup::GENERIC_BOUNCEABLE;
+        filterData666.collidesWith = (CollisionGroup)(ENVIROMENT_OBSTACLE | GENERIC_BOUNCEABLE);
+        weapon.CreateRigidBody(weapon._transform.to_mat4(), false);
+        weapon.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("Glock_Isolated_ConvexMesh")->_meshes[0], filterData666);
+        weapon.SetRaycastShapeFromModel(AssetManager::GetModel("Glock_Isolated"));
+        weapon.SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
+        weapon.UpdateRigidBodyMassAndInertia(200.0f);
+        weapon.DisableRespawnOnPickup();
+        PxMat44 mat = Util::GlmMat4ToPxMat44(weapon._transform.to_mat4());
+        weapon._collisionBody->setGlobalPose(PxTransform(mat));
+    }
+}
+
 void Player::Kill()  {
+
+    if (_isDead) {
+        return;
+    }
+
+    DrawWeapons();
 
     PxExtendedVec3 globalPose = PxExtendedVec3(-1, 0.1, -1);
     _characterController->setFootPosition(globalPose);
@@ -2007,16 +2225,14 @@ void Player::Kill()  {
 
     _isDead = true;
 
-    _characterModel.WipeAllSkippedMeshIndices();
-    HideKnifeMesh();
-    HideGlockMesh();
-    HideShotgunMesh();
-    HideAKS74UMesh();
+    _characterModel._ragdoll.EnableCollision();
 
     for (RigidComponent& rigid : _characterModel._ragdoll._rigidComponents) {
         rigid.pxRigidBody->wakeUp();
     }
-    Audio::PlayAudio("Death0.wav", 1.0f);}
+
+    Audio::PlayAudio("Death0.wav", 1.0f);   
+}
 
 void Player::CheckForKnifeHit() {
 
@@ -2058,7 +2274,7 @@ void Player::CheckForKnifeHit() {
 
                         otherPlayer.Kill();
                         _killCount++;
-
+                        /*
                         Player* otherPlayer = NULL;
                         if (this == &Scene::_players[0]) {
                             otherPlayer = &Scene::_players[1];
@@ -2066,14 +2282,14 @@ void Player::CheckForKnifeHit() {
                         else {
                             otherPlayer = &Scene::_players[0];
                         }
-
+                        
                         glm::vec3 deathPosition = { otherPlayer->GetFeetPosition().x, 0.1, otherPlayer->GetFeetPosition().z };
                         deathPosition += (otherPlayer->_movementVector * 0.25f);
 
                         AnimatedGameObject* dyingGuy = Scene::GetAnimatedGameObjectByName("DyingGuy");
                         dyingGuy->SetRotationY(GetViewRotation().y);
                         dyingGuy->SetPosition(deathPosition);
-                        dyingGuy->PlayAnimation("DyingGuy_Death", 1.0f);
+                        dyingGuy->PlayAnimation("DyingGuy_Death", 1.0f); */
 
                     }
                 }

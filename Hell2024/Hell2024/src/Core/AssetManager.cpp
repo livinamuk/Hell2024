@@ -19,6 +19,22 @@ std::vector<Model> _models;
 std::vector<SkinnedModel> _skinnedModels;
 
 
+void AssetManager::LoadVolumetricBloodTextures() {
+    s_ExrTexture_pos = ExrTexture("res/textures/exr/blood_pos.exr");
+    s_ExrTexture_norm = ExrTexture("res/textures/exr/blood_norm.exr");
+    s_ExrTexture_pos4 = ExrTexture("res/textures/exr/blood_pos4.exr");
+    s_ExrTexture_norm4 = ExrTexture("res/textures/exr/blood_norm4.exr");
+    s_ExrTexture_pos6 = ExrTexture("res/textures/exr/blood_pos6.exr");
+    s_ExrTexture_norm6 = ExrTexture("res/textures/exr/blood_norm6.exr");
+    s_ExrTexture_pos7 = ExrTexture("res/textures/exr/blood_pos7.exr");
+    s_ExrTexture_norm7 = ExrTexture("res/textures/exr/blood_norm7.exr");
+    s_ExrTexture_pos8 = ExrTexture("res/textures/exr/blood_pos8.exr");
+    s_ExrTexture_norm8 = ExrTexture("res/textures/exr/blood_norm8.exr");
+    s_ExrTexture_pos9 = ExrTexture("res/textures/exr/blood_pos9.exr");
+    s_ExrTexture_norm9 = ExrTexture("res/textures/exr/blood_norm9.exr");
+}
+
+
 namespace {
 
 constexpr BS::concurrency_t thread_count{ 4 };
@@ -29,6 +45,8 @@ size_t count_files_in(const std::string_view path) {
 }
 
 std::mutex _loadLogMutex;
+
+
 
 std::vector<std::future<Texture *>> load_textures_from_directory(const std::string_view directory) {
 	std::vector<std::future<Texture *>> loadedTextures;
@@ -212,9 +230,6 @@ void AssetManager::LoadAssetsMultithreaded() {
 
 void AssetManager::LoadEverythingElse() {
 
-
-
-
 	static const auto load_model_animations = [](std::vector<std::string>&& animations) {
 
 
@@ -244,17 +259,17 @@ void AssetManager::LoadEverythingElse() {
 	};
     
     std::vector<skinned_model_path> model_paths{
-        skinned_model_path{ "models/UniSexGuy2.fbx", std::vector<std::string>{
+        /*skinned_model_path{ "models/UniSexGuy2.fbx", std::vector<std::string>{
             "animations/Character_Glock_Walk.fbx",
                 "animations/Character_Glock_Kneel.fbx",
                 "animations/Character_Glock_Idle.fbx",
                 "animations/Character_AKS74U_Walk.fbx",
                 "animations/Character_AKS74U_Kneel.fbx",
                 "animations/Character_AKS74U_Idle.fbx",
-        } },
-            skinned_model_path{ "models/DyingGuy.fbx", std::vector<std::string>{
+        } },*/
+           /* skinned_model_path{"models/DyingGuy.fbx", std::vector<std::string>{
                 "animations/DyingGuy_Death.fbx",
-            } },
+            } },*/
             skinned_model_path{ "models/UniSexGuyScaled.fbx", std::vector<std::string>{
 
                     //"animations/UnisexGuy_Death.fbx",
@@ -305,7 +320,7 @@ void AssetManager::LoadEverythingElse() {
                 "animations/Glock_ReloadEmpty.fbx",
                 "animations/Glock_Draw.fbx",
             } },
-            skinned_model_path{ "models/MP7_test.fbx", std::vector<std::string>{
+           /* skinned_model_path{"models/MP7_test.fbx", std::vector<std::string>{
                 "animations/MP7_ReloadTest.fbx",
                     //"animations/Glock_Fire1.fbx",
                     //"animations/Glock_Fire2.fbx",
@@ -315,7 +330,7 @@ void AssetManager::LoadEverythingElse() {
                     //"animations/Glock_Reload.fbx",
                     //"animations/Glock_ReloadEmpty.fbx",
                     //"animations/Glock_Draw.fbx",
-                } },
+                } },*/
             skinned_model_path{ "models/Shotgun.fbx", std::vector<std::string>{
                 "animations/Shotgun_Idle.fbx",
                 "animations/Shotgun_Equip.fbx",
@@ -326,14 +341,6 @@ void AssetManager::LoadEverythingElse() {
                 "animations/Shotgun_ReloadEnd.fbx",
                 "animations/Shotgun_ReloadWetstart.fbx",
                 "animations/Shotgun_Walk.fbx",
-                    //"animations/Glock_Fire1.fbx",
-                    //"animations/Glock_Fire2.fbx",
-                    //"animations/Glock_Fire3.fbx",
-                    //"animations/Glock_Idle.fbx",
-                    //"animations/Glock_Walk.fbx",
-                    //"animations/Glock_Reload.fbx",
-                    //"animations/Glock_ReloadEmpty.fbx",
-                    //"animations/Glock_Draw.fbx",
                 } },
 			skinned_model_path{ "models/Knife.fbx", std::vector<std::string>{
 				"animations/Knife_Idle.fbx",
@@ -459,6 +466,9 @@ void AssetManager::LoadEverythingElse() {
 	FbxImporter::LoadAnimation(shotgun, "animations/Shotgun_Fire1.fbx");
 	FbxImporter::LoadAnimation(shotgun, "animations/Shotgun_Fire2.fbx");
 	FbxImporter::LoadAnimation(shotgun, "animations/Shotgun_Fire3.fbx");*/
+
+    LoadVolumetricBloodTextures();
+
 }
 
 Texture* AssetManager::GetTexture(const std::string& filename) {

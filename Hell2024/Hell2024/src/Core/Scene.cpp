@@ -13,13 +13,37 @@
 #include "Audio.hpp"
 #include "TextBlitter.h"
 
+
 float door2X = 2.05f;
+int _volumetricBloodObjectsSpawnedThisFrame = 0;
 
 void SetPlayerGroundedStates();
 void ProcessBullets();
 
+
+
+void Scene::CreateVolumetricBlood(glm::vec3 position, glm::vec3 rotation, glm::vec3 front) {
+    // Spawn a max of 4 per frame
+    if (_volumetricBloodObjectsSpawnedThisFrame < 4)
+        _volumetricBloodSplatters.push_back(VolumetricBloodSplatter(position, rotation, front));
+    _volumetricBloodObjectsSpawnedThisFrame++;
+}
+
 void Scene::Update(float deltaTime) {
 
+    _volumetricBloodObjectsSpawnedThisFrame = 0;
+
+    for (VolumetricBloodSplatter& volumetricBloodSplatter : _volumetricBloodSplatters) {
+        volumetricBloodSplatter.Update(deltaTime);
+    }
+    
+    for (vector<VolumetricBloodSplatter>::iterator it = _volumetricBloodSplatters.begin(); it != _volumetricBloodSplatters.end();) {
+        if (it->m_CurrentTime > 0.9f)
+            it = _volumetricBloodSplatters.erase(it);
+        else
+            ++it;
+    }
+    
     /*
     glm::vec3 p1Pos = Scene::_players[0].GetViewPos();
     glm::vec3 p2Pos = Scene::_players[1].GetViewPos();
@@ -29,6 +53,12 @@ void Scene::Update(float deltaTime) {
     float dotProduct = glm::dot(forward, v);
     std::cout << dotProduct << "\n";
     */
+
+    for (RigidComponent& rigid : Scene::_players[0]._characterModel._ragdoll._rigidComponents) {
+        PxShape* shape;
+        rigid.pxRigidBody->getShapes(&shape, 1);
+        shape->setFlag(PxShapeFlag::eVISUALIZATION, false);
+    }
 
     // Debug test spawn logic (respawns at same pos/rot)
     if (Input::KeyPressed(HELL_KEY_J) && false) {
@@ -46,13 +76,11 @@ void Scene::Update(float deltaTime) {
         }
     }
 
-
+    // Spawn player 2 to middle of main room
     if (Input::KeyPressed(HELL_KEY_K)) {
-
-       // Scene::_players[1]._isDead = false;
-     //   Scene::_players[1]._characterModel._animationMode = AnimatedGameObject::ANIMATION;
-       // Scene::_players[1]._characterController->setFootPosition(PxExtendedVec3(3.0f, 0.1f, 3.5f));
-
+        Scene::_players[1].Respawn();
+        Scene::_players[1].SetPosition(glm::vec3(3.0f, 0.1f, 3.5f));
+        Audio::PlayAudio("RE_Beep.wav", 0.75);
     }
 
     // Set spawn point
@@ -67,18 +95,7 @@ void Scene::Update(float deltaTime) {
 
 
 
-    if (Input::KeyPressed(HELL_KEY_1)) {
-        _players[0]._keyboardIndex = 0;
-        _players[1]._keyboardIndex = 1;
-        _players[0]._mouseIndex = 0;
-        _players[1]._mouseIndex = 1;
-    }
-    if (Input::KeyPressed(HELL_KEY_2)) {
-        _players[1]._keyboardIndex = 0;
-        _players[0]._keyboardIndex = 1;
-        _players[1]._mouseIndex = 0;
-        _players[0]._mouseIndex = 1;
-    }
+
 
   /*  if (Input::KeyPressed(HELL_KEY_SPACE)) {
 
@@ -195,18 +212,12 @@ void Scene::Update(float deltaTime) {
     if (Input::KeyPressed(HELL_KEY_SPACE) && false) {
         std::cout << "updating game object: " << ak->_name << "\n";
         //ak->_editorRaycastBody->setGlobalPose(PxTransform(Util::GlmMat4ToPxMat44(ak->GetModelMatrix())));
-
         Transform transform = ak->_transform;
 		PxQuat quat = Util::GlmQuatToPxQuat(glm::quat(transform.rotation));
 		PxTransform trans = PxTransform(PxVec3(transform.position.x, transform.position.y, transform.position.z), quat);
-
 		//ak->_editorRaycastBody->setGlobalPose(PxTransform(Util::GlmMat4ToPxMat44(trans.to_mat4())));
-		ak->_editorRaycastBody->setGlobalPose(trans);
-
+		//ak->_editorRaycastBody->setGlobalPose(trans);
     }
-
-    
-
 
     SetPlayerGroundedStates();
     ProcessBullets();
@@ -222,8 +233,6 @@ void Scene::Update(float deltaTime) {
         pickUp.Update(deltaTime);
 
 	}
-
-	
 
     if (Input::KeyPressed(HELL_KEY_T)) {
         for (Light& light : Scene::_lights) {
@@ -246,71 +255,16 @@ void Scene::Update(float deltaTime) {
     }*/
        
     for (AnimatedGameObject& animatedGameObject : _animatedGameObjects) {
-
-        // if this is the dying guy, then only calculate its animation if one of the players is actually dead
-        if (animatedGameObject.GetName() == "DyingGuy" && !Scene::_players[0]._isDead && !Scene::_players[1]._isDead) {
-            continue;
-        }
-
         animatedGameObject.Update(deltaTime);
     }
 
     for (GameObject& gameObject : _gameObjects) {
         gameObject.Update(deltaTime);
     }
-
-    //Flicker light 2
-    if (_lights.size() > 2) {
-        static float totalTime = 0;
-        float frequency = 20.f;
-        float amplitude = 0.5f;
-        totalTime += deltaTime;
-      //  Scene::_lights[2].strength = 1.0f + sin(totalTime * frequency) * amplitude;
-    }
-
-    // Move light 0 in a figure 8
-    /*
-    static bool figure8Light = false;
-    if (Input::KeyPressed(HELL_KEY_P)) {
-        figure8Light = !figure8Light;
-		Audio::PlayAudio(AUDIO_SELECT, 1.0f);
-        _lights[0].isDirty = true;
-    }
-
-    glm::vec3 lightPos = glm::vec3(2.8, 2.2, 3.6);
-
-    Light& light = _lights[0];
-    if (figure8Light) {
-        static float time = 0;
-        time += (deltaTime / 2);
-        glm::vec3 newPos = lightPos;
-        lightPos.x = lightPos.x + (cos(time)) * 2;
-        lightPos.y = lightPos.y;
-        lightPos.z = lightPos.z + (sin(2 * time) / 2) * 2;
-        light.isDirty = true;
-    }
-    light.position = lightPos;
-    */
-
+      
     for (Door& door : _doors) {
         door.Update(deltaTime);
     }
-
-
-    // Running Guy
-    /*auto enemy = GetAnimatedGameObjectByName("Enemy");
-    enemy->PlayAndLoopAnimation("UnisexGuyIdle", 1.0f);
-    enemy->SetScale(0.00975f);
-    enemy->SetScale(0.00f);
-    enemy->SetPosition(glm::vec3(1.3f, 0.1, 3.5f));
-    enemy->SetRotationX(HELL_PI / 2);
-    enemy->SetRotationY(HELL_PI / 2);
-
-    auto glock = GetAnimatedGameObjectByName("Shotgun");
-    glock->SetScale(0.01f);
-    glock->SetScale(0.00f);
-    glock->SetPosition(glm::vec3(1.3f, 1.1, 3.5f));*/
-
 
     UpdateRTInstanceData();
     ProcessPhysicsCollisions();
@@ -339,18 +293,6 @@ void Scene::CheckIfLightsAreDirty() {
         }
     }
 }
-
-void Scene::Update3DEditorScene() {
-
-	for (GameObject& gameObject : _gameObjects) {
-		gameObject.UpdateEditorPhysicsObject();
-	}
-
-	Physics::GetEditorScene()->simulate(1 / 60.0f);
-	Physics::GetEditorScene()->fetchResults(true);
-
-}
-
 
 void SetPlayerGroundedStates() {
     for (Player& player : Scene::_players) {
@@ -382,11 +324,54 @@ void ProcessBullets() {
                 // A ragdoll was hit
                 if (physicsObjectData->type == RAGDOLL_RIGID) {        
                     if (actor->userData) {
+
+
+                        // Spawn volumetric blood
+                        glm::vec3 position = rayResult.hitPosition;
+                        glm::vec3 rotation = glm::vec3(0, 0, 0);
+                        glm::vec3 front = bullet.direction * glm::vec3(-1);
+                        Scene::CreateVolumetricBlood(position, rotation, -bullet.direction);
+
+                        // Spawn blood decal
+                        static int counter = 0;
+                        int type = counter;
+                        Transform transform;
+                        transform.position.x = rayResult.hitPosition.x;
+                        transform.position.y = 0.101f;
+                        transform.position.z = rayResult.hitPosition.z;
+                        transform.rotation.y = bullet.parentPlayersViewRotation.y + HELL_PI;
+
+                        std::cout << "transform.rotation.y: " << transform.rotation.y  << "\n";
+
+                        static int typeCounter = 0;
+                        Scene::_bloodDecals.push_back(BloodDecal(transform, typeCounter));
+                        BloodDecal* decal = &Scene::_bloodDecals.back();
+
+                        typeCounter++;
+                        if (typeCounter == 4) {
+                            typeCounter = 0;
+                        }
+                        /*
+                        s_remainingBloodDecalsAllowedThisFrame--;
+                        counter++;
+                        if (counter > 3)
+                            counter = 0;
+                            */
+
+
+
+
+
                         Player* parentPlayerHit = (Player*)physicsObjectData->parent;
                         if (!parentPlayerHit->_isDead) {
 
+
+
+
+
+
                             parentPlayerHit->GiveDamageColor();
-                            parentPlayerHit->_health -= 15;
+                            parentPlayerHit->_health -= 150;
                             parentPlayerHit->_health = std::max(0, parentPlayerHit->_health);
 
                             if (actor->getName() == "RAGDOLL_HEAD") {
@@ -399,41 +384,53 @@ void ProcessBullets() {
                                 fleshWasHit = true;
                             }
 
+                            // Did it kill them?
                             if (parentPlayerHit->_health == 0) {
+
                                 parentPlayerHit->Kill();
                                 if (parentPlayerHit != &Scene::_players[0]) {
                                     Scene::_players[0]._killCount++;
 
-                                    glm::vec3 deathPosition = { parentPlayerHit->GetFeetPosition().x, 0.1, parentPlayerHit->GetFeetPosition().z };
+                                    /*glm::vec3 deathPosition = {parentPlayerHit->GetFeetPosition().x, 0.1, parentPlayerHit->GetFeetPosition().z};
                                     deathPosition += (Scene::_players[0]._movementVector * 0.25f);
-
                                     AnimatedGameObject* dyingGuy = Scene::GetAnimatedGameObjectByName("DyingGuy");
                                     dyingGuy->SetRotationY(Scene::_players[0].GetViewRotation().y);
                                     dyingGuy->SetPosition(deathPosition);
-                                    dyingGuy->PlayAnimation("DyingGuy_Death", 1.0f);
+                                    dyingGuy->PlayAnimation("DyingGuy_Death", 1.0f);*/
                                 }
                                 if (parentPlayerHit != &Scene::_players[1]) {
                                     Scene::_players[1]._killCount++;
-
+                                    /*
                                     glm::vec3 deathPosition = { parentPlayerHit->GetFeetPosition().x, 0.1, parentPlayerHit->GetFeetPosition().z };
                                     deathPosition += (Scene::_players[1]._movementVector * 0.25f);
-
                                     AnimatedGameObject* dyingGuy = Scene::GetAnimatedGameObjectByName("DyingGuy");
                                     dyingGuy->SetRotationY(Scene::_players[1].GetViewRotation().y);
                                     dyingGuy->SetPosition(deathPosition);
-                                    dyingGuy->PlayAnimation("DyingGuy_Death", 1.0f);
+                                    dyingGuy->PlayAnimation("DyingGuy_Death", 1.0f);*/
+                                }
+
+                                for (RigidComponent& rigidComponent : Scene::_players[1]._characterModel._ragdoll._rigidComponents) {
+                                    float strength = 75;
+                                    if (bullet.type == SHOTGUN) {
+                                        strength = 20;
+                                    }
+                                    strength *= rigidComponent.mass * 1.5f;
+                                    PxVec3 force = PxVec3(bullet.direction.x, bullet.direction.y, bullet.direction.z) * strength;
+                                    rigidComponent.pxRigidBody->addForce(force);
                                 }
                             }
                         }
                     }
+                                
 
-               
 
-                    float strength = 0.75;
+
+                    
+                    float strength = 75;
                     if (bullet.type == SHOTGUN) {
-                        strength = 0.20;
+                        strength = 20;
                     }
-                    strength *= 5;
+                    strength *= 20000;
                    // std::cout << "you shot a ragdoll rigid\n";
                     PxVec3 force = PxVec3(bullet.direction.x, bullet.direction.y, bullet.direction.z) * strength;
                     actor->addForce(force);
@@ -537,6 +534,14 @@ void ProcessBullets() {
 }
 void Scene::LoadHardCodedObjects() {
 
+    _volumetricBloodSplatters.clear();
+
+    glm::vec3 position = glm::vec3(3, 1.5, 3);
+    glm::vec3 rotaiton = glm::vec3(0, 0, 0);
+    glm::vec3 front = glm::vec3(1, 0, 0);
+    CreateVolumetricBlood(position, rotaiton, front);
+    
+
 /*PickUp& glockAmmoA = _pickUps.emplace_back();
 	//glockAmmoA.position = glm::vec3(2.0f, 0.1f, 3.6f);
 	glockAmmoA.position = glm::vec3(0.0f, 0.676f, 0.3f);
@@ -548,6 +553,8 @@ void Scene::LoadHardCodedObjects() {
    // _ceilings.emplace_back(door2X - 0.8f, 7.0f, door2X + 0.8f, 9.95f, 2.5f, AssetManager::GetMaterialIndex("Ceiling"));
 
     // ceilings   
+
+
 
     _ceilings.emplace_back(0.1f, 0.1f, 5.2f, 3.1f, 2.5f, AssetManager::GetMaterialIndex("Ceiling"));
     _ceilings.emplace_back(0.1f, 4.1f, 6.1f, 6.9f, 2.5f, AssetManager::GetMaterialIndex("Ceiling"));
@@ -693,6 +700,8 @@ void Scene::LoadHardCodedObjects() {
         aks74u.SetMeshMaterialByMeshName("Magazine_Housing_low", "AKS74U_3");
         aks74u.SetMeshMaterialByMeshName("BarrelTip_low", "AKS74U_4");
         aks74u.SetPickUpType(PickUpType::AKS74U);
+        aks74u.SetWakeOnStart(true);
+
 
         // physics shit for ak weapon pickup
         PhysicsFilterData filterData666;
@@ -700,6 +709,7 @@ void Scene::LoadHardCodedObjects() {
         filterData666.collisionGroup = CollisionGroup::GENERIC_BOUNCEABLE;
         filterData666.collidesWith = (CollisionGroup)(ENVIROMENT_OBSTACLE | GENERIC_BOUNCEABLE);
         aks74u.CreateRigidBody(aks74u._transform.to_mat4(), false);
+
         aks74u.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("AKS74U_Carlos_ConvexMesh")->_meshes[0], filterData666);
         aks74u.SetRaycastShapeFromModel(AssetManager::GetModel("AKS74U_Carlos"));
         aks74u.SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
@@ -808,7 +818,7 @@ void Scene::LoadHardCodedObjects() {
         PhysicsFilterData sofaFilterData;
         sofaFilterData.raycastGroup = RAYCAST_DISABLED;
         sofaFilterData.collisionGroup = CollisionGroup::ENVIROMENT_OBSTACLE;
-        sofaFilterData.collidesWith = (CollisionGroup)(GENERIC_BOUNCEABLE | BULLET_CASING | PLAYER);
+        sofaFilterData.collidesWith = (CollisionGroup)(GENERIC_BOUNCEABLE | BULLET_CASING | PLAYER | RAGDOLL);
 
         GameObject& sofa = _gameObjects.emplace_back();
         sofa.SetPosition(2.0f, 0.1f, 0.1f);
@@ -890,6 +900,14 @@ void Scene::LoadHardCodedObjects() {
         tree.SetName("ChristmasTree");
         tree.SetMeshMaterial("Tree");
 
+
+        /*
+        GameObject& tree2 = _gameObjects.emplace_back();
+        tree2.SetPosition(3.0f, 1.5f, 3.0f);
+        tree2.SetModel("Glock_Isolated");
+        tree2.SetName("GlockGlockGlockGlock");
+        tree2.SetMeshMaterial("Glock");
+        */
     
 
         //tree.CreateRigidBody(sofa.GetGameWorldMatrix(), true);
@@ -964,22 +982,22 @@ void Scene::LoadHardCodedObjects() {
             filterData2.collisionGroup = CollisionGroup::GENERIC_BOUNCEABLE;
             filterData2.collidesWith = CollisionGroup(ENVIROMENT_OBSTACLE | GENERIC_BOUNCEABLE);
 
-            GameObject& lamp = _gameObjects.emplace_back();
+            GameObject& lamp2 = _gameObjects.emplace_back();
           //  lamp.SetModel("LampFullNoGlobe");
-            lamp.SetModel("Lamp");
-			lamp.SetName("Lamp");
-            lamp.SetMeshMaterial("Lamp");
-            lamp.SetPosition(-.105f, 0.88, 0.25f);
-            lamp.SetParentName("SmallDrawersHis");
+            lamp2.SetModel("Lamp");
+            lamp2.SetName("Lamp");
+            lamp2.SetMeshMaterial("Lamp");
+            lamp2.SetPosition(glm::vec3(0.25f, 0.88, 0.105f) + glm::vec3(0.1f, 0.1f, 4.45f));
+            //lamp.SetParentName("SmallDrawersHis");
 
-            lamp.SetRaycastShapeFromModel(AssetManager::GetModel("LampFull"));
-            lamp.CreateRigidBody(lamp.GetGameWorldMatrix(), false);
+            lamp2.SetRaycastShapeFromModel(AssetManager::GetModel("LampFull"));
+            lamp2.CreateRigidBody(lamp2.GetGameWorldMatrix(), false);
 
-            lamp.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("LampConvexMesh_0")->_meshes[0], filterData2);
-            lamp.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("LampConvexMesh_1")->_meshes[0], filterData2);
-            lamp.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("LampConvexMesh_2")->_meshes[0], filterData2);
-            lamp.SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
-            lamp.UpdateRigidBodyMassAndInertia(20.0f);
+            lamp2.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("LampConvexMesh_0")->_meshes[0], filterData2);
+            lamp2.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("LampConvexMesh_1")->_meshes[0], filterData2);
+            lamp2.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("LampConvexMesh_2")->_meshes[0], filterData2);
+            lamp2.SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
+            lamp2.UpdateRigidBodyMassAndInertia(20.0f);
 
 
 
@@ -1071,7 +1089,7 @@ void Scene::LoadHardCodedObjects() {
 
             GameObject* cube = &_gameObjects.emplace_back();
             float halfExtent = 0.1f;
-            cube->SetPosition(2.0f, y * halfExtent * 2 + 0.1f, 3.5f);
+            cube->SetPosition(2.0f, y * halfExtent * 2 + 0.2f, 3.5f);
             cube->SetModel("SmallCube");
             cube->SetName("Present");
 
@@ -1090,7 +1108,7 @@ void Scene::LoadHardCodedObjects() {
 
 
             Transform transform;
-            transform.position = glm::vec3(2.0f, y * halfExtent * 2 + 0.1f, 3.5f);
+            transform.position = glm::vec3(2.0f, y * halfExtent * 2 + 0.2f, 3.5f);
 
             PxShape* collisionShape = Physics::CreateBoxShape(halfExtent, halfExtent, halfExtent);
             PxShape* raycastShape = Physics::CreateBoxShape(halfExtent, halfExtent, halfExtent);
@@ -1175,6 +1193,7 @@ void Scene::LoadHardCodedObjects() {
     // glock.SetRotationY(HELL_PI * 0.5f);
     */
 
+    /*
     AnimatedGameObject& dyingGuy = _animatedGameObjects.emplace_back(AnimatedGameObject());
     dyingGuy.SetName("DyingGuy");
     dyingGuy.SetSkinnedModel("DyingGuy");
@@ -1190,7 +1209,7 @@ void Scene::LoadHardCodedObjects() {
     dyingGuy.SetMeshMaterial("Glock", "Glock");
     dyingGuy.SetMeshMaterial("SM_Knife_01", "Knife");
     dyingGuy.SetMeshMaterial("Shotgun_Mesh", "Shotgun");
-    dyingGuy.SetMeshMaterialByIndex(13, "UniSexGuyHead");
+    dyingGuy.SetMeshMaterialByIndex(13, "UniSexGuyHead");*/
 
     /*
 
@@ -1387,11 +1406,18 @@ void Scene::LoadHardCodedObjects() {
 
 }
 
+void Scene::ResetGameObjectStates() {
+    for (GameObject& gameObject : _gameObjects) {
+        gameObject.LoadSavedState();
+    }
+}
+
 void Scene::LoadMap(std::string mapPath) {
-    Scene::CleanUp();   
-	File::LoadMap(mapPath);
-    Scene::LoadHardCodedObjects();
-	Scene::RecreateDataStructures();
+    CleanUp();   
+    File::LoadMap(mapPath);
+    LoadHardCodedObjects();
+    RecreateDataStructures();
+    ResetGameObjectStates();
 }
 
 void Scene::SaveMap(std::string mapPath) {
@@ -1412,12 +1438,11 @@ void Scene::CreatePlayers() {
     _players[0]._mouseIndex = 0;
     _players[1]._mouseIndex = 1;
 
-
     PxU32 p1RagdollCollisionGroupFlags = RaycastGroup::PLAYER_1_RAGDOLL;
     PxU32 p2RagdollCollisionGroupFlags = RaycastGroup::PLAYER_2_RAGDOLL;
 
-    _players[0]._characterModel.LoadRagdoll("UnisexGuy4.rag", p1RagdollCollisionGroupFlags);
-    _players[1]._characterModel.LoadRagdoll("UnisexGuy4.rag", p2RagdollCollisionGroupFlags);
+    _players[0]._characterModel.LoadRagdoll("UnisexGuy3.rag", p1RagdollCollisionGroupFlags);
+    _players[1]._characterModel.LoadRagdoll("UnisexGuy3.rag", p2RagdollCollisionGroupFlags);
 
     _players[0]._interactFlags = RaycastGroup::RAYCAST_ENABLED;
     _players[0]._interactFlags &= ~RaycastGroup::PLAYER_1_RAGDOLL;
@@ -1430,7 +1455,8 @@ void Scene::CreatePlayers() {
 
     _players[0]._playerName = "Orion";
     _players[1]._playerName = "CrustyAssCracker";
-    
+
+    _players[1]._characterModel._renderDebugBones = true;
 }
 
 
@@ -1454,6 +1480,7 @@ void Scene::CleanUp() {
         animatedGameObject.DestroyRagdoll();
     }
 
+    _bloodDecals.clear();
     _spawnPoints.clear();
     _bulletCasings.clear();
     _decals.clear();
@@ -1732,7 +1759,7 @@ void Scene::RecreateAllPhysicsObjects() {
         PhysicsFilterData filterData;
         filterData.raycastGroup = RAYCAST_ENABLED;
         filterData.collisionGroup = ENVIROMENT_OBSTACLE;
-        filterData.collidesWith = (CollisionGroup)(GENERIC_BOUNCEABLE | BULLET_CASING | PLAYER);
+        filterData.collidesWith = (CollisionGroup)(GENERIC_BOUNCEABLE | BULLET_CASING | PLAYER | RAGDOLL);
 		_sceneTriangleMesh = Physics::CreateTriangleMesh(vertices.size(), vertices.data(), vertices.size() / 3, indices.data());
 		PxShapeFlags shapeFlags(PxShapeFlag::eSIMULATION_SHAPE);
         _sceneShape = Physics::CreateShapeFromTriangleMesh(_sceneTriangleMesh, shapeFlags);
@@ -1750,7 +1777,7 @@ void Scene::RecreateAllPhysicsObjects() {
 
     // Editor objects
     for (GameObject& gameObject : _gameObjects) {
-        gameObject.CreateEditorPhysicsObject();
+       // gameObject.CreateEditorPhysicsObject();
     }
 
 

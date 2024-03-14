@@ -42,6 +42,12 @@ struct PlayerControls {
     unsigned int NEXT_WEAPON = HELL_KEY_Q;
     unsigned int MELEE = HELL_KEY_J;
     unsigned int ESCAPE = HELL_KEY_WIN_ESCAPE;
+    unsigned int DEBUG_FULLSCREEN = HELL_KEY_F;
+    unsigned int DEBUG_ONE = HELL_KEY_1;
+    unsigned int DEBUG_TWO = HELL_KEY_2;
+    unsigned int DEBUG_THREE = HELL_KEY_3;
+    unsigned int DEBUG_FOUR = HELL_KEY_4;
+    
 };
 
 class Player {
@@ -73,7 +79,8 @@ public:
 	Player(glm::vec3 position, glm::vec3 rotation);
 
 	int GetCurrentWeaponClipAmmo();
-	int GetCurrentWeaponTotalAmmo();
+	int GetCurrentWeaponTotalAmmo(); 
+    void SetPosition(glm::vec3 position);
 
     bool _glockSlideNeedsToBeOut = false;
     bool _needsShotgunFirstShellAdded = false;
@@ -84,10 +91,14 @@ public:
     float _outsideDamageTimer = 0;
     float _outsideDamageAudioTimer = 0;
 
+    void DrawWeapons();
     void GiveDamageColor();
+
 
 	//void Init(glm::vec3 position);
 	void Update(float deltaTime);
+    void UpdateRagdoll();
+
 	void SetRotation(glm::vec3 rotation);
 	void SetWeapon(Weapon weapon);
 	void Respawn();
@@ -167,6 +178,14 @@ public:
     bool PressedADS();
     bool PressedEscape();
     bool PressedWindowsEnter();
+
+    // Dev keys
+    bool PressedFullscreen();
+    bool PressedOne();
+    bool PressedTwo();
+    bool PressedThree();
+    bool PressedFour();
+
     glm::vec3 GetCameraRotation();
     void GiveAKS74UScope();
     bool _hasAKS74UScope = false;
@@ -176,6 +195,7 @@ public:
     void HideShotgunMesh();
     void HideAKS74UMesh();
     void Kill();
+    void PickUpGlock();
     PxU32 _interactFlags;
     PxU32 _bulletFlags;
     std::string _playerName;
@@ -183,6 +203,8 @@ public:
     glm::vec3 _movementVector = glm::vec3(0);
     float _timeSinceDeath = 0;
     bool _isOutside = false;
+
+    void ForceSetViewMatrix(glm::mat4 viewMatrix);
 
 private:
 

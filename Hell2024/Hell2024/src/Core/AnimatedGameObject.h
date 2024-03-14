@@ -61,6 +61,10 @@ struct AnimatedGameObject {
     bool _hasRagdoll = false;
     std::vector<unsigned int> _skippedMeshIndices;
 
+    bool _renderDebugBones = false;
+    std::vector<glm::vec3> _debugRigids;
+    std::vector<glm::vec3> _debugBones;
+
 private:
 
 	void UpdateAnimation(float deltaTime);

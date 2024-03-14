@@ -9,9 +9,15 @@ enum class InteractType { NONE, TEXT, QUESTION, PICKUP, CALLBACK_ONLY };
 enum class ModelMatrixMode { GAME_TRANSFORM, PHYSX_TRANSFORM };
 enum class PickUpType { NONE, GLOCK, GLOCK_AMMO, SHOTGUN, SHOTGUN_AMMO, AKS74U, AKS74U_AMMO, AKS74U_SCOPE };
 
+struct RaycastObject {
+    Model* model = nullptr;
+    PxRigidStatic* rigid = NULL;
+    PxShape* shape = NULL;
+};
+
 struct GameObject {
 public:
-	Model* _model = nullptr;
+    Model* _model = nullptr;
 	std::vector<int> _meshMaterialIndices;
 	Transform _transform;
 	Transform _openTransform;
@@ -22,16 +28,14 @@ public:
 	float _maxOpenAmount = 0;
 	float _minOpenAmount = 0;
 	float _openSpeed = 0;
-
+    bool _respawns = true;
 
 	// make this private again some how PLEEEEEEEEEEEEEEEEEEEEEASE when you have time. no rush.
 	PxRigidBody* _collisionBody = NULL;
 
-	PxRigidStatic* _editorRaycastBody = NULL;
-	PxShape* _editorRaycastShape = NULL;
-
-    PxRigidStatic* _raycastBody = NULL;
-    PxShape* _raycastShape = NULL;
+	//PxRigidStatic* _editorRaycastBody = NULL;
+	//PxShape* _editorRaycastShape = NULL;
+    RaycastObject _raycastObject;
 
 private:
 
@@ -66,7 +70,12 @@ public:
 	glm::vec3 GetWorldSpaceOABBCenter();
     void DisableRaycasting();
     void EnableRaycasting();
+    void SetCollisionGroup(CollisionGroup collisionGroup);
+    void SetCollidesWithGroup(PxU32 collisionGroup) {
 
+
+
+    }
     AABB _aabb;
     AABB _aabbPreviousFrame;
 
@@ -117,7 +126,7 @@ public:
 	bool IsCollectable();
 	bool IsCollected();
 	PickUpType GetPickUpType();
-	void CreateEditorPhysicsObject();
+	//void CreateEditorPhysicsObject();
 
 	void CreateRigidBody(glm::mat4 matrix, bool kinematic);
 	void AddCollisionShape(PxShape* shape, PhysicsFilterData physicsFilterData);
@@ -138,10 +147,17 @@ public:
     void CleanUp();
     bool HasMovedSinceLastFrame();
 
+    void LoadSavedState();
+    void SetWakeOnStart(bool value);
+    void UpdateRaycastObject();
+    void DisableRespawnOnPickup();
+
+
 	std::vector<Triangle> GetTris();
 
 private:
     bool _wasPickedUpLastFrame = false;
     bool _wasRespawnedUpLastFrame = false;
+    bool _wakeOnStart = false;
 	//glm::mat4 CalculateModelMatrix(ModelMatrixMode modelMatrixMode);
 };

@@ -6,6 +6,7 @@
 #include "../Common.h"
 #include "Animation/SkinnedModel.h"
 #include <future>
+#include "ExrTexture.h"
 
 namespace AssetManager {
 	void Init();
@@ -26,7 +27,21 @@ namespace AssetManager {
 	Mesh& GetDecalMesh();
 
 	void LoadAssetsMultithreaded();
-	
+    void LoadVolumetricBloodTextures();
+
+    inline ExrTexture s_ExrTexture_pos;
+    inline ExrTexture s_ExrTexture_norm;
+    inline ExrTexture s_ExrTexture_pos4;
+    inline ExrTexture s_ExrTexture_norm4;
+    inline ExrTexture s_ExrTexture_pos6;
+    inline ExrTexture s_ExrTexture_norm6;
+    inline ExrTexture s_ExrTexture_pos7;
+    inline ExrTexture s_ExrTexture_norm7;
+    inline ExrTexture s_ExrTexture_pos8;
+    inline ExrTexture s_ExrTexture_norm8;
+    inline ExrTexture s_ExrTexture_pos9;
+    inline ExrTexture s_ExrTexture_norm9;
+
 	inline int numFilesToLoad = 0;
 
 	inline std::vector<Extent2Di> _charExtents;

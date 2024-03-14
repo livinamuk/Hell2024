@@ -56,13 +56,6 @@ void Ragdoll::LoadFromJSON(std::string filename, PxU32 collisionGroup) {
             rigidComponent.boxExtents = Util::Vec3FromJSONArray(components["GeometryDescriptionComponent"].GetObject()["members"].GetObject()["extents"].GetObject()["values"].GetArray());
             rigidComponent.offset = Util::Vec3FromJSONArray(components["GeometryDescriptionComponent"].GetObject()["members"].GetObject()["offset"].GetObject()["values"].GetArray());
             rigidComponent.rotation = Util::PxQuatFromJSONArray(components["GeometryDescriptionComponent"].GetObject()["members"].GetObject()["rotation"].GetObject()["values"].GetArray());
-
-            //Transform transform;
-           // transform.rotation.x = -HELL_PI * 0.5f;
-
-            PxQuat newQ = { rigidComponent.rotation.z,rigidComponent.rotation.x,rigidComponent.rotation.y,rigidComponent.rotation.w };
-           // rigidComponent.rotation = newQ;
-
             rigidComponent.mass = components["RigidComponent"].GetObject()["members"].GetObject()["mass"].GetFloat();
             rigidComponent.friction = components["RigidComponent"].GetObject()["members"].GetObject()["friction"].GetFloat();
             rigidComponent.restitution = components["RigidComponent"].GetObject()["members"].GetObject()["restitution"].GetFloat();
@@ -89,13 +82,6 @@ void Ragdoll::LoadFromJSON(std::string filename, PxU32 collisionGroup) {
             if (jointComponent.name.find("Absolute") != -1) {
                 continue;
             } 
-           // std::cout << "\nLOADING " << jointComponent.name << "\n";
-
-
-          //  std::string shortestPath = components["NameComponent"].GetObject()["members"].GetObject()["shortestPath"].GetString();
-          //  std::cout << "CCCCCCCCCCCCCCCCCCCCCCCUNT     " << jointComponent.name << ": " << shortestPath << "\n";
-
-
 
             jointComponent.parentID = components["JointComponent"].GetObject()["members"].GetObject()["parent"].GetObject()["value"].GetInt();
             jointComponent.childID = components["JointComponent"].GetObject()["members"].GetObject()["child"].GetObject()["value"].GetInt();
@@ -107,18 +93,6 @@ void Ragdoll::LoadFromJSON(std::string filename, PxU32 collisionGroup) {
             jointComponent.drive_linearStiffness = components["DriveComponent"].GetObject()["members"].GetObject()["linearStiffness"].GetFloat();
             jointComponent.drive_enabled = components["DriveComponent"].GetObject()["members"].GetObject()["enabled"].GetBool();
             jointComponent.target = Util::Mat4FromJSONArray(components["DriveComponent"].GetObject()["members"].GetObject()["target"].GetObject()["values"].GetArray());
-
-          /*  Transform transform;
-            transform.rotation.x = -HELL_PI * 0.5f;
-
-            glm::mat4 parentFrm = Util::PxMat44ToGlmMat4(jointComponent.parentFrame);
-            parentFrm = parentFrm * transform.to_mat4();
-            jointComponent.parentFrame = Util::GlmMat4ToPxMat44(parentFrm);
-
-            glm::mat4 childFrm = Util::PxMat44ToGlmMat4(jointComponent.childFrame);
-            childFrm = childFrm * transform.to_mat4();
-            jointComponent.childFrame = Util::GlmMat4ToPxMat44(childFrm);
-            */
 
           //  std::cout << "angularDamping\n";
            // jointComponent.limit_angularDampening = components["LimitComponent"].GetObject()["members"].GetObject()["angularDamping"].GetFloat();
@@ -192,14 +166,6 @@ void Ragdoll::LoadFromJSON(std::string filename, PxU32 collisionGroup) {
         rigid.pxRigidBody = Physics::CreateRigidDynamic(spawnTransform.to_mat4() * rigid.restMatrix, false);
         rigid.pxRigidBody->wakeUp();
 
-        // rigid.pxRigidBody = Physics::CreateRigidDynamic(PxTransform(spawnMatrix * restMatrix));
-       // rigid.pxRigidBody = Physics::CreateRigidDynamic(PxTransform(spawnMatrix * restMatrix));
-       // rigid.pxRigidBody = Physics::CreateRigidDynamic(PxTransform(spawnMatrix * restMatrix));
-       // rigid.pxRigidBody = Physics::CreateRigidDynamic(PxTransform(spawnMatrix * restMatrix));
-       // rigid.pxRigidBody = Physics::CreateRigidDynamic(PxTransform(spawnMatrix * restMatrix));
-       // 
-       // 
-       // 
         //rigid.pxRigidBody->attachShape(*shape);
         rigid.pxRigidBody->setSolverIterationCounts(8, 1);
         rigid.pxRigidBody->setName("RAGDOLL");
@@ -236,19 +202,20 @@ void Ragdoll::LoadFromJSON(std::string filename, PxU32 collisionGroup) {
         rigid.pxRigidBody->getShapes(&shape, 1);
         shape->setLocalPose(offsetTranslation.transform(offsetRotation));
 
-        if (rigid.name == "rMarker_CC_Base_FacialBone") {
+        if (rigid.name == "rMarker_CC_Base_Head") {
             rigid.pxRigidBody->setName("RAGDOLL_HEAD");
         }
         if (rigid.name == "rMarker_CC_Base_NeckTwist01") {
             rigid.pxRigidBody->setName("RAGDOLL_NECK");
         }
-
+        
         PxRigidBodyExt::setMassAndUpdateInertia(*rigid.pxRigidBody, rigid.mass);
+        //PxRigidBodyExt::setMassAndUpdateInertia(*rigid.pxRigidBody, 0.125f);
 
         PxFilterData filterData;
-        filterData.word0 = collisionGroup;// RaycastGroup::RAYCAST_ENABLED& RaycastGroup::PLAYER_1_RAGDOLL;
-        filterData.word1 = CollisionGroup::GENERIC_BOUNCEABLE;
-        filterData.word2 = CollisionGroup::ENVIROMENT_OBSTACLE;
+        filterData.word0 = collisionGroup;
+        filterData.word1 = CollisionGroup::RAGDOLL;
+        filterData.word2 = CollisionGroup::ENVIROMENT_OBSTACLE | CollisionGroup::GENERIC_BOUNCEABLE | CollisionGroup::RAGDOLL;
         shape->setQueryFilterData(filterData);
         shape->setSimulationFilterData(filterData);
 
@@ -445,3 +412,47 @@ RigidComponent* Ragdoll::GetRigidByName(std::string& name) {
     }
     return nullptr;
 }
+
+void Ragdoll::EnableVisualization() {
+    for (RigidComponent& rigid : _rigidComponents) {
+        PxShape* shape;
+        rigid.pxRigidBody->getShapes(&shape, 1);
+        shape->setFlag(PxShapeFlag::eVISUALIZATION, true);
+    }
+}
+
+void Ragdoll::DisableVisualization() {
+    for (RigidComponent& rigid : _rigidComponents) {
+        PxShape* shape;
+        rigid.pxRigidBody->getShapes(&shape, 1);
+        shape->setFlag(PxShapeFlag::eVISUALIZATION, false);
+    }
+}
+
+void Ragdoll::EnableCollision() {
+    return;
+    for (RigidComponent& rigid : _rigidComponents) {
+        PxShape* shape;
+        rigid.pxRigidBody->getShapes(&shape, 1);
+        PxFilterData filterData = shape->getQueryFilterData();
+        filterData.word1 = CollisionGroup::RAGDOLL;
+        filterData.word2 = CollisionGroup::ENVIROMENT_OBSTACLE | CollisionGroup::GENERIC_BOUNCEABLE;
+        shape->setQueryFilterData(filterData);
+        shape->setSimulationFilterData(filterData);
+    }
+}
+
+void Ragdoll::DisableCollision() {
+    return;
+    for (RigidComponent& rigid : _rigidComponents) {
+        PxShape* shape;
+        rigid.pxRigidBody->getShapes(&shape, 1);
+        PxFilterData filterData = shape->getQueryFilterData();
+        filterData.word1 = CollisionGroup::RAGDOLL;
+        filterData.word2 = CollisionGroup::NO_COLLISION;
+        shape->setQueryFilterData(filterData);
+        shape->setSimulationFilterData(filterData);
+    }
+}
+
+

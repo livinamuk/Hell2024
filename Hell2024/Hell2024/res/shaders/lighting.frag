@@ -549,7 +549,6 @@ void main() {
  // FragColor.rgb = vec3(directLighting);
    
  /// FragColor.rgb = vec3(WorldPos);
-	//FragColor.rgb = baseColor.rgb;
 	//FragColor.rgb = normal.rgb;
 
 

@@ -10,6 +10,31 @@
 #include "../Effects/Decal.h"
 #include "Light.h"
 #include "Floor.h"
+#include "VolumetricBloodSplatter.h"
+#include "../Util.hpp"
+
+
+struct BloodDecal {
+    Transform transform;
+    Transform localOffset;
+    int type;
+    glm::mat4 modelMatrix;
+
+    BloodDecal(Transform transform, int type) {
+        this->transform = transform;
+        this->type = type;
+        if (type != 2) {
+            localOffset.position.z = 0.55f;
+            transform.scale = glm::vec3(2.0f);
+        }
+        else {
+            localOffset.rotation.y = Util::RandomFloat(0, HELL_PI * 2);;
+            transform.scale = glm::vec3(1.5f);
+        }
+        modelMatrix = transform.to_mat4() * localOffset.to_mat4();
+    }
+};
+
 
 #define WALL_HEIGHT 2.4f
 
@@ -118,6 +143,7 @@ struct Bullet {
     glm::vec3 direction;
     Weapon type;
     PxU32 raycastFlags;
+    glm::vec3 parentPlayersViewRotation;
 };
 
 
@@ -158,6 +184,8 @@ namespace Scene {
     inline PxRigidStatic* _sceneRigidDynamic = NULL;
     inline PxShape* _sceneShape = NULL;
 
+    inline std::vector<BloodDecal> _bloodDecals;
+    inline std::vector<VolumetricBloodSplatter> _volumetricBloodSplatters;
     inline std::vector<PickUp> _pickUps;
     inline std::vector<SpawnPoint> _spawnPoints;
     inline std::vector<Bullet> _bullets;
@@ -184,7 +212,6 @@ namespace Scene {
    // void NewScene();
     void CleanUp();
     void Update(float deltaTime);
-    void Update3DEditorScene();
     void LoadLightSetup(int index);
     GameObject* GetGameObjectByName(std::string);
     AnimatedGameObject* GetAnimatedGameObjectByName(std::string);
@@ -203,5 +230,9 @@ namespace Scene {
 	void RemoveAllDecalsFromWindow(Window* window); 
     void CalculateLightBoundingVolumes();
     void CheckIfLightsAreDirty();
+    void ResetGameObjectStates();
+
+    void CreateVolumetricBlood(glm::vec3 position, glm::vec3 rotation, glm::vec3 front);
+
     //Player* GetPlayerFromCharacterControler(PxController* characterController);
 }

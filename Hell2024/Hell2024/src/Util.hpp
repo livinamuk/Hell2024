@@ -1,3 +1,5 @@
+#pragma once
+
 #include <fstream>
 #include <sstream>
 #include <iostream>
@@ -106,6 +108,8 @@ namespace Util {
         }
     }
 
+
+
 	inline glm::vec3 PxVec3toGlmVec3(PxVec3 vec) {
 		return { vec.x, vec.y, vec.z };
 	}
@@ -136,7 +140,7 @@ namespace Util {
 		return ray_wor;
     }
 
-    inline PhysXRayResult CastPhysXRay(glm::vec3 rayOrigin, glm::vec3 rayDirection, float rayLength, PxU32 collisionFlags) {
+    inline PhysXRayResult CastPhysXRay(glm::vec3 rayOrigin, glm::vec3 rayDirection, float rayLength, PxU32 collisionFlags, bool cullBackFacing = false) {
 
         PxScene* scene = Physics::GetScene();
 
@@ -145,8 +149,14 @@ namespace Util {
         PxReal maxDistance = rayLength;
         PxRaycastBuffer hit;
         // [in] Define what parts of PxRaycastHit we're interested in
-        const PxHitFlags outputFlags = PxHitFlag::ePOSITION | PxHitFlag::eNORMAL;
-        // Only ray cast against objects with the GROUP_RAYCAST flag
+     //   const PxHitFlags outputFlags = PxHitFlag::ePOSITION | PxHitFlag::eNORMAL | ~PxHitFlag::eMESH_BOTH_SIDES;
+       
+        PxHitFlags outputFlags = PxHitFlag::ePOSITION | PxHitFlag::eNORMAL | PxHitFlag::eMESH_BOTH_SIDES;
+        if (cullBackFacing) {
+            outputFlags = PxHitFlag::ePOSITION | PxHitFlag::eNORMAL;
+        }
+
+     // Only ray cast against objects with the GROUP_RAYCAST flag
         PxQueryFilterData filterData = PxQueryFilterData();
         filterData.data.word0 = collisionFlags;
 

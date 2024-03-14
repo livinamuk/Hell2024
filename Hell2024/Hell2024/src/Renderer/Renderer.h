@@ -28,6 +28,7 @@ namespace Renderer {
 	void ToggleDrawingLines();
 	void ToggleDrawingRagdolls();
 	void ToggleDebugText();
+    void DrawInstancedBloodDecals(Shader* shader, Player* player);
 
 	int GetRenderWidth();
 	int GetRenderHeight();
@@ -38,6 +39,8 @@ namespace Renderer {
 	void RecreateFrameBuffers(int currentPlayer);
 	void CreatePointCloudBuffer();
 	void CreateTriangleWorldVertexBuffer();
+
+    void EnteredEditorMode();
 	//glm::mat4 GetProjectionMatrix(float depthOfField);
 
 	//std::vector<int> UpdateDirtyPointCloudIndices();

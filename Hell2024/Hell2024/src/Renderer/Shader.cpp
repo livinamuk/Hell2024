@@ -155,7 +155,8 @@ void Shader::SetVec3(const std::string& name, const glm::vec3& value) {
     if (_uniformsLocations.find(name) == _uniformsLocations.end())
         _uniformsLocations[name] = glGetUniformLocation(_ID, name.c_str());
     glUniform3fv(_uniformsLocations[name], 1, &value[0]);
-    //glUniform3fv(glGetUniformLocation(_ID, name.c_str()), 1, &value[0]);
+
+  //  glUniform3fv(glGetUniformLocation(_ID, name.c_str()), 1, &value[0]);
 }
 void Shader::SetVec2(const std::string& name, const glm::vec2& value) {
     if (_uniformsLocations.find(name) == _uniformsLocations.end())

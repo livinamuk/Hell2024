@@ -286,6 +286,7 @@ enum CollisionGroup {
     ENVIROMENT_OBSTACLE = 4,
     GENERIC_BOUNCEABLE = 8,
     ITEM_PICK_UP = 16,
+    RAGDOLL = 32,
 };
 
 struct AABB {

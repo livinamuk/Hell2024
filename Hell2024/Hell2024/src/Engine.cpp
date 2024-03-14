@@ -169,12 +169,15 @@ void Engine::Run() {
             LazyKeyPresses();
             Scene::Update(deltaTime);
 
-            InputMulti::Update();
-            for (Player& player : Scene::_players) {
-                player.Update(deltaTime);
+            if (EngineState::GetEngineMode() == GAME) {
+                InputMulti::Update();
+                for (Player& player : Scene::_players) {
+                    player.Update(deltaTime);
+                }
+                InputMulti::ResetMouseOffsets();
             }
+
             Scene::CheckIfLightsAreDirty();
-            InputMulti::ResetMouseOffsets();
         }
 
         else if (EngineState::GetEngineMode() == FLOORPLAN) {
@@ -249,8 +252,44 @@ void Engine::LazyKeyPresses() {
         Renderer::HotloadShaders();
     }
     if (Input::KeyPressed(GLFW_KEY_F)) {
-		ToggleFullscreen();
+    //    ToggleFullscreen();
     }
+
+    if (Scene::_players[0].PressedFullscreen()) {
+        ToggleFullscreen();
+    }
+
+    if (Input::KeyPressed(HELL_KEY_1)) {
+        Scene::_players[0]._keyboardIndex = 0;
+        Scene::_players[1]._keyboardIndex = 1;
+        Scene::_players[0]._mouseIndex = 0;
+        Scene::_players[1]._mouseIndex = 1;
+    }
+    if (Input::KeyPressed(HELL_KEY_2)) {
+        Scene::_players[1]._keyboardIndex = 0;
+        Scene::_players[0]._keyboardIndex = 1;
+        Scene::_players[1]._mouseIndex = 0;
+        Scene::_players[0]._mouseIndex = 1;
+    }
+    if (Input::KeyPressed(HELL_KEY_3)) {
+        Scene::_players[0]._keyboardIndex = 0;
+        Scene::_players[1]._keyboardIndex = 1;
+        Scene::_players[1]._mouseIndex = 0;
+        Scene::_players[0]._mouseIndex = 1;
+    }
+    if (Input::KeyPressed(HELL_KEY_4)) {
+        Scene::_players[0]._keyboardIndex = 0;
+        Scene::_players[1]._keyboardIndex = 1;
+        Scene::_players[1]._mouseIndex = 0;
+        Scene::_players[0]._mouseIndex = 1;
+    }
+
+
+
+
+
+
+
     if (Input::KeyPressed(HELL_KEY_TAB)) {
 		Audio::PlayAudio(AUDIO_SELECT, 1.00f);
         DebugMenu::Toggle();

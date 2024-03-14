@@ -312,8 +312,9 @@ PxShape* Physics::CreateShapeFromTriangleMesh(PxTriangleMesh* triangleMesh, PxSh
     if (material == NULL) {
         material = _defaultMaterial;
 	}
-	PxMeshGeometryFlags flags(~PxMeshGeometryFlag::eTIGHT_BOUNDS | ~PxMeshGeometryFlag::eDOUBLE_SIDED);
-	//PxMeshGeometryFlags flags(~PxMeshGeometryFlag::eDOUBLE_SIDED);
+	//PxMeshGeometryFlags flags(~PxMeshGeometryFlag::eTIGHT_BOUNDS | ~PxMeshGeometryFlag::eDOUBLE_SIDED);
+    // maybe tight bounds did something?? check it out...
+	PxMeshGeometryFlags flags(~PxMeshGeometryFlag::eDOUBLE_SIDED);
     PxTriangleMeshGeometry geometry(triangleMesh, PxMeshScale(PxVec3(scale.x, scale.y, scale.z)), flags);
 
     PxShapeFlags shapeFlags(PxShapeFlag::eSCENE_QUERY_SHAPE); // Most importantly NOT eSIMULATION_SHAPE. PhysX does not allow for tri mesh.

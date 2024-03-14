@@ -42,4 +42,8 @@ struct Ragdoll {
     void LoadFromJSON(std::string filename, PxU32 collisionGroup);
     RigidComponent* GetRigidByName(std::string& name);
 
+    void EnableVisualization();
+    void DisableVisualization();
+    void EnableCollision();
+    void DisableCollision();
 };

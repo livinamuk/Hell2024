@@ -38,6 +38,15 @@
 
 std::vector<glm::vec3> debugPoints;
 
+struct EditorObject {
+    void* ptr;
+    void* rigidBody;
+    PhysicsObjectType type;
+};
+
+EditorObject _selectedEditorObject;
+EditorObject _hoveredEditorObject;
+
 struct RenderTarget {
     GLuint fbo = { 0 };
 	GLuint texture = { 0 };
@@ -91,6 +100,8 @@ struct Shaders {
     Shader envMapShader;
     Shader brdf;
     Shader test;
+    Shader bloodDecals;
+    Shader bloodVolumetric;
     ComputeShader compute;
 	ComputeShader pointCloud;
 	ComputeShader propogateLight;
@@ -174,8 +185,6 @@ int _dirtyProbeCount;
 std::vector<glm::mat4> _glockMatrices;
 std::vector<glm::mat4> _aks74uMatrices;
 
-PxRigidStatic* selectedPhysXObject = nullptr;
-
 glm::vec3 debugBonePosition = glm::vec3(-1, -1, -1);
 
 
@@ -191,7 +200,8 @@ enum DebugLineRenderMode {
     DEBUG_LINE_MODE_COUNT} _debugLineRenderMode;
 
 void RenderEnviromentMaps();
-void DrawHud(Player* player);
+void DrawHudAmmo(Player* player);
+void DrawHudLowRes(Player* player);
 void DrawScene(Shader& shader);
 void DrawAnimatedScene(Shader& shader, Player* player);
 void DrawShadowMapScene(Shader& shader);
@@ -222,6 +232,7 @@ void CreateBRDFTexture();
 void QueueAABBForRenering(PxRigidStatic* body);
 void QueueAABBForRenering(PxRigidBody* body);
 void QueueAABBForRenering(AABB& aabb, glm::vec3 color);
+void DrawInstancedVAO(GLuint vao, GLsizei indexCount, std::vector<glm::mat4>& matrices);
 
 unsigned int _brdfLUTTexture;
 
@@ -432,8 +443,6 @@ void RenderEnviromentMaps() {
 	glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
 
     runOnceOnly = false;
-
-	glFlush();
 }
 
 void GlassPass(Player* player) {
@@ -677,6 +686,10 @@ void Renderer::Init() {
 	_shaders.envMapShader.Load("envMap.vert", "envMap.frag", "envMap.geom");
 	_shaders.brdf.Load("brdf.vert", "brdf.frag");
     _shaders.test.Load("test.vert", "test.frag");
+    _shaders.bloodVolumetric.Load("blood_volumetric.vert", "blood_volumetric.frag");
+    _shaders.bloodDecals.Load("blood_decals.vert", "blood_decals.frag");
+    
+    
     
     _shaders.computeTest.Load("res/shaders/test.comp");
     _shaders.skin.Load("res/shaders/skin.comp");
@@ -934,23 +947,6 @@ void Renderer::RenderFrame(Player* player) {
     glm::mat4 projection = player->GetProjectionMatrix();// Renderer::GetProjectionMatrix(_depthOfFieldScene); // 1.0 for weapon, 0.9 for scene.
 	glm::mat4 view = player->GetViewMatrix();
 
-
-    glm::vec3 viewPos = player->GetViewPos();
-    glm::vec3 viewDir = player->GetCameraForward();
-    float mouseX = MapRange(Input::GetMouseX(), 0, GL::GetWindowWidth(), 0, presentFrameBuffer.GetWidth());
-    float mouseY = MapRange(Input::GetMouseY(), 0, GL::GetWindowHeight(), 0, presentFrameBuffer.GetHeight());
-
-    
-
-
-
-    bool leftMouseDown = Input::LeftMouseDown();
-    Gizmo::Update(viewPos, viewDir, mouseX, mouseY, projection, view, leftMouseDown, presentFrameBuffer.GetWidth(), presentFrameBuffer.GetHeight());
-
-    if (Input::KeyPressed(HELL_KEY_SLASH)) {
-        Gizmo::NextGizmoMode();
-    }
-
 	_shaders.UI.Use();
 	_shaders.UI.SetVec3("overrideColor", WHITE);
 
@@ -972,6 +968,41 @@ void Renderer::RenderFrame(Player* player) {
 
     GeometryPass(player);
 
+
+
+  //  gBuffer.Bind();
+  //  unsigned int attachments2[5] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT6, GL_COLOR_ATTACHMENT7 };
+  //  glDrawBuffers(5, attachments2);
+   // glViewport(0, 0, gBuffer.GetWidth(), gBuffer.GetHeight());
+
+    glEnable(GL_DEPTH_TEST);
+    glEnable(GL_CULL_FACE);
+    glDisable(GL_BLEND);
+    glDepthMask(GL_TRUE);
+    glCullFace(GL_BACK);
+
+
+    _shaders.bloodVolumetric.Use();
+    _shaders.bloodVolumetric.SetMat4("u_MatrixProjection", player->GetProjectionMatrix());
+    _shaders.bloodVolumetric.SetMat4("u_MatrixView", player->GetViewMatrix());
+    _shaders.bloodVolumetric.SetVec3("u_viewPos", player->GetViewPos());
+
+    /*
+    std::cout << "\nu_MatrixProjection: " << glGetUniformLocation(_shaders.bloodVolumetric._ID, "u_MatrixProjection") << "\n";
+    std::cout << "u_MatrixView: " << glGetUniformLocation(_shaders.bloodVolumetric._ID, "u_MatrixView") << "\n";
+    std::cout << "u_MatrixWorld: " << glGetUniformLocation(_shaders.bloodVolumetric._ID, "u_MatrixWorld") << "\n";
+    std::cout << "u_viewPos: " << glGetUniformLocation(_shaders.bloodVolumetric._ID, "u_viewPos") << "\n";
+    std::cout << "u_Time: " << glGetUniformLocation(_shaders.bloodVolumetric._ID, "u_Time") << "\n";
+    */
+    
+    //std::cout << Util::Vec3ToString(player->GetViewPos()) << "\n";
+
+
+    for (int i = 0; i < Scene::_volumetricBloodSplatters.size(); i++) {
+        Scene::_volumetricBloodSplatters[i].Draw(&_shaders.bloodVolumetric);
+    }
+
+    DrawInstancedBloodDecals(&_shaders.bloodDecals, player);
     DrawBulletDecals(player);
     DrawCasingProjectiles(player);
     LightingPass(player);
@@ -1009,10 +1040,12 @@ void Renderer::RenderFrame(Player* player) {
         glDrawElementsInstanced(GL_TRIANGLES, _cubeMesh.GetIndexCount(), GL_UNSIGNED_INT, 0, count);
 	}
 
-    // HUD
-    glDisable(GL_DEPTH_TEST);
-	glDrawBuffer(GL_COLOR_ATTACHMENT3);
-	DrawHud(player);
+    // Ammo counter
+    if (EngineState::GetEngineMode() == EngineMode::GAME) {
+        glDisable(GL_DEPTH_TEST);
+        glDrawBuffer(GL_COLOR_ATTACHMENT3);
+        DrawHudAmmo(player);
+    }
 
     // Blit final image from large FBO down into a smaller FBO
     glBindFramebuffer(GL_READ_FRAMEBUFFER, gBuffer.GetID());
@@ -1033,145 +1066,30 @@ void Renderer::RenderFrame(Player* player) {
     glDisable(GL_DEPTH_TEST);
     DrawFullscreenQuad();
 
+
     // Render any debug shit, like the point cloud, prorogation grid, misc points, lines, etc
     DebugPass(player);
 
-    // Render editor mode UI if needed?
+    // HUD (killcount, debug text and crosshair)
+    if (EngineState::GetEngineMode() == EngineMode::GAME) {
+        glDisable(GL_DEPTH_TEST);
+        glDrawBuffer(GL_COLOR_ATTACHMENT3);
+        DrawHudLowRes(player);
+    }
+
+    // Editor (GIZMO render and Editor logic in here)
     if (EngineState::GetEngineMode() == EngineMode::EDITOR) {
         RenderEditorMode();
     }
-
-    // Render UI
-    presentFrameBuffer.Bind();
-    glDrawBuffer(GL_COLOR_ATTACHMENT1);
-
-    // Crosshair
-    if (!player->_isDead) {     
-        std::string texture = "CrosshairDot";
-        if (player->CursorShouldBeInterect()) {
-            texture = "CrosshairSquare";
-        }
-        QueueUIForRendering(texture, presentFrameBuffer.GetWidth() / 2, presentFrameBuffer.GetHeight() / 2, true, WHITE);
-    }
-
-
-    if (player->_isDead && player->_timeSinceDeath > 3.25f) {
-        QueueUIForRendering("PressStart", presentFrameBuffer.GetWidth() / 2, presentFrameBuffer.GetHeight() / 2, true, WHITE);
-    }
-
-    /*if (Scene::_cameraRayData.found) {
-        if (Scene::_cameraRayData.raycastObjectType == RaycastObjectType::WALLS) {
-            TextBlitter::_debugTextToBilt += "Ray hit: WALL\n";
-        }
-        if (Scene::_cameraRayData.raycastObjectType == RaycastObjectType::DOOR) {
-            TextBlitter::_debugTextToBilt += "Ray hit: DOOR\n";
-        }
-    }
     else {
-        TextBlitter::_debugTextToBilt += "Ray hit: NONE\n";
+        _hoveredEditorObject.ptr = nullptr;
+        _hoveredEditorObject.rigidBody = nullptr;
+        _hoveredEditorObject.type = PhysicsObjectType::UNDEFINED;
+        _selectedEditorObject.ptr = nullptr;
+        _selectedEditorObject.rigidBody = nullptr;
+        _selectedEditorObject.type = PhysicsObjectType::UNDEFINED;
     }
-    */
-
-	TextBlitter::_debugTextToBilt += "View pos: " + Util::Vec3ToString(player->GetViewPos()) + "\n";
-	TextBlitter::_debugTextToBilt += "View rot: " + Util::Vec3ToString(player->GetViewRotation()) + "\n";
-    TextBlitter::_debugTextToBilt += "Weapon Action: " + Util::WeaponActionToString(Scene::_players[playerIndex].GetWeaponAction()) + "\n";
-    
-    /*for (int i = 0; i < Scene::_lights.size(); i++) {
-        if (Scene::_lights[i].isDirty) {
-            TextBlitter::_debugTextToBilt += "LIGHT " + std::to_string(i) + " is dirty \n";
-        }      
-    }*/
-
-    /*for (int j = 0; j < Scene::_floors.size(); j++) {
-        Floor& floor = Scene::_floors[j];
-        if (floor.PointIsAboveThisFloor(Scene::_players[0].GetFeetPosition())) {
-            TextBlitter::_debugTextToBilt += "Floor: " + std::to_string(j) + "\n";
-            break;
-        }
-    }*/
-
-    /*
-    
-    //TextBlitter::_debugTextToBilt += "Grounded: " + std::to_string(Scene::_players[0]._isGrounded) + "\n";
-	TextBlitter::_debugTextToBilt += "Y vel: " + std::to_string(Scene::_players[0]._yVelocity) + "\n";
-	//TextBlitter::_debugTextToBilt += "Mouse ray: " + Util::Vec3ToString(EngineState::_mouseRay) + "\n";
-
-	TextBlitter::_debugTextToBilt += "X: " + std::to_string(Input::GetMouseX()) +"\n";
-	TextBlitter::_debugTextToBilt += "Y: " + std::to_string(Input::GetMouseY()) +"\n";
-
-    TextBlitter::_debugTextToBilt += "Win width: " + std::to_string(GL::GetWindowWidth()) + "\n";
-    TextBlitter::_debugTextToBilt += "Win height: " + std::to_string(GL::GetWindowHeight()) + "\n";
-    TextBlitter::_debugTextToBilt += "Selected light index: " + std::to_string(DebugMenu::GetSelectedLightIndex()) + "\n";
-
-    int selectedLightIndex = DebugMenu::GetSelectedLightIndex();
-    if (selectedLightIndex >= 0 && selectedLightIndex < Scene::_lights.size()) {
-        TextBlitter::_debugTextToBilt += "Selected light type: " + std::to_string(Scene::_lights[selectedLightIndex].type) + "\n";
-    }*/
-
-  
-    
-
-    //TextBlitter::_debugTextToBilt = "";
-    
-    if (!_toggles.drawDebugText) {
-        TextBlitter::_debugTextToBilt = "";
-    }
-
-    
-    TextBlitter::_debugTextToBilt = "Health: " + std::to_string(player->_health);
-    TextBlitter::_debugTextToBilt += "\nKills: " + std::to_string(player->_killCount);
-    
-    TextBlitter::_debugTextToBilt += "\n"; 
-
-
-  //  TextBlitter::_debugTextToBilt = "AnimationMode: " + std::to_string(player->_characterModel._animationMode);
-
-    /*
-    AnimatedGameObject* player1model = &Scene::_players[0]._characterModel;
-    TextBlitter::_debugTextToBilt += "\nSkipped index count: " + std::to_string(player1model->_skippedMeshIndices.size());
-    for (auto& index : player1model->_skippedMeshIndices) {
-        TextBlitter::_debugTextToBilt += "\nSkipping: " + std::to_string(index) + ": " + player1model->_skinnedModel->m_meshEntries[index].Name;
-    }*/
-    
-
-    if (EngineState::GetViewportMode() == FULLSCREEN) {
-        TextBlitter::BlitAtPosition(player->_pickUpText, 60, presentFrameBuffer.GetHeight() - 60, false, 1.0f);
-    }
-    else if (EngineState::GetViewportMode() == SPLITSCREEN) {
-        TextBlitter::BlitAtPosition(player->_pickUpText, 40, presentFrameBuffer.GetHeight() - 35, false, 1.0f);
-    }
-
-    glBindFramebuffer(GL_FRAMEBUFFER, presentFrameBuffer.GetID());
-    glViewport(0, 0, presentFrameBuffer.GetWidth(), presentFrameBuffer.GetHeight());
-    glDisable(GL_DEPTH_TEST);
-    glDisable(GL_CULL_FACE);
-    TextBlitter::Update(1.0f / 60.0f);
-    Renderer::RenderUI(presentFrameBuffer.GetWidth(), presentFrameBuffer.GetHeight());
-
-    // Gizmo shit !!!
-    if (EngineState::_engineMode == EDITOR) {
-        if (selectedPhysXObject) {
-
-            GameObject* selectedObject = nullptr;
-            for (auto& gameObject : Scene::_gameObjects) {
-                if (gameObject._editorRaycastBody == selectedPhysXObject) {
-                    selectedObject = &gameObject;
-                    break;
-                }
-            }
-            if (selectedObject) {
-                glm::mat4 matrix = selectedObject->GetModelMatrix();
-                Im3d::Mat4 gizmoMatrix = Gizmo::Draw(projection, view, presentFrameBuffer.GetWidth(), presentFrameBuffer.GetHeight(), matrix);
-                Im3d::Vec3 pos = gizmoMatrix.getTranslation();
-                Im3d::Vec3 euler = ToEulerXYZ(gizmoMatrix.getRotation());
-                Im3d::Vec3 scale = gizmoMatrix.getScale();
-                selectedObject->SetPosition(glm::vec3(pos.x, pos.y, pos.z));
-                selectedObject->SetRotation(glm::vec3(euler.x, euler.y, euler.z));
-                selectedObject->SetScale(glm::vec3(scale.x, scale.y, scale.z));
-            }
-        }
-    }
-
+       
     // Blit that smaller FBO into the main frame buffer 
     if (EngineState::GetViewportMode() == FULLSCREEN) {
         glBindFramebuffer(GL_READ_FRAMEBUFFER, playerRenderTarget.presentFrameBuffer.GetID());
@@ -1194,9 +1112,6 @@ void Renderer::RenderFrame(Player* player) {
             glBlitFramebuffer(0, 0, playerRenderTarget.presentFrameBuffer.GetWidth(), playerRenderTarget.presentFrameBuffer.GetHeight(), 0, 0, GL::GetWindowWidth(), GL::GetWindowHeight() / 2, GL_COLOR_BUFFER_BIT, GL_NEAREST);
         }
     }
-
-  //  BlitDebugTexture(_blurBuffers[2].FBO, GL_COLOR_ATTACHMENT1, _blurBuffers[2].width, _blurBuffers[2].height);
-
 
     // Wipe all light dirty flags back to false
     for (Light& light : Scene::_lights) {
@@ -1259,125 +1174,259 @@ void RenderGameObjectOutline(Shader& shader, GameObject* gameObject) {
 	}
 }
 
+// Editor constants
+constexpr double _orbitRadius = 2.5f;
+constexpr double _orbiteSpeed = 0.003f;
+constexpr double _zoomSpeed = 0.5f;
+constexpr double _panSpeed = 0.004f;
+
+// Editor globals
+glm::dmat4x4 _editorViewMatrix;
+glm::dvec3 _viewTarget;
+glm::dvec3 _camPos;
+double _yawAngle = 0.0;
+double _pitchAngle = 0.0;
+
+void Renderer::EnteredEditorMode() {
+
+    // Force switch to fullscreen and player 1
+    // EngineState::_viewportMode = FULLSCREEN;
+    // EngineState::_currentPlayer = 0;
+    // above is broken. find out why.
+
+    Audio::PlayAudio(AUDIO_SELECT, 1.00f);
+
+    Player* player = &Scene::_players[0];
+    _editorViewMatrix = player->GetViewMatrix();
+
+    glm::dmat4x4 inverseViewMatrix = glm::inverse(_editorViewMatrix);
+    glm::dvec3 forward = inverseViewMatrix[2];
+    glm::dvec3 viewPos = inverseViewMatrix[3];
+    _viewTarget = viewPos - (forward * _orbitRadius);
+    _camPos = viewPos;
+
+    glm::dvec3 delta = _viewTarget - _camPos;
+    _yawAngle = std::atan2(delta.z, delta.x) + HELL_PI * 0.5f;
+    _pitchAngle = std::asin(delta.y / glm::length(delta));
+}
+
+glm::dvec3 rot3D(glm::dvec3 v, glm::dvec2 rot) {
+    glm::vec2 c = cos(rot);
+    glm::vec2 s = sin(rot);
+    glm::dmat3 rm = glm::dmat3(c.x, c.x * s.y, s.x * c.y,
+        0.0, c.y, s.y,
+        -c.x, s.y * c.x, c.y * c.x);
+    return v * rm;
+}
+
 void Renderer::RenderEditorMode() {
 
-	//if (!_gizmoXTranslate._editorRaycastBodyXTranslate) {
-  //      _gizmoXTranslate.InitPhysXObjects();
-//	}
-
-    Scene::Update3DEditorScene();
-
-    glm::mat4 projection = Scene::_players[0].GetProjectionMatrix();// glm::perspective(1.0f, 1920.0f / 1080.0f, NEAR_PLANE, FAR_PLANE);
-	glm::mat4 view = Scene::_players[0].GetViewMatrix();
-
-	int playerIndex = GetPlayerIndexFromPlayerPointer(&Scene::_players[0]);
-	PlayerRenderTarget& playerRenderTarget = GetPlayerRenderTarget(playerIndex);
-	GBuffer& gBuffer = playerRenderTarget.gBuffer;
-	PresentFrameBuffer& presentFrameBuffer = playerRenderTarget.presentFrameBuffer;
-
-	_shaders.outline.Use();
-	_shaders.outline.SetMat4("projection", projection);
-	_shaders.outline.SetMat4("view", view);
-	_shaders.outline.SetFloat("viewportWidth", presentFrameBuffer.GetWidth());
-	_shaders.outline.SetFloat("viewportHeight", presentFrameBuffer.GetHeight());
+    Player* player = &Scene::_players[0]; 
+        
     
+           
+    PlayerRenderTarget& playerRenderTarget = GetPlayerRenderTarget(0);
+    GBuffer& gBuffer = playerRenderTarget.gBuffer;
+    PresentFrameBuffer& presentFrameBuffer = playerRenderTarget.presentFrameBuffer;               
+    glm::mat4 projection = player->GetProjectionMatrix();
+    glm::mat4 view = player->GetViewMatrix();
+    glm::vec3 viewPos = player->GetViewPos();
+    glm::vec3 viewDir = player->GetCameraForward() * glm::vec3(-1);
+    float mouseX = MapRange(Input::GetMouseX(), 0, GL::GetWindowWidth(), 0, presentFrameBuffer.GetWidth());
+    float mouseY = MapRange(Input::GetMouseY(), 0, GL::GetWindowHeight(), 0, presentFrameBuffer.GetHeight());
+
+    // Start the gizmo out of view
+    Transform transform;
+    transform.position.y = -1000.0f;
+    glm::mat4 matrix = transform.to_mat4();
+
+    // Update gizmo with correct matrix if required
+    if (_selectedEditorObject.ptr) {
+        GameObject* gameObject = (GameObject*)_selectedEditorObject.ptr;
+        matrix = gameObject->GetModelMatrix();
+    }
+
+    // Update the gizmo
+    Gizmo::Update(viewPos, viewDir, mouseX, mouseY, projection, view, Input::LeftMouseDown(), presentFrameBuffer.GetWidth(), presentFrameBuffer.GetHeight(), matrix);
+    Im3d::Mat4 gizmoMatrix = Gizmo::GetTransform();
+    Im3d::Vec3 pos = gizmoMatrix.getTranslation();
+    Im3d::Vec3 euler = ToEulerXYZ(gizmoMatrix.getRotation());
+    Im3d::Vec3 scale = gizmoMatrix.getScale();
+
+    // Update any selected object with its new transform data
+    if (_selectedEditorObject.ptr) {
+        GameObject* gameObject = (GameObject*)_selectedEditorObject.ptr;
+        gameObject->SetPosition(glm::vec3(pos.x, pos.y, pos.z));
+        gameObject->SetRotation(glm::vec3(euler.x, euler.y, euler.z));
+        gameObject->SetScale(glm::vec3(scale.x, scale.y, scale.z));
+    }
+
+    // Check for hover
+    _hoveredEditorObject.ptr = nullptr;
+    _hoveredEditorObject.rigidBody = nullptr;
+    _hoveredEditorObject.type = PhysicsObjectType::UNDEFINED;
+    PxU32 hitFlags = RaycastGroup::RAYCAST_ENABLED;
     glm::vec3 rayOrigin = Scene::_players[0].GetViewPos();
     glm::vec3 rayDirection = Util::GetMouseRay(projection, view, GL::GetWindowWidth(), GL::GetWindowHeight(), Input::GetMouseX(), Input::GetMouseY());
-	auto result = Util::CastPhysXRay(rayOrigin, rayDirection , 100, true);
-
-
-	GameObject* hoveredObject = nullptr;
-	GameObject* selectedObject = nullptr;
-
-	if (!result.hitFound) {
-        hoveredObject = nullptr;
-       // std::cout << "hit not found\n";
+    auto hitResult = Util::CastPhysXRay(rayOrigin, rayDirection, 100, hitFlags, true);
+    if (hitResult.hitFound) {
+        if (hitResult.physicsObjectType == PhysicsObjectType::GAME_OBJECT) {
+            _hoveredEditorObject.ptr = hitResult.parent;
+            _hoveredEditorObject.rigidBody = hitResult.hitActor;
+            _hoveredEditorObject.type = hitResult.physicsObjectType;
+        }
     }
-	else {
-	//	std::cout << "hit found\n";
-		if (result.physicsObjectType == PhysicsObjectType::GAME_OBJECT) {
-			if (result.parent) {
-          //      std::cout << "parent was valid\n";
-				GameObject* hitObject = (GameObject*)result.parent;
-				hoveredObject = hitObject;
-			}
-            else {
-			//	std::cout << "parent was invalid\n";
+
+    if (!Input::KeyDown(HELL_KEY_LEFT_CONTROL_GLFW) && !Input::KeyDown(HELL_KEY_LEFT_ALT)) {
+
+        // Select clicked hovered object
+        if (Input::LeftMousePressed() && _hoveredEditorObject.ptr && !Gizmo::HasHover()) {
+            _selectedEditorObject = _hoveredEditorObject;
+                std::cout << "Selected an editor object\n";
+        }
+
+        // Clicked on nothing, so unselect any selected object
+        if (Input::LeftMousePressed() && !_hoveredEditorObject.ptr && !Gizmo::HasHover()) {
+            _selectedEditorObject.ptr = nullptr;
+                _selectedEditorObject.rigidBody = nullptr;
+                _selectedEditorObject.type = PhysicsObjectType::UNDEFINED;
+            std::cout << "Unelected an editor object\n";
+        }
+    }
+
+    //////////////////////
+    //                  //
+    //  Object outline  //
+
+    _shaders.outline.Use();
+    _shaders.outline.SetMat4("projection", projection);
+    _shaders.outline.SetMat4("view", view);
+    _shaders.outline.SetFloat("viewportWidth", presentFrameBuffer.GetWidth());
+    _shaders.outline.SetFloat("viewportHeight", presentFrameBuffer.GetHeight());
+
+    // Draw hovered object outline
+    if (_hoveredEditorObject.ptr && !Input::LeftMouseDown() && !Gizmo::HasHover()) {
+        GameObject* hoveredGameObject = nullptr;
+        for (auto& gameObject : Scene::_gameObjects) {
+            if (gameObject._raycastObject.rigid == _hoveredEditorObject.rigidBody) {
+                hoveredGameObject = &gameObject;
+                break;
             }
-		}
-        // Click to select an object
-        if (Input::LeftMouseDown()) {
-            selectedPhysXObject = (PxRigidStatic*)result.hitActor;
+        }
+        if (hoveredGameObject) {
+            // Render outline mask
+            glDisable(GL_DEPTH_TEST);
+            glEnable(GL_STENCIL_TEST);
+            glStencilMask(0xff);
+            glClearStencil(0);
+            glClear(GL_STENCIL_BUFFER_BIT);
+            glStencilOp(GL_REPLACE, GL_REPLACE, GL_REPLACE);
+            glStencilFunc(GL_ALWAYS, 1, 1);
+            glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+            _shaders.outline.SetInt("offsetX", 0); // reset x offset
+            _shaders.outline.SetInt("offsetY", 0); // reset y offset
+            _shaders.outline.SetMat4("model", hoveredGameObject->GetModelMatrix());
+            for (int i = 0; i < hoveredGameObject->_meshMaterialIndices.size(); i++) {
+                hoveredGameObject->_model->_meshes[i].Draw();
+            }
+            // Render outline
+            glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
+            glStencilMask(0x00);
+            glEnable(GL_STENCIL_TEST);
+            glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+            glDisable(GL_DEPTH_TEST);
+            _shaders.outline.SetVec3("Color", WHITE);
+            RenderGameObjectOutline(_shaders.outline, hoveredGameObject);
         }
     }
 
-    // Get game object pointer from PxRigidStatic pointer
-    for (auto& gameObject : Scene::_gameObjects) {
-        if (gameObject._editorRaycastBody == selectedPhysXObject) {
-            selectedObject = &gameObject;
+    // Draw selected object outline
+    if (_selectedEditorObject.ptr) {
+        GameObject* selectedGameObject = nullptr;
+        for (auto& gameObject : Scene::_gameObjects) {
+            if (gameObject._raycastObject.rigid == _selectedEditorObject.rigidBody) {
+                selectedGameObject = &gameObject;
+                break;
+            }
+        }
+        if (selectedGameObject) {
+            // Render outline mask
+            glDisable(GL_DEPTH_TEST);
+            glEnable(GL_STENCIL_TEST);
+            glStencilMask(0xff);
+            glClearStencil(0);
+            glClear(GL_STENCIL_BUFFER_BIT);
+            glStencilOp(GL_REPLACE, GL_REPLACE, GL_REPLACE);
+            glStencilFunc(GL_ALWAYS, 1, 1);
+            glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+            _shaders.outline.SetInt("offsetX", 0); // reset x offset
+            _shaders.outline.SetInt("offsetY", 0); // reset y offset
+            _shaders.outline.SetMat4("model", selectedGameObject->GetModelMatrix());
+            for (int i = 0; i < selectedGameObject->_meshMaterialIndices.size(); i++) {
+                selectedGameObject->_model->_meshes[i].Draw();
+            }
+            // Render outline
+            glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
+            glStencilMask(0x00);
+            glEnable(GL_STENCIL_TEST);
+            glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+            glDisable(GL_DEPTH_TEST);
+            _shaders.outline.SetVec3("Color", YELLOW);
+            RenderGameObjectOutline(_shaders.outline, selectedGameObject);
         }
     }
 
-
-   
-	if (hoveredObject) {
-		// Render outline mask
-        glDisable(GL_DEPTH_TEST);
-        glEnable(GL_STENCIL_TEST);
-        glStencilMask(0xff);
-        glClearStencil(0);
-        glClear(GL_STENCIL_BUFFER_BIT);
-        glStencilOp(GL_REPLACE, GL_REPLACE, GL_REPLACE);
-        glStencilFunc(GL_ALWAYS, 1, 1);
-		glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
-        _shaders.outline.SetInt("offsetX", 0); // reset x offset
-        _shaders.outline.SetInt("offsetY", 0); // reset y offset
-        _shaders.outline.SetMat4("model", hoveredObject->GetModelMatrix());
-        for (int i = 0; i < hoveredObject->_meshMaterialIndices.size(); i++) {
-            hoveredObject->_model->_meshes[i].Draw();
-        }
-        // Render outline
-        glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
-        glStencilMask(0x00);
-        glEnable(GL_STENCIL_TEST);
-        glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-		glDisable(GL_DEPTH_TEST);
-		_shaders.outline.SetVec3("Color", WHITE);
-        RenderGameObjectOutline(_shaders.outline, hoveredObject);
-    }
-
-	if (selectedObject) {
-		// Render outline mask
-		glDisable(GL_DEPTH_TEST);
-		glEnable(GL_STENCIL_TEST);
-		glStencilMask(0xff);
-		glClearStencil(0);
-		glClear(GL_STENCIL_BUFFER_BIT);
-		glStencilOp(GL_REPLACE, GL_REPLACE, GL_REPLACE);
-		glStencilFunc(GL_ALWAYS, 1, 1);
-		glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
-        _shaders.outline.SetInt("offsetX", 0); // reset x offset
-        _shaders.outline.SetInt("offsetY", 0); // reset y offset
-		_shaders.outline.SetMat4("model", selectedObject->GetModelMatrix());
-		for (int i = 0; i < selectedObject->_meshMaterialIndices.size(); i++) {
-			selectedObject->_model->_meshes[i].Draw();
-		}
-		// Render outline
-		glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
-		glStencilMask(0x00);
-		glEnable(GL_STENCIL_TEST);
-		glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-		glDisable(GL_DEPTH_TEST);
-		_shaders.outline.SetVec3("Color", YELLOW);
-		RenderGameObjectOutline(_shaders.outline, selectedObject);
-	}
-        
     // Cleanup
-	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-	glDepthMask(GL_TRUE);
-	glDisable(GL_STENCIL_TEST);
+    glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+    glDepthMask(GL_TRUE);
+    glDisable(GL_STENCIL_TEST);
     _shaders.outline.SetInt("offsetX", 0); // reset x offset
     _shaders.outline.SetInt("offsetY", 0); // reset y offset
+       
+    // Draw the gizmo
+    if (_selectedEditorObject.ptr) {
+        glm::mat4 projection = player->GetProjectionMatrix();
+        glm::mat4 view = player->GetViewMatrix();
+        int playerIndex = GetPlayerIndexFromPlayerPointer(player);
+        PlayerRenderTarget& playerRenderTarget = GetPlayerRenderTarget(playerIndex);
+        PresentFrameBuffer& presentFrameBuffer = playerRenderTarget.presentFrameBuffer;
+        Gizmo::Draw(projection, view, presentFrameBuffer.GetWidth(), presentFrameBuffer.GetHeight());
+    }
+
+    // Camera orbit
+    if (Input::LeftMouseDown() && Input::KeyDown(HELL_KEY_LEFT_ALT)) {
+        _yawAngle += Input::GetMouseOffsetX() * _orbiteSpeed;
+        _pitchAngle -= Input::GetMouseOffsetY() * _orbiteSpeed;
+        _camPos = _orbitRadius * glm::dvec3(0, 0, 1);
+        _camPos = rot3D(_camPos, { -_yawAngle, -_pitchAngle });
+        _camPos += _viewTarget;
+        _editorViewMatrix = glm::lookAt(_camPos, _viewTarget, glm::dvec3(0.0, 1.0, 0.0));
+    }
+
+    // Camera Zoom
+    glm::dmat4 inverseViewMatrix = glm::inverse(_editorViewMatrix);
+    glm::dvec3 forward = inverseViewMatrix[2];
+    glm::dvec3 right = inverseViewMatrix[0];
+    glm::dvec3 up = inverseViewMatrix[1];
+    if (Input::MouseWheelUp()) {
+        _camPos += (forward * -_zoomSpeed);
+        _viewTarget += (forward * -_zoomSpeed);
+    }
+    if (Input::MouseWheelDown()) {
+        _camPos += (forward * _zoomSpeed);
+        _viewTarget += (forward * _zoomSpeed);
+    }
+
+    // Camera Pan
+    if (Input::KeyDown(HELL_KEY_LEFT_CONTROL_GLFW) && Input::LeftMouseDown()) {
+        _camPos -= (right * _panSpeed * (double)Input::GetMouseOffsetX());
+        _camPos -= (up * _panSpeed * -(double)Input::GetMouseOffsetY());
+        _viewTarget -= (right * _panSpeed * (double)Input::GetMouseOffsetX());
+        _viewTarget -= (up * _panSpeed * -(double)Input::GetMouseOffsetY());
+    }
+
+    _editorViewMatrix = glm::lookAt(_camPos, _viewTarget, glm::dvec3(0.0, 1.0, 0.0));
+    player->ForceSetViewMatrix(_editorViewMatrix);
 }
 
 
@@ -1535,8 +1584,64 @@ void BlitDebugTexture(GLint fbo, GLenum colorAttachment, GLint srcWidth, GLint s
 
 }
 
+void DrawHudLowRes(Player* player) {
 
-void DrawHud(Player* player) {
+    int playerIndex = GetPlayerIndexFromPlayerPointer(player);
+    PlayerRenderTarget& playerRenderTarget = GetPlayerRenderTarget(playerIndex);
+    PresentFrameBuffer& presentFrameBuffer = playerRenderTarget.presentFrameBuffer;
+    presentFrameBuffer.Bind();
+    glDrawBuffer(GL_COLOR_ATTACHMENT1);
+    
+    // Crosshair
+    if (!player->_isDead) {
+        std::string texture = "CrosshairDot";
+        if (player->CursorShouldBeInterect()) {
+            texture = "CrosshairSquare";
+        }
+        Renderer::QueueUIForRendering(texture, presentFrameBuffer.GetWidth() / 2, presentFrameBuffer.GetHeight() / 2, true, WHITE);
+    }
+
+    // "Press Start"
+    if (player->_isDead && player->_timeSinceDeath > 3.25f) {
+        Renderer::QueueUIForRendering("PressStart", presentFrameBuffer.GetWidth() / 2, presentFrameBuffer.GetHeight() / 2, true, WHITE);
+    }
+
+    // Debug text
+    if (_toggles.drawDebugText) {
+        TextBlitter::_debugTextToBilt += "View pos: " + Util::Vec3ToString(player->GetViewPos()) + "\n";
+        TextBlitter::_debugTextToBilt += "View rot: " + Util::Vec3ToString(player->GetViewRotation()) + "\n";
+        TextBlitter::_debugTextToBilt += "Weapon Action: " + Util::WeaponActionToString(Scene::_players[playerIndex].GetWeaponAction()) + "\n";
+
+        TextBlitter::_debugTextToBilt += "Blood decal count: " + std::to_string(Scene::_bloodDecals.size()) + "\n";
+    }
+    // Health and killcount
+    else {
+        TextBlitter::_debugTextToBilt = "Health: " + std::to_string(player->_health);
+        TextBlitter::_debugTextToBilt += "\nKills: " + std::to_string(player->_killCount);
+        TextBlitter::_debugTextToBilt += "\n";
+    }
+
+    // Pickup text
+    if (EngineState::GetViewportMode() == FULLSCREEN) {
+        TextBlitter::BlitAtPosition(player->_pickUpText, 60, presentFrameBuffer.GetHeight() - 60, false, 1.0f);
+    }
+    else if (EngineState::GetViewportMode() == SPLITSCREEN) {
+        TextBlitter::BlitAtPosition(player->_pickUpText, 40, presentFrameBuffer.GetHeight() - 35, false, 1.0f);
+    }
+
+    // Draw it
+    glBindFramebuffer(GL_FRAMEBUFFER, presentFrameBuffer.GetID());
+    glViewport(0, 0, presentFrameBuffer.GetWidth(), presentFrameBuffer.GetHeight());
+    glDisable(GL_DEPTH_TEST);
+    glDisable(GL_CULL_FACE);
+    TextBlitter::Update(1.0f / 60.0f);
+    Renderer::RenderUI(presentFrameBuffer.GetWidth(), presentFrameBuffer.GetHeight());
+}
+void DrawHudAmmo(Player* player) {
+
+    if (player->_isDead) {
+        return;
+    }
 
 	int playerIndex = GetPlayerIndexFromPlayerPointer(player);
 	PlayerRenderTarget& playerRenderTarget = GetPlayerRenderTarget(playerIndex);
@@ -1558,30 +1663,19 @@ void DrawHud(Player* player) {
     }
     glm::vec3 ammoColor = glm::vec3(0.16f, 0.78f, 0.23f);
 
-    /*
-	int Player::GetCurrentWeaponClipAmmo() {
-	int Player::GetCurrentWeaponTotalAmmo() {
-    */
 
-    if (player->GetCurrentWeaponIndex() == Weapon::KNIFE ||
-        player->_isDead) {
-        return;
-    }
-
-    std::string clipAmmo = std::to_string(player->GetCurrentWeaponClipAmmo());
-    std::string totalAmmo = std::to_string(player->GetCurrentWeaponTotalAmmo());
-
-	if (player->GetCurrentWeaponClipAmmo() == 0) {
-        ammoColor = glm::vec3(0.8f, 0.05f, 0.05f);
-	}
-
-
-
-	_shaders.UI.SetVec3("color", ammoColor);
-	NumberBlitter::Draw(clipAmmo.c_str(), slashXPos - 4, slashYPos, viewportWidth, viewportHeight, scale, NumberBlitter::Justification::RIGHT);
-	_shaders.UI.SetVec3("color", WHITE);
-	NumberBlitter::Draw("/", slashXPos, slashYPos, viewportWidth, viewportHeight, scale, NumberBlitter::Justification::LEFT);
-	NumberBlitter::Draw(totalAmmo.c_str(), slashXPos + 17, slashYPos, viewportWidth, viewportHeight, scale * 0.8f, NumberBlitter::Justification::LEFT);
+    if (player->GetCurrentWeaponIndex() != Weapon::KNIFE) {
+        std::string clipAmmo = std::to_string(player->GetCurrentWeaponClipAmmo());
+        std::string totalAmmo = std::to_string(player->GetCurrentWeaponTotalAmmo());
+        if (player->GetCurrentWeaponClipAmmo() == 0) {
+            ammoColor = glm::vec3(0.8f, 0.05f, 0.05f);
+        }
+        _shaders.UI.SetVec3("color", ammoColor);
+        NumberBlitter::Draw(clipAmmo.c_str(), slashXPos - 4, slashYPos, viewportWidth, viewportHeight, scale, NumberBlitter::Justification::RIGHT);
+        _shaders.UI.SetVec3("color", WHITE);
+        NumberBlitter::Draw("/", slashXPos, slashYPos, viewportWidth, viewportHeight, scale, NumberBlitter::Justification::LEFT);
+        NumberBlitter::Draw(totalAmmo.c_str(), slashXPos + 17, slashYPos, viewportWidth, viewportHeight, scale * 0.8f, NumberBlitter::Justification::LEFT);
+    } 
 }
 
 void GeometryPass(Player* player) {
@@ -1637,7 +1731,14 @@ void LightingPass(Player* player) {
     PlayerRenderTarget& playerRenderTarget = GetPlayerRenderTarget(playerIndex);
     GBuffer& gBuffer = playerRenderTarget.gBuffer;
 
+    static float totalTime = 0;
+    totalTime += 1.0f / 60.0f;
+
+    float sinTime = sin(totalTime);
+
     _shaders.lighting.Use();
+    _shaders.lighting.SetFloat("time", totalTime);
+    _shaders.lighting.SetFloat("sinTime", sinTime);
 
     // Debug Text
     TextBlitter::_debugTextToBilt = "";
@@ -1759,7 +1860,6 @@ void DebugPass(Player* player) {
 
     int playerIndex = GetPlayerIndexFromPlayerPointer(player);
     PlayerRenderTarget& playerRenderTarget = GetPlayerRenderTarget(playerIndex);
-    //GBuffer& gBuffer = playerRenderTarget.gBuffer;
     PresentFrameBuffer& presentFrameBuffer = playerRenderTarget.presentFrameBuffer;
 
 
@@ -1837,7 +1937,6 @@ void DebugPass(Player* player) {
     debugPoints.push_back(testPoint);*/
 
 
-
     /*
     AnimatedGameObject* unisexGuy = Scene::GetAnimatedGameObjectByName("UNISEXGUY");
     if (unisexGuy) {
@@ -1856,6 +1955,27 @@ void DebugPass(Player* player) {
         RenderImmediate();
         debugPoints.clear();
     }*/
+
+    /*
+    static glm::vec3 focalPoint = glm::vec3(2, 1, 2);
+    static glm::vec3 position = glm::vec3(2, 1, 2);
+
+    static float angle = 0;
+    angle += 0.01f;
+    float radius = 0.1f;
+
+    position.x = focalPoint.x + cos(angle) * radius;
+    position.z = focalPoint.z + sin(angle) * radius;
+
+    debugPoints.push_back(position);
+
+    */
+
+
+   // std::cout << Util::Vec3ToString(position) << "\n";
+
+    //this.setPosX(((float)Math.cos(angle) * radius) + center.x);
+    //this.setPosY(((float)Math.sin(angle) * radius) + center.y);
 
 
     /*
@@ -1930,6 +2050,13 @@ void DebugPass(Player* player) {
 
    
 
+   /* auto& player1 = Scene::_players[1];
+
+    for (auto& point : player1._characterModel._debugBones) {
+        debugPoints.push_back(point);
+    }
+    player1._characterModel._debugBones.clear();*/
+
     for (auto& pos : debugPoints) {
         Point point;
         point.pos = pos;
@@ -1941,7 +2068,23 @@ void DebugPass(Player* player) {
     RenderImmediate();
     debugPoints.clear();
 
+    /*
 
+    for (auto& point : player1._characterModel._debugRigids) {
+        debugPoints.push_back(point);
+    }
+    player1._characterModel._debugRigids.clear();
+    for (auto& pos : debugPoints) {
+        Point point;
+        point.pos = pos + glm::vec3(0, 0.01, 0);
+        point.color = YELLOW;
+       // Renderer::QueuePointForDrawing(point);
+    }
+    glDisable(GL_DEPTH_TEST);
+    glDisable(GL_CULL_FACE);
+    RenderImmediate();
+    debugPoints.clear();
+    */
 
     //////////////////////////////////////////////////////////////////////////////////////////////
     
@@ -1983,7 +2126,7 @@ void DebugPass(Player* player) {
     // Debug lines
     if (_debugLineRenderMode == DebugLineRenderMode::BOUNDING_BOXES) {
         for (GameObject& gameObject : Scene::_gameObjects) {
-            if (gameObject._raycastBody) {
+            if (gameObject._raycastObject.rigid) {
                 if (gameObject.HasMovedSinceLastFrame()) {
                     QueueAABBForRenering(gameObject._aabb, RED);
                 }
@@ -2014,12 +2157,6 @@ void DebugPass(Player* player) {
         _shaders.solidColor.SetBool("uniformColor", false);
         _shaders.solidColor.SetMat4("model", glm::mat4(1));
         auto* renderBuffer = &scene->getRenderBuffer();
-
-		if (_debugLineRenderMode == DebugLineRenderMode::PHYSX_EDITOR) {
-			Scene::Update3DEditorScene();
-			renderBuffer = &Physics::GetEditorScene()->getRenderBuffer();
-			color = PURPLE;
-		}
 
         for (unsigned int i = 0; i < renderBuffer->getNbLines(); i++) {
             auto pxLine = renderBuffer->getLines()[i];
@@ -2421,9 +2558,9 @@ void DrawAnimatedObject(Shader& shader, AnimatedGameObject* animatedGameObject) 
     }
 
     // Dont draw dead guy if nobody is dead
-    if (animatedGameObject->GetName() == "DyingGuy" && !Scene::_players[0]._isDead && !Scene::_players[1]._isDead) {
+    /*if (animatedGameObject->GetName() == "DyingGuy" && !Scene::_players[0]._isDead && !Scene::_players[1]._isDead) {
         return;
-    }
+    }*/
 
 
     /*
@@ -2536,16 +2673,19 @@ void DrawAnimatedObject(Shader& shader, AnimatedGameObject* animatedGameObject) 
         }
         glDrawElementsBaseVertex(GL_TRIANGLES, skinnedModel.m_meshEntries[i].NumIndices, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int) * skinnedModel.m_meshEntries[i].BaseIndex), skinnedModel.m_meshEntries[i].BaseVertex);
     }
-    //glFlush();
 }
 
 void DrawAnimatedScene(Shader& shader, Player* player) {
+
+    if (EngineState::GetEngineMode() == EDITOR) {
+        return;
+    }
 
     // Hack to hide the dead guy model if the current player is dead
     // otherwise it's possible to see it on screen
     // because the player cam when dead is pinned to the ragdoll head
     // and not the head of the dying guy animation
-    AnimatedGameObject* dyingGuy = Scene::GetAnimatedGameObjectByName("DyingGuy");
+    /*AnimatedGameObject* dyingGuy = Scene::GetAnimatedGameObjectByName("DyingGuy");
     if (dyingGuy) {
         if (player->_isDead) {
             dyingGuy->SetScale(0.001f);
@@ -2554,6 +2694,7 @@ void DrawAnimatedScene(Shader& shader, Player* player) {
             dyingGuy->SetScale(1.000f);
         }
     }
+    dyingGuy->SetScale(0.001f);*/
 
     // This is a temporary hack so multiple animated game objects can have glocks which are queued to be rendered later by DrawScene()
     _glockMatrices.clear();
@@ -2583,7 +2724,8 @@ void DrawAnimatedScene(Shader& shader, Player* player) {
 
     // Render other players
     for (Player& otherPlayer : Scene::_players) {
-        if (&otherPlayer != player && !otherPlayer._isDead) {
+        //if (&otherPlayer != player && !otherPlayer._isDead) {
+        if (&otherPlayer != player) {
             DrawAnimatedObject(shader, &otherPlayer._characterModel);
         }
 
@@ -2599,7 +2741,14 @@ void DrawAnimatedScene(Shader& shader, Player* player) {
 
                 std::cout << i << ": " << name << "\n";
                // std::cout << Util::Mat4ToString(matrix) << "\n";
+            }
 
+
+            std::cout << "\JOINT NAMES FROM SKINNED MODEL\n";
+            for (int i = 0; i < otherPlayer._characterModel._skinnedModel->m_joints.size(); i++) {
+                std::string name = otherPlayer._characterModel._skinnedModel->m_joints[i].m_name;
+                std::cout << i << ": " << name << "\n";
+                // std::cout << Util::Mat4ToString(matrix) << "\n";
             }
 
         }
@@ -2797,6 +2946,124 @@ void RenderImmediate() {
     _solidTrianglePoints.clear();
 }
 
+
+
+void Renderer::DrawInstancedBloodDecals(Shader* shader, Player* player) {
+    static unsigned int upFacingPlaneVAO = 0;
+
+    // Setup if you haven't already
+    if (upFacingPlaneVAO == 0) {
+        Vertex vert0, vert1, vert2, vert3;
+        vert0.position = glm::vec3(-0.5, 0, 0.5);
+        vert1.position = glm::vec3(0.5, 0, 0.5f);
+        vert2.position = glm::vec3(0.5, 0, -0.5);
+        vert3.position = glm::vec3(-0.5, 0, -0.5);
+        vert0.uv = glm::vec2(0, 1);
+        vert1.uv = glm::vec2(1, 1);
+        vert2.uv = glm::vec2(1, 0);
+        vert3.uv = glm::vec2(0, 0);
+        Util::SetNormalsAndTangentsFromVertices(&vert0, &vert1, &vert2);
+        Util::SetNormalsAndTangentsFromVertices(&vert3, &vert0, &vert1);
+        std::vector<Vertex> vertices;
+        std::vector<unsigned int> indices;
+        unsigned int i = (unsigned int)vertices.size();
+        indices.push_back(i);
+        indices.push_back(i + 1);
+        indices.push_back(i + 2);
+        indices.push_back(i + 2);
+        indices.push_back(i + 3);
+        indices.push_back(i);
+        vertices.push_back(vert0);
+        vertices.push_back(vert1);
+        vertices.push_back(vert2);
+        vertices.push_back(vert3);
+        unsigned int VBO;
+        unsigned int EBO;
+        glGenVertexArrays(1, &upFacingPlaneVAO);
+        glGenBuffers(1, &VBO);
+        glGenBuffers(1, &EBO);
+        glBindVertexArray(upFacingPlaneVAO);
+        glBindBuffer(GL_ARRAY_BUFFER, VBO);
+        glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Vertex), &vertices[0], GL_STATIC_DRAW);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), &indices[0], GL_STATIC_DRAW);
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)0);
+        glEnableVertexAttribArray(1);
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, normal));
+        glEnableVertexAttribArray(2);
+        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, uv));
+        glEnableVertexAttribArray(3);
+        glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, tangent));
+        glEnableVertexAttribArray(4);
+        glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, bitangent));
+    }
+
+    // create GL buffer to store matrices in if ya haven't already
+    static unsigned int instancing_array_buffer = 0;
+    if (instancing_array_buffer == 0) {
+        glGenBuffers(1, &instancing_array_buffer);
+    }
+
+
+    glActiveTexture(GL_TEXTURE2);
+    shader->Use();
+    shader->SetMat4("pv", player->GetProjectionMatrix() * player->GetViewMatrix());
+
+
+    glFlush();
+
+    glEnable(GL_DEPTH_TEST);
+    glDepthMask(GL_FALSE);
+
+    // Type 0
+    std::vector<glm::mat4> matrices;
+    for (BloodDecal& decal : Scene::_bloodDecals) {
+        if (decal.type == 0) {
+            matrices.push_back(decal.modelMatrix);
+        }
+    }
+    if (matrices.size()) {
+        glBindTexture(GL_TEXTURE_2D, AssetManager::GetTexture("blood_decal_4")->GetID());
+        DrawInstancedVAO(upFacingPlaneVAO, 6, matrices);
+    }
+    // Type 1
+    matrices.clear();
+    for (BloodDecal& decal : Scene::_bloodDecals) {
+        if (decal.type == 1) {
+            matrices.push_back(decal.modelMatrix);
+        }
+    }
+    if (matrices.size()) {
+        glBindTexture(GL_TEXTURE_2D, AssetManager::GetTexture("blood_decal_6")->GetID());
+        DrawInstancedVAO(upFacingPlaneVAO, 6, matrices);
+    }
+    // Type 2
+    matrices.clear();
+    for (BloodDecal& decal : Scene::_bloodDecals) {
+        if (decal.type == 2) {
+            matrices.push_back(decal.modelMatrix);
+        }
+    }
+    if (matrices.size()) {
+        glBindTexture(GL_TEXTURE_2D, AssetManager::GetTexture("blood_decal_7")->GetID());
+        DrawInstancedVAO(upFacingPlaneVAO, 6, matrices);
+    }
+    // Type 3
+    matrices.clear();
+    for (BloodDecal& decal : Scene::_bloodDecals) {
+        if (decal.type == 3) {
+            matrices.push_back(decal.modelMatrix);
+        }
+    }
+    if (matrices.size()) {
+        glBindTexture(GL_TEXTURE_2D, AssetManager::GetTexture("blood_decal_9")->GetID());
+        DrawInstancedVAO(upFacingPlaneVAO, 6, matrices);
+    }
+
+    glDepthMask(GL_TRUE);
+}
+
 void Renderer::HotloadShaders() {
 
     std::cout << "Hotloaded shaders\n";
@@ -2821,6 +3088,8 @@ void Renderer::HotloadShaders() {
 	_shaders.outline.Load("outline.vert", "outline.frag");
     _shaders.envMapShader.Load("envMap.vert", "envMap.frag", "envMap.geom");
     _shaders.test.Load("test.vert", "test.frag");
+    _shaders.bloodVolumetric.Load("blood_volumetric.vert", "blood_volumetric.frag");
+    _shaders.bloodDecals.Load("blood_decals.vert", "blood_decals.frag");
 
     _shaders.compute.Load("res/shaders/compute.comp");
     _shaders.pointCloud.Load("res/shaders/point_cloud.comp");
@@ -3401,13 +3670,13 @@ void Renderer::NextDebugLineRenderMode() {
         _debugLineRenderMode = (DebugLineRenderMode)(int(_debugLineRenderMode) + 1);
     }
     if (_debugLineRenderMode == PHYSX_RAYCAST) {
-        _debugLineRenderMode = (DebugLineRenderMode)(int(_debugLineRenderMode) + 1);
+      //  _debugLineRenderMode = (DebugLineRenderMode)(int(_debugLineRenderMode) + 1);
     }
     if (_debugLineRenderMode == PHYSX_COLLISION) {
    //     _debugLineRenderMode = (DebugLineRenderMode)(int(_debugLineRenderMode) + 1);
     }
     if (_debugLineRenderMode == RAYTRACE_LAND) {
-        _debugLineRenderMode = (DebugLineRenderMode)(int(_debugLineRenderMode) + 1);
+    //    _debugLineRenderMode = (DebugLineRenderMode)(int(_debugLineRenderMode) + 1);
     }
     if (_debugLineRenderMode == PHYSX_EDITOR) {
         _debugLineRenderMode = (DebugLineRenderMode)(int(_debugLineRenderMode) + 1);
@@ -3587,6 +3856,20 @@ void DrawInstanced(Mesh& mesh, std::vector<glm::mat4>& matrices) {
     }
 }
 
+
+void DrawInstancedVAO(GLuint vao, GLsizei indexCount, std::vector<glm::mat4>& matrices) {
+    if (_ssbos.instanceMatrices == 0) {
+        glCreateBuffers(1, &_ssbos.instanceMatrices);
+        glNamedBufferStorage(_ssbos.instanceMatrices, 4096 * sizeof(glm::mat4), NULL, GL_DYNAMIC_STORAGE_BIT);
+    }
+    if (matrices.size()) {
+        glNamedBufferSubData(_ssbos.instanceMatrices, 0, matrices.size() * sizeof(glm::mat4), &matrices[0]);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, _ssbos.instanceMatrices);
+        glBindVertexArray(vao);
+        glDrawElementsInstanced(GL_TRIANGLES, indexCount, GL_UNSIGNED_INT, 0, matrices.size());
+    }
+}
+
 void DrawBulletDecals(Player* player) {
 
     unsigned int attachments[3] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2 };
@@ -3759,7 +4042,16 @@ void RenderShadowMaps() {
 
     for (int i = 0; i < Scene::_lights.size(); i++) {
 
+        bool skip = false;
+
         if (!Scene::_lights[i].isDirty) {
+            skip = true;
+        }
+        if (EngineMode::EDITOR) {
+            skip = false;
+        }
+
+        if (skip) {
             continue;
         }
 

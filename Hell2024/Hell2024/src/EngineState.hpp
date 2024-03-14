@@ -9,6 +9,9 @@ namespace EngineState {
 	inline int _currentPlayer = 0;
 	inline int _playerCount = 2;
 
+    inline glm::vec3 _editorCameraPosition = glm::vec3(0);
+    inline glm::vec3 _editorCameraRotation = glm::vec3(0);
+
 	inline int GetCurrentPlayer() {
 		return _currentPlayer;
 	}

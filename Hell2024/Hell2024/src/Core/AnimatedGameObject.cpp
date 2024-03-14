@@ -191,8 +191,145 @@ void AnimatedGameObject::UpdateAnimation(float deltaTime) {
     }
 }
 
+//void SkinnedModel::UpdateBoneTransformsFromAnimation(float animTime, Animation* animation, AnimatedTransforms& animatedTransforms, glm::mat4& outCameraMatrix)
+
+float GetAnimationTime(SkinnedModel* skinnedModel, float animTime, Animation* animation) {
+    float AnimationTime = 0;
+    if (skinnedModel->m_animations.size() > 0) {
+        float TicksPerSecond = animation->m_ticksPerSecond != 0 ? animation->m_ticksPerSecond : 25.0f;
+        float TimeInTicks = animTime * TicksPerSecond;
+        AnimationTime = fmod(TimeInTicks, animation->m_duration);
+        AnimationTime = std::min(TimeInTicks, animation->m_duration);
+    }
+    return AnimationTime;
+}
+
 void AnimatedGameObject::CalculateBoneTransforms() {
-    _skinnedModel->UpdateBoneTransformsFromAnimation(_currentAnimationTime, _currentAnimation, _animatedTransforms, _cameraMatrix);
+    //_skinnedModel->UpdateBoneTransformsFromAnimation(_currentAnimationTime, _currentAnimation, _animatedTransforms, _cameraMatrix);
+
+    // Get the animation time
+    float AnimationTime = GetAnimationTime(_skinnedModel, _currentAnimationTime, _currentAnimation);
+    auto m_animations = _skinnedModel->m_animations;
+    auto m_BoneMapping = _skinnedModel->m_BoneMapping;
+    auto m_BoneInfo = _skinnedModel->m_BoneInfo;
+
+  // _debugBones.clear();
+
+    struct JointWorldMatrix {
+        std::string name;
+        glm::mat4 worldMatrix;
+    };
+
+    std::vector<JointWorldMatrix> jointWorldMatrices;
+    jointWorldMatrices.resize(_skinnedModel->m_joints.size());
+
+    // Traverse the tree 
+    for (int i = 0; i < _skinnedModel->m_joints.size(); i++) {
+
+        // Get the node and its um bind pose transform?
+        const char* NodeName = _skinnedModel->m_joints[i].m_name;
+        glm::mat4 NodeTransformation = _skinnedModel->m_joints[i].m_inverseBindTransform;
+                       
+        // Calculate any animation
+        if (m_animations.size() > 0) {
+
+            const AnimatedNode* animatedNode = _skinnedModel->FindAnimatedNode(_currentAnimation, NodeName);
+
+            if (animatedNode) {
+                glm::vec3 Scaling;
+                _skinnedModel->CalcInterpolatedScaling(Scaling, AnimationTime, animatedNode);
+                glm::mat4 ScalingM;
+                ScalingM = Util::Mat4InitScaleTransform(Scaling.x, Scaling.y, Scaling.z);
+                glm::quat RotationQ;
+                _skinnedModel->CalcInterpolatedRotation(RotationQ, AnimationTime, animatedNode);
+                glm::mat4 RotationM(RotationQ);
+                glm::vec3 Translation;
+                _skinnedModel->CalcInterpolatedPosition(Translation, AnimationTime, animatedNode);
+                glm::mat4 TranslationM;
+                ScalingM = glm::mat4(1);
+                TranslationM = Util::Mat4InitTranslationTransform(Translation.x, Translation.y, Translation.z);
+                NodeTransformation = TranslationM * RotationM * ScalingM;
+            }
+        }
+        unsigned int parentIndex = _skinnedModel->m_joints[i].m_parentIndex;
+
+        glm::mat4 ParentTransformation = (parentIndex == -1) ? glm::mat4(1) : _skinnedModel->m_joints[parentIndex].m_currentFinalTransform;
+        glm::mat4 GlobalTransformation = ParentTransformation * NodeTransformation;
+
+        jointWorldMatrices[i].worldMatrix = GlobalTransformation;
+        jointWorldMatrices[i].name = NodeName;
+
+       // glm::vec3 point = GetModelMatrix() * GlobalTransformation * glm::vec4(0, 0, 0, 1.0);
+       // _debugBones.push_back(point);
+
+        // Store the current transformation, so child nodes can access it
+        _skinnedModel->m_joints[i].m_currentFinalTransform = GlobalTransformation;
+
+        if (m_BoneMapping.find(NodeName) != m_BoneMapping.end()) {
+            unsigned int BoneIndex = m_BoneMapping[NodeName];
+            m_BoneInfo[BoneIndex].FinalTransformation = GlobalTransformation * m_BoneInfo[BoneIndex].BoneOffset;
+            m_BoneInfo[BoneIndex].ModelSpace_AnimatedTransform = GlobalTransformation;
+        }
+    }
+
+
+    for (int j = 0; j < _ragdoll._rigidComponents.size(); j++) {
+
+
+        bool found = false;
+        RigidComponent& rigid = _ragdoll._rigidComponents[j];
+
+        /*
+        if (Input::KeyPressed(HELL_KEY_J)) {
+            std::cout << "\n";
+            //std::cout << "_skinnedModel->m_BoneInfo.size(): " << _skinnedModel->m_BoneInfo.size() << "\n";
+            //std::cout << "_skinnedModel->m_joints.size():   " << _skinnedModel->m_joints.size() << "\n";
+            std::cout << "jointWorldMatrices.size():   " << jointWorldMatrices.size() << "\n";
+        }*/
+
+            
+        for (int i = 0; i < jointWorldMatrices.size(); i++) {
+
+            std::string& NodeName = jointWorldMatrices[i].name;
+            /*
+            if (Input::KeyPressed(HELL_KEY_J)) {
+                std::cout << i << ": " << NodeName << "\n";
+            }
+            */
+            if (rigid.correspondingJointName == NodeName) {
+
+                glm::mat4 m = GetModelMatrix() * jointWorldMatrices[i].worldMatrix;
+                PxMat44 mat = Util::GlmMat4ToPxMat44(m);
+                PxTransform pose(mat);
+                rigid.pxRigidBody->setGlobalPose(pose);
+                rigid.pxRigidBody->putToSleep();
+                found = true;
+                break;
+            }               
+        }
+
+        if (!found) {
+
+            if (Input::KeyPressed(HELL_KEY_SPACE)) {
+                std::cout << j << ": " << rigid.correspondingJointName << " was not found\n";
+            }
+
+            //std::cout << NodeName << " was not found"
+        }
+        
+    }
+
+    _animatedTransforms.Resize(_skinnedModel->m_NumBones);
+
+    for (unsigned int i = 0; i < _skinnedModel->m_NumBones; i++) {
+        _animatedTransforms.local[i] = m_BoneInfo[i].FinalTransformation;
+        _animatedTransforms.worldspace[i] = m_BoneInfo[i].ModelSpace_AnimatedTransform;
+        _animatedTransforms.names[i] = m_BoneInfo[i].BoneName;
+        //animatedTransforms.inverseBindTransform[i] = m_BoneInfo[i].BoneOffset;
+    }
+
+
+
 }
 
 glm::mat4 AnimatedGameObject::GetModelMatrix() {
@@ -457,6 +594,12 @@ void AnimatedGameObject::LoadRagdoll(std::string filename, PxU32 ragdollCollisio
 }
 
 void AnimatedGameObject::SetRagdollToCurrentAniamtionState() {
+
+    
+
+    
+    return;
+
     if (_hasRagdoll) {
 
         if (Input::KeyPressed(HELL_KEY_L)) {
@@ -483,7 +626,7 @@ void AnimatedGameObject::SetRagdollToCurrentAniamtionState() {
             RigidComponent& rigid = _ragdoll._rigidComponents[j];
             bool found = false;
 
-            if (rigid.name == "rMarker_CC_Base_L_Calf") {
+           /* if (rigid.name == "rMarker_CC_Base_L_Calf") {
                 rigid.correspondingJointName = "CC_Base_L_CalfTwist01";
                 rigid.correspondingJointName = "CC_Base_L_CalfTwist02";
             }
@@ -513,7 +656,7 @@ void AnimatedGameObject::SetRagdollToCurrentAniamtionState() {
             if (rigid.name == "rMarker_CC_Base_FacialBone") {
              //   rigid.correspondingJointName = "CC_Base_Head";
             }
-
+            */
             for (int i = 0; i < _animatedTransforms.names.size(); i++) {
 
                 std::string transformName = _animatedTransforms.names[i];
@@ -530,7 +673,7 @@ void AnimatedGameObject::SetRagdollToCurrentAniamtionState() {
             }
 
             if (!found) {
-                std::cout << "No match for rigid: " << rigid.name << " / " << rigid.correspondingJointName << "\n";
+            //    std::cout << "No match for rigid: " << rigid.name << " / " << rigid.correspondingJointName << "\n";
             }
         }
     } 
@@ -577,6 +720,106 @@ void AnimatedGameObject::PrintMeshNames() {
 
 void AnimatedGameObject::UpdateBoneTransformsFromRagdoll() {
 
+    if (false)
+    {
+       // _debugBones.clear();
+
+        struct JointWorldMatrix {
+            std::string name;
+            glm::mat4 worldMatrix;
+            glm::mat4 localMatrix;
+        };
+        std::vector<JointWorldMatrix> jointWorldMatrices;
+        jointWorldMatrices.resize(_skinnedModel->m_joints.size());
+
+        auto m_animations = _skinnedModel->m_animations;
+        auto m_BoneMapping = _skinnedModel->m_BoneMapping;
+        auto m_BoneInfo = _skinnedModel->m_BoneInfo;
+
+        // Traverse the tree 
+        for (int i = 0; i < _skinnedModel->m_joints.size(); i++) {
+
+            // Get the node and its um bind pose transform?
+            const char* NodeName = _skinnedModel->m_joints[i].m_name;
+            glm::mat4 NodeTransformation = _skinnedModel->m_joints[i].m_inverseBindTransform;
+
+            // Calculate any animation
+           // bool matchingRigidFound = false;
+
+
+            for (int j = 0; j < _ragdoll._rigidComponents.size(); j++) {
+
+                RigidComponent& rigid = _ragdoll._rigidComponents[j];
+                if (rigid.correspondingJointName == NodeName) {
+                    PxMat44 globalPose = rigid.pxRigidBody->getGlobalPose();
+                    NodeTransformation = Util::PxMat44ToGlmMat4(globalPose);
+
+
+                     glm::vec3 point = NodeTransformation * glm::vec4(0, 0, 0, 1.0);
+                     _debugBones.push_back(point);
+
+                    break;
+                }
+            }
+
+            unsigned int parentIndex = _skinnedModel->m_joints[i].m_parentIndex;
+
+            glm::mat4 ParentTransformation = (parentIndex == -1) ? glm::mat4(1) : _skinnedModel->m_joints[parentIndex].m_currentFinalTransform;
+            glm::mat4 GlobalTransformation = ParentTransformation * NodeTransformation;
+
+            jointWorldMatrices[i].worldMatrix = GlobalTransformation;
+            jointWorldMatrices[i].localMatrix = GlobalTransformation * _skinnedModel->m_joints[i].m_inverseBindTransform;
+            jointWorldMatrices[i].name = NodeName;
+
+            glm::vec3 point = GetModelMatrix() * GlobalTransformation * glm::vec4(0, 0, 0, 1.0);
+            _debugBones.push_back(point);
+
+            // Store the current transformation, so child nodes can access it
+            _skinnedModel->m_joints[i].m_currentFinalTransform = GlobalTransformation;
+
+            if (m_BoneMapping.find(NodeName) != m_BoneMapping.end()) {
+                unsigned int BoneIndex = m_BoneMapping[NodeName];
+                m_BoneInfo[BoneIndex].FinalTransformation = GlobalTransformation * m_BoneInfo[BoneIndex].BoneOffset;
+                m_BoneInfo[BoneIndex].ModelSpace_AnimatedTransform = GlobalTransformation;
+            }
+        }
+
+
+        _animatedTransforms.Resize(_skinnedModel->m_NumBones);
+
+
+        if (Input::KeyPressed(HELL_KEY_J)) {
+            std::cout << "\nANIMATED TRANSFORM NAMES\n";
+        }
+
+        for (unsigned int i = 0; i < _skinnedModel->m_NumBones; i++) {
+
+            if (Input::KeyPressed(HELL_KEY_J)) {
+                std::cout << i << ": " << _animatedTransforms.names[i] << "\n";
+            }
+
+            std::string& transformName = _animatedTransforms.names[i];
+
+            for (int j = 0; j < jointWorldMatrices.size(); j++) {
+
+                std::string& jointName = jointWorldMatrices[j].name;
+                glm::mat4& localMatrix = jointWorldMatrices[j].localMatrix;
+
+                if (jointName == transformName) {
+                    _animatedTransforms.local[i] = localMatrix;
+                    break;
+                }      
+
+            }
+        }
+
+    }
+
+
+
+
+
+  
 
     auto& m_joints = _skinnedModel->m_joints;
     auto& m_BoneMapping = _skinnedModel->m_BoneMapping;
@@ -584,11 +827,27 @@ void AnimatedGameObject::UpdateBoneTransformsFromRagdoll() {
     auto& m_NumBones = _skinnedModel->m_NumBones;
 
 
-    for (int i = 0; i < m_joints.size(); i++)
+
+    if (Input::KeyPressed(HELL_KEY_J)) {
+        std::cout << " \n\n\n\n";
+    }
+
+        for (int i = 0; i < m_joints.size(); i++)
     {
+
+
 
         // Get the node and its um bind pose transform?
         std::string NodeName = m_joints[i].m_name;
+
+
+
+        if (Input::KeyPressed(HELL_KEY_J)) {
+        //    std::cout << "" << i << " " << NodeName << "\n";
+        }
+
+
+
 
 
         glm::mat4 NodeTransformation = m_joints[i].m_inverseBindTransform;
@@ -600,13 +859,99 @@ void AnimatedGameObject::UpdateBoneTransformsFromRagdoll() {
 
         m_joints[i].m_currentFinalTransform = GlobalTransformation;
 
+
+        bool found = false;
+
+        for (int j = 0; j < _ragdoll._rigidComponents.size(); j++) {
+            RigidComponent& rigid = _ragdoll._rigidComponents[j];
+
+            if (NodeName == rigid.correspondingJointName) {
+
+                //std::cout << j << ": " << NodeName << "\n";
+
+                PxRigidDynamic* rigidBody = rigid.pxRigidBody;
+                glm::mat4 matrix = Util::PxMat44ToGlmMat4(rigidBody->getGlobalPose());
+
+
+                rigidBody->wakeUp();
+                glm::mat4 bindPose = m_joints[i].m_inverseBindTransform;
+
+                GlobalTransformation = matrix;// *glm::inverse(bindPose);
+                  
+           //     glm::mat4 worldMatrix = matrix * bindPose;
+                m_joints[i].m_currentFinalTransform = matrix;// *bindPose;
+
+                found = true;
+
+
+                if (NodeName == "CC_Base_R_Foot") {
+
+                    auto p = rigidBody->getGlobalPose().p;
+                    auto q = rigidBody->getGlobalPose().q;
+
+    //                std::cout << "\n";
+//                    std::cout << p.x << ", " << p.y << ", " << p.z << "\n";
+  //                  std::cout << q.x << ", " << q.y << ", " << q.z << ", " << q.w << "\n";
+
+                }
+
+
+//                GlobalTransformation = matrix * glm::inverse(bindPose);
+            //    m_BoneInfo[BoneIndex].ModelSpace_AnimatedTransform = matrix;
+
+
+                glm::vec3 point = matrix * glm::vec4(0, 0, 0, 1.0);
+                _debugRigids.push_back(point);
+
+                //std::cout << i << " "  << Util::Vec3ToString(point) << "\n";
+
+              //  found = true;
+                break;
+
+            }
+        }
+
+
+        glm::vec3 point = m_joints[i].m_currentFinalTransform * glm::vec4(0, 0, 0, 1.0);
+        _debugBones.push_back(point);
+
+
+        if (!found) {
+
+         //   m_joints[i].m_currentFinalTransform = m_joints[i].m_inverseBindTransform;
+        }
+
+
+
+
+
+        if (m_BoneMapping.find(NodeName) != m_BoneMapping.end()) {
+
+            unsigned int BoneIndex = m_BoneMapping[NodeName];
+            m_BoneInfo[BoneIndex].FinalTransformation = GlobalTransformation * m_BoneInfo[BoneIndex].BoneOffset;
+            m_BoneInfo[BoneIndex].ModelSpace_AnimatedTransform = GlobalTransformation;
+
+
+
+            if (Input::KeyPressed(HELL_KEY_J)) {
+            //          std::cout << "  " << i << " " << NodeName << ": " << m_BoneInfo[BoneIndex].BoneName << "\n";
+            }
+
+        }
+
+        /*
         if (m_BoneMapping.find(NodeName) != m_BoneMapping.end()) {
             unsigned int BoneIndex = m_BoneMapping[NodeName];
             m_BoneInfo[BoneIndex].FinalTransformation = GlobalTransformation * m_BoneInfo[BoneIndex].BoneOffset;
             m_BoneInfo[BoneIndex].ModelSpace_AnimatedTransform = GlobalTransformation;
 
 
+
+
+
             PxRigidDynamic* rigidBody = nullptr;
+
+            bool found = false;
 
             for (int j = 0; j < _ragdoll._rigidComponents.size(); j++) {
                 RigidComponent& rigid = _ragdoll._rigidComponents[j];
@@ -615,34 +960,29 @@ void AnimatedGameObject::UpdateBoneTransformsFromRagdoll() {
                     rigidBody = rigid.pxRigidBody;
                 }
 
-
                 if (rigidBody) {
                     glm::mat4 matrix = Util::PxMat44ToGlmMat4(rigidBody->getGlobalPose());
-
                     rigidBody->wakeUp();
-
-                    // matrix = matrix * transform.to_mat4();
-
                     glm::mat4 bindPose = m_BoneInfo[BoneIndex].BoneOffset;
-
-                    //bindPose = transform.to_mat4() * bindPose;
-
                     m_BoneInfo[BoneIndex].FinalTransformation = matrix * bindPose;
                     m_joints[i].m_currentFinalTransform = matrix;
                     m_BoneInfo[BoneIndex].ModelSpace_AnimatedTransform = matrix;
-
-
-
+                    found = true;
                     break;
                 }
 
             }
-        }
+        }*/
+
     }
 
     // Update the actual animated transforms, with the ragdoll global poses
     for (unsigned int i = 0; i < m_NumBones; i++) {
         _animatedTransforms.local[i] = m_BoneInfo[i].FinalTransformation;
+
+        if (Input::KeyPressed(HELL_KEY_J)) {
+            std::cout << i << ": " << _animatedTransforms.names[i] << " " << m_BoneInfo[i].BoneName << "\n";
+        }
     }
 
 }
