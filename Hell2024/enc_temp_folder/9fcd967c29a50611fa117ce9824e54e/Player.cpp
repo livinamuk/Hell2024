@@ -329,7 +329,7 @@ void Player::Update(float deltaTime) {
 
     // Pressed Respawn
     bool autoRespawn = false;
-    //autoRespawn = true;
+    autoRespawn = true;
     if (_isDead && _timeSinceDeath > 3.25) {
         if (PressedFire() ||
             PressedReload() ||
@@ -881,7 +881,7 @@ bool Player::CanFire() {
 		return (
 			_weaponAction == IDLE ||
 			_weaponAction == DRAWING && _firstPersonWeapon.AnimationIsPastPercentage(50.0f) ||
-			_weaponAction == FIRE && _firstPersonWeapon.AnimationIsPastPercentage(25.0f) ||
+			_weaponAction == FIRE && _firstPersonWeapon.AnimationIsPastPercentage(05.0f) ||
 			_weaponAction == RELOAD && _firstPersonWeapon.AnimationIsPastPercentage(80.0f) ||
 			_weaponAction == RELOAD_FROM_EMPTY && _firstPersonWeapon.AnimationIsPastPercentage(80.0f) ||
 			_weaponAction == SPAWNING && _firstPersonWeapon.AnimationIsPastPercentage(5.0f)
@@ -1111,7 +1111,7 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
 			_weaponAction = IDLE;
 		}
 		// Fire
-		if (PressedFire() && CanFire()) {
+		if (PressingFire() && CanFire()) {
 			// Has ammo
 			if (_inventory.glockAmmo.clip > 0) {				
 				_weaponAction = FIRE;

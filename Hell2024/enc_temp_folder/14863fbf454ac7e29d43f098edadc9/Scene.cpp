@@ -371,7 +371,7 @@ void ProcessBullets() {
 
 
                             parentPlayerHit->GiveDamageColor();
-                            parentPlayerHit->_health -= 15;
+                            //parentPlayerHit->_health -= 150;
                             parentPlayerHit->_health = std::max(0, parentPlayerHit->_health);
 
                             if (actor->getName() == "RAGDOLL_HEAD") {
