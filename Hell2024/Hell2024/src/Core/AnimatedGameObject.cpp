@@ -407,22 +407,7 @@ bool AnimatedGameObject::AnimationIsPastPercentage(float percent) {
 }
 
 
-glm::vec3 AnimatedGameObject::GetGlockBarrelPostion() {
-    if (_name == "Glock") {
-        int boneIndex = _skinnedModel->m_BoneMapping["Barrel"];
-        glm::mat4 boneMatrix = _animatedTransforms.worldspace[boneIndex];
-        Transform offset;
-        offset.position = glm::vec3(0, 2 + 2, 11);
-        glm::mat4 m = GetModelMatrix() * boneMatrix * offset.to_mat4();
-        float x = m[3][0];
-        float y = m[3][1];
-        float z = m[3][2];
-        return glm::vec3(x, y, z);
-    }
-    else {
-        return glm::vec3(0);
-    }
-}
+
 
 
 glm::vec3 AnimatedGameObject::GetAK74USCasingSpawnPostion() {

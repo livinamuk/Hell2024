@@ -1703,8 +1703,7 @@ void GeometryPass(Player* player) {
     DrawAnimatedScene(_shaders.geometry, player);
     DrawScene(_shaders.geometry);
 
-
-    // draw the scope
+    // Draw scope
     if (player->GetCurrentWeaponIndex() == AKS74U && player->_hasAKS74UScope) {
         AnimatedGameObject* ak = &player->GetFirstPersonWeapon();
         SkinnedModel* skinnedModel = ak->_skinnedModel;
@@ -1712,10 +1711,7 @@ void GeometryPass(Player* player) {
         if (ak->_animatedTransforms.worldspace.size()) {
             glm::mat4 boneMatrix = ak->_animatedTransforms.worldspace[boneIndex];
             glm::mat4 m = ak->GetModelMatrix() * boneMatrix;
-
-            if (player->GetCurrentWeaponIndex() == AKS74U) {
-                m = m * player->GetWeaponSwayMatrix();
-            }
+            m = m * player->GetWeaponSwayMatrix();
             _shaders.geometry.SetMat4("model", m);
             AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("ScopeMount"));
             AssetManager::GetModel("ScopeACOG")->_meshes[0].Draw();
@@ -2048,7 +2044,18 @@ void DebugPass(Player* player) {
 		//debugPoints.push_back(window.GetBackLeftCorner());
     }
 
-   
+    /*
+    AnimatedGameObject* glock = Scene::GetAnimatedGameObjectByName("GLOCK_TEST");
+    int boneIndex = glock->_skinnedModel->m_BoneMapping["Barrel"];
+    glm::mat4 boneMatrix = glock->_animatedTransforms.worldspace[boneIndex];
+    Transform offset;
+    offset.position = glm::vec3(0, 2 + 2, 11);
+    glm::mat4 m = glock->GetModelMatrix() * boneMatrix * offset.to_mat4();
+    float x = m[3][0];
+    float y = m[3][1];
+    float z = m[3][2];
+    glm::vec3 pos = glm::vec3(x, y, z);   
+    debugPoints.push_back(pos);*/
 
    /* auto& player1 = Scene::_players[1];
 
@@ -2259,6 +2266,10 @@ void Renderer::RecreateFrameBuffers(int currentPlayer) {
 }
 
 void DrawScene(Shader& shader) {
+
+    
+
+
 
     shader.SetMat4("model", glm::mat4(1));
 
@@ -3777,6 +3788,7 @@ void DrawFullscreenQuadWithNormals() {
 	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 	glBindVertexArray(0);
 }
+
 void DrawMuzzleFlashes(Player* player) {
 
     int playerIndex = GetPlayerIndexFromPlayerPointer(player);
@@ -3799,7 +3811,7 @@ void DrawMuzzleFlashes(Player* player) {
     muzzleFlash.m_CurrentTime = player->GetMuzzleFlashTime();
     glm::vec3 worldPosition = glm::vec3(0);
     if (player->GetCurrentWeaponIndex() == GLOCK) {
-        worldPosition = player->GetFirstPersonWeapon().GetGlockBarrelPostion();
+        worldPosition = player->GetGlockBarrelPosition();
     }
     else if (player->GetCurrentWeaponIndex() == AKS74U) {
         worldPosition = player->GetFirstPersonWeapon().GetAKS74UBarrelPostion();

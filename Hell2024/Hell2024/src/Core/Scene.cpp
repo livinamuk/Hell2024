@@ -1181,6 +1181,22 @@ void Scene::LoadHardCodedObjects() {
         aks.SetRotationY(HELL_PI * 0.5f);
     }
 
+    /////////////////////
+    //                 //
+    //      GLOCK      //
+
+    if (false) {
+        AnimatedGameObject& glock = _animatedGameObjects.emplace_back(AnimatedGameObject());
+        glock.SetName("GLOCK_TEST");
+        glock.SetSkinnedModel("Glock");
+        glock.SetAnimationModeToBindPose();
+        glock.PlayAndLoopAnimation("Glock_Reload", 0.2f);
+        glock.PlayAndLoopAnimation("AKS74U_Idle", 1.0f);
+        glock.SetMaterial("Glock");
+        glock.SetScale(0.01f);
+        glock.SetPosition(glm::vec3(2.5f, 1.5f, 3));
+        glock.SetRotationY(HELL_PI * 0.5f);
+    }
 
     /*AnimatedGameObject& nurse = _animatedGameObjects.emplace_back(AnimatedGameObject());
     nurse.SetName("NURSEGUY");

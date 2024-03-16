@@ -81,6 +81,7 @@ public:
 	int GetCurrentWeaponClipAmmo();
 	int GetCurrentWeaponTotalAmmo(); 
     void SetPosition(glm::vec3 position);
+    void RespawnAtCurrentPosition();
 
     bool _glockSlideNeedsToBeOut = false;
     bool _needsShotgunFirstShellAdded = false;
@@ -145,6 +146,8 @@ public:
 	glm::mat4 GetWeaponSwayMatrix();
     WeaponAction& GetWeaponAction();
 
+    glm::vec3 GetGlockBarrelPosition();
+
 	bool _isGrounded = true;
 
     void PickUpShotgun();
@@ -203,6 +206,7 @@ public:
     glm::vec3 _movementVector = glm::vec3(0);
     float _timeSinceDeath = 0;
     bool _isOutside = false;
+    bool _hasGlockSilencer = true;
 
     void ForceSetViewMatrix(glm::mat4 viewMatrix);
 
