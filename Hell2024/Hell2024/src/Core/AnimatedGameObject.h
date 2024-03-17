@@ -2,6 +2,16 @@
 #include "Animation/SkinnedModel.h"
 #include "Ragdoll.h"
 
+struct MeshRenderingEntry {
+    std::string meshName;
+    int indexCount = -1;
+    int baseIndex = -1;
+    int baseVertex = -1;
+    int materialIndex = 0;
+    bool blendingEnabled = false;
+    bool drawingEnabled = true;
+};
+
 struct AnimatedGameObject {
 
     enum AnimationMode { BINDPOSE, ANIMATION, RAGDOLL };
@@ -19,9 +29,9 @@ struct AnimatedGameObject {
 	void PlayAndLoopAnimation(std::string animationName, float speed);
     void PauseAnimation();
     void SetAnimationModeToBindPose();
-	void SetMeshMaterial(std::string meshName, std::string materialName);
-	void SetMeshMaterialByIndex(int meshIndex, std::string materialName);
-	void SetMaterial(std::string materialName);
+	void SetMeshMaterialByMeshName(std::string meshName, std::string materialName);
+	void SetMeshMaterialByMeshIndex(int meshIndex, std::string materialName);
+	void SetAllMeshMaterials(std::string materialName);
     void UpdateBoneTransformsFromBindPose();
     void UpdateBoneTransformsFromRagdoll();
 	glm::mat4 GetBoneWorldMatrixFromBoneName(std::string name);
@@ -37,12 +47,12 @@ struct AnimatedGameObject {
 	AnimatedTransforms _animatedTransforms;
 	float _currentAnimationTime = 0;
 	glm::mat4 _cameraMatrix = glm::mat4(1);
-	std::vector<int> _materialIndices;
+	std::vector<MeshRenderingEntry> _meshRenderingEntries;
     AnimationMode _animationMode = BINDPOSE;
     Ragdoll _ragdoll;
 
 	// Hacky shit
-	glm::vec3 GetGlockBarrelPostion();
+	//glm::vec3 GetGlockBarrelPostion();
 	glm::vec3 GetGlockCasingSpawnPostion();
 	glm::vec3 GetAKS74UBarrelPostion();
 	glm::vec3 GetShotgunBarrelPosition();
@@ -52,14 +62,15 @@ struct AnimatedGameObject {
     void SetRagdollToCurrentAniamtionState();
     void SetAnimatedModeToRagdoll();
     void DestroyRagdoll();
-    void WipeAllSkippedMeshIndices();
-    void AddSkippedMeshIndexByName(std::string meshName);
+    void EnableDrawingForAllMesh();
+    void DisableDrawingForMeshByMeshName(std::string meshName);
     void PrintMeshNames();
+    void EnableBlendingByMeshIndex(int index);
 
     std::vector<glm::mat4> _debugTransformsA;
     std::vector<glm::mat4> _debugTransformsB;
     bool _hasRagdoll = false;
-    std::vector<unsigned int> _skippedMeshIndices;
+    //std::vector<unsigned int> _skippedMeshIndices;
 
     bool _renderDebugBones = false;
     std::vector<glm::vec3> _debugRigids;

@@ -13,6 +13,7 @@
 #include "Core/Scene.h"
 #include "Core/Physics.h"
 #include "Core/DebugMenu.h"
+#include "Timer.hpp"
 
 void ToggleFullscreen();
 
@@ -167,11 +168,16 @@ void Engine::Run() {
             }
 
             LazyKeyPresses();
-            Scene::Update(deltaTime);
-
+            
+            {
+                //Timer timer("SceneUpdate");
+                Scene::Update(deltaTime);
+            }
+            
             if (EngineState::GetEngineMode() == GAME) {
                 InputMulti::Update();
                 for (Player& player : Scene::_players) {
+                    //Timer timer("PlayerUpdate");
                     player.Update(deltaTime);
                 }
                 InputMulti::ResetMouseOffsets();

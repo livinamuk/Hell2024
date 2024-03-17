@@ -165,6 +165,7 @@ float _mapDepth = 16;
 //std::vector<int> _newDirtyPointCloudIndices;
 int _floorVertexCount;
 Mesh _quadMesh;
+bool _lastBlendState = false;
 
 const int _gridTextureWidth = (int)(_mapWidth / _propogationGridSpacing);
 const int _gridTextureHeight = (int)(_mapHeight / _propogationGridSpacing);
@@ -199,7 +200,6 @@ enum DebugLineRenderMode {
     BOUNDING_BOXES,
     DEBUG_LINE_MODE_COUNT} _debugLineRenderMode;
 
-void RenderEnviromentMaps();
 void DrawHudAmmo(Player* player);
 void DrawHudLowRes(Player* player);
 void DrawScene(Shader& shader);
@@ -228,90 +228,22 @@ void GlassPass(Player* player);
 void BlitDebugTexture(GLint fbo, GLenum colorAttachment, GLint srcWidth, GLint srcHeight);
 void DrawQuad(int viewportWidth, int viewPortHeight, int textureWidth, int textureHeight, int xPos, int yPos, bool centered = false, float scale = 1.0f, int xSize = -1, int ySize = -1);
 void SkyBoxPass(Player* player);
-void CreateBRDFTexture();
 void QueueAABBForRenering(PxRigidStatic* body);
 void QueueAABBForRenering(PxRigidBody* body);
 void QueueAABBForRenering(AABB& aabb, glm::vec3 color);
 void DrawInstancedVAO(GLuint vao, GLsizei indexCount, std::vector<glm::mat4>& matrices);
 
-unsigned int _brdfLUTTexture;
-
-
-// renderQuad() renders a 1x1 XY quad in NDC
-// -----------------------------------------
-unsigned int quadVAO = 0;
-unsigned int quadVBO;
-void renderQuad()
-{
-	if (quadVAO == 0)
-	{
-		float quadVertices[] = {
-			// positions        // texture Coords
-			-1.0f,  1.0f, 0.0f, 0.0f, 1.0f,
-			-1.0f, -1.0f, 0.0f, 0.0f, 0.0f,
-			 1.0f,  1.0f, 0.0f, 1.0f, 1.0f,
-			 1.0f, -1.0f, 0.0f, 1.0f, 0.0f,
-		};
-		// setup plane VAO
-		glGenVertexArrays(1, &quadVAO);
-		glGenBuffers(1, &quadVBO);
-		glBindVertexArray(quadVAO);
-		glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
-		glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
-		glEnableVertexAttribArray(0);
-		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
-		glEnableVertexAttribArray(1);
-		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
-	}
-	glBindVertexArray(quadVAO);
-	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-	glBindVertexArray(0);
+void SetBlendState(bool state) {
+    if (state != _lastBlendState) {
+        if (state) {
+            glEnable(GL_BLEND);
+        }
+        else {
+            glDisable(GL_BLEND);
+        }
+        _lastBlendState = state;
+    }
 }
-
-
-void CreateBRDFTexture() {
-
-	// pbr: setup framebuffer
-	// ----------------------
-	unsigned int captureFBO;
-	unsigned int captureRBO;
-	glGenFramebuffers(1, &captureFBO);
-	glGenRenderbuffers(1, &captureRBO);
-
-	glBindFramebuffer(GL_FRAMEBUFFER, captureFBO);
-	glBindRenderbuffer(GL_RENDERBUFFER, captureRBO);
-	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, 512, 512);
-	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, captureRBO);
-
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-	// pbr: generate a 2D LUT from the BRDF equations used.
-	// ----------------------------------------------------
-	glGenTextures(1, &_brdfLUTTexture);
-
-	// pre-allocate enough memory for the LUT texture.
-	glBindTexture(GL_TEXTURE_2D, _brdfLUTTexture);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RG16F, 512, 512, 0, GL_RG, GL_FLOAT, 0);
-	// be sure to set wrapping mode to GL_CLAMP_TO_EDGE
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-	// then re-configure capture framebuffer object and render screen-space quad with BRDF shader.
-	glBindFramebuffer(GL_FRAMEBUFFER, captureFBO);
-	glBindRenderbuffer(GL_RENDERBUFFER, captureRBO);
-	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, 512, 512);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, _brdfLUTTexture, 0);
-
-	glViewport(0, 0, 512, 512);
-	_shaders.brdf.Use();
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	renderQuad();
-
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-}
-
 
 int GetPlayerIndexFromPlayerPointer(Player* player) {
 	for (int i = 0; i < Scene::_players.size(); i++) {
@@ -326,127 +258,7 @@ PlayerRenderTarget& GetPlayerRenderTarget(int playerIndex) {
 	return _playerRenderTargets[playerIndex];
 }
 
-
-
-struct EnvMap {
-
-	unsigned int ID = 0;
-	unsigned int depthTex = 0;
-	unsigned int colorTex = 0;
-
-	void Init() {
-
-		glGenFramebuffers(1, &ID);
-		glGenTextures(1, &depthTex);
-		glGenTextures(1, &colorTex);
-
-		glBindTexture(GL_TEXTURE_CUBE_MAP, depthTex);
-		for (unsigned int i = 0; i < 6; ++i) {
-			glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_DEPTH_COMPONENT, ENV_MAP_SIZE, ENV_MAP_SIZE, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
-			glGenerateMipmap(GL_TEXTURE_2D);
-		}
-		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		glBindFramebuffer(GL_FRAMEBUFFER, ID);
-		glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, depthTex, 0);
-
-		glBindTexture(GL_TEXTURE_CUBE_MAP, colorTex);
-		for (unsigned int i = 0; i < 6; ++i) {
-			glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB, ENV_MAP_SIZE, ENV_MAP_SIZE, 0, GL_RGB, GL_FLOAT, nullptr);
-			glGenerateMipmap(GL_TEXTURE_2D);
-		}
-		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
-		glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, colorTex, 0);
-		glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
-		glBindTexture(GL_TEXTURE_CUBE_MAP, colorTex);
-		glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
-
-		auto fboStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);
-		if (fboStatus == 36053)
-			std::cout << "FRAMEBUFFER: complete\n";
-		if (fboStatus == 36054)
-			std::cout << "FRAMEBUFFER: incomplete attachment\n";
-		if (fboStatus == 36057)
-			std::cout << "FRAMEBUFFER: incomplete dimensions\n";
-		if (fboStatus == 36055)
-			std::cout << "FRAMEBUFFER: missing attachment\n";
-		if (fboStatus == 36061)
-			std::cout << "FRAMEBUFFER: unsupported\n";
-		auto glstatus = glGetError();
-		if (glstatus != GL_NO_ERROR) {
-			std::cout << "Error in GL call: " << glstatus << std::endl;
-		}
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	}
-};
-
-EnvMap _envMap;
-
-void RenderEnviromentMaps() {
-    
-    static bool runOnceOnly = true;
-
-    if (!runOnceOnly) {
-       return;
-    }
-
-    if (_envMap.ID == 0) {
-        _envMap.Init();
-    }
-
-	// Render cubemap
-	glm::mat4 captureProjection = glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, 10.0f);
-	glm::mat4 captureViews[] = {
-		glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(1.0f,  0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
-		glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(-1.0f,  0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
-		glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f,  1.0f,  0.0f), glm::vec3(0.0f,  0.0f,  1.0f)),
-		glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f,  0.0f), glm::vec3(0.0f,  0.0f, -1.0f)),
-		glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f,  0.0f,  1.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
-		glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f,  0.0f, -1.0f), glm::vec3(0.0f, -1.0f,  0.0f))
-	};
-	_shaders.envMapShader.Use();
-    _shaders.envMapShader.SetMat4("projection", captureProjection);
-	glViewport(0, 0, ENV_MAP_SIZE, ENV_MAP_SIZE);
-	glBindFramebuffer(GL_FRAMEBUFFER, _envMap.ID);
-	glClearColor(0, 0, 0, 0);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	glEnable(GL_DEPTH_TEST);
-	Transform captureTransform;
-	captureTransform.position = glm::vec3(3.1f, WALL_HEIGHT * 0.5f + 0.1f, 3.5f);
-	for (unsigned int i = 0; i < 6; ++i) {
-        _shaders.envMapShader.SetMat4("captureViewMatrix[" + std::to_string(i) + "]", captureProjection * captureViews[i] * glm::inverse(captureTransform.to_mat4()));
-	}
-
-	// Update lights
-	auto& lights = Scene::_lights;
-	for (int i = 0; i < lights.size(); i++) {
-		if (i >= 16) break;
-		glActiveTexture(GL_TEXTURE5 + i);
-		glBindTexture(GL_TEXTURE_CUBE_MAP, _shadowMaps[i]._depthTexture);
-		_shaders.envMapShader.SetVec3("lights[" + std::to_string(i) + "].position", lights[i].position);
-		_shaders.envMapShader.SetVec3("lights[" + std::to_string(i) + "].color", lights[i].color);
-		_shaders.envMapShader.SetFloat("lights[" + std::to_string(i) + "].radius", lights[i].radius);
-		_shaders.envMapShader.SetFloat("lights[" + std::to_string(i) + "].strength", lights[i].strength);
-	}
-	_shaders.envMapShader.SetInt("lightsCount", std::min((int)lights.size(), 16));
-
-	DrawScene(_shaders.envMapShader);
-	glBindTexture(GL_TEXTURE_CUBE_MAP, _envMap.colorTex);
-	glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
-
-    runOnceOnly = false;
-}
-
 void GlassPass(Player* player) {
-
 
     glm::mat4 projection = player->GetProjectionMatrix();// Renderer::GetProjectionMatrix(_depthOfFieldScene);
 	glm::mat4 view = player->GetViewMatrix();
@@ -455,7 +267,6 @@ void GlassPass(Player* player) {
 	PlayerRenderTarget& playerRenderTarget = GetPlayerRenderTarget(playerIndex);
 	GBuffer& gBuffer = playerRenderTarget.gBuffer;
     
-
 	gBuffer.Bind();
 	unsigned int attachments[1] = { GL_COLOR_ATTACHMENT4 };
 	glDrawBuffers(1, attachments);
@@ -545,8 +356,6 @@ void GlassPass(Player* player) {
             float val = (player->_timeSinceDeath - waitTime) * 10;
             colorTint.r -= val;
         }
-       // std::cout << "contrastAmount: " << contrastAmount << "\n";
-       // std::cout << "colorTint:      " << Util::Vec3ToString(colorTint) << "\n";
     }
     else {
 
@@ -554,10 +363,7 @@ void GlassPass(Player* player) {
 
     _shaders.glassComposite.SetVec3("screenTint", colorTint);
     _shaders.glassComposite.SetFloat("contrastAmount", contrastAmount);
-
-
-
-    
+        
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, gBuffer._gLightingTexture);
 	glActiveTexture(GL_TEXTURE1);
@@ -571,23 +377,12 @@ void GlassPass(Player* player) {
 	glBindTexture(GL_TEXTURE_2D, _blurBuffers[2].textureB);
 	glActiveTexture(GL_TEXTURE5);
 	glBindTexture(GL_TEXTURE_2D, _blurBuffers[3].textureB);
-
-	glActiveTexture(GL_TEXTURE6);
-	glBindTexture(GL_TEXTURE_2D, gBuffer._gDepthTexture);
-	glActiveTexture(GL_TEXTURE7);
-	glBindTexture(GL_TEXTURE_2D, _brdfLUTTexture);
-
-    
-
-
+      
     glDisable(GL_DEPTH_TEST);
 	unsigned int attachments2[1] = { GL_COLOR_ATTACHMENT5 };
 	glDrawBuffers(1, attachments2);
     DrawFullscreenQuad();
 
-
-	//glBindFramebuffer(GL_READ_FRAMEBUFFER, playerRenderTarget.gBuffer.GetID());
-	//glBindFramebuffer(GL_DRAW_FRAMEBUFFER, playerRenderTarget.gBuffer.GetID());
 	glReadBuffer(GL_COLOR_ATTACHMENT5);
 	glDrawBuffer(GL_COLOR_ATTACHMENT3);
 	float x0 = 0;
@@ -660,6 +455,7 @@ void Renderer::Init() {
 
     // figure out how to put this back in Engine.cpp ya dikkhead
     Gizmo::Init();
+    SetBlendState(false);
 
     glGenVertexArrays(1, &_pointLineVAO);
     glGenBuffers(1, &_pointLineVBO);
@@ -687,27 +483,15 @@ void Renderer::Init() {
 	_shaders.brdf.Load("brdf.vert", "brdf.frag");
     _shaders.test.Load("test.vert", "test.frag");
     _shaders.bloodVolumetric.Load("blood_volumetric.vert", "blood_volumetric.frag");
-    _shaders.bloodDecals.Load("blood_decals.vert", "blood_decals.frag");
-    
-    
-    
+    _shaders.bloodDecals.Load("blood_decals.vert", "blood_decals.frag");  
     _shaders.computeTest.Load("res/shaders/test.comp");
-    _shaders.skin.Load("res/shaders/skin.comp");
-    
+    _shaders.skin.Load("res/shaders/skin.comp");    
 	_shaders.blurVertical.Load("blurVertical.vert", "blur.frag");
 	_shaders.blurHorizontal.Load("blurHorizontal.vert", "blur.frag");
     
     _cubeMesh = MeshUtil::CreateCube(1.0f, 1.0f, true);
 
     RecreateFrameBuffers(0);
-
-
-    /*
-    _shadowMaps.push_back(ShadowMap());
-    _shadowMaps.push_back(ShadowMap());
-    _shadowMaps.push_back(ShadowMap());
-    _shadowMaps.push_back(ShadowMap());
-    */
 
     for(int i = 0; i < 16; i++) {
         _shadowMaps.emplace_back();
@@ -718,10 +502,7 @@ void Renderer::Init() {
     }
 
     FindProbeCoordsWithinMapBounds();
-
     InitCompute();
-
-    CreateBRDFTexture();
 }
 
 void Renderer::RenderLoadingFrame() {
@@ -1608,10 +1389,46 @@ void DrawHudLowRes(Player* player) {
 
     // Debug text
     if (_toggles.drawDebugText) {
+        if (_mode == RenderMode::COMPOSITE) {
+            TextBlitter::_debugTextToBilt = "Mode: COMPOSITE\n";
+            _shaders.lighting.SetInt("mode", 0);
+        }
+        if (_mode == RenderMode::POINT_CLOUD) {
+            TextBlitter::_debugTextToBilt = "Mode: POINT CLOUD\n";
+            _shaders.lighting.SetInt("mode", 1);
+        }
+        if (_mode == RenderMode::DIRECT_LIGHT) {
+            TextBlitter::_debugTextToBilt = "Mode: DIRECT LIGHT\n";
+            _shaders.lighting.SetInt("mode", 2);
+        }
+        if (_mode == RenderMode::INDIRECT_LIGHT) {
+            TextBlitter::_debugTextToBilt = "Mode: INDIRECT LIGHT\n";
+            _shaders.lighting.SetInt("mode", 3);
+        }
+        if (_debugLineRenderMode == DebugLineRenderMode::SHOW_NO_LINES) {
+            TextBlitter::_debugTextToBilt += "Debug Mode: NONE\n";
+        }
+        else if (_debugLineRenderMode == DebugLineRenderMode::PHYSX_ALL) {
+            TextBlitter::_debugTextToBilt += "Debug Mode: PHYSX ALL\n";
+        }
+        else if (_debugLineRenderMode == DebugLineRenderMode::PHYSX_RAYCAST) {
+            TextBlitter::_debugTextToBilt += "Debug Mode: PHYSX RAYCAST\n";
+        }
+        else if (_debugLineRenderMode == DebugLineRenderMode::PHYSX_COLLISION) {
+            TextBlitter::_debugTextToBilt += "Debug Mode: PHYSX COLLISION\n";
+        }
+        else if (_debugLineRenderMode == DebugLineRenderMode::RAYTRACE_LAND) {
+            TextBlitter::_debugTextToBilt += "Debug Mode: COMPUTE RAY WORLD\n";
+        }
+        else if (_debugLineRenderMode == DebugLineRenderMode::PHYSX_EDITOR) {
+            TextBlitter::_debugTextToBilt += "Debug Mode: PHYSX EDITOR\n";
+        }
+        else if (_debugLineRenderMode == DebugLineRenderMode::BOUNDING_BOXES) {
+            TextBlitter::_debugTextToBilt += "Debug Mode: BOUNDING BOXES\n";
+        }
         TextBlitter::_debugTextToBilt += "View pos: " + Util::Vec3ToString(player->GetViewPos()) + "\n";
         TextBlitter::_debugTextToBilt += "View rot: " + Util::Vec3ToString(player->GetViewRotation()) + "\n";
         TextBlitter::_debugTextToBilt += "Weapon Action: " + Util::WeaponActionToString(Scene::_players[playerIndex].GetWeaponAction()) + "\n";
-
         TextBlitter::_debugTextToBilt += "Blood decal count: " + std::to_string(Scene::_bloodDecals.size()) + "\n";
     }
     // Health and killcount
@@ -1734,54 +1551,8 @@ void LightingPass(Player* player) {
 
     _shaders.lighting.Use();
     _shaders.lighting.SetFloat("time", totalTime);
-    _shaders.lighting.SetFloat("sinTime", sinTime);
+    _shaders.lighting.SetFloat("sinTime", sinTime);    
 
-    // Debug Text
-    TextBlitter::_debugTextToBilt = "";
-    if (_mode == RenderMode::COMPOSITE) {
-        TextBlitter::_debugTextToBilt = "Mode: COMPOSITE\n";
-        _shaders.lighting.SetInt("mode", 0);
-    }
-    if (_mode == RenderMode::POINT_CLOUD) {
-        TextBlitter::_debugTextToBilt = "Mode: POINT CLOUD\n";
-        _shaders.lighting.SetInt("mode", 1);
-    }
-    if (_mode == RenderMode::DIRECT_LIGHT) {
-        TextBlitter::_debugTextToBilt = "Mode: DIRECT LIGHT\n";
-        _shaders.lighting.SetInt("mode", 2);
-    }
-    if (_mode == RenderMode::INDIRECT_LIGHT) {
-        TextBlitter::_debugTextToBilt = "Mode: INDIRECT LIGHT\n";
-        _shaders.lighting.SetInt("mode", 3);
-    }
-
-
-    if (_debugLineRenderMode == DebugLineRenderMode::SHOW_NO_LINES) {
-        TextBlitter::_debugTextToBilt += "Debug Mode: NONE\n";
-    }
-    else if (_debugLineRenderMode == DebugLineRenderMode::PHYSX_ALL) {
-        TextBlitter::_debugTextToBilt += "Debug Mode: PHYSX ALL\n";
-    }
-    else if (_debugLineRenderMode == DebugLineRenderMode::PHYSX_RAYCAST) {
-        TextBlitter::_debugTextToBilt += "Debug Mode: PHYSX RAYCAST\n";
-    }
-    else if (_debugLineRenderMode == DebugLineRenderMode::PHYSX_COLLISION) {
-        TextBlitter::_debugTextToBilt += "Debug Mode: PHYSX COLLISION\n";
-    }
-    else if (_debugLineRenderMode == DebugLineRenderMode::RAYTRACE_LAND) {
-        TextBlitter::_debugTextToBilt += "Debug Mode: COMPUTE RAY WORLD\n";
-    }
-    else if (_debugLineRenderMode == DebugLineRenderMode::PHYSX_EDITOR) {
-        TextBlitter::_debugTextToBilt += "Debug Mode: PHYSX EDITOR\n";
-    }
-    else if (_debugLineRenderMode == DebugLineRenderMode::BOUNDING_BOXES) {
-        TextBlitter::_debugTextToBilt += "Debug Mode: BOUNDING BOXES\n";
-    }
-
-
-
-
-  
     gBuffer.Bind();
     glDrawBuffer(GL_COLOR_ATTACHMENT3);
     glViewport(0, 0, gBuffer.GetWidth(), gBuffer.GetHeight());
@@ -1799,10 +1570,6 @@ void LightingPass(Player* player) {
 	glBindTexture(GL_TEXTURE_3D, _progogationGridTexture);
 	glActiveTexture(GL_TEXTURE31);
 	glBindTexture(GL_TEXTURE_2D, gBuffer._gWorldSpacePosition);
-	glActiveTexture(GL_TEXTURE30);
-	glBindTexture(GL_TEXTURE_2D, _brdfLUTTexture);
-	glActiveTexture(GL_TEXTURE29);
-	glBindTexture(GL_TEXTURE_CUBE_MAP, _envMap.colorTex);
 
     // Update lights
     auto& lights = Scene::_lights;
@@ -2560,7 +2327,6 @@ void DrawAnimatedObject(Shader& shader, AnimatedGameObject* animatedGameObject) 
 
     if (!animatedGameObject) {
         std::cout << "You tried to draw an nullptr AnimatedGameObject\n";
-        std::cout << "You tried to draw an nullptr AnimatedGameObject\n";
         return;
     }
     if (!animatedGameObject->_skinnedModel) {
@@ -2568,41 +2334,13 @@ void DrawAnimatedObject(Shader& shader, AnimatedGameObject* animatedGameObject) 
         return;
     }
 
-    // Dont draw dead guy if nobody is dead
-    /*if (animatedGameObject->GetName() == "DyingGuy" && !Scene::_players[0]._isDead && !Scene::_players[1]._isDead) {
-        return;
-    }*/
-
-
-    /*
-    if (animatedGameObject->GetName() == "UNISEXGUY") {
-        if (Input::KeyPressed(HELL_KEY_L)) {
-
-            std::cout << "\nBONE NAMES\n";
-            for (int i = 0; i < animatedGameObject->_animatedTransforms.names.size(); i++) {
-                std::string boneName = animatedGameObject->_animatedTransforms.names[i];
-                std::cout << " " << boneName << "\n";
-            }
-
-            std::cout << "\nMESH NAMES\n";
-            for (int i = 0; i < animatedGameObject->_skinnedModel->m_meshEntries.size(); i++) {
-                std::string name = animatedGameObject->_skinnedModel->m_meshEntries[i].Name;
-                std::cout << i <<  ": " << name << "\n";
-            }
-        }
-    }*/
-
-
-
-
-
-    std::vector<glm::mat4> tempSkinningMats;
+    // Animated transforms
     for (unsigned int i = 0; i < animatedGameObject->_animatedTransforms.local.size(); i++) {
         glm::mat4 matrix = animatedGameObject->_animatedTransforms.local[i];
         shader.SetMat4("skinningMats[" + std::to_string(i) + "]", matrix);
-        tempSkinningMats.push_back(matrix);
     }
 
+    // Model matrix 
     if (animatedGameObject->_hasRagdoll && animatedGameObject->_animationMode == AnimatedGameObject::AnimationMode::RAGDOLL) {
         shader.SetMat4("model", glm::mat4(1));
     }
@@ -2610,79 +2348,24 @@ void DrawAnimatedObject(Shader& shader, AnimatedGameObject* animatedGameObject) 
         shader.SetMat4("model", animatedGameObject->GetModelMatrix());
     }
 
+    // Draw
+    glBindVertexArray(animatedGameObject->_skinnedModel->m_VAO);
+    for (MeshRenderingEntry& meshRenderingEntry : animatedGameObject->_meshRenderingEntries) {
 
-    /*
-    if (animatedGameObject->GetName() == "Glock") {
-        glm::vec3 barrelPosition = animatedGameObject->GetGlockCasingSpawnPostion();
-        Point point = Point(barrelPosition, BLUE);
-        Renderer::QueuePointForDrawing(point);
-        //debugPoints.push_back(barrelPosition);
-    }*/
+        const int materialIndex = meshRenderingEntry.materialIndex;
+        const int indexCount = meshRenderingEntry.indexCount;
+        const int baseIndex = meshRenderingEntry.baseIndex;
+        const int baseVertex = meshRenderingEntry.baseVertex;
+        const bool blendingEnabled = meshRenderingEntry.blendingEnabled;
+        const bool drawingEnabled = meshRenderingEntry.drawingEnabled;
+        const std::string& meshName = meshRenderingEntry.meshName;
 
+        SetBlendState(blendingEnabled);
 
-    for (int i = 0; i < animatedGameObject->_animatedTransforms.worldspace.size(); i++) {
-             
-        auto& bone = animatedGameObject->_animatedTransforms.worldspace[i];
-        glm::mat4 m = animatedGameObject->GetModelMatrix() * bone;
-        float x = m[3][0];
-        float y = m[3][1];
-        float z = m[3][2];
-        Point p2(glm::vec3(x, y, z), RED);
-        Renderer::QueuePointForDrawing(p2);
-
-        /*
-        if (animatedGameObject->_animatedTransforms.names[i] == "Glock") {
-            //    float x = m[3][0];
-            //    float y = m[3][1];
-            //    float z = m[3][2];
-             //   debugPoints.push_back(glm::vec3(x, y, z));
+        if (drawingEnabled) {
+            AssetManager::BindMaterialByIndex(materialIndex);
+            glDrawElementsBaseVertex(GL_TRIANGLES, indexCount, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int) * baseIndex), baseVertex);
         }
-
-        if (animatedGameObject->GetName() == "Shotgun") {
-            glm::vec3 barrelPosition = animatedGameObject->GetShotgunBarrelPostion();
-            Point point = Point(barrelPosition, BLUE);
-            //   QueuePointForDrawing(point);
-        }*/
-    }
-
-    static bool maleHands = true;
-    if (Input::KeyPressed(HELL_KEY_U)) {
-        maleHands = !maleHands;
-    }
-
-    SkinnedModel& skinnedModel = *animatedGameObject->_skinnedModel;
-    glBindVertexArray(skinnedModel.m_VAO);
-    for (int i = 0; i < skinnedModel.m_meshEntries.size(); i++) {
-
-       // std::cout << "idnex: " << animatedGameObject->_skippedMeshIndices[0] << "\n";
-
-        bool skipMesh = false;
-        for (int j = 0; j < animatedGameObject->_skippedMeshIndices.size(); j++) {
-            if (i == animatedGameObject->_skippedMeshIndices[j]) {
-                skipMesh = true;
-            }
-        }
-        if (skipMesh) {
-            continue;
-        }
-
-
-        AssetManager::BindMaterialByIndex(animatedGameObject->_materialIndices[i]);
-
-        if (maleHands) {
-            if (skinnedModel.m_meshEntries[i].Name == "SK_FPSArms_Female.001" ||
-                skinnedModel.m_meshEntries[i].Name == "SK_FPSArms_Female" ||
-                skinnedModel.m_meshEntries[i].Name == "SK_FPSArms_Female_LOD0.001") {
-                continue;
-            }
-        }
-        else {
-            if (skinnedModel.m_meshEntries[i].Name == "manniquen1_2.001" ||
-                skinnedModel.m_meshEntries[i].Name == "manniquen1_2") {
-                continue;
-            }
-        }
-        glDrawElementsBaseVertex(GL_TRIANGLES, skinnedModel.m_meshEntries[i].NumIndices, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int) * skinnedModel.m_meshEntries[i].BaseIndex), skinnedModel.m_meshEntries[i].BaseVertex);
     }
 }
 

@@ -9,6 +9,7 @@
 #include "AnimatedGameObject.h"
 #include "Config.hpp"
 #include "../EngineState.hpp"
+#include "../Timer.hpp"
 
 int Player::GetCurrentWeaponClipAmmo() {
 	if (_currentWeaponIndex == Weapon::GLOCK) {
@@ -43,27 +44,28 @@ Player::Player(glm::vec3 position, glm::vec3 rotation) {
 
     Respawn();
 
-	_characterModel.SetSkinnedModel("UniSexGuyScaled");
-    _characterModel.SetMeshMaterial("CC_Base_Body", "UniSexGuyBody");
-    _characterModel.SetMeshMaterial("CC_Base_Eye", "UniSexGuyBody");
-    _characterModel.SetMeshMaterial("Biker_Jeans", "UniSexGuyJeans");
-    _characterModel.SetMeshMaterial("CC_Base_Eye", "UniSexGuyEyes");
-    _characterModel.SetMeshMaterial("Glock", "Glock");
-    _characterModel.SetMeshMaterial("SM_Knife_01", "Knife");
-    _characterModel.SetMeshMaterial("Shotgun_Mesh", "Shotgun");
-    _characterModel.SetMeshMaterialByIndex(13, "UniSexGuyHead");
-    _characterModel.SetMeshMaterial("FrontSight_low", "AKS74U_0");
-    _characterModel.SetMeshMaterial("Receiver_low", "AKS74U_1");
-    _characterModel.SetMeshMaterial("BoltCarrier_low", "AKS74U_1");
-    _characterModel.SetMeshMaterial("SafetySwitch_low", "AKS74U_0");
-    _characterModel.SetMeshMaterial("MagRelease_low", "AKS74U_0");
-    _characterModel.SetMeshMaterial("Pistol_low", "AKS74U_2");
-    _characterModel.SetMeshMaterial("Trigger_low", "AKS74U_1");
-    _characterModel.SetMeshMaterial("Magazine_Housing_low", "AKS74U_3");
-    _characterModel.SetMeshMaterial("BarrelTip_low", "AKS74U_4");
+    //_characterModel.PrintMeshNames();
 
-	//_characterModel.SetScale(0.01f);
-	//_characterModel.SetRotationX(HELL_PI / 2);
+	_characterModel.SetSkinnedModel("UniSexGuyScaled");
+    _characterModel.SetMeshMaterialByMeshName("CC_Base_Body", "UniSexGuyBody");
+    _characterModel.SetMeshMaterialByMeshName("CC_Base_Eye", "UniSexGuyBody");
+    _characterModel.SetMeshMaterialByMeshName("Biker_Jeans", "UniSexGuyJeans");
+    _characterModel.SetMeshMaterialByMeshName("CC_Base_Eye", "UniSexGuyEyes");
+    _characterModel.SetMeshMaterialByMeshName("Glock", "Glock");
+    _characterModel.SetMeshMaterialByMeshName("SM_Knife_01", "Knife");
+    _characterModel.SetMeshMaterialByMeshName("Shotgun_Mesh", "Shotgun");
+    _characterModel.SetMeshMaterialByMeshIndex(13, "UniSexGuyHead");
+    _characterModel.SetMeshMaterialByMeshIndex(14, "UniSexGuyLashes");
+    _characterModel.EnableBlendingByMeshIndex(14);
+    _characterModel.SetMeshMaterialByMeshName("FrontSight_low", "AKS74U_0");
+    _characterModel.SetMeshMaterialByMeshName("Receiver_low", "AKS74U_1");
+    _characterModel.SetMeshMaterialByMeshName("BoltCarrier_low", "AKS74U_1");
+    _characterModel.SetMeshMaterialByMeshName("SafetySwitch_low", "AKS74U_0");
+    _characterModel.SetMeshMaterialByMeshName("MagRelease_low", "AKS74U_0");
+    _characterModel.SetMeshMaterialByMeshName("Pistol_low", "AKS74U_2");
+    _characterModel.SetMeshMaterialByMeshName("Trigger_low", "AKS74U_1");
+    _characterModel.SetMeshMaterialByMeshName("Magazine_Housing_low", "AKS74U_3");
+    _characterModel.SetMeshMaterialByMeshName("BarrelTip_low", "AKS74U_4");
 
 	_shadowMap.Init();
 
@@ -314,6 +316,21 @@ void Player::UpdateRagdoll() {
 }
 
 void Player::Update(float deltaTime) {
+
+    /*
+    if (maleHands) {
+        if (meshName == "SK_FPSArms_Female.001" ||
+            meshName == "SK_FPSArms_Female" ||
+            meshName == "SK_FPSArms_Female_LOD0.001") {
+            continue;
+        }
+    }
+    else {
+        if (meshName == "manniquen1_2.001" ||
+            meshName == "manniquen1_2") {
+            continue;
+        }
+        */
 
     if (Input::KeyPressed(HELL_KEY_J)) {
         RespawnAtCurrentPosition();
@@ -860,14 +877,14 @@ void Player::Respawn() {
     _inventory.shotgunAmmo.clip = 0;
     _inventory.shotgunAmmo.total = 0;
 	_firstPersonWeapon.SetName("Glock");
-	_firstPersonWeapon.SetSkinnedModel("Glock");
-	_firstPersonWeapon.SetMaterial("Glock");
-	_firstPersonWeapon.PlayAnimation("Glock_Spawn", 1.0f);
-	_firstPersonWeapon.SetMeshMaterial("manniquen1_2.001", "Hands");
-	_firstPersonWeapon.SetMeshMaterial("manniquen1_2", "Hands");
-    _firstPersonWeapon.SetMeshMaterial("SK_FPSArms_Female.001", "FemaleArms");
-    _firstPersonWeapon.SetMeshMaterial("SK_FPSArms_Female", "FemaleArms");
-    _firstPersonWeapon.SetMeshMaterial("Glock_silencer", "Silencer"); 
+    _firstPersonWeapon.SetSkinnedModel("Glock");
+    _firstPersonWeapon.PlayAnimation("Glock_Spawn", 1.0f);
+	_firstPersonWeapon.SetAllMeshMaterials("Glock");
+	_firstPersonWeapon.SetMeshMaterialByMeshName("manniquen1_2.001", "Hands");
+	_firstPersonWeapon.SetMeshMaterialByMeshName("manniquen1_2", "Hands");
+    _firstPersonWeapon.SetMeshMaterialByMeshName("SK_FPSArms_Female.001", "FemaleArms");
+    _firstPersonWeapon.SetMeshMaterialByMeshName("SK_FPSArms_Female", "FemaleArms");
+    _firstPersonWeapon.SetMeshMaterialByMeshName("Glock_silencer", "Silencer");
 
 
 	Audio::PlayAudio("Glock_Equip.wav", 0.5f);
@@ -899,13 +916,13 @@ void Player::RespawnAtCurrentPosition() {
     _inventory.shotgunAmmo.total = 0;
     _firstPersonWeapon.SetName("Glock");
     _firstPersonWeapon.SetSkinnedModel("Glock");
-    _firstPersonWeapon.SetMaterial("Glock");
+    _firstPersonWeapon.SetAllMeshMaterials("Glock");
     _firstPersonWeapon.PlayAnimation("Glock_Spawn", 1.0f);
-    _firstPersonWeapon.SetMeshMaterial("manniquen1_2.001", "Hands");
-    _firstPersonWeapon.SetMeshMaterial("manniquen1_2", "Hands");
-    _firstPersonWeapon.SetMeshMaterial("SK_FPSArms_Female.001", "FemaleArms");
-    _firstPersonWeapon.SetMeshMaterial("SK_FPSArms_Female", "FemaleArms");
-    _firstPersonWeapon.SetMeshMaterial("Glock_silencer", "Silencer");
+    _firstPersonWeapon.SetMeshMaterialByMeshName("manniquen1_2.001", "Hands");
+    _firstPersonWeapon.SetMeshMaterialByMeshName("manniquen1_2", "Hands");
+    _firstPersonWeapon.SetMeshMaterialByMeshName("SK_FPSArms_Female.001", "FemaleArms");
+    _firstPersonWeapon.SetMeshMaterialByMeshName("SK_FPSArms_Female", "FemaleArms");
+    _firstPersonWeapon.SetMeshMaterialByMeshName("Glock_silencer", "Silencer");
     Audio::PlayAudio("Glock_Equip.wav", 0.5f);
 }
 
@@ -996,7 +1013,7 @@ bool Player::CanReload() {
 void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
 
     if (_weaponAction == SPAWNING) {
-        _characterModel.WipeAllSkippedMeshIndices();
+        _characterModel.EnableDrawingForAllMesh();
         HideKnifeMesh();
         HideShotgunMesh();
         HideAKS74UMesh();
@@ -1007,8 +1024,8 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
 		if (_currentWeaponIndex == Weapon::KNIFE) {
 			_firstPersonWeapon.SetName("Knife");
 			_firstPersonWeapon.SetSkinnedModel("Knife");
-			_firstPersonWeapon.SetMeshMaterial("SM_Knife_01", "Knife");
-            _characterModel.WipeAllSkippedMeshIndices();
+			_firstPersonWeapon.SetMeshMaterialByMeshName("SM_Knife_01", "Knife");
+            _characterModel.EnableDrawingForAllMesh();
             HideGlockMesh();
             HideShotgunMesh();
             HideAKS74UMesh();
@@ -1016,9 +1033,9 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
 		else if (_currentWeaponIndex == Weapon::GLOCK) {
 			_firstPersonWeapon.SetName("Glock");
 			_firstPersonWeapon.SetSkinnedModel("Glock");
-            _firstPersonWeapon.SetMaterial("Glock");
-            _firstPersonWeapon.SetMeshMaterial("Glock_silencer", "Silencer");
-            _characterModel.WipeAllSkippedMeshIndices();
+            _firstPersonWeapon.SetAllMeshMaterials("Glock");
+            _firstPersonWeapon.SetMeshMaterialByMeshName("Glock_silencer", "Silencer");
+            _characterModel.EnableDrawingForAllMesh();
             HideKnifeMesh();
             HideShotgunMesh();
             HideAKS74UMesh();
@@ -1026,15 +1043,15 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
 		else if (_currentWeaponIndex == Weapon::AKS74U) {
 			_firstPersonWeapon.SetName("AKS74U");
 			_firstPersonWeapon.SetSkinnedModel("AKS74U");
-			_firstPersonWeapon.SetMeshMaterialByIndex(2, "AKS74U_3");
-			_firstPersonWeapon.SetMeshMaterialByIndex(3, "AKS74U_3"); // possibly incorrect. this is the follower
-			_firstPersonWeapon.SetMeshMaterialByIndex(4, "AKS74U_1");
-			_firstPersonWeapon.SetMeshMaterialByIndex(5, "AKS74U_4");
-			_firstPersonWeapon.SetMeshMaterialByIndex(6, "AKS74U_0");
-			_firstPersonWeapon.SetMeshMaterialByIndex(7, "AKS74U_2");
-			_firstPersonWeapon.SetMeshMaterialByIndex(8, "AKS74U_1");  // Bolt_low. Possibly wrong
-            _firstPersonWeapon.SetMeshMaterialByIndex(9, "AKS74U_3"); // possibly incorrect.
-            _characterModel.WipeAllSkippedMeshIndices();
+			_firstPersonWeapon.SetMeshMaterialByMeshIndex(2, "AKS74U_3");
+			_firstPersonWeapon.SetMeshMaterialByMeshIndex(3, "AKS74U_3"); // possibly incorrect. this is the follower
+			_firstPersonWeapon.SetMeshMaterialByMeshIndex(4, "AKS74U_1");
+			_firstPersonWeapon.SetMeshMaterialByMeshIndex(5, "AKS74U_4");
+			_firstPersonWeapon.SetMeshMaterialByMeshIndex(6, "AKS74U_0");
+			_firstPersonWeapon.SetMeshMaterialByMeshIndex(7, "AKS74U_2");
+			_firstPersonWeapon.SetMeshMaterialByMeshIndex(8, "AKS74U_1");  // Bolt_low. Possibly wrong
+            _firstPersonWeapon.SetMeshMaterialByMeshIndex(9, "AKS74U_3"); // possibly incorrect.
+            _characterModel.EnableDrawingForAllMesh();
             HideKnifeMesh();
             HideGlockMesh();
             HideShotgunMesh();
@@ -1043,9 +1060,9 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
         else if (_currentWeaponIndex == Weapon::SHOTGUN) {
             _firstPersonWeapon.SetName("Shotgun");
             _firstPersonWeapon.SetSkinnedModel("Shotgun");
-            _firstPersonWeapon.SetMeshMaterialByIndex(2, "Shell");
-            _firstPersonWeapon.SetMaterial("Shotgun");
-            _characterModel.WipeAllSkippedMeshIndices();
+            _firstPersonWeapon.SetAllMeshMaterials("Shotgun");
+            _firstPersonWeapon.SetMeshMaterialByMeshIndex(2, "Shell");
+            _characterModel.EnableDrawingForAllMesh();
             HideKnifeMesh();
             HideGlockMesh();
             HideAKS74UMesh();
@@ -1056,11 +1073,11 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
            // _firstPersonWeapon.SetMaterial("Glock"); // fix meeeee. remove meeee
            // _firstPersonWeapon.PlayAndLoopAnimation("MP7_ReloadTest", 1.0f);
         }
-        _firstPersonWeapon.SetMeshMaterial("manniquen1_2.001", "Hands");
-        _firstPersonWeapon.SetMeshMaterial("manniquen1_2", "Hands");
-        _firstPersonWeapon.SetMeshMaterial("SK_FPSArms_Female.001", "FemaleArms");
-        _firstPersonWeapon.SetMeshMaterial("SK_FPSArms_Female", "FemaleArms");
-        _firstPersonWeapon.SetMeshMaterial("Arms", "Hands");
+        _firstPersonWeapon.SetMeshMaterialByMeshName("manniquen1_2.001", "Hands");
+        _firstPersonWeapon.SetMeshMaterialByMeshName("manniquen1_2", "Hands");
+        _firstPersonWeapon.SetMeshMaterialByMeshName("SK_FPSArms_Female.001", "FemaleArms");
+        _firstPersonWeapon.SetMeshMaterialByMeshName("SK_FPSArms_Female", "FemaleArms");
+        _firstPersonWeapon.SetMeshMaterialByMeshName("Arms", "Hands");
 	}
 	_firstPersonWeapon.SetScale(0.001f);
 	_firstPersonWeapon.SetRotationX(Player::GetViewRotation().x);
@@ -1068,7 +1085,7 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
 	_firstPersonWeapon.SetPosition(Player::GetViewPos());
 
     if (_isDead) {
-        _characterModel.WipeAllSkippedMeshIndices();
+        _characterModel.EnableDrawingForAllMesh();
         HideKnifeMesh();
         HideGlockMesh();
         HideShotgunMesh();
@@ -2164,24 +2181,24 @@ void Player::GiveAKS74UScope() {
 
 
 void Player::HideKnifeMesh() {
-    _characterModel.AddSkippedMeshIndexByName("SM_Knife_01");
+    _characterModel.DisableDrawingForMeshByMeshName("SM_Knife_01");
 }
 void Player::HideGlockMesh() {
-    _characterModel.AddSkippedMeshIndexByName("Glock");
+    _characterModel.DisableDrawingForMeshByMeshName("Glock");
 }
 void Player::HideShotgunMesh() {
-    _characterModel.AddSkippedMeshIndexByName("Shotgun_Mesh");
+    _characterModel.DisableDrawingForMeshByMeshName("Shotgun_Mesh");
 }
 void Player::HideAKS74UMesh() {
-    _characterModel.AddSkippedMeshIndexByName("FrontSight_low");
-    _characterModel.AddSkippedMeshIndexByName("Receiver_low");
-    _characterModel.AddSkippedMeshIndexByName("BoltCarrier_low");
-    _characterModel.AddSkippedMeshIndexByName("SafetySwitch_low");
-    _characterModel.AddSkippedMeshIndexByName("MagRelease_low");
-    _characterModel.AddSkippedMeshIndexByName("Pistol_low");
-    _characterModel.AddSkippedMeshIndexByName("Trigger_low");
-    _characterModel.AddSkippedMeshIndexByName("Magazine_Housing_low");
-    _characterModel.AddSkippedMeshIndexByName("BarrelTip_low");
+    _characterModel.DisableDrawingForMeshByMeshName("FrontSight_low");
+    _characterModel.DisableDrawingForMeshByMeshName("Receiver_low");
+    _characterModel.DisableDrawingForMeshByMeshName("BoltCarrier_low");
+    _characterModel.DisableDrawingForMeshByMeshName("SafetySwitch_low");
+    _characterModel.DisableDrawingForMeshByMeshName("MagRelease_low");
+    _characterModel.DisableDrawingForMeshByMeshName("Pistol_low");
+    _characterModel.DisableDrawingForMeshByMeshName("Trigger_low");
+    _characterModel.DisableDrawingForMeshByMeshName("Magazine_Housing_low");
+    _characterModel.DisableDrawingForMeshByMeshName("BarrelTip_low");
 }
 
 void Player::DrawWeapons() {

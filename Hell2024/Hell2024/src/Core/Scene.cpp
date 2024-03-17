@@ -1164,18 +1164,18 @@ void Scene::LoadHardCodedObjects() {
         aks.SetAnimationModeToBindPose();
         //aks.PlayAndLoopAnimation("AKS74U_ReloadEmpty", 0.2f);
         aks.PlayAndLoopAnimation("AKS74U_Idle", 1.0f);
-        aks.SetMeshMaterial("manniquen1_2.001", "Hands");
-        aks.SetMeshMaterial("manniquen1_2", "Hands");
-        aks.SetMeshMaterial("SK_FPSArms_Female.001", "FemaleArms");
-        aks.SetMeshMaterial("SK_FPSArms_Female", "FemaleArms");
-        aks.SetMeshMaterialByIndex(2, "AKS74U_3");
-        aks.SetMeshMaterialByIndex(3, "AKS74U_3"); // possibly incorrect. this is the follower
-        aks.SetMeshMaterialByIndex(4, "AKS74U_1");
-        aks.SetMeshMaterialByIndex(5, "AKS74U_4");
-        aks.SetMeshMaterialByIndex(6, "AKS74U_0");
-        aks.SetMeshMaterialByIndex(7, "AKS74U_2");
-        aks.SetMeshMaterialByIndex(8, "AKS74U_1");  // Bolt_low. Possibly wrong
-        aks.SetMeshMaterialByIndex(9, "AKS74U_3"); // possibly incorrect.
+        aks.SetMeshMaterialByMeshName("manniquen1_2.001", "Hands");
+        aks.SetMeshMaterialByMeshName("manniquen1_2", "Hands");
+        aks.SetMeshMaterialByMeshName("SK_FPSArms_Female.001", "FemaleArms");
+        aks.SetMeshMaterialByMeshName("SK_FPSArms_Female", "FemaleArms");
+        aks.SetMeshMaterialByMeshIndex(2, "AKS74U_3");
+        aks.SetMeshMaterialByMeshIndex(3, "AKS74U_3"); // possibly incorrect. this is the follower
+        aks.SetMeshMaterialByMeshIndex(4, "AKS74U_1");
+        aks.SetMeshMaterialByMeshIndex(5, "AKS74U_4");
+        aks.SetMeshMaterialByMeshIndex(6, "AKS74U_0");
+        aks.SetMeshMaterialByMeshIndex(7, "AKS74U_2");
+        aks.SetMeshMaterialByMeshIndex(8, "AKS74U_1");  // Bolt_low. Possibly wrong
+        aks.SetMeshMaterialByMeshIndex(9, "AKS74U_3"); // possibly incorrect.
         aks.SetScale(0.01f);
         aks.SetPosition(glm::vec3(2.5f, 1.5f, 3));
         aks.SetRotationY(HELL_PI * 0.5f);
@@ -1192,7 +1192,7 @@ void Scene::LoadHardCodedObjects() {
         glock.SetAnimationModeToBindPose();
         glock.PlayAndLoopAnimation("Glock_Reload", 0.2f);
         glock.PlayAndLoopAnimation("AKS74U_Idle", 1.0f);
-        glock.SetMaterial("Glock");
+        glock.SetAllMeshMaterials("Glock");
         glock.SetScale(0.01f);
         glock.SetPosition(glm::vec3(2.5f, 1.5f, 3));
         glock.SetRotationY(HELL_PI * 0.5f);

@@ -8,42 +8,6 @@
 
 void AnimatedGameObject::Update(float deltaTime) {
 
-
-   
-    /*if (Input::KeyPressed(HELL_KEY_L)) {
-    std::cout << "\nANIMATED TRANSFORM NAMES\n";
-    for (int i = 0; i < _animatedTransforms.names.size(); i++) {
-        std::string boneName = _animatedTransforms.names[i];
-        std::cout << " " << boneName << "\n";
-    }
-    Ragdoll& ragdoll = _ragdoll;
-    std::cout << "\nRIGID NAMES\n";
-    for (int i = 0; i < ragdoll._rigidComponents.size(); i++) {
-        RigidComponent& rigid = ragdoll._rigidComponents[i];
-        std::string name = rigid.name;
-        std::cout << " " << name << "\n";
-    }
-    std::cout << "\nRIGID CORRESPONDING JOINT NAMES\n";
-    for (int i = 0; i < ragdoll._rigidComponents.size(); i++) {
-        RigidComponent& rigid = ragdoll._rigidComponents[i];
-        std::string name = rigid.correspondingJointName;
-        std::cout << " " << name << "\n";
-    }
-    std::cout << "\nJOINT NAMES\n";
-    for (int i = 0; i < ragdoll._jointComponents.size(); i++) {
-        JointComponent& joint = ragdoll._jointComponents[i];
-        std::string name = joint.name;
-        std::cout << " " << name << "\n";
-    }
-    std::cout << "\n\n";
-    }*/
-
- 
-
-    if (Input::KeyPressed(HELL_KEY_L) && _hasRagdoll) {
-    //    _animationMode = RAGDOLL;
-    }
-
     if (_animationMode == ANIMATION) {
         if (_currentAnimation) {
             UpdateAnimation(deltaTime);
@@ -95,42 +59,50 @@ void AnimatedGameObject::PlayAndLoopAnimation(std::string animationName, float s
         }
     }
     // Not found
-    std::cout << animationName << " not found!\n";
+    std::cout << "Animation '" << animationName << "' not found!\n";
 }
 
 void AnimatedGameObject::PauseAnimation() {
     _animationPaused = true;
 }
 
-void AnimatedGameObject::SetMeshMaterial(std::string meshName, std::string materialName) {
+void AnimatedGameObject::SetMeshMaterialByMeshName(std::string meshName, std::string materialName) {
     if (!_skinnedModel) {
         return;
     }
-    for (int i = 0; i < _skinnedModel->m_meshEntries.size(); i++) {
-        auto& mesh = _skinnedModel->m_meshEntries[i];
-        if (mesh.Name == meshName) {
-            _materialIndices[i] = AssetManager::GetMaterialIndex(materialName);
-            //return;
+    for (MeshRenderingEntry& meshRenderingEntry : _meshRenderingEntries) {
+        if (meshRenderingEntry.meshName == meshName) {
+            meshRenderingEntry.materialIndex = AssetManager::GetMaterialIndex(materialName);
         }
     }
 }
 
-void AnimatedGameObject::SetMeshMaterialByIndex(int meshIndex, std::string materialName) {
+void AnimatedGameObject::SetMeshMaterialByMeshIndex(int meshIndex, std::string materialName) {
     if (!_skinnedModel) {
         return;
     }
-    if (meshIndex >= 0 && meshIndex < _materialIndices.size()) {
-        _materialIndices[meshIndex] = AssetManager::GetMaterialIndex(materialName);
+    if (meshIndex >= 0 && meshIndex < _meshRenderingEntries.size()) {
+        _meshRenderingEntries[meshIndex].materialIndex = AssetManager::GetMaterialIndex(materialName);
+    }   
+}
+
+void AnimatedGameObject::EnableBlendingByMeshIndex(int meshIndex) {
+    if (!_skinnedModel) {
+        return;
+    }
+    if (meshIndex >= 0 && meshIndex < _meshRenderingEntries.size()) {
+        _meshRenderingEntries[meshIndex].blendingEnabled = true;
     }
 }
 
-void AnimatedGameObject::SetMaterial(std::string materialName) {
+
+
+void AnimatedGameObject::SetAllMeshMaterials(std::string materialName) {
     if (!_skinnedModel) {
         return;
     }
-    for (int i = 0; i < _skinnedModel->m_meshEntries.size(); i++) {
-        //auto& mesh = _skinnedModel->m_meshEntries[i];
-        _materialIndices[i] = AssetManager::GetMaterialIndex(materialName);
+    for (MeshRenderingEntry& meshRenderingEntry : _meshRenderingEntries) {
+        meshRenderingEntry.materialIndex = AssetManager::GetMaterialIndex(materialName);
     }
 }
 
@@ -205,7 +177,6 @@ float GetAnimationTime(SkinnedModel* skinnedModel, float animTime, Animation* an
 }
 
 void AnimatedGameObject::CalculateBoneTransforms() {
-    //_skinnedModel->UpdateBoneTransformsFromAnimation(_currentAnimationTime, _currentAnimation, _animatedTransforms, _cameraMatrix);
 
     // Get the animation time
     float AnimationTime = GetAnimationTime(_skinnedModel, _currentAnimationTime, _currentAnimation);
@@ -256,11 +227,17 @@ void AnimatedGameObject::CalculateBoneTransforms() {
         glm::mat4 ParentTransformation = (parentIndex == -1) ? glm::mat4(1) : _skinnedModel->m_joints[parentIndex].m_currentFinalTransform;
         glm::mat4 GlobalTransformation = ParentTransformation * NodeTransformation;
 
+        if (Util::StrCmp("Camera", NodeName) ||
+            Util::StrCmp("Camera001", NodeName)) {
+            _cameraMatrix = GlobalTransformation;
+            _cameraMatrix[0][2] *= -1.0f; // yaw
+            _cameraMatrix[2][0] *= -1.0f; // yaw
+            _cameraMatrix[0][1] *= -1.0f; // roll
+            _cameraMatrix[1][0] *= -1.0f; // roll
+        }
+
         jointWorldMatrices[i].worldMatrix = GlobalTransformation;
         jointWorldMatrices[i].name = NodeName;
-
-       // glm::vec3 point = GetModelMatrix() * GlobalTransformation * glm::vec4(0, 0, 0, 1.0);
-       // _debugBones.push_back(point);
 
         // Store the current transformation, so child nodes can access it
         _skinnedModel->m_joints[i].m_currentFinalTransform = GlobalTransformation;
@@ -364,12 +341,14 @@ void AnimatedGameObject::SetSkinnedModel(std::string name) {
     SkinnedModel* skinnedModel = AssetManager::GetSkinnedModel(name);
     if (skinnedModel) {
         _skinnedModel = skinnedModel;
-        _materialIndices.resize(skinnedModel->m_meshEntries.size());
-
-        /*std::cout << "SetSkinnedModel() " << name << "\n";
-        for (int i = 0; i < skinnedModel->m_meshEntries.size(); i++) {
-            std::cout << "-" << skinnedModel->m_meshEntries[i].Name << "\n";
-        }*/
+        _meshRenderingEntries.clear();
+        for (MeshEntry& meshEntry : skinnedModel->m_meshEntries) {
+            MeshRenderingEntry& meshRenderingEntry = _meshRenderingEntries.emplace_back();
+            meshRenderingEntry.meshName = meshEntry.Name;
+            meshRenderingEntry.indexCount = meshEntry.NumIndices;
+            meshRenderingEntry.baseIndex = meshEntry.BaseIndex;
+            meshRenderingEntry.baseVertex = meshEntry.BaseVertex;
+        }
     }
     else {
         std::cout << "Could not SetSkinnedModel(name) with name: \"" << name << "\", it does not exist\n";
@@ -680,25 +659,26 @@ void AnimatedGameObject::DestroyRagdoll() {
     }
 }
 
-void AnimatedGameObject::WipeAllSkippedMeshIndices() {
-    _skippedMeshIndices.clear();
+void AnimatedGameObject::EnableDrawingForAllMesh() {
+    for (MeshRenderingEntry& meshRenderingEntry : _meshRenderingEntries) {
+        meshRenderingEntry.drawingEnabled = true;
+    }
 }
 
-void AnimatedGameObject::AddSkippedMeshIndexByName(std::string meshName) {
-    for (int i = 0; i < _skinnedModel->m_meshEntries.size(); i++) {
-        if (_skinnedModel->m_meshEntries[i].Name == meshName) {
-            _skippedMeshIndices.push_back(i);
-            //std::cout << "SKPPING MESH " << i << " " << meshName << "!\n";
+void AnimatedGameObject::DisableDrawingForMeshByMeshName(std::string meshName) {
+    for (MeshRenderingEntry& meshRenderingEntry : _meshRenderingEntries) {
+        if (meshRenderingEntry.meshName == meshName) {
+            meshRenderingEntry.drawingEnabled = false;
             return;
         }
     }
-    std::cout << "AddSkippedMeshIndexByName() called but mesh " << meshName << " was not found!\n";
+    std::cout << "DisableDrawingForMeshByMeshName() called but name " << meshName << " was not found!\n";
 }
 
 void AnimatedGameObject::PrintMeshNames() {
     std::cout << _skinnedModel->_filename << "\n";
-    for (int i = 0; i < _skinnedModel->m_meshEntries.size(); i++) {
-        std::cout << "-" << _skinnedModel->m_meshEntries[i].Name << "\n";
+    for (int i = 0; i < _meshRenderingEntries.size(); i++) {
+        std::cout << "-" << i << " " << _meshRenderingEntries[i].meshName << "\n";
     } 
 }
 
