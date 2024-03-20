@@ -59,10 +59,8 @@ bool FbxImporter::LoadSkinnedModelData(SkinnedModel &model, const std::string &f
 
     FileInfo fileInfo = Util::GetFileInfo(filename);
 
-    const aiScene* m_pScene;
-    Assimp::Importer m_Importer;
 
-    model.m_VAO = 0; 
+    model.m_VAO = 0;
     ZERO_MEM(model.m_Buffers);
     model.m_NumBones = 0;
     model._filename = fileInfo.filename;
@@ -72,34 +70,29 @@ bool FbxImporter::LoadSkinnedModelData(SkinnedModel &model, const std::string &f
     std::string filepath = "res/";
     filepath += filename;
 
-    const aiScene* tempScene = m_Importer.ReadFile(filepath.c_str(), aiProcess_LimitBoneWeights | aiProcess_Triangulate | aiProcess_GenSmoothNormals | aiProcess_FlipUVs | aiProcess_CalcTangentSpace);
+    Assimp::Importer m_Importer;
+    const aiScene* scene = m_Importer.ReadFile(filepath.c_str(), aiProcess_LimitBoneWeights | aiProcess_Triangulate | aiProcess_GenSmoothNormals | aiProcess_FlipUVs | aiProcess_CalcTangentSpace);
 
     //Getting corrupted later. So deep copying now.
-    if (!tempScene) {
+    if (!scene) {
         std::cout << "Something fucked up loading your skinned model: " << filepath << "\n";
         return false;
     }
-    
-    // Try load the assimp scene
-    m_pScene = new aiScene(*tempScene);
-    if (m_pScene)  {
-        model.m_GlobalInverseTransform = Util::aiMatrix4x4ToGlm(m_pScene->mRootNode->mTransformation);
-        model.m_GlobalInverseTransform = glm::inverse(model.m_GlobalInverseTransform);
-        Ret = InitFromScene(model, m_pScene, filename, false);
-    }
-    else {
-        //printf("Error parsing '%s': '%s'\n", filename, m_Importer.GetErrorString());
-        std::cout << "Error parsing " << filename << ": " << m_Importer.GetErrorString() << "\n";
-    }        
 
-    //if (m_pScene->mNumCameras > 0) {
-    //    aiCamera* m_camera = m_pScene->mCameras[0];
+    // Try load the assimp scene
+    // m_pScene = new aiScene(*scene);
+    model.m_GlobalInverseTransform = Util::aiMatrix4x4ToGlm(scene->mRootNode->mTransformation);
+    model.m_GlobalInverseTransform = glm::inverse(model.m_GlobalInverseTransform);
+    Ret = InitFromScene(model, scene, filename, false);
+
+    //if (tempScene->mNumCameras > 0) {
+    //    aiCamera* m_camera = tempScene->mCameras[0];
     //}
 
-    GrabSkeleton(model, m_pScene->mRootNode, -1);
+    GrabSkeleton(model, scene->mRootNode, -1);
 
      //std::cout << "Loaded model " << model._filename << " ("  << model.m_BoneInfo.size() << " bones)\n";
-     
+
      for (auto b : model.m_BoneInfo) {
      //    std::cout << "-" << b.BoneName << "\n";
      }
