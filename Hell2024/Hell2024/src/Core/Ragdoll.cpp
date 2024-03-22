@@ -30,7 +30,7 @@ void Ragdoll::LoadFromJSON(std::string filename, PxU32 collisionGroup) {
         return;
     }
     else {
-        std::cout << filepath << " read successfully\n";
+        //std::cout << filepath << " read successfully\n";
         char buffer[65536];
         rapidjson::FileReadStream is(filepoint, buffer, sizeof(buffer));
         document.ParseStream<0, rapidjson::UTF8<>, rapidjson::FileReadStream>(is);
@@ -229,6 +229,7 @@ void Ragdoll::LoadFromJSON(std::string filename, PxU32 collisionGroup) {
     scene->setVisualizationParameter(PxVisualizationParameter::eJOINT_LOCAL_FRAMES, 1.0f);
     scene->setVisualizationParameter(PxVisualizationParameter::eJOINT_LIMITS, 1.0f);
 
+    /*
     std::cout << "\nRIGID IDS\n";
     for (RigidComponent& rigid : _rigidComponents) {
         std::cout << rigid.name << " ID: " << rigid.ID << "     " << rigid.correspondingJointName << "\n";
@@ -237,7 +238,7 @@ void Ragdoll::LoadFromJSON(std::string filename, PxU32 collisionGroup) {
     std::cout << "\nJOINT IDS\n";
     for (JointComponent& joint : _jointComponents) {
         std::cout << joint.name << " PARENT ID: " << joint.parentID << " CHILD ID: " << joint.childID << "\n";
-    }
+    }*/
 
 
 
@@ -267,7 +268,7 @@ void Ragdoll::LoadFromJSON(std::string filename, PxU32 collisionGroup) {
 
         joint.pxD6 = PxD6JointCreate(*Physics::GetPhysics(), parentRigid->pxRigidBody, parentFrame, childRigid->pxRigidBody, childFrame);
 
-        std::cout << "Created PXD6 joint: " << joint.name << "\n";
+        //std::cout << "Created PXD6 joint: " << joint.name << "\n";
 
         joint.pxD6->setConstraintFlag(PxConstraintFlag::eCOLLISION_ENABLED, false);
 

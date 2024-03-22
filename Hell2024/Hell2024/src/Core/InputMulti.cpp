@@ -1,5 +1,5 @@
 #include "InputMulti.h"
-#include "GL.h"
+#include "../BackEnd/BackEnd.h"
 #include <iostream>
 
 #define NOMINMAX
@@ -163,7 +163,7 @@ void InputMulti::Update()
 
     // Out of window focus? then remove any detected input
     HWND activeWindow = GetActiveWindow();
-    HWND myWindow = glfwGetWin32Window(GL::GetWindowPtr());
+    HWND myWindow = glfwGetWin32Window(BackEnd::GetWindowPointer());
     if ((void*)myWindow != (void*)activeWindow) {
         for (KeyboardState& state : _keyboardStates) {
             for (int i = 0; i < 350; i++) {

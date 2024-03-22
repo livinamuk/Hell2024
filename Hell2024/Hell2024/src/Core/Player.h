@@ -1,7 +1,7 @@
 #pragma once
 #include "../Common.h"
 #include "AnimatedGameObject.h"
-#include "Physics.h"
+#include "../Physics/Physics.h"
 #include "../Renderer/ShadowMap.h"
 #include "keycodes.h"
 
@@ -139,7 +139,9 @@ public:
 	void DropAKS7UMag();
     void CheckForKnifeHit();
 
-	ShadowMap _shadowMap;
+    void SetGlockAnimatedModelSettings();
+
+	//ShadowMap _shadowMap;
 	float _muzzleFlashCounter = 0;
 
 	bool MuzzleFlashIsRequired();
@@ -206,11 +208,15 @@ public:
     glm::vec3 _movementVector = glm::vec3(0);
     float _timeSinceDeath = 0;
     bool _isOutside = false;
-    bool _hasGlockSilencer = true;
+    bool _hasGlockSilencer = false;
+
+    float _currentSpeed = 0.0f;
 
     void ForceSetViewMatrix(glm::mat4 viewMatrix);
 
 private:
+
+    glm::vec3 _displacement;
 
 	void Interact();
 	void SpawnBullet(float variance, Weapon type);
@@ -230,18 +236,15 @@ private:
 	float _viewHeightCrouching = 1.15f;
 	float _crouchDownSpeed = 17.5f;
 	float _currentViewHeight = _viewHeightStanding;
-	float _walkingSpeed = 4 * 1.25f;
-	float _crouchingSpeed = 2 * 1.25f;
+	float _walkingSpeed = 4.85f;
+	float _crouchingSpeed = 2.325f;
 	glm::mat4 _viewMatrix = glm::mat4(1);
 	glm::mat4 _inverseViewMatrix = glm::mat4(1);
 	glm::vec3 _viewPos = glm::vec3(0);
 	glm::vec3 _forward = glm::vec3(0);
 	glm::vec3 _up = glm::vec3(0);
 	glm::vec3 _right = glm::vec3(0);
-	float _breatheAmplitude = 0.00052f;
-	float _breatheFrequency = 8;
-	float _headBobAmplitude = 0.00505f;
-	float _headBobFrequency = 25.0f;
+
 	bool _isMoving = false;
 	float _muzzleFlashTimer = -1;
 	float _muzzleFlashRotation = 0;

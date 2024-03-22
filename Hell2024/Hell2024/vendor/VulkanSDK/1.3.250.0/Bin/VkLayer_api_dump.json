@@ -1,0 +1,284 @@
+{
+    "file_format_version" : "1.2.0",
+    "layer": {
+        "name": "VK_LAYER_LUNARG_api_dump",
+        "type": "GLOBAL",
+        "library_path": ".\\VkLayer_api_dump.dll",
+        "api_version": "1.3.250",
+        "implementation_version": "2",
+        "description": "LunarG API dump layer",
+        "introduction": "The API Dump utility layer prints API calls, parameters, and values to the identified output stream.",
+        "url": "https://vulkan.lunarg.com/doc/sdk/latest/windows/api_dump_layer.html",
+        "platforms": [ "WINDOWS", "LINUX", "MACOS", "ANDROID" ],
+        "device_extensions": [
+            {
+                "name": "VK_EXT_tooling_info",
+                "spec_version": "1",
+                "entrypoints": [
+                    "vkGetPhysicalDeviceToolPropertiesEXT"
+                ]
+            }
+        ],
+        "features": {
+            "presets": [
+                {
+                    "label": "Console Output",
+                    "description": "Output API dump to stdout",
+                    "platforms": [ "WINDOWS", "LINUX", "MACOS", "ANDROID" ],
+                    "status": "STABLE",
+                    "settings": [
+                        {
+                            "key": "output_format",
+                            "value": "text"
+                        },
+                        {
+                            "key": "log_filename",
+                            "value": "stdout"
+                        },
+                        {
+                            "key": "file",
+                            "value": false
+                        }
+                    ]
+                },
+                {
+                    "label": "Text Output",
+                    "description": "Output API dump to a text file",
+                    "platforms": [ "WINDOWS", "LINUX", "MACOS", "ANDROID" ],
+                    "status": "STABLE",
+                    "settings": [
+                        {
+                            "key": "output_format",
+                            "value": "text"
+                        },
+                        {
+                            "key": "log_filename",
+                            "value": "${VK_LOCAL}/vk_apidump.txt"
+                        },
+                        {
+                            "key": "file",
+                            "value": true
+                        }
+                    ]
+                },
+                {
+                    "label": "HTML Output",
+                    "description": "Output API dump to a HTML file",
+                    "platforms": [ "WINDOWS", "LINUX", "MACOS", "ANDROID" ],
+                    "status": "STABLE",
+                    "settings": [
+                        {
+                            "key": "output_format",
+                            "value": "html"
+                        },
+                        {
+                            "key": "log_filename",
+                            "value": "${VK_LOCAL}/vk_apidump.html"
+                        },
+                        {
+                            "key": "file",
+                            "value": true
+                        }
+                    ]
+                },
+                {
+                    "label": "JSON Output",
+                    "description": "Output API dump to a JSON file",
+                    "platforms": [ "WINDOWS", "LINUX", "MACOS", "ANDROID" ],
+                    "status": "STABLE",
+                    "settings": [
+                        {
+                            "key": "output_format",
+                            "value": "json"
+                        },
+                        {
+                            "key": "log_filename",
+                            "value": "${VK_LOCAL}/vk_apidump.json"
+                        },
+                        {
+                            "key": "file",
+                            "value": true
+                        }
+                    ]
+                }
+            ],
+            "settings": [
+                {
+                    "key": "output_range",
+                    "env": "VK_APIDUMP_OUTPUT_RANGE",
+                    "label": "Output Range",
+                    "description": "Comma separated list of frames to output or a range of frames with a start, count, and optional interval separated by a dash. A count of 0 will output every frame after the start of the range. Example: \"5-8-2\" will output frame 5, continue until frame 13, dumping every other frame. Example: \"3,8-2\" will output frames 3, 8, and 9.",
+                    "type": "STRING",
+                    "default": "0-0"
+                },
+                {
+                    "key": "output_format",
+                    "env": "VK_APIDUMP_OUTPUT_FORMAT",
+                    "label": "Output Format",
+                    "description": "Specifies the format used for output; can be HTML, JSON, or  Text (default -- outputs plain text)",
+                    "type": "ENUM",
+                    "flags": [
+                        {
+                            "key": "text",
+                            "label": "Text",
+                            "description": "Plain text"
+                        },
+                        {
+                            "key": "html",
+                            "label": "HTML",
+                            "description": "HTML"
+                        },
+                        {
+                            "key": "json",
+                            "label": "JSON",
+                            "description": "Json"
+                        }
+                    ],
+                    "default": "text"
+                },
+                {
+                    "key": "file",
+                    "label": "Output to File",
+                    "description": "Setting this to true indicates that output should be written to file instead of stdout",
+                    "type": "BOOL",
+                    "default": false,
+                    "settings": [
+                        {
+                            "key": "log_filename",
+                            "env": "VK_APIDUMP_LOG_FILENAME",
+                            "label": "Log Filename",
+                            "description": "Specifies the file to dump to when output files are enabled",
+                            "type": "SAVE_FILE",
+                            "filter": "*.txt,*.html,*.json",
+                            "default": "stdout",
+                            "dependence": {
+                                "mode": "ALL",
+                                "settings": [
+                                    {
+                                        "key": "file",
+                                        "value": true
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "key": "flush",
+                    "env": "VK_APIDUMP_FLUSH",
+                    "label": "Log Flush After Write",
+                    "description": "Setting this to true causes IO to be flushed after each API call that is written",
+                    "type": "BOOL",
+                    "default": true
+                },
+                {
+                    "key": "name_size",
+                    "label": "Name Size",
+                    "description": "The number of characters the name of a variable should consume, assuming more are not required",
+                    "type": "INT",
+                    "default": 32,
+                    "range": {
+                        "min": 1
+                    },
+                    "unit": "chars"
+                },
+                {
+                    "key": "show_types",
+                    "label": "Show Types",
+                    "description": "Dump types in addition to values",
+                    "type": "BOOL",
+                    "default": true,
+                    "settings": [
+                        {
+                            "key": "type_size",
+                            "label": "Type Size",
+                            "description": "The number of characters the name of a type should consume, assuming more are not required",
+                            "type": "INT",
+                            "default": 0,
+                            "range": {
+                                "min": 0
+                            },
+                            "dependence": {
+                                "mode": "ALL",
+                                "settings": [
+                                    {
+                                        "key": "show_types",
+                                        "value": true
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "key": "show_timestamp",
+                    "env": "VK_APIDUMP_TIMESTAMP",
+                    "label": "Show Timestamp",
+                    "description": "Show the timestamp of function calls since start in microseconds",
+                    "type": "BOOL",
+                    "default": false
+                },
+                {
+                    "key": "show_shader",
+                    "label": "Show Shader",
+                    "description": "Dump the shader binary code in pCode",
+                    "type": "BOOL",
+                    "default": false
+                },
+                {
+                    "key": "detailed",
+                    "env": "VK_APIDUMP_DETAILED",
+                    "label": "Show Parameter Details",
+                    "description": "Dump parameter details in addition to API calls",
+                    "type": "BOOL",
+                    "default": true
+                },
+                {
+                    "key": "no_addr",
+                    "env": "VK_APIDUMP_NO_ADDR",
+                    "label": "Hide Addresses",
+                    "description": "Dump \"address\" in place of hex addresses",
+                    "type": "BOOL",
+                    "default": false
+                },
+                {
+                    "key": "use_spaces",
+                    "label": "Use Spaces",
+                    "description": "Setting this to true causes all tab characters to be replaced with spaces",
+                    "type": "BOOL",
+                    "default": true,
+                    "settings": [
+                        {
+                            "key": "indent_size",
+                            "label": "Indent Size",
+                            "description": "Specifies the number of spaces that a tab is equal to",
+                            "type": "INT",
+                            "default": 4,
+                            "range": {
+                                "min": 1,
+                                "max": 16
+                            },
+                            "unit": "chars",
+                            "dependence": {
+                                "mode": "ALL",
+                                "settings": [
+                                    {
+                                        "key": "use_spaces",
+                                        "value": true
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "key": "show_thread_and_frame",
+                    "label": "Show Thread and Frame",
+                    "description": "Show the thread and frame of each function called",
+                    "type": "BOOL",
+                    "default": true
+                }
+            ]
+        }
+    }
+}

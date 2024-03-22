@@ -13,7 +13,7 @@
 #include <filesystem>
 #include <assimp/matrix3x3.h>
 #include <assimp/matrix4x4.h>
-#include "Core/Physics.h"
+#include "Physics/Physics.h"
 #include "rapidjson/document.h"
 #include <rapidjson/filereadstream.h>
 #include <rapidjson/istreamwrapper.h>
@@ -48,7 +48,7 @@ namespace Util {
         sq += check(p.x, min.x, max.x);
         sq += check(p.y, min.y, max.y);
         sq += check(p.z, min.z, max.z);
-        return sq;
+        return (float)sq;
     }
 
     inline bool AABBInSphere(AABB& aabb, glm::vec3 spherePosition, float sphereRadius) {
@@ -526,7 +526,7 @@ namespace Util {
     }*/
 
     /*
-    inline void EvaluateRaycasts(glm::vec3 rayOrigin, glm::vec3 rayDirection, float maxDistance, std::vector<Triangle>& triangles, RaycastObjectType parentType, glm::mat4 parentMatrix, RayCastResult& out, void* parent, bool ignoreBackFacing = true) {
+    inline void EvaluateRaycasts(glm::vec3 rayOrigin, glm::vec3 rayDirection, float maxDistance, std::vector<Triangle>& triangles, RigidStaticType parentType, glm::mat4 parentMatrix, RayCastResult& out, void* parent, bool ignoreBackFacing = true) {
         glm::mat4 inverseTransform = glm::inverse(parentMatrix);
 
         glm::vec3 origin = inverseTransform * glm::vec4(rayOrigin, 1);
@@ -546,7 +546,7 @@ namespace Util {
                 if (result.distance < out.distanceToHit) {
                     out.triangle = triangle;
                     out.distanceToHit = result.distance;
-                    out.raycastObjectType = parentType;
+                    out.RigidStaticType = parentType;
                     out.triangeleModelMatrix = parentMatrix;
                     out.baryPosition = result.baryPosition;
                     out.found = true;

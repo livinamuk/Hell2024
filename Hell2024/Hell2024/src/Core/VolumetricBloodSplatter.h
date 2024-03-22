@@ -1,13 +1,13 @@
 #pragma once
 #include "../Common.h"
-#include "../Renderer/Model.h"
+#include "../API/OpenGL/Types/GL_model.h"
 #include "../Renderer/Shader.h"
 
 struct VolumetricBloodSplatter {
 
 	float m_CurrentTime = 0.0f;
 	Transform m_transform;
-	Model* m_model = nullptr;
+	OpenGLModel* m_model = nullptr;
 	glm::vec3 m_front;
 
 	int m_type = 9;

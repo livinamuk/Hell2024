@@ -5,14 +5,17 @@
 #include "Door.h"
 #include "Window.h"
 #include "Player.h"
-#include "Physics.h"
+#include "../Physics/Physics.h"
 #include "../Effects/BulletCasing.h"
 #include "../Effects/Decal.h"
 #include "Light.h"
-#include "Floor.h"
 #include "VolumetricBloodSplatter.h"
 #include "../Util.hpp"
 
+#include "../Types/Modular/Ceiling.h"
+#include "../Types/Modular/Floor.h"
+#include "../Types/Modular/Toilet.hpp"
+#include "../Types/Modular/Wall.h"
 
 struct BloodDecal {
     Transform transform;
@@ -36,7 +39,7 @@ struct BloodDecal {
 };
 
 
-#define WALL_HEIGHT 2.4f
+
 
 inline float RandFloat(float min, float max) {
     return min + static_cast <float> (rand()) / (static_cast <float> (RAND_MAX / (max - min)));
@@ -92,35 +95,10 @@ struct SpawnPoint {
 };
 
 
-struct Wall {
-    glm::vec3 begin = glm::vec3(0);
-    glm::vec3 end;
-    float height = 0;
-    GLuint VAO = 0;
-    GLuint VBO = 0;
-    std::vector<Vertex> vertices;
-    int materialIndex = 0;
-    float wallHeight = 2.4f;
-    void CreateMesh();
-    Wall(glm::vec3 begin, glm::vec3 end, float height, int materialIndex);
-    glm::vec3 GetNormal();
-    glm::vec3 GetMidPoint();
-    void Draw();
-    std::vector<Transform> ceilingTrims;
-    std::vector<Transform> floorTrims;
-    std::vector<Line> collisionLines;
-};
 
 
-struct Ceiling {
-    float x1, z1, x2, z2, height;
-    GLuint VAO = 0;
-    GLuint VBO = 0;
-    std::vector<Vertex> vertices;
-    int materialIndex = 0;
-    Ceiling(float x1, float z1, float x2, float z2, float height, int materialIndex);
-    void Draw();
-};
+
+
 
 struct RTMesh {
     GLuint baseVertex = 0;
@@ -184,6 +162,7 @@ namespace Scene {
     inline PxRigidStatic* _sceneRigidDynamic = NULL;
     inline PxShape* _sceneShape = NULL;
 
+    inline std::vector<Toilet> _toilets;
     inline std::vector<BloodDecal> _bloodDecals;
     inline std::vector<VolumetricBloodSplatter> _volumetricBloodSplatters;
     inline std::vector<PickUp> _pickUps;
@@ -204,6 +183,8 @@ namespace Scene {
     inline std::vector<RTMesh> _rtMesh;
     inline std::vector<RTInstance> _rtInstances;
     inline std::vector<Player> _players;
+
+    void LoadMapNEW(std::string mapPath);
 
 	void LoadHardCodedObjects();
 	void LoadMap(std::string mapPath);

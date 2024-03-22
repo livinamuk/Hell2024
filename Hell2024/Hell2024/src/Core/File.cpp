@@ -12,8 +12,8 @@
 #include <fstream>
 #include <string>
 #include <iostream>
-#include "../Core/Scene.h"
 #include "../Core/AssetManager.h"
+#include "../Core/Scene.h"
 
 namespace File {
 	void SaveVec2(rapidjson::Value* object, std::string elementName, glm::vec2 vector, rapidjson::Document::AllocatorType& allocator);

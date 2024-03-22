@@ -35,7 +35,7 @@ void PresentFrameBuffer::Configure(int width, int height) {
 
 	auto status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
 	if (status != GL_FRAMEBUFFER_COMPLETE) {
-		std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << std::endl;
+		std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!\n";
 	}
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);

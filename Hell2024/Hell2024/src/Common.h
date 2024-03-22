@@ -13,8 +13,11 @@
 #include "Math.h"
 #pragma warning(pop)
 
+enum class API { OPENGL, VULKAN, UNDEFINED };
+enum class WindowedMode { WINDOWED, FULLSCREEN };
+
+enum class SplitScreenMode { FULLSCREEN, SPLITSCREEN, SPLITSCREEN_MODE_COUNT };
 enum EngineMode { GAME = 0, FLOORPLAN, EDITOR };
-enum ViewportMode {FULLSCREEN = 0, SPLITSCREEN, VIEWPORTMODE_COUNT};
 enum Weapon { KNIFE = 0, GLOCK, SHOTGUN, AKS74U, MP7, WEAPON_COUNT };
 enum WeaponAction {
     IDLE = 0, 
@@ -55,8 +58,8 @@ enum WeaponAction {
 #define WINDOW_WIDTH 0.85f
 #define WINDOW_HEIGHT 2.1f
 
-#define PLAYER_CAPSULE_HEIGHT 0.5f
-#define PLAYER_CAPSULE_RADIUS 0.1f
+#define PLAYER_CAPSULE_HEIGHT 0.4f
+#define PLAYER_CAPSULE_RADIUS 0.15f
 
 //#define MAP_WIDTH   32
 //#define MAP_HEIGHT  16
@@ -214,10 +217,18 @@ struct GridProbe {
     bool ignore = true; // either blocked by geometry, or out of map range
 };
 
-struct Extent2Di {
-    int width;
-    int height;
+struct RenderItem2DB {
+    std::string textureName;
+    int screenX = 0;
+    int screenY = 0;
+    glm::mat4 modelMatrix = glm::mat4(1);
+    glm::vec3 color = WHITE;
+    bool centered = false;
+    GLuint target = GL_TEXTURE_2D;
+    void* parent = nullptr;
 };
+
+
 
 struct UIRenderInfo {
     std::string textureName;
@@ -230,7 +241,7 @@ struct UIRenderInfo {
     void* parent = nullptr;
 };
 
-//enum class RaycastObjectType { NONE, FLOOR, WALLS, ENEMY, DOOR };
+//enum class RigidStaticType { NONE, FLOOR, WALLS, ENEMY, DOOR };
 
 
 

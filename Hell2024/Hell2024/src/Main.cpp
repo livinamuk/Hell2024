@@ -6,24 +6,10 @@ extern "C" {
 }
 
 #include "Engine.h"
-#include "Util.hpp"
+#include <iostream>
 
 int main() {
-
-	/*
-	for (int i = 0; i < 100; i++) {
-		int result = Util::RandomInt(0, 1);
-		if (result == 0) {
-			std::cout << "ak item pickup\n";
-		}
-		else {
-			std::cout << "glass projectiles (definitely)\n";
-		}
-	}
-
-
-	return 0;*/
-
-   Engine::Run();
-   return 0;
+    std::cout << "We are all alone on life's journey, held captive by the limitations of human consciousness.\n";
+    Engine::RunOld();
+    return 0;
 }

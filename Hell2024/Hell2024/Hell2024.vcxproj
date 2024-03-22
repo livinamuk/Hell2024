@@ -62,7 +62,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>vendor\tinyexr;vendor\compressonator\include;vendor\tracy\public;vendor\tinyobj;vendor\GLFW\include;vendor\glm;vendor\glad\include;vendor\stb_image;vendor\fmod\include;vendor\assimp\include;vendor\rapidjson\include;vendor\physx\include;vendor\thread_pool\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>vendor\nlohmann_json\include;vendor\lz4\include;vendor\VulkanMemoryAllocator\include;vendor\VulkanSDK\1.3.250.0\Include;vendor\tinyexr;vendor\compressonator\include;vendor\tracy\public;vendor\tinyobj;vendor\GLFW\include;vendor\glm;vendor\glad\include;vendor\stb_image;vendor\fmod\include;vendor\assimp\include;vendor\rapidjson\include;vendor\physx\include;vendor\thread_pool\include</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
@@ -71,8 +71,8 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>vendor\GLFW\lib\Release;vendor\fmod\lib;vendor\physx\lib\Debug;vendor\assimp\lib;vendor\compressonator\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>glfw3.lib;fmod_vc.lib;assimp-vc142-mt.lib;Compressonator_MD_DLL.lib;PhysX_64.lib;PhysXCommon_64.lib;PhysXCooking_64.lib;PhysXExtensions_static_64.lib;PhysXFoundation_64.lib;PhysXTask_static_64.lib;PhysXPvdSDK_static_64.lib;PVDRuntime_64.lib;PhysXCharacterKinematic_static_64.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>vendor\GLFW\lib\Release;vendor\fmod\lib;vendor\physx\lib\Debug;vendor\assimp\lib;vendor\compressonator\lib;vendor\DDS;vendor\Vulkan;vendor\lz4\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>glfw3.lib;fmod_vc.lib;assimp-vc142-mt.lib;Compressonator_MD_DLL.lib;PhysX_64.lib;PhysXCommon_64.lib;PhysXCooking_64.lib;PhysXExtensions_static_64.lib;PhysXFoundation_64.lib;PhysXTask_static_64.lib;PhysXPvdSDK_static_64.lib;PVDRuntime_64.lib;PhysXCharacterKinematic_static_64.lib;vulkan-1.lib;shaderc_combined.lib;liblz4_static.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <TreatLinkerWarningAsErrors>false</TreatLinkerWarningAsErrors>
     </Link>
     <PostBuildEvent>
@@ -98,7 +98,7 @@ copy /Y "$(ProjectDir)vendor\dll_debug\PVDRuntime_64.dll" "$(TargetDir)PVDRuntim
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;TRACY_ENABLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>vendor\tinyexr;vendor\compressonator\include;vendor\tracy\public;vendor\tinyobj;vendor\GLFW\include;vendor\glm;vendor\glad\include;vendor\stb_image;vendor\fmod\include;vendor\assimp\include;vendor\rapidjson\include;vendor\physx\include;vendor\thread_pool\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>vendor\nlohmann_json\include;vendor\lz4\include;vendor\VkBootstrap;vendor\VulkanMemoryAllocator\include;vendor\VulkanSDK\1.3.250.0\Include;vendor\tinyexr;vendor\compressonator\include;vendor\tracy\public;vendor\tinyobj;vendor\GLFW\include;vendor\glm;vendor\glad\include;vendor\stb_image;vendor\fmod\include;vendor\assimp\include;vendor\rapidjson\include;vendor\physx\include;vendor\thread_pool\include</AdditionalIncludeDirectories>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
@@ -113,8 +113,8 @@ copy /Y "$(ProjectDir)vendor\dll_debug\PVDRuntime_64.dll" "$(TargetDir)PVDRuntim
       <EnableCOMDATFolding>false</EnableCOMDATFolding>
       <OptimizeReferences>false</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>vendor\compressonator\lib;vendor\GLFW\lib\Release;vendor\fmod\lib;vendor\assimp\lib;vendor\physx\lib\Release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>glfw3.lib;fmod_vc.lib;assimp-vc142-mt.lib;Compressonator_MD_DLL.lib;PhysX_64.lib;PhysXCommon_64.lib;PhysXCooking_64.lib;PhysXFoundation_64.lib;PhysXTask_static_64.lib;PhysXPvdSDK_static_64.lib;PVDRuntime_64.lib;PhysXExtensions_static_64.lib;PhysXCharacterKinematic_static_64.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>vendor\compressonator\lib;vendor\GLFW\lib\Release;vendor\fmod\lib;vendor\assimp\lib;vendor\physx\lib\Release;vendor\Vulkan;vendor\DDS;vendor\lz4\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>glfw3.lib;fmod_vc.lib;assimp-vc142-mt.lib;Compressonator_MD_DLL.lib;PhysX_64.lib;PhysXCommon_64.lib;PhysXCooking_64.lib;PhysXFoundation_64.lib;PhysXTask_static_64.lib;PhysXPvdSDK_static_64.lib;PVDRuntime_64.lib;PhysXExtensions_static_64.lib;PhysXCharacterKinematic_static_64.lib;vulkan-1.lib;shaderc_combined.lib;liblz4_static.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <TreatLinkerWarningAsErrors>false</TreatLinkerWarningAsErrors>
       <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
     </Link>
@@ -134,27 +134,35 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="src\API\OpenGL\Types\GL_texture.cpp" />
+    <ClCompile Include="src\API\Vulkan\Types\VK_texture.cpp" />
+    <ClCompile Include="src\Core\AssetManager.cpp" />
     <ClCompile Include="src\Core\DebugMenu.cpp" />
     <ClCompile Include="src\Core\Animation\Animation.cpp" />
     <ClCompile Include="src\Core\Animation\SkinnedModel.cpp" />
-    <ClCompile Include="src\Core\AssetManager.cpp" />
+    <ClCompile Include="src\API\OpenGL\GL_assetManager.cpp" />
     <ClCompile Include="src\Core\Door.cpp" />
     <ClCompile Include="src\Core\ExrTexture.cpp" />
-    <ClCompile Include="src\Core\Floor.cpp" />
+    <ClCompile Include="src\Types\Modular\Ceiling.cpp" />
+    <ClCompile Include="src\Types\Modular\Floor.cpp" />
     <ClCompile Include="src\Core\Floorplan.cpp" />
     <ClCompile Include="src\Core\AnimatedGameObject.cpp" />
     <ClCompile Include="src\Core\FbxImporter.cpp" />
     <ClCompile Include="src\Core\File.cpp" />
+    <ClCompile Include="src\Core\Game.cpp" />
     <ClCompile Include="src\Core\GameObject.cpp" />
-    <ClCompile Include="src\Core\GL.cpp" />
+    <ClCompile Include="src\Core\Game.h" />
+    <ClCompile Include="src\Types\Modular\Wall.cpp" />
+    <ClCompile Include="src\BackEnd\BackEnd.cpp" />
+    <ClCompile Include="src\API\OpenGL\GL_backEnd.cpp" />
     <ClCompile Include="src\Core\Input.cpp" />
     <ClCompile Include="src\Core\InputMulti.cpp" />
     <ClCompile Include="src\Core\Light.cpp" />
-    <ClCompile Include="src\Core\Physics.cpp" />
+    <ClCompile Include="src\Physics\Physics.cpp" />
     <ClCompile Include="src\Core\Player.cpp" />
     <ClCompile Include="src\Core\Ragdoll.cpp" />
     <ClCompile Include="src\Core\Scene.cpp" />
-    <ClCompile Include="src\Core\TextBlitting.cpp" />
+    <ClCompile Include="src\Renderer\TextBlitting.cpp" />
     <ClCompile Include="src\Core\VolumetricBloodSplatter.cpp" />
     <ClCompile Include="src\Core\Window.cpp" />
     <ClCompile Include="src\Effects\BulletCasing.cpp" />
@@ -162,33 +170,53 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <ClCompile Include="src\Effects\MuzzleFlash.cpp" />
     <ClCompile Include="src\Engine.cpp" />
     <ClCompile Include="src\Main.cpp" />
-    <ClCompile Include="src\Renderer\DDS_Helpers.cpp" />
+    <ClCompile Include="vendor\DDS\DDS_Helpers.cpp" />
     <ClCompile Include="src\Renderer\GBuffer.cpp" />
-    <ClCompile Include="src\Renderer\Mesh.cpp" />
-    <ClCompile Include="src\Renderer\Model.cpp" />
+    <ClCompile Include="src\API\OpenGL\Types\GL_mesh.cpp" />
+    <ClCompile Include="src\API\OpenGL\Types\GL_model.cpp" />
     <ClCompile Include="src\Renderer\NumberBlitter.cpp" />
+    <ClCompile Include="src\API\OpenGL\GL_renderer.cpp" />
+    <ClCompile Include="src\API\OpenGL\Types\GL_types.cpp" />
     <ClCompile Include="src\Renderer\PresentFrameBuffer.cpp" />
     <ClCompile Include="src\Renderer\Renderer.cpp" />
     <ClCompile Include="src\Renderer\Shader.cpp" />
     <ClCompile Include="src\Renderer\ShadowMap.cpp" />
-    <ClCompile Include="src\Renderer\Texture.cpp" />
+    <ClCompile Include="src\Types\Texture.cpp" />
     <ClCompile Include="src\Renderer\Texture3D.cpp" />
+    <ClCompile Include="src\API\Vulkan\VK_assetManager.cpp" />
+    <ClCompile Include="src\API\Vulkan\Types\VK_mesh.cpp" />
+    <ClCompile Include="src\API\Vulkan\VK_renderer.cpp" />
+    <ClCompile Include="src\API\Vulkan\Types\VK_shader.hpp" />
+    <ClCompile Include="src\API\Vulkan\Types\VK_types.cpp" />
+    <ClCompile Include="src\Types\Mesh.cpp" />
+    <ClCompile Include="src\Types\Model.cpp" />
     <ClCompile Include="vendor\glad\src\glad.c" />
     <ClCompile Include="vendor\im3d\im3d.cpp" />
-    <ClCompile Include="vendor\stb_image\stb_image.cpp" />
+    <ClCompile Include="vendor\lz4\include\lz4.c" />
+    <ClCompile Include="vendor\lz4\include\lz4file.c" />
+    <ClCompile Include="vendor\lz4\include\lz4frame.c" />
+    <ClCompile Include="vendor\lz4\include\lz4hc.c" />
+    <ClCompile Include="vendor\lz4\include\xxhash.c" />
     <ClCompile Include="vendor\tracy\public\TracyClient.cpp" />
+    <ClCompile Include="src\API\Vulkan\VK_backEnd.cpp" />
+    <ClCompile Include="vendor\VkBootstrap\VkBootstrap.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\API\OpenGL\Types\GL_texture.h" />
+    <ClInclude Include="src\API\Vulkan\Types\VK_texture.h" />
+    <ClInclude Include="src\Core\AssetManager.h" />
     <ClInclude Include="src\Core\Config.hpp" />
     <ClInclude Include="src\Core\DebugMenu.h" />
     <ClInclude Include="src\Common.h" />
     <ClInclude Include="src\Core\Animation\Animation.h" />
     <ClInclude Include="src\Core\Animation\SkinnedModel.h" />
-    <ClInclude Include="src\Core\AssetManager.h" />
+    <ClInclude Include="src\API\OpenGL\GL_assetManager.h" />
     <ClInclude Include="src\Core\Audio.hpp" />
     <ClInclude Include="src\Core\Door.h" />
     <ClInclude Include="src\Core\ExrTexture.h" />
-    <ClInclude Include="src\Core\Floor.h" />
+    <ClInclude Include="src\Types\Modular\Ceiling.h" />
+    <ClInclude Include="src\Types\Modular\Class.h" />
+    <ClInclude Include="src\Types\Modular\Floor.h" />
     <ClInclude Include="src\Core\Floorplan.h" />
     <ClInclude Include="src\Core\AnimatedGameObject.h" />
     <ClInclude Include="src\Core\FbxImporter.h" />
@@ -197,38 +225,65 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <ClInclude Include="src\Core\Gizmo.hpp" />
     <ClInclude Include="src\Core\InputMulti.h" />
     <ClInclude Include="src\Core\Light.h" />
+    <ClInclude Include="src\Types\Modular\ModularCommon.h" />
+    <ClInclude Include="src\Types\Modular\Toilet.hpp" />
+    <ClInclude Include="src\Types\Modular\Wall.h" />
     <ClInclude Include="src\Core\Ragdoll.h" />
     <ClInclude Include="src\Core\VolumetricBloodSplatter.h" />
     <ClInclude Include="src\EngineState.hpp" />
-    <ClInclude Include="src\Core\GL.h" />
+    <ClInclude Include="src\API\OpenGL\GL_backEnd.h" />
     <ClInclude Include="src\Core\Input.h" />
     <ClInclude Include="src\Core\keycodes.h" />
-    <ClInclude Include="src\Core\Physics.h" />
+    <ClInclude Include="src\Physics\Physics.h" />
     <ClInclude Include="src\Core\Player.h" />
     <ClInclude Include="src\Core\Scene.h" />
-    <ClInclude Include="src\Core\TextBlitter.h" />
+    <ClInclude Include="src\Renderer\TextBlitter.h" />
     <ClInclude Include="src\Core\Window.h" />
     <ClInclude Include="src\Effects\BulletCasing.h" />
     <ClInclude Include="src\Effects\Decal.h" />
     <ClInclude Include="src\Effects\MuzzleFlash.h" />
     <ClInclude Include="src\Engine.h" />
     <ClInclude Include="src\Math.h" />
-    <ClInclude Include="src\Renderer\DDS_Helpers.h" />
+    <ClInclude Include="src\Physics\RigidBody.hpp" />
+    <ClInclude Include="src\Physics\RigidStatic.hpp" />
+    <ClInclude Include="vendor\DDS\DDS_Helpers.h" />
     <ClInclude Include="src\Renderer\GBuffer.h" />
-    <ClInclude Include="src\Renderer\Mesh.h" />
+    <ClInclude Include="src\API\OpenGL\Types\GL_mesh.h" />
     <ClInclude Include="src\Renderer\MeshUtil.hpp" />
-    <ClInclude Include="src\Renderer\Model.h" />
+    <ClInclude Include="src\API\OpenGL\Types\GL_model.h" />
     <ClInclude Include="src\Renderer\NumberBlitter.h" />
+    <ClInclude Include="src\API\OpenGL\GL_renderer.h" />
+    <ClInclude Include="src\API\OpenGL\Types\GL_types.h" />
     <ClInclude Include="src\Renderer\PresentFrameBuffer.h" />
     <ClInclude Include="src\Renderer\Renderer.h" />
+    <ClInclude Include="src\BackEnd\BackEnd.h" />
+    <ClInclude Include="src\Renderer\RendererCommon.h" />
     <ClInclude Include="src\Renderer\Shader.h" />
     <ClInclude Include="src\Renderer\ShadowMap.h" />
-    <ClInclude Include="src\Renderer\Texture.h" />
+    <ClInclude Include="src\Types\Texture.h" />
     <ClInclude Include="src\Renderer\Texture3D.h" />
+    <ClInclude Include="src\API\Vulkan\VK_assetManager.h" />
+    <ClInclude Include="src\API\Vulkan\Types\VK_mesh.h" />
+    <ClInclude Include="src\API\Vulkan\Types\VK_pipeline.hpp" />
+    <ClInclude Include="src\API\Vulkan\Types\VK_types.h" />
+    <ClInclude Include="src\API\Vulkan\VK_renderer.h" />
+    <ClInclude Include="src\API\Vulkan\VK_util.hpp" />
     <ClInclude Include="src\Threading.h" />
     <ClInclude Include="src\Timer.hpp" />
+    <ClInclude Include="src\Types\Mesh.h" />
+    <ClInclude Include="src\Types\Model.h" />
     <ClInclude Include="src\Util.hpp" />
+    <ClInclude Include="vendor\lz4\include\lz4.h" />
+    <ClInclude Include="vendor\lz4\include\lz4file.h" />
+    <ClInclude Include="vendor\lz4\include\lz4frame.h" />
+    <ClInclude Include="vendor\lz4\include\lz4frame_static.h" />
+    <ClInclude Include="vendor\lz4\include\lz4hc.h" />
+    <ClInclude Include="vendor\lz4\include\xxhash.h" />
     <ClInclude Include="vendor\tinyexr\tinyexr.h" />
+    <ClInclude Include="src\API\Vulkan\VK_backEnd.h" />
+    <ClInclude Include="vendor\VkBootstrap\VkBootstrap.h" />
+    <ClInclude Include="vendor\VkBootstrap\VkBootstrapDispatch.h" />
+    <ClInclude Include="vendor\VulkanMemoryAllocator\include\vk_mem_alloc.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="res\shaders\animated_quad.frag" />
@@ -261,6 +316,8 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <None Include="res\shaders\geometry_instanced.vert" />
     <None Include="res\shaders\glass.frag" />
     <None Include="res\shaders\glass.vert" />
+    <None Include="res\shaders\NEW_geometry.frag" />
+    <None Include="res\shaders\NEW_geometry.vert" />
     <None Include="res\shaders\outline.frag" />
     <None Include="res\shaders\outline.vert" />
     <None Include="res\shaders\skin.comp" />
@@ -279,8 +336,12 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <None Include="res\shaders\solid_color.vert" />
     <None Include="res\shaders\test.frag" />
     <None Include="res\shaders\test.vert" />
+    <None Include="res\shaders\toilet_water.frag" />
+    <None Include="res\shaders\toilet_water.vert" />
     <None Include="res\shaders\ui.frag" />
     <None Include="res\shaders\ui.vert" />
+    <None Include="res\shaders\ui_new.frag" />
+    <None Include="res\shaders\ui_new.vert" />
     <None Include="res\shaders\voxelize.frag" />
     <None Include="res\shaders\voxelize.vert" />
   </ItemGroup>

@@ -43,6 +43,13 @@ glm::mat4 Decal::GetModelMatrix() {
     rotationMatrix[2] = glm::vec4(n, 0);
 
     modelMatrix = parentMatrix * localTranslation.to_mat4() * rotationMatrix * localRotation.to_mat4();
+
+    if (type == Decal::Type::GLASS) {
+        Transform transform;
+        transform.scale = glm::vec3(2.0f);
+        modelMatrix = modelMatrix * transform.to_mat4();
+    }
+
     return modelMatrix;
 }
 

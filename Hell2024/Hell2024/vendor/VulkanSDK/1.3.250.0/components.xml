@@ -1,0 +1,26 @@
+<Packages>
+    <ApplicationName>Vulkan SDK 1.3.250.0</ApplicationName>
+    <ApplicationVersion>1.0.0</ApplicationVersion>
+    <Package>
+        <Name>com.lunarg.vulkan</Name>
+        <Title>The Vulkan SDK</Title>
+        <Description>Install the Vulkan SDK and optional components.</Description>
+        <TreeName></TreeName>
+        <Version>1.3.250.0</Version>
+        <LastUpdateDate></LastUpdateDate>
+        <InstallDate>2023-06-27</InstallDate>
+        <Size>0</Size>
+        <ForcedInstallation>true</ForcedInstallation>
+    </Package>
+    <Package>
+        <Name>com.lunarg.vulkan.core</Name>
+        <Title>The Vulkan SDK Core (Always Installed)</Title>
+        <Description>These components make up the core Vulkan SDK. This includes the Vulkan Loader, Layers, VkConfig, and other essential shader development tools.</Description>
+        <TreeName></TreeName>
+        <Version>1.3.250.0</Version>
+        <LastUpdateDate></LastUpdateDate>
+        <InstallDate>2023-06-27</InstallDate>
+        <Size>577675496</Size>
+        <ForcedInstallation>true</ForcedInstallation>
+    </Package>
+</Packages>

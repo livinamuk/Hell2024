@@ -1,5 +1,5 @@
 #include "VolumetricBloodSplatter.h"
-#include "AssetManager.h"
+#include "../API/OpenGL/GL_assetManager.h"
 
 GLuint VolumetricBloodSplatter::s_vao;
 GLuint VolumetricBloodSplatter::s_buffer_mode_matrices;
@@ -76,49 +76,49 @@ void VolumetricBloodSplatter::Draw(Shader* shader)
     shader->SetMat4("u_MatrixWorld", GetModelMatrix());
     shader->SetFloat("u_Time", this->m_CurrentTime);
 
-    Model* m_model = NULL;
+    OpenGLModel* m_model = NULL;
 
     if (m_type == 0) {
         glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, AssetManager::s_ExrTexture_pos.gTexId);
+        glBindTexture(GL_TEXTURE_2D, OpenGLAssetManager::s_ExrTexture_pos.gTexId);
         glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, AssetManager::s_ExrTexture_norm.gTexId);
-        m_model = AssetManager::GetModel("blood_mesh");
+        glBindTexture(GL_TEXTURE_2D, OpenGLAssetManager::s_ExrTexture_norm.gTexId);
+        m_model = OpenGLAssetManager::GetModel("blood_mesh");
     }
     else if (m_type == 7) {
         glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, AssetManager::s_ExrTexture_pos7.gTexId);
+        glBindTexture(GL_TEXTURE_2D, OpenGLAssetManager::s_ExrTexture_pos7.gTexId);
         glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, AssetManager::s_ExrTexture_norm7.gTexId);
-        m_model = AssetManager::GetModel("blood_mesh7");
+        glBindTexture(GL_TEXTURE_2D, OpenGLAssetManager::s_ExrTexture_norm7.gTexId);
+        m_model = OpenGLAssetManager::GetModel("blood_mesh7");
     }
     else if (m_type == 6) {
         glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, AssetManager::s_ExrTexture_pos6.gTexId);
+        glBindTexture(GL_TEXTURE_2D, OpenGLAssetManager::s_ExrTexture_pos6.gTexId);
         glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, AssetManager::s_ExrTexture_norm6.gTexId);
-        m_model = AssetManager::GetModel("blood_mesh6");
+        glBindTexture(GL_TEXTURE_2D, OpenGLAssetManager::s_ExrTexture_norm6.gTexId);
+        m_model = OpenGLAssetManager::GetModel("blood_mesh6");
     }
     else if (m_type == 8) {
         glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, AssetManager::s_ExrTexture_pos8.gTexId);
+        glBindTexture(GL_TEXTURE_2D, OpenGLAssetManager::s_ExrTexture_pos8.gTexId);
         glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, AssetManager::s_ExrTexture_norm8.gTexId);
-        m_model = AssetManager::GetModel("blood_mesh8");
+        glBindTexture(GL_TEXTURE_2D, OpenGLAssetManager::s_ExrTexture_norm8.gTexId);
+        m_model = OpenGLAssetManager::GetModel("blood_mesh8");
     }
     else if (m_type == 9) {
         glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, AssetManager::s_ExrTexture_pos9.gTexId);
+        glBindTexture(GL_TEXTURE_2D, OpenGLAssetManager::s_ExrTexture_pos9.gTexId);
         glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, AssetManager::s_ExrTexture_norm9.gTexId);
-        m_model = AssetManager::GetModel("blood_mesh9");
+        glBindTexture(GL_TEXTURE_2D, OpenGLAssetManager::s_ExrTexture_norm9.gTexId);
+        m_model = OpenGLAssetManager::GetModel("blood_mesh9");
     }
     else if (m_type == 4) {
         glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, AssetManager::s_ExrTexture_pos4.gTexId);
+        glBindTexture(GL_TEXTURE_2D, OpenGLAssetManager::s_ExrTexture_pos4.gTexId);
         glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, AssetManager::s_ExrTexture_norm4.gTexId);
-        m_model = AssetManager::GetModel("blood_mesh4");
+        glBindTexture(GL_TEXTURE_2D, OpenGLAssetManager::s_ExrTexture_norm4.gTexId);
+        m_model = OpenGLAssetManager::GetModel("blood_mesh4");
     }
 
     int VAO = m_model->_meshes[0]._VAO;

@@ -2,25 +2,38 @@
 #include "Renderer.h"
 #include "GBuffer.h"
 #include "PresentFrameBuffer.h"
-#include "Mesh.h"
 #include "MeshUtil.hpp"
 #include "Shader.h"
 #include "ShadowMap.h"
-#include "Texture.h"
 #include "Texture3D.h"
 #include "../common.h"
-#include "../Util.hpp"
+
+#include "../API/OpenGL/GL_renderer.h"
+#include "../API/OpenGL/GL_assetManager.h"
+#include "../API/OpenGL/Types/GL_mesh.h"
+#include "../API/OpenGL/Types/GL_model.h"
+#include "../API/Vulkan/VK_renderer.h"
+#include "../BackEnd/BackEnd.h"
+#include "../Core/AnimatedGameObject.h"
 #include "../Core/Audio.hpp"
-#include "../Core/GL.h"
-#include "../Core/Physics.h"
-#include "../Core/Player.h"
-#include "../Core/Input.h"
-#include "../Core/Scene.h"
 #include "../Core/AssetManager.h"
-#include "../Core/TextBlitter.h"
+#include "../Core/DebugMenu.h"
 #include "../Core/Floorplan.h"
-#include "Model.h"
+#include "../Core/Game.h"
+#include "../Core/Gizmo.hpp"
+#include "../Core/Input.h"
+#include "../Core/Player.h"
+#include "../Core/Scene.h"
+#include "../Effects/MuzzleFlash.h"
+#include "../Types/Texture.h"
+#include "../Physics/Physics.h"
+#include "../Util.hpp"
+
 #include "NumberBlitter.h"
+#include "RendererCommon.h"
+#include "TextBlitter.h"
+
+#include "../EngineState.hpp"
 #include "../Timer.hpp"
 
 #include <vector>
@@ -28,13 +41,23 @@
 #include <format>
 #include <future>
 #include <algorithm>
+#include <stb_image.h>
 
-#include "../Core/AnimatedGameObject.h"
-#include "../Effects/MuzzleFlash.h"
-#include "../Core/DebugMenu.h"
-#include "../EngineState.hpp"
+struct RenderTarget {
+    GLuint fbo = { 0 };
+    GLuint texture = { 0 };
+    GLuint width = { 0 };
+    GLuint height = { 0 };
 
-#include "../Core/Gizmo.hpp"
+    void Create(int textureWidth, int textureHeight) {
+        if (fbo != 0) {
+            glDeleteFramebuffers(1, &fbo);
+        }
+        glGenFramebuffers(1, &fbo);
+        this->width = textureWidth;
+        this->height = textureHeight;
+    }
+};
 
 std::vector<glm::vec3> debugPoints;
 
@@ -44,27 +67,11 @@ struct EditorObject {
     PhysicsObjectType type;
 };
 
+
 EditorObject _selectedEditorObject;
 EditorObject _hoveredEditorObject;
-
-struct RenderTarget {
-    GLuint fbo = { 0 };
-	GLuint texture = { 0 };
-	GLuint width = { 0 };
-	GLuint height = { 0 };
-
-    void Create(int width, int height) {
-		if (fbo != 0) {
-			glDeleteFramebuffers(1, &fbo);
-		}
-		glGenFramebuffers(1, &fbo);
-		this->width = width;
-		this->height = height;
-    }
-};
-
 RenderTarget _menuRenderTarget;
-RenderTarget _loadingScreenRenderTarget;
+//RenderTarget _loadingScreenRenderTarget;
 
 struct BlurBuffer {
 	GLuint width = 0;
@@ -102,13 +109,13 @@ struct Shaders {
     Shader test;
     Shader bloodDecals;
     Shader bloodVolumetric;
+    Shader toiletWater;
     ComputeShader compute;
 	ComputeShader pointCloud;
 	ComputeShader propogateLight;
 	ComputeShader computeTest;
     ComputeShader skin;
-    //ComputeShader propogationList;
-    //ComputeShader calculateIndirectDispatchSize;
+
 } _shaders;
 
 struct SSBOs {
@@ -140,11 +147,17 @@ struct PlayerRenderTarget {
 };
 
 GLuint _progogationGridTexture = 0;
-Mesh _cubeMesh;
+OpenGLMesh _cubeMesh;
 unsigned int _pointLineVAO;
 unsigned int _pointLineVBO;
-int _renderWidth = 768;// 512 * 1.5f;
-int _renderHeight = 432;// 288 * 1.5f;
+
+constexpr int _horizontalTileCount = PRESENT_WIDTH / 24 * 2;
+constexpr int _verticalTileCount = PRESENT_HEIGHT / 24 * 2;
+
+// Light volumes
+// *************
+// bounding volumes must not exceed the lights radius
+// but can be smaller, of course
 
 std::vector<PlayerRenderTarget> _playerRenderTargets;
 std::vector<Point> _points;
@@ -164,19 +177,14 @@ float _mapHeight = 8;
 float _mapDepth = 16; 
 //std::vector<int> _newDirtyPointCloudIndices;
 int _floorVertexCount;
-Mesh _quadMesh;
+OpenGLMesh _quadMesh;
 bool _lastBlendState = false;
 
 const int _gridTextureWidth = (int)(_mapWidth / _propogationGridSpacing);
 const int _gridTextureHeight = (int)(_mapHeight / _propogationGridSpacing);
 const int _gridTextureDepth = (int)(_mapDepth / _propogationGridSpacing);
 const int _gridTextureSize = (int)(_gridTextureWidth * _gridTextureHeight * _gridTextureDepth);
-//const int _xSize = std::ceil(_gridTextureWidth * 0.25f);
-//const int _ySize = std::ceil(_gridTextureHeight * 0.25f);
-//const int _zSize = std::ceil(_gridTextureDepth * 0.25f);
 
-//std::vector<glm::uvec4> _gridIndices;
-//std::vector<glm::uvec4> _newGridIndices;
 static std::vector<glm::uvec4> _probeCoordsWithinMapBounds;
 static std::vector<glm::vec3> _probeWorldPositionsWithinMapBounds;
 std::vector<glm::uvec4> _dirtyProbeCoords;
@@ -185,9 +193,6 @@ int _dirtyProbeCount;
 
 std::vector<glm::mat4> _glockMatrices;
 std::vector<glm::mat4> _aks74uMatrices;
-
-glm::vec3 debugBonePosition = glm::vec3(-1, -1, -1);
-
 
 enum RenderMode { COMPOSITE, DIRECT_LIGHT, INDIRECT_LIGHT, POINT_CLOUD, MODE_COUNT } _mode;
 enum DebugLineRenderMode { 
@@ -198,7 +203,91 @@ enum DebugLineRenderMode {
     RAYTRACE_LAND, 
     PHYSX_EDITOR, 
     BOUNDING_BOXES,
-    DEBUG_LINE_MODE_COUNT} _debugLineRenderMode;
+    DEBUG_LINE_MODE_COUNT
+} _debugLineRenderMode;
+
+// new shit
+
+void RenderWorld(Player* player);
+void RenderUI(Player* player);
+void RenderEditor3D(Player* player);
+void RenderEditorTopDown();
+
+void Renderer::RenderFrame() {
+
+    Player* playerOne = &Scene::_players[0];
+
+    // Game
+    if (Game::GetGameMode() == Game::GameMode::GAME) {
+        if (Game::GetMultiplayerMode() == Game::MultiplayerMode::NONE ||
+            Game::GetMultiplayerMode() == Game::MultiplayerMode::ONLINE) {
+            RenderWorld(playerOne);
+            RenderUI(playerOne);
+        }
+        else if (Game::GetMultiplayerMode() == Game::MultiplayerMode::LOCAL) {
+            for (Player& player : Scene::_players) {
+                RenderWorld(&player);
+                RenderUI(&player);
+            }
+        }
+    }
+    // 3D editor
+    else if (Game::GetGameMode() == Game::GameMode::EDITOR_3D) {
+        RenderWorld(playerOne);
+        RenderEditor3D(playerOne);
+    }
+    // Top down editor
+    else if (Game::GetGameMode() == Game::GameMode::EDITOR_TOP_DOWN) {
+        RenderEditorTopDown();
+    }
+}
+
+void RenderWorld(Player* player) {
+
+    // Create render items
+    std::vector<RenderItem3D> renderItems;
+
+    for (Wall& wall : Scene::_walls) {
+        renderItems.push_back(wall.GetRenderItem());
+    }
+    for (Floor& floor : Scene::_floors) {
+        renderItems.push_back(floor.GetRenderItem());
+    }
+    for (Ceiling& ceiling : Scene::_ceilings) {
+        renderItems.push_back(ceiling.GetRenderItem());
+    }
+
+    // Draw em
+    if (BackEnd::GetAPI() == API::OPENGL) {
+        OpenGLRenderer::RenderWorld(renderItems);
+    }
+    else if (BackEnd::GetAPI() == API::VULKAN) {
+        VulkanRenderer::RenderWorld(renderItems);
+    }
+}
+
+void Renderer::HotloadShadersNEW() {
+    if (BackEnd::GetAPI() == API::OPENGL) {
+        OpenGLRenderer::HotloadShaders();
+    }
+    else if (BackEnd::GetAPI() == API::VULKAN) {
+        // TO DO
+    }
+}
+
+void RenderUI(Player* player) {
+
+}
+
+void RenderEditor3D(Player* player) {
+
+}
+
+void RenderEditorTopDown() {
+
+}
+
+// old shit
 
 void DrawHudAmmo(Player* player);
 void DrawHudLowRes(Player* player);
@@ -225,6 +314,7 @@ void FindProbeCoordsWithinMapBounds();
 void CalculateDirtyCloudPoints();
 void CalculateDirtyProbeCoords();
 void GlassPass(Player* player);
+void ToietWaterPass(Player* player);
 void BlitDebugTexture(GLint fbo, GLenum colorAttachment, GLint srcWidth, GLint srcHeight);
 void DrawQuad(int viewportWidth, int viewPortHeight, int textureWidth, int textureHeight, int xPos, int yPos, bool centered = false, float scale = 1.0f, int xSize = -1, int ySize = -1);
 void SkyBoxPass(Player* player);
@@ -232,6 +322,7 @@ void QueueAABBForRenering(PxRigidStatic* body);
 void QueueAABBForRenering(PxRigidBody* body);
 void QueueAABBForRenering(AABB& aabb, glm::vec3 color);
 void DrawInstancedVAO(GLuint vao, GLsizei indexCount, std::vector<glm::mat4>& matrices);
+void RenderVATBlood(Player* player);
 
 void SetBlendState(bool state) {
     if (state != _lastBlendState) {
@@ -258,202 +349,22 @@ PlayerRenderTarget& GetPlayerRenderTarget(int playerIndex) {
 	return _playerRenderTargets[playerIndex];
 }
 
-void GlassPass(Player* player) {
+void Renderer::InitMinimumGL() {
 
-    glm::mat4 projection = player->GetProjectionMatrix();// Renderer::GetProjectionMatrix(_depthOfFieldScene);
-	glm::mat4 view = player->GetViewMatrix();
-
-	int playerIndex = GetPlayerIndexFromPlayerPointer(player);
-	PlayerRenderTarget& playerRenderTarget = GetPlayerRenderTarget(playerIndex);
-	GBuffer& gBuffer = playerRenderTarget.gBuffer;
+    _shaders.UI.Load("ui.vert", "ui.frag");
     
-	gBuffer.Bind();
-	unsigned int attachments[1] = { GL_COLOR_ATTACHMENT4 };
-	glDrawBuffers(1, attachments);
-	glViewport(0, 0, gBuffer.GetWidth(), gBuffer.GetHeight());
-	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-	//glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	glEnable(GL_DEPTH_TEST);
-	glEnable(GL_CULL_FACE);
-	glCullFace(GL_BACK);
-	_shaders.glass.Use();
-	_shaders.glass.SetMat4("projection", projection);
-	_shaders.glass.SetMat4("view", view);
-	_shaders.glass.SetVec3("viewPos", player->GetViewPos());
-	_shaders.glass.SetFloat("screenWidth", gBuffer.GetWidth());
-	_shaders.glass.SetFloat("screenHeight", gBuffer.GetHeight());
-
-	_shaders.glass.SetInt("lightCount", std::min((int)Scene::_lights.size(), 32));
-	auto& lights = Scene::_lights;
-	for (int i = 0; i < lights.size(); i++) {
-		_shaders.glass.SetVec3("lights[" + std::to_string(i) + "].position", lights[i].position);
-		_shaders.glass.SetVec3("lights[" + std::to_string(i) + "].color", lights[i].color);
-		_shaders.glass.SetFloat("lights[" + std::to_string(i) + "].radius", lights[i].radius);
-		_shaders.glass.SetFloat("lights[" + std::to_string(i) + "].strength", lights[i].strength);
-	}
-
-    AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("WindowExterior"));
-	glActiveTexture(GL_TEXTURE4);
-	glBindTexture(GL_TEXTURE_2D, gBuffer._gLightingTexture);
-
-	//glDisable(GL_CULL_FACE);
-    _shaders.glass.SetBool("isWindow", true);
-	for (Window& window : Scene::_windows) {
-		_shaders.glass.SetMat4("model", window.GetModelMatrix());
-        AssetManager::GetModel("Glass")->Draw();
-    }
-    _shaders.glass.SetBool("isWindow", false);
-
-
-    // draw the scope
-    if (player->GetCurrentWeaponIndex() == AKS74U && !player->InADS() && player->_hasAKS74UScope) {
-        AnimatedGameObject* ak = &player->GetFirstPersonWeapon();
-        SkinnedModel* skinnedModel = ak->_skinnedModel;
-        int boneIndex = skinnedModel->m_BoneMapping["Weapon"];
-        if (ak->_animatedTransforms.worldspace.size()) {
-            glm::mat4 boneMatrix = ak->_animatedTransforms.worldspace[boneIndex];
-            glm::mat4 m = ak->GetModelMatrix() * boneMatrix * player->GetWeaponSwayMatrix();
-            _shaders.glass.SetMat4("model", m);
-            AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("Scope"));
-            AssetManager::GetModel("ScopeACOG")->_meshes[2].Draw();
-            AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("Scope"));
-            AssetManager::GetModel("ScopeACOG")->_meshes[3].Draw();
-        }
-    }
-
-
-
-	_shaders.glassComposite.Use();
-
-    glm::vec3 colorTint = glm::vec3(1, 1, 1);
-    float contrastAmount = 1;
-
-
-    if (!player->_isDead && player->_isOutside) {
-        colorTint = RED;
-        colorTint.g = player->_outsideDamageAudioTimer;
-        colorTint.b = player->_outsideDamageAudioTimer;
-    }
-
-    if (!player->_isDead && player->_damageColorTimer < 1.0f) {
-        colorTint.g = player->_damageColorTimer + 0.75;
-        colorTint.b = player->_damageColorTimer + 0.75;
-        colorTint.g = std::min(colorTint.g, 1.0f);
-        colorTint.b = std::min(colorTint.b, 1.0f);
-    }
-
-    if (player->_isDead) {
-
-        // Make it red
-        if (player->_timeSinceDeath > 0) {
-            colorTint.g *= 0.25f;
-            colorTint.b *= 0.25f;
-            contrastAmount = 1.2f;
-        }
-        // Darken it after 3 seconds
-        float waitTime = 3;
-        if (player->_timeSinceDeath > waitTime) {
-            float val = (player->_timeSinceDeath - waitTime) * 10;
-            colorTint.r -= val;
-        }
-    }
-    else {
-
-    }
-
-    _shaders.glassComposite.SetVec3("screenTint", colorTint);
-    _shaders.glassComposite.SetFloat("contrastAmount", contrastAmount);
-        
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, gBuffer._gLightingTexture);
-	glActiveTexture(GL_TEXTURE1);
-	glBindTexture(GL_TEXTURE_2D, gBuffer._gGlassTexture);
-
-	glActiveTexture(GL_TEXTURE2);
-	glBindTexture(GL_TEXTURE_2D, _blurBuffers[0].textureB);
-	glActiveTexture(GL_TEXTURE3);
-	glBindTexture(GL_TEXTURE_2D, _blurBuffers[1].textureB);
-	glActiveTexture(GL_TEXTURE4);
-	glBindTexture(GL_TEXTURE_2D, _blurBuffers[2].textureB);
-	glActiveTexture(GL_TEXTURE5);
-	glBindTexture(GL_TEXTURE_2D, _blurBuffers[3].textureB);
-      
-    glDisable(GL_DEPTH_TEST);
-	unsigned int attachments2[1] = { GL_COLOR_ATTACHMENT5 };
-	glDrawBuffers(1, attachments2);
-    DrawFullscreenQuad();
-
-	glReadBuffer(GL_COLOR_ATTACHMENT5);
-	glDrawBuffer(GL_COLOR_ATTACHMENT3);
-	float x0 = 0;
-	float y0 = 0;
-	float x1 = playerRenderTarget.gBuffer.GetWidth();
-	float y1 = playerRenderTarget.gBuffer.GetHeight();
-	float d_x0 = 0;
-	float d_y0 = 0;
-	float d_x1 = playerRenderTarget.gBuffer.GetWidth();
-	float d_y1 = playerRenderTarget.gBuffer.GetHeight();
-	glBlitFramebuffer(x0, y0, x1, y1, d_x0, d_y0, d_x1, d_y1, GL_COLOR_BUFFER_BIT, GL_NEAREST);
-
-
-}
-
-//std::vector<glm::uvec4> GridIndicesUpdate(std::vector<glm::uvec4> allGridIndicesWithinRooms);
-
-void DrawFullScreenQuad() {
-    static GLuint VAO = 0;
-    if (VAO == 0) {
-        float quadVertices[] = {
-            // positions         texcoords
-            -1.0f,  1.0f, 0.0f,  0.0f, 1.0f,
-            -1.0f, -1.0f, 0.0f,  0.0f, 0.0f,
-             1.0f,  1.0f, 0.0f,  1.0f, 1.0f,
-             1.0f, -1.0f, 0.0f,  1.0f, 0.0f,
-        };
-        unsigned int VBO;
-        glGenVertexArrays(1, &VAO);
-        glGenBuffers(1, &VBO);
-        glBindVertexArray(VAO);
-        glBindBuffer(GL_ARRAY_BUFFER, VBO);
-        glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
-        glEnableVertexAttribArray(0);
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
-        glEnableVertexAttribArray(1);
-        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
-    }
-    glBindVertexArray(VAO);
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-}
-
-void Renderer::InitMinimumToRenderLoadingFrame() {
-
-	_shaders.UI.Load("ui.vert", "ui.frag");
-
-	// Menu FBO
-	_menuRenderTarget.Create(_renderWidth, _renderHeight);
-	glBindFramebuffer(GL_FRAMEBUFFER, _menuRenderTarget.fbo);
-	glGenTextures(1, &_menuRenderTarget.texture);
-	glBindTexture(GL_TEXTURE_2D, _menuRenderTarget.texture);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, _menuRenderTarget.width, _menuRenderTarget.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, _menuRenderTarget.texture, 0);
-
-	_loadingScreenRenderTarget.Create(_renderWidth * 1.45f, _renderHeight * 1.45f);
-	glBindFramebuffer(GL_FRAMEBUFFER, _loadingScreenRenderTarget.fbo);
-	glGenTextures(1, &_loadingScreenRenderTarget.texture);
-	glBindTexture(GL_TEXTURE_2D, _loadingScreenRenderTarget.texture);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, _loadingScreenRenderTarget.width, _loadingScreenRenderTarget.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, _loadingScreenRenderTarget.texture, 0);
-
-
+    _menuRenderTarget.Create(PRESENT_WIDTH, PRESENT_HEIGHT);
+    glBindFramebuffer(GL_FRAMEBUFFER, _menuRenderTarget.fbo);
+    glGenTextures(1, &_menuRenderTarget.texture);
+    glBindTexture(GL_TEXTURE_2D, _menuRenderTarget.texture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, _menuRenderTarget.width, _menuRenderTarget.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, _menuRenderTarget.texture, 0);
 }
 
 void Renderer::Init() {
 
-    // figure out how to put this back in Engine.cpp ya dikkhead
     Gizmo::Init();
     SetBlendState(false);
 
@@ -486,8 +397,9 @@ void Renderer::Init() {
     _shaders.bloodDecals.Load("blood_decals.vert", "blood_decals.frag");  
     _shaders.computeTest.Load("res/shaders/test.comp");
     _shaders.skin.Load("res/shaders/skin.comp");    
-	_shaders.blurVertical.Load("blurVertical.vert", "blur.frag");
-	_shaders.blurHorizontal.Load("blurHorizontal.vert", "blur.frag");
+    _shaders.blurVertical.Load("blurVertical.vert", "blur.frag");
+    _shaders.blurHorizontal.Load("blurHorizontal.vert", "blur.frag");
+    _shaders.toiletWater.Load("toilet_water.vert", "toilet_water.frag");
     
     _cubeMesh = MeshUtil::CreateCube(1.0f, 1.0f, true);
 
@@ -505,42 +417,420 @@ void Renderer::Init() {
     InitCompute();
 }
 
-void Renderer::RenderLoadingFrame() {
-
-    glBindFramebuffer(GL_FRAMEBUFFER, _loadingScreenRenderTarget.fbo);
-	glViewport(0, 0, _loadingScreenRenderTarget.width, _loadingScreenRenderTarget.height);
-	glDisable(GL_DEPTH_TEST);
-	glDisable(GL_CULL_FACE);
-
-	glClearColor(0, 0, 0, 0);
-	glClear(GL_COLOR_BUFFER_BIT);
-	glDisable(GL_DEPTH_TEST);
-
-	_shaders.UI.Use();
-	_shaders.UI.SetVec3("color", WHITE);
-	_shaders.UI.SetVec3("overrideColor", WHITE);
-	_shaders.UI.SetMat4("model", glm::mat4(1));
-
-    std::string text = "";
-    int maxLinesDisplayed = 40;
-	int endIndex = AssetManager::_loadLog.size();
-    int beginIndex = std::max(0, endIndex - maxLinesDisplayed);
-    for (int i = beginIndex; i < endIndex; i++) {
-        text += AssetManager::_loadLog[i] + "\n";
+void Renderer::RenderLoadingScreen() {
+    if (!BackEnd::WindowIsMinimized()) {
+        if (BackEnd::GetAPI() == API::OPENGL) {
+            OpenGLRenderer::RenderLoadingScreen();
+        }        
+        else if (BackEnd::GetAPI() == API::VULKAN) {
+            VulkanRenderer::RenderLoadingScreen();
+        }
     }
-
-	TextBlitter::_debugTextToBilt = text;
-    TextBlitter::Update(1.0f / 60.0f);
-	Renderer::RenderUI(_loadingScreenRenderTarget.width, _loadingScreenRenderTarget.height);
-
-	glViewport(0, 0, GL::GetWindowWidth(), GL::GetWindowHeight());
-	glBindFramebuffer(GL_READ_FRAMEBUFFER, _loadingScreenRenderTarget.fbo);
-	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-	glReadBuffer(GL_COLOR_ATTACHMENT0);
-	glBlitFramebuffer(0, 0, _loadingScreenRenderTarget.width, _loadingScreenRenderTarget.height, 0, 0, GL::GetWindowWidth(), GL::GetWindowHeight(), GL_COLOR_BUFFER_BIT, GL_NEAREST);
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
+void Renderer::RenderFrame(Player* player) {
+
+    _shaders.UI.Use();
+    _shaders.UI.SetVec3("overrideColor", WHITE);
+
+    int playerIndex = GetPlayerIndexFromPlayerPointer(player);
+    if (!player || playerIndex == -1) {
+        return;
+    }
+    PlayerRenderTarget& playerRenderTarget = GetPlayerRenderTarget(playerIndex);
+    GBuffer& gBuffer = playerRenderTarget.gBuffer;
+    PresentFrameBuffer& presentFrameBuffer = playerRenderTarget.presentFrameBuffer;
+    gBuffer.Bind();
+    unsigned int attachments[6] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3, GL_COLOR_ATTACHMENT4, GL_COLOR_ATTACHMENT6 };
+    glDrawBuffers(6, attachments);
+    glViewport(0, 0, gBuffer.GetWidth(), gBuffer.GetHeight());
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    if (playerIndex == 0) {
+        RenderShadowMaps();
+        CalculateDirtyCloudPoints();
+        CalculateDirtyProbeCoords();
+        ComputePass(); // Fills the indirect lighting data structures
+    }
+    GeometryPass(player);  
+    RenderVATBlood(player);   
+    DrawInstancedBloodDecals(&_shaders.bloodDecals, player);
+    DrawBulletDecals(player);
+    DrawCasingProjectiles(player);
+    LightingPass(player);
+    SkyBoxPass(player);
+    BlurEmissiveBulbs(player);
+    ToietWaterPass(player);
+    GlassPass(player);
+    DrawMuzzleFlashes(player);
+    // debug
+
+    // Propagation Grid
+    if (_toggles.drawProbes) {
+        Transform cubeTransform;
+        cubeTransform.scale = glm::vec3(0.025f);
+        _shaders.debugViewPropgationGrid.Use();
+        _shaders.debugViewPropgationGrid.SetMat4("projection", player->GetProjectionMatrix());
+        _shaders.debugViewPropgationGrid.SetMat4("view", player->GetViewMatrix());
+        _shaders.debugViewPropgationGrid.SetMat4("model", cubeTransform.to_mat4());
+        _shaders.debugViewPropgationGrid.SetFloat("propogationGridSpacing", _propogationGridSpacing);
+        _shaders.debugViewPropgationGrid.SetInt("propogationTextureWidth", _gridTextureWidth);
+        _shaders.debugViewPropgationGrid.SetInt("propogationTextureHeight", _gridTextureHeight);
+        _shaders.debugViewPropgationGrid.SetInt("propogationTextureDepth", _gridTextureDepth);
+        int count = _gridTextureWidth * _gridTextureHeight * _gridTextureDepth;
+        glEnable(GL_CULL_FACE);
+        glEnable(GL_DEPTH_TEST);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_3D, _progogationGridTexture);
+        glBindVertexArray(_cubeMesh.GetVAO());
+        glDrawElementsInstanced(GL_TRIANGLES, _cubeMesh.GetIndexCount(), GL_UNSIGNED_INT, 0, count);
+    }
+
+    // Ammo counter
+    if (EngineState::GetEngineMode() == EngineMode::GAME) {
+        glDisable(GL_DEPTH_TEST);
+        glDrawBuffer(GL_COLOR_ATTACHMENT3);
+        DrawHudAmmo(player);
+    }
+
+    // Blit final image from large FBO down into a smaller FBO
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, gBuffer.GetID());
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, presentFrameBuffer.GetID());
+    glReadBuffer(GL_COLOR_ATTACHMENT3);
+    glDrawBuffer(GL_COLOR_ATTACHMENT0);
+    glBlitFramebuffer(0, 0, gBuffer.GetWidth(), gBuffer.GetHeight(), 0, 0, presentFrameBuffer.GetWidth(), presentFrameBuffer.GetHeight(), GL_COLOR_BUFFER_BIT, GL_LINEAR);
+
+    // FXAA on that smaller FBO
+    _shaders.fxaa.Use();
+    _shaders.fxaa.SetFloat("viewportWidth", presentFrameBuffer.GetWidth());
+    _shaders.fxaa.SetFloat("viewportHeight", presentFrameBuffer.GetHeight());
+    presentFrameBuffer.Bind();
+    glViewport(0, 0, presentFrameBuffer.GetWidth(), presentFrameBuffer.GetHeight());
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, presentFrameBuffer._inputTexture);
+    glDrawBuffer(GL_COLOR_ATTACHMENT1);
+    glDisable(GL_DEPTH_TEST);
+    DrawFullscreenQuad();
+
+    // Render any debug shit, like the point cloud, prorogation grid, misc points, lines, etc
+    DebugPass(player);
+
+    // HUD (killcount, debug text and crosshair)
+    if (EngineState::GetEngineMode() == EngineMode::GAME) {
+        glDisable(GL_DEPTH_TEST);
+        glDrawBuffer(GL_COLOR_ATTACHMENT3);
+        DrawHudLowRes(player);
+    }
+
+    // Editor (GIZMO render and Editor logic in here)
+    if (EngineState::GetEngineMode() == EngineMode::EDITOR) {
+        RenderEditorMode();
+    }
+    else {
+        _hoveredEditorObject.ptr = nullptr;
+        _hoveredEditorObject.rigidBody = nullptr;
+        _hoveredEditorObject.type = PhysicsObjectType::UNDEFINED;
+        _selectedEditorObject.ptr = nullptr;
+        _selectedEditorObject.rigidBody = nullptr;
+        _selectedEditorObject.type = PhysicsObjectType::UNDEFINED;
+    }
+
+    // Blit that smaller FBO into the main frame buffer 
+    if (EngineState::GetSplitScreenMode() == SplitScreenMode::FULLSCREEN) {
+        glBindFramebuffer(GL_READ_FRAMEBUFFER, playerRenderTarget.presentFrameBuffer.GetID());
+        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+        glReadBuffer(GL_COLOR_ATTACHMENT1);
+        glBlitFramebuffer(0, 0, playerRenderTarget.presentFrameBuffer.GetWidth(), playerRenderTarget.presentFrameBuffer.GetHeight(), 0, 0, BackEnd::GetCurrentWindowWidth(), BackEnd::GetCurrentWindowHeight(), GL_COLOR_BUFFER_BIT, GL_NEAREST);
+    }
+    else if (EngineState::GetSplitScreenMode() == SplitScreenMode::SPLITSCREEN) {
+
+        if (GetPlayerIndexFromPlayerPointer(player) == 0) {
+            glBindFramebuffer(GL_READ_FRAMEBUFFER, playerRenderTarget.presentFrameBuffer.GetID());
+            glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+            glReadBuffer(GL_COLOR_ATTACHMENT1);
+            glBlitFramebuffer(0, 0, playerRenderTarget.presentFrameBuffer.GetWidth(), playerRenderTarget.presentFrameBuffer.GetHeight(), 0, BackEnd::GetCurrentWindowHeight() / 2, BackEnd::GetCurrentWindowWidth(), BackEnd::GetCurrentWindowHeight(), GL_COLOR_BUFFER_BIT, GL_NEAREST);
+        }
+        if (GetPlayerIndexFromPlayerPointer(player) == 1) {
+            glBindFramebuffer(GL_READ_FRAMEBUFFER, playerRenderTarget.presentFrameBuffer.GetID());
+            glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+            glReadBuffer(GL_COLOR_ATTACHMENT1);
+            glBlitFramebuffer(0, 0, playerRenderTarget.presentFrameBuffer.GetWidth(), playerRenderTarget.presentFrameBuffer.GetHeight(), 0, 0, BackEnd::GetCurrentWindowWidth(), BackEnd::GetCurrentWindowHeight() / 2, GL_COLOR_BUFFER_BIT, GL_NEAREST);
+        }
+    }
+
+    // Wipe all light dirty flags back to false
+    for (Light& light : Scene::_lights) {
+        light.isDirty = false;
+    }
+
+    TextBlitter::ClearAllText();
+}
+
+
+
+void RenderVATBlood(Player* player) {
+    glEnable(GL_DEPTH_TEST);
+    glEnable(GL_CULL_FACE);
+    glDisable(GL_BLEND);
+    glDepthMask(GL_TRUE);
+    glCullFace(GL_BACK);
+    _shaders.bloodVolumetric.Use();
+    _shaders.bloodVolumetric.SetMat4("u_MatrixProjection", player->GetProjectionMatrix());
+    _shaders.bloodVolumetric.SetMat4("u_MatrixView", player->GetViewMatrix());
+    _shaders.bloodVolumetric.SetVec3("u_viewPos", player->GetViewPos());
+    for (int i = 0; i < Scene::_volumetricBloodSplatters.size(); i++) {
+        Scene::_volumetricBloodSplatters[i].Draw(&_shaders.bloodVolumetric);
+    }
+}
+
+void ToietWaterPass(Player* player) {
+
+    int playerIndex = GetPlayerIndexFromPlayerPointer(player);
+    PlayerRenderTarget& playerRenderTarget = GetPlayerRenderTarget(playerIndex);
+    GBuffer& gBuffer = playerRenderTarget.gBuffer;
+
+    gBuffer.Bind();
+    unsigned int attachments[1] = { GL_COLOR_ATTACHMENT3 };
+    glDrawBuffers(1, attachments);
+    glViewport(0, 0, gBuffer.GetWidth(), gBuffer.GetHeight());
+
+    _shaders.toiletWater.Use();
+    _shaders.toiletWater.SetMat4("projection", player->GetProjectionMatrix());
+    _shaders.toiletWater.SetMat4("view", player->GetViewMatrix());
+    _shaders.toiletWater.SetInt("lightCount", std::min((int)Scene::_lights.size(), 32));
+
+    auto& lights = Scene::_lights;
+    for (int i = 0; i < lights.size(); i++) {
+        _shaders.toiletWater.SetVec3("lights[" + std::to_string(i) + "].position", lights[i].position);
+        _shaders.toiletWater.SetVec3("lights[" + std::to_string(i) + "].color", lights[i].color);
+        _shaders.toiletWater.SetFloat("lights[" + std::to_string(i) + "].radius", lights[i].radius);
+        _shaders.toiletWater.SetFloat("lights[" + std::to_string(i) + "].strength", lights[i].strength);
+    }
+
+    glEnable(GL_BLEND);
+    glActiveTexture(GL_TEXTURE0);
+    AssetManager::GetTextureByName("ToiletWater_NRM")->glTexture.Bind(0);
+
+    for (Toilet& toilet : Scene::_toilets) {
+        _shaders.toiletWater.SetMat4("model", toilet.GetModelMatrix());
+        OpenGLAssetManager::GetModel("ToiletWater")->Draw();
+    }
+
+    glDisable(GL_BLEND);        
+}
+
+
+void GlassPass(Player* player) {
+
+    glm::mat4 projection = player->GetProjectionMatrix();// Renderer::GetProjectionMatrix(_depthOfFieldScene);
+    glm::mat4 view = player->GetViewMatrix();
+
+    int playerIndex = GetPlayerIndexFromPlayerPointer(player);
+    PlayerRenderTarget& playerRenderTarget = GetPlayerRenderTarget(playerIndex);
+    GBuffer& gBuffer = playerRenderTarget.gBuffer;
+
+    gBuffer.Bind();
+    unsigned int attachments[1] = { GL_COLOR_ATTACHMENT4 };
+    glDrawBuffers(1, attachments);
+    glViewport(0, 0, gBuffer.GetWidth(), gBuffer.GetHeight());
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+    glEnable(GL_DEPTH_TEST);
+    glEnable(GL_CULL_FACE);
+    glCullFace(GL_BACK);
+    _shaders.glass.Use();
+    _shaders.glass.SetMat4("projection", projection);
+    _shaders.glass.SetMat4("view", view);
+    _shaders.glass.SetVec3("viewPos", player->GetViewPos());
+    _shaders.glass.SetFloat("screenWidth", gBuffer.GetWidth());
+    _shaders.glass.SetFloat("screenHeight", gBuffer.GetHeight());
+
+    _shaders.glass.SetInt("lightCount", std::min((int)Scene::_lights.size(), 32));
+    auto& lights = Scene::_lights;
+    for (int i = 0; i < lights.size(); i++) {
+        _shaders.glass.SetVec3("lights[" + std::to_string(i) + "].position", lights[i].position);
+        _shaders.glass.SetVec3("lights[" + std::to_string(i) + "].color", lights[i].color);
+        _shaders.glass.SetFloat("lights[" + std::to_string(i) + "].radius", lights[i].radius);
+        _shaders.glass.SetFloat("lights[" + std::to_string(i) + "].strength", lights[i].strength);
+    }
+
+    AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("WindowExterior"));
+    glActiveTexture(GL_TEXTURE4);
+    glBindTexture(GL_TEXTURE_2D, gBuffer.lightingTexture);
+
+    //glDisable(GL_CULL_FACE);
+    _shaders.glass.SetBool("isWindow", true);
+    for (Window& window : Scene::_windows) {
+        _shaders.glass.SetMat4("model", window.GetModelMatrix());
+        OpenGLAssetManager::GetModel("Glass")->Draw();
+    }
+    _shaders.glass.SetBool("isWindow", false);
+
+
+
+
+    // draw the scope
+    if (player->GetCurrentWeaponIndex() == AKS74U && !player->InADS() && player->_hasAKS74UScope) {
+        AnimatedGameObject* ak = &player->GetFirstPersonWeapon();
+        SkinnedModel* skinnedModel = ak->_skinnedModel;
+        int boneIndex = skinnedModel->m_BoneMapping["Weapon"];
+        if (ak->_animatedTransforms.worldspace.size()) {
+            glm::mat4 boneMatrix = ak->_animatedTransforms.worldspace[boneIndex];
+            glm::mat4 m = ak->GetModelMatrix() * boneMatrix * player->GetWeaponSwayMatrix();
+            _shaders.glass.SetMat4("model", m);
+            AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("Scope"));
+            OpenGLAssetManager::GetModel("ScopeACOG")->_meshes[2].Draw();
+            AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("Scope"));
+            OpenGLAssetManager::GetModel("ScopeACOG")->_meshes[3].Draw();
+        }
+    }
+
+
+    _shaders.glass.SetBool("isAnimated", true);
+
+    if (player->GetCurrentWeaponIndex() == GLOCK) {
+    
+        AnimatedGameObject* animatedGameObject = &player->GetFirstPersonWeapon();
+        Shader& shader = _shaders.glass;
+
+        if (!animatedGameObject) {
+            std::cout << "You tried to draw an nullptr AnimatedGameObject\n";
+            return;
+        }
+        if (!animatedGameObject->_skinnedModel) {
+            std::cout << "You tried to draw an AnimatedGameObject with a nullptr skinned model\n";
+            return;
+        }
+
+        // Animated transforms
+        for (unsigned int i = 0; i < animatedGameObject->_animatedTransforms.local.size(); i++) {
+            glm::mat4 matrix = animatedGameObject->_animatedTransforms.local[i];
+            shader.SetMat4("skinningMats[" + std::to_string(i) + "]", matrix);
+        }
+
+
+        shader.SetMat4("model", animatedGameObject->GetModelMatrix());
+
+
+        // Draw
+        glBindVertexArray(animatedGameObject->_skinnedModel->m_VAO);
+        for (MeshRenderingEntry& meshRenderingEntry : animatedGameObject->_meshRenderingEntries) {
+
+            const int materialIndex = meshRenderingEntry.materialIndex;
+            const int indexCount = meshRenderingEntry.indexCount;
+            const int baseIndex = meshRenderingEntry.baseIndex;
+            const int baseVertex = meshRenderingEntry.baseVertex;
+            const bool blendingEnabled = meshRenderingEntry.blendingEnabled;
+            const bool drawingEnabled = meshRenderingEntry.drawingEnabled;
+            const bool renderAsGlass = meshRenderingEntry.renderAsGlass;
+            const std::string& meshName = meshRenderingEntry.meshName;
+
+            SetBlendState(blendingEnabled);
+
+            if (drawingEnabled && renderAsGlass) {
+                AssetManager::BindMaterialByIndex(materialIndex);
+                glDrawElementsBaseVertex(GL_TRIANGLES, indexCount, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int) * baseIndex), baseVertex);
+            }
+        }
+        SetBlendState(false);
+    }
+    _shaders.glass.SetBool("isAnimated", false);
+
+
+
+
+
+
+
+    _shaders.glassComposite.Use();
+
+    glm::vec3 colorTint = glm::vec3(1, 1, 1);
+    float contrastAmount = 1;
+
+    if (!player->_isDead && player->_isOutside) {
+        colorTint = RED;
+        colorTint.g = player->_outsideDamageAudioTimer;
+        colorTint.b = player->_outsideDamageAudioTimer;
+    }
+
+    if (!player->_isDead && player->_damageColorTimer < 1.0f) {
+        colorTint.g = player->_damageColorTimer + 0.75;
+        colorTint.b = player->_damageColorTimer + 0.75;
+        colorTint.g = std::min(colorTint.g, 1.0f);
+        colorTint.b = std::min(colorTint.b, 1.0f);
+    }
+
+    if (player->_isDead) {
+
+        // Make it red
+        if (player->_timeSinceDeath > 0) {
+            colorTint.g *= 0.25f;
+            colorTint.b *= 0.25f;
+            contrastAmount = 1.2f;
+        }
+        // Darken it after 3 seconds
+        float waitTime = 3;
+        if (player->_timeSinceDeath > waitTime) {
+            float val = (player->_timeSinceDeath - waitTime) * 10;
+            colorTint.r -= val;
+        }
+    }
+    _shaders.glassComposite.SetVec3("screenTint", colorTint);
+    _shaders.glassComposite.SetFloat("contrastAmount", contrastAmount);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, gBuffer.lightingTexture);
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, gBuffer.glassTexture);
+    glActiveTexture(GL_TEXTURE2);
+    glBindTexture(GL_TEXTURE_2D, _blurBuffers[0].textureB);
+    glActiveTexture(GL_TEXTURE3);
+    glBindTexture(GL_TEXTURE_2D, _blurBuffers[1].textureB);
+    glActiveTexture(GL_TEXTURE4);
+    glBindTexture(GL_TEXTURE_2D, _blurBuffers[2].textureB);
+    glActiveTexture(GL_TEXTURE5);
+    glBindTexture(GL_TEXTURE_2D, _blurBuffers[3].textureB);
+    glDisable(GL_DEPTH_TEST);
+    unsigned int attachments2[1] = { GL_COLOR_ATTACHMENT5 };
+    glDrawBuffers(1, attachments2);
+    DrawFullscreenQuad();
+    glReadBuffer(GL_COLOR_ATTACHMENT5);
+    glDrawBuffer(GL_COLOR_ATTACHMENT3);
+    float x0 = 0;
+    float y0 = 0;
+    float x1 = playerRenderTarget.gBuffer.GetWidth();
+    float y1 = playerRenderTarget.gBuffer.GetHeight();
+    float d_x0 = 0;
+    float d_y0 = 0;
+    float d_x1 = playerRenderTarget.gBuffer.GetWidth();
+    float d_y1 = playerRenderTarget.gBuffer.GetHeight();
+    glBlitFramebuffer(x0, y0, x1, y1, d_x0, d_y0, d_x1, d_y1, GL_COLOR_BUFFER_BIT, GL_NEAREST);
+}
+
+void DrawFullScreenQuad() {
+    static GLuint VAO = 0;
+    if (VAO == 0) {
+        float quadVertices[] = {
+            // positions         texcoords
+            -1.0f,  1.0f, 0.0f,  0.0f, 1.0f,
+            -1.0f, -1.0f, 0.0f,  0.0f, 0.0f,
+             1.0f,  1.0f, 0.0f,  1.0f, 1.0f,
+             1.0f, -1.0f, 0.0f,  1.0f, 0.0f,
+        };
+        unsigned int VBO;
+        glGenVertexArrays(1, &VAO);
+        glGenBuffers(1, &VBO);
+        glBindVertexArray(VAO);
+        glBindBuffer(GL_ARRAY_BUFFER, VBO);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+        glEnableVertexAttribArray(1);
+        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+    }
+    glBindVertexArray(VAO);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+}
 
 void BlurEmissiveBulbs(Player* player) {
 
@@ -579,8 +869,8 @@ void BlurEmissiveBulbs(Player* player) {
 
             glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-			width *= 0.5f;
-            height *= 0.5f;
+			width = (int)(width * 0.5f);
+            height = (int)(height * 0.5f);
         }
     }
 
@@ -597,7 +887,7 @@ void BlurEmissiveBulbs(Player* player) {
 	glViewport(0, 0, _blurBuffers[0].width, _blurBuffers[0].height);
 
 	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, gBuffer._gEmissive);
+	glBindTexture(GL_TEXTURE_2D, gBuffer.emissiveTexture);
     glDrawBuffer(GL_COLOR_ATTACHMENT0);
 	_shaders.blurHorizontal.Use();
 	_shaders.blurHorizontal.SetFloat("targetWidth", _blurBuffers[0].width);
@@ -709,225 +999,8 @@ Im3d::Vec3 ToEulerXYZ(const Im3d::Mat3& _m)
     return ret;
 }
 
-void Renderer::RenderFrame(Player* player) {
-
-    if (!player) {
-        return;
-    }
-
-    int playerIndex = GetPlayerIndexFromPlayerPointer(player);
-
-    if (playerIndex == -1) {
-        return;
-    }
-
-    PlayerRenderTarget& playerRenderTarget = GetPlayerRenderTarget(playerIndex);
-    GBuffer& gBuffer = playerRenderTarget.gBuffer;
-    PresentFrameBuffer& presentFrameBuffer = playerRenderTarget.presentFrameBuffer;
-
-    glm::mat4 projection = player->GetProjectionMatrix();// Renderer::GetProjectionMatrix(_depthOfFieldScene); // 1.0 for weapon, 0.9 for scene.
-	glm::mat4 view = player->GetViewMatrix();
-
-	_shaders.UI.Use();
-	_shaders.UI.SetVec3("overrideColor", WHITE);
-
-    gBuffer.Bind();
-	unsigned int attachments[6] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3, GL_COLOR_ATTACHMENT4, GL_COLOR_ATTACHMENT6 };
-	glDrawBuffers(6, attachments);
-	glViewport(0, 0, gBuffer.GetWidth(), gBuffer.GetHeight());
-	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-    if (playerIndex == 0) {
-		RenderShadowMaps();
-		//RenderEnviromentMaps();
-        CalculateDirtyCloudPoints();
-        CalculateDirtyProbeCoords();
-        ComputePass(); // Fills the indirect lighting data structures
-    }
-
-    GeometryPass(player);
 
 
-
-  //  gBuffer.Bind();
-  //  unsigned int attachments2[5] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT6, GL_COLOR_ATTACHMENT7 };
-  //  glDrawBuffers(5, attachments2);
-   // glViewport(0, 0, gBuffer.GetWidth(), gBuffer.GetHeight());
-
-    glEnable(GL_DEPTH_TEST);
-    glEnable(GL_CULL_FACE);
-    glDisable(GL_BLEND);
-    glDepthMask(GL_TRUE);
-    glCullFace(GL_BACK);
-
-
-    _shaders.bloodVolumetric.Use();
-    _shaders.bloodVolumetric.SetMat4("u_MatrixProjection", player->GetProjectionMatrix());
-    _shaders.bloodVolumetric.SetMat4("u_MatrixView", player->GetViewMatrix());
-    _shaders.bloodVolumetric.SetVec3("u_viewPos", player->GetViewPos());
-
-    /*
-    std::cout << "\nu_MatrixProjection: " << glGetUniformLocation(_shaders.bloodVolumetric._ID, "u_MatrixProjection") << "\n";
-    std::cout << "u_MatrixView: " << glGetUniformLocation(_shaders.bloodVolumetric._ID, "u_MatrixView") << "\n";
-    std::cout << "u_MatrixWorld: " << glGetUniformLocation(_shaders.bloodVolumetric._ID, "u_MatrixWorld") << "\n";
-    std::cout << "u_viewPos: " << glGetUniformLocation(_shaders.bloodVolumetric._ID, "u_viewPos") << "\n";
-    std::cout << "u_Time: " << glGetUniformLocation(_shaders.bloodVolumetric._ID, "u_Time") << "\n";
-    */
-    
-    //std::cout << Util::Vec3ToString(player->GetViewPos()) << "\n";
-
-
-    for (int i = 0; i < Scene::_volumetricBloodSplatters.size(); i++) {
-        Scene::_volumetricBloodSplatters[i].Draw(&_shaders.bloodVolumetric);
-    }
-
-    DrawInstancedBloodDecals(&_shaders.bloodDecals, player);
-    DrawBulletDecals(player);
-    DrawCasingProjectiles(player);
-    LightingPass(player);
-    
-    if (true) {
-
-    }
-
-    SkyBoxPass(player);
-
-    BlurEmissiveBulbs(player);
-
-	GlassPass(player);
-
-    DrawMuzzleFlashes(player);
-    
-    // Propagation Grid
-    if (_toggles.drawProbes) {
-        Transform cubeTransform;
-        cubeTransform.scale = glm::vec3(0.025f);
-        _shaders.debugViewPropgationGrid.Use();
-        _shaders.debugViewPropgationGrid.SetMat4("projection", player->GetProjectionMatrix());
-        _shaders.debugViewPropgationGrid.SetMat4("view", player->GetViewMatrix());
-        _shaders.debugViewPropgationGrid.SetMat4("model", cubeTransform.to_mat4());
-        _shaders.debugViewPropgationGrid.SetFloat("propogationGridSpacing", _propogationGridSpacing);
-        _shaders.debugViewPropgationGrid.SetInt("propogationTextureWidth", _gridTextureWidth);
-        _shaders.debugViewPropgationGrid.SetInt("propogationTextureHeight", _gridTextureHeight);
-        _shaders.debugViewPropgationGrid.SetInt("propogationTextureDepth", _gridTextureDepth);
-        int count = _gridTextureWidth * _gridTextureHeight * _gridTextureDepth;
-        glEnable(GL_CULL_FACE);
-        glEnable(GL_DEPTH_TEST);
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_3D, _progogationGridTexture);
-        glBindVertexArray(_cubeMesh.GetVAO());
-        glDrawElementsInstanced(GL_TRIANGLES, _cubeMesh.GetIndexCount(), GL_UNSIGNED_INT, 0, count);
-	}
-
-    // Ammo counter
-    if (EngineState::GetEngineMode() == EngineMode::GAME) {
-        glDisable(GL_DEPTH_TEST);
-        glDrawBuffer(GL_COLOR_ATTACHMENT3);
-        DrawHudAmmo(player);
-    }
-
-    // Blit final image from large FBO down into a smaller FBO
-    glBindFramebuffer(GL_READ_FRAMEBUFFER, gBuffer.GetID());
-    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, presentFrameBuffer.GetID());
-    glReadBuffer(GL_COLOR_ATTACHMENT3);
-    glDrawBuffer(GL_COLOR_ATTACHMENT0);
-    glBlitFramebuffer(0, 0, gBuffer.GetWidth(), gBuffer.GetHeight(), 0, 0, presentFrameBuffer.GetWidth(), presentFrameBuffer.GetHeight(), GL_COLOR_BUFFER_BIT, GL_LINEAR);
-
-    // FXAA on that smaller FBO
-    _shaders.fxaa.Use();
-    _shaders.fxaa.SetFloat("viewportWidth", presentFrameBuffer.GetWidth());
-    _shaders.fxaa.SetFloat("viewportHeight", presentFrameBuffer.GetHeight());
-    presentFrameBuffer.Bind();
-    glViewport(0, 0, presentFrameBuffer.GetWidth(), presentFrameBuffer.GetHeight());
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, presentFrameBuffer._inputTexture);
-    glDrawBuffer(GL_COLOR_ATTACHMENT1);
-    glDisable(GL_DEPTH_TEST);
-    DrawFullscreenQuad();
-
-
-    // Render any debug shit, like the point cloud, prorogation grid, misc points, lines, etc
-    DebugPass(player);
-
-    // HUD (killcount, debug text and crosshair)
-    if (EngineState::GetEngineMode() == EngineMode::GAME) {
-        glDisable(GL_DEPTH_TEST);
-        glDrawBuffer(GL_COLOR_ATTACHMENT3);
-        DrawHudLowRes(player);
-    }
-
-    // Editor (GIZMO render and Editor logic in here)
-    if (EngineState::GetEngineMode() == EngineMode::EDITOR) {
-        RenderEditorMode();
-    }
-    else {
-        _hoveredEditorObject.ptr = nullptr;
-        _hoveredEditorObject.rigidBody = nullptr;
-        _hoveredEditorObject.type = PhysicsObjectType::UNDEFINED;
-        _selectedEditorObject.ptr = nullptr;
-        _selectedEditorObject.rigidBody = nullptr;
-        _selectedEditorObject.type = PhysicsObjectType::UNDEFINED;
-    }
-       
-    // Blit that smaller FBO into the main frame buffer 
-    if (EngineState::GetViewportMode() == FULLSCREEN) {
-        glBindFramebuffer(GL_READ_FRAMEBUFFER, playerRenderTarget.presentFrameBuffer.GetID());
-        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-        glReadBuffer(GL_COLOR_ATTACHMENT1);
-        glBlitFramebuffer(0, 0, playerRenderTarget.presentFrameBuffer.GetWidth(), playerRenderTarget.presentFrameBuffer.GetHeight(), 0, 0, GL::GetWindowWidth(), GL::GetWindowHeight(), GL_COLOR_BUFFER_BIT, GL_NEAREST);
-    }
-    else if (EngineState::GetViewportMode() == SPLITSCREEN) {
-
-        if (GetPlayerIndexFromPlayerPointer(player) == 0) {
-            glBindFramebuffer(GL_READ_FRAMEBUFFER, playerRenderTarget.presentFrameBuffer.GetID());
-            glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-            glReadBuffer(GL_COLOR_ATTACHMENT1);
-            glBlitFramebuffer(0, 0, playerRenderTarget.presentFrameBuffer.GetWidth(), playerRenderTarget.presentFrameBuffer.GetHeight(), 0, GL::GetWindowHeight() / 2, GL::GetWindowWidth(), GL::GetWindowHeight(), GL_COLOR_BUFFER_BIT, GL_NEAREST);
-        }
-        if (GetPlayerIndexFromPlayerPointer(player) == 1) {
-            glBindFramebuffer(GL_READ_FRAMEBUFFER, playerRenderTarget.presentFrameBuffer.GetID());
-            glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-            glReadBuffer(GL_COLOR_ATTACHMENT1);
-            glBlitFramebuffer(0, 0, playerRenderTarget.presentFrameBuffer.GetWidth(), playerRenderTarget.presentFrameBuffer.GetHeight(), 0, 0, GL::GetWindowWidth(), GL::GetWindowHeight() / 2, GL_COLOR_BUFFER_BIT, GL_NEAREST);
-        }
-    }
-
-    // Wipe all light dirty flags back to false
-    for (Light& light : Scene::_lights) {
-        light.isDirty = false;
-    }
-
-    TextBlitter::ClearAllText();
-}
-
-/*
-struct Gizmo {
-
-	PxRigidStatic* _editorRaycastBodyXTranslate = NULL;
-	PxShape* _editorRaycastShapeXTranslate = NULL;
-
-    void InitPhysXObjects() {
-        glm::vec3 scale = glm::vec3(0.02f);
-        Model* model = AssetManager::GetModel("Gizmo_XTranslate");
-		if (!model->_triangleMesh) {
-            model->CreateTriangleMesh();
-		}
-		PxShapeFlags shapeFlags(PxShapeFlag::eSCENE_QUERY_SHAPE);
-        _editorRaycastShapeXTranslate = Physics::CreateShapeFromTriangleMesh(model->_triangleMesh, shapeFlags, Physics::GetDefaultMaterial(), scale);
-        if (!_editorRaycastShapeXTranslate) {
-            std::cout << "_editorRaycastShapeXTranslate was NULL\n";
-		}
-		_editorRaycastBodyXTranslate = Physics::CreateEditorRigidStatic(Transform(), _editorRaycastShapeXTranslate, Physics::GetGizmoXTranslateScene());
-    }
-
-    void Update() {
-
-    }
-};*/
-
-//Gizmo _gizmoXTranslate;
 
 void RenderGameObjectOutline(Shader& shader, GameObject* gameObject) {
 
@@ -1013,8 +1086,8 @@ void Renderer::RenderEditorMode() {
     glm::mat4 view = player->GetViewMatrix();
     glm::vec3 viewPos = player->GetViewPos();
     glm::vec3 viewDir = player->GetCameraForward() * glm::vec3(-1);
-    float mouseX = MapRange(Input::GetMouseX(), 0, GL::GetWindowWidth(), 0, presentFrameBuffer.GetWidth());
-    float mouseY = MapRange(Input::GetMouseY(), 0, GL::GetWindowHeight(), 0, presentFrameBuffer.GetHeight());
+    float mouseX = MapRange(Input::GetMouseX(), 0, BackEnd::GetCurrentWindowWidth(), 0, presentFrameBuffer.GetWidth());
+    float mouseY = MapRange(Input::GetMouseY(), 0, BackEnd::GetCurrentWindowHeight(), 0, presentFrameBuffer.GetHeight());
 
     // Start the gizmo out of view
     Transform transform;
@@ -1048,7 +1121,7 @@ void Renderer::RenderEditorMode() {
     _hoveredEditorObject.type = PhysicsObjectType::UNDEFINED;
     PxU32 hitFlags = RaycastGroup::RAYCAST_ENABLED;
     glm::vec3 rayOrigin = Scene::_players[0].GetViewPos();
-    glm::vec3 rayDirection = Util::GetMouseRay(projection, view, GL::GetWindowWidth(), GL::GetWindowHeight(), Input::GetMouseX(), Input::GetMouseY());
+    glm::vec3 rayDirection = Util::GetMouseRay(projection, view, BackEnd::GetCurrentWindowWidth(), BackEnd::GetCurrentWindowHeight(), Input::GetMouseX(), Input::GetMouseY());
     auto hitResult = Util::CastPhysXRay(rayOrigin, rayDirection, 100, hitFlags, true);
     if (hitResult.hitFound) {
         if (hitResult.physicsObjectType == PhysicsObjectType::GAME_OBJECT) {
@@ -1089,7 +1162,7 @@ void Renderer::RenderEditorMode() {
     if (_hoveredEditorObject.ptr && !Input::LeftMouseDown() && !Gizmo::HasHover()) {
         GameObject* hoveredGameObject = nullptr;
         for (auto& gameObject : Scene::_gameObjects) {
-            if (gameObject._raycastObject.rigid == _hoveredEditorObject.rigidBody) {
+            if (gameObject.raycastRigidStatic.pxRigidStatic == _hoveredEditorObject.rigidBody) {
                 hoveredGameObject = &gameObject;
                 break;
             }
@@ -1125,7 +1198,7 @@ void Renderer::RenderEditorMode() {
     if (_selectedEditorObject.ptr) {
         GameObject* selectedGameObject = nullptr;
         for (auto& gameObject : Scene::_gameObjects) {
-            if (gameObject._raycastObject.rigid == _selectedEditorObject.rigidBody) {
+            if (gameObject.raycastRigidStatic.pxRigidStatic == _selectedEditorObject.rigidBody) {
                 selectedGameObject = &gameObject;
                 break;
             }
@@ -1387,24 +1460,39 @@ void DrawHudLowRes(Player* player) {
         Renderer::QueueUIForRendering("PressStart", presentFrameBuffer.GetWidth() / 2, presentFrameBuffer.GetHeight() / 2, true, WHITE);
     }
 
+    // Debug lighting mode
+    _shaders.lighting.Use();
+    if (_mode == RenderMode::COMPOSITE) {
+        _shaders.lighting.SetInt("mode", 0);
+    }
+    else if (_mode == RenderMode::POINT_CLOUD) {
+        _shaders.lighting.SetInt("mode", 1);
+    }
+    else if (_mode == RenderMode::DIRECT_LIGHT) {
+        _shaders.lighting.SetInt("mode", 2);
+    }
+    else if (_mode == RenderMode::INDIRECT_LIGHT) {
+        _shaders.lighting.SetInt("mode", 3);
+    }
+
     // Debug text
     if (_toggles.drawDebugText) {
+
+        // Render mode
         if (_mode == RenderMode::COMPOSITE) {
             TextBlitter::_debugTextToBilt = "Mode: COMPOSITE\n";
-            _shaders.lighting.SetInt("mode", 0);
         }
-        if (_mode == RenderMode::POINT_CLOUD) {
+        else if (_mode == RenderMode::POINT_CLOUD) {
             TextBlitter::_debugTextToBilt = "Mode: POINT CLOUD\n";
-            _shaders.lighting.SetInt("mode", 1);
         }
-        if (_mode == RenderMode::DIRECT_LIGHT) {
+        else if (_mode == RenderMode::DIRECT_LIGHT) {
             TextBlitter::_debugTextToBilt = "Mode: DIRECT LIGHT\n";
-            _shaders.lighting.SetInt("mode", 2);
         }
-        if (_mode == RenderMode::INDIRECT_LIGHT) {
+        else if (_mode == RenderMode::INDIRECT_LIGHT) {
             TextBlitter::_debugTextToBilt = "Mode: INDIRECT LIGHT\n";
-            _shaders.lighting.SetInt("mode", 3);
         }
+
+        // Debug line mode
         if (_debugLineRenderMode == DebugLineRenderMode::SHOW_NO_LINES) {
             TextBlitter::_debugTextToBilt += "Debug Mode: NONE\n";
         }
@@ -1426,10 +1514,13 @@ void DrawHudLowRes(Player* player) {
         else if (_debugLineRenderMode == DebugLineRenderMode::BOUNDING_BOXES) {
             TextBlitter::_debugTextToBilt += "Debug Mode: BOUNDING BOXES\n";
         }
+
+        // Misc debug info
         TextBlitter::_debugTextToBilt += "View pos: " + Util::Vec3ToString(player->GetViewPos()) + "\n";
         TextBlitter::_debugTextToBilt += "View rot: " + Util::Vec3ToString(player->GetViewRotation()) + "\n";
         TextBlitter::_debugTextToBilt += "Weapon Action: " + Util::WeaponActionToString(Scene::_players[playerIndex].GetWeaponAction()) + "\n";
         TextBlitter::_debugTextToBilt += "Blood decal count: " + std::to_string(Scene::_bloodDecals.size()) + "\n";
+    
     }
     // Health and killcount
     else {
@@ -1439,10 +1530,10 @@ void DrawHudLowRes(Player* player) {
     }
 
     // Pickup text
-    if (EngineState::GetViewportMode() == FULLSCREEN) {
+    if (EngineState::GetSplitScreenMode() == SplitScreenMode::FULLSCREEN) {
         TextBlitter::BlitAtPosition(player->_pickUpText, 60, presentFrameBuffer.GetHeight() - 60, false, 1.0f);
     }
-    else if (EngineState::GetViewportMode() == SPLITSCREEN) {
+    else if (EngineState::GetSplitScreenMode() == SplitScreenMode::SPLITSCREEN) {
         TextBlitter::BlitAtPosition(player->_pickUpText, 40, presentFrameBuffer.GetHeight() - 35, false, 1.0f);
     }
 
@@ -1466,7 +1557,7 @@ void DrawHudAmmo(Player* player) {
 
 	_shaders.UI.Use();
 	_shaders.UI.SetMat4("model", glm::mat4(1));
-    AssetManager::GetTexture("NumSheet")->Bind(0);
+    AssetManager::GetTextureByName("NumSheet")->glTexture.Bind(0);
 
 	float scale = 1.1f;
 	unsigned int slashXPos = gBuffer.GetWidth() - 180.0f;
@@ -1474,7 +1565,7 @@ void DrawHudAmmo(Player* player) {
 	float viewportWidth = gBuffer.GetWidth();
 	float viewportHeight = gBuffer.GetHeight();
 
-    if (EngineState::GetViewportMode() == SPLITSCREEN) {
+    if (EngineState::GetSplitScreenMode() == SplitScreenMode::SPLITSCREEN) {
         slashYPos = gBuffer.GetHeight() - 70.0f;
         scale = 1.05f;
     }
@@ -1531,9 +1622,9 @@ void GeometryPass(Player* player) {
             m = m * player->GetWeaponSwayMatrix();
             _shaders.geometry.SetMat4("model", m);
             AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("ScopeMount"));
-            AssetManager::GetModel("ScopeACOG")->_meshes[0].Draw();
+            OpenGLAssetManager::GetModel("ScopeACOG")->_meshes[0].Draw();
             AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("Scope"));
-            AssetManager::GetModel("ScopeACOG")->_meshes[1].Draw();
+            OpenGLAssetManager::GetModel("ScopeACOG")->_meshes[1].Draw();
         }
     }
 }
@@ -1559,17 +1650,15 @@ void LightingPass(Player* player) {
     glDisable(GL_DEPTH_TEST);
     glDisable(GL_BLEND);
     glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, gBuffer._gBaseColorTexture);
+    glBindTexture(GL_TEXTURE_2D, gBuffer.baseColorTexture);
     glActiveTexture(GL_TEXTURE1);
-    glBindTexture(GL_TEXTURE_2D, gBuffer._gNormalTexture);
+    glBindTexture(GL_TEXTURE_2D, gBuffer.normalTexture);
     glActiveTexture(GL_TEXTURE2);
-    glBindTexture(GL_TEXTURE_2D, gBuffer._gRMATexture);
+    glBindTexture(GL_TEXTURE_2D, gBuffer.RMATexture);
     glActiveTexture(GL_TEXTURE3);
-    glBindTexture(GL_TEXTURE_2D, gBuffer._gDepthTexture);
+    glBindTexture(GL_TEXTURE_2D, gBuffer.depthTexture);
     glActiveTexture(GL_TEXTURE4);
 	glBindTexture(GL_TEXTURE_3D, _progogationGridTexture);
-	glActiveTexture(GL_TEXTURE31);
-	glBindTexture(GL_TEXTURE_2D, gBuffer._gWorldSpacePosition);
 
     // Update lights
     auto& lights = Scene::_lights;
@@ -1609,12 +1698,6 @@ void LightingPass(Player* player) {
 	_shaders.lighting.SetVec3("player2MuzzleFlashPosition", Scene::_players[1].GetViewPos());
 	_shaders.lighting.SetBool("player1NeedsMuzzleFlash", Scene::_players[0].MuzzleFlashIsRequired());
 	_shaders.lighting.SetBool("player2NeedsMuzzleFlash", Scene::_players[1].MuzzleFlashIsRequired());
-
-
-	glActiveTexture(GL_TEXTURE22);
-	glBindTexture(GL_TEXTURE_CUBE_MAP, Scene::_players[0]._shadowMap._depthTexture);
-	glActiveTexture(GL_TEXTURE23);
-	glBindTexture(GL_TEXTURE_CUBE_MAP, Scene::_players[1]._shadowMap._depthTexture);
 
     DrawFullscreenQuad();
 }
@@ -1900,7 +1983,7 @@ void DebugPass(Player* player) {
     // Debug lines
     if (_debugLineRenderMode == DebugLineRenderMode::BOUNDING_BOXES) {
         for (GameObject& gameObject : Scene::_gameObjects) {
-            if (gameObject._raycastObject.rigid) {
+            if (gameObject.raycastRigidStatic.pxRigidStatic) {
                 if (gameObject.HasMovedSinceLastFrame()) {
                     QueueAABBForRenering(gameObject._aabb, RED);
                 }
@@ -1983,7 +2066,7 @@ void DebugPass(Player* player) {
         RenderImmediate();
 
         // Draw player sphere
-        auto* sphere = AssetManager::GetModel("Sphere");
+        auto* sphere = OpenGLAssetManager::GetModel("Sphere");
         Transform transform;
         transform.position = player->GetFeetPosition() + glm::vec3(0, 0.101f, 0);
         transform.scale.x = player->GetRadius();
@@ -1999,12 +2082,12 @@ void DebugPass(Player* player) {
 
 void Renderer::RecreateFrameBuffers(int currentPlayer) {
 
-    float width = (float)_renderWidth;
-    float height = (float)_renderHeight;
+    float width = (float)PRESENT_WIDTH;
+    float height = (float)PRESENT_HEIGHT;
     int playerCount = EngineState::GetPlayerCount();
 
     // Adjust for splitscreen
-    if (EngineState::GetViewportMode() == SPLITSCREEN) {
+    if (EngineState::GetSplitScreenMode() == SplitScreenMode::SPLITSCREEN) {
         height *= 0.5f;
     }
 
@@ -2074,7 +2157,7 @@ void DrawScene(Shader& shader) {
 			else if (wall.materialIndex == wallPaperMaterialIndex) {
 				AssetManager::BindMaterialByIndex(trimCeilingMaterialIndex);
             }*/
-            AssetManager::GetModel("TrimCeiling")->Draw();
+            OpenGLAssetManager::GetModel("TrimCeiling")->Draw();
         }
     } 
     // Floor trims
@@ -2085,16 +2168,21 @@ void DrawScene(Shader& shader) {
 			if (wall.materialIndex == ceilingMaterialIndex) {
                 //AssetManager::BindMaterialByIndex(ceilingMaterialIndex);
                 //AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("Ceiling2"));
-				AssetManager::GetModel("TrimFloor2")->Draw();
+				OpenGLAssetManager::GetModel("TrimFloor2")->Draw();
 			}
 			else if (wall.materialIndex == wallPaperMaterialIndex) {
                 //AssetManager::BindMaterialByIndex(trimCeilingMaterialIndex);
                 //AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("Ceiling2"));
-				AssetManager::GetModel("TrimFloor")->Draw();
+				OpenGLAssetManager::GetModel("TrimFloor")->Draw();
 			}
         }
     }
 
+    // Toilets
+    for (Toilet& toilet: Scene::_toilets) {
+        toilet.Draw(shader);
+    }
+  
     // Render game objects
     for (GameObject& gameObject : Scene::_gameObjects) {
 
@@ -2131,8 +2219,8 @@ void DrawScene(Shader& shader) {
                 mag.SetName("AKS74UMag");
                 mag.SetMeshMaterial("AKS74U_3");
                 mag.CreateRigidBody(magWorldMatrix, false);
-                mag.SetRaycastShapeFromModel(AssetManager::GetModel("AKS74UMag"));
-                mag.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("AKS74UMag_ConvexMesh")->_meshes[0], magFilterData, glm::vec3(1));
+                mag.SetRaycastShapeFromModel(OpenGLAssetManager::GetModel("AKS74UMag"));
+                mag.AddCollisionShapeFromConvexMesh(&OpenGLAssetManager::GetModel("AKS74UMag_ConvexMesh")->_meshes[0], magFilterData, glm::vec3(1));
                 mag.SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
                 mag.UpdateRigidBodyMassAndInertia(magDensity);
                 mag.CreateEditorPhysicsObject();
@@ -2173,7 +2261,7 @@ void DrawScene(Shader& shader) {
         // Add Christmas bows to Christmas cubes
         if (gameObject.GetName() == "Present") {
 			AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("Gold"));
-            AssetManager::GetModel("ChristmasBow")->Draw();
+            OpenGLAssetManager::GetModel("ChristmasBow")->Draw();
         }
 
 
@@ -2183,15 +2271,15 @@ void DrawScene(Shader& shader) {
             glm::mat4 lampMatrix = gameObject.GetModelMatrix();
 
             //AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("Gold"));
-            //AssetManager::GetModel("LampWire")->Draw();
+            //OpenGLAssetManager::GetModel("LampWire")->Draw();
 
 
-          //  AssetManager::GetModel("LampShadeFaceA")->Draw();
-          /*  AssetManager::GetModel("LampShadeFaceB")->Draw();
-            AssetManager::GetModel("LampShadeFaceC")->Draw();
-            AssetManager::GetModel("LampShadeFaceD")->Draw();
-            AssetManager::GetModel("LampShadeFaceE")->Draw();
-            AssetManager::GetModel("LampShadeFaceF")->Draw();
+          //  OpenGLAssetManager::GetModel("LampShadeFaceA")->Draw();
+          /*  OpenGLAssetManager::GetModel("LampShadeFaceB")->Draw();
+            OpenGLAssetManager::GetModel("LampShadeFaceC")->Draw();
+            OpenGLAssetManager::GetModel("LampShadeFaceD")->Draw();
+            OpenGLAssetManager::GetModel("LampShadeFaceE")->Draw();
+            OpenGLAssetManager::GetModel("LampShadeFaceF")->Draw();
 
             */
             Transform globeTransform;
@@ -2200,12 +2288,12 @@ void DrawScene(Shader& shader) {
             shader.SetBool("sampleEmissive", true);
             shader.SetVec3("lightColor", Scene::_lights[0].color);
             AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("Gold"));
-            AssetManager::GetModel("LampGlobe")->Draw();
+            OpenGLAssetManager::GetModel("LampGlobe")->Draw();
 
             shader.SetBool("writeEmissive", false);
             glEnable(GL_BLEND);
             AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("Lamp2"));
-            //AssetManager::GetModel("LampShade")->Draw();
+            //OpenGLAssetManager::GetModel("LampShade")->Draw();
             shader.SetBool("writeEmissive", true);
             glDisable(GL_BLEND);
 
@@ -2241,7 +2329,7 @@ void DrawScene(Shader& shader) {
 
             
             AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("GlockAmmoBox"));
-            AssetManager::GetModel("GlockAmmoBox")->Draw();
+            OpenGLAssetManager::GetModel("GlockAmmoBox")->Draw();
         }
     }*/
 
@@ -2252,36 +2340,36 @@ void DrawScene(Shader& shader) {
 
         AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("Door"));
         shader.SetMat4("model", door.GetFrameModelMatrix());
-        auto* doorFrameModel = AssetManager::GetModel("DoorFrame");
+        auto* doorFrameModel = OpenGLAssetManager::GetModel("DoorFrame");
         doorFrameModel->Draw();
 
         shader.SetMat4("model", door.GetDoorModelMatrix());
-        auto* doorModel = AssetManager::GetModel("Door");
+        auto* doorModel = OpenGLAssetManager::GetModel("Door");
         doorModel->Draw();
     }
 
 	for (Window& window : Scene::_windows) {
 		shader.SetMat4("model", window.GetModelMatrix());
 		AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("Window"));
-		AssetManager::GetModel("Window")->_meshes[0].Draw();
-		AssetManager::GetModel("Window")->_meshes[1].Draw();
-		AssetManager::GetModel("Window")->_meshes[2].Draw();
-		AssetManager::GetModel("Window")->_meshes[3].Draw();
+		OpenGLAssetManager::GetModel("Window")->_meshes[0].Draw();
+		OpenGLAssetManager::GetModel("Window")->_meshes[1].Draw();
+		OpenGLAssetManager::GetModel("Window")->_meshes[2].Draw();
+		OpenGLAssetManager::GetModel("Window")->_meshes[3].Draw();
 		AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("WindowExterior"));
-		AssetManager::GetModel("Window")->_meshes[4].Draw();
-		AssetManager::GetModel("Window")->_meshes[5].Draw();
-		AssetManager::GetModel("Window")->_meshes[6].Draw();
+		OpenGLAssetManager::GetModel("Window")->_meshes[4].Draw();
+		OpenGLAssetManager::GetModel("Window")->_meshes[5].Draw();
+		OpenGLAssetManager::GetModel("Window")->_meshes[6].Draw();
 	}
 
     // This is a hack. Fix this.
     /*AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("Glock"));
     for (auto& matrix : _glockMatrices) {
         shader.SetMat4("model", matrix);
-        AssetManager::GetModel("Glock_Isolated")->Draw();
+        OpenGLAssetManager::GetModel("Glock_Isolated")->Draw();
     }
     for (auto& matrix : _aks74uMatrices) {
         shader.SetMat4("model", matrix);
-        AssetManager::GetModel("AKS74U_Isolated")->Draw();
+        OpenGLAssetManager::GetModel("AKS74U_Isolated")->Draw();
     }*/
 
     shader.SetBool("sampleEmissive", true);
@@ -2294,7 +2382,7 @@ void DrawScene(Shader& shader) {
 
         if (light.type == 0) {
             AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("Light"));
-            AssetManager::GetModel("Light0_Bulb")->Draw();
+            OpenGLAssetManager::GetModel("Light0_Bulb")->Draw();
 
             // Find mount position
             PxU32 raycastFlags = RaycastGroup::RAYCAST_ENABLED;
@@ -2303,20 +2391,20 @@ void DrawScene(Shader& shader) {
                 Transform mountTransform;
                 mountTransform.position = rayResult.hitPosition;
                 shader.SetMat4("model", mountTransform.to_mat4());
-                AssetManager::GetModel("Light0_Mount")->Draw();
+                OpenGLAssetManager::GetModel("Light0_Mount")->Draw();
 
                 // Stretch the cord
                 Transform cordTransform;
                 cordTransform.position = light.position;
                 cordTransform.scale.y = abs(rayResult.hitPosition.y - light.position.y);
                 shader.SetMat4("model", cordTransform.to_mat4());
-                AssetManager::GetModel("Light0_Cord")->Draw();
+                OpenGLAssetManager::GetModel("Light0_Cord")->Draw();
 
             }
         }
         else if (light.type == 1) {
             AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("LightWall"));
-            AssetManager::GetModel("LightWallMounted")->Draw();
+            OpenGLAssetManager::GetModel("LightWallMounted")->Draw();
         }
 	}
 	shader.SetBool("sampleEmissive", false);
@@ -2348,6 +2436,8 @@ void DrawAnimatedObject(Shader& shader, AnimatedGameObject* animatedGameObject) 
         shader.SetMat4("model", animatedGameObject->GetModelMatrix());
     }
 
+    
+
     // Draw
     glBindVertexArray(animatedGameObject->_skinnedModel->m_VAO);
     for (MeshRenderingEntry& meshRenderingEntry : animatedGameObject->_meshRenderingEntries) {
@@ -2356,17 +2446,29 @@ void DrawAnimatedObject(Shader& shader, AnimatedGameObject* animatedGameObject) 
         const int indexCount = meshRenderingEntry.indexCount;
         const int baseIndex = meshRenderingEntry.baseIndex;
         const int baseVertex = meshRenderingEntry.baseVertex;
+        const int emissiveColorTexutreIndex = meshRenderingEntry.emissiveColorTexutreIndex;
         const bool blendingEnabled = meshRenderingEntry.blendingEnabled;
         const bool drawingEnabled = meshRenderingEntry.drawingEnabled;
+        const bool renderAsGlass = meshRenderingEntry.renderAsGlass;
         const std::string& meshName = meshRenderingEntry.meshName;
 
         SetBlendState(blendingEnabled);
 
-        if (drawingEnabled) {
+        if (emissiveColorTexutreIndex != -1) {
+            shader.SetBool("hasEmissiveColor", true);
+            AssetManager::GetTextureByIndex(emissiveColorTexutreIndex)->glTexture.Bind(3);
+        } 
+        else {
+            shader.SetBool("hasEmissiveColor", false);
+        }
+
+        if (drawingEnabled && !renderAsGlass) {
             AssetManager::BindMaterialByIndex(materialIndex);
             glDrawElementsBaseVertex(GL_TRIANGLES, indexCount, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int) * baseIndex), baseVertex);
         }
     }
+    SetBlendState(false);
+    shader.SetBool("hasEmissiveColor", false);
 }
 
 void DrawAnimatedScene(Shader& shader, Player* player) {
@@ -2464,6 +2566,8 @@ void DrawAnimatedScene(Shader& shader, Player* player) {
         shader.SetFloat("projectionMatrixIndex", 0.0f);
         glEnable(GL_CULL_FACE);
     }
+
+
     // Debug: draw first person weapon for other players
     /*for (Player& otherPlayer : Scene::_players) {
         if (&otherPlayer != player) {
@@ -2582,13 +2686,16 @@ void DrawShadowMapScene(Shader& shader) {
     for (Ceiling& ceiling : Scene::_ceilings) {
         ceiling.Draw();
     }
+    for (Toilet& toilet : Scene::_toilets) {
+        toilet.Draw(shader, false);
+    }
 
     for (Door& door : Scene::_doors) {
         shader.SetMat4("model", door.GetFrameModelMatrix());
-        auto* doorFrameModel = AssetManager::GetModel("DoorFrame");
+        auto* doorFrameModel = OpenGLAssetManager::GetModel("DoorFrame");
         doorFrameModel->Draw();
         shader.SetMat4("model", door.GetDoorModelMatrix());
-        auto* doorModel = AssetManager::GetModel("Door");
+        auto* doorModel = OpenGLAssetManager::GetModel("Door");
         doorModel->Draw();
     }
 
@@ -2718,7 +2825,7 @@ void Renderer::DrawInstancedBloodDecals(Shader* shader, Player* player) {
         }
     }
     if (matrices.size()) {
-        glBindTexture(GL_TEXTURE_2D, AssetManager::GetTexture("blood_decal_4")->GetID());
+        glBindTexture(GL_TEXTURE_2D, AssetManager::GetTextureByName("blood_decal_4")->glTexture.GetID());
         DrawInstancedVAO(upFacingPlaneVAO, 6, matrices);
     }
     // Type 1
@@ -2729,7 +2836,7 @@ void Renderer::DrawInstancedBloodDecals(Shader* shader, Player* player) {
         }
     }
     if (matrices.size()) {
-        glBindTexture(GL_TEXTURE_2D, AssetManager::GetTexture("blood_decal_6")->GetID());
+        glBindTexture(GL_TEXTURE_2D, AssetManager::GetTextureByName("blood_decal_6")->glTexture.GetID());
         DrawInstancedVAO(upFacingPlaneVAO, 6, matrices);
     }
     // Type 2
@@ -2740,7 +2847,7 @@ void Renderer::DrawInstancedBloodDecals(Shader* shader, Player* player) {
         }
     }
     if (matrices.size()) {
-        glBindTexture(GL_TEXTURE_2D, AssetManager::GetTexture("blood_decal_7")->GetID());
+        glBindTexture(GL_TEXTURE_2D, AssetManager::GetTextureByName("blood_decal_7")->glTexture.GetID());
         DrawInstancedVAO(upFacingPlaneVAO, 6, matrices);
     }
     // Type 3
@@ -2751,7 +2858,7 @@ void Renderer::DrawInstancedBloodDecals(Shader* shader, Player* player) {
         }
     }
     if (matrices.size()) {
-        glBindTexture(GL_TEXTURE_2D, AssetManager::GetTexture("blood_decal_9")->GetID());
+        glBindTexture(GL_TEXTURE_2D, AssetManager::GetTextureByName("blood_decal_9")->glTexture.GetID());
         DrawInstancedVAO(upFacingPlaneVAO, 6, matrices);
     }
 
@@ -2759,9 +2866,7 @@ void Renderer::DrawInstancedBloodDecals(Shader* shader, Player* player) {
 }
 
 void Renderer::HotloadShaders() {
-
     std::cout << "Hotloaded shaders\n";
-
     _shaders.solidColor.Load("solid_color.vert", "solid_color.frag");
     _shaders.UI.Load("ui.vert", "ui.frag");
     _shaders.editorSolidColor.Load("editor_solid_color.vert", "editor_solid_color.frag");
@@ -2784,12 +2889,12 @@ void Renderer::HotloadShaders() {
     _shaders.test.Load("test.vert", "test.frag");
     _shaders.bloodVolumetric.Load("blood_volumetric.vert", "blood_volumetric.frag");
     _shaders.bloodDecals.Load("blood_decals.vert", "blood_decals.frag");
-
     _shaders.compute.Load("res/shaders/compute.comp");
     _shaders.pointCloud.Load("res/shaders/point_cloud.comp");
     _shaders.propogateLight.Load("res/shaders/propogate_light.comp");
     _shaders.computeTest.Load("res/shaders/test.comp");
     _shaders.skin.Load("res/shaders/skin.comp");
+    _shaders.toiletWater.Load("toilet_water.vert", "toilet_water.frag");
 }
 
 void Renderer::RenderFloorplanFrame() {
@@ -2798,15 +2903,6 @@ void Renderer::RenderFloorplanFrame() {
 	CalculateDirtyCloudPoints();
 	CalculateDirtyProbeCoords();
 	ComputePass(); // Fills the indirect lighting data structures
-
-
-
-
-    //PlayerRenderTarget playerRenderTarget = GetPlayerRenderTarget(0);
-    //PresentFrameBuffer presentFrameBuffer = playerRenderTarget.presentFrameBuffer;
-
-    //presentFrameBuffer.Bind();
-
 
 	GBuffer& gBuffer = _playerRenderTargets[0].gBuffer;
     PresentFrameBuffer& presentFrameBuffer = _playerRenderTargets[0].presentFrameBuffer;
@@ -2832,112 +2928,56 @@ void Renderer::RenderFloorplanFrame() {
 
     glDisable(GL_BLEND);
 
-   /* _shaders.editorTextured.Use();
-    _shaders.editorTextured.SetMat4("projection", Floorplan::GetProjectionMatrix());
-    _shaders.editorTextured.SetMat4("view", Floorplan::GetViewMatrix());
-    Transform t;
-    t.position.y = -3.5f;
-    _shaders.editorTextured.SetMat4("model", t.to_mat4());
-    */
-
 	_shaders.geometry.Use();
 	_shaders.geometry.SetMat4("projection", Floorplan::GetProjectionMatrix());
 	_shaders.geometry.SetMat4("view", Floorplan::GetViewMatrix());
-
-    // Get view pos from view matrix
-    glm::vec3 viewPos = glm::inverse(Floorplan::GetViewMatrix())[3];
-
 	_shaders.geometry.SetVec3("viewPos", Scene::_players[0].GetViewPos());
-	_shaders.geometry.SetVec3("camForward", viewPos);
-
+	_shaders.geometry.SetVec3("camForward", glm::inverse(Floorplan::GetViewMatrix())[3]);
     _shaders.geometry.SetMat4("model", glm::mat4(1));
 
-
-
-
-
-
-
-    // draw the scene
-
-
+    // Draw the scene
     for (Floor& floor : Scene::_floors) {
         AssetManager::BindMaterialByIndex(floor.materialIndex);
         floor.Draw();
     }
-
-
-
-    Shader& shader = _shaders.geometry;
-    // Render game objects
     for (GameObject& gameObject : Scene::_gameObjects) {
-
         if (gameObject.IsCollectable() && gameObject.IsCollected()) {
             continue;
         }
-
-        shader.SetMat4("model", gameObject.GetModelMatrix());
-
+        _shaders.geometry.SetMat4("model", gameObject.GetModelMatrix());
         for (int i = 0; i < gameObject._meshMaterialIndices.size(); i++) {
             AssetManager::BindMaterialByIndex(gameObject._meshMaterialIndices[i]);
             gameObject._model->_meshes[i].Draw();
         }
         if (gameObject.GetName() == "Present") {
             AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("Gold"));
-            AssetManager::GetModel("ChristmasBow")->Draw();
+            OpenGLAssetManager::GetModel("ChristmasBow")->Draw();
         }
     }
-
-
     for (Door& door : Scene::_doors) {
-
         AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("Door"));
-        shader.SetMat4("model", door.GetFrameModelMatrix());
-        auto* doorFrameModel = AssetManager::GetModel("DoorFrame");
+        _shaders.geometry.SetMat4("model", door.GetFrameModelMatrix());
+        auto* doorFrameModel = OpenGLAssetManager::GetModel("DoorFrame");
         doorFrameModel->Draw();
 
-        shader.SetMat4("model", door.GetDoorModelMatrix());
-        auto* doorModel = AssetManager::GetModel("Door");
+        _shaders.geometry.SetMat4("model", door.GetDoorModelMatrix());
+        auto* doorModel = OpenGLAssetManager::GetModel("Door");
         doorModel->Draw();
     }
-
     for (Window& window : Scene::_windows) {
-        shader.SetMat4("model", window.GetModelMatrix());
+        _shaders.geometry.SetMat4("model", window.GetModelMatrix());
         AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("Window"));
-        AssetManager::GetModel("Window")->_meshes[0].Draw();
-        AssetManager::GetModel("Window")->_meshes[1].Draw();
-        AssetManager::GetModel("Window")->_meshes[2].Draw();
-        AssetManager::GetModel("Window")->_meshes[3].Draw();
+        OpenGLAssetManager::GetModel("Window")->_meshes[0].Draw();
+        OpenGLAssetManager::GetModel("Window")->_meshes[1].Draw();
+        OpenGLAssetManager::GetModel("Window")->_meshes[2].Draw();
+        OpenGLAssetManager::GetModel("Window")->_meshes[3].Draw();
         AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("WindowExterior"));
-        AssetManager::GetModel("Window")->_meshes[4].Draw();
-        AssetManager::GetModel("Window")->_meshes[5].Draw();
-        AssetManager::GetModel("Window")->_meshes[6].Draw();
+        OpenGLAssetManager::GetModel("Window")->_meshes[4].Draw();
+        OpenGLAssetManager::GetModel("Window")->_meshes[5].Draw();
+        OpenGLAssetManager::GetModel("Window")->_meshes[6].Draw();
     }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     // Lighting pass
-
 	_shaders.lighting.Use();
 	gBuffer.Bind();
 	glDrawBuffer(GL_COLOR_ATTACHMENT3);
@@ -2945,17 +2985,15 @@ void Renderer::RenderFloorplanFrame() {
 	glDisable(GL_DEPTH_TEST);
 	glDisable(GL_BLEND);
 	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, gBuffer._gBaseColorTexture);
+	glBindTexture(GL_TEXTURE_2D, gBuffer.baseColorTexture);
 	glActiveTexture(GL_TEXTURE1);
-	glBindTexture(GL_TEXTURE_2D, gBuffer._gNormalTexture);
+	glBindTexture(GL_TEXTURE_2D, gBuffer.normalTexture);
 	glActiveTexture(GL_TEXTURE2);
-	glBindTexture(GL_TEXTURE_2D, gBuffer._gRMATexture);
+	glBindTexture(GL_TEXTURE_2D, gBuffer.RMATexture);
 	glActiveTexture(GL_TEXTURE3);
-	glBindTexture(GL_TEXTURE_2D, gBuffer._gDepthTexture);
+	glBindTexture(GL_TEXTURE_2D, gBuffer.depthTexture);
 	glActiveTexture(GL_TEXTURE4);
 	glBindTexture(GL_TEXTURE_3D, _progogationGridTexture);
-	glActiveTexture(GL_TEXTURE31);
-	glBindTexture(GL_TEXTURE_2D, gBuffer._gWorldSpacePosition);
 
 	// Update lights
 	auto& lights = Scene::_lights;
@@ -2984,25 +3022,8 @@ void Renderer::RenderFloorplanFrame() {
 	_shaders.lighting.SetMat4("inverseView", glm::inverse(Floorplan::GetViewMatrix()));
     _shaders.lighting.SetVec3("viewPos", Scene::_players[0].GetViewPos());
 	_shaders.lighting.SetFloat("propogationGridSpacing", _propogationGridSpacing);
-	_shaders.lighting.SetVec3("player1MuzzleFlashPosition", Scene::_players[0].GetViewPos());
-	_shaders.lighting.SetVec3("player2MuzzleFlashPosition", Scene::_players[1].GetViewPos());
-	_shaders.lighting.SetBool("player1NeedsMuzzleFlash", Scene::_players[0].MuzzleFlashIsRequired());
-	_shaders.lighting.SetBool("player2NeedsMuzzleFlash", Scene::_players[1].MuzzleFlashIsRequired());
-
-
-	glActiveTexture(GL_TEXTURE22);
-	glBindTexture(GL_TEXTURE_CUBE_MAP, Scene::_players[0]._shadowMap._depthTexture);
-	glActiveTexture(GL_TEXTURE23);
-	glBindTexture(GL_TEXTURE_CUBE_MAP, Scene::_players[1]._shadowMap._depthTexture);
 
 	DrawFullscreenQuad();
-
-
-
-
-
-
-
 
 	// Blit final image from large FBO down into a smaller FBO
 	glBindFramebuffer(GL_READ_FRAMEBUFFER, gBuffer.GetID());
@@ -3010,13 +3031,6 @@ void Renderer::RenderFloorplanFrame() {
 	glReadBuffer(GL_COLOR_ATTACHMENT3);
 	glDrawBuffer(GL_COLOR_ATTACHMENT0);
 	glBlitFramebuffer(0, 0, gBuffer.GetWidth(), gBuffer.GetHeight(), 0, 0, presentFrameBuffer.GetWidth(), presentFrameBuffer.GetHeight(), GL_COLOR_BUFFER_BIT, GL_LINEAR);
-
-
-
-
-
-
-    
 
 	//glEnable(GL_DEPTH_TEST);
 	glBindFramebuffer(GL_FRAMEBUFFER, presentFrameBuffer.GetID());
@@ -3044,72 +3058,36 @@ void Renderer::RenderFloorplanFrame() {
 	glEnable(GL_DEPTH_TEST);
 	RenderImmediate();
    
-
-
 	// Blit image back to frame buffer
     glReadBuffer(GL_COLOR_ATTACHMENT0);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	glBindFramebuffer(GL_READ_FRAMEBUFFER, presentFrameBuffer.GetID());
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-	glBlitFramebuffer(0, 0, presentFrameBuffer.GetWidth(), presentFrameBuffer.GetHeight(), 0, 0, GL::GetWindowWidth(), GL::GetWindowHeight(), GL_COLOR_BUFFER_BIT, GL_NEAREST);
-
-
-
-
-
-    /*
-
-   
-    // Render UI
-    glBindFramebuffer(GL_FRAMEBUFFER, presentFrameBuffer.GetID());
-    glViewport(0, 0, presentFrameBuffer.GetWidth(), presentFrameBuffer.GetHeight());
-    glDisable(GL_DEPTH_TEST);
-    glDisable(GL_CULL_FACE);
-    Renderer::RenderUI(presentFrameBuffer.GetWidth(), presentFrameBuffer.GetHeight());
-
-    // Blit image back to frame buffer
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    glBindFramebuffer(GL_READ_FRAMEBUFFER, presentFrameBuffer.GetID());
-    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-    glBlitFramebuffer(0, 0, presentFrameBuffer.GetWidth(), presentFrameBuffer.GetHeight(), 0, 0, GL::GetWindowWidth(), GL::GetWindowHeight(), GL_COLOR_BUFFER_BIT, GL_NEAREST);*/
+	glBlitFramebuffer(0, 0, presentFrameBuffer.GetWidth(), presentFrameBuffer.GetHeight(), 0, 0, BackEnd::GetCurrentWindowWidth(), BackEnd::GetCurrentWindowHeight(), GL_COLOR_BUFFER_BIT, GL_NEAREST);
 }
 
-
 void DrawQuad2(int viewportWidth, int viewPortHeight, int xPos, int yPos, int xSize, int ySize, bool centered) {
-
 	float quadWidth = (float)xSize;
 	float quadHeight = (float)ySize;
-
-	//if (centered) {
-	//	xPos -= (int)(quadWidth / 2);
-	//	yPos -= (int)(quadHeight / 2);
-	//
-
 	float renderTargetWidth = (float)viewportWidth;
 	float renderTargetHeight = (float)viewPortHeight;
 	float width = (1.0f / renderTargetWidth) * quadWidth;
 	float height = (1.0f / renderTargetHeight) * quadHeight;
 	float ndcX = ((xPos + (quadWidth / 2.0f)) / renderTargetWidth) * 2 - 1;
 	float ndcY = ((yPos + (quadHeight / 2.0f)) / renderTargetHeight) * 2 - 1;
-	Transform transform;
-	//transform.position.x = ndcX;
-	//transform.position.y = ndcY * -1;
-	//transform.scale = glm::vec3(width, height * -1, 1);
-
 	width = (1.0f / renderTargetWidth) * xSize;
-	height = (1.0f / renderTargetHeight) * ySize;
+    height = (1.0f / renderTargetHeight) * ySize;
+    Transform transform;
 	transform.scale.x = width;
 	transform.scale.y = height;
-
 	_shaders.UI.SetMat4("model", transform.to_mat4());
 	_quadMesh.Draw();
 }
 
 void Renderer::RenderDebugMenu() {
 
-
 	glBindFramebuffer(GL_FRAMEBUFFER, _menuRenderTarget.fbo);
-	glViewport(0, 0, _renderWidth, _renderHeight);
+	glViewport(0, 0, PRESENT_WIDTH, PRESENT_HEIGHT);
 	glClearColor(0, 0, 0, 0);
 	glClear(GL_COLOR_BUFFER_BIT);
 	glDisable(GL_DEPTH_TEST);
@@ -3122,8 +3100,8 @@ void Renderer::RenderDebugMenu() {
     float lineHeight = TextBlitter::GetLineHeight();
     float paddingBetweenHeading = 8.0f;
     float paddingBetweenLeftAndRightText = 10.0f;
-	float viewportCenterX = _renderWidth * 0.5f;
-	float viewportCenterY = _renderHeight * 0.5f;
+	float viewportCenterX = PRESENT_WIDTH * 0.5f;
+	float viewportCenterY = PRESENT_HEIGHT * 0.5f;
 
     float subMenuHeight = DebugMenu::GetSubMenuItemCount() * lineHeight;
     float headingHeight = lineHeight;
@@ -3163,30 +3141,25 @@ void Renderer::RenderDebugMenu() {
 	textLeftX = viewportCenterX - (menuWidth * 0.5f) + paddingLeftRight;
 	textRightX = viewportCenterX + 0;
 
-
-//	std::cout << menuWidth << "\n";
-    	
-	// Draw menu background
-
 	_shaders.UI.SetVec3("overrideColor", GREEN);
-	AssetManager::GetTexture("MenuBG")->Bind(0);
-	DrawQuad(_renderWidth, _renderHeight, menuWidth, totalMenuHeight, viewportCenterX, viewportCenterY, true);
+    AssetManager::GetTextureByName("MenuBG")->glTexture.Bind(0);
+	DrawQuad(PRESENT_WIDTH, PRESENT_HEIGHT, menuWidth, totalMenuHeight, viewportCenterX, viewportCenterY, true);
 
-	AssetManager::GetTexture("MenuBorderHorizontal")->Bind(0);
-	DrawQuad(_renderWidth, _renderHeight, menuWidth, 3, viewportCenterX, viewportCenterY - (totalMenuHeight * 0.5f), true);
-	DrawQuad(_renderWidth, _renderHeight, menuWidth, 3, viewportCenterX, viewportCenterY + (totalMenuHeight * 0.5f), true);
-	AssetManager::GetTexture("MenuBorderVertical")->Bind(0);
-	DrawQuad(_renderWidth, _renderHeight, 3, totalMenuHeight, viewportCenterX - (menuWidth * 0.5f), viewportCenterY, true);
-	DrawQuad(_renderWidth, _renderHeight, 3, totalMenuHeight, viewportCenterX + (menuWidth * 0.5f), viewportCenterY, true);
+    AssetManager::GetTextureByName("MenuBorderHorizontal")->glTexture.Bind(0);
+	DrawQuad(PRESENT_WIDTH, PRESENT_HEIGHT, menuWidth, 3, viewportCenterX, viewportCenterY - (totalMenuHeight * 0.5f), true);
+	DrawQuad(PRESENT_WIDTH, PRESENT_HEIGHT, menuWidth, 3, viewportCenterX, viewportCenterY + (totalMenuHeight * 0.5f), true);
+    AssetManager::GetTextureByName("MenuBorderVertical")->glTexture.Bind(0);
+	DrawQuad(PRESENT_WIDTH, PRESENT_HEIGHT, 3, totalMenuHeight, viewportCenterX - (menuWidth * 0.5f), viewportCenterY, true);
+	DrawQuad(PRESENT_WIDTH, PRESENT_HEIGHT, 3, totalMenuHeight, viewportCenterX + (menuWidth * 0.5f), viewportCenterY, true);
 
-	AssetManager::GetTexture("MenuBorderCornerTL")->Bind(0);
-	DrawQuad(_renderWidth, _renderHeight, 3, 3, viewportCenterX - (menuWidth * 0.5f), viewportCenterY - (totalMenuHeight * 0.5f), true);
-	AssetManager::GetTexture("MenuBorderCornerTR")->Bind(0);
-	DrawQuad(_renderWidth, _renderHeight, 3, 3, viewportCenterX + (menuWidth * 0.5f), viewportCenterY - (totalMenuHeight * 0.5f), true);
-	AssetManager::GetTexture("MenuBorderCornerBL")->Bind(0);
-	DrawQuad(_renderWidth, _renderHeight, 3, 3, viewportCenterX - (menuWidth * 0.5f), viewportCenterY + (totalMenuHeight * 0.5f), true);
-	AssetManager::GetTexture("MenuBorderCornerBR")->Bind(0);
-	DrawQuad(_renderWidth, _renderHeight, 3, 3, viewportCenterX + (menuWidth * 0.5f), viewportCenterY + (totalMenuHeight * 0.5f), true);
+    AssetManager::GetTextureByName("MenuBorderCornerTL")->glTexture.Bind(0);
+	DrawQuad(PRESENT_WIDTH, PRESENT_HEIGHT, 3, 3, viewportCenterX - (menuWidth * 0.5f), viewportCenterY - (totalMenuHeight * 0.5f), true);
+    AssetManager::GetTextureByName("MenuBorderCornerTR")->glTexture.Bind(0);
+	DrawQuad(PRESENT_WIDTH, PRESENT_HEIGHT, 3, 3, viewportCenterX + (menuWidth * 0.5f), viewportCenterY - (totalMenuHeight * 0.5f), true);
+    AssetManager::GetTextureByName("MenuBorderCornerBL")->glTexture.Bind(0);
+	DrawQuad(PRESENT_WIDTH, PRESENT_HEIGHT, 3, 3, viewportCenterX - (menuWidth * 0.5f), viewportCenterY + (totalMenuHeight * 0.5f), true);
+    AssetManager::GetTextureByName("MenuBorderCornerBR")->glTexture.Bind(0);
+	DrawQuad(PRESENT_WIDTH, PRESENT_HEIGHT, 3, 3, viewportCenterX + (menuWidth * 0.5f), viewportCenterY + (totalMenuHeight * 0.5f), true);
 
     // Draw menu text
     TextBlitter::BlitAtPosition(DebugMenu::GetHeading(), viewportCenterX, headingY, true, 1.0f);
@@ -3195,12 +3168,12 @@ void Renderer::RenderDebugMenu() {
 
 	_shaders.UI.SetVec3("overrideColor", WHITE);
     TextBlitter::Update(1.0f / 60.0f);
-	Renderer::RenderUI(_renderWidth, _renderHeight);
+	Renderer::RenderUI(PRESENT_WIDTH, PRESENT_HEIGHT);
 	_shaders.UI.SetVec3("overrideColor", WHITE);
 
     // Draw the menu into the main frame buffer
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	glViewport(0, 0, GL::GetWindowWidth(), GL::GetWindowHeight());
+	glViewport(0, 0, BackEnd::GetCurrentWindowWidth(), BackEnd::GetCurrentWindowHeight());
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, _menuRenderTarget.texture);
 	glDisable(GL_DEPTH_TEST);
@@ -3232,8 +3205,6 @@ void Renderer::ToggleDrawingRagdolls() {
 void Renderer::ToggleDebugText() {
 	_toggles.drawDebugText = !_toggles.drawDebugText;
 }
-
-
 
 void DrawQuad(int viewportWidth, int viewPortHeight, int textureWidth, int textureHeight, int xPos, int yPos, bool centered, float scale, int xSize, int ySize) {
 
@@ -3282,7 +3253,6 @@ void Renderer::RenderUI(float viewportWidth, float viewportHeight) {
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glBlendEquation(GL_FUNC_ADD);
 
-
 	_shaders.UI.Use();
 
     if (_quadMesh.GetIndexCount() == 0) {
@@ -3301,18 +3271,16 @@ void Renderer::RenderUI(float viewportWidth, float viewportHeight) {
         vertices.push_back(vertC);
         vertices.push_back(vertD);
         std::vector<uint32_t> indices = { 0, 1, 2, 0, 2, 3 };
-        _quadMesh = Mesh(vertices, indices, "QuadMesh");
+        _quadMesh = OpenGLMesh(vertices, indices, "QuadMesh");
     }
 
-    //float viewportWidth = (float)_renderWidth;
-    //float viewportHeight = (float)_renderHeight;
-    if (EngineState::GetViewportMode() == SPLITSCREEN) {
+    //if (EngineState::GetViewportMode() == SPLITSCREEN) {
       //  viewportHeight *= 0.5f;
-    }
+    //}
 
     for (UIRenderInfo& uiRenderInfo : _UIRenderInfos) {
-        AssetManager::GetTexture(uiRenderInfo.textureName)->Bind(0);
-        Texture* texture = AssetManager::GetTexture(uiRenderInfo.textureName);
+        AssetManager::GetTextureByName(uiRenderInfo.textureName)->glTexture.Bind(0);
+        Texture* texture = AssetManager::GetTextureByName(uiRenderInfo.textureName);
         _shaders.UI.SetVec3("color", uiRenderInfo.color);
         DrawQuad(viewportWidth, viewportHeight, texture->GetWidth(), texture->GetHeight(), uiRenderInfo.screenX, uiRenderInfo.screenY, uiRenderInfo.centered);
     }
@@ -3322,11 +3290,11 @@ void Renderer::RenderUI(float viewportWidth, float viewportHeight) {
 }
 
 int Renderer::GetRenderWidth() {
-    return _renderWidth;
+    return PRESENT_WIDTH;
 }
 
 int Renderer::GetRenderHeight() {
-    return _renderHeight;
+    return PRESENT_HEIGHT;
 }
 
 float Renderer::GetPointCloudSpacing() {
@@ -3383,20 +3351,6 @@ void Renderer::NextDebugLineRenderMode() {
         _debugLineRenderMode = (DebugLineRenderMode)0;
     }     
 }
-
-/*
-glm::mat4 Renderer::GetProjectionMatrix(float depthOfField) {
-
-    float width = (float)GL::GetWindowWidth();
-    float height = (float)GL::GetWindowHeight();
-
-    if (EngineState::GetViewportMode() == SPLITSCREEN) {
-        height *= 0.5f;
-    }
-
-    return glm::perspective(depthOfField, width / height, NEAR_PLANE, FAR_PLANE);
-}
-*/
 
 void Renderer::QueueLineForDrawing(Line line) {
     _lines.push_back(line);
@@ -3477,7 +3431,6 @@ void DrawMuzzleFlashes(Player* player) {
     int playerIndex = GetPlayerIndexFromPlayerPointer(player);
     PlayerRenderTarget& playerRenderTarget = GetPlayerRenderTarget(playerIndex);
     GBuffer& gBuffer = playerRenderTarget.gBuffer;
-    //PresentFrameBuffer& presentFrameBuffer = playerRenderTarget.presentFrameBuffer;
 
     static MuzzleFlash muzzleFlash; // has init on the first use. DISGUSTING. Fix if you ever see this when you aren't on another mission.
 
@@ -3519,7 +3472,7 @@ void DrawMuzzleFlashes(Player* player) {
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     /// this is sketchy. add this to player class.
-    glm::mat4 projection = player->GetProjectionMatrix();// Renderer::GetProjectionMatrix(_depthOfFieldWeapon); // 1.0 for weapon, 0.9 for scene.
+    glm::mat4 projection = player->GetProjectionMatrix();
     glm::mat4 view = player->GetViewMatrix();
     glm::vec3 viewPos = player->GetViewPos();
 
@@ -3529,7 +3482,7 @@ void DrawMuzzleFlashes(Player* player) {
     _shaders.animatedQuad.SetVec3("u_ViewPos", viewPos);
 
     glActiveTexture(GL_TEXTURE0);
-    AssetManager::GetTexture("MuzzleFlash_ALB")->Bind(0);
+    AssetManager::GetTextureByName("MuzzleFlash_ALB")->glTexture.Bind(0);
 
     muzzleFlash.Draw(&_shaders.animatedQuad, t, player->GetMuzzleFlashRotation());
     glDisable(GL_BLEND);
@@ -3538,7 +3491,7 @@ void DrawMuzzleFlashes(Player* player) {
     glDepthMask(GL_TRUE);
 }
 
-void DrawInstanced(Mesh& mesh, std::vector<glm::mat4>& matrices) {
+void DrawInstanced(OpenGLMesh& mesh, std::vector<glm::mat4>& matrices) {
     if (_ssbos.instanceMatrices == 0) {
         glCreateBuffers(1, &_ssbos.instanceMatrices);
         glNamedBufferStorage(_ssbos.instanceMatrices, 4096 * sizeof(glm::mat4), NULL, GL_DYNAMIC_STORAGE_BIT);
@@ -3569,55 +3522,39 @@ void DrawBulletDecals(Player* player) {
 
     unsigned int attachments[3] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2 };
     glDrawBuffers(3, attachments);
+    glEnable(GL_CULL_FACE);        
 
-    glEnable(GL_CULL_FACE);
-    
-    {
-        std::vector<glm::mat4> matrices;
-        for (Decal& decal : Scene::_decals) {
-            if (decal.type == Decal::Type::REGULAR) {
-                matrices.push_back(decal.GetModelMatrix());
-            }
+    _shaders.bulletDecals.Use();
+    _shaders.bulletDecals.SetMat4("projection", player->GetProjectionMatrix());
+    _shaders.bulletDecals.SetMat4("view", player->GetViewMatrix());
+
+    std::vector<glm::mat4> matrices;
+    matrices.reserve(Scene::_decals.size());
+
+    // Bullet holes
+    for (Decal& decal : Scene::_decals) {
+        if (decal.type == Decal::Type::REGULAR) {
+            matrices.push_back(decal.GetModelMatrix());
         }
-
-        glm::mat4 projection = player->GetProjectionMatrix();// Renderer::GetProjectionMatrix(_depthOfFieldScene); // 1.0 for weapon, 0.9 for scene.
-        glm::mat4 view = player->GetViewMatrix();
-
-        _shaders.bulletDecals.Use();
-        _shaders.bulletDecals.SetMat4("projection", projection);
-        _shaders.bulletDecals.SetMat4("view", view);
-
-        AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("BulletHole_Plaster"));
-
-        DrawInstanced(AssetManager::GetDecalMesh(), matrices);
     }
-	{
-		std::vector<glm::mat4> matrices;
-		for (Decal& decal : Scene::_decals) {
-			if (decal.type == Decal::Type::GLASS) {                
-                Transform transform;
-                transform.scale = glm::vec3(2.0f);                
-                matrices.push_back(decal.GetModelMatrix() * transform.to_mat4());
-			}
-		}
+    AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("BulletHole_Plaster"));
+    DrawInstanced(OpenGLAssetManager::GetDecalMesh(), matrices);
 
-        glm::mat4 projection = player->GetProjectionMatrix();// Renderer::GetProjectionMatrix(_depthOfFieldScene); // 1.0 for weapon, 0.9 for scene.
-		glm::mat4 view = player->GetViewMatrix();
-
-		_shaders.bulletDecals.Use();
-		_shaders.bulletDecals.SetMat4("projection", projection);
-		_shaders.bulletDecals.SetMat4("view", view);
-
-		AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("BulletHole_Glass"));
-
-		DrawInstanced(AssetManager::GetDecalMesh(), matrices);
-	}
+	// Glass bullet holes
+    matrices.clear();
+    for (Decal& decal : Scene::_decals) {
+        if (decal.type == Decal::Type::GLASS) {
+            matrices.push_back(decal.GetModelMatrix());
+        }
+    }
+    AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("BulletHole_Glass"));
+    DrawInstanced(OpenGLAssetManager::GetDecalMesh(), matrices);
 }
 
 
 void DrawCasingProjectiles(Player* player) {
 
-    glm::mat4 projection = player->GetProjectionMatrix();// Renderer::GetProjectionMatrix(_depthOfFieldScene); // 1.0 for weapon, 0.9 for scene.
+    glm::mat4 projection = player->GetProjectionMatrix();
     glm::mat4 view = player->GetViewMatrix();
     _shaders.geometry_instanced.Use();
     _shaders.geometry_instanced.SetMat4("projection", projection);
@@ -3631,7 +3568,7 @@ void DrawCasingProjectiles(Player* player) {
         }
     }
     AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("BulletCasing"));
-    Mesh& glockCasingmesh = AssetManager::GetModel("BulletCasing")->_meshes[0];
+    OpenGLMesh& glockCasingmesh = OpenGLAssetManager::GetModel("BulletCasing")->_meshes[0];
     DrawInstanced(glockCasingmesh, matrices);
     
     // AKS74U
@@ -3642,7 +3579,7 @@ void DrawCasingProjectiles(Player* player) {
         }
     }
     AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("Casing_AkS74U"));
-    Mesh& aks75uCasingmesh = AssetManager::GetModel("BulletCasing_AK")->_meshes[0];
+    OpenGLMesh& aks75uCasingmesh = OpenGLAssetManager::GetModel("BulletCasing_AK")->_meshes[0];
     DrawInstanced(aks75uCasingmesh, matrices);
 
     // SHOTGUN
@@ -3653,71 +3590,23 @@ void DrawCasingProjectiles(Player* player) {
         }
     }
     AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("Shell"));
-    Mesh& shotgunShellMesh = AssetManager::GetModel("Shell")->_meshes[0];
+    OpenGLMesh& shotgunShellMesh = OpenGLAssetManager::GetModel("Shell")->_meshes[0];
     DrawInstanced(shotgunShellMesh, matrices);
 
 	// DRAW GLASS PROJECTILES 
-    // 
     // (currently using the mp7 as a tag, thats fucked, rewrite this soon
-
-	matrices.clear();
+	/*matrices.clear();
 	for (BulletCasing& casing : Scene::_bulletCasings) {
 		if (casing.type == MP7) {
 			matrices.push_back(casing.GetModelMatrix());
 		}
 	}
 	AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("BulletHole_Glass"));
-	Mesh& shardMesh = AssetManager::GetModel("GlassShard")->_meshes[0];
-	DrawInstanced(shardMesh, matrices);
-
+	Mesh& shardMesh = OpenGLAssetManager::GetModel("GlassShard")->_meshes[0];
+	DrawInstanced(shardMesh, matrices);*/
 }
 
 void RenderShadowMaps() {
-
-    if (!Input::KeyPressed(HELL_KEY_SPACE)) {
-      //  return;
-    }
-
-	// Render player shadowmaps (muzzle flashes)
-	_shaders.shadowMap.Use();
-	_shaders.shadowMap.SetFloat("far_plane", SHADOW_FAR_PLANE);
-	_shaders.shadowMap.SetMat4("model", glm::mat4(1));
-	glDepthMask(true);
-	glDisable(GL_BLEND);
-	glDisable(GL_CULL_FACE);
-    glEnable(GL_DEPTH_TEST);
-    glViewport(0, 0, SHADOW_MAP_SIZE, SHADOW_MAP_SIZE);
-
-    /*for (Player& player : Scene::_players) {
-        if (player.MuzzleFlashIsRequired()) {
-	        glBindFramebuffer(GL_FRAMEBUFFER, player._shadowMap._ID);
-	        glClear(GL_DEPTH_BUFFER_BIT);
-	        std::vector<glm::mat4> projectionTransforms;
-            glm::vec3 position = player.GetViewPos();
-	        glm::mat4 shadowProj = glm::perspective(glm::radians(90.0f), (float)SHADOW_MAP_SIZE / (float)SHADOW_MAP_SIZE, SHADOW_NEAR_PLANE, SHADOW_FAR_PLANE);
-	        projectionTransforms.clear();
-	        projectionTransforms.push_back(shadowProj * glm::lookAt(position, position + glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
-	        projectionTransforms.push_back(shadowProj * glm::lookAt(position, position + glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
-	        projectionTransforms.push_back(shadowProj * glm::lookAt(position, position + glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f)));
-	        projectionTransforms.push_back(shadowProj * glm::lookAt(position, position + glm::vec3(0.0f, -1.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f)));
-	        projectionTransforms.push_back(shadowProj * glm::lookAt(position, position + glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
-	        projectionTransforms.push_back(shadowProj * glm::lookAt(position, position + glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
-	        _shaders.shadowMap.SetMat4("shadowMatrices[0]", projectionTransforms[0]);
-	        _shaders.shadowMap.SetMat4("shadowMatrices[1]", projectionTransforms[1]);
-	        _shaders.shadowMap.SetMat4("shadowMatrices[2]", projectionTransforms[2]);
-	        _shaders.shadowMap.SetMat4("shadowMatrices[3]", projectionTransforms[3]);
-	        _shaders.shadowMap.SetMat4("shadowMatrices[4]", projectionTransforms[4]);
-	        _shaders.shadowMap.SetMat4("shadowMatrices[5]", projectionTransforms[5]);
-	        _shaders.shadowMap.SetVec3("lightPosition", position);
-	        _shaders.shadowMap.SetMat4("model", glm::mat4(1));
-	        DrawShadowMapScene(_shaders.shadowMap);
-        }
-    }*/
-
-
-
-//    if (!Renderer::_shadowMapsAreDirty)
-  //      return;
 
     _shaders.shadowMap.Use();
     _shaders.shadowMap.SetFloat("far_plane", SHADOW_FAR_PLANE);
@@ -3725,15 +3614,8 @@ void RenderShadowMaps() {
     glDepthMask(true);
     glDisable(GL_BLEND);
     glDisable(GL_CULL_FACE);
-
-    // clear all, in case there are less lights than the previous frame
-    // but really you want to only update lights that have an an dynamic object pass through its radius
     glEnable(GL_DEPTH_TEST);
     glViewport(0, 0, SHADOW_MAP_SIZE, SHADOW_MAP_SIZE);
-   /* for (int i = 0; i < _shadowMaps.size(); i++) {
-        glBindFramebuffer(GL_FRAMEBUFFER, _shadowMaps[i]._ID);
-       // glClear(GL_DEPTH_BUFFER_BIT);
-    }*/
 
     for (int i = 0; i < Scene::_lights.size(); i++) {
 
@@ -3742,14 +3624,13 @@ void RenderShadowMaps() {
         if (!Scene::_lights[i].isDirty) {
             skip = true;
         }
-        if (EngineMode::EDITOR) {
+        if (EngineState::GetEngineMode() == EngineMode::EDITOR) {
             skip = false;
         }
 
         if (skip) {
             continue;
         }
-
         glBindFramebuffer(GL_FRAMEBUFFER, _shadowMaps[i]._ID);
         glClear(GL_DEPTH_BUFFER_BIT);
 
@@ -3773,9 +3654,6 @@ void RenderShadowMaps() {
         _shaders.shadowMap.SetMat4("model", glm::mat4(1));
         DrawShadowMapScene(_shaders.shadowMap);
     }
-    //Renderer::_shadowMapsAreDirty = false;
-
-
 }
 
 void Renderer::CreatePointCloudBuffer() {
@@ -3904,7 +3782,7 @@ void ComputePass() {
 
 	// Composite
 	//_shaders.computeTest.Use();
-	//glBindImageTexture(0, gBuffer._gLightingTexture, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA16F);
+	//glBindImageTexture(0, gBuffer.lightingTexture, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA16F);
 	//glDispatchCompute(gBuffer.GetWidth() / 8, gBuffer.GetHeight() / 8, 1);
 	//glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 }

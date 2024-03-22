@@ -1,0 +1,93 @@
+{
+    "file_format_version" : "1.2.0",
+    "layer": {
+        "name": "VK_LAYER_LUNARG_screenshot",
+        "type": "GLOBAL",
+        "library_path": ".\\VkLayer_screenshot.dll",
+        "api_version": "1.3.250",
+        "implementation_version": "1",
+        "description": "LunarG image capture layer",
+        "introduction": "The screenshot layer records frames to image files.",
+        "url": "https://vulkan.lunarg.com/doc/sdk/latest/windows/screenshot_layer.html",
+        "platforms": [ "WINDOWS", "LINUX", "ANDROID" ],
+        "device_extensions": [
+            {
+                "name": "VK_EXT_tooling_info",
+                "spec_version": "1",
+                "entrypoints": [
+                    "vkGetPhysicalDeviceToolPropertiesEXT"
+                ]
+            }
+        ],
+        "features": {
+            "settings": [
+                {
+                    "key": "frames",
+                    "env": "VK_SCREENSHOT_FRAMES",
+                    "label": "Frames",
+                    "description": "Specifies list of frames to output as screenshots. It is specified as a comma-separated list of frames or a range of frames with a start, count, and optional interval separated by a dash. Setting the variable to \"all\" will output every frame. Example: \"5-8-2\" will output frame 5, continue until frame 13, dumping every other frame. Example: \"3,8-2\" will output frames 3, 8, and 9. If it is not set or it set to an empty string, no screenshots are created.",
+                    "type": "STRING",
+                    "default": ""
+                },
+                {
+                    "key": "dir",
+                    "env": "VK_SCREENSHOT_DIR",
+                    "label": "Directory",
+                    "description": "Specifies the directory in which to create the screenshot files. If it is not set or is set to an empty string, the files will be created in the current working directory.",
+                    "type": "SAVE_FOLDER",
+                    "default": ""
+                },
+                {
+                    "key": "format",
+                    "env": "VK_SCREENSHOT_FORMAT",
+                    "label": "Format",
+                    "description": "Specify a color space for the output. If it is not set, set to null, or set to USE_SWAPCHAIN_COLORSPACE the format will be set to use the same color space as the swapchain object.",
+                    "type": "ENUM",
+                    "flags": [
+                        {
+                            "key": "UNORM",
+                            "label": "UNORM",
+                            "description": ""
+                        },
+                        {
+                            "key": "SNORM",
+                            "label": "SNORM",
+                            "description": ""
+                        },
+                        {
+                            "key": "USCALED",
+                            "label": "USCALED",
+                            "description": ""
+                        },
+                        {
+                            "key": "SSCALED",
+                            "label": "SSCALED",
+                            "description": ""
+                        },
+                        {
+                            "key": "UINT",
+                            "label": "UINT",
+                            "description": ""
+                        },
+                        {
+                            "key": "SINT",
+                            "label": "SINT",
+                            "description": ""
+                        },
+                        {
+                            "key": "SRGB",
+                            "label": "SRGB",
+                            "description": ""
+                        },
+                        {
+                            "key": "USE_SWAPCHAIN_COLORSPACE",
+                            "label": "USE_SWAPCHAIN_COLORSPACE",
+                            "description": ""
+                        }
+                    ],
+                    "default": "USE_SWAPCHAIN_COLORSPACE"
+                }
+            ]
+        }
+    }
+}

@@ -1,7 +1,6 @@
 #version 420 core
 
 out vec4 FragColor;
-in vec3 Normal;
 in vec2 TexCoords;
 in vec3 WorldPos;
 
@@ -16,6 +15,10 @@ uniform float screenWidth;
 uniform float screenHeight;
 uniform vec3 viewPos;
 uniform bool isWindow;
+
+in vec3 attrNormal;
+in vec3 attrTangent;
+in vec3 attrBiTangent;
 
 struct Light {
 	vec3 position;
@@ -126,6 +129,10 @@ void main() {
     baseColor = pow(baseColor, vec3(2.2));
     float roughness =  texture2D(rmaTexture, TexCoords).r;
     float metallic = 0;
+    vec3 normalMap = texture2D(normalTexture, TexCoords).rgb;
+
+	mat3 tbn = mat3(normalize(attrTangent), normalize(attrBiTangent), normalize(attrNormal));	
+	vec3 Normal = normalize(tbn * (normalMap.rgb * 2.0 - 1.0));
 
 	if (isWindow) {
 		baseColor += (roughness) * (0.25);
@@ -158,7 +165,9 @@ void main() {
    
     vec3 brdf = texture(brdfTexture, TexCoords).rgb;
    
+ //  color = vec3(Normal);
 
+ color += baseColor * 0.1;
    
     FragColor = vec4(color, 1.0f);
 }

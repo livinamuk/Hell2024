@@ -1,6 +1,6 @@
 #pragma once
 #include "../common.h"
-#include "Physics.h"
+#include "../Physics/Physics.h"
 
 class Window {
 

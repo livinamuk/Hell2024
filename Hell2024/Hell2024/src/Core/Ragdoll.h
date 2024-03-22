@@ -1,7 +1,7 @@
 #pragma once
 #include <vector>
 #include <string>
-#include "Physics.h"
+#include "../Physics/Physics.h"
 
 struct RigidComponent {
 public:

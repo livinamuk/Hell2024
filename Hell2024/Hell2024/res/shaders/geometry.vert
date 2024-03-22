@@ -65,12 +65,9 @@ void main() {
 
 		mat4 normalMatrix = transpose(inverse(model));
 		attrNormal = normalize((normalMatrix * vec4(aNormal, 0)).xyz);
-
-
-
-
 		attrTangent = (model * vec4(aTangent, 0.0)).xyz;
 		attrBiTangent = normalize(cross(attrNormal,attrTangent));
+
 		//attrTangent = (model * vec4(aBitangent, 0.0)).xyz;
 		WorldPos = (model * vec4(aPos.x, aPos.y, aPos.z, 1.0)).xyz;	
 		//attrNormal = transpose(inverse(mat3(model))) * aNormal;

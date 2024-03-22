@@ -1,0 +1,509 @@
+# The settings in this file can be used to configure the behavior of
+# layers in this repository.
+#
+# Note that this file is not regulary updated, so not all possible layer
+# settings may be listed, and some layer settings may even be obsolete.
+
+# VK_LAYER_KHRONOS_validation
+
+# Debug Action
+# =====================
+# <LayerIdentifier>.debug_action
+# Specifies what action is to be taken when a layer reports information
+khronos_validation.debug_action = VK_DBG_LAYER_ACTION_LOG_MSG
+
+# Log Filename
+# =====================
+# <LayerIdentifier>.log_filename
+# Specifies the output filename
+khronos_validation.log_filename = stdout
+
+# Message Severity
+# =====================
+# <LayerIdentifier>.report_flags
+# Comma-delineated list of options specifying the types of messages to be
+# reported
+khronos_validation.report_flags = error
+
+# Limit Duplicated Messages
+# =====================
+# <LayerIdentifier>.enable_message_limit
+# Enable limiting of duplicate messages.
+khronos_validation.enable_message_limit = true
+
+# Max Duplicated Messages
+# =====================
+# <LayerIdentifier>.duplicate_message_limit
+# Maximum number of times any single validation message should be reported.
+khronos_validation.duplicate_message_limit = 10
+
+# Mute Message VUIDs
+# =====================
+# <LayerIdentifier>.message_id_filter
+# List of VUIDs and VUID identifers which are to be IGNORED by the validation
+# layer
+khronos_validation.message_id_filter =
+
+# Disables
+# =====================
+# <LayerIdentifier>.disables
+# Specify areas of validation to be disabled
+khronos_validation.disables = VK_VALIDATION_FEATURE_DISABLE_THREAD_SAFETY_EXT
+
+# Enables
+# =====================
+# <LayerIdentifier>.enables
+# Setting an option here will enable specialized areas of validation
+khronos_validation.enables =
+
+# Redirect Printf messages to stdout
+# =====================
+# <LayerIdentifier>.printf_to_stdout
+# Enable redirection of Debug Printf messages from the debug callback to stdout
+#khronos_validation.printf_to_stdout = true
+
+# Printf verbose
+# =====================
+# <LayerIdentifier>.printf_verbose
+# Set the verbosity of debug printf messages
+#khronos_validation.printf_verbose = false
+
+# Printf buffer size
+# =====================
+# <LayerIdentifier>.printf_buffer_size
+# Set the size in bytes of the buffer used by debug printf
+#khronos_validation.printf_buffer_size = 1024
+
+# Check descriptor indexing accesses
+# =====================
+# <LayerIdentifier>.gpuav_descriptor_indexing
+# Enable descriptor indexing access checking
+#khronos_validation.gpuav_descriptor_indexing = true
+
+# Check Out of Bounds
+# =====================
+# <LayerIdentifier>.gpuav_buffer_oob
+# Enable buffer out of bounds checking
+#khronos_validation.gpuav_buffer_oob = true
+
+# Check Draw Indirect Count Buffers and firstInstance values
+# =====================
+# <LayerIdentifier>.validate_draw_indirect
+# Enable draw indirect checking
+#khronos_validation.validate_draw_indirect = true
+
+# Check Dispatch Indirect group count values
+# =====================
+# <LayerIdentifier>.validate_dispatch_indirect
+# Enable dispatch indirect checking
+#khronos_validation.validate_dispatch_indirect = true
+
+# Use linear vma allocator for GPU-AV output buffers
+# =====================
+# <LayerIdentifier>.gpuav_vma_linear_output
+# Use VMA linear memory allocations for GPU-AV output buffers
+#khronos_validation.vma_linear_output = true
+
+# Fine Grained Locking
+# =====================
+# <LayerIdentifier>.fine_grained_locking
+# Enable fine grained locking for Core Validation, which should improve
+# performance in multithreaded applications.
+khronos_validation.fine_grained_locking = true
+
+# Best Practices
+# =====================
+# Enable best practices layer
+khronos_validation.enables=VK_VALIDATION_FEATURE_ENABLE_BEST_PRACTICES_EXT
+
+# Best Practices with ARM best practices
+# =====================
+# Enable best practices layer
+khronos_validation.enables=VK_VALIDATION_FEATURE_ENABLE_BEST_PRACTICES_EXT,VALIDATION_CHECK_ENABLE_VENDOR_SPECIFIC_ARM
+
+# Best Practices with AMD best practices
+# =====================
+# Enable best practices layer
+khronos_validation.enables=VK_VALIDATION_FEATURE_ENABLE_BEST_PRACTICES_EXT,VALIDATION_CHECK_ENABLE_VENDOR_SPECIFIC_AMD
+
+# Best Practices with Imagination Tech best practices
+# =====================
+# Enable best practices layer
+khronos_validation.enables=VK_VALIDATION_FEATURE_ENABLE_BEST_PRACTICES_EXT,VALIDATION_CHECK_ENABLE_VENDOR_SPECIFIC_IMG
+
+# Best Practices with Nvidia Specific Check
+# =====================
+# Enable best practices layer
+khronos_validation.enables=VK_VALIDATION_FEATURE_ENABLE_BEST_PRACTICES_EXT,VALIDATION_CHECK_ENABLE_VENDOR_SPECIFIC_NVIDIA
+
+# Best Practices with ALL Vendor Specific Checks
+# =====================
+# Enable best practices layer
+khronos_validation.enables=VK_VALIDATION_FEATURE_ENABLE_BEST_PRACTICES_EXT,VALIDATION_CHECK_ENABLE_VENDOR_SPECIFIC_ALL
+# The settings in this file can be used to configure the behavior of
+# layers in this repository.
+#
+# Note that this file is not regulary updated, so not all possible layer
+# settings may be listed, and some layer settings may even be obsolete.
+
+# VK_LAYER_KHRONOS_synchronization2
+
+# Force Enable
+# =====================
+# <LayerIdentifier>.force_enable
+# Force the layer to be active even if the underlying driver also implements the
+# synchonization2 extension.
+khronos_synchronization2.force_enable = false
+
+# VK_LAYER_KHRONOS_shader_object
+
+# Force Enable
+# =====================
+# <LayerIdentifier>.force_enable
+# Force the layer to be active even if the underlying driver also implements the
+# shader object extension.
+khronos_shader_object.force_enable = false
+
+# VK_LAYER_KHRONOS_memory_decompression
+
+# Force Enable
+# =====================
+# <LayerIdentifier>.force_enable
+# Force the layer to be active even if the underlying driver also implements the
+# memory decompression extension.
+khronos_memory_decompression.force_enable = true
+# The settings in this file can be used to configure the behavior of
+# layers in this repository.
+#
+# Note that this file is not regulary updated, so not all possible layer
+# settings may be listed, and some layer settings may even be obsolete.
+
+# VK_LAYER_LUNARG_api_dump
+
+# Output Range
+# =====================
+# <LayerIdentifier>.output_range
+# Comma separated list of frames to output or a range of frames with a start,
+# count, and optional interval separated by a dash. A count of 0 will output
+# every frame after the start of the range. Example: "5-8-2" will output frame
+# 5, continue until frame 13, dumping every other frame. Example: "3,8-2" will
+# output frames 3, 8, and 9.
+lunarg_api_dump.output_range = 0-0
+
+# Output Format
+# =====================
+# <LayerIdentifier>.output_format
+# Specifies the format used for output; can be HTML, JSON, or  Text (default --
+# outputs plain text)
+lunarg_api_dump.output_format = text
+
+# Output to File
+# =====================
+# <LayerIdentifier>.file
+# Setting this to true indicates that output should be written to file instead
+# of stdout
+lunarg_api_dump.file = false
+
+# Log Filename
+# =====================
+# <LayerIdentifier>.log_filename
+# Specifies the file to dump to when output files are enabled
+#lunarg_api_dump.log_filename = stdout
+
+# Log Flush After Write
+# =====================
+# <LayerIdentifier>.flush
+# Setting this to true causes IO to be flushed after each API call that is
+# written
+lunarg_api_dump.flush = true
+
+# Name Size
+# =====================
+# <LayerIdentifier>.name_size
+# The number of characters the name of a variable should consume, assuming more
+# are not required
+lunarg_api_dump.name_size = 32
+
+# Show Types
+# =====================
+# <LayerIdentifier>.show_types
+# Dump types in addition to values
+lunarg_api_dump.show_types = true
+
+# Type Size
+# =====================
+# <LayerIdentifier>.type_size
+# The number of characters the name of a type should consume, assuming more are
+# not required
+lunarg_api_dump.type_size = 0
+
+# Show Timestamp
+# =====================
+# <LayerIdentifier>.show_timestamp
+# Show the timestamp of function calls since start in microseconds
+lunarg_api_dump.show_timestamp = false
+
+# Show Shader
+# =====================
+# <LayerIdentifier>.show_shader
+# Dump the shader binary code in pCode
+lunarg_api_dump.show_shader = false
+
+# Show Parameter Details
+# =====================
+# <LayerIdentifier>.detailed
+# Dump parameter details in addition to API calls
+lunarg_api_dump.detailed = true
+
+# Hide Addresses
+# =====================
+# <LayerIdentifier>.no_addr
+# Dump "address" in place of hex addresses
+lunarg_api_dump.no_addr = false
+
+# Use Spaces
+# =====================
+# <LayerIdentifier>.use_spaces
+# Setting this to true causes all tab characters to be replaced with spaces
+lunarg_api_dump.use_spaces = true
+
+# Indent Size
+# =====================
+# <LayerIdentifier>.indent_size
+# Specifies the number of spaces that a tab is equal to
+lunarg_api_dump.indent_size = 4
+
+# Show Thread and Frame
+# =====================
+# <LayerIdentifier>.show_thread_and_frame
+# Show the thread and frame of each function called
+lunarg_api_dump.show_thread_and_frame = true
+
+
+# VK_LAYER_LUNARG_screenshot
+
+# Frames
+# =====================
+# <LayerIdentifier>.frames
+# Specifies list of frames to output as screenshots. It is specified as a
+# comma-separated list of frames or a range of frames with a start, count, and
+# optional interval separated by a dash. Setting the variable to "all" will
+# output every frame. Example: "5-8-2" will output frame 5, continue until frame
+# 13, dumping every other frame. Example: "3,8-2" will output frames 3, 8, and
+# 9. If it is not set or it set to an empty string, no screenshots are created.
+lunarg_screenshot.frames = 
+
+# Directory
+# =====================
+# <LayerIdentifier>.dir
+# Specifies the directory in which to create the screenshot files. If it is not
+# set or is set to an empty string, the files will be created in the current
+# working directory.
+lunarg_screenshot.dir = 
+
+# Format
+# =====================
+# <LayerIdentifier>.format
+# Specify a color space for the output. If it is not set, set to null, or set to
+# USE_SWAPCHAIN_COLORSPACE the format will be set to use the same color space as
+# the swapchain object.
+lunarg_screenshot.format = USE_SWAPCHAIN_COLORSPACE
+
+# The settings in this file can be used to configure the behavior of
+# layers in this repository.
+#
+# Note that this file is not regulary updated, so not all possible layer
+# settings may be listed, and some layer settings may even be obsolete.
+
+# VK_LAYER_LUNARG_gfxreconstruct
+
+# Hotkey Capture Trigger
+# =====================
+# <LayerIdentifier>.capture_trigger
+# Specify a hotkey (any one of F1-F12, TAB, CONTROL) that will be used to
+# start/stop capture. Example: F3 will set the capture trigger to F3 hotkey. One
+# capture file will be generated for each pair of start/stop hotkey presses.
+# Default is: Empty string (hotkey capture trigger is disabled).
+lunarg_gfxreconstruct.capture_trigger =
+
+# Capture Specific Frames
+# =====================
+# <LayerIdentifier>.capture_frames
+# Specify one or more comma-separated frame ranges to capture. Each range will
+# be written to its own file. A frame range can be specified as a single value,
+# to specify a single frame to capture, or as two hyphenated values, to specify
+# the first and last frame to capture. Frame ranges should be specified in
+# ascending order and cannot overlap. Note that frame numbering is 1-based (i.e.
+# the first frame is frame 1). Example: 200,301-305 will create two capture
+# files, one containing a single frame and one containing five frames. Default
+# is: Empty string (all frames are captured).
+lunarg_gfxreconstruct.capture_frames =
+
+# Capture File Name
+# =====================
+# <LayerIdentifier>.capture_file
+# Path to use when creating the capture file. Default is: gfxrecon_capture.gfxr
+lunarg_gfxreconstruct.capture_file = gfxrecon_capture.gfxr
+
+# Capture File Name with Timestamp
+# =====================
+# <LayerIdentifier>.capture_file_timestamp
+# Add a timestamp (yyyymmddThhmmss) postfix to the capture file name.
+lunarg_gfxreconstruct.capture_file_timestamp = true
+
+# Capture File Flush After Write
+# =====================
+# <LayerIdentifier>.capture_file_flush
+# Flush output stream after each packet is written to the capture file. Default
+# is: false.
+lunarg_gfxreconstruct.capture_file_flush = false
+
+# Compression Format
+# =====================
+# <LayerIdentifier>.capture_compression_type
+# Compression format to use with the capture file. Valid values are: LZ4, ZLIB,
+# ZSTD, and NONE. Default is: LZ4
+lunarg_gfxreconstruct.capture_compression_type = LZ4
+
+# Memory Tracking Mode
+# =====================
+# <LayerIdentifier>.memory_tracking_mode
+# Specifies the memory tracking mode to use for detecting modifications to
+# mapped Vulkan memory objects. Available options are: page_guard, assisted, and
+# unassisted.
+lunarg_gfxreconstruct.memory_tracking_mode = page_guard
+
+# Page Guard Copy on Map
+# =====================
+# <LayerIdentifier>.page_guard_copy_on_map
+# When the page_guard memory tracking mode is enabled, copies the content of the
+# mapped memory to the shadow memory immediately after the memory is mapped.
+lunarg_gfxreconstruct.page_guard_copy_on_map = true
+
+# Page Guard Separate Read Tracking
+# =====================
+# <LayerIdentifier>.page_guard_separate_read
+# When the page_guard memory tracking mode is enabled, copies the content of
+# pages accessed for read from mapped memory to shadow memory on each read. Can
+# overwrite unprocessed shadow memory content when an application is reading
+# from and writing to the same page.
+lunarg_gfxreconstruct.page_guard_separate_read = true
+
+# Page Guard External Memory
+# =====================
+# <LayerIdentifier>.page_guard_external_memory
+# When the page_guard memory tracking mode is enabled, use the
+# VK_EXT_external_memory_host extension to eliminate the need for shadow memory
+# allocations. For each memory allocation from a host visible memory type, the
+# capture layer will create an allocation from system memory, which it can
+# monitor for write access, and provide that allocation to vkAllocateMemory as
+# external memory. Only available on Windows.
+lunarg_gfxreconstruct.page_guard_external_memory = false
+
+# Page Guard Persistent Memory
+# =====================
+# <LayerIdentifier>.page_guard_persistent_memory
+# When the page_guard memory tracking mode is enabled, this option changes the
+# way that the shadow memory used to detect modifications to mapped memory is
+# allocated. The default behavior is to allocate and copy the mapped memory
+# range on map and free the allocation on unmap. When this option is enabled, an
+# allocation with a size equal to that of the object being mapped is made once
+# on the first map and is not freed until the object is destroyed. This option
+# is intended to be used with applications that frequently map and unmap large
+# memory ranges, to avoid frequent allocation and copy operations that can have
+# a negative impact on performance. This option is ignored when
+# GFXRECON_PAGE_GUARD_EXTERNAL_MEMORY is enabled.
+lunarg_gfxreconstruct.page_guard_persistent_memory = false
+
+# Page Guard Align Buffer Sizes
+# =====================
+# <LayerIdentifier>.page_guard_align_buffer_sizes
+# When the page_guard memory tracking mode is enabled, this option overrides the
+# Vulkan API calls that report buffer memory properties to report that buffer
+# sizes and alignments must be a multiple of the system page size. This option
+# is intended to be used with applications that perform CPU writes and GPU
+# writes/copies to different buffers that are bound to the same page of mapped
+# memory, which may result in data being lost when copying pages from the
+# page_guard shadow allocation to the real allocation. This data loss can result
+# in visible corruption during capture. Forcing buffer sizes and alignments to a
+# multiple of the system page size prevents multiple buffers from being bound to
+# the same page, avoiding data loss from simultaneous CPU writes to the shadow
+# allocation and GPU writes to the real allocation for different buffers bound
+# to the same page. This option is only available for the Vulkan API.
+lunarg_gfxreconstruct.page_guard_align_buffer_sizes = false
+
+# Page Guard Unblock SIGSEGV
+# =====================
+# <LayerIdentifier>.page_guard_unblock_sigsegv
+# When the page_guard memory tracking mode is enabled and in the case that
+# SIGSEGV has been marked as blocked in thread's signal mask, setting this
+# enviroment variable to true will forcibly re-enable the signal in the
+# thread's signal mask.
+lunarg_gfxreconstruct.page_guard_unblock_sigsegv = false
+
+# Level
+# =====================
+# <LayerIdentifier>.log_level
+# Specify the minimum severity level of messages to log. Options are: debug,
+# info, warning, error, and fatal. The specified level and all higher levels
+# will be enabled for logging. For example, choosing the warning level will also
+# enable the error and fatal levels.
+lunarg_gfxreconstruct.log_level = info
+
+# Log Name and Line Number
+# =====================
+# <LayerIdentifier>.log_detailed
+# Include name and line number from the file responsible.
+lunarg_gfxreconstruct.log_detailed = false
+
+# Log Name and Line Number
+# =====================
+# <LayerIdentifier>.log_allow_indents
+# Apply additional indentation formatting to log messages.
+lunarg_gfxreconstruct.log_allow_indents = false
+
+# Log Output to Console / stdout
+# =====================
+# <LayerIdentifier>.log_output_to_console
+# Log messages will be written to stdout.
+lunarg_gfxreconstruct.log_output_to_console = true
+
+# Trigger Debug Break on Error
+# =====================
+# <LayerIdentifier>.log_break_on_error
+# Trigger a debug break when logging an error.
+lunarg_gfxreconstruct.log_break_on_error = false
+
+# Log Output to Debug Console
+# =====================
+# <LayerIdentifier>.log_output_to_os_debug_string
+# Windows only option. Log messages will be written to the Debug Console with
+# OutputDebugStringA
+lunarg_gfxreconstruct.log_output_to_os_debug_string = false
+
+# Log File
+# =====================
+# <LayerIdentifier>.log_file
+# When set, log messages will be written to a file at the specified path.
+# Default is: Empty string (file logging disabled).
+lunarg_gfxreconstruct.log_file =
+
+# Log File Flush After Write
+# =====================
+# <LayerIdentifier>.log_file_flush_after_write
+# Flush the log file to disk after each write when true.
+lunarg_gfxreconstruct.log_file_flush_after_write = false
+
+# Log File Keep Open
+# =====================
+# <LayerIdentifier>.log_file_keep_open
+# Keep the log file open between log messages when true, or close and reopen the
+# log file for each message when false.
+lunarg_gfxreconstruct.log_file_keep_open = true
+
+# Log File Overwrite
+# =====================
+# <LayerIdentifier>.log_file_create_new
+# Specifies that log file initialization should overwrite an existing file when
+# true, or append to an existing file when false.
+lunarg_gfxreconstruct.log_file_create_new = true

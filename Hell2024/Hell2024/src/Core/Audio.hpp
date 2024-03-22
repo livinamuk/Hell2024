@@ -30,7 +30,7 @@ namespace Audio {
 
 	inline bool succeededOrWarn(const std::string& message, FMOD_RESULT result) {
 		if (result != FMOD_OK) {
-			std::cout << message << ": " << result << " " << FMOD_ErrorString(result) << std::endl;
+			std::cout << message << ": " << result << " " << FMOD_ErrorString(result) << "\n";
 			return false;
 		}
 		return true;

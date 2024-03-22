@@ -1,7 +1,7 @@
 #include "Door.h"
+#include "../API/OpenGL/GL_assetManager.h"
 #include "../Core/Player.h"
 #include "../Core/Audio.hpp"
-#include "../Core/AssetManager.h"
 #include "../Util.hpp"
 
 
@@ -130,12 +130,12 @@ bool Door::IsInteractable(glm::vec3 playerPosition) {
 
 void Door::CreatePhysicsObject() {
 
-    Model* model = AssetManager::GetModel("Door");
+    OpenGLModel* model = OpenGLAssetManager::GetModel("Door");
     if (!model) {
         std::cout << "Failed to create door physics object, cause could not find 'Door' model\n";
         return;
     }
-    Mesh* mesh = &model->_meshes[3];
+    OpenGLMesh* mesh = &model->_meshes[3];
     if (!mesh->_triangleMesh) {
         mesh->CreateTriangleMesh();
     }

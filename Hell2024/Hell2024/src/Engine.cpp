@@ -1,121 +1,94 @@
 #include "Engine.h"
+
 #include "EngineState.hpp"
+#include "Timer.hpp"
 #include "Util.hpp"
-#include "Renderer/Renderer.h"
-#include "Core/GL.h"
-#include "Core/Player.h"
-#include "Core/Input.h"
-#include "Core/InputMulti.h"
+
+#include "API/OpenGL/GL_BackEnd.h"
+#include "API/OpenGL/gl_assetManager.h"
+#include "API/Vulkan/VK_BackEnd.h"
 #include "Core/AssetManager.h"
 #include "Core/Audio.hpp"
-#include "Core/Floorplan.h"
-#include "Core/TextBlitter.h"
-#include "Core/Scene.h"
-#include "Core/Physics.h"
 #include "Core/DebugMenu.h"
-#include "Timer.hpp"
-
-void ToggleFullscreen();
+#include "Core/Game.h"
+#include "Core/Floorplan.h"
+#include "Core/Input.h"
+#include "Core/InputMulti.h"
+#include "Physics/Physics.h"
+#include "Core/Player.h"
+#include "Core/Scene.h"
+#include "Renderer/Renderer.h"
+#include "Renderer/TextBlitter.h"
 
 void Engine::Run() {
 
-	std::cout << "We are all alone on life's journey, held captive by the limitations of human consciousness.\n";
+    BackEnd::Init(API::VULKAN);
 
-	GL::Init(1920 * 1.5f, 1080 * 1.5f);
+    while (BackEnd::WindowIsOpen()) {
 
-	Renderer::InitMinimumToRenderLoadingFrame();
+        BackEnd::BeginFrame();
+        BackEnd::UpdateSubSystems();
 
-    AssetManager::LoadFont(); 
-    AssetManager::LoadAssetsMultithreaded();
-
-
-	////////////////////////////////////
-    //                                //
-    //      Load assets from CPU      //
-    //                                //
-
-    while (GL::WindowIsOpen()) {
-
-		if (Input::KeyPressed(GLFW_KEY_F)) {
-            ToggleFullscreen();
-		}
-		if (Input::KeyPressed(GLFW_KEY_ESCAPE)) {
-			return;
-		}
-        GL::ProcessInput();
-        Input::Update();
-        Renderer::RenderLoadingFrame();
-        GL::SwapBuffersPollEvents();
-
-        // Final asset has been loaded
-		if (AssetManager::_loadLog.size() == AssetManager::numFilesToLoad) {
-            break;
+        // Load files from disk
+        if (AssetManager::IsStillLoading()) {
+            AssetManager::LoadNextItem();
+            Renderer::RenderLoadingScreen();
         }
+        // Create game
+        else if (!Game::IsLoaded()) {
+            Game::Create();
+            AssetManager::UploadVertexData();
+        }
+        // The game
+        else {
+            Game::Update();
+            Renderer::RenderFrame();
+        }
+        BackEnd::EndFrame();
     }
 
-    //////////////////////////////////
-    //                              //
-    //      Bake assets to GPU      //
-    //                              //
+    BackEnd::CleanUp();
+}
 
-    while (GL::WindowIsOpen()) {
 
-		if (Input::KeyPressed(GLFW_KEY_F)) {
-			GL::ToggleFullscreen();
-			Renderer::RecreateFrameBuffers(EngineState::GetCurrentPlayer());
-			Audio::PlayAudio(AUDIO_SELECT, 1.00f);
-		}
-		if (Input::KeyPressed(GLFW_KEY_ESCAPE)) {
-			return;
-		}
-		bool bakingComplete = true;
 
-		for (int i = 0; i < AssetManager::GetTextureCount(); i++) {
-			Texture* texture = AssetManager::GetTextureByIndex(i);
-			if (!texture->IsBaked()) {
-				texture->Bake();
-				bakingComplete = false;
-				AssetManager::_loadLog.push_back("Baking textures/" + texture->GetFilename() + "." + texture->GetFiletype());
-				break;
-			}
-		}
-		for (int i = 0; i < AssetManager::GetModelCount(); i++) {
-			Model* model = AssetManager::GetModelByIndex(i);
-			if (!model->IsBaked()) {
-                model->Bake();
-				bakingComplete = false;
-                AssetManager::_loadLog.push_back("Baking models/" + model->_name + ".obj");
-				break;
-			}
-		}
-		GL::ProcessInput();
-		Input::Update();
-		Renderer::RenderLoadingFrame();
-		GL::SwapBuffersPollEvents();
 
-        if (bakingComplete) {
-            break;
-        }
+void Engine::RunOld() {
+
+    BackEnd::Init(API::OPENGL);
+
+    // Load files from disk
+    while (BackEnd::WindowIsOpen() && AssetManager::IsStillLoading()) {
+        
+        BackEnd::BeginFrame();
+        BackEnd::UpdateSubSystems();
+        
+        AssetManager::LoadNextItem();
+        Renderer::RenderLoadingScreen();
+
+        BackEnd::EndFrame();
+    }
+    
+    // Init some shit
+    if (BackEnd::WindowIsOpen()) {
+        Scene::LoadMap("map.txt");
+        Renderer::Init();
+        Renderer::CreatePointCloudBuffer();
+        Renderer::CreateTriangleWorldVertexBuffer();
+        Scene::CreatePlayers();
+        DebugMenu::Init();
     }
 
-	AssetManager::LoadEverythingElse();
-
-    Init();
-
-
-	/////////////////////////
-	//                     //
-	//      Game loop      //
-	//                     //
-
-
+    // Game loop
     double lastFrame = glfwGetTime();
     double thisFrame = lastFrame;
     double deltaTimeAccumulator = 0.0;
     double fixedDeltaTime = 1.0 / 60.0;
 
-    while (GL::WindowIsOpen() && GL::WindowHasNotBeenForceClosed()) {
-               
+    while (BackEnd::WindowIsOpen()) {
+
+        BackEnd::BeginFrame();
+
         if (DebugMenu::IsOpen()) {
             Scene::_players[0]._ignoreControl = true;
             Scene::_players[1]._ignoreControl = true;
@@ -125,38 +98,23 @@ void Engine::Run() {
             Scene::_players[1]._ignoreControl = false;
         }
 
-        // Only the current player can be controlled by keyboard/mouse
-		/*for (int i = 0; i < EngineState::GetPlayerCount(); i++) {
-			if (i != EngineState::GetCurrentPlayer() || DebugMenu::IsOpen()) {
-				Scene::_players[i]._ignoreControl = true;
-			}
-			else {
-				Scene::_players[i]._ignoreControl = false;
-			}
-		}*/
-
         lastFrame = thisFrame;
         thisFrame = glfwGetTime();
         double deltaTime = thisFrame - lastFrame;
         deltaTimeAccumulator += deltaTime;
 
-        GL::ProcessInput();
-
         // Cursor
-		if (EngineState::GetEngineMode() == GAME) {
-			GL::DisableCursor();
-		}
-		else if (EngineState::GetEngineMode() == EDITOR ||
-                 EngineState::GetEngineMode() == FLOORPLAN) {
-			GL::ShowCursor();
-		}
-
-        //////////////////////
-        //                  //
-        //      UPDATE      //
-
+        if (EngineState::GetEngineMode() == GAME) {
+            Input::DisableCursor();
+        }
+        else if (EngineState::GetEngineMode() == EDITOR ||
+            EngineState::GetEngineMode() == FLOORPLAN) {
+            Input::ShowCursor();
+        }
+                
+        // Update
         Input::Update();
-        DebugMenu::Update();	
+        DebugMenu::Update();
         Audio::Update();
 
         if (EngineState::GetEngineMode() == GAME ||
@@ -166,18 +124,12 @@ void Engine::Run() {
                 deltaTimeAccumulator -= fixedDeltaTime;
                 Physics::StepPhysics(fixedDeltaTime);
             }
+            Engine::LazyKeyPresses();
+            Scene::Update(deltaTime);            
 
-            LazyKeyPresses();
-            
-            {
-                //Timer timer("SceneUpdate");
-                Scene::Update(deltaTime);
-            }
-            
             if (EngineState::GetEngineMode() == GAME) {
                 InputMulti::Update();
                 for (Player& player : Scene::_players) {
-                    //Timer timer("PlayerUpdate");
                     player.Update(deltaTime);
                 }
                 InputMulti::ResetMouseOffsets();
@@ -185,63 +137,42 @@ void Engine::Run() {
 
             Scene::CheckIfLightsAreDirty();
         }
-
         else if (EngineState::GetEngineMode() == FLOORPLAN) {
 
-            LazyKeyPressesEditor();
+            Engine::LazyKeyPressesEditor();
             Floorplan::Update(deltaTime);
         }
-
-		//////////////////////
-		//                  //
-		//      RENDER      //
-
-		if (EngineState::GetEngineMode() == GAME ||
+              
+        // Render
+        if (EngineState::GetEngineMode() == GAME ||
             EngineState::GetEngineMode() == EDITOR) {
-            
-            // Splitscreen
-            if (EngineState::GetViewportMode() == FULLSCREEN) {
-                Renderer::RenderFrame(&Scene::_players[EngineState::GetCurrentPlayer()]);
-		    }
+
             // Fullscreen
-            else if (EngineState::GetViewportMode() == SPLITSCREEN) {
+            if (EngineState::GetSplitScreenMode() == SplitScreenMode::FULLSCREEN) {
+                Renderer::RenderFrame(&Scene::_players[EngineState::GetCurrentPlayer()]);
+            }
+            // Splitscreen
+            else if (EngineState::GetSplitScreenMode() == SplitScreenMode::SPLITSCREEN) {
                 for (Player& player : Scene::_players) {
                     Renderer::RenderFrame(&player);
                 }
-            }           
+            }
         }
+
         // Floor plan
-		else if (EngineState::GetEngineMode() == FLOORPLAN) {
+        else if (EngineState::GetEngineMode() == FLOORPLAN) {
             Floorplan::PrepareRenderFrame();
             Renderer::RenderFloorplanFrame();
         }
         if (DebugMenu::IsOpen()) {
             Renderer::RenderDebugMenu();
-		}
-        GL::SwapBuffersPollEvents();
+        }
+
+        BackEnd::EndFrame();
     }
 
-    GL::Cleanup();
+    BackEnd::CleanUp();
     return;
-}
-
-void Engine::Init() {
-
-
-    Input::Init(); 
-    InputMulti::Init();
-    Physics::Init();
-
-    Audio::Init();
-
-    Scene::LoadMap("map.txt");
-
-    Renderer::Init();
-    Renderer::CreatePointCloudBuffer();
-    Renderer::CreateTriangleWorldVertexBuffer();
-
-    Scene::CreatePlayers();
-    DebugMenu::Init();
 }
 
 void Engine::LazyKeyPresses() {
@@ -257,14 +188,6 @@ void Engine::LazyKeyPresses() {
     if (Input::KeyPressed(GLFW_KEY_H)) {
         Renderer::HotloadShaders();
     }
-    if (Input::KeyPressed(GLFW_KEY_F)) {
-    //    ToggleFullscreen();
-    }
-
-    if (Scene::_players[0].PressedFullscreen()) {
-        ToggleFullscreen();
-    }
-
     if (Input::KeyPressed(HELL_KEY_1)) {
         Scene::_players[0]._keyboardIndex = 0;
         Scene::_players[1]._keyboardIndex = 1;
@@ -289,13 +212,6 @@ void Engine::LazyKeyPresses() {
         Scene::_players[1]._mouseIndex = 0;
         Scene::_players[0]._mouseIndex = 1;
     }
-
-
-
-
-
-
-
     if (Input::KeyPressed(HELL_KEY_TAB)) {
 		Audio::PlayAudio(AUDIO_SELECT, 1.00f);
         DebugMenu::Toggle();
@@ -318,13 +234,19 @@ void Engine::LazyKeyPresses() {
 	}
     if (Input::KeyPressed(GLFW_KEY_C)) {
         EngineState::NextPlayer();
-		if (EngineState::GetViewportMode() == FULLSCREEN) {
+        // This seems questionable
+        // This seems questionable
+        // This seems questionable
+		if (EngineState::GetSplitScreenMode() == SplitScreenMode::FULLSCREEN) {
 			Renderer::RecreateFrameBuffers(EngineState::GetCurrentPlayer());
 		}
+        // This seems questionable
+        // This seems questionable
+        // This seems questionable
 		Audio::PlayAudio(AUDIO_SELECT, 1.00f);
     }
     if (Input::KeyPressed(GLFW_KEY_V)) {
-		EngineState::NextViewportMode();
+		EngineState::NextSplitScreenMode();
 		Renderer::RecreateFrameBuffers(EngineState::GetCurrentPlayer());
 		Audio::PlayAudio(AUDIO_SELECT, 1.00f);
     }
@@ -342,9 +264,6 @@ void Engine::LazyKeyPresses() {
 }
 
 void Engine::LazyKeyPressesEditor() {
-    if (Input::KeyPressed(GLFW_KEY_F)) {
-        ToggleFullscreen();
-    }
     if (Input::KeyPressed(HELL_KEY_TAB)) {
         //ToggleEditor();
     }
@@ -359,11 +278,4 @@ void Engine::LazyKeyPressesEditor() {
     if (Input::KeyPressed(GLFW_KEY_H)) {
 		Renderer::HotloadShaders();
 	}
-
-}
-
-void ToggleFullscreen() {
-	GL::ToggleFullscreen();
-	Renderer::RecreateFrameBuffers(EngineState::GetCurrentPlayer());
-	Audio::PlayAudio(AUDIO_SELECT, 1.00f);
 }

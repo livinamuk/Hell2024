@@ -2,7 +2,8 @@
 #include "../Core/Audio.hpp"
 #include "../Core/Input.h"
 #include "../Core/InputMulti.h"
-#include "../Core/GL.h"
+#include "../BackEnd/BackEnd.h"
+#include "../API/OpenGL/GL_assetManager.h"
 #include "../Core/Scene.h"
 #include "../Common.h"
 #include "../Util.hpp"
@@ -67,7 +68,7 @@ Player::Player(glm::vec3 position, glm::vec3 rotation) {
     _characterModel.SetMeshMaterialByMeshName("Magazine_Housing_low", "AKS74U_3");
     _characterModel.SetMeshMaterialByMeshName("BarrelTip_low", "AKS74U_4");
 
-	_shadowMap.Init();
+	//_shadowMap.Init();
 
 	CreateCharacterController(_position);
 	CreateItemPickupOverlapShape();
@@ -90,7 +91,6 @@ bool Player::MuzzleFlashIsRequired() {
 }
 
 glm::mat4 Player::GetWeaponSwayMatrix() {
-    _weaponSwayMatrix = glm::mat4(1);
 	return _weaponSwayMatrix;
 }
 
@@ -245,7 +245,7 @@ void Player::CheckForItemPickOverlaps() {
 
                         GameObject* topDrawer = Scene::GetGameObjectByName("TopDraw");
 
-                        auto ammoPose = parent->_collisionBody->getGlobalPose();
+                        auto ammoPose = parent->collisionRigidBody.pxRigidBody->getGlobalPose();
                         auto ammoY = ammoPose.p.y;
 
                         if (ammoY > 0.4f && topDrawer->_openState == OpenState::OPEN) {
@@ -316,6 +316,18 @@ void Player::UpdateRagdoll() {
 }
 
 void Player::Update(float deltaTime) {
+
+    if (Input::KeyPressed(HELL_KEY_G)) {
+        _hasGlockSilencer = !_hasGlockSilencer;
+        Audio::PlayAudio("Glock_Equip.wav", 0.5f);
+
+        if (_hasGlockSilencer) {
+            _firstPersonWeapon.EnableDrawingForMeshByMeshName("Glock_silencer");
+        }
+        else {
+            _firstPersonWeapon.DisableDrawingForMeshByMeshName("Glock_silencer");
+        }
+    }
 
     /*
     if (maleHands) {
@@ -424,7 +436,7 @@ void Player::Update(float deltaTime) {
 
 	// Mouselook
 	if (EngineState::GetEngineMode() == GAME) {
-		if (!_ignoreControl && GL::WindowHasFocus()) {
+		if (!_ignoreControl && BackEnd::WindowHasFocus()) {
 			float mouseSensitivity = 0.002f;
             if (InADS()) {
                 mouseSensitivity = 0.001f;
@@ -461,8 +473,13 @@ void Player::Update(float deltaTime) {
 	// View height
 	float viewHeightTarget = crouching ? _viewHeightCrouching : _viewHeightStanding;
 	_currentViewHeight = Util::FInterpTo(_currentViewHeight, viewHeightTarget, deltaTime, _crouchDownSpeed);
-
-	// Breathe bob
+    
+    float _breatheAmplitude = 0.00052f;
+    float _breatheFrequency = 8;
+    float _headBobAmplitude = 0.009505f;
+    float _headBobFrequency = 25.0f;
+    
+    // Breathe bob
 	static float totalTime;
     totalTime += deltaTime / 2.25f;// 0.0075f;
 	Transform breatheTransform;
@@ -505,32 +522,39 @@ void Player::Update(float deltaTime) {
 
     // WSAD movement
     _isMoving = false;
-    glm::vec3 displacement(0);
     if (!_ignoreControl) {
 	    if (PressingWalkForward()) {
-		    displacement -= _movementVector;
+            _displacement -= _movementVector;
 		    _isMoving = true;
 	    }
 	    if (PressingWalkBackward()) {
-		    displacement += _movementVector;
+            _displacement += _movementVector;
 		    _isMoving = true;
 	    }
 	    if (PressingWalkLeft()) {
-		    displacement -= _right;
+            _displacement -= _right;
 		    _isMoving = true;
 	    }
 	    if (PressingWalkRight()) {
-		    displacement += _right;
+            _displacement += _right;
 		    _isMoving = true;
 	    }
     }
-	float fixedDeltaTime = (1.0f / 60.0f);
+	
 
-	// Normalize displacement vector and include player speed
-	float len = length(displacement);
+
+    float targetSpeed = crouching ? _crouchingSpeed : _walkingSpeed;
+    float interSpeed = 18.0f;
+    if (!_isMoving) {
+        targetSpeed = 0.0f;
+        interSpeed = 22.0f;
+    }
+    _currentSpeed = Util::FInterpTo(_currentSpeed, targetSpeed, deltaTime, interSpeed);
+
+    // Normalize displacement vector and include player speed
+	float len = length(_displacement);
 	if (len != 0.0) {
-		float speed = crouching ? _crouchingSpeed : _walkingSpeed;
-		displacement = (displacement / len) * speed * deltaTime;
+        _displacement = (_displacement / len) * _currentSpeed * deltaTime;
 	}
 
 	// Jump
@@ -556,8 +580,9 @@ void Player::Update(float deltaTime) {
 	filterData.word1 = CollisionGroup::ENVIROMENT_OBSTACLE;	// Things to collide with	
 	PxControllerFilters data;
 	data.mFilterData = &filterData;
-	PxF32 minDist = 0.001f;
-	_characterController->move(PxVec3(displacement.x, yDisplacement, displacement.z), minDist, fixedDeltaTime, data);
+	PxF32 minDist = 0.001f; 
+    float fixedDeltaTime = (1.0f / 60.0f);
+	_characterController->move(PxVec3(_displacement.x, yDisplacement, _displacement.z), minDist, fixedDeltaTime, data);
 	_position = Util::PxVec3toGlmVec3(_characterController->getFootPosition());
 
 	
@@ -876,20 +901,36 @@ void Player::Respawn() {
     _inventory.aks74uAmmo.total = 0;
     _inventory.shotgunAmmo.clip = 0;
     _inventory.shotgunAmmo.total = 0;
-	_firstPersonWeapon.SetName("Glock");
+    SetGlockAnimatedModelSettings();
+
+	Audio::PlayAudio("Glock_Equip.wav", 0.5f);
+}
+
+void Player::SetGlockAnimatedModelSettings() {
+
+    _firstPersonWeapon.SetName("Glock");
     _firstPersonWeapon.SetSkinnedModel("Glock");
+    if (!_firstPersonWeapon._skinnedModel) {
+        return; // remove this once you have Vulkan loading shit correctly
+    }
     _firstPersonWeapon.PlayAnimation("Glock_Spawn", 1.0f);
-	_firstPersonWeapon.SetAllMeshMaterials("Glock");
-	_firstPersonWeapon.SetMeshMaterialByMeshName("manniquen1_2.001", "Hands");
-	_firstPersonWeapon.SetMeshMaterialByMeshName("manniquen1_2", "Hands");
+    _firstPersonWeapon.SetAllMeshMaterials("Glock");
+    _firstPersonWeapon.SetMeshMaterialByMeshName("manniquen1_2.001", "Hands");
+    _firstPersonWeapon.SetMeshMaterialByMeshName("manniquen1_2", "Hands");
     _firstPersonWeapon.SetMeshMaterialByMeshName("SK_FPSArms_Female.001", "FemaleArms");
     _firstPersonWeapon.SetMeshMaterialByMeshName("SK_FPSArms_Female", "FemaleArms");
     _firstPersonWeapon.SetMeshMaterialByMeshName("Glock_silencer", "Silencer");
+    _firstPersonWeapon.SetMeshMaterialByMeshName("RedDotSight", "RedDotSight");
+    _firstPersonWeapon.SetMeshMaterialByMeshName("RedDotSightGlass", "RedDotSight");
+    _firstPersonWeapon.SetMeshToRenderAsGlassByMeshIndex("RedDotSightGlass");
+    _firstPersonWeapon.SetMeshEmissiveColorTextureByMeshName("RedDotSight", "RedDotSight_EmissiveColor");
 
-
-	Audio::PlayAudio("Glock_Equip.wav", 0.5f);
-
-
+    _firstPersonWeapon.EnableDrawingForAllMesh();
+    if (!_hasGlockSilencer) {
+        _firstPersonWeapon.DisableDrawingForMeshByMeshName("Glock_silencer");
+    }
+    _firstPersonWeapon.DisableDrawingForMeshByMeshName("SK_FPSArms_Female");
+    _firstPersonWeapon.DisableDrawingForMeshByMeshName("SK_FPSArms_Female.001");
 }
 
 void Player::RespawnAtCurrentPosition() {
@@ -914,15 +955,7 @@ void Player::RespawnAtCurrentPosition() {
     _inventory.aks74uAmmo.total = 0;
     _inventory.shotgunAmmo.clip = 0;
     _inventory.shotgunAmmo.total = 0;
-    _firstPersonWeapon.SetName("Glock");
-    _firstPersonWeapon.SetSkinnedModel("Glock");
-    _firstPersonWeapon.SetAllMeshMaterials("Glock");
-    _firstPersonWeapon.PlayAnimation("Glock_Spawn", 1.0f);
-    _firstPersonWeapon.SetMeshMaterialByMeshName("manniquen1_2.001", "Hands");
-    _firstPersonWeapon.SetMeshMaterialByMeshName("manniquen1_2", "Hands");
-    _firstPersonWeapon.SetMeshMaterialByMeshName("SK_FPSArms_Female.001", "FemaleArms");
-    _firstPersonWeapon.SetMeshMaterialByMeshName("SK_FPSArms_Female", "FemaleArms");
-    _firstPersonWeapon.SetMeshMaterialByMeshName("Glock_silencer", "Silencer");
+    SetGlockAnimatedModelSettings();
     Audio::PlayAudio("Glock_Equip.wav", 0.5f);
 }
 
@@ -1031,11 +1064,7 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
             HideAKS74UMesh();
 		}
 		else if (_currentWeaponIndex == Weapon::GLOCK) {
-			_firstPersonWeapon.SetName("Glock");
-			_firstPersonWeapon.SetSkinnedModel("Glock");
-            _firstPersonWeapon.SetAllMeshMaterials("Glock");
-            _firstPersonWeapon.SetMeshMaterialByMeshName("Glock_silencer", "Silencer");
-            _characterModel.EnableDrawingForAllMesh();
+            SetGlockAnimatedModelSettings();
             HideKnifeMesh();
             HideShotgunMesh();
             HideAKS74UMesh();
@@ -1078,6 +1107,8 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
         _firstPersonWeapon.SetMeshMaterialByMeshName("SK_FPSArms_Female.001", "FemaleArms");
         _firstPersonWeapon.SetMeshMaterialByMeshName("SK_FPSArms_Female", "FemaleArms");
         _firstPersonWeapon.SetMeshMaterialByMeshName("Arms", "Hands");
+        _firstPersonWeapon.DisableDrawingForMeshByMeshName("SK_FPSArms_Female");
+        _firstPersonWeapon.DisableDrawingForMeshByMeshName("SK_FPSArms_Female.001");
 	}
 	_firstPersonWeapon.SetScale(0.001f);
 	_firstPersonWeapon.SetRotationX(Player::GetViewRotation().x);
@@ -1172,13 +1203,17 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
 		if (PressedFire() && CanFire()) {
 			// Has ammo
 			if (_inventory.glockAmmo.clip > 0) {				
-				_weaponAction = FIRE;
-				int random_number = std::rand() % 3 + 1;
-				std::string aninName = "Glock_Fire" + std::to_string(random_number);
-				std::string audioName = "Glock_Fire" + std::to_string(random_number) + ".wav";
+				_weaponAction = FIRE; 
+                int random_number = std::rand() % 3 + 1;
+                if (_hasGlockSilencer) {
+                    Audio::PlayAudio("Silenced.wav", 1.0f);
+                }
+                else {                    
+                    std::string audioName = "Glock_Fire" + std::to_string(random_number) + ".wav";
+                    Audio::PlayAudio(audioName, 1.0f);
+                }
+                std::string aninName = "Glock_Fire" + std::to_string(random_number);
                 _firstPersonWeapon.PlayAnimation(aninName, 1.5f);
-                //Audio::PlayAudio(audioName, 1.0f);
-                Audio::PlayAudio("Silenced.wav", 1.0f);
 				SpawnMuzzleFlash();
 				SpawnBullet(0, Weapon::GLOCK);
                 SpawnGlockCasing();
@@ -1870,7 +1905,7 @@ void Player::CreateItemPickupOverlapShape() {
 	if (_itemPickupOverlapShape) {
 		_itemPickupOverlapShape->release();
 	}
-    float radius = PLAYER_CAPSULE_RADIUS + 0.2;
+    float radius = PLAYER_CAPSULE_RADIUS + 0.05;
     float halfHeight = PLAYER_CAPSULE_HEIGHT * 0.75f;
     _itemPickupOverlapShape = Physics::GetPhysics()->createShape(PxCapsuleGeometry(radius, halfHeight), *Physics::GetDefaultMaterial(), true);
 }
@@ -1905,10 +1940,10 @@ void Player::CreateCharacterController(glm::vec3 position) {
 }
 
 glm::mat4 Player::GetProjectionMatrix() {
-    float width = (float)GL::GetWindowWidth();
-    float height = (float)GL::GetWindowHeight();
+    float width = (float)BackEnd::GetWindowedWidth();
+    float height = (float)BackEnd::GetWindowedHeight();
 
-    if (EngineState::GetViewportMode() == SPLITSCREEN) {
+    if (EngineState::GetSplitScreenMode() == SplitScreenMode::SPLITSCREEN) {
         height *= 0.5f;
     }
     return glm::perspective(_zoom, width / height, NEAR_PLANE, FAR_PLANE);
@@ -2229,14 +2264,13 @@ void Player::DrawWeapons() {
         filterData666.raycastGroup = RAYCAST_DISABLED;
         filterData666.collisionGroup = CollisionGroup::GENERIC_BOUNCEABLE;
         filterData666.collidesWith = (CollisionGroup)(ENVIROMENT_OBSTACLE | GENERIC_BOUNCEABLE);
-        weapon.CreateRigidBody(weapon._transform.to_mat4(), false);
-        weapon.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("AKS74U_Carlos_ConvexMesh")->_meshes[0], filterData666);
-        weapon.SetRaycastShapeFromModel(AssetManager::GetModel("AKS74U_Carlos"));
+        weapon.SetKinematic(false);
+        weapon.AddCollisionShapeFromConvexMesh(&OpenGLAssetManager::GetModel("AKS74U_Carlos_ConvexMesh")->_meshes[0], filterData666);
+        weapon.SetRaycastShapeFromModel(OpenGLAssetManager::GetModel("AKS74U_Carlos"));
         weapon.SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
         weapon.UpdateRigidBodyMassAndInertia(50.0f);
         weapon.DisableRespawnOnPickup();
-        PxMat44 mat = Util::GlmMat4ToPxMat44(weapon._transform.to_mat4());
-        weapon._collisionBody->setGlobalPose(PxTransform(mat));
+        weapon.collisionRigidBody.SetGlobalPose(weapon._transform.to_mat4());
     }
 
     if (_weaponInventory[Weapon::SHOTGUN]) {        
@@ -2254,14 +2288,13 @@ void Player::DrawWeapons() {
         filterData666.raycastGroup = RAYCAST_DISABLED;
         filterData666.collisionGroup = CollisionGroup::GENERIC_BOUNCEABLE;
         filterData666.collidesWith = (CollisionGroup)(ENVIROMENT_OBSTACLE | GENERIC_BOUNCEABLE);
-        weapon.CreateRigidBody(weapon._transform.to_mat4(), false);
-        weapon.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("Shotgun_Isolated_ConvexMesh")->_meshes[0], filterData666);
-        weapon.SetRaycastShapeFromModel(AssetManager::GetModel("Shotgun_Isolated"));
+        weapon.SetKinematic(false);
+        weapon.AddCollisionShapeFromConvexMesh(&OpenGLAssetManager::GetModel("Shotgun_Isolated_ConvexMesh")->_meshes[0], filterData666);
+        weapon.SetRaycastShapeFromModel(OpenGLAssetManager::GetModel("Shotgun_Isolated"));
         weapon.SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
         weapon.UpdateRigidBodyMassAndInertia(50.0f);
         weapon.DisableRespawnOnPickup();
-        PxMat44 mat = Util::GlmMat4ToPxMat44(weapon._transform.to_mat4());
-        weapon._collisionBody->setGlobalPose(PxTransform(mat));
+        weapon.collisionRigidBody.SetGlobalPose(weapon._transform.to_mat4());
     }
 
     if (_weaponInventory[Weapon::GLOCK]) {
@@ -2279,14 +2312,13 @@ void Player::DrawWeapons() {
         filterData666.raycastGroup = RAYCAST_DISABLED;
         filterData666.collisionGroup = CollisionGroup::GENERIC_BOUNCEABLE;
         filterData666.collidesWith = (CollisionGroup)(ENVIROMENT_OBSTACLE | GENERIC_BOUNCEABLE);
-        weapon.CreateRigidBody(weapon._transform.to_mat4(), false);
-        weapon.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("Glock_Isolated_ConvexMesh")->_meshes[0], filterData666);
-        weapon.SetRaycastShapeFromModel(AssetManager::GetModel("Glock_Isolated"));
+        weapon.SetKinematic(false);
+        weapon.AddCollisionShapeFromConvexMesh(&OpenGLAssetManager::GetModel("Glock_Isolated_ConvexMesh")->_meshes[0], filterData666);
+        weapon.SetRaycastShapeFromModel(OpenGLAssetManager::GetModel("Glock_Isolated"));
         weapon.SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
         weapon.UpdateRigidBodyMassAndInertia(200.0f);
         weapon.DisableRespawnOnPickup();
-        PxMat44 mat = Util::GlmMat4ToPxMat44(weapon._transform.to_mat4());
-        weapon._collisionBody->setGlobalPose(PxTransform(mat));
+        weapon.collisionRigidBody.SetGlobalPose(weapon._transform.to_mat4());
     }
 }
 

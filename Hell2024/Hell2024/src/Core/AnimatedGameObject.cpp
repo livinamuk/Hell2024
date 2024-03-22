@@ -4,7 +4,8 @@
 #include "Floorplan.h"
 #include "../Util.hpp"
 #include "Input.h"
-#include "AssetManager.h"
+#include "../Core/AssetManager.h"
+#include "../API/OpenGL/GL_assetManager.h"
 
 void AnimatedGameObject::Update(float deltaTime) {
 
@@ -12,12 +13,10 @@ void AnimatedGameObject::Update(float deltaTime) {
         if (_currentAnimation) {
             UpdateAnimation(deltaTime);
             CalculateBoneTransforms();
-            SetRagdollToCurrentAniamtionState();
         }
     }
     else if (_animationMode == BINDPOSE && _skinnedModel) {
         _skinnedModel->UpdateBoneTransformsFromBindPose(_animatedTransforms);
-        SetRagdollToCurrentAniamtionState();
     }
     else if (_animationMode == RAGDOLL && _skinnedModel) {
         UpdateBoneTransformsFromRagdoll();
@@ -86,6 +85,28 @@ void AnimatedGameObject::SetMeshMaterialByMeshIndex(int meshIndex, std::string m
     }   
 }
 
+void AnimatedGameObject::SetMeshToRenderAsGlassByMeshIndex(std::string meshName) {
+    if (!_skinnedModel) {
+        return;
+    }
+    for (MeshRenderingEntry& meshRenderingEntry : _meshRenderingEntries) {
+        if (meshRenderingEntry.meshName == meshName) {
+            meshRenderingEntry.renderAsGlass = true;
+        }
+    }
+}
+
+void AnimatedGameObject::SetMeshEmissiveColorTextureByMeshName(std::string meshName, std::string textureName) {
+    if (!_skinnedModel) {
+        return;
+    }
+    for (MeshRenderingEntry& meshRenderingEntry : _meshRenderingEntries) {
+        if (meshRenderingEntry.meshName == meshName) {
+            meshRenderingEntry.emissiveColorTexutreIndex = AssetManager::GetTextureIndex(textureName);
+        }
+    }
+}
+
 void AnimatedGameObject::EnableBlendingByMeshIndex(int meshIndex) {
     if (!_skinnedModel) {
         return;
@@ -102,7 +123,7 @@ void AnimatedGameObject::SetAllMeshMaterials(std::string materialName) {
         return;
     }
     for (MeshRenderingEntry& meshRenderingEntry : _meshRenderingEntries) {
-        meshRenderingEntry.materialIndex = AssetManager::GetMaterialIndex(materialName);
+        meshRenderingEntry.materialIndex =AssetManager::GetMaterialIndex(materialName);
     }
 }
 
@@ -124,7 +145,10 @@ void AnimatedGameObject::SetAnimatedModeToRagdoll() {
     _animationMode = RAGDOLL;
 }
 
-void AnimatedGameObject::PlayAnimation(std::string animationName, float speed) {    
+void AnimatedGameObject::PlayAnimation(std::string animationName, float speed) {
+    if (!_skinnedModel) {
+        return; // Remove once you have Vulkan loading shit properly.
+    }
     // Find the matching animation name if it exists
     for (int i = 0; i < _skinnedModel->m_animations.size(); i++) {
         if (_skinnedModel->m_animations[i]->_filename == animationName) {       
@@ -183,8 +207,6 @@ void AnimatedGameObject::CalculateBoneTransforms() {
     auto m_animations = _skinnedModel->m_animations;
     auto m_BoneMapping = _skinnedModel->m_BoneMapping;
     auto m_BoneInfo = _skinnedModel->m_BoneInfo;
-
-  // _debugBones.clear();
 
     struct JointWorldMatrix {
         std::string name;
@@ -249,32 +271,12 @@ void AnimatedGameObject::CalculateBoneTransforms() {
         }
     }
 
-
     for (int j = 0; j < _ragdoll._rigidComponents.size(); j++) {
-
-
         bool found = false;
-        RigidComponent& rigid = _ragdoll._rigidComponents[j];
-
-        /*
-        if (Input::KeyPressed(HELL_KEY_J)) {
-            std::cout << "\n";
-            //std::cout << "_skinnedModel->m_BoneInfo.size(): " << _skinnedModel->m_BoneInfo.size() << "\n";
-            //std::cout << "_skinnedModel->m_joints.size():   " << _skinnedModel->m_joints.size() << "\n";
-            std::cout << "jointWorldMatrices.size():   " << jointWorldMatrices.size() << "\n";
-        }*/
-
-            
+        RigidComponent& rigid = _ragdoll._rigidComponents[j];                    
         for (int i = 0; i < jointWorldMatrices.size(); i++) {
-
             std::string& NodeName = jointWorldMatrices[i].name;
-            /*
-            if (Input::KeyPressed(HELL_KEY_J)) {
-                std::cout << i << ": " << NodeName << "\n";
-            }
-            */
             if (rigid.correspondingJointName == NodeName) {
-
                 glm::mat4 m = GetModelMatrix() * jointWorldMatrices[i].worldMatrix;
                 PxMat44 mat = Util::GlmMat4ToPxMat44(m);
                 PxTransform pose(mat);
@@ -283,17 +285,7 @@ void AnimatedGameObject::CalculateBoneTransforms() {
                 found = true;
                 break;
             }               
-        }
-
-        if (!found) {
-
-            if (Input::KeyPressed(HELL_KEY_SPACE)) {
-                std::cout << j << ": " << rigid.correspondingJointName << " was not found\n";
-            }
-
-            //std::cout << NodeName << " was not found"
-        }
-        
+        }        
     }
 
     _animatedTransforms.Resize(_skinnedModel->m_NumBones);
@@ -302,21 +294,14 @@ void AnimatedGameObject::CalculateBoneTransforms() {
         _animatedTransforms.local[i] = m_BoneInfo[i].FinalTransformation;
         _animatedTransforms.worldspace[i] = m_BoneInfo[i].ModelSpace_AnimatedTransform;
         _animatedTransforms.names[i] = m_BoneInfo[i].BoneName;
-        //animatedTransforms.inverseBindTransform[i] = m_BoneInfo[i].BoneOffset;
     }
-
-
-
 }
 
 glm::mat4 AnimatedGameObject::GetModelMatrix() {
 
     Transform correction;
-    
-    if (_skinnedModel->_filename == "AKS74U" 
-        || _skinnedModel->_filename == "Glock"
-       // || _skinnedModel->_filename == "Shotgun"
-        ) {
+
+    if (_skinnedModel->_filename == "AKS74U" || _skinnedModel->_filename == "Glock") {
         correction.rotation.y = HELL_PI;
     }
 
@@ -338,7 +323,7 @@ void AnimatedGameObject::SetName(std::string name) {
 }
 
 void AnimatedGameObject::SetSkinnedModel(std::string name) {
-    SkinnedModel* skinnedModel = AssetManager::GetSkinnedModel(name);
+    SkinnedModel* skinnedModel = OpenGLAssetManager::GetSkinnedModel(name);
     if (skinnedModel) {
         _skinnedModel = skinnedModel;
         _meshRenderingEntries.clear();
@@ -379,15 +364,14 @@ void AnimatedGameObject::SetRotationZ(float rotation) {
 }
 
 bool AnimatedGameObject::AnimationIsPastPercentage(float percent) {
+    if (!_currentAnimation) {
+        return false; // REMOVE ONCE YOU HAVE VULKAN LOADING SHIT CORRECTLY!
+    }
     if (_currentAnimationTime * _currentAnimation->GetTicksPerSecond() > _currentAnimation->m_duration * (percent / 100.0))
         return true;
     else
         return false;
 }
-
-
-
-
 
 glm::vec3 AnimatedGameObject::GetAK74USCasingSpawnPostion() {
     if (_name == "AKS74U") {
@@ -436,6 +420,9 @@ glm::vec3 AnimatedGameObject::GetAK74USCasingSpawnPostion() {
 }
 
 glm::vec3 AnimatedGameObject::GetGlockCasingSpawnPostion() {
+    if (!_skinnedModel) {
+        return glm::vec3(0); // REMOVE ONCE YOU HAVE VULKAN LOADING SHIT CORRECTLY!
+    }
     if (_name == "Glock") {
         int boneIndex = _skinnedModel->m_BoneMapping["Barrel"];
         if (_animatedTransforms.worldspace.size()) {
@@ -557,95 +544,6 @@ void AnimatedGameObject::LoadRagdoll(std::string filename, PxU32 ragdollCollisio
     _hasRagdoll = true;
 }
 
-void AnimatedGameObject::SetRagdollToCurrentAniamtionState() {
-
-    
-
-    
-    return;
-
-    if (_hasRagdoll) {
-
-        if (Input::KeyPressed(HELL_KEY_L)) {
-
-            std::cout << "\nWORLDSPACE TRANSFORM NAMES: \n";
-            for (auto name : _animatedTransforms.names) {
-                std::cout << " " << name << "\n";
-            }
-
-            std::cout << "\nRIGID NAMES: \n";
-            for (int j = 0; j < _ragdoll._rigidComponents.size(); j++) {
-                RigidComponent& rigid = _ragdoll._rigidComponents[j];
-                std::cout << " " << j << ": " << rigid.name << "\n";
-            }
-            std::cout << "\nRIGID CORRESPONDING BONE NAMES: \n";
-            for (int j = 0; j < _ragdoll._rigidComponents.size(); j++) {
-                RigidComponent& rigid = _ragdoll._rigidComponents[j];
-                std::cout << " " << j << ": " << rigid.correspondingJointName << "\n";
-            }
-        }
-        
-        for (int j = 0; j < _ragdoll._rigidComponents.size(); j++) {
-
-            RigidComponent& rigid = _ragdoll._rigidComponents[j];
-            bool found = false;
-
-           /* if (rigid.name == "rMarker_CC_Base_L_Calf") {
-                rigid.correspondingJointName = "CC_Base_L_CalfTwist01";
-                rigid.correspondingJointName = "CC_Base_L_CalfTwist02";
-            }
-            if (rigid.name == "rMarker_CC_Base_R_Calf") {
-                rigid.correspondingJointName = "CC_Base_R_CalfTwist01";
-
-                
-            }
-            if (rigid.name == "rMarker_CC_Base_L_Thigh") {
-                rigid.correspondingJointName = "CC_Base_L_ThighTwist01";
-            }
-            if (rigid.name == "rMarker_CC_Base_R_Thigh") {
-                rigid.correspondingJointName = "CC_Base_R_ThighTwist01";
-            }
-            if (rigid.name == "rMarker_CC_Base_Hip") {
-                rigid.correspondingJointName = "CC_Base_Pelvis";
-            }
-            if (rigid.name == "rMarker_CC_Base_L_Upperarm") {
-                rigid.correspondingJointName = "CC_Base_L_UpperarmTwist01";
-            }
-            if (rigid.name == "rMarker_CC_Base_R_Upperarm") {
-                rigid.correspondingJointName = "CC_Base_R_UpperarmTwist01";
-            }
-            if (rigid.name == "rMarker_CC_Base_R_Forearm") {
-                rigid.correspondingJointName = "CC_Base_R_ForearmTwist02";
-            }
-            if (rigid.name == "rMarker_CC_Base_FacialBone") {
-             //   rigid.correspondingJointName = "CC_Base_Head";
-            }
-            */
-            for (int i = 0; i < _animatedTransforms.names.size(); i++) {
-
-                std::string transformName = _animatedTransforms.names[i];
-                glm::mat4 worldTransform = _animatedTransforms.worldspace[i];
-                if (transformName == rigid.correspondingJointName) {
-                    glm::mat4 m = GetModelMatrix() * worldTransform;
-                    PxMat44 mat = Util::GlmMat4ToPxMat44(m);
-                    PxTransform pose(mat);
-                    rigid.pxRigidBody->setGlobalPose(pose);
-                    rigid.pxRigidBody->putToSleep();
-                    found = true;
-                    break;
-                }
-            }
-
-            if (!found) {
-            //    std::cout << "No match for rigid: " << rigid.name << " / " << rigid.correspondingJointName << "\n";
-            }
-        }
-    } 
-    else {
-        //std::cout << "You called SetRagdollToCurrentAniamtionState() on a AnimatedGameObject with name '" << GetName() << "' but it doesn't have a valid ragdoll!!!\n";
-    }
-}
-
 void AnimatedGameObject::DestroyRagdoll() {
     for (JointComponent& joint: _ragdoll._jointComponents) {
         if (joint.pxD6) {
@@ -665,6 +563,16 @@ void AnimatedGameObject::EnableDrawingForAllMesh() {
     }
 }
 
+void AnimatedGameObject::EnableDrawingForMeshByMeshName(std::string meshName) {
+    for (MeshRenderingEntry& meshRenderingEntry : _meshRenderingEntries) {
+        if (meshRenderingEntry.meshName == meshName) {
+            meshRenderingEntry.drawingEnabled = true;
+            return;
+        }
+    }
+    //std::cout << "DisableDrawingForMeshByMeshName() called but name " << meshName << " was not found!\n";
+}
+
 void AnimatedGameObject::DisableDrawingForMeshByMeshName(std::string meshName) {
     for (MeshRenderingEntry& meshRenderingEntry : _meshRenderingEntries) {
         if (meshRenderingEntry.meshName == meshName) {
@@ -672,7 +580,7 @@ void AnimatedGameObject::DisableDrawingForMeshByMeshName(std::string meshName) {
             return;
         }
     }
-    std::cout << "DisableDrawingForMeshByMeshName() called but name " << meshName << " was not found!\n";
+    //std::cout << "DisableDrawingForMeshByMeshName() called but name " << meshName << " was not found!\n";
 }
 
 void AnimatedGameObject::PrintMeshNames() {

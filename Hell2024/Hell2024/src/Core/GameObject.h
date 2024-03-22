@@ -1,7 +1,10 @@
 #pragma once
-#include "AssetManager.h"
 #include "Audio.hpp"
-#include "Physics.h"
+#include "../API/OpenGL/Types/gl_model.h"
+#include "../Physics/RigidBody.hpp"
+#include "../Physics/RigidStatic.hpp"
+#include "../Physics/Physics.h"
+#include "../Util.hpp"
 
 enum class OpenState { NONE, CLOSED, CLOSING, OPEN, OPENING };
 enum class OpenAxis { NONE, TRANSLATE_X, TRANSLATE_Y, TRANSLATE_Z, ROTATION_POS_X, ROTATION_POS_Y, ROTATION_POS_Z, ROTATION_NEG_X, ROTATION_NEG_Y, ROTATION_NEG_Z };
@@ -9,15 +12,9 @@ enum class InteractType { NONE, TEXT, QUESTION, PICKUP, CALLBACK_ONLY };
 enum class ModelMatrixMode { GAME_TRANSFORM, PHYSX_TRANSFORM };
 enum class PickUpType { NONE, GLOCK, GLOCK_AMMO, SHOTGUN, SHOTGUN_AMMO, AKS74U, AKS74U_AMMO, AKS74U_SCOPE };
 
-struct RaycastObject {
-    Model* model = nullptr;
-    PxRigidStatic* rigid = NULL;
-    PxShape* shape = NULL;
-};
-
 struct GameObject {
 public:
-    Model* _model = nullptr;
+    OpenGLModel* _model = nullptr;
 	std::vector<int> _meshMaterialIndices;
 	Transform _transform;
 	Transform _openTransform;
@@ -30,12 +27,8 @@ public:
 	float _openSpeed = 0;
     bool _respawns = true;
 
-	// make this private again some how PLEEEEEEEEEEEEEEEEEEEEEASE when you have time. no rush.
-	PxRigidBody* _collisionBody = NULL;
-
-	//PxRigidStatic* _editorRaycastBody = NULL;
-	//PxShape* _editorRaycastShape = NULL;
-    RaycastObject _raycastObject;
+    RigidBody collisionRigidBody;
+    RigidStatic raycastRigidStatic;
 
 private:
 
@@ -45,7 +38,7 @@ private:
 		
 	ModelMatrixMode _modelMatrixMode = ModelMatrixMode::GAME_TRANSFORM;
 	BoundingBox _boundingBox;
-	std::vector<PxShape*> _collisionShapes;
+	//std::vector<PxShape*> _collisionShapes;
 
 
 	struct AudioEffects {
@@ -68,9 +61,13 @@ public:
 	void UpdateEditorPhysicsObject();
 
 	glm::vec3 GetWorldSpaceOABBCenter();
+    void SetKinematic(bool value);
     void DisableRaycasting();
     void EnableRaycasting();
     void SetCollisionGroup(CollisionGroup collisionGroup);
+    
+    
+    
     void SetCollidesWithGroup(PxU32 collisionGroup) {
 
 
@@ -128,15 +125,15 @@ public:
 	PickUpType GetPickUpType();
 	//void CreateEditorPhysicsObject();
 
-	void CreateRigidBody(glm::mat4 matrix, bool kinematic);
+	//void CreateRigidBody(glm::mat4 matrix, bool kinematic);
 	void AddCollisionShape(PxShape* shape, PhysicsFilterData physicsFilterData);
-	void AddCollisionShapeFromConvexMesh(Mesh* mesh, PhysicsFilterData physicsFilterData, glm::vec3 scale = glm::vec3(1));
+	void AddCollisionShapeFromConvexMesh(OpenGLMesh* mesh, PhysicsFilterData physicsFilterData, glm::vec3 scale = glm::vec3(1));
 	void AddCollisionShapeFromBoundingBox(BoundingBox& boundignBox, PhysicsFilterData physicsFilterData);
 	void UpdateRigidBodyMassAndInertia(float density);
     void PutRigidBodyToSleep();
 
-	void SetRaycastShapeFromMesh(Mesh* mesh);
-	void SetRaycastShapeFromModel(Model* model);
+	void SetRaycastShapeFromMesh(OpenGLMesh* mesh);
+	void SetRaycastShapeFromModel(OpenGLModel* model);
 	void SetRaycastShape(PxShape* shape);
 	
 	void SetModelMatrixMode(ModelMatrixMode modelMatrixMode);
@@ -149,7 +146,7 @@ public:
 
     void LoadSavedState();
     void SetWakeOnStart(bool value);
-    void UpdateRaycastObject();
+    void UpdateRigidStatic();
     void DisableRespawnOnPickup();
 
 

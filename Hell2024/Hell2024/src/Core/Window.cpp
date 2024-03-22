@@ -1,5 +1,5 @@
 #include "Window.h"
-#include "AssetManager.h"
+#include "../API/OpenGL/GL_assetManager.h"
 #include "../Util.hpp"
 
 Window::Window() {
@@ -26,7 +26,7 @@ void Window::CleanUp() {
 
 void Window::CreatePhysicsObjects() {
 
-	Model* model = AssetManager::GetModel("Glass");
+	OpenGLModel* model = OpenGLAssetManager::GetModel("Glass");
 	if (!model) {
 		std::cout << "Failed to create Window physics object, cause could not find 'Glass.obj' model\n";
 		return;
@@ -37,7 +37,7 @@ void Window::CreatePhysicsObjects() {
 
 	{
 
-		Mesh* mesh = &model->_meshes[0];
+		OpenGLMesh* mesh = &model->_meshes[0];
 		if (!mesh->_triangleMesh) {
 			mesh->CreateTriangleMesh();
 		}
@@ -58,7 +58,7 @@ void Window::CreatePhysicsObjects() {
 		raycastBody->setGlobalPose(transform2);
 	}
 	{
-		Mesh* mesh = &model->_meshes[1];
+		OpenGLMesh* mesh = &model->_meshes[1];
 		if (!mesh->_triangleMesh) {
 			mesh->CreateTriangleMesh();
 		}

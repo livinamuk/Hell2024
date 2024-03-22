@@ -1,11 +1,14 @@
 #include "Floorplan.h"
 #include "Input.h"
-#include "GL.h"
-#include "../Util.hpp"
+#include "../API/OpenGL/GL_backEnd.h"
+#include "../BackEnd/BackEnd.h"
+#include "../Core/AssetManager.h"
 #include "../Core/Scene.h"
-#include "../Core/TextBlitter.h"
-#include "../Renderer/Renderer.h"
 #include "../EngineState.hpp"
+#include "../Renderer/TextBlitter.h"
+#include "../Renderer/Renderer.h"
+#include "../Types/Modular/ModularCommon.h"
+#include "../Util.hpp"
 
 namespace Floorplan {
     glm::mat4 _projection = glm::mat4(1);
@@ -90,8 +93,8 @@ void Floorplan::Update(float /*deltaTime*/) {
 	}
 
     // Zoom
-    float screenWidth = (float)GL::GetWindowWidth();
-    float screenHeight = (float)GL::GetWindowHeight();
+    float screenWidth = (float)BackEnd::GetWindowedWidth();
+    float screenHeight = (float)BackEnd::GetWindowedHeight();
     float scrollSpeedZoomFactor = 1000.0f / _zoom;
     _zoom *= (1 + ((float)-Input::GetMouseWheelValue() / -5));
     _zoom = std::max(_zoom, 2.0f);
@@ -358,7 +361,7 @@ void Floorplan::FloorModeUpdate() {
             float x2 = std::max(_creatingFloorBegin.x, _creatingFloorEnd.x);
             float z2 = std::max(_creatingFloorBegin.z, _creatingFloorEnd.z);
             float height = 0.1f;
-            int materialIndex = AssetManager::GetMaterialIndex("FloorBoards");    
+            int materialIndex = AssetManager::GetMaterialIndex("FloorBoards");
             Floor floor(x1, z1, x2, z2, height, materialIndex, 2.0f);
             Scene::AddFloor(floor);
             Scene::RecreateDataStructures();

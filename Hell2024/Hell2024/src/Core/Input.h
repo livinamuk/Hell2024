@@ -1,5 +1,7 @@
 #pragma once
 #include "keycodes.h"
+#include <glad/glad.h>
+#include <GLFW/glfw3.h>
 
 namespace Input {
 
@@ -19,4 +21,13 @@ namespace Input {
 	int GetMouseX();
 	int GetMouseY();
 	void PreventRightMouseHold();
+    int GetScrollWheelYOffset();
+    void ResetScrollWheelYOffset();
+    //int GetCursorX();
+    //int GetCursorY();
+    void DisableCursor();
+    void HideCursor();
+    void ShowCursor();
+    int GetCursorScreenX();
+    int GetCursorScreenY();
 }

@@ -1,8 +1,8 @@
 #include "NumberBlitter.h"
 #include <algorithm>
 #include <iostream>
-#include "../Core/GL.h"
-#include "../Core/AssetManager.h"
+#include "../API/OpenGL/GL_assetManager.h"
+#include "../API/OpenGL/GL_backEnd.h"
 
 
 unsigned int VAO = 0;

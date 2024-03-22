@@ -3,15 +3,84 @@
 #include <future>
 #include <thread>
 
+#include "../API/OpenGL/GL_assetManager.h"
+#include "../BackEnd/BackEnd.h"
+#include "../Core/AssetManager.h"
+#include "../Renderer/Renderer.h"
+#include "../Renderer/TextBlitter.h"
 #include "../Util.hpp"
 #include "../EngineState.hpp"
-#include "AssetManager.h"
-#include "../Renderer/Renderer.h"
+
 #include "Input.h"
 #include "File.h"
- #include "Player.h"
+#include "Player.h"
 #include "Audio.hpp"
-#include "TextBlitter.h"
+
+void CreateCeilingsHack();
+
+void Scene::LoadMapNEW(std::string mapPath) {
+
+    CleanUp();
+    File::LoadMap(mapPath);
+
+    // Walls
+    for (int i = 0; i < Scene::_walls.size(); i++) {
+        Wall& wall = Scene::_walls[i];
+        std::string name = "Wall" + std::to_string(i);
+        wall.CreateVertexData();
+        wall.meshIndex = AssetManager::CreateMesh(name, wall.vertices, wall.indices);
+        wall.UpdateRenderItem();
+        Mesh* mesh = AssetManager::GetMeshByIndex(wall.meshIndex);
+    }    
+    
+    // Floors
+    for (int i = 0; i < Scene::_floors.size(); i++) {
+        Floor& floor = Scene::_floors[i];
+        std::string name = "Floor" + std::to_string(i);
+        floor.CreateVertexData();
+        floor.meshIndex = AssetManager::CreateMesh(name, floor.vertices, floor.indices);
+        floor.UpdateRenderItem();
+        Mesh* mesh = AssetManager::GetMeshByIndex(floor.meshIndex);
+    }
+
+    CreateCeilingsHack();
+
+    // Floors
+    for (int i = 0; i < Scene::_ceilings.size(); i++) {
+        Ceiling& ceiling = Scene::_ceilings[i];
+        std::string name = "Floor" + std::to_string(i);
+        ceiling.CreateVertexData();
+        ceiling.meshIndex = AssetManager::CreateMesh(name, ceiling.vertices, ceiling.indices);
+        ceiling.UpdateRenderItem();
+        Mesh* mesh = AssetManager::GetMeshByIndex(ceiling.meshIndex);
+    }
+}
+
+// Hack To Create Ceilings From Floors
+void CreateCeilingsHack() {
+    Scene::_ceilings.emplace_back(0.1f, 0.1f, 5.2f, 3.1f, 2.5f, AssetManager::GetMaterialIndex("Ceiling"));
+    Scene::_ceilings.emplace_back(0.1f, 4.1f, 6.1f, 6.9f, 2.5f, AssetManager::GetMaterialIndex("Ceiling"));
+    Scene::_ceilings.emplace_back(0.1f, 3.1f, 3.7f, 4.1f, 2.5f, AssetManager::GetMaterialIndex("Ceiling"));
+    Scene::_ceilings.emplace_back(4.7f, 3.1f, 6.1f, 4.1f, 2.5f, AssetManager::GetMaterialIndex("Ceiling"));
+    int count = 0;
+    for (Floor& floor : Scene::_floors) {
+        count++;
+        if (count == 2) {
+            continue;
+        }
+        float minX = std::min(std::min(std::min(floor.v1.position.x, floor.v2.position.x), floor.v3.position.x), floor.v4.position.x);
+        float maxX = std::max(std::max(std::max(floor.v1.position.x, floor.v2.position.x), floor.v3.position.x), floor.v4.position.x);
+        float minZ = std::min(std::min(std::min(floor.v1.position.z, floor.v2.position.z), floor.v3.position.z), floor.v4.position.z);
+        float maxZ = std::max(std::max(std::max(floor.v1.position.z, floor.v2.position.z), floor.v3.position.z), floor.v4.position.z);
+        Scene::_ceilings.emplace_back(minX, minZ, maxX, maxZ, 2.5f, AssetManager::GetMaterialIndex("Ceiling"));
+    }
+}
+
+
+
+
+
+
 
 
 float door2X = 2.05f;
@@ -222,16 +291,16 @@ void Scene::Update(float deltaTime) {
     SetPlayerGroundedStates();
     ProcessBullets();
 
-    // fix this
-	Renderer::_shadowMapsAreDirty = true;
-	
     for (BulletCasing& bulletCasing : _bulletCasings) {
         bulletCasing.Update(deltaTime);
     }
 
+    for (Toilet& toilet : _toilets) {
+        toilet.Update(deltaTime);
+    }
+
 	for (PickUp& pickUp : _pickUps) {
         pickUp.Update(deltaTime);
-
 	}
 
     if (Input::KeyPressed(HELL_KEY_T)) {
@@ -285,6 +354,22 @@ void Scene::CheckIfLightsAreDirty() {
             for (Door& door : Scene::_doors) {
                 if (door.HasMovedSinceLastFrame()) {
                     if (Util::AABBInSphere(door._aabb, light.position, light.radius)) {
+                        light.isDirty = true;
+                        break;
+                    }
+                }
+            }
+        }
+        if (!light.isDirty) {
+            for (Toilet& toilet : Scene::_toilets) {
+                if (toilet.lid.HasMovedSinceLastFrame()) {
+                    if (Util::AABBInSphere(toilet.lid._aabb, light.position, light.radius)) {
+                        light.isDirty = true;
+                        break;
+                    }
+                }
+                else if (toilet.seat.HasMovedSinceLastFrame()) {
+                    if (Util::AABBInSphere(toilet.seat._aabb, light.position, light.radius)) {
                         light.isDirty = true;
                         break;
                     }
@@ -510,13 +595,22 @@ void ProcessBullets() {
 					}
 				}
 				else if (physicsObjectData->type != RAGDOLL_RIGID) {
-					// Bullet decal
-					PxRigidBody* parent = actor;
-					glm::mat4 parentMatrix = Util::PxMat44ToGlmMat4(actor->getGlobalPose());
-					glm::vec3 localPosition = glm::inverse(parentMatrix) * glm::vec4(rayResult.hitPosition, 1.0);
-					glm::vec3 localNormal = glm::inverse(parentMatrix) * glm::vec4(rayResult.surfaceNormal, 0.0);
-					Decal decal(localPosition, localNormal, parent, Decal::Type::REGULAR);
-                    Scene::_decals.push_back(decal);
+                    bool doIt = true;
+                    if (physicsObjectData->type == GAME_OBJECT) {
+                        GameObject* gameObject = (GameObject*)physicsObjectData->parent;
+                        if (gameObject->GetPickUpType() != PickUpType::NONE) {
+                            doIt = false;
+                        }
+                    }
+                    if (doIt) {
+                        // Bullet decal
+                        PxRigidBody* parent = actor;
+                        glm::mat4 parentMatrix = Util::PxMat44ToGlmMat4(actor->getGlobalPose());
+                        glm::vec3 localPosition = glm::inverse(parentMatrix) * glm::vec4(rayResult.hitPosition, 1.0);
+                        glm::vec3 localNormal = glm::inverse(parentMatrix) * glm::vec4(rayResult.surfaceNormal, 0.0);
+                        Decal decal(localPosition, localNormal, parent, Decal::Type::REGULAR);
+                        Scene::_decals.push_back(decal);
+                    }
 				}
 			}
 		}
@@ -536,54 +630,8 @@ void Scene::LoadHardCodedObjects() {
 
     _volumetricBloodSplatters.clear();
 
-    glm::vec3 position = glm::vec3(3, 1.5, 3);
-    glm::vec3 rotaiton = glm::vec3(0, 0, 0);
-    glm::vec3 front = glm::vec3(1, 0, 0);
-    CreateVolumetricBlood(position, rotaiton, front);
-    
-
-/*PickUp& glockAmmoA = _pickUps.emplace_back();
-	//glockAmmoA.position = glm::vec3(2.0f, 0.1f, 3.6f);
-	glockAmmoA.position = glm::vec3(0.0f, 0.676f, 0.3f);
-    glockAmmoA.rotation.y = HELL_PI * 0.4f;
-    glockAmmoA.type = PickUp::Type::GLOCK_AMMO;
-    glockAmmoA.parentGameObjectName = "TopDraw";
-    */
-    
-   // _ceilings.emplace_back(door2X - 0.8f, 7.0f, door2X + 0.8f, 9.95f, 2.5f, AssetManager::GetMaterialIndex("Ceiling"));
-
-    // ceilings   
-
-
-
-    _ceilings.emplace_back(0.1f, 0.1f, 5.2f, 3.1f, 2.5f, AssetManager::GetMaterialIndex("Ceiling"));
-    _ceilings.emplace_back(0.1f, 4.1f, 6.1f, 6.9f, 2.5f, AssetManager::GetMaterialIndex("Ceiling"));
-    _ceilings.emplace_back(0.1f, 3.1f, 3.7f, 4.1f, 2.5f, AssetManager::GetMaterialIndex("Ceiling"));
-    _ceilings.emplace_back(4.7f, 3.1f, 6.1f, 4.1f, 2.5f, AssetManager::GetMaterialIndex("Ceiling"));
- //   _ceilings.emplace_back(5.3f, 0.1f, 11.3f, 3.0f, 2.5f, AssetManager::GetMaterialIndex("Ceiling"));
-
-    for (Floor& floor : Scene::_floors) {
-        float minX = std::min(std::min(std::min(floor.v1.position.x, floor.v2.position.x), floor.v3.position.x), floor.v4.position.x);
-        float maxX = std::max(std::max(std::max(floor.v1.position.x, floor.v2.position.x), floor.v3.position.x), floor.v4.position.x);
-        float minZ = std::min(std::min(std::min(floor.v1.position.z, floor.v2.position.z), floor.v3.position.z), floor.v4.position.z);
-        float maxZ = std::max(std::max(std::max(floor.v1.position.z, floor.v2.position.z), floor.v3.position.z), floor.v4.position.z);
-        _ceilings.emplace_back(minX, minZ, maxX, maxZ, 2.5f, AssetManager::GetMaterialIndex("Ceiling"));
-    }
-
-
-   // std::cout << Scene::_floors.size() << " FLOOOOOOOOOOORS\n";
-
-   // LoadLightSetup(2);
-
-    /*
-	GameObject& shard = _gameObjects.emplace_back();
-    shard.SetPosition(3.8f, 1.4f, 3.75f);
-    shard.SetModel("GlassShard");
-    shard.SetScale(100.0f);
-    shard.SetMeshMaterial("BulletHole_Glass");
-
-    */
-
+    _toilets.push_back(Toilet(glm::vec3(8.3, 0.1, 2.8), 0));
+    _toilets.push_back(Toilet(glm::vec3(11.2f, 0.1f, 3.65f), HELL_PI * 0.5f));
 
     if (true) {
         /*
@@ -708,10 +756,10 @@ void Scene::LoadHardCodedObjects() {
         filterData666.raycastGroup = RAYCAST_DISABLED;
         filterData666.collisionGroup = CollisionGroup::GENERIC_BOUNCEABLE;
         filterData666.collidesWith = (CollisionGroup)(ENVIROMENT_OBSTACLE | GENERIC_BOUNCEABLE);
-        aks74u.CreateRigidBody(aks74u._transform.to_mat4(), false);
-
-        aks74u.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("AKS74U_Carlos_ConvexMesh")->_meshes[0], filterData666);
-        aks74u.SetRaycastShapeFromModel(AssetManager::GetModel("AKS74U_Carlos"));
+        //aks74u.CreateRigidBody(aks74u._transform.to_mat4(), false);
+        aks74u.SetKinematic(false);
+        aks74u.AddCollisionShapeFromConvexMesh(&OpenGLAssetManager::GetModel("AKS74U_Carlos_ConvexMesh")->_meshes[0], filterData666);
+        aks74u.SetRaycastShapeFromModel(OpenGLAssetManager::GetModel("AKS74U_Carlos"));
         aks74u.SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
         aks74u.UpdateRigidBodyMassAndInertia(50.0f);
 
@@ -732,9 +780,10 @@ void Scene::LoadHardCodedObjects() {
         shotgunPickup.SetName("Shotgun_Pickup");
         shotgunPickup.SetMeshMaterial("Shotgun");
         shotgunPickup.SetPickUpType(PickUpType::SHOTGUN);
-        shotgunPickup.CreateRigidBody(shotgunPickup._transform.to_mat4(), false);
-        shotgunPickup.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("Shotgun_Isolated_ConvexMesh")->_meshes[0], filterData666);
-        shotgunPickup.SetRaycastShapeFromModel(AssetManager::GetModel("Shotgun_Isolated"));
+        //shotgunPickup.CreateRigidBody(shotgunPickup._transform.to_mat4(), false);
+        shotgunPickup.SetKinematic(false);
+        shotgunPickup.AddCollisionShapeFromConvexMesh(&OpenGLAssetManager::GetModel("Shotgun_Isolated_ConvexMesh")->_meshes[0], filterData666);
+        shotgunPickup.SetRaycastShapeFromModel(OpenGLAssetManager::GetModel("Shotgun_Isolated"));
         shotgunPickup.SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
         shotgunPickup.UpdateRigidBodyMassAndInertia(75.0f);
         shotgunPickup.PutRigidBodyToSleep();
@@ -750,9 +799,9 @@ void Scene::LoadHardCodedObjects() {
         scopePickUp.SetName("ScopePickUp");
         scopePickUp.SetMeshMaterial("Shotgun");
         scopePickUp.SetPickUpType(PickUpType::AKS74U_SCOPE);
-        scopePickUp.CreateRigidBody(scopePickUp._transform.to_mat4(), false);
-        scopePickUp.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("ScopePickUp_ConvexMesh")->_meshes[0], filterData666);
-        scopePickUp.SetRaycastShapeFromModel(AssetManager::GetModel("ScopePickUp"));
+        scopePickUp.SetKinematic(false);
+        scopePickUp.AddCollisionShapeFromConvexMesh(&OpenGLAssetManager::GetModel("ScopePickUp_ConvexMesh")->_meshes[0], filterData666);
+        scopePickUp.SetRaycastShapeFromModel(OpenGLAssetManager::GetModel("ScopePickUp"));
         scopePickUp.SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
         scopePickUp.UpdateRigidBodyMassAndInertia(750.0f);
         scopePickUp.PutRigidBodyToSleep();
@@ -764,9 +813,9 @@ void Scene::LoadHardCodedObjects() {
         glockAmmo.SetName("GlockAmmo_PickUp");
         glockAmmo.SetMeshMaterial("GlockAmmoBox");
         glockAmmo.SetPickUpType(PickUpType::GLOCK_AMMO);
-        glockAmmo.CreateRigidBody(glockAmmo._transform.to_mat4(), false);
-        glockAmmo.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("GlockAmmoBox_ConvexMesh")->_meshes[0], filterData666);
-        glockAmmo.SetRaycastShapeFromModel(AssetManager::GetModel("GlockAmmoBox_ConvexMesh"));
+        glockAmmo.SetKinematic(false);
+        glockAmmo.AddCollisionShapeFromConvexMesh(&OpenGLAssetManager::GetModel("GlockAmmoBox_ConvexMesh")->_meshes[0], filterData666);
+        glockAmmo.SetRaycastShapeFromModel(OpenGLAssetManager::GetModel("GlockAmmoBox_ConvexMesh"));
         glockAmmo.SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
         glockAmmo.UpdateRigidBodyMassAndInertia(150.0f);
         glockAmmo.PutRigidBodyToSleep();
@@ -825,12 +874,12 @@ void Scene::LoadHardCodedObjects() {
         sofa.SetName("Sofa");
         sofa.SetModel("Sofa_Cushionless");
         sofa.SetMeshMaterial("Sofa");
-        sofa.CreateRigidBody(sofa.GetGameWorldMatrix(), true);
-        sofa.SetRaycastShapeFromModel(AssetManager::GetModel("Sofa_Cushionless"));
+        sofa.SetKinematic(true);
+        sofa.SetRaycastShapeFromModel(OpenGLAssetManager::GetModel("Sofa_Cushionless"));
         sofa.AddCollisionShape(sofaShapeBigCube, sofaFilterData);
-        sofa.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("SofaBack_ConvexMesh")->_meshes[0], sofaFilterData);
-        sofa.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("SofaLeftArm_ConvexMesh")->_meshes[0], sofaFilterData);
-        sofa.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("SofaRightArm_ConvexMesh")->_meshes[0], sofaFilterData);
+        sofa.AddCollisionShapeFromConvexMesh(&OpenGLAssetManager::GetModel("SofaBack_ConvexMesh")->_meshes[0], sofaFilterData);
+        sofa.AddCollisionShapeFromConvexMesh(&OpenGLAssetManager::GetModel("SofaLeftArm_ConvexMesh")->_meshes[0], sofaFilterData);
+        sofa.AddCollisionShapeFromConvexMesh(&OpenGLAssetManager::GetModel("SofaRightArm_ConvexMesh")->_meshes[0], sofaFilterData);
         sofa.SetModelMatrixMode(ModelMatrixMode::GAME_TRANSFORM);
 
         PhysicsFilterData cushionFilterData;
@@ -844,9 +893,9 @@ void Scene::LoadHardCodedObjects() {
         cushion0.SetModel("SofaCushion0");
         cushion0.SetMeshMaterial("Sofa");
         cushion0.SetName("SofaCushion0");
-        cushion0.CreateRigidBody(cushion0.GetGameWorldMatrix(), false);
-        cushion0.SetRaycastShapeFromModel(AssetManager::GetModel("SofaCushion0"));
-        cushion0.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("SofaCushion0_ConvexMesh")->_meshes[0], cushionFilterData);
+        cushion0.SetKinematic(false);
+        cushion0.SetRaycastShapeFromModel(OpenGLAssetManager::GetModel("SofaCushion0"));
+        cushion0.AddCollisionShapeFromConvexMesh(&OpenGLAssetManager::GetModel("SofaCushion0_ConvexMesh")->_meshes[0], cushionFilterData);
         cushion0.SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
         cushion0.UpdateRigidBodyMassAndInertia(cushionDensity);
 
@@ -855,9 +904,9 @@ void Scene::LoadHardCodedObjects() {
         cushion1.SetModel("SofaCushion1");
         cushion1.SetName("SofaCushion1");
         cushion1.SetMeshMaterial("Sofa");
-        cushion1.CreateRigidBody(cushion1.GetGameWorldMatrix(), false);
-        cushion1.SetRaycastShapeFromModel(AssetManager::GetModel("SofaCushion1"));
-        cushion1.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("SofaCushion1_ConvexMesh")->_meshes[0], cushionFilterData);
+        cushion1.SetKinematic(false);
+        cushion1.SetRaycastShapeFromModel(OpenGLAssetManager::GetModel("SofaCushion1"));
+        cushion1.AddCollisionShapeFromConvexMesh(&OpenGLAssetManager::GetModel("SofaCushion1_ConvexMesh")->_meshes[0], cushionFilterData);
         cushion1.SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
         cushion1.UpdateRigidBodyMassAndInertia(cushionDensity);
 
@@ -866,9 +915,9 @@ void Scene::LoadHardCodedObjects() {
         cushion2.SetModel("SofaCushion2");
         cushion2.SetName("SofaCushion2");
         cushion2.SetMeshMaterial("Sofa");
-        cushion2.CreateRigidBody(cushion2.GetGameWorldMatrix(), false);
-        cushion2.SetRaycastShapeFromModel(AssetManager::GetModel("SofaCushion2"));
-        cushion2.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("SofaCushion2_ConvexMesh")->_meshes[0], cushionFilterData);
+        cushion2.SetKinematic(false);
+        cushion2.SetRaycastShapeFromModel(OpenGLAssetManager::GetModel("SofaCushion2"));
+        cushion2.AddCollisionShapeFromConvexMesh(&OpenGLAssetManager::GetModel("SofaCushion2_ConvexMesh")->_meshes[0], cushionFilterData);
         cushion2.SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
         cushion2.UpdateRigidBodyMassAndInertia(cushionDensity);
 
@@ -877,9 +926,9 @@ void Scene::LoadHardCodedObjects() {
         cushion3.SetModel("SofaCushion3");
         cushion3.SetName("SofaCushion3");
         cushion3.SetMeshMaterial("Sofa");
-        cushion3.CreateRigidBody(cushion3.GetGameWorldMatrix(), false);
-        cushion3.SetRaycastShapeFromModel(AssetManager::GetModel("SofaCushion3"));
-        cushion3.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("SofaCushion3_ConvexMesh")->_meshes[0], cushionFilterData);
+        cushion3.SetKinematic(false);
+        cushion3.SetRaycastShapeFromModel(OpenGLAssetManager::GetModel("SofaCushion3"));
+        cushion3.AddCollisionShapeFromConvexMesh(&OpenGLAssetManager::GetModel("SofaCushion3_ConvexMesh")->_meshes[0], cushionFilterData);
         cushion3.SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
         cushion3.UpdateRigidBodyMassAndInertia(cushionDensity);
 
@@ -888,9 +937,9 @@ void Scene::LoadHardCodedObjects() {
         cushion4.SetModel("SofaCushion4");
         cushion4.SetName("SofaCushion4");
         cushion4.SetMeshMaterial("Sofa");
-        cushion4.CreateRigidBody(cushion4.GetGameWorldMatrix(), false);
-        cushion4.SetRaycastShapeFromModel(AssetManager::GetModel("SofaCushion4"));
-        cushion4.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("SofaCushion4_ConvexMesh")->_meshes[0], cushionFilterData);
+        cushion4.SetKinematic(false);
+        cushion4.SetRaycastShapeFromModel(OpenGLAssetManager::GetModel("SofaCushion4"));
+        cushion4.AddCollisionShapeFromConvexMesh(&OpenGLAssetManager::GetModel("SofaCushion4_ConvexMesh")->_meshes[0], cushionFilterData);
         cushion4.SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
         cushion4.UpdateRigidBodyMassAndInertia(15.0f);
 
@@ -935,7 +984,7 @@ void Scene::LoadHardCodedObjects() {
             smallChestOfDrawers.SetName("SmallDrawersHis");
             smallChestOfDrawers.SetPosition(0.1f, 0.1f, 4.45f);
             smallChestOfDrawers.SetRotationY(NOOSE_PI / 2);
-            smallChestOfDrawers.SetRaycastShapeFromModel(AssetManager::GetModel("SmallChestOfDrawersFrame"));
+            smallChestOfDrawers.SetRaycastShapeFromModel(OpenGLAssetManager::GetModel("SmallChestOfDrawersFrame"));
             smallChestOfDrawers.SetOpenState(OpenState::NONE, 0, 0, 0);
             smallChestOfDrawers.SetAudioOnOpen("DrawerOpen.wav", 1.0f);
             smallChestOfDrawers.SetAudioOnClose("DrawerOpen.wav", 1.0f);
@@ -943,12 +992,12 @@ void Scene::LoadHardCodedObjects() {
             PhysicsFilterData filterData3;
             filterData3.raycastGroup = RAYCAST_DISABLED;
             filterData3.collisionGroup = CollisionGroup::ENVIROMENT_OBSTACLE;
-            filterData3.collidesWith = CollisionGroup(GENERIC_BOUNCEABLE | BULLET_CASING | PLAYER);
-            smallChestOfDrawers.CreateRigidBody(smallChestOfDrawers.GetGameWorldMatrix(), true);
-            smallChestOfDrawers.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("SmallChestOfDrawersFrame_ConvexMesh")->_meshes[0], filterData3);
-            smallChestOfDrawers.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("SmallChestOfDrawersFrame_ConvexMesh1")->_meshes[0], filterData3);
-            smallChestOfDrawers.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("SmallChestOfDrawersFrameLeftSide_ConvexMesh")->_meshes[0], filterData3);
-            smallChestOfDrawers.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("SmallChestOfDrawersFrameRightSide_ConvexMesh")->_meshes[0], filterData3);
+            filterData3.collidesWith = CollisionGroup(GENERIC_BOUNCEABLE | BULLET_CASING | PLAYER | RAGDOLL);
+            smallChestOfDrawers.SetKinematic(true);
+            smallChestOfDrawers.AddCollisionShapeFromConvexMesh(&OpenGLAssetManager::GetModel("SmallChestOfDrawersFrame_ConvexMesh")->_meshes[0], filterData3);
+            smallChestOfDrawers.AddCollisionShapeFromConvexMesh(&OpenGLAssetManager::GetModel("SmallChestOfDrawersFrame_ConvexMesh1")->_meshes[0], filterData3);
+            smallChestOfDrawers.AddCollisionShapeFromConvexMesh(&OpenGLAssetManager::GetModel("SmallChestOfDrawersFrameLeftSide_ConvexMesh")->_meshes[0], filterData3);
+            smallChestOfDrawers.AddCollisionShapeFromConvexMesh(&OpenGLAssetManager::GetModel("SmallChestOfDrawersFrameRightSide_ConvexMesh")->_meshes[0], filterData3);
 
 
 
@@ -958,15 +1007,15 @@ void Scene::LoadHardCodedObjects() {
             smallChestOfDrawers2.SetName("SmallDrawersHers");
             smallChestOfDrawers2.SetPosition(8.9, 0.1f, 8.3f);
             smallChestOfDrawers2.SetRotationY(NOOSE_PI);
-            smallChestOfDrawers2.SetRaycastShapeFromModel(AssetManager::GetModel("SmallChestOfDrawersFrame"));
+            smallChestOfDrawers2.SetRaycastShapeFromModel(OpenGLAssetManager::GetModel("SmallChestOfDrawersFrame"));
             smallChestOfDrawers2.SetOpenState(OpenState::NONE, 0, 0, 0);
             smallChestOfDrawers2.SetAudioOnOpen("DrawerOpen.wav", 1.0f);
             smallChestOfDrawers2.SetAudioOnClose("DrawerOpen.wav", 1.0f);
-            smallChestOfDrawers2.CreateRigidBody(smallChestOfDrawers2.GetGameWorldMatrix(), true);
-            smallChestOfDrawers2.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("SmallChestOfDrawersFrame_ConvexMesh")->_meshes[0], filterData3);
-            smallChestOfDrawers2.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("SmallChestOfDrawersFrame_ConvexMesh1")->_meshes[0], filterData3);
-            smallChestOfDrawers2.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("SmallChestOfDrawersFrameLeftSide_ConvexMesh")->_meshes[0], filterData3);
-            smallChestOfDrawers2.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("SmallChestOfDrawersFrameRightSide_ConvexMesh")->_meshes[0], filterData3);
+            smallChestOfDrawers2.SetKinematic(true);
+            smallChestOfDrawers2.AddCollisionShapeFromConvexMesh(&OpenGLAssetManager::GetModel("SmallChestOfDrawersFrame_ConvexMesh")->_meshes[0], filterData3);
+            smallChestOfDrawers2.AddCollisionShapeFromConvexMesh(&OpenGLAssetManager::GetModel("SmallChestOfDrawersFrame_ConvexMesh1")->_meshes[0], filterData3);
+            smallChestOfDrawers2.AddCollisionShapeFromConvexMesh(&OpenGLAssetManager::GetModel("SmallChestOfDrawersFrameLeftSide_ConvexMesh")->_meshes[0], filterData3);
+            smallChestOfDrawers2.AddCollisionShapeFromConvexMesh(&OpenGLAssetManager::GetModel("SmallChestOfDrawersFrameRightSide_ConvexMesh")->_meshes[0], filterData3);
            
 
 
@@ -990,28 +1039,26 @@ void Scene::LoadHardCodedObjects() {
             lamp2.SetPosition(glm::vec3(0.25f, 0.88, 0.105f) + glm::vec3(0.1f, 0.1f, 4.45f));
             //lamp.SetParentName("SmallDrawersHis");
 
-            lamp2.SetRaycastShapeFromModel(AssetManager::GetModel("LampFull"));
-            lamp2.CreateRigidBody(lamp2.GetGameWorldMatrix(), false);
+            lamp2.SetRaycastShapeFromModel(OpenGLAssetManager::GetModel("LampFull"));
+            lamp2.SetKinematic(false);
 
-            lamp2.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("LampConvexMesh_0")->_meshes[0], filterData2);
-            lamp2.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("LampConvexMesh_1")->_meshes[0], filterData2);
-            lamp2.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("LampConvexMesh_2")->_meshes[0], filterData2);
+            lamp2.AddCollisionShapeFromConvexMesh(&OpenGLAssetManager::GetModel("LampConvexMesh_0")->_meshes[0], filterData2);
+            lamp2.AddCollisionShapeFromConvexMesh(&OpenGLAssetManager::GetModel("LampConvexMesh_1")->_meshes[0], filterData2);
+            lamp2.AddCollisionShapeFromConvexMesh(&OpenGLAssetManager::GetModel("LampConvexMesh_2")->_meshes[0], filterData2);
             lamp2.SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
             lamp2.UpdateRigidBodyMassAndInertia(20.0f);
 
-
-
-
-
-            GameObject& toilet = _gameObjects.emplace_back();
+       /*    GameObject& toilet = _gameObjects.emplace_back();
             toilet.SetPosition(11.2f, 0.1f, 3.65f);
             toilet.SetModel("Toilet");
             toilet.SetName("Toilet");
             toilet.SetMeshMaterial("Toilet");
-            toilet.SetRaycastShapeFromModel(AssetManager::GetModel("Toilet"));
+            toilet.SetRaycastShapeFromModel(OpenGLAssetManager::GetModel("Toilet"));
             toilet.SetRotationY(HELL_PI * 0.5f);
-            toilet.CreateRigidBody(toilet.GetGameWorldMatrix(), false);
-            toilet.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("Toilet_ConvexMesh")->_meshes[0], filterData3);
+            toilet.SetKinematic(true);
+            toilet.AddCollisionShapeFromConvexMesh(&OpenGLAssetManager::GetModel("Toilet_ConvexMesh")->_meshes[0], sofaFilterData);
+            toilet.AddCollisionShapeFromConvexMesh(&OpenGLAssetManager::GetModel("Toilet_ConvexMesh1")->_meshes[0], sofaFilterData);
+            toilet.SetModelMatrixMode(ModelMatrixMode::GAME_TRANSFORM);
 
 
             GameObject& toiletSeat = _gameObjects.emplace_back();
@@ -1022,7 +1069,7 @@ void Scene::LoadHardCodedObjects() {
             toiletSeat.SetParentName("Toilet");
             toiletSeat.SetOpenState(OpenState::CLOSED, 2.183f, 0, 0.2f);
             toiletSeat.SetOpenAxis(OpenAxis::ROTATION_NEG_X);
-            toiletSeat.SetRaycastShapeFromModel(AssetManager::GetModel("ToiletSeat"));
+            toiletSeat.SetRaycastShapeFromModel(OpenGLAssetManager::GetModel("ToiletSeat"));
 
             GameObject& toiletLid = _gameObjects.emplace_back();
             toiletLid.SetPosition(0, 0.40727, -0.2014);
@@ -1032,8 +1079,8 @@ void Scene::LoadHardCodedObjects() {
             toiletLid.SetParentName("Toilet");
             toiletLid.SetOpenState(OpenState::CLOSED, 2.183f, 0, 0.2f);
             toiletLid.SetOpenAxis(OpenAxis::ROTATION_POS_X);
-            toiletLid.SetRaycastShapeFromModel(AssetManager::GetModel("ToiletLid"));
-
+            toiletLid.SetRaycastShapeFromModel(OpenGLAssetManager::GetModel("ToiletLid"));
+            */
 
             //  lamp.userData = new PhysicsObjectData(PhysicsObjectType::GAME_OBJECT, &_gameObjects[_gameObjects.size()-1]);
 
@@ -1045,13 +1092,13 @@ void Scene::LoadHardCodedObjects() {
             smallChestOfDrawer_1.SetName("TopDraw");
             smallChestOfDrawer_1.SetOpenState(OpenState::CLOSED, 2.183f, 0, 0.2f);
             smallChestOfDrawer_1.SetOpenAxis(OpenAxis::TRANSLATE_Z);
-            smallChestOfDrawer_1.SetRaycastShapeFromModel(AssetManager::GetModel("SmallDrawerTop"));
-            smallChestOfDrawer_1.CreateRigidBody(smallChestOfDrawer_1.GetGameWorldMatrix(), true);
-            smallChestOfDrawer_1.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("SmallDrawerTop_ConvexMesh0")->_meshes[0], filterData2);
-            smallChestOfDrawer_1.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("SmallDrawerTop_ConvexMesh1")->_meshes[0], filterData2);
-            smallChestOfDrawer_1.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("SmallDrawerTop_ConvexMesh2")->_meshes[0], filterData2);
-            smallChestOfDrawer_1.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("SmallDrawerTop_ConvexMesh3")->_meshes[0], filterData2);
-            smallChestOfDrawer_1.AddCollisionShapeFromConvexMesh(&AssetManager::GetModel("SmallDrawerTop_ConvexMesh4")->_meshes[0], filterData2);
+            smallChestOfDrawer_1.SetRaycastShapeFromModel(OpenGLAssetManager::GetModel("SmallDrawerTop"));
+            smallChestOfDrawer_1.SetKinematic(true);
+            smallChestOfDrawer_1.AddCollisionShapeFromConvexMesh(&OpenGLAssetManager::GetModel("SmallDrawerTop_ConvexMesh0")->_meshes[0], filterData2);
+            smallChestOfDrawer_1.AddCollisionShapeFromConvexMesh(&OpenGLAssetManager::GetModel("SmallDrawerTop_ConvexMesh1")->_meshes[0], filterData2);
+            smallChestOfDrawer_1.AddCollisionShapeFromConvexMesh(&OpenGLAssetManager::GetModel("SmallDrawerTop_ConvexMesh2")->_meshes[0], filterData2);
+            smallChestOfDrawer_1.AddCollisionShapeFromConvexMesh(&OpenGLAssetManager::GetModel("SmallDrawerTop_ConvexMesh3")->_meshes[0], filterData2);
+            smallChestOfDrawer_1.AddCollisionShapeFromConvexMesh(&OpenGLAssetManager::GetModel("SmallDrawerTop_ConvexMesh4")->_meshes[0], filterData2);
 
 
 
@@ -1062,7 +1109,7 @@ void Scene::LoadHardCodedObjects() {
 			smallChestOfDrawer_2.SetName("SecondDraw");
 			smallChestOfDrawer_2.SetOpenState(OpenState::CLOSED, 2.183f, 0, 0.2f);
 			smallChestOfDrawer_2.SetOpenAxis(OpenAxis::TRANSLATE_Z);
-            smallChestOfDrawer_2.SetRaycastShapeFromModel(AssetManager::GetModel("SmallDrawerSecond"));
+            smallChestOfDrawer_2.SetRaycastShapeFromModel(OpenGLAssetManager::GetModel("SmallDrawerSecond"));
 
             GameObject& smallChestOfDrawer_3 = _gameObjects.emplace_back();
             smallChestOfDrawer_3.SetModel("SmallDrawerThird");
@@ -1071,7 +1118,7 @@ void Scene::LoadHardCodedObjects() {
 			smallChestOfDrawer_3.SetName("ThirdDraw");
 			smallChestOfDrawer_3.SetOpenState(OpenState::CLOSED, 2.183f, 0, 0.2f);
 			smallChestOfDrawer_3.SetOpenAxis(OpenAxis::TRANSLATE_Z);
-            smallChestOfDrawer_3.SetRaycastShapeFromModel(AssetManager::GetModel("SmallDrawerThird"));
+            smallChestOfDrawer_3.SetRaycastShapeFromModel(OpenGLAssetManager::GetModel("SmallDrawerThird"));
 
             GameObject& smallChestOfDrawer_4 = _gameObjects.emplace_back();
             smallChestOfDrawer_4.SetModel("SmallDrawerFourth");
@@ -1080,7 +1127,7 @@ void Scene::LoadHardCodedObjects() {
 			smallChestOfDrawer_4.SetName("ForthDraw");
 			smallChestOfDrawer_4.SetOpenState(OpenState::CLOSED, 2.183f, 0, 0.2f);
 			smallChestOfDrawer_4.SetOpenAxis(OpenAxis::TRANSLATE_Z);
-            smallChestOfDrawer_4.SetRaycastShapeFromModel(AssetManager::GetModel("SmallDrawerFourth"));
+            smallChestOfDrawer_4.SetRaycastShapeFromModel(OpenGLAssetManager::GetModel("SmallDrawerFourth"));
         }
 
 
@@ -1116,9 +1163,9 @@ void Scene::LoadHardCodedObjects() {
             PhysicsFilterData filterData;
             filterData.raycastGroup = RAYCAST_DISABLED;
             filterData.collisionGroup = CollisionGroup::GENERIC_BOUNCEABLE;
-            filterData.collidesWith = (CollisionGroup)(ENVIROMENT_OBSTACLE | GENERIC_BOUNCEABLE);
+            filterData.collidesWith = (CollisionGroup)(ENVIROMENT_OBSTACLE | GENERIC_BOUNCEABLE | RAGDOLL);
 
-            cube->CreateRigidBody(transform.to_mat4(), false);
+            cube->SetKinematic(false);
             cube->AddCollisionShape(collisionShape, filterData);
             cube->SetRaycastShape(raycastShape);
             cube->SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
@@ -1429,12 +1476,34 @@ void Scene::ResetGameObjectStates() {
 }
 
 void Scene::LoadMap(std::string mapPath) {
+
     CleanUp();   
     File::LoadMap(mapPath);
+
+    for (Wall& wall : _walls) {
+        wall.CreateVertexData();
+        wall.CreateMeshGL();
+    }
+
+    for (Floor& floor : _floors) {
+        floor.CreateVertexData();
+        floor.CreateMeshGL();
+    }
+    
+    CreateCeilingsHack();
+
+    for (Ceiling& ceiling : _ceilings) {
+        ceiling.CreateVertexData();
+        ceiling.CreateMeshGL();
+    }
+    
     LoadHardCodedObjects();
+
     RecreateDataStructures();
     ResetGameObjectStates();
 }
+
+
 
 void Scene::SaveMap(std::string mapPath) {
 	File::SaveMap(mapPath);
@@ -1489,6 +1558,9 @@ void Scene::CleanUp() {
     for (GameObject& gameObject : _gameObjects) {
         gameObject.CleanUp();
     }
+    for (Toilet& toilet: _toilets) {
+        toilet.CleanUp();
+    }
     for (Window& window : _windows) {
         window.CleanUp();
     }
@@ -1496,6 +1568,7 @@ void Scene::CleanUp() {
         animatedGameObject.DestroyRagdoll();
     }
 
+    _toilets.clear();
     _bloodDecals.clear();
     _spawnPoints.clear();
     _bulletCasings.clear();
@@ -1994,12 +2067,12 @@ void Scene::CalculateLightBoundingVolumes() {
 
 void Scene::CreateMeshData() {
 
-    for (Wall& wall : _walls) {
-        wall.CreateMesh();
-    }
-    for (Floor& floor : _floors) {
-        floor.CreateMesh();
-    }
+    //for (Wall& wall : _walls) {
+    //    wall.CreateMesh();
+    //}
+    //for (Floor& floor : _floors) {
+    //    floor.CreateMeshGL();
+    // }
 
 	_rtVertices.clear();
 	_rtMesh.clear();
@@ -2010,7 +2083,7 @@ void Scene::CreateMeshData() {
     // House
     {
         for (Wall& wall : _walls) {
-            wall.CreateMesh();
+            //wall.CreateMesh();
             for (Vertex& vert : wall.vertices) {
                 _rtVertices.push_back(vert.position);
             }
@@ -2069,451 +2142,4 @@ void Scene::CreateMeshData() {
         mesh.baseVertex = baseVertex;
         _rtMesh.push_back(mesh);
     }
-}
-
-
-//////////////
-//          // 
-//   Wall   //
-
-Wall::Wall(glm::vec3 begin, glm::vec3 end, float height, int materialIndex) {
-    this->materialIndex = materialIndex;
-    this->begin = begin;
-    this->end = end;
-    this->height = height;
-    CreateMesh();
-}
-
-
-
-void Wall::CreateMesh() {
-
-    vertices.clear();
-    ceilingTrims.clear();
-    floorTrims.clear();
-    collisionLines.clear();
-
-    // Init shit
-    bool finishedBuildingWall = false;
-    glm::vec3 wallStart = begin;
-    glm::vec3 wallEnd = end;
-    glm::vec3 cursor = wallStart;
-    glm::vec3 wallDir = glm::normalize(wallEnd - cursor);
-    float texScale = 2.0f;
-    if (materialIndex == AssetManager::GetMaterialIndex("WallPaper")) {
-        texScale = 1.0f;
-    }
-
-    float uvX1 = 0;
-    float uvX2 = 0;
-
-    bool hasTrims = (height == WALL_HEIGHT);
-
-    int count = 0;
-    while (!finishedBuildingWall || count > 1000) {
-        count++;
-		float shortestDistance = 9999;
-		Door* closestDoor = nullptr;
-		Window* closestWindow = nullptr;
-        glm::vec3 intersectionPoint;
-
-        for (Door& door : Scene::_doors) {
-
-            // Left side
-            glm::vec3 v1(door.GetFloorplanVertFrontLeft(0.05f));
-            glm::vec3 v2(door.GetFloorplanVertBackRight(0.05f));
-            // Right side
-            glm::vec3 v3(door.GetFloorplanVertBackLeft(0.05f));
-            glm::vec3 v4(door.GetFloorplanVertFrontRight(0.05f));
-            // If an intersection is found closer than one u have already then store it
-            glm::vec3 tempIntersectionPoint;
-            if (Util::LineIntersects(v1, v2, cursor, wallEnd, tempIntersectionPoint)) {
-                if (shortestDistance > glm::distance(cursor, tempIntersectionPoint)) {
-                    shortestDistance = glm::distance(cursor, tempIntersectionPoint);
-                    closestDoor = &door;
-                    intersectionPoint = tempIntersectionPoint;
-                }
-            }
-            // Check the other side now
-            if (Util::LineIntersects(v3, v4, cursor, wallEnd, tempIntersectionPoint)) {
-                if (shortestDistance > glm::distance(cursor, tempIntersectionPoint)) {
-                    shortestDistance = glm::distance(cursor, tempIntersectionPoint);
-                    closestDoor = &door;
-                    intersectionPoint = tempIntersectionPoint;
-                }
-            }
-        }
-
-		for (Window& window : Scene::_windows) {
-
-            
-			// Left side
-			glm::vec3 v3(window.GetFrontLeftCorner());
-			glm::vec3 v4(window.GetBackRightCorner());
-			// Right side
-			glm::vec3 v1(window.GetFrontRightCorner());
-			glm::vec3 v2(window.GetBackLeftCorner());
-           
-
-          /*
-			// Left side
-			//glm::vec3 v1(window.position + glm::vec3(-0.1, 0, WINDOW_WIDTH * -0.5));
-            glm::vec3 v1 = window.GetFrontLeftCorner();
-			glm::vec3 v2(window.position + glm::vec3(0.1f, 0, WINDOW_WIDTH * -0.5));
-			// Right side
-			glm::vec3 v3(window.position + glm::vec3(-0.1, 0, WINDOW_WIDTH * 0.5));
-			glm::vec3 v4(window.position + glm::vec3(0.1f, 0, WINDOW_WIDTH * 0.5));
-*/
-			v1.y = 0.1f;
-			v2.y = 0.1f;
-			v3.y = 0.1f;
-			v4.y = 0.1f;
-
-            //std::cout << "\n" << Util::Vec3ToString(v1) << "\n\n";
-
-			// If an intersection is found closer than one u have already then store it
-			glm::vec3 tempIntersectionPoint;
-			if (Util::LineIntersects(v1, v2, cursor, wallEnd, tempIntersectionPoint)) {
-				if (shortestDistance > glm::distance(cursor, tempIntersectionPoint)) {
-					shortestDistance = glm::distance(cursor, tempIntersectionPoint);
-                    closestWindow = &window;
-                    closestDoor = NULL;
-					intersectionPoint = tempIntersectionPoint;
-					//std::cout << "\n\n\nHELLO\n\n";
-				}
-			}
-			// Check the other side now
-			if (Util::LineIntersects(v3, v4, cursor, wallEnd, tempIntersectionPoint)) {
-				if (shortestDistance > glm::distance(cursor, tempIntersectionPoint)) {
-					shortestDistance = glm::distance(cursor, tempIntersectionPoint);
-					closestWindow = &window;
-					closestDoor = NULL;
-					intersectionPoint = tempIntersectionPoint;
-                    //std::cout << "\n\n\nHELLO\n\n";
-				}
-			}
-		}
-
-        // Did ya find a door?
-        if (closestDoor != nullptr) {
-
-            // The wall piece from cursor to door            
-            Vertex v1, v2, v3, v4;
-            v1.position = cursor;
-            v2.position = cursor + glm::vec3(0, height, 0);
-            v3.position = intersectionPoint + glm::vec3(0, height, 0);
-            v4.position = intersectionPoint;
-            float segmentWidth = abs(glm::length((v4.position - v1.position))) / WALL_HEIGHT;
-            float segmentHeight = glm::length((v2.position - v1.position)) / WALL_HEIGHT;
-            uvX2 = uvX1 + segmentWidth;
-            v1.uv = glm::vec2(uvX1, segmentHeight) * texScale;
-            v2.uv = glm::vec2(uvX1, 0) * texScale;
-            v3.uv = glm::vec2(uvX2, 0) * texScale;
-            v4.uv = glm::vec2(uvX2, segmentHeight) * texScale;
-            SetNormalsAndTangentsFromVertices(&v3, &v2, &v1);
-            SetNormalsAndTangentsFromVertices(&v3, &v1, &v4);
-            vertices.push_back(v3);
-            vertices.push_back(v2);
-            vertices.push_back(v1);
-            vertices.push_back(v3);
-            vertices.push_back(v1);
-            vertices.push_back(v4);
-
-            if (hasTrims) {
-                Transform trimTransform;
-                trimTransform.position = cursor;
-                trimTransform.rotation.y = Util::YRotationBetweenTwoPoints(v4.position, v1.position) + HELL_PI;
-                trimTransform.scale.x = segmentWidth * WALL_HEIGHT;
-                ceilingTrims.push_back(trimTransform);
-                floorTrims.push_back(trimTransform);
-            }
-
-            // Bit above the door
-            Vertex v5, v6, v7, v8;
-            v5.position = intersectionPoint + glm::vec3(0, DOOR_HEIGHT, 0);
-            v6.position = intersectionPoint + glm::vec3(0, height, 0);
-            v7.position = intersectionPoint + (wallDir * (DOOR_WIDTH + 0.005f)) + glm::vec3(0, height, 0);
-            v8.position = intersectionPoint + (wallDir * (DOOR_WIDTH + 0.005f)) + glm::vec3(0, DOOR_HEIGHT, 0);
-            segmentWidth = abs(glm::length((v8.position - v5.position))) / WALL_HEIGHT;
-            segmentHeight = glm::length((v6.position - v5.position)) / WALL_HEIGHT;
-            uvX1 = uvX2;
-            uvX2 = uvX1 + segmentWidth;
-            v5.uv = glm::vec2(uvX1, segmentHeight) * texScale;
-            v6.uv = glm::vec2(uvX1, 0) * texScale;
-            v7.uv = glm::vec2(uvX2, 0) * texScale;
-            v8.uv = glm::vec2(uvX2, segmentHeight) * texScale;
-            SetNormalsAndTangentsFromVertices(&v7, &v6, &v5);
-            SetNormalsAndTangentsFromVertices(&v7, &v5, &v8);
-            vertices.push_back(v7);
-            vertices.push_back(v6);
-            vertices.push_back(v5);
-            vertices.push_back(v7);
-            vertices.push_back(v5);
-            vertices.push_back(v8);
-
-            if (hasTrims) {
-                Transform trimTransform;
-                trimTransform.position = intersectionPoint;
-                trimTransform.rotation.y = Util::YRotationBetweenTwoPoints(v4.position, v1.position) + HELL_PI;
-                trimTransform.scale.x = segmentWidth * WALL_HEIGHT;
-                ceilingTrims.push_back(trimTransform);
-            }
-
-            cursor = intersectionPoint + (wallDir * (DOOR_WIDTH + 0.005f)); // This 0.05 is so you don't get an intersection with the door itself
-            uvX1 = uvX2;
-
-            Line collisionLine;
-            collisionLine.p1.pos = v1.position;
-            collisionLine.p2.pos = v4.position;
-            collisionLine.p1.color = YELLOW;
-            collisionLine.p2.color = RED;
-            collisionLines.push_back(collisionLine);
-        }
-        else if (closestWindow != nullptr) {
-
-			// The wall piece from cursor to window            
-			Vertex v1, v2, v3, v4;
-			v1.position = cursor;
-			v2.position = cursor + glm::vec3(0, height, 0);
-			v3.position = intersectionPoint + glm::vec3(0, height, 0);
-			v4.position = intersectionPoint;
-			float segmentWidth = abs(glm::length((v4.position - v1.position))) / WALL_HEIGHT;
-			float segmentHeight = glm::length((v2.position - v1.position)) / WALL_HEIGHT;
-			uvX2 = uvX1 + segmentWidth;
-			v1.uv = glm::vec2(uvX1, segmentHeight) * texScale;
-			v2.uv = glm::vec2(uvX1, 0) * texScale;
-			v3.uv = glm::vec2(uvX2, 0) * texScale;
-			v4.uv = glm::vec2(uvX2, segmentHeight) * texScale;
-			SetNormalsAndTangentsFromVertices(&v3, &v2, &v1);
-			SetNormalsAndTangentsFromVertices(&v3, &v1, &v4);
-			vertices.push_back(v3);
-			vertices.push_back(v2);
-			vertices.push_back(v1);
-			vertices.push_back(v3);
-			vertices.push_back(v1);
-			vertices.push_back(v4);
-
-			if (hasTrims) {
-				Transform trimTransform;
-				trimTransform.position = cursor;
-				trimTransform.rotation.y = Util::YRotationBetweenTwoPoints(v4.position, v1.position) + HELL_PI;
-				trimTransform.scale.x = segmentWidth * WALL_HEIGHT;
-				ceilingTrims.push_back(trimTransform);
-				floorTrims.push_back(trimTransform);
-			}
-
-			// Bit above the window
-			Vertex v5, v6, v7, v8;
-			v5.position = intersectionPoint + glm::vec3(0, WINDOW_HEIGHT, 0);
-			v6.position = intersectionPoint + glm::vec3(0, height, 0);
-			v7.position = intersectionPoint + (wallDir * (WINDOW_WIDTH + 0.005f)) + glm::vec3(0, height, 0);
-			v8.position = intersectionPoint + (wallDir * (WINDOW_WIDTH + 0.005f)) + glm::vec3(0, WINDOW_HEIGHT, 0);
-			segmentWidth = abs(glm::length((v8.position - v5.position))) / WALL_HEIGHT;
-			segmentHeight = glm::length((v6.position - v5.position)) / WALL_HEIGHT;
-			uvX1 = uvX2;
-			uvX2 = uvX1 + segmentWidth;
-			v5.uv = glm::vec2(uvX1, segmentHeight) * texScale;
-			v6.uv = glm::vec2(uvX1, 0) * texScale;
-			v7.uv = glm::vec2(uvX2, 0) * texScale;
-			v8.uv = glm::vec2(uvX2, segmentHeight) * texScale;
-			SetNormalsAndTangentsFromVertices(&v7, &v6, &v5);
-			SetNormalsAndTangentsFromVertices(&v7, &v5, &v8);
-			vertices.push_back(v7);
-			vertices.push_back(v6);
-			vertices.push_back(v5);
-			vertices.push_back(v7);
-			vertices.push_back(v5);
-			vertices.push_back(v8);	
-
-			// Bit below the window
-            {
-                float windowYBegin = 0.8f;
-                float height = windowYBegin + 0.1f;
-
-                Vertex v5, v6, v7, v8;
-				v5.position = intersectionPoint + glm::vec3(0, 0, 0);
-				v6.position = intersectionPoint + glm::vec3(0, height, 0);
-				v7.position = intersectionPoint + (wallDir * (WINDOW_WIDTH + 0.005f)) + glm::vec3(0, height, 0);
-				v8.position = intersectionPoint + (wallDir * (WINDOW_WIDTH + 0.005f)) + glm::vec3(0, 0, 0);
-				segmentWidth = abs(glm::length((v8.position - v5.position))) / WALL_HEIGHT;
-				segmentHeight = glm::length((v6.position - v5.position)) / WALL_HEIGHT;
-                uvX1 = uvX2;
-                uvX2 = uvX1 + segmentWidth;
-                v5.uv = glm::vec2(uvX1, segmentHeight) * texScale;
-                v6.uv = glm::vec2(uvX1, 0) * texScale;
-                v7.uv = glm::vec2(uvX2, 0) * texScale;
-                v8.uv = glm::vec2(uvX2, segmentHeight) * texScale;
-                SetNormalsAndTangentsFromVertices(&v7, &v6, &v5);
-                SetNormalsAndTangentsFromVertices(&v7, &v5, &v8);
-                vertices.push_back(v7);
-                vertices.push_back(v6);
-                vertices.push_back(v5);
-                vertices.push_back(v7);
-                vertices.push_back(v5);
-                vertices.push_back(v8);
-            }
-
-			if (hasTrims) {
-				Transform trimTransform;
-				trimTransform.position = intersectionPoint;
-				trimTransform.rotation.y = Util::YRotationBetweenTwoPoints(v4.position, v1.position) + HELL_PI;
-				trimTransform.scale.x = segmentWidth * WALL_HEIGHT;
-				ceilingTrims.push_back(trimTransform);
-				floorTrims.push_back(trimTransform);
-			}
-
-
-			cursor = intersectionPoint + (wallDir * (WINDOW_WIDTH + 0.005f)); // This 0.05 is so you don't get an intersection with the door itself
-			uvX1 = uvX2;
-		}
-
-        // You're on the final bit of wall then aren't ya
-        else {
-
-            // The wall piece from cursor to door            
-            Vertex v1, v2, v3, v4;
-            v1.position = cursor;
-            v2.position = cursor + glm::vec3(0, height, 0);
-            v3.position = wallEnd + glm::vec3(0, height, 0);
-            v4.position = wallEnd;
-            float segmentWidth = abs(glm::length((v4.position - v1.position))) / WALL_HEIGHT;
-            float segmentHeight = glm::length((v2.position - v1.position)) / WALL_HEIGHT;
-            uvX2 = uvX1 + segmentWidth;
-            v1.uv = glm::vec2(uvX1, segmentHeight) * texScale;
-            v2.uv = glm::vec2(uvX1, 0) * texScale;
-            v3.uv = glm::vec2(uvX2, 0) * texScale;
-            v4.uv = glm::vec2(uvX2, segmentHeight) * texScale;
-
-            SetNormalsAndTangentsFromVertices(&v3, &v2, &v1);
-            SetNormalsAndTangentsFromVertices(&v3, &v1, &v4);
-            vertices.push_back(v3);
-            vertices.push_back(v2);
-            vertices.push_back(v1);
-            vertices.push_back(v3);
-            vertices.push_back(v1);
-            vertices.push_back(v4);
-            finishedBuildingWall = true;
-
-            if (hasTrims) {
-                Transform trimTransform;
-                trimTransform.position = cursor;
-                trimTransform.rotation.y = Util::YRotationBetweenTwoPoints(v4.position, v1.position) + HELL_PI;
-                trimTransform.scale.x = segmentWidth * WALL_HEIGHT;
-                ceilingTrims.push_back(trimTransform);
-                floorTrims.push_back(trimTransform);
-            }
-
-            Line collisionLine;
-            collisionLine.p1.pos = v1.position;
-            collisionLine.p2.pos = v4.position;
-            collisionLine.p1.color = YELLOW;
-            collisionLine.p2.color = RED;
-            collisionLines.push_back(collisionLine);
-        }
-    }
-
-    if (VAO != 0) {
-        glDeleteVertexArrays(1, &VAO);
-        glDeleteBuffers(1, &VBO);
-    }
-    glGenVertexArrays(1, &VAO);
-    glGenBuffers(1, &VBO);
-    glBindVertexArray(VAO);
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Vertex), &vertices[0], GL_STATIC_DRAW);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)0);
-    glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, normal));
-    glEnableVertexAttribArray(2);
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, uv));
-    glEnableVertexAttribArray(3);
-    glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, tangent));
-    glEnableVertexAttribArray(4);
-    glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, bitangent));
-
-}
-
-glm::vec3 Wall::GetNormal() {
-    glm::vec3 vector = glm::normalize(begin - end);
-    return glm::vec3(-vector.z, 0, vector.x) * glm::vec3(-1);
-}
-
-glm::vec3 Wall::GetMidPoint() {
-    return (begin + end) * glm::vec3(0.5);
-}
-
-void Wall::Draw() {
-    glBindVertexArray(VAO);
-    glDrawArrays(GL_TRIANGLES, 0, vertices.size());
-}
-
-///////////////////
-//               //
-//    Ceiling    //
-
-Ceiling::Ceiling(float x1, float z1, float x2, float z2, float height, int materialIndex) {
-    this->materialIndex = materialIndex;
-    this->x1 = x1;
-    this->z1 = z1;
-    this->x2 = x2;
-    this->z2 = z2;
-    this->height = height;
-    Vertex v1, v2, v3, v4;
-    v1.position = glm::vec3(x1, height, z1);
-    v2.position = glm::vec3(x1, height, z2);
-    v3.position = glm::vec3(x2, height, z2);
-    v4.position = glm::vec3(x2, height, z1);
-    glm::vec3 normal = NormalFromThreePoints(v3.position, v2.position, v1.position);
-    v1.normal = normal;
-    v2.normal = normal;
-    v3.normal = normal;
-    v4.normal = normal;
-    float scale = 2.0f;
-    float uv_x_low = z1 / scale;
-    float uv_x_high = z2 / scale;
-    float uv_y_low = x1 / scale;
-    float uv_y_high = x2 / scale;
-    uv_x_low = x1;
-    uv_x_high = x2;
-    uv_y_low = z1;
-    uv_y_high = z2;
-    v1.uv = glm::vec2(uv_x_low, uv_y_low);
-    v2.uv = glm::vec2(uv_x_low, uv_y_high);
-    v3.uv = glm::vec2(uv_x_high, uv_y_high);
-    v4.uv = glm::vec2(uv_x_high, uv_y_low);
-    SetNormalsAndTangentsFromVertices(&v3, &v2, &v1);
-    SetNormalsAndTangentsFromVertices(&v1, &v4, &v3);
-    vertices.push_back(v3);
-    vertices.push_back(v2);
-    vertices.push_back(v1);
-
-    vertices.push_back(v1);
-    vertices.push_back(v4);
-    vertices.push_back(v3);
-
-    if (VAO != 0) {
-        glDeleteVertexArrays(1, &VAO);
-        glDeleteBuffers(1, &VBO);
-    }
-    glGenVertexArrays(1, &VAO);
-    glGenBuffers(1, &VBO);
-    glBindVertexArray(VAO);
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Vertex), &vertices[0], GL_STATIC_DRAW);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)0);
-    glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, normal));
-    glEnableVertexAttribArray(2);
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, uv));
-    glEnableVertexAttribArray(3);
-    glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, tangent));
-    glEnableVertexAttribArray(4);
-    glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, bitangent));
-}
-
-void Ceiling::Draw() {
-    glBindVertexArray(VAO);
-    glDrawArrays(GL_TRIANGLES, 0, vertices.size());
 }

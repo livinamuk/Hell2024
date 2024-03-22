@@ -8,8 +8,10 @@ struct MeshRenderingEntry {
     int baseIndex = -1;
     int baseVertex = -1;
     int materialIndex = 0;
+    int emissiveColorTexutreIndex = -1;
     bool blendingEnabled = false;
     bool drawingEnabled = true;
+    bool renderAsGlass = false;
 };
 
 struct AnimatedGameObject {
@@ -29,8 +31,10 @@ struct AnimatedGameObject {
 	void PlayAndLoopAnimation(std::string animationName, float speed);
     void PauseAnimation();
     void SetAnimationModeToBindPose();
-	void SetMeshMaterialByMeshName(std::string meshName, std::string materialName);
-	void SetMeshMaterialByMeshIndex(int meshIndex, std::string materialName);
+    void SetMeshMaterialByMeshName(std::string meshName, std::string materialName);
+    void SetMeshMaterialByMeshIndex(int meshIndex, std::string materialName);
+    void SetMeshToRenderAsGlassByMeshIndex(std::string materialName);
+    void SetMeshEmissiveColorTextureByMeshName(std::string meshName, std::string textureName);
 	void SetAllMeshMaterials(std::string materialName);
     void UpdateBoneTransformsFromBindPose();
     void UpdateBoneTransformsFromRagdoll();
@@ -42,7 +46,7 @@ struct AnimatedGameObject {
 	bool AnimationIsPastPercentage(float percent);
     glm::vec3 GetScale();
 
-	SkinnedModel* _skinnedModel;
+	SkinnedModel* _skinnedModel = nullptr;
 	Transform _transform;
 	AnimatedTransforms _animatedTransforms;
 	float _currentAnimationTime = 0;
@@ -59,11 +63,11 @@ struct AnimatedGameObject {
 	glm::vec3 GetAK74USCasingSpawnPostion();
 
     void LoadRagdoll(std::string filename, PxU32 ragdollCollisionFlags);
-    void SetRagdollToCurrentAniamtionState();
     void SetAnimatedModeToRagdoll();
     void DestroyRagdoll();
     void EnableDrawingForAllMesh();
-    void DisableDrawingForMeshByMeshName(std::string meshName);
+    void EnableDrawingForMeshByMeshName(std::string meshName);
+    void DisableDrawingForMeshByMeshName(std::string meshName); 
     void PrintMeshNames();
     void EnableBlendingByMeshIndex(int index);
 

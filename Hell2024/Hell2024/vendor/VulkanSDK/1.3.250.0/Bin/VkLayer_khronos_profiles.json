@@ -1,0 +1,1372 @@
+{
+    "file_format_version": "1.2.1",
+    "layer": {
+        "name": "VK_LAYER_KHRONOS_profiles",
+        "type": "GLOBAL",
+        "library_path": ".\\VkLayer_khronos_profiles.dll",
+        "api_version": "1.3.250",
+        "implementation_version": "1.0.2",
+        "status": "STABLE",
+        "description": "Khronos Profiles layer",
+        "introduction": "The Khronos Profiles layer helps test across a wide range of hardware capabilities without requiring a physical copy of every device.",
+        "url": "https://vulkan.lunarg.com/doc/sdk/latest/windows/profiles_layer.html",
+        "device_extensions": [
+            {
+                "name": "VK_EXT_tooling_info",
+                "spec_version": "1",
+                "entrypoints": [
+                    "vkGetPhysicalDeviceToolPropertiesEXT"
+                ]
+            }
+        ],
+        "features": {
+            "presets": [
+                {
+                    "label": "Force Physical Device Only",
+                    "description": "Use the Profiles layer to force a specific physical device",
+                    "platforms": [ "WINDOWS", "LINUX", "MACOS" ],
+                    "status": "STABLE",
+                    "settings": [
+                        {
+                            "key": "force_device",
+                            "value": "FORCE_DEVICE_WITH_NAME"
+                        },
+                        {
+                            "key": "profile_file",
+                            "value": ""
+                        },
+                        {
+                            "key": "profile_name",
+                            "value": ""
+                        },
+                        {
+                            "key": "simulate_capabilities",
+                            "value": []
+                        },
+                        {
+                            "key": "emulate_portability",
+                            "value": false
+                        }
+                    ]
+                },
+                {
+                    "label": "LunarG Desktop Portability 2023",
+                    "description": "Check the Vulkan 1.2 application will run on Windows, Linux and macOS platforms without exceeding ecosystem effective devices capabilities",
+                    "platforms": [ "WINDOWS", "LINUX", "MACOS" ],
+                    "status": "STABLE",
+                    "settings": [
+                        {
+                            "key": "force_device",
+                            "value": "FORCE_DEVICE_OFF"
+                        },
+                        {
+                            "key": "profile_file",
+                            "value": "${VULKAN_CONTENT}/VK_LAYER_KHRONOS_profiles/VP_LUNARG_desktop_baseline_2023.json"
+                        },
+                        {
+                            "key": "profile_name",
+                            "value": "VP_LUNARG_desktop_baseline_2023"
+                        },
+                        {
+                            "key": "simulate_capabilities",
+                            "value": [ "SIMULATE_API_VERSION_BIT", "SIMULATE_FEATURES_BIT", "SIMULATE_PROPERTIES_BIT" ]
+                        },
+                        {
+                            "key": "emulate_portability",
+                            "value": true
+                        },
+                        {
+                            "key": "vertexAttributeAccessBeyondStride",
+                            "value": true
+                        },
+                        {
+                            "key": "separateStencilMaskRef",
+                            "value": true
+                        },
+                        {
+                            "key": "mutableComparisonSamplers",
+                            "value": true
+                        },
+                        {
+                            "key": "multisampleArrayImage",
+                            "value": true
+                        },
+                        {
+                            "key": "imageViewFormatSwizzle",
+                            "value": true
+                        },
+                        {
+                            "key": "imageViewFormatReinterpretation",
+                            "value": true
+                        },
+                        {
+                            "key": "events",
+                            "value": true
+                        },
+                        {
+                            "key": "constantAlphaColorBlendFactors",
+                            "value": true
+                        }
+                    ]
+                },
+                {
+                    "label": "LunarG Desktop Portability 2022",
+                    "description": "Check the Vulkan 1.1 application will run on Windows, Linux and macOS platforms without exceeding ecosystem effective devices capabilities",
+                    "platforms": [ "WINDOWS", "LINUX", "MACOS" ],
+                    "status": "STABLE",
+                    "settings": [
+                        {
+                            "key": "force_device",
+                            "value": "FORCE_DEVICE_OFF"
+                        },
+                        {
+                            "key": "profile_file",
+                            "value": "${VULKAN_CONTENT}/VK_LAYER_KHRONOS_profiles/VP_LUNARG_desktop_baseline_2022.json"
+                        },
+                        {
+                            "key": "profile_name",
+                            "value": "VP_LUNARG_desktop_baseline_2022"
+                        },
+                        {
+                            "key": "simulate_capabilities",
+                            "value": [ "SIMULATE_API_VERSION_BIT", "SIMULATE_FEATURES_BIT", "SIMULATE_PROPERTIES_BIT" ]
+                        },
+                        {
+                            "key": "emulate_portability",
+                            "value": true
+                        },
+                        {
+                            "key": "vertexAttributeAccessBeyondStride",
+                            "value": true
+                        },
+                        {
+                            "key": "separateStencilMaskRef",
+                            "value": true
+                        },
+                        {
+                            "key": "mutableComparisonSamplers",
+                            "value": true
+                        },
+                        {
+                            "key": "multisampleArrayImage",
+                            "value": true
+                        },
+                        {
+                            "key": "imageViewFormatSwizzle",
+                            "value": true
+                        },
+                        {
+                            "key": "imageViewFormatReinterpretation",
+                            "value": true
+                        },
+                        {
+                            "key": "events",
+                            "value": true
+                        },
+                        {
+                            "key": "constantAlphaColorBlendFactors",
+                            "value": true
+                        }
+                    ]
+                },
+                {
+                    "label": "Khronos Roadmap 2022",
+                    "description": "Check the Vulkan 1.3 application will run on the Khronos Roadmap 2022 Profile devices",
+                    "platforms": [ "WINDOWS", "LINUX", "MACOS" ],
+                    "status": "STABLE",
+                    "settings": [
+                        {
+                            "key": "force_device",
+                            "value": "FORCE_DEVICE_OFF"
+                        },
+                        {
+                            "key": "emulate_portability",
+                            "value": false
+                        },
+                        {
+                            "key": "profile_file",
+                            "value": "${VULKAN_CONTENT}/VK_LAYER_KHRONOS_profiles/VP_KHR_roadmap_2022.json"
+                        },
+                        {
+                            "key": "profile_name",
+                            "value": "VP_KHR_roadmap_2022"
+                        },
+                        {
+                            "key": "simulate_capabilities",
+                            "value": [ "SIMULATE_API_VERSION_BIT", "SIMULATE_FEATURES_BIT", "SIMULATE_PROPERTIES_BIT" ]
+                        }
+                    ]
+                },
+                {
+                    "label": "Android Baseline 2022",
+                    "description": "Check the Vulkan 1.1 application will run on the Android Baseline 2022 Profile devices",
+                    "platforms": [ "WINDOWS", "LINUX", "MACOS" ],
+                    "status": "STABLE",
+                    "settings": [
+                        {
+                            "key": "force_device",
+                            "value": "FORCE_DEVICE_OFF"
+                        },
+                        {
+                            "key": "emulate_portability",
+                            "value": false
+                        },
+                        {
+                            "key": "profile_file",
+                            "value": "${VULKAN_CONTENT}/VK_LAYER_KHRONOS_profiles/VP_ANDROID_baseline_2022.json"
+                        },
+                        {
+                            "key": "profile_name",
+                            "value": "VP_ANDROID_baseline_2022"
+                        },
+                        {
+                            "key": "simulate_capabilities",
+                            "value": [ "SIMULATE_API_VERSION_BIT", "SIMULATE_FEATURES_BIT", "SIMULATE_PROPERTIES_BIT", "SIMULATE_EXTENSIONS_BIT", "SIMULATE_FORMATS_BIT" ]
+                        }
+                    ]
+                },
+                {
+                    "label": "Android Baseline 2021",
+                    "description": "Check the Vulkan 1.0 application will run on the Android Baseline 2021 Profile devices",
+                    "platforms": [ "WINDOWS", "LINUX", "MACOS" ],
+                    "status": "STABLE",
+                    "settings": [
+                        {
+                            "key": "force_device",
+                            "value": "FORCE_DEVICE_OFF"
+                        },
+                        {
+                            "key": "emulate_portability",
+                            "value": false
+                        },
+                        {
+                            "key": "profile_file",
+                            "value": "${VULKAN_CONTENT}/VK_LAYER_KHRONOS_profiles/VP_ANDROID_baseline_2021.json"
+                        },
+                        {
+                            "key": "profile_name",
+                            "value": "VP_ANDROID_baseline_2021"
+                        },
+                        {
+                            "key": "simulate_capabilities",
+                            "value": [ "SIMULATE_API_VERSION_BIT", "SIMULATE_FEATURES_BIT", "SIMULATE_PROPERTIES_BIT", "SIMULATE_EXTENSIONS_BIT", "SIMULATE_FORMATS_BIT" ]
+                        }
+                    ]
+                }
+            ],
+            "settings": [
+                {
+                    "key": "force_device",
+                    "env": "VK_KHRONOS_PROFILES_FORCE_DEVICE",
+                    "label": "Force Device",
+                    "description": "On system with multiple physical devices, force the use of one specific physical device.",
+                    "status": "BETA",
+                    "type": "ENUM",
+                    "default": "FORCE_DEVICE_OFF",
+                    "platforms": [ "WINDOWS", "LINUX", "MACOS" ],
+                    "flags": [
+                        {
+                            "key": "FORCE_DEVICE_OFF",
+                            "label": "Off",
+                            "description": "Let the Vulkan Loader list all the Physical Device."
+                        },
+                        {
+                            "key": "FORCE_DEVICE_WITH_UUID",
+                            "label": "Using Device UUID",
+                            "description": "Force the Physical Device identified by the device UUID.",
+                            "settings": [
+                                {
+                                    "key": "force_device_uuid",
+                                    "env": "VK_KHRONOS_PROFILES_FORCE_DEVICE_UUID",
+                                    "label": "Device UUID",
+                                    "description": "Device UUID of the forced physical devices",
+                                    "status": "STABLE",
+                                    "platforms": [ "WINDOWS", "LINUX", "MACOS" ],
+                                    "type": "STRING",
+                                    "default": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+                                    "dependence": {
+                                        "mode": "ALL",
+                                        "settings": [
+                                            {
+                                                "key": "force_device",
+                                                "value": "FORCE_DEVICE_WITH_UUID"
+                                            }
+                                        ]
+                                    }
+                                }
+                            ]
+                        },
+                        {
+                            "key": "FORCE_DEVICE_WITH_NAME",
+                            "label": "Using Device Name",
+                            "description": "Force the Physical Device identified by the device UUID.",
+                            "settings": [
+                                {
+                                    "key": "force_device_name",
+                                    "env": "VK_KHRONOS_PROFILES_FORCE_DEVICE_NAME",
+                                    "label": "Device Name",
+                                    "description": "Device Name of the forced physical devices",
+                                    "status": "STABLE",
+                                    "platforms": [ "WINDOWS", "LINUX", "MACOS" ],
+                                    "type": "ENUM",
+                                    "flags": [],
+                                    "default": "${VP_PHYSICAL_DEVICES}",
+                                    "dependence": {
+                                        "mode": "ALL",
+                                        "settings": [
+                                            {
+                                                "key": "force_device",
+                                                "value": "FORCE_DEVICE_WITH_NAME"
+                                            }
+                                        ]
+                                    }
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "key": "profile_file",
+                    "env": "VK_KHRONOS_PROFILES_PROFILE_FILE",
+                    "label": "Profile Selection",
+                    "description": "Path of a profile file and the name of the profile to load.",
+                    "status": "STABLE",
+                    "type": "LOAD_FILE",
+                    "format": "PROFILE",
+                    "filter": "*.json",
+                    "default": "${VULKAN_CONTENT}/VK_LAYER_KHRONOS_profiles/VP_LUNARG_desktop_portability_2022.json",
+                    "expanded": true,
+                    "platforms": [ "WINDOWS", "LINUX", "MACOS" ],
+                    "settings": [
+                        {
+                            "key": "profile_name",
+                            "env": "VK_KHRONOS_PROFILES_PROFILE_NAME",
+                            "label": "Profile",
+                            "description": "Name of the profile specified by the profile file to use. If set to ${VP_DEFAULT}, the layer will load the first profile in the file.",
+                            "type": "ENUM",
+                            "platforms": [ "WINDOWS", "LINUX", "MACOS" ],
+                            "flags": [],
+                            "default": "${VP_DEFAULT}"
+                        },
+                        {
+                            "key": "profile_validation",
+                            "env": "VK_KHRONOS_PROFILES_PROFILE_VALIDATION",
+                            "label": "Schema Validation",
+                            "description": "Validate the profile file against the Vulkan SDK profile schema if the file is found.",
+                            "type": "BOOL",
+                            "default": false,
+                            "platforms": [ "WINDOWS", "LINUX", "MACOS" ]
+                        }
+                    ]
+                },
+                {
+                    "key": "simulate_capabilities",
+                    "env": "VK_KHRONOS_PROFILES_SIMULATE_CAPABILITIES",
+                    "label": "Simulate Profile Capabilities",
+                    "description": "Control of the simulated capabilities of the Vulkan physical device from the selected Vulkan Profile.",
+                    "status": "STABLE",
+                    "type": "FLAGS",
+                    "platforms": [ "WINDOWS", "LINUX", "MACOS" ],
+                    "flags": [
+                        {
+                            "key": "SIMULATE_API_VERSION_BIT",
+                            "label": "Version",
+                            "description": "The Vulkan device will report the API version from the selected Profile. It also overrides the `api-version` set in VkPhysicalDeviceProperties."
+                        },
+                        {
+                            "key": "SIMULATE_FEATURES_BIT",
+                            "label": "Features",
+                            "description": "The Vulkan device will report the features from the selected Profile.",
+                            "settings": [
+                                {
+                                    "key": "default_feature_values",
+                                    "env": "VK_KHRONOS_PROFILES_DEFAULT_FEATURE_VALUES",
+                                    "label": "Unspecified Features",
+                                    "description": "Feature values when not specified in the select Vulkan profiles.",
+                                    "status": "STABLE",
+                                    "type": "ENUM",
+                                    "default": "DEFAULT_FEATURE_VALUES_DEVICE",
+                                    "flags": [
+                                        {
+                                            "key": "DEFAULT_FEATURE_VALUES_DEVICE",
+                                            "label": "Use Device Values",
+                                            "description": "When a feature is not mentionned in the select Vulkan profiles, set is to the physical device value."
+                                        },
+                                        {
+                                            "key": "DEFAULT_FEATURE_VALUES_FALSE",
+                                            "label": "Use False",
+                                            "description": "When a feature is not mentionned in the select Vulkan profiles, set it to false."
+                                        }
+                                    ]
+                                }
+                            ]
+                        },
+                        {
+                            "key": "SIMULATE_PROPERTIES_BIT",
+                            "label": "Properties",
+                            "description": "The Vulkan device will report the properties from the selected Profile."
+                        },
+                        {
+                            "key": "SIMULATE_EXTENSIONS_BIT",
+                            "label": "Device Extensions",
+                            "description": "The Vulkan device will report the extensions from the selected Profile."
+                        },
+                        {
+                            "key": "SIMULATE_FORMATS_BIT",
+                            "label": "Formats",
+                            "description": "The Vulkan device will report the formats from the selected Profile."
+                        }
+                    ],
+                    "default": [ "SIMULATE_API_VERSION_BIT", "SIMULATE_FEATURES_BIT", "SIMULATE_PROPERTIES_BIT" ]
+                },
+                {
+                    "key": "emulate_portability",
+                    "env": "VK_KHRONOS_PROFILES_EMULATE_PORTABILITY",
+                    "label": "Emulate VK_KHR_portability_subset",
+                    "description": "Emulate the VK_KHR_portability_subset extension on the device.",
+                    "status": "STABLE",
+                    "platforms": [
+                        "WINDOWS",
+                        "LINUX"
+                    ],
+                    "type": "BOOL",
+                    "default": true,
+                    "settings": [
+                        {
+                            "key": "constantAlphaColorBlendFactors",
+                            "label": "constantAlphaColorBlendFactors",
+                            "description": "Indicates whether this implementation supports constant alpha Blend Factors used as source or destination color Blending.",
+                            "type": "BOOL",
+                            "default": false,
+                            "platforms": [ "WINDOWS", "LINUX" ],
+                            "dependence": {
+                                "mode": "ALL",
+                                "settings": [
+                                    {
+                                        "key": "emulate_portability",
+                                        "value": true
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            "key": "events",
+                            "label": "events",
+                            "description": "Indicates whether this implementation supports synchronization using Events",
+                            "type": "BOOL",
+                            "default": false,
+                            "platforms": [ "WINDOWS", "LINUX" ],
+                            "dependence": {
+                                "mode": "ALL",
+                                "settings": [
+                                    {
+                                        "key": "emulate_portability",
+                                        "value": true
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            "key": "imageViewFormatReinterpretation",
+                            "label": "imageViewFormatReinterpretation",
+                            "description": "Indicates whether this implementation supports a VkImageView being created with a texel format containing a different number of components, or a different number of bits in each component, than the texel format of the underlying VkImage.",
+                            "type": "BOOL",
+                            "default": false,
+                            "platforms": [ "WINDOWS", "LINUX" ],
+                            "dependence": {
+                                "mode": "ALL",
+                                "settings": [
+                                    {
+                                        "key": "emulate_portability",
+                                        "value": true
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            "key": "imageViewFormatSwizzle",
+                            "label": "imageViewFormatSwizzle",
+                            "description": "Indicates whether this implementation supports remapping format components using VkImageViewCreateInfo::components.",
+                            "type": "BOOL",
+                            "default": false,
+                            "platforms": [ "WINDOWS", "LINUX" ],
+                            "dependence": {
+                                "mode": "ALL",
+                                "settings": [
+                                    {
+                                        "key": "emulate_portability",
+                                        "value": true
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            "key": "imageView2DOn3DImage",
+                            "label": "imageView2DOn3DImage",
+                            "description": "Indicates whether this implementation supports a VkImage being created with the VK_IMAGE_CREATE_2D_ARRAY_COMPATIBLE_BIT flag set, permitting a 2D or 2D array image view to be created on a 3D VkImage.",
+                            "type": "BOOL",
+                            "default": false,
+                            "platforms": [ "WINDOWS", "LINUX" ],
+                            "dependence": {
+                                "mode": "ALL",
+                                "settings": [
+                                    {
+                                        "key": "emulate_portability",
+                                        "value": true
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            "key": "multisampleArrayImage",
+                            "label": "multisampleArrayImage",
+                            "description": "Indicates whether this implementation supports a VkImage being created as a 2D array with multiple samples per texel.",
+                            "type": "BOOL",
+                            "default": false,
+                            "platforms": [ "WINDOWS", "LINUX" ],
+                            "dependence": {
+                                "mode": "ALL",
+                                "settings": [
+                                    {
+                                        "key": "emulate_portability",
+                                        "value": true
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            "key": "mutableComparisonSamplers",
+                            "label": "mutableComparisonSamplers",
+                            "description": "Indicates whether this implementation allows descriptors with comparison samplers to be updated.",
+                            "type": "BOOL",
+                            "default": false,
+                            "platforms": [ "WINDOWS", "LINUX" ],
+                            "dependence": {
+                                "mode": "ALL",
+                                "settings": [
+                                    {
+                                        "key": "emulate_portability",
+                                        "value": true
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            "key": "pointPolygons",
+                            "label": "pointPolygons",
+                            "description": "Indicates whether this implementation supports Rasterization using a point Polygon Mode.",
+                            "type": "BOOL",
+                            "default": false,
+                            "platforms": [ "WINDOWS", "LINUX" ],
+                            "dependence": {
+                                "mode": "ALL",
+                                "settings": [
+                                    {
+                                        "key": "emulate_portability",
+                                        "value": true
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            "key": "samplerMipLodBias",
+                            "label": "samplerMipLodBias",
+                            "description": "Indicates whether this implementation supports setting a mipmap LOD bias value when creating a sampler.",
+                            "type": "BOOL",
+                            "default": false,
+                            "platforms": [ "WINDOWS", "LINUX" ],
+                            "dependence": {
+                                "mode": "ALL",
+                                "settings": [
+                                    {
+                                        "key": "emulate_portability",
+                                        "value": true
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            "key": "separateStencilMaskRef",
+                            "label": "separateStencilMaskRef",
+                            "description": "Indicates whether this implementation supports separate front and back Stencil Test reference values.",
+                            "type": "BOOL",
+                            "default": false,
+                            "platforms": [ "WINDOWS", "LINUX" ],
+                            "dependence": {
+                                "mode": "ALL",
+                                "settings": [
+                                    {
+                                        "key": "emulate_portability",
+                                        "value": true
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            "key": "shaderSampleRateInterpolationFunctions",
+                            "label": "shaderSampleRateInterpolationFunctions",
+                            "description": "Indicates whether this implementation supports fragment shaders which use the InterpolationFunction capability.",
+                            "type": "BOOL",
+                            "default": false,
+                            "platforms": [ "WINDOWS", "LINUX" ],
+                            "dependence": {
+                                "mode": "ALL",
+                                "settings": [
+                                    {
+                                        "key": "emulate_portability",
+                                        "value": true
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            "key": "tessellationIsolines",
+                            "label": "tessellationIsolines",
+                            "description": "Indicates whether this implementation supports isoline output from the Tessellation stage of a graphics pipeline. This member is only meaningful if tessellationShader are supported.",
+                            "type": "BOOL",
+                            "default": false,
+                            "platforms": [ "WINDOWS", "LINUX" ],
+                            "dependence": {
+                                "mode": "ALL",
+                                "settings": [
+                                    {
+                                        "key": "emulate_portability",
+                                        "value": true
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            "key": "triangleFans",
+                            "label": "triangleFans",
+                            "description": "Indicates whether this implementation supports Triangle Fans primitive topology.",
+                            "type": "BOOL",
+                            "default": false,
+                            "platforms": [ "WINDOWS", "LINUX" ],
+                            "dependence": {
+                                "mode": "ALL",
+                                "settings": [
+                                    {
+                                        "key": "emulate_portability",
+                                        "value": true
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            "key": "vertexAttributeAccessBeyondStride",
+                            "label": "vertexAttributeAccessBeyondStride",
+                            "description": "Indicates whether this implementation supports accessing a vertex input attribute beyond the stride of the corresponding vertex input binding.",
+                            "type": "BOOL",
+                            "default": false,
+                            "platforms": [ "WINDOWS", "LINUX" ],
+                            "dependence": {
+                                "mode": "ALL",
+                                "settings": [
+                                    {
+                                        "key": "emulate_portability",
+                                        "value": true
+                                    }
+                                ]
+                            },
+                            "settings": [
+                                {
+                                    "key": "minVertexInputBindingStrideAlignment",
+                                    "label": "minVertexInputBindingStrideAlignment",
+                                    "description": "Indicates whether this implementation supports accessing a vertex input attribute beyond the stride of the corresponding vertex input binding.",
+                                    "type": "INT",
+                                    "default": 4,
+                                    "platforms": [ "WINDOWS", "LINUX" ],
+                                    "dependence": {
+                                        "mode": "ALL",
+                                        "settings": [
+                                            {
+                                                "key": "vertexAttributeAccessBeyondStride",
+                                                "value": false
+                                            }
+                                        ]
+                                    }
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "key": "exclude_device_extensions",
+                    "env": "VK_KHRONOS_PROFILES_EXCLUDE_DEVICE_EXTENSIONS",
+                    "label": "Exclude Device Extensions",
+                    "description": "Removes the listed device extensions from being reported by the Vulkan physical device.",
+                    "status": "STABLE",
+                    "type": "LIST",
+                    "list": [
+                        "VK_KHR_16bit_storage",
+                        "VK_KHR_8bit_storage",
+                        "VK_KHR_acceleration_structure",
+                        "VK_KHR_bind_memory2",
+                        "VK_KHR_buffer_device_address",
+                        "VK_KHR_copy_commands2",
+                        "VK_KHR_create_renderpass2",
+                        "VK_KHR_dedicated_allocation",
+                        "VK_KHR_deferred_host_operations",
+                        "VK_KHR_depth_stencil_resolve",
+                        "VK_KHR_descriptor_update_template",
+                        "VK_KHR_device_group",
+                        "VK_KHR_display_swapchain",
+                        "VK_KHR_draw_indirect_count",
+                        "VK_KHR_driver_properties",
+                        "VK_KHR_dynamic_rendering",
+                        "VK_KHR_external_fence",
+                        "VK_KHR_external_fence_fd",
+                        "VK_KHR_external_fence_win32",
+                        "VK_KHR_external_memory",
+                        "VK_KHR_external_memory_fd",
+                        "VK_KHR_external_memory_win32",
+                        "VK_KHR_external_semaphore",
+                        "VK_KHR_external_semaphore_fd",
+                        "VK_KHR_external_semaphore_win32",
+                        "VK_KHR_format_feature_flags2",
+                        "VK_KHR_fragment_shading_rate",
+                        "VK_KHR_get_memory_requirements2",
+                        "VK_KHR_image_format_list",
+                        "VK_KHR_imageless_framebuffer",
+                        "VK_KHR_incremental_present",
+                        "VK_KHR_maintenance1",
+                        "VK_KHR_maintenance2",
+                        "VK_KHR_maintenance3",
+                        "VK_KHR_maintenance4",
+                        "VK_KHR_multiview",
+                        "VK_KHR_performance_query",
+                        "VK_KHR_pipeline_executable_properties",
+                        "VK_KHR_pipeline_library",
+                        "VK_KHR_portability_subset",
+                        "VK_KHR_present_id",
+                        "VK_KHR_present_wait",
+                        "VK_KHR_push_descriptor",
+                        "VK_KHR_ray_query",
+                        "VK_KHR_ray_tracing_pipeline",
+                        "VK_KHR_relaxed_block_layout",
+                        "VK_KHR_sampler_mirror_clamp_to_edge",
+                        "VK_KHR_sampler_ycbcr_conversion",
+                        "VK_KHR_separate_depth_stencil_layouts",
+                        "VK_KHR_shader_atomic_int64",
+                        "VK_KHR_shader_clock",
+                        "VK_KHR_shader_draw_parameters",
+                        "VK_KHR_shader_float16_int8",
+                        "VK_KHR_shader_float_controls",
+                        "VK_KHR_shader_integer_dot_product",
+                        "VK_KHR_shader_non_semantic_info",
+                        "VK_KHR_shader_subgroup_extended_types",
+                        "VK_KHR_shader_subgroup_uniform_control_flow",
+                        "VK_KHR_shader_terminate_invocation",
+                        "VK_KHR_shared_presentable_image",
+                        "VK_KHR_spirv_1_4",
+                        "VK_KHR_storage_buffer_storage_class",
+                        "VK_KHR_swapchain",
+                        "VK_KHR_swapchain_mutable_format",
+                        "VK_KHR_synchronization2",
+                        "VK_KHR_timeline_semaphore",
+                        "VK_KHR_uniform_buffer_standard_layout",
+                        "VK_KHR_variable_pointers",
+                        "VK_KHR_video_decode_queue",
+                        "VK_KHR_video_encode_queue",
+                        "VK_KHR_video_queue",
+                        "VK_KHR_vulkan_memory_model",
+                        "VK_KHR_win32_keyed_mutex",
+                        "VK_KHR_workgroup_memory_explicit_layout",
+                        "VK_KHR_zero_initialize_workgroup_memory",
+                        "VK_EXT_4444_formats",
+                        "VK_EXT_astc_decode_mode",
+                        "VK_EXT_blend_operation_advanced",
+                        "VK_EXT_border_color_swizzle",
+                        "VK_EXT_buffer_device_address",
+                        "VK_EXT_calibrated_timestamps",
+                        "VK_EXT_color_write_enable",
+                        "VK_EXT_conditional_rendering",
+                        "VK_EXT_conservative_rasterization",
+                        "VK_EXT_custom_border_color",
+                        "VK_EXT_debug_marker",
+                        "VK_EXT_depth_clip_control",
+                        "VK_EXT_depth_clip_enable",
+                        "VK_EXT_depth_range_unrestricted",
+                        "VK_EXT_descriptor_indexing",
+                        "VK_EXT_device_memory_report",
+                        "VK_EXT_discard_rectangles",
+                        "VK_EXT_display_control",
+                        "VK_EXT_extended_dynamic_state",
+                        "VK_EXT_extended_dynamic_state2",
+                        "VK_EXT_external_memory_dma_buf",
+                        "VK_EXT_external_memory_host",
+                        "VK_EXT_filter_cubic",
+                        "VK_EXT_fragment_density_map",
+                        "VK_EXT_fragment_density_map2",
+                        "VK_EXT_fragment_shader_interlock",
+                        "VK_EXT_full_screen_exclusive",
+                        "VK_EXT_global_priority",
+                        "VK_EXT_global_priority_query",
+                        "VK_EXT_hdr_metadata",
+                        "VK_EXT_host_query_reset",
+                        "VK_EXT_image_drm_format_modifier",
+                        "VK_EXT_image_robustness",
+                        "VK_EXT_image_view_min_lod",
+                        "VK_EXT_index_type_uint8",
+                        "VK_EXT_inline_uniform_block",
+                        "VK_EXT_line_rasterization",
+                        "VK_EXT_load_store_op_none",
+                        "VK_EXT_memory_budget",
+                        "VK_EXT_memory_priority",
+                        "VK_EXT_multi_draw",
+                        "VK_EXT_pageable_device_local_memory",
+                        "VK_EXT_pci_bus_info",
+                        "VK_EXT_physical_device_drm",
+                        "VK_EXT_pipeline_creation_cache_control",
+                        "VK_EXT_pipeline_creation_feedback",
+                        "VK_EXT_post_depth_coverage",
+                        "VK_EXT_primitive_topology_list_restart",
+                        "VK_EXT_private_data",
+                        "VK_EXT_provoking_vertex",
+                        "VK_EXT_queue_family_foreign",
+                        "VK_EXT_rgba10x6_formats",
+                        "VK_EXT_robustness2",
+                        "VK_EXT_sample_locations",
+                        "VK_EXT_sampler_filter_minmax",
+                        "VK_EXT_scalar_block_layout",
+                        "VK_EXT_separate_stencil_usage",
+                        "VK_EXT_shader_atomic_float",
+                        "VK_EXT_shader_atomic_float2",
+                        "VK_EXT_shader_demote_to_helper_invocation",
+                        "VK_EXT_shader_image_atomic_int64",
+                        "VK_EXT_shader_stencil_export",
+                        "VK_EXT_shader_subgroup_ballot",
+                        "VK_EXT_shader_subgroup_vote",
+                        "VK_EXT_shader_viewport_index_layer",
+                        "VK_EXT_subgroup_size_control",
+                        "VK_EXT_texel_buffer_alignment",
+                        "VK_EXT_texture_compression_astc_hdr",
+                        "VK_EXT_tooling_info",
+                        "VK_EXT_transform_feedback",
+                        "VK_EXT_validation_cache",
+                        "VK_EXT_vertex_attribute_divisor",
+                        "VK_EXT_vertex_input_dynamic_state",
+                        "VK_EXT_video_decode_h264",
+                        "VK_EXT_video_decode_h265",
+                        "VK_EXT_video_encode_h264",
+                        "VK_EXT_video_encode_h265",
+                        "VK_EXT_ycbcr_2plane_444_formats",
+                        "VK_EXT_ycbcr_image_arrays",
+                        "VK_AMD_buffer_marker",
+                        "VK_AMD_device_coherent_memory",
+                        "VK_AMD_display_native_hdr",
+                        "VK_AMD_draw_indirect_count",
+                        "VK_AMD_gcn_shader",
+                        "VK_AMD_gpu_shader_half_float",
+                        "VK_AMD_gpu_shader_int16",
+                        "VK_AMD_memory_overallocation_behavior",
+                        "VK_AMD_mixed_attachment_samples",
+                        "VK_AMD_negative_viewport_height",
+                        "VK_AMD_pipeline_compiler_control",
+                        "VK_AMD_rasterization_order",
+                        "VK_AMD_shader_ballot",
+                        "VK_AMD_shader_core_properties",
+                        "VK_AMD_shader_core_properties2",
+                        "VK_AMD_shader_explicit_vertex_parameter",
+                        "VK_AMD_shader_fragment_mask",
+                        "VK_AMD_shader_image_load_store_lod",
+                        "VK_AMD_shader_info",
+                        "VK_AMD_shader_trinary_minmax",
+                        "VK_AMD_texture_gather_bias_lod",
+                        "VK_ANDROID_external_memory_android_hardware_buffer",
+                        "VK_ARM_rasterization_order_attachment_access",
+                        "VK_FUCHSIA_buffer_collection",
+                        "VK_FUCHSIA_external_memory",
+                        "VK_FUCHSIA_external_semaphore",
+                        "VK_GGP_frame_token",
+                        "VK_GOOGLE_decorate_string",
+                        "VK_GOOGLE_display_timing",
+                        "VK_GOOGLE_hlsl_functionality1",
+                        "VK_GOOGLE_user_type",
+                        "VK_HUAWEI_invocation_mask",
+                        "VK_HUAWEI_subpass_shading",
+                        "VK_IMG_filter_cubic",
+                        "VK_IMG_format_pvrtc",
+                        "VK_INTEL_performance_query",
+                        "VK_INTEL_shader_integer_functions2",
+                        "VK_NV_acquire_winrt_display",
+                        "VK_NV_clip_space_w_scaling",
+                        "VK_NV_compute_shader_derivatives",
+                        "VK_NV_cooperative_matrix",
+                        "VK_NV_corner_sampled_image",
+                        "VK_NV_coverage_reduction_mode",
+                        "VK_NV_dedicated_allocation",
+                        "VK_NV_dedicated_allocation_image_aliasing",
+                        "VK_NV_device_diagnostic_checkpoints",
+                        "VK_NV_device_diagnostics_config",
+                        "VK_NV_device_generated_commands",
+                        "VK_NV_external_memory",
+                        "VK_NV_external_memory_rdma",
+                        "VK_NV_external_memory_win32",
+                        "VK_NV_fill_rectangle",
+                        "VK_NV_fragment_coverage_to_color",
+                        "VK_NV_fragment_shader_barycentric",
+                        "VK_NV_fragment_shading_rate_enums",
+                        "VK_NV_framebuffer_mixed_samples",
+                        "VK_NV_geometry_shader_passthrough",
+                        "VK_NV_glsl_shader",
+                        "VK_NV_inherited_viewport_scissor",
+                        "VK_NV_mesh_shader",
+                        "VK_NV_ray_tracing",
+                        "VK_NV_ray_tracing_motion_blur",
+                        "VK_NV_representative_fragment_test",
+                        "VK_NV_sample_mask_override_coverage",
+                        "VK_NV_scissor_exclusive",
+                        "VK_NV_shader_image_footprint",
+                        "VK_NV_shader_sm_builtins",
+                        "VK_NV_shader_subgroup_partitioned",
+                        "VK_NV_shading_rate_image",
+                        "VK_NV_viewport_array2",
+                        "VK_NV_viewport_swizzle",
+                        "VK_NV_win32_keyed_mutex",
+                        "VK_QCOM_render_pass_shader_resolve",
+                        "VK_QCOM_render_pass_store_ops",
+                        "VK_QCOM_render_pass_transform",
+                        "VK_QCOM_rotated_copy_commands",
+                        "VK_VALVE_mutable_descriptor_type",
+                        "VK_QCOM_fragment_density_map_offset",
+                        "VK_NV_linear_color_attachment",
+                        "VK_KHR_global_priority"
+                    ],
+                    "default": []
+                },
+                {
+                    "key": "exclude_formats",
+                    "env": "VK_KHRONOS_PROFILES_EXCLUDE_FORMATS",
+                    "label": "Exclude Formats",
+                    "description": "Removes the format feature flags from being reported by the Vulkan physical device.",
+                    "status": "STABLE",
+                    "type": "LIST",
+                    "list": [
+                        "VK_FORMAT_R4G4_UNORM_PACK8",
+                        "VK_FORMAT_R4G4B4A4_UNORM_PACK16",
+                        "VK_FORMAT_B4G4R4A4_UNORM_PACK16",
+                        "VK_FORMAT_R5G6B5_UNORM_PACK16",
+                        "VK_FORMAT_B5G6R5_UNORM_PACK16",
+                        "VK_FORMAT_R5G5B5A1_UNORM_PACK16",
+                        "VK_FORMAT_B5G5R5A1_UNORM_PACK16",
+                        "VK_FORMAT_A1R5G5B5_UNORM_PACK16",
+                        "VK_FORMAT_R8_UNORM",
+                        "VK_FORMAT_R8_SNORM",
+                        "VK_FORMAT_R8_USCALED",
+                        "VK_FORMAT_R8_SSCALED",
+                        "VK_FORMAT_R8_UINT",
+                        "VK_FORMAT_R8_SINT",
+                        "VK_FORMAT_R8_SRGB",
+                        "VK_FORMAT_R8G8_UNORM",
+                        "VK_FORMAT_R8G8_SNORM",
+                        "VK_FORMAT_R8G8_USCALED",
+                        "VK_FORMAT_R8G8_SSCALED",
+                        "VK_FORMAT_R8G8_UINT",
+                        "VK_FORMAT_R8G8_SINT",
+                        "VK_FORMAT_R8G8_SRGB",
+                        "VK_FORMAT_R8G8B8_UNORM",
+                        "VK_FORMAT_R8G8B8_SNORM",
+                        "VK_FORMAT_R8G8B8_USCALED",
+                        "VK_FORMAT_R8G8B8_SSCALED",
+                        "VK_FORMAT_R8G8B8_UINT",
+                        "VK_FORMAT_R8G8B8_SINT",
+                        "VK_FORMAT_R8G8B8_SRGB",
+                        "VK_FORMAT_B8G8R8_UNORM",
+                        "VK_FORMAT_B8G8R8_SNORM",
+                        "VK_FORMAT_B8G8R8_USCALED",
+                        "VK_FORMAT_B8G8R8_SSCALED",
+                        "VK_FORMAT_B8G8R8_UINT",
+                        "VK_FORMAT_B8G8R8_SINT",
+                        "VK_FORMAT_B8G8R8_SRGB",
+                        "VK_FORMAT_R8G8B8A8_UNORM",
+                        "VK_FORMAT_R8G8B8A8_SNORM",
+                        "VK_FORMAT_R8G8B8A8_USCALED",
+                        "VK_FORMAT_R8G8B8A8_SSCALED",
+                        "VK_FORMAT_R8G8B8A8_UINT",
+                        "VK_FORMAT_R8G8B8A8_SINT",
+                        "VK_FORMAT_R8G8B8A8_SRGB",
+                        "VK_FORMAT_B8G8R8A8_UNORM",
+                        "VK_FORMAT_B8G8R8A8_SNORM",
+                        "VK_FORMAT_B8G8R8A8_USCALED",
+                        "VK_FORMAT_B8G8R8A8_SSCALED",
+                        "VK_FORMAT_B8G8R8A8_UINT",
+                        "VK_FORMAT_B8G8R8A8_SINT",
+                        "VK_FORMAT_B8G8R8A8_SRGB",
+                        "VK_FORMAT_A8B8G8R8_UNORM_PACK32",
+                        "VK_FORMAT_A8B8G8R8_SNORM_PACK32",
+                        "VK_FORMAT_A8B8G8R8_USCALED_PACK32",
+                        "VK_FORMAT_A8B8G8R8_SSCALED_PACK32",
+                        "VK_FORMAT_A8B8G8R8_UINT_PACK32",
+                        "VK_FORMAT_A8B8G8R8_SINT_PACK32",
+                        "VK_FORMAT_A8B8G8R8_SRGB_PACK32",
+                        "VK_FORMAT_A2R10G10B10_UNORM_PACK32",
+                        "VK_FORMAT_A2R10G10B10_SNORM_PACK32",
+                        "VK_FORMAT_A2R10G10B10_USCALED_PACK32",
+                        "VK_FORMAT_A2R10G10B10_SSCALED_PACK32",
+                        "VK_FORMAT_A2R10G10B10_UINT_PACK32",
+                        "VK_FORMAT_A2R10G10B10_SINT_PACK32",
+                        "VK_FORMAT_A2B10G10R10_UNORM_PACK32",
+                        "VK_FORMAT_A2B10G10R10_SNORM_PACK32",
+                        "VK_FORMAT_A2B10G10R10_USCALED_PACK32",
+                        "VK_FORMAT_A2B10G10R10_SSCALED_PACK32",
+                        "VK_FORMAT_A2B10G10R10_UINT_PACK32",
+                        "VK_FORMAT_A2B10G10R10_SINT_PACK32",
+                        "VK_FORMAT_R16_UNORM",
+                        "VK_FORMAT_R16_SNORM",
+                        "VK_FORMAT_R16_USCALED",
+                        "VK_FORMAT_R16_SSCALED",
+                        "VK_FORMAT_R16_UINT",
+                        "VK_FORMAT_R16_SINT",
+                        "VK_FORMAT_R16_SFLOAT",
+                        "VK_FORMAT_R16G16_UNORM",
+                        "VK_FORMAT_R16G16_SNORM",
+                        "VK_FORMAT_R16G16_USCALED",
+                        "VK_FORMAT_R16G16_SSCALED",
+                        "VK_FORMAT_R16G16_UINT",
+                        "VK_FORMAT_R16G16_SINT",
+                        "VK_FORMAT_R16G16_SFLOAT",
+                        "VK_FORMAT_R16G16B16_UNORM",
+                        "VK_FORMAT_R16G16B16_SNORM",
+                        "VK_FORMAT_R16G16B16_USCALED",
+                        "VK_FORMAT_R16G16B16_SSCALED",
+                        "VK_FORMAT_R16G16B16_UINT",
+                        "VK_FORMAT_R16G16B16_SINT",
+                        "VK_FORMAT_R16G16B16_SFLOAT",
+                        "VK_FORMAT_R16G16B16A16_UNORM",
+                        "VK_FORMAT_R16G16B16A16_SNORM",
+                        "VK_FORMAT_R16G16B16A16_USCALED",
+                        "VK_FORMAT_R16G16B16A16_SSCALED",
+                        "VK_FORMAT_R16G16B16A16_UINT",
+                        "VK_FORMAT_R16G16B16A16_SINT",
+                        "VK_FORMAT_R16G16B16A16_SFLOAT",
+                        "VK_FORMAT_R32_UINT",
+                        "VK_FORMAT_R32_SINT",
+                        "VK_FORMAT_R32_SFLOAT",
+                        "VK_FORMAT_R32G32_UINT",
+                        "VK_FORMAT_R32G32_SINT",
+                        "VK_FORMAT_R32G32_SFLOAT",
+                        "VK_FORMAT_R32G32B32_UINT",
+                        "VK_FORMAT_R32G32B32_SINT",
+                        "VK_FORMAT_R32G32B32_SFLOAT",
+                        "VK_FORMAT_R32G32B32A32_UINT",
+                        "VK_FORMAT_R32G32B32A32_SINT",
+                        "VK_FORMAT_R32G32B32A32_SFLOAT",
+                        "VK_FORMAT_R64_UINT",
+                        "VK_FORMAT_R64_SINT",
+                        "VK_FORMAT_R64_SFLOAT",
+                        "VK_FORMAT_R64G64_UINT",
+                        "VK_FORMAT_R64G64_SINT",
+                        "VK_FORMAT_R64G64_SFLOAT",
+                        "VK_FORMAT_R64G64B64_UINT",
+                        "VK_FORMAT_R64G64B64_SINT",
+                        "VK_FORMAT_R64G64B64_SFLOAT",
+                        "VK_FORMAT_R64G64B64A64_UINT",
+                        "VK_FORMAT_R64G64B64A64_SINT",
+                        "VK_FORMAT_R64G64B64A64_SFLOAT",
+                        "VK_FORMAT_B10G11R11_UFLOAT_PACK32",
+                        "VK_FORMAT_E5B9G9R9_UFLOAT_PACK32",
+                        "VK_FORMAT_D16_UNORM",
+                        "VK_FORMAT_X8_D24_UNORM_PACK32",
+                        "VK_FORMAT_D32_SFLOAT",
+                        "VK_FORMAT_S8_UINT",
+                        "VK_FORMAT_D16_UNORM_S8_UINT",
+                        "VK_FORMAT_D24_UNORM_S8_UINT",
+                        "VK_FORMAT_D32_SFLOAT_S8_UINT",
+                        "VK_FORMAT_BC1_RGB_UNORM_BLOCK",
+                        "VK_FORMAT_BC1_RGB_SRGB_BLOCK",
+                        "VK_FORMAT_BC1_RGBA_UNORM_BLOCK",
+                        "VK_FORMAT_BC1_RGBA_SRGB_BLOCK",
+                        "VK_FORMAT_BC2_UNORM_BLOCK",
+                        "VK_FORMAT_BC2_SRGB_BLOCK",
+                        "VK_FORMAT_BC3_UNORM_BLOCK",
+                        "VK_FORMAT_BC3_SRGB_BLOCK",
+                        "VK_FORMAT_BC4_UNORM_BLOCK",
+                        "VK_FORMAT_BC4_SNORM_BLOCK",
+                        "VK_FORMAT_BC5_UNORM_BLOCK",
+                        "VK_FORMAT_BC5_SNORM_BLOCK",
+                        "VK_FORMAT_BC6H_UFLOAT_BLOCK",
+                        "VK_FORMAT_BC6H_SFLOAT_BLOCK",
+                        "VK_FORMAT_BC7_UNORM_BLOCK",
+                        "VK_FORMAT_BC7_SRGB_BLOCK",
+                        "VK_FORMAT_ETC2_R8G8B8_UNORM_BLOCK",
+                        "VK_FORMAT_ETC2_R8G8B8_SRGB_BLOCK",
+                        "VK_FORMAT_ETC2_R8G8B8A1_UNORM_BLOCK",
+                        "VK_FORMAT_ETC2_R8G8B8A1_SRGB_BLOCK",
+                        "VK_FORMAT_ETC2_R8G8B8A8_UNORM_BLOCK",
+                        "VK_FORMAT_ETC2_R8G8B8A8_SRGB_BLOCK",
+                        "VK_FORMAT_EAC_R11_UNORM_BLOCK",
+                        "VK_FORMAT_EAC_R11_SNORM_BLOCK",
+                        "VK_FORMAT_EAC_R11G11_UNORM_BLOCK",
+                        "VK_FORMAT_EAC_R11G11_SNORM_BLOCK",
+                        "VK_FORMAT_ASTC_4x4_UNORM_BLOCK",
+                        "VK_FORMAT_ASTC_4x4_SRGB_BLOCK",
+                        "VK_FORMAT_ASTC_5x4_UNORM_BLOCK",
+                        "VK_FORMAT_ASTC_5x4_SRGB_BLOCK",
+                        "VK_FORMAT_ASTC_5x5_UNORM_BLOCK",
+                        "VK_FORMAT_ASTC_5x5_SRGB_BLOCK",
+                        "VK_FORMAT_ASTC_6x5_UNORM_BLOCK",
+                        "VK_FORMAT_ASTC_6x5_SRGB_BLOCK",
+                        "VK_FORMAT_ASTC_6x6_UNORM_BLOCK",
+                        "VK_FORMAT_ASTC_6x6_SRGB_BLOCK",
+                        "VK_FORMAT_ASTC_8x5_UNORM_BLOCK",
+                        "VK_FORMAT_ASTC_8x5_SRGB_BLOCK",
+                        "VK_FORMAT_ASTC_8x6_UNORM_BLOCK",
+                        "VK_FORMAT_ASTC_8x6_SRGB_BLOCK",
+                        "VK_FORMAT_ASTC_8x8_UNORM_BLOCK",
+                        "VK_FORMAT_ASTC_8x8_SRGB_BLOCK",
+                        "VK_FORMAT_ASTC_10x5_UNORM_BLOCK",
+                        "VK_FORMAT_ASTC_10x5_SRGB_BLOCK",
+                        "VK_FORMAT_ASTC_10x6_UNORM_BLOCK",
+                        "VK_FORMAT_ASTC_10x6_SRGB_BLOCK",
+                        "VK_FORMAT_ASTC_10x8_UNORM_BLOCK",
+                        "VK_FORMAT_ASTC_10x8_SRGB_BLOCK",
+                        "VK_FORMAT_ASTC_10x10_UNORM_BLOCK",
+                        "VK_FORMAT_ASTC_10x10_SRGB_BLOCK",
+                        "VK_FORMAT_ASTC_12x10_UNORM_BLOCK",
+                        "VK_FORMAT_ASTC_12x10_SRGB_BLOCK",
+                        "VK_FORMAT_ASTC_12x12_UNORM_BLOCK",
+                        "VK_FORMAT_ASTC_12x12_SRGB_BLOCK",
+                        "VK_FORMAT_G8B8G8R8_422_UNORM",
+                        "VK_FORMAT_B8G8R8G8_422_UNORM",
+                        "VK_FORMAT_G8_B8_R8_3PLANE_420_UNORM",
+                        "VK_FORMAT_G8_B8R8_2PLANE_420_UNORM",
+                        "VK_FORMAT_G8_B8_R8_3PLANE_422_UNORM",
+                        "VK_FORMAT_G8_B8R8_2PLANE_422_UNORM",
+                        "VK_FORMAT_G8_B8_R8_3PLANE_444_UNORM",
+                        "VK_FORMAT_R10X6_UNORM_PACK16",
+                        "VK_FORMAT_R10X6G10X6_UNORM_2PACK16",
+                        "VK_FORMAT_R10X6G10X6B10X6A10X6_UNORM_4PACK16",
+                        "VK_FORMAT_G10X6B10X6G10X6R10X6_422_UNORM_4PACK16",
+                        "VK_FORMAT_B10X6G10X6R10X6G10X6_422_UNORM_4PACK16",
+                        "VK_FORMAT_G10X6_B10X6_R10X6_3PLANE_420_UNORM_3PACK16",
+                        "VK_FORMAT_G10X6_B10X6R10X6_2PLANE_420_UNORM_3PACK16",
+                        "VK_FORMAT_G10X6_B10X6_R10X6_3PLANE_422_UNORM_3PACK16",
+                        "VK_FORMAT_G10X6_B10X6R10X6_2PLANE_422_UNORM_3PACK16",
+                        "VK_FORMAT_G10X6_B10X6_R10X6_3PLANE_444_UNORM_3PACK16",
+                        "VK_FORMAT_R12X4_UNORM_PACK16",
+                        "VK_FORMAT_R12X4G12X4_UNORM_2PACK16",
+                        "VK_FORMAT_R12X4G12X4B12X4A12X4_UNORM_4PACK16",
+                        "VK_FORMAT_G12X4B12X4G12X4R12X4_422_UNORM_4PACK16",
+                        "VK_FORMAT_B12X4G12X4R12X4G12X4_422_UNORM_4PACK16",
+                        "VK_FORMAT_G12X4_B12X4_R12X4_3PLANE_420_UNORM_3PACK16",
+                        "VK_FORMAT_G12X4_B12X4R12X4_2PLANE_420_UNORM_3PACK16",
+                        "VK_FORMAT_G12X4_B12X4_R12X4_3PLANE_422_UNORM_3PACK16",
+                        "VK_FORMAT_G12X4_B12X4R12X4_2PLANE_422_UNORM_3PACK16",
+                        "VK_FORMAT_G12X4_B12X4_R12X4_3PLANE_444_UNORM_3PACK16",
+                        "VK_FORMAT_G16B16G16R16_422_UNORM",
+                        "VK_FORMAT_B16G16R16G16_422_UNORM",
+                        "VK_FORMAT_G16_B16_R16_3PLANE_420_UNORM",
+                        "VK_FORMAT_G16_B16R16_2PLANE_420_UNORM",
+                        "VK_FORMAT_G16_B16_R16_3PLANE_422_UNORM",
+                        "VK_FORMAT_G16_B16R16_2PLANE_422_UNORM",
+                        "VK_FORMAT_G16_B16_R16_3PLANE_444_UNORM",
+                        "VK_FORMAT_G8_B8R8_2PLANE_444_UNORM",
+                        "VK_FORMAT_G10X6_B10X6R10X6_2PLANE_444_UNORM_3PACK16",
+                        "VK_FORMAT_G12X4_B12X4R12X4_2PLANE_444_UNORM_3PACK16",
+                        "VK_FORMAT_G16_B16R16_2PLANE_444_UNORM",
+                        "VK_FORMAT_A4R4G4B4_UNORM_PACK16",
+                        "VK_FORMAT_A4B4G4R4_UNORM_PACK16",
+                        "VK_FORMAT_ASTC_4x4_SFLOAT_BLOCK",
+                        "VK_FORMAT_ASTC_5x4_SFLOAT_BLOCK",
+                        "VK_FORMAT_ASTC_5x5_SFLOAT_BLOCK",
+                        "VK_FORMAT_ASTC_6x5_SFLOAT_BLOCK",
+                        "VK_FORMAT_ASTC_6x6_SFLOAT_BLOCK",
+                        "VK_FORMAT_ASTC_8x5_SFLOAT_BLOCK",
+                        "VK_FORMAT_ASTC_8x6_SFLOAT_BLOCK",
+                        "VK_FORMAT_ASTC_8x8_SFLOAT_BLOCK",
+                        "VK_FORMAT_ASTC_10x5_SFLOAT_BLOCK",
+                        "VK_FORMAT_ASTC_10x6_SFLOAT_BLOCK",
+                        "VK_FORMAT_ASTC_10x8_SFLOAT_BLOCK",
+                        "VK_FORMAT_ASTC_10x10_SFLOAT_BLOCK",
+                        "VK_FORMAT_ASTC_12x10_SFLOAT_BLOCK",
+                        "VK_FORMAT_ASTC_12x12_SFLOAT_BLOCK",
+                        "VK_FORMAT_PVRTC1_2BPP_UNORM_BLOCK_IMG",
+                        "VK_FORMAT_PVRTC1_4BPP_UNORM_BLOCK_IMG",
+                        "VK_FORMAT_PVRTC2_2BPP_UNORM_BLOCK_IMG",
+                        "VK_FORMAT_PVRTC2_4BPP_UNORM_BLOCK_IMG",
+                        "VK_FORMAT_PVRTC1_2BPP_SRGB_BLOCK_IMG",
+                        "VK_FORMAT_PVRTC1_4BPP_SRGB_BLOCK_IMG",
+                        "VK_FORMAT_PVRTC2_2BPP_SRGB_BLOCK_IMG",
+                        "VK_FORMAT_PVRTC2_4BPP_SRGB_BLOCK_IMG"
+                    ],
+                    "default": []
+                },
+                {
+                    "key": "debug_actions",
+                    "env": "VK_KHRONOS_PROFILES_DEBUG_ACTIONS",
+                    "label": "Debug Actions",
+                    "description": "This indicates what action is to be taken when a layer wants to report information",
+                    "status": "STABLE",
+                    "type": "FLAGS",
+                    "platforms": [ "WINDOWS", "LINUX", "MACOS" ],
+                    "flags": [
+                        {
+                            "key": "DEBUG_ACTION_STDOUT_BIT",
+                            "label": "Log to stdout",
+                            "description": "Log messages using the stdout."
+                        },
+                        {
+                            "key": "DEBUG_ACTION_OUTPUT_BIT",
+                            "label": "Log to OutputDebugString",
+                            "description": "Log messages using the Windows OutputDebugString for Vulkan Studio output display.",
+                            "platforms": [ "WINDOWS" ]
+                        },
+                        {
+                            "key": "DEBUG_ACTION_FILE_BIT",
+                            "label": "Log to File",
+                            "description": "Log messages to a file.",
+                            "settings": [
+                                {
+                                    "key": "debug_filename",
+                                    "env": "VK_KHRONOS_PROFILES_DEBUG_FILENAME",
+                                    "label": "Log Filename",
+                                    "description": "Specifies the output filename",
+                                    "type": "SAVE_FILE",
+                                    "default": "profiles_layer_log.txt",
+                                    "dependence": {
+                                        "mode": "ANY",
+                                        "settings": [
+                                            {
+                                                "key": "debug_actions",
+                                                "value": [ "DEBUG_ACTION_FILE_BIT" ]
+                                            },
+                                            {
+                                                "key": "debug_actions",
+                                                "value": [ "DEBUG_ACTION_FILE_BIT", "DEBUG_ACTION_STDOUT_BIT" ]
+                                            },
+                                            {
+                                                "key": "debug_actions",
+                                                "value": [ "DEBUG_ACTION_FILE_BIT", "DEBUG_ACTION_OUTPUT_BIT" ]
+                                            },
+                                            {
+                                                "key": "debug_actions",
+                                                "value": [ "DEBUG_ACTION_FILE_BIT", "DEBUG_ACTION_BREAKPOINT_BIT" ]
+                                            },
+                                            {
+                                                "key": "debug_actions",
+                                                "value": [ "DEBUG_ACTION_FILE_BIT", "DEBUG_ACTION_STDOUT_BIT", "DEBUG_ACTION_OUTPUT_BIT" ]
+                                            },
+                                            {
+                                                "key": "debug_actions",
+                                                "value": [ "DEBUG_ACTION_FILE_BIT", "DEBUG_ACTION_STDOUT_BIT", "DEBUG_ACTION_BREAKPOINT_BIT" ]
+                                            },
+                                            {
+                                                "key": "debug_actions",
+                                                "value": [ "DEBUG_ACTION_FILE_BIT", "DEBUG_ACTION_OUTPUT_BIT", "DEBUG_ACTION_BREAKPOINT_BIT" ]
+                                            },
+                                            {
+                                                "key": "debug_actions",
+                                                "value": [ "DEBUG_ACTION_FILE_BIT", "DEBUG_ACTION_STDOUT_BIT", "DEBUG_ACTION_OUTPUT_BIT", "DEBUG_ACTION_BREAKPOINT_BIT" ]
+                                            }
+                                        ]
+                                    }
+                                },
+                                {
+                                    "key": "debug_file_clear",
+                                    "env": "VK_KHRONOS_PROFILES_DEBUG_FILE_CLEAR",
+                                    "label": "Clear Log at Launch",
+                                    "description": "Discard the content of the log file between each layer run",
+                                    "type": "BOOL",
+                                    "default": true,
+                                    "dependence": {
+                                        "mode": "ANY",
+                                        "settings": [
+                                            {
+                                                "key": "debug_actions",
+                                                "value": [ "DEBUG_ACTION_FILE_BIT" ]
+                                            },
+                                            {
+                                                "key": "debug_actions",
+                                                "value": [ "DEBUG_ACTION_FILE_BIT", "DEBUG_ACTION_STDOUT_BIT" ]
+                                            },
+                                            {
+                                                "key": "debug_actions",
+                                                "value": [ "DEBUG_ACTION_FILE_BIT", "DEBUG_ACTION_OUTPUT_BIT" ]
+                                            },
+                                            {
+                                                "key": "debug_actions",
+                                                "value": [ "DEBUG_ACTION_FILE_BIT", "DEBUG_ACTION_BREAKPOINT_BIT" ]
+                                            },
+                                            {
+                                                "key": "debug_actions",
+                                                "value": [ "DEBUG_ACTION_FILE_BIT", "DEBUG_ACTION_STDOUT_BIT", "DEBUG_ACTION_OUTPUT_BIT" ]
+                                            },
+                                            {
+                                                "key": "debug_actions",
+                                                "value": [ "DEBUG_ACTION_FILE_BIT", "DEBUG_ACTION_STDOUT_BIT", "DEBUG_ACTION_BREAKPOINT_BIT" ]
+                                            },
+                                            {
+                                                "key": "debug_actions",
+                                                "value": [ "DEBUG_ACTION_FILE_BIT", "DEBUG_ACTION_OUTPUT_BIT", "DEBUG_ACTION_BREAKPOINT_BIT" ]
+                                            },
+                                            {
+                                                "key": "debug_actions",
+                                                "value": [ "DEBUG_ACTION_FILE_BIT", "DEBUG_ACTION_STDOUT_BIT", "DEBUG_ACTION_OUTPUT_BIT", "DEBUG_ACTION_BREAKPOINT_BIT" ]
+                                            }
+                                        ]
+                                    }
+                                }
+                            ],
+                            "platforms": [ "WINDOWS", "LINUX", "MACOS" ],
+                            "expanded": true
+                        },
+                        {
+                            "key": "DEBUG_ACTION_BREAKPOINT_BIT",
+                            "label": "Break",
+                            "description": "Trigger a breakpoint if a debugger is in use."
+                        }
+                    ],
+                    "default": [ "DEBUG_ACTION_STDOUT_BIT" ]
+                },
+                {
+                    "key": "debug_fail_on_error",
+                    "env": "VK_KHRONOS_PROFILES_DEBUG_FAIL_ON_ERROR",
+                    "label": "Fail on Error",
+                    "description": "If the device doesn't support the capabilities of the selected Profile, the layer fail to load. When enabled, vkEnumeratePhysicalDevices will fail when the selected Profile is not supported.",
+                    "status": "STABLE",
+                    "type": "BOOL",
+                    "platforms": [ "WINDOWS", "LINUX", "MACOS" ],
+                    "default": false
+                },
+                {
+                    "key": "debug_reports",
+                    "env": "VK_KHRONOS_PROFILES_DEBUG_REPORTS",
+                    "label": "Message Types",
+                    "description": "This is a comma-delineated list of options telling the layer what types of messages it should report back",
+                    "status": "STABLE",
+                    "type": "FLAGS",
+                    "platforms": [ "WINDOWS", "LINUX", "MACOS" ],
+                    "flags": [
+                        {
+                            "key": "DEBUG_REPORT_NOTIFICATION_BIT",
+                            "label": "Notification",
+                            "description": "Report notifications."
+                        },
+                        {
+                            "key": "DEBUG_REPORT_WARNING_BIT",
+                            "label": "Warning",
+                            "description": "Report warnings from using the API in a manner which may lead to undefined behavior or to warn the user of common trouble spots. A warning does NOT necessarily signify illegal application behavior."
+                        },
+                        {
+                            "key": "DEBUG_REPORT_ERROR_BIT",
+                            "label": "Error",
+                            "description": "Report errors in API usage."
+                        },
+                        {
+                            "key": "DEBUG_REPORT_DEBUG_BIT",
+                            "label": "Debug",
+                            "description": "Report debug information for the Profiles Layer development.",
+                            "view": "ADVANCED"
+                        }
+                    ],
+                    "default": [
+                        "DEBUG_REPORT_WARNING_BIT",
+                        "DEBUG_REPORT_ERROR_BIT"
+                    ]
+                }
+            ]
+        }
+    }
+}

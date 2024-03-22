@@ -39,14 +39,13 @@ namespace DebugMenu {
 		std::vector<MenuItem> subMenu;
 
 		MenuItem() {}
-		MenuItem(std::string name, MenuItemFlag flag, void* ptr) {
-			this->name = name;
-			this->flag = flag;
-			this->ptr = ptr;
-			//subMenu.reserve(64);
+		MenuItem(std::string itemName, MenuItemFlag itemFlag, void* itemPtr) {
+			this->name = itemName;
+			this->flag = itemFlag;
+			this->ptr = itemPtr;
 		}
-		MenuItem& AddItem(std::string name, MenuItemFlag flag, void* ptr) {
-			return subMenu.emplace_back(MenuItem(name, flag, ptr));
+		MenuItem& AddItem(std::string itemName, MenuItemFlag itemFlag, void* itemPtr) {
+			return subMenu.emplace_back(MenuItem(itemName, itemFlag, itemPtr));
 		}
 	};
 

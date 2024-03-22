@@ -226,7 +226,7 @@ void DebugMenu::PressedEnter() {
 	else if (flag == MenuItemFlag::OPEN_EDITOR_MODE) {
 		_isOpen = false;
 		EngineState::_engineMode = EngineMode::EDITOR;
-		EngineState::_viewportMode == FULLSCREEN;
+		EngineState::_splitScreenMode == SplitScreenMode::FULLSCREEN;
         Renderer::EnteredEditorMode();
 	}
 	// Load map

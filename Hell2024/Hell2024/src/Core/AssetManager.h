@@ -1,52 +1,36 @@
 #pragma once
-#include "../Renderer/Texture.h"
-#include "../Renderer/Model.h"
-#include <string>
-#include <vector>
 #include "../Common.h"
-#include "Animation/SkinnedModel.h"
-#include <future>
-#include "ExrTexture.h"
+#include "../API/Vulkan/Types/VK_types.h"
+#include "../Types/Mesh.h"
+#include "../Types/Texture.h"
 
 namespace AssetManager {
-	void Init();
-	void LoadFont();
-	void LoadEverythingElse();
-	Texture* GetTexture(const std::string& filename);
-	Texture* GetTextureByIndex(const int index);
-	int GetTextureCount();
-	int GetTextureIndex(const std::string& filename, bool ignoreWarning = false);
-	int GetMaterialIndex(const std::string& _name);
-	void BindMaterialByIndex(int index);
-	Model* GetModel(const std::string& name);
-	Model* GetModelByIndex(const int index);
-	int GetModelCount();
-	SkinnedModel* GetSkinnedModel(const std::string& name);
-	std::string GetMaterialNameByIndex(int index);
 
-	Mesh& GetDecalMesh();
+    void LoadNextItem();
+    void UploadVertexData();
+    bool IsStillLoading();
+    
+    // Vertex data
+    std::vector<Vertex>& GetVertices();
+    std::vector<VulkanVertex>& GetVerticesVK();
+    std::vector<uint32_t>& GetIndices();
 
-	void LoadAssetsMultithreaded();
-    void LoadVolumetricBloodTextures();
+    // Mesh
+    Mesh* GetMeshByIndex(int index);
+    int CreateMesh(std::string& name, std::vector<Vertex>& vertices, std::vector<unsigned int>& indices);
 
-    inline ExrTexture s_ExrTexture_pos;
-    inline ExrTexture s_ExrTexture_norm;
-    inline ExrTexture s_ExrTexture_pos4;
-    inline ExrTexture s_ExrTexture_norm4;
-    inline ExrTexture s_ExrTexture_pos6;
-    inline ExrTexture s_ExrTexture_norm6;
-    inline ExrTexture s_ExrTexture_pos7;
-    inline ExrTexture s_ExrTexture_norm7;
-    inline ExrTexture s_ExrTexture_pos8;
-    inline ExrTexture s_ExrTexture_norm8;
-    inline ExrTexture s_ExrTexture_pos9;
-    inline ExrTexture s_ExrTexture_norm9;
+    // Materials
+    void BuildMaterials();
+    void BindMaterialByIndex(int index);
+    int GetMaterialIndex(const std::string&_name);
+    Material* GetMaterialByIndex(int index);
+    std::string& GetMaterialNameByIndex(int index);
 
-	inline int numFilesToLoad = 0;
-
-	inline std::vector<Extent2Di> _charExtents;
-	inline GLuint _textureArray;
-
-	inline std::vector<std::string> _loadLog;// = { "We are all alone on life's journey, held captive by the limitations of human consciousness.\n" };
-	inline std::vector<std::future<Texture*>> _loadedTextures;
+    // Textures
+    inline std::vector<Texture> _textures; // Get this into the CPP
+    Texture* GetTextureByName(const std::string& name);
+    Texture* GetTextureByIndex(const int index);
+    int GetTextureCount();
+    int GetTextureIndex(const std::string& filename, bool ignoreWarning = false);
+    bool TextureExists(const std::string& name);
 }

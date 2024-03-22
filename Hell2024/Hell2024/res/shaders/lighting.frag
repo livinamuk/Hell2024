@@ -17,12 +17,6 @@ layout (binding = 3) uniform sampler2D depthTexture;
 layout (binding = 4) uniform sampler3D propgationGridTexture;
 layout (binding = 5) uniform samplerCube shadowMap[16];
 
-//layout (binding = 22) uniform samplerCube player1_shadowMap;
-//layout (binding = 23) uniform samplerCube player2_shadowMap;
-layout (binding = 30) uniform sampler2D brdfTexture;
-layout (binding = 31) uniform sampler2D worldSpacePositionTexture;
-layout (binding = 29) uniform samplerCube enviromentMap;
-
 uniform mat4 projectionScene;
 uniform mat4 projectionWeapon;
 uniform mat4 inverseProjectionScene;
@@ -37,21 +31,8 @@ uniform float screenHeight;
 uniform float time;
 uniform int mode;
 uniform float propogationGridSpacing;
-//uniform bool player1NeedsMuzzleFlash;
-//uniform bool player2NeedsMuzzleFlash;
-
-//uniform vec3 player1MuzzleFlashPosition;
-//uniform vec3 player2MuzzleFlashPosition;
 
 const float PI = 3.14159265359;
-
-//uniform int propogationTextureWidth;
-//uniform int propogationTextureHeight;
-//uniform int propogationTextureDepth;
-
-//#define MAP_WIDTH   32
-//#define MAP_HEIGHT  16
-//#define MAP_DEPTH   50
 
 ////////////////////////
 //                    //
@@ -188,44 +169,6 @@ vec3 microfacetBRDF(in vec3 L, in vec3 V, in vec3 N, in vec3 baseColor, in float
   float G = G_Smith(NoV, NoL, roughness);
   vec3 spec = (D * G * F) / max(4.0 * NoV * NoL, 0.001);  
 
-
-
-
-  /*
-    vec3 R = reflect(-V, N); 
-
-    // parallax correct R
-    
-      // Hardcoded room size and captured pos
-    vec3 boxMax = vec3(6.1, 2.5, 6.9);
-    vec3 boxMin = vec3(0.1, 0.1, 0.1);
-    vec3 cupemapCapturePositon = vec3(3.1, 2.4 * 0.5 + 0.1, 3.5);
-
-    // Find the ray intersection with box plane
-    vec3 firstPlaneIntersect = (boxMax - WorldPos) / R;
-    vec3 secondPlaneIntersect = (boxMin - WorldPos) / R;
-
-    // Get the furthest of these intersections along the ray
-    vec3 furthestPlane = max(firstPlaneIntersect, secondPlaneIntersect);
-
-    // Find the closest far intersection
-    float dist = min(min(furthestPlane.x, furthestPlane.y), furthestPlane.z);
-
-    // Get the intersection position
-    vec3 intersectPoint = WorldPos + R * dist;
-
-    // Get corrected reflection
-    R = intersectPoint - cupemapCapturePositon;
-  
-    const float MAX_REFLECTION_LOD = 4.0;
-    vec3 prefilteredColor = textureLod(enviromentMap, R,  roughness * MAX_REFLECTION_LOD).rgb; 
-    vec2 brdf2  = texture(brdfTexture, vec2(max(dot(N, V), 0.0), roughness)).rg;
-    vec3 specular = prefilteredColor * (F * brdf2.x + brdf2.y);
-   // spec = mix(specular, spec, 0.75);
-
-
-   spec = specular;  */
-
   // diffuse
   vec3 notSpec = vec3(1.0) - F; // if not specular, use as diffuse
   notSpec *= 1.0 - metallicness; // no diffuse for metals
@@ -233,47 +176,20 @@ vec3 microfacetBRDF(in vec3 L, in vec3 V, in vec3 N, in vec3 baseColor, in float
   spec *= 1.05;
   vec3 result = diff + spec;
 
-
-
- // return notSpec;
-
-
   return result;
 }
 
 vec3 GetDirectLighting(vec3 lightPos, vec3 lightColor, float radius, float strength, vec3 Normal, vec3 WorldPos, vec3 baseColor, float roughness, float metallic) {
-
-
-
 	float fresnelReflect = 1.0; // 0.5 is what they used for box, 1.0 for demon
 	vec3 viewDir = normalize(viewPos - WorldPos);    
 	float lightRadiance = strength * 1;// * 1.25;
-    vec3 lightDir = normalize(lightPos - WorldPos); 
-//	float lightDist = length(lightPos - WorldPos);
-//	float lightAttenuation = 1.0 / (lightDist*lightDist);
-
-   float lightAttenuation = smoothstep(radius, 0, length(lightPos - WorldPos));
-  //  lightAttenuation *= 0.25;
- //   float compression = 0.5;
-   // lightAttenuation = pow(smoothstep(radius * 2, 0, length(lightPos - WorldPos)), compression);
-
-//	lightAttenuation = clamp(lightAttenuation, 0.0, 0.9); // THIS IS WRONG, but does stop super bright region around light source and doesn't seem to affect anything else...
+	vec3 lightDir = normalize(lightPos - WorldPos); 
+	float lightAttenuation = smoothstep(radius, 0, length(lightPos - WorldPos));
+	// lightAttenuation = clamp(lightAttenuation, 0.0, 0.9); // THIS IS WRONG, but does stop super bright region around light source and doesn't seem to affect anything else...
 	float irradiance = max(dot(lightDir, Normal), 0.0) ;
 	irradiance *= lightAttenuation * lightRadiance;		
-    //irradiance = clamp(irradiance, 0.0, 0.9);
 	vec3 brdf = microfacetBRDF(lightDir, viewDir, Normal, baseColor, metallic, fresnelReflect, roughness, WorldPos);
-	
-	
-
-
-//	vec3 test = vec3(1) * lightDir ;
-//	return test * test;
-
-
-
-
-
-    return brdf * irradiance * clamp(lightColor, 0, 1);
+	return brdf * irradiance * clamp(lightColor, 0, 1);
 }
 
 ///////////////////////////
@@ -334,20 +250,14 @@ vec3 GetIndirectLighting(vec3 WorldPos, vec3 Normal) { // Interpolate visible pr
 void main() {
 
     // Sample GBuffer
-    vec3 baseColor = texture(basecolorTexture, TexCoords).rgb;
-    vec3 brdf = texture(brdfTexture, TexCoords).rgb;
-    
-
-
-//    baseColor *= 2.0;
-
-    vec3 baseColor2 = baseColor;
-    baseColor = pow(baseColor, vec3(2.2));
+    vec4 baseColor = texture(basecolorTexture, TexCoords).rgba;
+    baseColor.rgb = pow(baseColor.rgb, vec3(2.2));
     vec3 normalMap =  texture2D(normalTexture, TexCoords).rgb;
     vec4 rma =  texture2D(rmaTexture, TexCoords);
     vec3 normal =  texture2D(normalTexture, TexCoords).rgb;
-
-    
+	float roughness = rma.r;
+    float metallic = rma.g;
+    float ao = rma.b;
 
     // Get world position
     float projectionMatrixIndex = rma.a;
@@ -362,56 +272,14 @@ void main() {
     vec4 worldSpacePosition = inverseView * viewSpacePosition;    
     vec3 WorldPos = worldSpacePosition.xyz;
 
-   // WorldPos = texture2D(worldSpacePositionTexture, TexCoords).rgb;
-
-
-    // Get more stuff    
-    float roughness = rma.r;
-    float metallic = rma.g;
-    float ao = rma.b;
-	//
-	//roughness = max(roughness, 0.5);
-//	metallic = max(metallic, 0.5);
-
-   // roughness = 0.99;
-   // metallic = 1;
-
     // Direct lighting
     vec3 directLighting = vec3(0);
     for(int i = 0; i < lightsCount; i++) {
         float shadow = ShadowCalculation(shadowMap[i], lights[i].position, WorldPos, viewPos, normal);
-        vec3 ligthting = GetDirectLighting(lights[i].position, lights[i].color, lights[i].radius, lights[i].strength, normal, WorldPos, baseColor, roughness, metallic);
+        vec3 ligthting = GetDirectLighting(lights[i].position, lights[i].color, lights[i].radius, lights[i].strength, normal, WorldPos, baseColor.rgb, roughness, metallic);
         directLighting += shadow * ligthting;
     }
-//	directLighting = GetDirectLighting(lights[0].position, lights[0].color, lights[0].radius, lights[0].strength, normal, WorldPos, baseColor, roughness, metallic);;
-    
-   //. float
-   vec3 muzzleFlashLightColor =  vec3(1, 0.7799999713897705, 0.5289999842643738);
-   muzzleFlashLightColor *= 0.0025;
-   float muzzleFlashRadius = 15;
-   float muzzleFlashStrength = 10;
-
-   
-   /*vec3 directLightingFromPlayer1MuzzleFlashPosition = GetDirectLighting(player1MuzzleFlashPosition, muzzleFlashLightColor, muzzleFlashRadius, muzzleFlashStrength, normal, WorldPos, baseColor, roughness, metallic);
-   float player1MuzzleFlashshadow =   ShadowCalculation(player1_shadowMap, player1MuzzleFlashPosition, WorldPos, viewPos, normal); 
-   vec3 p1MuzzleFlashColor = directLightingFromPlayer1MuzzleFlashPosition * player1MuzzleFlashshadow;
-
-   
-   vec3 directLightingFromPlayer2MuzzleFlashPosition = GetDirectLighting(player2MuzzleFlashPosition, muzzleFlashLightColor, muzzleFlashRadius, muzzleFlashStrength, normal, WorldPos, baseColor, roughness, metallic);
-   float player2MuzzleFlashshadow =   ShadowCalculation(player2_shadowMap, player2MuzzleFlashPosition, WorldPos, viewPos, normal); 
-   vec3 p2MuzzleFlashColor = directLightingFromPlayer2MuzzleFlashPosition * player2MuzzleFlashshadow;
-   */
-   
-
     directLighting = clamp(directLighting, 0, 1);
-
-    
-   /* if (player1NeedsMuzzleFlash) {
-        directLighting += p1MuzzleFlashColor;
-    }
-    if (player2NeedsMuzzleFlash) {
-        directLighting += p2MuzzleFlashColor;
-    }*/
 
     // Indirect lighthing
     vec3 WorldPos2 = WorldPos + (normal * 0.01);
@@ -419,29 +287,13 @@ void main() {
 
     vec3 adjustedIndirectLighting = indirectLighting;
     float factor = min(1, roughness * 1.5);
-    //factor = 1;
-    //factor = min(1, roughness * 0.25) * 4;
     adjustedIndirectLighting *= (0.4) * vec3(factor); 
     adjustedIndirectLighting = max(adjustedIndirectLighting, vec3(0));
-    adjustedIndirectLighting *= baseColor * 1.5;
-
-    
-
-
-  //  adjustedIndirectLighting *= 0.8;
-    
-   //  float contrast2 = 2.0;
-	//adjustedIndirectLighting.rgb = adjustedIndirectLighting.rgb * contrast2;
-   // adjustedIndirectLighting.rgb -= vec3(0.0025);
-
-  //  adjustedIndirectLighting += sqrt(adjustedIndirectLighting) * 0.1;
-    //adjustedIndirectLighting *= 0.85;
+    adjustedIndirectLighting *= baseColor.rgb * 1.5;
 
     // Composite
-    vec3 composite = directLighting  + (adjustedIndirectLighting);
-  //  vec3 composite = directLighting  + (indirectLighting * texture(basecolorTexture, TexCoords).rgb);
-    FragColor.rgb = vec3(composite);
-
+    vec3 composite = directLighting + adjustedIndirectLighting;
+	FragColor.rgb = vec3(composite);
 
     // Final color
     if (mode == 0) {
@@ -461,95 +313,53 @@ void main() {
         FragColor.a = 1;
     }
     
-// FragColor.rgb = GetDirectLighting(lights[0].position, lights[0].color, lights[0].radius, lights[0].strength, normal, WorldPos, baseColor, roughness, metallic);
-
-       // FragColor.rgb = indirectLighting;    
-        float d = distance(viewPos, WorldPos);
-        float alpha = getFogFactor(d);
-        vec3 FogColor = vec3(0.0);
-        FragColor.rgb = mix(FragColor.rgb, FogColor, alpha);
-        FragColor.rgb = mix(FragColor.rgb, Tonemap_ACES(FragColor.rgb), 1.0);
-        FragColor.rgb = mix(FragColor.rgb, Tonemap_ACES(FragColor.rgb), 0.35);		
-		//FragColor.rgb = FragColor.rgb / (FragColor.rgb + vec3(1.0));
-	    FragColor.rgb = pow(FragColor.rgb, vec3(1.0/2.2)); 
+	// FragColor.rgb = indirectLighting;    
+	float d = distance(viewPos, WorldPos);
+	float alpha = getFogFactor(d);
+	vec3 FogColor = vec3(0.0);
+	FragColor.rgb = mix(FragColor.rgb, FogColor, alpha);
+	FragColor.rgb = mix(FragColor.rgb, Tonemap_ACES(FragColor.rgb), 1.0);
+	FragColor.rgb = mix(FragColor.rgb, Tonemap_ACES(FragColor.rgb), 0.35);	
+	FragColor.rgb = pow(FragColor.rgb, vec3(1.0/2.2)); 
 		
-		// Noise
-        vec2 uv = gl_FragCoord.xy / vec2(screenWidth, screenHeight);
-        vec2 filmRes = vec2(screenWidth, screenHeight);
-        vec2 coord = gl_FragCoord.xy;
-        vec2 rest = modf(uv * filmRes, coord);
-        vec3 noise00 = filmPixel(coord / filmRes);
-        vec3 noise01 = filmPixel((coord + vec2(0, 1)) / filmRes);
-        vec3 noise10 = filmPixel((coord + vec2(1, 0)) / filmRes);
-        vec3 noise11 = filmPixel((coord + vec2(1, 1)) / filmRes);
-        vec3 noise = mix(mix(noise00, noise01, rest.y), mix(noise10, noise11, rest.y), rest.x) * vec3(0.7, 0.6, 0.8);
-        float noiseSpeed = 30.0;
-        float x = rand(uv + rand(vec2(int(time * noiseSpeed), int(-time * noiseSpeed))));
-        float noiseFactor = 0.04;
-
-
+	// Noise
+	vec2 uv = gl_FragCoord.xy / vec2(screenWidth, screenHeight);
+	vec2 filmRes = vec2(screenWidth, screenHeight);
+	vec2 coord = gl_FragCoord.xy;
+	vec2 rest = modf(uv * filmRes, coord);
+	vec3 noise00 = filmPixel(coord / filmRes);
+	vec3 noise01 = filmPixel((coord + vec2(0, 1)) / filmRes);
+	vec3 noise10 = filmPixel((coord + vec2(1, 0)) / filmRes);
+	vec3 noise11 = filmPixel((coord + vec2(1, 1)) / filmRes);
+	vec3 noise = mix(mix(noise00, noise01, rest.y), mix(noise10, noise11, rest.y), rest.x) * vec3(0.7, 0.6, 0.8);
+	float noiseSpeed = 30.0;
+	float x = rand(uv + rand(vec2(int(time * noiseSpeed), int(-time * noiseSpeed))));
+	float noiseFactor = 0.04;
         
-        // Vignette         
-        uv = gl_FragCoord.xy / vec2(screenWidth * 1, screenHeight * 1);
-        uv *=  1.0 - uv.yx;           
-        float vig = uv.x*uv.y * 15.0; // multiply with sth for intensity    
-        vig = pow(vig, 0.05); // change pow for modifying the extend of the  vignette    
-        FragColor.rgb *= vec3(vig);
+	// Vignette         
+	uv = gl_FragCoord.xy / vec2(screenWidth * 1, screenHeight * 1);
+	uv *=  1.0 - uv.yx;           
+	float vig = uv.x*uv.y * 15.0;	// multiply with sth for intensity    
+	vig = pow(vig, 0.05);			// change pow for modifying the extend of the  vignette    
+	FragColor.rgb *= vec3(vig);
 
+	// Some more YOLO tone mapping
+	FragColor.rgb = mix(FragColor.rgb, Tonemap_ACES(FragColor.rgb), 0.995);	
+	
+	// Add the noise
+	FragColor.rgb = FragColor.rgb + (x * -noiseFactor) + (noiseFactor / 2);
+
+	// Contrast
+	float contrast = 1.15;
+	vec3 finalColor = FragColor.rgb;
+	FragColor.rgb = FragColor.rgb * contrast;
+
+	// Brightness
+	FragColor.rgb -= vec3(0.010);
 		
-        FragColor.rgb = mix(FragColor.rgb, Tonemap_ACES(FragColor.rgb), 0.995);
-		
-        FragColor.rgb = FragColor.rgb + (x * -noiseFactor) + (noiseFactor / 2);
-
-        // Contrast
-	    float contrast = 1.15;
-        vec3 finalColor = FragColor.rgb;
-	    FragColor.rgb = FragColor.rgb * contrast;
-
-        // Brightness
-       // FragColor.rgb -= vec3(0.085);
-		  FragColor.rgb -= vec3(0.010);
-		
-
-    //FragColor.rgb = vec3(0);
-
-    // not used bruh
-    /*
-    for(int i = 0; i < lightsCount; i++)
-    {
-        vec3 lightDir = normalize(lights[i].position - WorldPos);     
-	    float lightDist = length(lights[i].position - WorldPos);
-	    float lightAttenuation = 1.0 / (lightDist*lightDist);
-	    float ndotl = dot(lightDir, normal);
-    }
-    */
-    //FragColor.rgb = vec3(baseColor);
-  // FragColor.rgb = vec3(baseColor);
-    //FragColor.rgb = pow(FragColor.rgb, vec3(1.0/2.2)); 
- //   FragColor.rgb = baseColor;
-
-    
- //  FragColor.rgb = vec3(baseColor.rgb);
-
-
- /*   if (gl_FragCoord.y < 50) {
-      FragColor.rgb = vec3(0,0,0);
-    }
-    if (gl_FragCoord.y > (432 * 2) - 50) {
-         FragColor.rgb = vec3(0,0,0);
-    }
-    */
-
-   // FragColor.rgb = normal;
- //  float originalZ = gl_FragCoord.z / gl_FragCoord.w;
- // FragColor.rgb = vec3(WorldPos);
-
-//vec3 test =   texture2D(worldSpacePositionTexture, TexCoords).rgb;
- // FragColor.rgb = vec3(test);
- // FragColor.rgb = vec3(directLighting);
-   
- /// FragColor.rgb = vec3(WorldPos);
-	//FragColor.rgb = normal.rgb;
-
-
+	FragColor.a = baseColor.a;
+	//FragColor.a = 0.1;
+	//FragColor.rgb = vec3(baseColor.a);
+	// FragColor.rgb = vec3(WorldPos);
+	// FragColor.rgb = normal.rgb;
 }
