@@ -11,7 +11,7 @@
 #include "../../Util.hpp"
 #include "../../Core/AssetManager.h"
 #include "Types/GL_model.h"
-#include "../../Renderer/Renderer.h"
+#include "../../Renderer/Renderer_OLD.h"
 #include "../../Core/FbxImporter.h"
 #include "../../Types/Texture.h"
 
@@ -111,7 +111,7 @@ std::vector<std::future<Texture *>> load_textures_from_directory(const std::stri
 			continue;
 
 		if (info.filetype == "png" || info.filetype == "tga" || info.filetype == "jpg") {
-			auto &texture{ AssetManager::_textures.emplace_back(Texture{}) };
+			auto &texture{ AssetManager::GetTextures().emplace_back(Texture{}) };
 
 			loadedTextures.emplace_back(g_asset_mgr_loading_pool.submit_task(
 				[texture_ptr = &texture, path = std::move(info.fullpath)]() -> Texture * {
@@ -144,7 +144,7 @@ void OpenGLAssetManager::Init() {
 void OpenGLAssetManager::LoadFont() {
 
     _charExtents.clear();
-    AssetManager::_textures.reserve(AssetManager::_textures.size() + count_files_in("res/textures/font/"));
+    AssetManager::GetTextures().reserve(AssetManager::GetTextures().size() + count_files_in("res/textures/font/"));
     for (auto&& loaded : load_textures_from_directory("res/textures/font/")) {
         if (auto texture{ loaded.get() }; texture) {
             texture->glTexture.Bake();
@@ -214,7 +214,7 @@ void OpenGLAssetManager::LoadAssetsMultithreaded() {
 	
 
 	const size_t textures_count{ count_files_in("res/textures/") + count_files_in("res/textures/ui") };
-	AssetManager::_textures.reserve(AssetManager::_textures.size() + textures_count);	// are you sure this is correct?
+	AssetManager::GetTextures().reserve(AssetManager::GetTextures().size() + textures_count);	// are you sure this is correct?
 	_loadedTextures.reserve(textures_count);				// are you sure this is correct?
 
 	const auto models_count{ count_files_in("res/models/") };
@@ -241,7 +241,7 @@ void OpenGLAssetManager::LoadAssetsMultithreaded() {
 				constexpr bool bake_on_load{ false };
 				const auto message{ (std::stringstream{} << "[" << std::setw(6)	<< std::this_thread::get_id() << "] Loading " << path << "\n").str()};
 				//std::cout << message;
-				model.Load(std::move(path), bake_on_load);
+                AssetManager::LoadOpenGLModel(std::move(path), bake_on_load, model);
 
 				_loadLogMutex.lock();
                 OpenGLAssetManager::_loadLog.push_back("Loading models/" + model._name + ".obj");

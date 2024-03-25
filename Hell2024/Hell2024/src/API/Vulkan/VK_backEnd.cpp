@@ -1,17 +1,20 @@
-#include "VK_backEnd.h"
-#include "VK_assetManager.h"
+#define GLM_FORCE_SILENT_WARNINGS
+#define GLM_ENABLE_EXPERIMENTAL
 #define VMA_IMPLEMENTATION
+#define GLFW_INCLUDE_VULKAN
+#include <glad/glad.h>
+#include <GLFW/glfw3.h>
+#include "VK_backEnd.h"
+#include "VkBootstrap.h"
+#include "VK_assetManager.h"
 #include "vk_mem_alloc.h"
 #include "VK_Renderer.h"
-#include "../../Core/AssetManager.h"
 #include "../../BackEnd/BackEnd.h"
+#include "../../Core/AssetManager.h"
+#include "../../Core/Scene.h"
+#include "../../ErrorChecking.h"
 
 namespace VulkanBackEnd {
-
-    /*struct VulkanRenderTargets {
-        VulkanRenderTarget loadingScreen;
-    } _renderTargets;
-    */
 
     struct UploadContext {
         VkFence _uploadFence;
@@ -27,7 +30,6 @@ namespace VulkanBackEnd {
     VkFormat _swachainImageFormat; 
     VkSampler _sampler; 
     VkDescriptorPool _descriptorPool;
-    //GLFWwindow* _window;
     VkExtent2D _renderTargetPresentExtent = { 768 , 432 };
     VkExtent2D _windowedModeExtent = { 2280, 1620 };
     VkExtent2D _currentWindowExtent = { };
@@ -46,12 +48,10 @@ namespace VulkanBackEnd {
 
     PFN_vkGetBufferDeviceAddressKHR vkGetBufferDeviceAddressKHR;
     PFN_vkCreateAccelerationStructureKHR vkCreateAccelerationStructureKHR;
-    PFN_vkDestroyAccelerationStructureKHR vkDestroyAccelerationStructureKHR;
     PFN_vkGetAccelerationStructureBuildSizesKHR vkGetAccelerationStructureBuildSizesKHR;
     PFN_vkGetAccelerationStructureDeviceAddressKHR vkGetAccelerationStructureDeviceAddressKHR;
     PFN_vkCmdBuildAccelerationStructuresKHR vkCmdBuildAccelerationStructuresKHR;
-    PFN_vkBuildAccelerationStructuresKHR vkBuildAccelerationStructuresKHR;
-    PFN_vkCmdTraceRaysKHR vkCmdTraceRaysKHR;
+    PFN_vkBuildAccelerationStructuresKHR vkBuildAccelerationStructuresKHR;    
     PFN_vkGetRayTracingShaderGroupHandlesKHR vkGetRayTracingShaderGroupHandlesKHR;
     PFN_vkCreateRayTracingPipelinesKHR vkCreateRayTracingPipelinesKHR;
     PFN_vkDebugMarkerSetObjectTagEXT pfnDebugMarkerSetObjectTag;
@@ -70,42 +70,26 @@ namespace VulkanBackEnd {
     bool _thereAreStillAssetsToLoad = true;
     bool _forceCloseWindow;
 
-
-    //void UploadUnsubmittedTextures();
     void CreateBuffers();
-    void LoadShaders();
-    void CreatePipelines();;
-    void CreateRenderTargets();
-    void CreateRayTracingBuffers();
 
-    void UploadUnsubmittedMeshes();
-    void UploadMesh(VulkanMesh& mesh);
-
-    void FramebufferResizeCallback(GLFWwindow* window, int width, int height); 
-
-    //void BlitRenderTargetIntoSwapChain(VkCommandBuffer commandBuffer, Vulkan::RenderTarget& renderTarget, uint32_t swapchainImageIndex);
-    
-    
-
-    uint64_t GetBufferDeviceAddress(VkBuffer buffer);
+    void FramebufferResizeCallback(GLFWwindow* window, int width, int height);     
 
     RayTracingScratchBuffer CreateScratchBuffer(VkDeviceSize size);
-    AccelerationStructure CreateBottomLevelAccelerationStructure(VulkanMesh* mesh);
-    void CreateAccelerationStructureBuffer(AccelerationStructure& accelerationStructure, VkAccelerationStructureBuildSizesInfoKHR buildSizeInfo);	
-    void CreateTopLevelAccelerationStructure(std::vector<VkAccelerationStructureInstanceKHR> instances, AccelerationStructure& outTLAS);
-    void InitRayTracing();
+    
+   
+   // void CreateTopLevelAccelerationStructure(std::vector<VkAccelerationStructureInstanceKHR> instances, AccelerationStructure& outTLAS);
+    
 
     //void UpdateStaticDescriptorSet();
 
     //void BuildRayTracingCommandBuffers(int swapchainIndex);
-    inline AllocatedBuffer _rtVertexBuffer;
-    inline AllocatedBuffer _rtIndexBuffer;
+
+    inline uint32_t _mainIndexCount;
     //inline AllocatedBuffer _mousePickResultBuffer;
     //inline AllocatedBuffer _mousePickResultCPUBuffer; // for mouse picking
-    inline uint32_t _rtIndexCount;
-    inline VkDeviceOrHostAddressConstKHR _vertexBufferDeviceAddress{};
-    inline VkDeviceOrHostAddressConstKHR _indexBufferDeviceAddress{};
-    inline VkDeviceOrHostAddressConstKHR _transformBufferDeviceAddress{};
+    //inline VkDeviceOrHostAddressConstKHR _vertexBufferDeviceAddress{};
+    //inline VkDeviceOrHostAddressConstKHR _indexBufferDeviceAddress{};
+    //inline VkDeviceOrHostAddressConstKHR _transformBufferDeviceAddress{};
     inline AllocatedBuffer _rtInstancesBuffer;
 
     VkDevice GetDevice() {
@@ -160,7 +144,7 @@ void VulkanBackEnd::InitMinimum() {
     CreateSwapchain();
         
     VulkanRenderer::CreateMinimumShaders();
-    VulkanRenderer::CreateMinimumRenderTargets();
+    VulkanRenderer::CreateRenderTargets();
 
     CreateCommandBuffers();
     CreateSyncStructures();
@@ -172,157 +156,13 @@ void VulkanBackEnd::InitMinimum() {
     VulkanAssetManager::LoadFont(_device, _allocator);
     VulkanAssetManager::LoadHardCodedMesh();
 
-    UploadUnsubmittedMeshes();
+    AssetManager::UploadVertexData();
+    //UploadUnsubmittedMeshes();
 
-    VulkanRenderer::UpdateFixedDescriptorSetMinimum();
+    VulkanRenderer::UpdateSamplerDescriptorSet();
 
     CreateBuffers();
 }
-
-void Init() {
-
-}
-
-void VulkanBackEnd::LoadShaders() {
-
-    //LoadShader(_device, "solid_color.vert", VK_SHADER_STAGE_VERTEX_BIT, &_solid_color_vertex_shader);
-    //LoadShader(_device, "solid_color.frag", VK_SHADER_STAGE_FRAGMENT_BIT, &_solid_color_fragment_shader);
-
-    //LoadShader(_device, "gbuffer.vert", VK_SHADER_STAGE_VERTEX_BIT, &_gbuffer_vertex_shader);
-    //LoadShader(_device, "gbuffer.frag", VK_SHADER_STAGE_FRAGMENT_BIT, &_gbuffer_fragment_shader);
-
-    //LoadShader(_device, "composite.vert", VK_SHADER_STAGE_VERTEX_BIT, &_composite_vertex_shader);
-    //LoadShader(_device, "composite.frag", VK_SHADER_STAGE_FRAGMENT_BIT, &_composite_fragment_shader);
-
-    //_raytracer.LoadShaders(_device, "raygen.rgen", "miss.rmiss", "shadow.rmiss", "closesthit.rchit");
-    //_raytracerPath.LoadShaders(_device, "path_raygen.rgen", "path_miss.rmiss", "path_shadow.rmiss", "path_closesthit.rchit");
-    //_raytracerMousePick.LoadShaders(_device, "mousepick_raygen.rgen", "mousepick_miss.rmiss", "path_shadow.rmiss", "mousepick_closesthit.rchit");
-}
-
-void VulkanBackEnd::CreatePipelines() {
-
-    // Composite pipeline
-    /*_pipelines.composite.PushDescriptorSetLayout(_dynamicDescriptorSet.layout);
-    _pipelines.composite.PushDescriptorSetLayout(_staticDescriptorSet.layout);
-    _pipelines.composite.PushDescriptorSetLayout(_samplerDescriptorSet.layout);
-    _pipelines.composite.CreatePipelineLayout(_device);
-    _pipelines.composite.SetVertexDescription(VertexDescriptionType::POSITION_TEXCOORD);
-    _pipelines.composite.SetTopology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
-    _pipelines.composite.SetPolygonMode(VK_POLYGON_MODE_FILL);
-    _pipelines.composite.SetCullModeFlags(VK_CULL_MODE_NONE);
-    _pipelines.composite.SetColorBlending(false);
-    _pipelines.composite.SetDepthTest(false);
-    _pipelines.composite.SetDepthWrite(false);
-    _pipelines.composite.Build(_device, _composite_vertex_shader, _composite_fragment_shader, 1);
-
-    // Lines pipeline
-    _pipelines.lines.PushDescriptorSetLayout(_dynamicDescriptorSet.layout);
-    _pipelines.lines.PushDescriptorSetLayout(_staticDescriptorSet.layout);
-    _pipelines.lines.SetPushConstantSize(sizeof(LineShaderPushConstants));
-    _pipelines.lines.SetPushConstantCount(1);
-    _pipelines.lines.CreatePipelineLayout(_device);
-    _pipelines.lines.SetVertexDescription(VertexDescriptionType::POSITION);
-    _pipelines.lines.SetTopology(VK_PRIMITIVE_TOPOLOGY_LINE_LIST);
-    _pipelines.lines.SetPolygonMode(VK_POLYGON_MODE_FILL);
-    _pipelines.lines.SetCullModeFlags(VK_CULL_MODE_NONE);
-    _pipelines.lines.SetColorBlending(false);
-    _pipelines.lines.SetDepthTest(false);
-    _pipelines.lines.SetDepthWrite(false);
-    _pipelines.lines.Build(_device, _solid_color_vertex_shader, _solid_color_fragment_shader, 1);
-
-    // Denoise A pipeline
-    _pipelines.denoisePassA.PushDescriptorSetLayout(_samplerDescriptorSet.layout);
-    _pipelines.denoisePassA.CreatePipelineLayout(_device);
-    _pipelines.denoisePassA.SetVertexDescription(VertexDescriptionType::POSITION_TEXCOORD);
-    _pipelines.denoisePassA.SetTopology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
-    _pipelines.denoisePassA.SetPolygonMode(VK_POLYGON_MODE_FILL);
-    _pipelines.denoisePassA.SetCullModeFlags(VK_CULL_MODE_NONE);
-    _pipelines.denoisePassA.SetColorBlending(false);
-    _pipelines.denoisePassA.SetDepthTest(false);
-    _pipelines.denoisePassA.SetDepthWrite(false);
-    _pipelines.denoisePassA.Build(_device, _denoise_pass_A_vertex_shader, _denoise_pass_A_fragment_shader, 1);
-
-    // Denoise B pipeline
-    _pipelines.denoisePassB.PushDescriptorSetLayout(_samplerDescriptorSet.layout);
-    _pipelines.denoisePassB.CreatePipelineLayout(_device);
-    _pipelines.denoisePassB.SetVertexDescription(VertexDescriptionType::POSITION_TEXCOORD);
-    _pipelines.denoisePassB.SetTopology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
-    _pipelines.denoisePassB.SetPolygonMode(VK_POLYGON_MODE_FILL);
-    _pipelines.denoisePassB.SetCullModeFlags(VK_CULL_MODE_NONE);
-    _pipelines.denoisePassB.SetColorBlending(false);
-    _pipelines.denoisePassB.SetDepthTest(false);
-    _pipelines.denoisePassB.SetDepthWrite(false);
-    _pipelines.denoisePassB.Build(_device, _denoise_pass_B_vertex_shader, _denoise_pass_B_fragment_shader, 1);
-
-    // Denoise C pipeline
-    _pipelines.denoisePassC.PushDescriptorSetLayout(_samplerDescriptorSet.layout);
-    _pipelines.denoisePassC.CreatePipelineLayout(_device);
-    _pipelines.denoisePassC.SetVertexDescription(VertexDescriptionType::POSITION_TEXCOORD);
-    _pipelines.denoisePassC.SetTopology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
-    _pipelines.denoisePassC.SetPolygonMode(VK_POLYGON_MODE_FILL);
-    _pipelines.denoisePassC.SetCullModeFlags(VK_CULL_MODE_NONE);
-    _pipelines.denoisePassC.SetColorBlending(false);
-    _pipelines.denoisePassC.SetDepthTest(false);
-    _pipelines.denoisePassC.SetDepthWrite(false);
-    _pipelines.denoisePassC.Build(_device, _denoise_pass_C_vertex_shader, _denoise_pass_C_fragment_shader, 1);
-
-    // Blur horizontal
-    _pipelines.denoiseBlurHorizontal.PushDescriptorSetLayout(_samplerDescriptorSet.layout);
-    _pipelines.denoiseBlurHorizontal.CreatePipelineLayout(_device);
-    _pipelines.denoiseBlurHorizontal.SetVertexDescription(VertexDescriptionType::POSITION_TEXCOORD);
-    _pipelines.denoiseBlurHorizontal.SetTopology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
-    _pipelines.denoiseBlurHorizontal.SetPolygonMode(VK_POLYGON_MODE_FILL);
-    _pipelines.denoiseBlurHorizontal.SetCullModeFlags(VK_CULL_MODE_NONE);
-    _pipelines.denoiseBlurHorizontal.SetColorBlending(false);
-    _pipelines.denoiseBlurHorizontal.SetDepthTest(false);
-    _pipelines.denoiseBlurHorizontal.SetDepthWrite(false);
-    _pipelines.denoiseBlurHorizontal.Build(_device, _blur_horizontal_vertex_shader, _blur_horizontal_fragment_shader, 1);
-
-    // Blur vertical
-    _pipelines.denoiseBlurVertical.PushDescriptorSetLayout(_samplerDescriptorSet.layout);
-    _pipelines.denoiseBlurVertical.CreatePipelineLayout(_device);
-    _pipelines.denoiseBlurVertical.SetVertexDescription(VertexDescriptionType::POSITION_TEXCOORD);
-    _pipelines.denoiseBlurVertical.SetTopology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
-    _pipelines.denoiseBlurVertical.SetPolygonMode(VK_POLYGON_MODE_FILL);
-    _pipelines.denoiseBlurVertical.SetCullModeFlags(VK_CULL_MODE_NONE);
-    _pipelines.denoiseBlurVertical.SetColorBlending(false);
-    _pipelines.denoiseBlurVertical.SetDepthTest(false);
-    _pipelines.denoiseBlurVertical.SetDepthWrite(false);
-    _pipelines.denoiseBlurVertical.Build(_device, _blur_vertical_vertex_shader, _blur_vertical_fragment_shader, 1);
-    */
-
-    // Raster pipeline
-    /* {
-        // Text blitter pipeline layout
-        _rasterPipeline.PushDescriptorSetLayout(_dynamicDescriptorSet.layout);
-        _rasterPipeline.PushDescriptorSetLayout(_staticDescriptorSet.layout);
-        _rasterPipeline.CreatePipelineLayout(_device);
-
-        VertexInputDescription vertexDescription = Util::get_vertex_description();
-        PipelineBuilder pipelineBuilder;
-        pipelineBuilder._pipelineLayout = _rasterPipeline.layout;
-        pipelineBuilder._vertexInputInfo = vkinit::vertex_input_state_create_info();
-        pipelineBuilder._inputAssembly = vkinit::input_assembly_create_info(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
-        pipelineBuilder._rasterizer = vkinit::rasterization_state_create_info(VK_POLYGON_MODE_FILL, VK_CULL_MODE_NONE); // VK_CULL_MODE_NONE
-        pipelineBuilder._multisampling = vkinit::multisampling_state_create_info();
-        pipelineBuilder._colorBlendAttachment = vkinit::color_blend_attachment_state(false);
-        pipelineBuilder._depthStencil = vkinit::depth_stencil_create_info(true, true, VK_COMPARE_OP_LESS_OR_EQUAL);
-        pipelineBuilder._vertexInputInfo.pVertexAttributeDescriptions = vertexDescription.attributes.data();
-        pipelineBuilder._vertexInputInfo.vertexAttributeDescriptionCount = vertexDescription.attributes.size();
-        pipelineBuilder._vertexInputInfo.pVertexBindingDescriptions = vertexDescription.bindings.data();
-        pipelineBuilder._vertexInputInfo.vertexBindingDescriptionCount = vertexDescription.bindings.size();
-        pipelineBuilder._shaderStages.push_back(vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_VERTEX_BIT, _gbuffer_vertex_shader));
-        pipelineBuilder._shaderStages.push_back(vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_FRAGMENT_BIT, _gbuffer_fragment_shader));
-
-        _rasterPipeline.handle = pipelineBuilder.build_dynamic_rendering_pipeline(_device, _depthFormat, 3);
-    }*/
-}
-
-
-/*
-void VulkanBackEnd::SetWindowPointer(GLFWwindow* window) {
-    _window = window;
-}*/
 
 void VulkanBackEnd::SetGLFWSurface() {
     glfwCreateWindowSurface(_instance, BackEnd::GetWindowPointer(), nullptr, &_surface);
@@ -468,10 +308,11 @@ void VulkanBackEnd::SelectPhysicalDevice() {
     vkCmdBuildAccelerationStructuresKHR = reinterpret_cast<PFN_vkCmdBuildAccelerationStructuresKHR>(vkGetDeviceProcAddr(_device, "vkCmdBuildAccelerationStructuresKHR"));
     vkBuildAccelerationStructuresKHR = reinterpret_cast<PFN_vkBuildAccelerationStructuresKHR>(vkGetDeviceProcAddr(_device, "vkBuildAccelerationStructuresKHR"));
     vkCreateAccelerationStructureKHR = reinterpret_cast<PFN_vkCreateAccelerationStructureKHR>(vkGetDeviceProcAddr(_device, "vkCreateAccelerationStructureKHR"));
-    vkDestroyAccelerationStructureKHR = reinterpret_cast<PFN_vkDestroyAccelerationStructureKHR>(vkGetDeviceProcAddr(_device, "vkDestroyAccelerationStructureKHR"));
+    //vkDestroyAccelerationStructureKHR = reinterpret_cast<PFN_vkDestroyAccelerationStructureKHR>(vkGetDeviceProcAddr(_device, "vkDestroyAccelerationStructureKHR"));
     vkGetAccelerationStructureBuildSizesKHR = reinterpret_cast<PFN_vkGetAccelerationStructureBuildSizesKHR>(vkGetDeviceProcAddr(_device, "vkGetAccelerationStructureBuildSizesKHR"));
     vkGetAccelerationStructureDeviceAddressKHR = reinterpret_cast<PFN_vkGetAccelerationStructureDeviceAddressKHR>(vkGetDeviceProcAddr(_device, "vkGetAccelerationStructureDeviceAddressKHR"));
-    vkCmdTraceRaysKHR = reinterpret_cast<PFN_vkCmdTraceRaysKHR>(vkGetDeviceProcAddr(_device, "vkCmdTraceRaysKHR"));
+    //vkCmdTraceRaysKHR = reinterpret_cast<PFN_vkCmdTraceRaysKHR>(vkGetDeviceProcAddr(_device, "vkCmdTraceRaysKHR"));
+    VulkanRenderer::LoadRaytracingFunctionPointer();
     vkGetRayTracingShaderGroupHandlesKHR = reinterpret_cast<PFN_vkGetRayTracingShaderGroupHandlesKHR>(vkGetDeviceProcAddr(_device, "vkGetRayTracingShaderGroupHandlesKHR"));
     vkCreateRayTracingPipelinesKHR = reinterpret_cast<PFN_vkCreateRayTracingPipelinesKHR>(vkGetDeviceProcAddr(_device, "vkCreateRayTracingPipelinesKHR"));
 
@@ -617,15 +458,6 @@ void VulkanBackEnd::AddDebugName(VkDescriptorSetLayout descriptorSetLayout, cons
     vkSetDebugUtilsObjectNameEXT(_device, &nameInfo);
 }
 
-void VulkanBackEnd::UploadUnsubmittedMeshes() {
-    for (VulkanMesh& mesh : VulkanAssetManager::GetMeshList()) {
-        if (!mesh._uploadedToGPU) {
-            UploadMesh(mesh);
-            mesh._accelerationStructure = CreateBottomLevelAccelerationStructure(&mesh);
-        }
-    }
-}
-
 uint64_t VulkanBackEnd::GetBufferDeviceAddress(VkBuffer buffer) {
     VkBufferDeviceAddressInfoKHR bufferDeviceAI{};
     bufferDeviceAI.sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO;
@@ -669,17 +501,19 @@ RayTracingScratchBuffer VulkanBackEnd::CreateScratchBuffer(VkDeviceSize size) {
     return scratchBuffer;
 }
 
-AccelerationStructure VulkanBackEnd::CreateBottomLevelAccelerationStructure(VulkanMesh* mesh) {
+AccelerationStructure VulkanBackEnd::CreateBottomLevelAccelerationStructure(Mesh& mesh) {
+
     VkDeviceOrHostAddressConstKHR vertexBufferDeviceAddress{};
     VkDeviceOrHostAddressConstKHR indexBufferDeviceAddress{};
-    VkDeviceOrHostAddressConstKHR transformBufferDeviceAddress{};
 
-    vertexBufferDeviceAddress.deviceAddress = GetBufferDeviceAddress(mesh->_vertexBuffer._buffer);
-    indexBufferDeviceAddress.deviceAddress = GetBufferDeviceAddress(mesh->_indexBuffer._buffer);
-    transformBufferDeviceAddress.deviceAddress = GetBufferDeviceAddress(mesh->_transformBuffer._buffer);
+    uint32_t vertexAddressOffset = mesh.baseVertex * sizeof(Vertex);
+    uint32_t indexAddressOffset = mesh.baseIndex * sizeof(uint32_t);
+
+    vertexBufferDeviceAddress.deviceAddress = GetBufferDeviceAddress(_mainVertexBuffer._buffer) + vertexAddressOffset;
+    indexBufferDeviceAddress.deviceAddress = GetBufferDeviceAddress(_mainIndexBuffer._buffer) + indexAddressOffset;
 
     // Build
-    VkAccelerationStructureGeometryKHR accelerationStructureGeometry{};
+    VkAccelerationStructureGeometryKHR accelerationStructureGeometry {};
     accelerationStructureGeometry.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
     accelerationStructureGeometry.flags = VK_GEOMETRY_OPAQUE_BIT_KHR;
     accelerationStructureGeometry.geometryType = VK_GEOMETRY_TYPE_TRIANGLES_KHR;
@@ -687,13 +521,12 @@ AccelerationStructure VulkanBackEnd::CreateBottomLevelAccelerationStructure(Vulk
     accelerationStructureGeometry.geometry.triangles.vertexFormat = VK_FORMAT_R32G32B32_SFLOAT;
     accelerationStructureGeometry.geometry.triangles.vertexData = vertexBufferDeviceAddress;
     accelerationStructureGeometry.geometry.triangles.maxVertex = 3;
-    accelerationStructureGeometry.geometry.triangles.maxVertex = mesh->_vertexCount;
+    accelerationStructureGeometry.geometry.triangles.maxVertex = mesh.vertexCount;
     accelerationStructureGeometry.geometry.triangles.vertexStride = sizeof(Vertex);
     accelerationStructureGeometry.geometry.triangles.indexType = VK_INDEX_TYPE_UINT32;
     accelerationStructureGeometry.geometry.triangles.indexData = indexBufferDeviceAddress;
     accelerationStructureGeometry.geometry.triangles.transformData.deviceAddress = 0;
     accelerationStructureGeometry.geometry.triangles.transformData.hostAddress = nullptr;
-    accelerationStructureGeometry.geometry.triangles.transformData = transformBufferDeviceAddress;
 
     // Get size info
     VkAccelerationStructureBuildGeometryInfoKHR accelerationStructureBuildGeometryInfo{};
@@ -703,7 +536,7 @@ AccelerationStructure VulkanBackEnd::CreateBottomLevelAccelerationStructure(Vulk
     accelerationStructureBuildGeometryInfo.geometryCount = 1;
     accelerationStructureBuildGeometryInfo.pGeometries = &accelerationStructureGeometry;
 
-    const uint32_t numTriangles = mesh->_indexCount / 3;
+    const uint32_t numTriangles = mesh.indexCount / 3;
     VkAccelerationStructureBuildSizesInfoKHR accelerationStructureBuildSizesInfo{};
     accelerationStructureBuildSizesInfo.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR;
     vkGetAccelerationStructureBuildSizesKHR(
@@ -761,7 +594,7 @@ AccelerationStructure VulkanBackEnd::CreateBottomLevelAccelerationStructure(Vulk
     return bottomLevelAS;
 }
 
-
+/*
 void VulkanBackEnd::UploadMesh(VulkanMesh& mesh) {
 
     // Vertices
@@ -894,7 +727,7 @@ void VulkanBackEnd::UploadMesh(VulkanMesh& mesh) {
         vmaDestroyBuffer(_allocator, stagingBuffer._buffer, stagingBuffer._allocation);
     }
     mesh._uploadedToGPU = true;
-}
+}*/
 
 void VulkanBackEnd::ImmediateSubmit(std::function<void(VkCommandBuffer cmd)>&& function)
 {
@@ -930,19 +763,12 @@ void VulkanBackEnd::ImmediateSubmit(std::function<void(VkCommandBuffer cmd)>&& f
 
 void VulkanBackEnd::CreateBuffers() {
 
-    // Dynamic
     for (int i = 0; i < FRAME_OVERLAP; i++) {
-        //_frames[i]._sceneCamDataBuffer.Create(_allocator, sizeof(CameraData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-        //_frames[i]._inventoryCamDataBuffer.Create(_allocator, sizeof(CameraData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-        _frames[i]._meshInstances2DBuffer.Create(_allocator, sizeof(RenderItem2D) * MAX_RENDER_OBJECTS_2D, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-        _frames[i]._meshInstancesSceneBuffer.Create(_allocator, sizeof(GPUObjectData) * MAX_RENDER_OBJECTS_2D, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-        //_frames[i]._meshInstancesInventoryBuffer.Create(_allocator, sizeof(GPUObjectData) * MAX_RENDER_OBJECTS_2D, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-        //_frames[i]._lightRenderInfoBuffer.Create(_allocator, sizeof(LightRenderInfo) * MAX_LIGHTS, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-        //_frames[i]._lightRenderInfoBufferInventory.Create(_allocator, sizeof(LightRenderInfo) * 2, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-    }
-
-    // Static
-    // none as of yet. besides TLAS but that is created elsewhere.
+        _frames[i].buffers.globalShaderData.Create(_allocator, sizeof(GlobalShaderData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+        _frames[i].buffers.renderItems2D.Create(_allocator, sizeof(RenderItem2D) * MAX_RENDER_OBJECTS_2D, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+        _frames[i].buffers.renderItems3D.Create(_allocator, sizeof(RenderItem3D) * MAX_RENDER_OBJECTS_3D, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+   }
+   // renderItems3D.Create(_allocator, sizeof(RenderItem3D) * MAX_TLAS_OBJECT_COUNT, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 }
 
 bool VulkanBackEnd::StillLoading() {
@@ -972,8 +798,9 @@ void VulkanBackEnd::LoadNextItem() {
     }
     if (!shadersLoaded) {
         shadersLoaded = true;
-        LoadShaders();
-        UploadUnsubmittedMeshes();
+        VulkanRenderer::CreateShaders();
+        AssetManager::UploadVertexData(); 
+        VulkanRenderer::UpdateSamplerDescriptorSet();
         AssetManager::BuildMaterials();
     }
 
@@ -986,7 +813,7 @@ void VulkanBackEnd::LoadNextItem() {
     }
     if (!pipelinesCreated) {
         pipelinesCreated = true;
-        CreatePipelines();;
+        VulkanRenderer::CreatePipelines();
     }
 
     static bool renderTargetsCreated = false;
@@ -998,7 +825,8 @@ void VulkanBackEnd::LoadNextItem() {
     }
     if (!renderTargetsCreated) {
         renderTargetsCreated = true;
-        CreateRenderTargets();
+        VulkanRenderer::CreateShaders();
+        VulkanRenderer::CreatePipelines();
     }
 
     static bool rtSetup = false;
@@ -1010,12 +838,14 @@ void VulkanBackEnd::LoadNextItem() {
     }
     if (!rtSetup) {
         rtSetup = true;
+
+
         //AssetManager::BuildMaterials();
         //Scene::Init();						// Scene::Init creates wall geometry, and thus must run before upload_meshes
-        CreateRayTracingBuffers();
+        //CreateRayTracingBuffers();
         //CreateTopLevelAccelerationStructure(Scene::GetMeshInstancesForSceneAccelerationStructure(), _frames[0]._sceneTLAS);
         //CreateTopLevelAccelerationStructure(Scene::GetMeshInstancesForInventoryAccelerationStructure(), _frames[0]._inventoryTLAS);
-        InitRayTracing();
+        
         //VulkanRenderer::UpdateStaticDescriptorSet();
         //Input::SetMousePos(_windowedModeExtent.width / 2, _windowedModeExtent.height / 2);
     }
@@ -1034,6 +864,7 @@ void VulkanBackEnd::LoadNextItem() {
 
     _thereAreStillAssetsToLoad = false;
    // VulkanTextBlitter::ResetDebugText();
+
 }
 
 void VulkanBackEnd::PrepareSwapchainForPresent(VkCommandBuffer commandBuffer, uint32_t swapchainImageIndex) {
@@ -1068,47 +899,25 @@ void VulkanBackEnd::RecreateDynamicSwapchain() {
     CreateSwapchain();
 }
 
-void VulkanBackEnd::CreateRayTracingBuffers()
-{
-    //std::vector<Mesh*> meshes = Scene::GetMeshList();
-    //std::vector<Mesh>& meshes = AssetManager::GetMeshList();
-    std::vector<VulkanVertex>& vertices = VulkanAssetManager::GetVertices_TEMPORARY();
-    std::vector<uint32_t>& indices = VulkanAssetManager::GetIndices_TEMPORARY();
+uint32_t alignedSize(uint32_t value, uint32_t alignment) {
+    return (value + alignment - 1) & ~(alignment - 1);
+}
 
-    /* you commented this out porting it
-    {
-        // RT Mesh Instance Index Buffer
-        VkBufferCreateInfo bufferInfo = {};
-        bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-        bufferInfo.pNext = nullptr;
-        bufferInfo.size = sizeof(uint32_t) * 2;
-        bufferInfo.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-        VmaAllocationCreateInfo vmaallocInfo = {};
-        vmaallocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
-        vmaallocInfo.usage = VMA_MEMORY_USAGE_AUTO;
-        VK_CHECK(vmaCreateBuffer(_allocator, &bufferInfo, &vmaallocInfo, &_mousePickResultBuffer._buffer, &_mousePickResultBuffer._allocation, nullptr));
-        add_debug_name(_mousePickResultBuffer._buffer, "_mousePickResultBuffer");
-        //vmaMapMemory(_allocator, _mousePickResultBuffer._allocation, &_mousePickResultBuffer._mapped);
-        
+void VulkanBackEnd::UploadVertexData(std::vector<Vertex>& vertices, std::vector<uint32_t>& indices) {
 
-        // Copy in inital values of 0
-        uint32_t mousePickResult[2] = { 0, 0 };
+    // FIX ME
+    // FIX ME
+    // FIX ME
+    if (_mainVertexBuffer._buffer != VK_NULL_HANDLE) {
+        //vmaDestroyBuffer(_allocator, _mainVertexBuffer._buffer, _mainVertexBuffer._allocation);
+    }
+    if (_mainIndexBuffer._buffer != VK_NULL_HANDLE) {
+        //vmaDestroyBuffer(_allocator, _mainIndexBuffer._buffer, _mainIndexBuffer._allocation);
+    }
 
-        bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-        bufferInfo.pNext = nullptr;
-        bufferInfo.size = sizeof(uint32_t) * 2;
-        bufferInfo.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-        vmaallocInfo = {};
-        vmaallocInfo.usage = VMA_MEMORY_USAGE_CPU_ONLY;
-        vmaallocInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
-        VK_CHECK(vmaCreateBuffer(_allocator, &bufferInfo, &vmaallocInfo, &_mousePickResultCPUBuffer._buffer, &_mousePickResultCPUBuffer._allocation, nullptr));
-        add_debug_name(_mousePickResultCPUBuffer._buffer, "_mousePickResultCPUBuffer");
-        vmaMapMemory(_allocator, _mousePickResultCPUBuffer._allocation, &_mousePickResultCPUBuffer._mapped);
-    }*/
+    /* Vertices */ {
 
-    // Vertices
-    {
-        const size_t bufferSize = vertices.size() * sizeof(VulkanVertex);
+        const size_t bufferSize = vertices.size() * sizeof(Vertex);
         VkBufferCreateInfo stagingBufferInfo = {};
         stagingBufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
         stagingBufferInfo.pNext = nullptr;
@@ -1131,25 +940,26 @@ void VulkanBackEnd::CreateRayTracingBuffers()
             VK_BUFFER_USAGE_TRANSFER_DST_BIT |
             VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT |
             VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR |
-            VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+            VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
+            VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
 
         vmaallocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
-        VK_CHECK(vmaCreateBuffer(_allocator, &vertexBufferInfo, &vmaallocInfo, &_rtVertexBuffer._buffer, &_rtVertexBuffer._allocation, nullptr));
-        AddDebugName(_rtVertexBuffer._buffer, "_rtVertexBuffer");
+        VK_CHECK(vmaCreateBuffer(_allocator, &vertexBufferInfo, &vmaallocInfo, &_mainVertexBuffer._buffer, &_mainVertexBuffer._allocation, nullptr));
+        AddDebugName(_mainVertexBuffer._buffer, "Main Vertex Buffer");
         ImmediateSubmit([=](VkCommandBuffer cmd) {
             VkBufferCopy copy;
             copy.dstOffset = 0;
             copy.srcOffset = 0;
             copy.size = bufferSize;
-            vkCmdCopyBuffer(cmd, stagingBuffer._buffer, _rtVertexBuffer._buffer, 1, &copy);
+            vkCmdCopyBuffer(cmd, stagingBuffer._buffer, _mainVertexBuffer._buffer, 1, &copy);
         });
         vmaDestroyBuffer(_allocator, stagingBuffer._buffer, stagingBuffer._allocation);
 
         int objectCount = 1;
     }
 
-    // Indices
-    {
+    /* Indices */ {
+
         const size_t bufferSize = indices.size() * sizeof(uint32_t);
         VkBufferCreateInfo stagingBufferInfo = {};
         stagingBufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -1173,29 +983,88 @@ void VulkanBackEnd::CreateRayTracingBuffers()
             VK_BUFFER_USAGE_TRANSFER_DST_BIT |
             VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT |
             VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR |
-            VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+            VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
+            VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
         vmaallocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
-        VK_CHECK(vmaCreateBuffer(_allocator, &bufferInfo, &vmaallocInfo, &_rtIndexBuffer._buffer, &_rtIndexBuffer._allocation, nullptr));
-        AddDebugName(_rtIndexBuffer._buffer, "_rtIndexBufferVertices");
+        VK_CHECK(vmaCreateBuffer(_allocator, &bufferInfo, &vmaallocInfo, &_mainIndexBuffer._buffer, &_mainIndexBuffer._allocation, nullptr));
+        AddDebugName(_mainIndexBuffer._buffer, "Main Index Buffer");
         ImmediateSubmit([=](VkCommandBuffer cmd) {
             VkBufferCopy copy;
             copy.dstOffset = 0;
             copy.srcOffset = 0;
             copy.size = bufferSize;
-            vkCmdCopyBuffer(cmd, stagingBuffer._buffer, _rtIndexBuffer._buffer, 1, &copy);
+            vkCmdCopyBuffer(cmd, stagingBuffer._buffer, _mainIndexBuffer._buffer, 1, &copy);
         });
         vmaDestroyBuffer(_allocator, stagingBuffer._buffer, stagingBuffer._allocation);
     }
 
-    _vertexBufferDeviceAddress.deviceAddress = GetBufferDeviceAddress(_rtVertexBuffer._buffer);
-    _indexBufferDeviceAddress.deviceAddress = GetBufferDeviceAddress(_rtIndexBuffer._buffer);
+    //_vertexBufferDeviceAddress.deviceAddress = GetBufferDeviceAddress(_mainVertexBuffer._buffer);
+    //_indexBufferDeviceAddress.deviceAddress = GetBufferDeviceAddress(_mainIndexBuffer._buffer);
+
+    // Uploaded
+
+    std::cout << "\nVulkanBackEnd::UploadVertexData()\n";
+    std::cout << "-Vertex count: " << AssetManager::GetVertices().size() << "\n";
+    std::cout << "-Index count: " << AssetManager::GetIndices().size() << "\n";
+}
+
+
+//                      //
+//      Raytracing      //
+//                      //
+
+void VulkanBackEnd::InitRayTracing() {
+
+    std::cout << "Raytracing init successful\n";
+
+    AssetManager::CreateMeshBLAS();
+
+    std::vector<VkDescriptorSetLayout> rtDescriptorSetLayouts = {
+        VulkanRenderer::GetDynamicDescriptorSet().layout,
+        VulkanRenderer::GetAllTexturesDescriptorSet().layout,
+        VulkanRenderer::GetRenderTargetsDescriptorSet().layout,
+        VulkanRenderer::GetRaytracingDescriptorSet().layout
+    };
+
+    VulkanRenderer::GetRaytracer().CreatePipeline(_device, rtDescriptorSetLayouts, 2);
+    VulkanRenderer::GetRaytracer().CreateShaderBindingTable(_device, _allocator, _rayTracingPipelineProperties);
+}
+
+VkTransformMatrixKHR GlmMat4ToVkTransformMatrix(glm::mat4 matrix) {
+    matrix = glm::transpose(matrix);
+    VkTransformMatrixKHR vkTransformMatrix;
+    for (int x = 0; x < 4; x++) {
+        for (int y = 0; y < 4; y++) {
+            vkTransformMatrix.matrix[x][y] = matrix[x][y];
+        }
+    }
+    return vkTransformMatrix;
+}
+
+std::vector<VkAccelerationStructureInstanceKHR> VulkanBackEnd::CreateTLASInstancesFromRenderItems(std::vector<RenderItem3D>& renderItems) {
+  
+    int instanceCustomIndex = 0;
+    std::vector<VkAccelerationStructureInstanceKHR> instances;
+    for (RenderItem3D& renderItem : renderItems) {
+        Mesh* mesh = AssetManager::GetMeshByIndex(renderItem.meshIndex);
+        VkAccelerationStructureInstanceKHR& instance = instances.emplace_back(VkAccelerationStructureInstanceKHR());
+        instance.transform = GlmMat4ToVkTransformMatrix(renderItem.modelMatrix);
+        instance.instanceCustomIndex = instanceCustomIndex;
+        instance.mask = 0xFF;
+        instance.instanceShaderBindingTableRecordOffset = 0;
+        instance.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_FRONT_COUNTERCLOCKWISE_BIT_KHR;
+        instance.accelerationStructureReference = mesh->accelerationStructure.deviceAddress;
+        instanceCustomIndex++;
+    }
+    return instances;
 }
 
 void VulkanBackEnd::CreateTopLevelAccelerationStructure(std::vector<VkAccelerationStructureInstanceKHR> instances, AccelerationStructure& outTLAS) {
-    if (instances.size() == 0)
-        return;
 
-    // create the BLAS instances within TLAS, one for each game object
+    if (instances.size() == 0) {
+        return;
+    }
+
     const size_t bufferSize = instances.size() * sizeof(VkAccelerationStructureInstanceKHR);
     VkBufferCreateInfo stagingBufferInfo = {};
     stagingBufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -1232,10 +1101,8 @@ void VulkanBackEnd::CreateTopLevelAccelerationStructure(std::vector<VkAccelerati
     });
     vmaDestroyBuffer(_allocator, stagingBuffer._buffer, stagingBuffer._allocation);
 
-
     VkDeviceOrHostAddressConstKHR instanceDataDeviceAddress{};
     instanceDataDeviceAddress.deviceAddress = GetBufferDeviceAddress(_rtInstancesBuffer._buffer);
-    //instanceDataDeviceAddresses.push_back(instanceDataDeviceAddress);
 
     VkAccelerationStructureGeometryInstancesDataKHR tlasInstancesInfo = {};
     tlasInstancesInfo.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_INSTANCES_DATA_KHR;
@@ -1256,7 +1123,6 @@ void VulkanBackEnd::CreateTopLevelAccelerationStructure(std::vector<VkAccelerati
     buildInfo.pGeometries = &accelerationStructureGeometry;
 
     const uint32_t numInstances = static_cast<uint32_t>(instances.size());
-    //std::cout << "numInstances: " << numInstances << "\n";
 
     VkAccelerationStructureBuildSizesInfoKHR accelerationStructureBuildSizesInfo{};
     accelerationStructureBuildSizesInfo.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR;
@@ -1296,7 +1162,13 @@ void VulkanBackEnd::CreateTopLevelAccelerationStructure(std::vector<VkAccelerati
     accelerationStructureBuildRangeInfo.transformOffset = 0;
     std::vector<VkAccelerationStructureBuildRangeInfoKHR*> accelerationBuildStructureRangeInfos = { &accelerationStructureBuildRangeInfo };
 
+    // This seems suspect AF
+    // This seems suspect AF
+    // This seems suspect AF
     vkDeviceWaitIdle(_device);
+    // This seems suspect AF
+    // This seems suspect AF
+    // This seems suspect AF
 
     // Build the acceleration structure on the device via a one-time command buffer submission
     // Some implementations may support acceleration structure building on the host (VkPhysicalDeviceAccelerationStructureFeaturesKHR->accelerationStructureHostCommands), but we prefer device builds
@@ -1319,94 +1191,10 @@ void VulkanBackEnd::CreateTopLevelAccelerationStructure(std::vector<VkAccelerati
     vmaDestroyBuffer(_allocator, _rtInstancesBuffer._buffer, _rtInstancesBuffer._allocation);
 }
 
-uint32_t alignedSize(uint32_t value, uint32_t alignment) {
-    return (value + alignment - 1) & ~(alignment - 1);
-}
 
-void VulkanBackEnd::InitRayTracing() {
-
-    /*
-    std::vector<VkDescriptorSetLayout> rtDescriptorSetLayouts = { _dynamicDescriptorSet.layout, _staticDescriptorSet.layout, _samplerDescriptorSet.layout };
-
-    _raytracer.CreatePipeline(_device, rtDescriptorSetLayouts, 2);
-    _raytracer.CreateShaderBindingTable(_device, _allocator, _rayTracingPipelineProperties);
-
-    _raytracerPath.CreatePipeline(_device, rtDescriptorSetLayouts, 2);
-    _raytracerPath.CreateShaderBindingTable(_device, _allocator, _rayTracingPipelineProperties);
-
-    _raytracerMousePick.CreatePipeline(_device, rtDescriptorSetLayouts, 2);
-    _raytracerMousePick.CreateShaderBindingTable(_device, _allocator, _rayTracingPipelineProperties);*/
-}
-
-
-
-void VulkanBackEnd::CreateRenderTargets() {
-
-    /*
-    VkFormat format = VK_FORMAT_R8G8B8A8_UNORM;
-
-    //  Present Target
-    {
-        VkImageUsageFlags usageFlags = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-        VkImageLayout layout = VK_IMAGE_LAYOUT_UNDEFINED;
-        _renderTargets.present = RenderTarget(_device, _allocator, format, _renderTargetPresentExtent.width, _renderTargetPresentExtent.height, usageFlags, "present render target");
-    }
-    int scale = 2;
-    uint32_t width = _renderTargets.present._extent.width * scale;
-    uint32_t height = _renderTargets.present._extent.height * scale;
-
-    // RT image store 
-    {
-        VkFormat format = VK_FORMAT_R32G32B32A32_SFLOAT;// VK_FORMAT_R8G8B8A8_UNORM;
-        VkImageUsageFlags usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-        _renderTargets.rt_first_hit_color = RenderTarget(_device, _allocator, format, width, height, usage, "rt first hit color render target");
-        _renderTargets.rt_first_hit_normals = RenderTarget(_device, _allocator, format, width, height, usage, "rt first hit normals render target");
-        _renderTargets.rt_first_hit_base_color = RenderTarget(_device, _allocator, format, width, height, usage, "rt first hit base color render target");
-        _renderTargets.rt_second_hit_color = RenderTarget(_device, _allocator, format, width, height, usage, "rt second hit color render target");
-    }
-
-    // GBuffer
-    {
-        VkFormat format = VK_FORMAT_R8G8B8A8_UNORM;
-        VkImageUsageFlags usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-        _renderTargets.gBufferBasecolor = RenderTarget(_device, _allocator, format, width, height, usage, "gbuffer base color render target");
-        _renderTargets.gBufferNormal = RenderTarget(_device, _allocator, format, width, height, usage, "gbuffer base normal render target");
-        _renderTargets.gBufferRMA = RenderTarget(_device, _allocator, format, width, height, usage, "gbuffer base rma render target");
-    }
-    // Laptop screen
-    {
-        VkFormat format = VK_FORMAT_R8G8B8A8_UNORM;
-        VkImageUsageFlags usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-        _renderTargets.laptopDisplay = RenderTarget(_device, _allocator, format, LAPTOP_DISPLAY_WIDTH, LAPTOP_DISPLAY_HEIGHT, usage, "laptop display render target");
-    }
-
-    //depth image size will match the window
-    VkExtent3D depthImageExtent = {
-        _renderTargets.present._extent.width,
-        _renderTargets.present._extent.height,
-        1
-    };
-
-    //hardcoding the depth format to 32 bit float
-    _depthFormat = VK_FORMAT_D32_SFLOAT;
-
-    _presentDepthTarget.Create(_device, _allocator, VK_FORMAT_D32_SFLOAT, _renderTargets.present._extent);
-    _gbufferDepthTarget.Create(_device, _allocator, VK_FORMAT_D32_SFLOAT, _renderTargets.gBufferNormal._extent);
-
-    // Blur target
-    VkImageUsageFlags usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-    _renderTargets.composite = RenderTarget(_device, _allocator, format, width, height, usage, "composite render target");
-
-    float denoiseWidth = _renderTargets.rt_first_hit_color._extent.width;
-    float denoiseHeight = _renderTargets.rt_first_hit_color._extent.height;
-    _renderTargets.denoiseTextureA = RenderTarget(_device, _allocator, format, denoiseWidth, denoiseHeight, usage, "denoise A render target");
-    _renderTargets.denoiseTextureB = RenderTarget(_device, _allocator, format, denoiseWidth, denoiseHeight, usage, "denoise B render target");
-    _renderTargets.denoiseTextureC = RenderTarget(_device, _allocator, format, denoiseWidth, denoiseHeight, usage, "denoise C render target");*/
-}
-
-//////////////////////////
-//                      //
-//      CALLBACKS       //
+//                     //
+//      Callbacks      //
+//                     //
 
 void VulkanBackEnd::FramebufferResizeCallback(GLFWwindow* window, int width, int height) {
     _frameBufferResized = true;

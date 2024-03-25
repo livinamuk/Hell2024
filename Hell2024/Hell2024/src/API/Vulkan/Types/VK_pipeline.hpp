@@ -1,9 +1,8 @@
 #pragma once
-#include "VK_types.h"
 #include <glm/glm.hpp>
 #include <string>
 
-enum VertexDescriptionType { POSITION_NORMAL_TEXCOORD, POSITION_TEXCOORD, POSITION };
+enum VertexDescriptionType { POSITION_NORMAL_TEXCOORD, POSITION_TEXCOORD, POSITION, ALL};
 
 struct VertexInputDescription {
     std::vector<VkVertexInputBindingDescription> bindings;
@@ -72,39 +71,80 @@ struct Pipeline {
 		_vertexDescription.Reset();
 		VkVertexInputBindingDescription mainBinding = {};
 		mainBinding.binding = 0;
-		mainBinding.stride = sizeof(VulkanVertex);
+		mainBinding.stride = sizeof(Vertex);
 		mainBinding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 		_vertexDescription.bindings.push_back(mainBinding);
-		// Position
-		VkVertexInputAttributeDescription positionAttribute = {};
-		positionAttribute.binding = 0;
-		positionAttribute.location = 0;
-		positionAttribute.format = VK_FORMAT_R32G32B32_SFLOAT;
-		positionAttribute.offset = offsetof(VulkanVertex, position);
-		// Normals
-		VkVertexInputAttributeDescription normalAttribute = {};
-		normalAttribute.binding = 0;
-		normalAttribute.location = 1;
-		normalAttribute.format = VK_FORMAT_R32G32B32_SFLOAT;
-		normalAttribute.offset = offsetof(VulkanVertex, normal);
-		// UVs
-		VkVertexInputAttributeDescription uvAttribute = {};
-		uvAttribute.binding = 0;
-		uvAttribute.location = 1;
-		uvAttribute.format = VK_FORMAT_R32G32_SFLOAT;
-		uvAttribute.offset = offsetof(VulkanVertex, uv);
+
+        // Position
+        VkVertexInputAttributeDescription positionAttribute = {};
+        positionAttribute.binding = 0;
+        positionAttribute.location = 0;
+        positionAttribute.format = VK_FORMAT_R32G32B32_SFLOAT;
+        positionAttribute.offset = offsetof(Vertex, position);
+
+        // Normals
+        VkVertexInputAttributeDescription normalAttribute = {};
+        normalAttribute.binding = 0;
+        normalAttribute.location = 1;
+        normalAttribute.format = VK_FORMAT_R32G32B32_SFLOAT;
+        normalAttribute.offset = offsetof(Vertex, normal);
+
+        // UVs
+        VkVertexInputAttributeDescription uvAttribute = {};
+        uvAttribute.binding = 0;
+        uvAttribute.location = 2;
+        uvAttribute.format = VK_FORMAT_R32G32_SFLOAT;
+        uvAttribute.offset = offsetof(Vertex, uv);
+
+        // Tangent
+        VkVertexInputAttributeDescription tangentAttribute = {};
+        tangentAttribute.binding = 0;
+        tangentAttribute.location = 3;
+        tangentAttribute.format = VK_FORMAT_R32G32B32_SFLOAT;
+        tangentAttribute.offset = offsetof(Vertex, tangent);
+
+        // BiTangent
+        VkVertexInputAttributeDescription biTangentAttribute = {};
+        biTangentAttribute.binding = 0;
+        biTangentAttribute.location = 4;
+        biTangentAttribute.format = VK_FORMAT_R32G32B32_SFLOAT;
+        biTangentAttribute.offset = offsetof(Vertex, bitangent);
+
+        // Weight
+        VkVertexInputAttributeDescription weightAttribute = {};
+        weightAttribute.binding = 0;
+        weightAttribute.location = 5;
+        weightAttribute.format = VK_FORMAT_R32G32B32_SFLOAT;
+        weightAttribute.offset = offsetof(Vertex, weight);
+
+        // BoneID
+        VkVertexInputAttributeDescription boneIDAttribute = {};
+        boneIDAttribute.binding = 0;
+        boneIDAttribute.location = 6;
+        boneIDAttribute.format = VK_FORMAT_R32G32B32_UINT;
+        boneIDAttribute.offset = offsetof(Vertex, boneID);
+
 		if (type == POSITION_NORMAL_TEXCOORD) {
 			_vertexDescription.attributes.push_back(positionAttribute);
 			_vertexDescription.attributes.push_back(normalAttribute);
 			_vertexDescription.attributes.push_back(uvAttribute);
 		}
-		else if (type == POSITION_TEXCOORD) {
-			_vertexDescription.attributes.push_back(positionAttribute);
-			_vertexDescription.attributes.push_back(uvAttribute);
-		}
-		else if (type == POSITION) {
-			_vertexDescription.attributes.push_back(positionAttribute);
-		}
+        else if (type == POSITION_TEXCOORD) {
+	        _vertexDescription.attributes.push_back(positionAttribute);
+	        _vertexDescription.attributes.push_back(uvAttribute);
+        }
+        else if (type == POSITION) {
+            _vertexDescription.attributes.push_back(positionAttribute);
+        }
+        else if (type == ALL) {
+            _vertexDescription.attributes.push_back(positionAttribute);
+            //_vertexDescription.attributes.push_back(normalAttribute);
+            _vertexDescription.attributes.push_back(uvAttribute);
+           // _vertexDescription.attributes.push_back(tangentAttribute);
+           // _vertexDescription.attributes.push_back(biTangentAttribute);
+          //  _vertexDescription.attributes.push_back(weightAttribute);
+          //  _vertexDescription.attributes.push_back(boneIDAttribute);
+        }
 	}
 
 	void SetTopology(VkPrimitiveTopology topology) {
@@ -167,7 +207,7 @@ struct Pipeline {
 		rasterizationCreateInfo.polygonMode = _polygonMode;
 		rasterizationCreateInfo.lineWidth = 1.0f;
 		rasterizationCreateInfo.cullMode = _cullModeFlags;
-		rasterizationCreateInfo.frontFace = VK_FRONT_FACE_CLOCKWISE;
+        rasterizationCreateInfo.frontFace = VK_FRONT_FACE_CLOCKWISE;// VK_FRONT_FACE_COUNTER_CLOCKWISE VK_FRONT_FACE_CLOCKWISE
 		rasterizationCreateInfo.depthBiasEnable = VK_FALSE;
 		rasterizationCreateInfo.depthBiasConstantFactor = 0.0f;
 		rasterizationCreateInfo.depthBiasClamp = 0.0f;

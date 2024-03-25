@@ -83,10 +83,10 @@ void Window::CreatePhysicsObjects() {
 
 glm::vec3 Window::GetFrontLeftCorner() {
 	glm::vec4 result(0);
-	result.z -= 0.1;
+	result.z -= 0.1f;
 	result.y += WINDOW_HEIGHT;
 	result.x += WINDOW_WIDTH * 0.5f;
-	result.a = 1;
+	result.a = 1.0f;
 	glm::vec4 worldSpaceResult = GetModelMatrix() * result;
 	return worldSpaceResult;
 }

@@ -2,7 +2,6 @@
 #include "../Common.h"
 #include "AnimatedGameObject.h"
 #include "../Physics/Physics.h"
-#include "../Renderer/ShadowMap.h"
 #include "keycodes.h"
 
 #define GLOCK_CLIP_SIZE 12

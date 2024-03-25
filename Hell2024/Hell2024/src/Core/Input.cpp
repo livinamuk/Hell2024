@@ -1,6 +1,7 @@
 #include "Input.h"
 #include "../BackEnd/BackEnd.h"
 #include "../Renderer/Renderer.h"
+#include "../Renderer/Renderer_OLD.h"
 
 namespace Input {
 
@@ -51,8 +52,8 @@ namespace Input {
             BackEnd::ToggleFullscreen();
         }
         if (KeyPressed(HELL_KEY_H)) {
-            Renderer::HotloadShadersNEW();
-        }
+            Renderer::HotloadShaders();
+        }        
 
         // Wheel
         _mouseWheelUp = false;

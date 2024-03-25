@@ -18,11 +18,12 @@
 #include "Core/Player.h"
 #include "Core/Scene.h"
 #include "Renderer/Renderer.h"
+#include "Renderer/Renderer_OLD.h"
 #include "Renderer/TextBlitter.h"
 
 void Engine::Run() {
 
-    BackEnd::Init(API::VULKAN);
+    BackEnd::Init(API::OPENGL);
 
     while (BackEnd::WindowIsOpen()) {
 
@@ -64,7 +65,7 @@ void Engine::RunOld() {
         BackEnd::UpdateSubSystems();
         
         AssetManager::LoadNextItem();
-        Renderer::RenderLoadingScreen();
+        Renderer_OLD::RenderLoadingScreen();
 
         BackEnd::EndFrame();
     }
@@ -72,9 +73,9 @@ void Engine::RunOld() {
     // Init some shit
     if (BackEnd::WindowIsOpen()) {
         Scene::LoadMap("map.txt");
-        Renderer::Init();
-        Renderer::CreatePointCloudBuffer();
-        Renderer::CreateTriangleWorldVertexBuffer();
+        Renderer_OLD::Init();
+        Renderer_OLD::CreatePointCloudBuffer();
+        Renderer_OLD::CreateTriangleWorldVertexBuffer();
         Scene::CreatePlayers();
         DebugMenu::Init();
     }
@@ -149,12 +150,12 @@ void Engine::RunOld() {
 
             // Fullscreen
             if (EngineState::GetSplitScreenMode() == SplitScreenMode::FULLSCREEN) {
-                Renderer::RenderFrame(&Scene::_players[EngineState::GetCurrentPlayer()]);
+                Renderer_OLD::RenderFrame(&Scene::_players[EngineState::GetCurrentPlayer()]);
             }
             // Splitscreen
             else if (EngineState::GetSplitScreenMode() == SplitScreenMode::SPLITSCREEN) {
                 for (Player& player : Scene::_players) {
-                    Renderer::RenderFrame(&player);
+                    Renderer_OLD::RenderFrame(&player);
                 }
             }
         }
@@ -162,10 +163,10 @@ void Engine::RunOld() {
         // Floor plan
         else if (EngineState::GetEngineMode() == FLOORPLAN) {
             Floorplan::PrepareRenderFrame();
-            Renderer::RenderFloorplanFrame();
+            Renderer_OLD::RenderFloorplanFrame();
         }
         if (DebugMenu::IsOpen()) {
-            Renderer::RenderDebugMenu();
+            Renderer_OLD::RenderDebugMenu();
         }
 
         BackEnd::EndFrame();
@@ -178,15 +179,15 @@ void Engine::RunOld() {
 void Engine::LazyKeyPresses() {
 
     if (Input::KeyPressed(GLFW_KEY_X)) {
-        Renderer::NextMode();
+        Renderer_OLD::NextMode();
         Audio::PlayAudio(AUDIO_SELECT, 1.00f);
     }
     if (Input::KeyPressed(GLFW_KEY_Z)) {
-        Renderer::PreviousMode();
+        Renderer_OLD::PreviousMode();
         Audio::PlayAudio(AUDIO_SELECT, 1.00f);
     }
     if (Input::KeyPressed(GLFW_KEY_H)) {
-        Renderer::HotloadShaders();
+        Renderer_OLD::HotloadShaders();
     }
     if (Input::KeyPressed(HELL_KEY_1)) {
         Scene::_players[0]._keyboardIndex = 0;
@@ -217,19 +218,19 @@ void Engine::LazyKeyPresses() {
         DebugMenu::Toggle();
     }
     if (Input::KeyPressed(HELL_KEY_L)) {
-        Renderer::ToggleDrawingLights();
+        Renderer_OLD::ToggleDrawingLights();
         Audio::PlayAudio(AUDIO_SELECT, 1.00f);
     }
     if (Input::KeyPressed(HELL_KEY_B)) {
-        Renderer::NextDebugLineRenderMode();
+        Renderer_OLD::NextDebugLineRenderMode();
         Audio::PlayAudio(AUDIO_SELECT, 1.00f);
 	}
 	if (Input::KeyPressed(HELL_KEY_Y)) {
-		Renderer::ToggleDrawingProbes();
+        Renderer_OLD::ToggleDrawingProbes();
 		Audio::PlayAudio(AUDIO_SELECT, 1.00f);
 	}
 	if (Input::KeyPressed(HELL_KEY_GRAVE_ACCENT)) {
-		Renderer::ToggleDebugText();
+        Renderer_OLD::ToggleDebugText();
 		Audio::PlayAudio(AUDIO_SELECT, 1.00f);
 	}
     if (Input::KeyPressed(GLFW_KEY_C)) {
@@ -238,7 +239,7 @@ void Engine::LazyKeyPresses() {
         // This seems questionable
         // This seems questionable
 		if (EngineState::GetSplitScreenMode() == SplitScreenMode::FULLSCREEN) {
-			Renderer::RecreateFrameBuffers(EngineState::GetCurrentPlayer());
+            Renderer_OLD::RecreateFrameBuffers(EngineState::GetCurrentPlayer());
 		}
         // This seems questionable
         // This seems questionable
@@ -247,7 +248,7 @@ void Engine::LazyKeyPresses() {
     }
     if (Input::KeyPressed(GLFW_KEY_V)) {
 		EngineState::NextSplitScreenMode();
-		Renderer::RecreateFrameBuffers(EngineState::GetCurrentPlayer());
+        Renderer_OLD::RecreateFrameBuffers(EngineState::GetCurrentPlayer());
 		Audio::PlayAudio(AUDIO_SELECT, 1.00f);
     }
     if (Input::KeyPressed(GLFW_KEY_N)) {
@@ -276,6 +277,6 @@ void Engine::LazyKeyPressesEditor() {
         Audio::PlayAudio(AUDIO_SELECT, 1.00f);
 	}	
     if (Input::KeyPressed(GLFW_KEY_H)) {
-		Renderer::HotloadShaders();
+        Renderer_OLD::HotloadShaders();
 	}
 }

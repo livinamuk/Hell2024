@@ -1,14 +1,17 @@
 #pragma once
-#include "Types/VK_types.h"
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
+#include "Types/vk_allocation.hpp"
+#include "Types/vk_frameData.hpp"
+#include "../../Common.h"
+#include "../../Types/Mesh.hpp"
+#include "../../Renderer/RendererCommon.h"
 
 namespace VulkanBackEnd {
     
     void CreateVulkanInstance();
 
     void InitMinimum();
-    //void Init();
     bool StillLoading();
     void LoadNextItem();
     void ImmediateSubmit(std::function<void(VkCommandBuffer cmd)>&& function);
@@ -21,6 +24,8 @@ namespace VulkanBackEnd {
     void CreateCommandBuffers();
     void CreateSyncStructures();
     void CreateSampler();
+
+    void UploadVertexData(std::vector<Vertex>& vertices, std::vector<uint32_t>& indices);
 
     void AddDebugName(VkBuffer buffer, const char* name);
     void AddDebugName(VkDescriptorSetLayout descriptorSetLayout, const char* name);
@@ -39,5 +44,17 @@ namespace VulkanBackEnd {
     VkDescriptorPool GetDescriptorPool();
     VkSampler GetSampler(); 
     std::vector<VkImage>& GetSwapchainImages();
+
+    inline AllocatedBuffer _mainVertexBuffer;
+    inline AllocatedBuffer _mainIndexBuffer;
+
+    // Raytracing
+    void InitRayTracing();
+    void CreateAccelerationStructureBuffer(AccelerationStructure& accelerationStructure, VkAccelerationStructureBuildSizesInfoKHR buildSizeInfo);
+    uint64_t GetBufferDeviceAddress(VkBuffer buffer);
+    AccelerationStructure CreateBottomLevelAccelerationStructure(Mesh& mesh);
+    void CreateTopLevelAccelerationStructure(std::vector<VkAccelerationStructureInstanceKHR> instances, AccelerationStructure& outTLAS);
+    std::vector<VkAccelerationStructureInstanceKHR> CreateTLASInstancesFromRenderItems(std::vector<RenderItem3D>& renderItems);
+
 };
 

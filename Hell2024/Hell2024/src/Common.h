@@ -20,16 +20,16 @@ enum class SplitScreenMode { FULLSCREEN, SPLITSCREEN, SPLITSCREEN_MODE_COUNT };
 enum EngineMode { GAME = 0, FLOORPLAN, EDITOR };
 enum Weapon { KNIFE = 0, GLOCK, SHOTGUN, AKS74U, MP7, WEAPON_COUNT };
 enum WeaponAction {
-    IDLE = 0, 
-    FIRE, 
-    RELOAD, 
-    RELOAD_FROM_EMPTY, 
-    DRAW_BEGIN, 
-    DRAWING, 
-    SPAWNING, 
-    RELOAD_SHOTGUN_BEGIN, 
-    RELOAD_SHOTGUN_SINGLE_SHELL, 
-    RELOAD_SHOTGUN_DOUBLE_SHELL, 
+    IDLE = 0,
+    FIRE,
+    RELOAD,
+    RELOAD_FROM_EMPTY,
+    DRAW_BEGIN,
+    DRAWING,
+    SPAWNING,
+    RELOAD_SHOTGUN_BEGIN,
+    RELOAD_SHOTGUN_SINGLE_SHELL,
+    RELOAD_SHOTGUN_DOUBLE_SHELL,
     RELOAD_SHOTGUN_END,
     ADS_IN,
     ADS_OUT,
@@ -115,23 +115,29 @@ enum VB_TYPES {
 };
 
 struct Transform {
-	glm::vec3 position = glm::vec3(0);
-	glm::vec3 rotation = glm::vec3(0);
-	glm::vec3 scale = glm::vec3(1);
-	glm::mat4 to_mat4() {
-		glm::mat4 m = glm::translate(glm::mat4(1), position);
-		m *= glm::mat4_cast(glm::quat(rotation));
-		m = glm::scale(m, scale);
-		return m;
-	}; 
+    glm::vec3 position = glm::vec3(0);
+    glm::vec3 rotation = glm::vec3(0);
+    glm::vec3 scale = glm::vec3(1);
+    glm::mat4 to_mat4() {
+        glm::mat4 m = glm::translate(glm::mat4(1), position);
+        m *= glm::mat4_cast(glm::quat(rotation));
+        m = glm::scale(m, scale);
+        return m;
+    };
 };
 
 struct Vertex {
-	glm::vec3 position = glm::vec3(0);
-	glm::vec3 normal = glm::vec3(0);
+    glm::vec3 position = glm::vec3(0);
+    float pad0 = 0;
+    glm::vec3 normal = glm::vec3(0);
+    float pad1 = 0;
     glm::vec2 uv = glm::vec2(0);
+    float pad2 = 0;
+    float pad3 = 0;
     glm::vec3 tangent = glm::vec3(0);
+    float pad4 = 0;
     glm::vec3 bitangent = glm::vec3(0);
+    float pad5 = 0;
     glm::vec4 weight = glm::vec4(0);
     glm::ivec4 boneID = glm::ivec4(0);
 
@@ -261,22 +267,22 @@ struct Material {
     int _rma = 0;
 };
 
-enum RaycastGroup { 
+enum RaycastGroup {
     RAYCAST_DISABLED = 0,
-    RAYCAST_ENABLED = 1, 
-    PLAYER_1_RAGDOLL = 2, 
+    RAYCAST_ENABLED = 1,
+    PLAYER_1_RAGDOLL = 2,
     PLAYER_2_RAGDOLL = 4
 };
 
-enum PhysicsObjectType { UNDEFINED = 0, GAME_OBJECT, GLASS, DOOR, SCENE_MESH, RAGDOLL_RIGID};
+enum PhysicsObjectType { UNDEFINED = 0, GAME_OBJECT, GLASS, DOOR, SCENE_MESH, RAGDOLL_RIGID };
 
 struct PhysicsObjectData {
     PhysicsObjectData(PhysicsObjectType type, void* parent) {
-		this->type = type;
-		this->parent = parent;
-	}
-	PhysicsObjectType type;
-	void* parent;
+        this->type = type;
+        this->parent = parent;
+    }
+    PhysicsObjectType type;
+    void* parent;
 };
 
 struct PhysXRayResult {

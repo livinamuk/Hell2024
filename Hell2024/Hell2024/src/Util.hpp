@@ -557,6 +557,12 @@ namespace Util {
         }
     }*/
 
+    inline const std::string GetFilename(const std::string& filepath) {
+        std::string result = filepath.substr(filepath.rfind("/") + 1);
+        result = result.substr(0, result.length() - 4);
+        return result;
+    }
+
     inline FileInfo GetFileInfo(std::string filepath) {
         // isolate name
         std::string filename = filepath.substr(filepath.rfind("/") + 1);

@@ -1,9 +1,9 @@
 #pragma once
 #include "../../Common.h"
 #include "../../API/OpenGL/GL_assetManager.h"
+#include "../../API/OpenGL/Types/GL_shader.h"
 #include "../../Core/AssetManager.h"
 #include "../../Core/GameObject.h"
-#include "../../Renderer/Shader.h"
 
 struct Toilet {
 

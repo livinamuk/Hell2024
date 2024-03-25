@@ -5,7 +5,7 @@
 #include "Scene.h"
 #include "Config.hpp"
 #include "Floorplan.h"
-#include "../Renderer/Renderer.h"
+#include "../Renderer/Renderer_OLD.h"
 #include "../EngineState.hpp"
 #include <format>
 
@@ -227,7 +227,7 @@ void DebugMenu::PressedEnter() {
 		_isOpen = false;
 		EngineState::_engineMode = EngineMode::EDITOR;
 		EngineState::_splitScreenMode == SplitScreenMode::FULLSCREEN;
-        Renderer::EnteredEditorMode();
+        Renderer_OLD::EnteredEditorMode();
 	}
 	// Load map
 	else if (flag == MenuItemFlag::LOAD_MAP) {

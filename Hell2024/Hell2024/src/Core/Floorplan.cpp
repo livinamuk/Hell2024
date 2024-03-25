@@ -6,7 +6,7 @@
 #include "../Core/Scene.h"
 #include "../EngineState.hpp"
 #include "../Renderer/TextBlitter.h"
-#include "../Renderer/Renderer.h"
+#include "../Renderer/Renderer_OLD.h"
 #include "../Types/Modular/ModularCommon.h"
 #include "../Util.hpp"
 
@@ -411,30 +411,30 @@ void Floorplan::PrepareRenderFrame() {
     // Draw grid
     float gridY = -0.1f;
     for (float x = 0; x <= _mapWidth + _gridSpacing / 2; x += _gridSpacing) {
-        Renderer::QueueLineForDrawing(Line(glm::vec3(x, gridY, 0), glm::vec3(x, gridY, _mapWidth), GRID_COLOR));
+        Renderer_OLD::QueueLineForDrawing(Line(glm::vec3(x, gridY, 0), glm::vec3(x, gridY, _mapWidth), GRID_COLOR));
     }
     for (float z = 0; z <= _mapDepth + _gridSpacing / 2; z += _gridSpacing) {
-        Renderer::QueueLineForDrawing(Line(glm::vec3(0, gridY, z), glm::vec3(_mapDepth, gridY, z), GRID_COLOR));
+        Renderer_OLD::QueueLineForDrawing(Line(glm::vec3(0, gridY, z), glm::vec3(_mapDepth, gridY, z), GRID_COLOR));
     }*/
     
     if (_mode == FloorplanMode::WALLS) {
 
         // Walls
         for (Wall& wall : Scene::_walls) {
-            Renderer::QueueLineForDrawing(Line(wall.begin, wall.end, WHITE));
-            Renderer::QueuePointForDrawing(Point(wall.begin, YELLOW));
-            Renderer::QueuePointForDrawing(Point(wall.end, YELLOW));
+            Renderer_OLD::QueueLineForDrawing(Line(wall.begin, wall.end, WHITE));
+            Renderer_OLD::QueuePointForDrawing(Point(wall.begin, YELLOW));
+            Renderer_OLD::QueuePointForDrawing(Point(wall.end, YELLOW));
 
             // Normal
             glm::vec3 normalBegin = wall.GetMidPoint();
             glm::vec3 normalEnd = wall.GetMidPoint() + (wall.GetNormal() * glm::vec3(0.1f));
-            Renderer::QueueLineForDrawing(Line(normalBegin, normalEnd, WHITE));
+            Renderer_OLD::QueueLineForDrawing(Line(normalBegin, normalEnd, WHITE));
         }
 
         if (_action == CREATING_WALL) {
-            Renderer::QueueLineForDrawing(_createLine);
-            Renderer::QueuePointForDrawing(Point(_createLine.p1.pos, YELLOW));
-            Renderer::QueuePointForDrawing(Point(_createLine.p2.pos, YELLOW));
+            Renderer_OLD::QueueLineForDrawing(_createLine);
+            Renderer_OLD::QueuePointForDrawing(Point(_createLine.p1.pos, YELLOW));
+            Renderer_OLD::QueuePointForDrawing(Point(_createLine.p2.pos, YELLOW));
 
             // Normal
             glm::vec3 lineNormal = GetLineNormal(_createLine);
@@ -443,11 +443,11 @@ void Floorplan::PrepareRenderFrame() {
                 lineNormal *= glm::vec3(-1);
             }
             glm::vec3 normalEnd = GetLineMidPoint(_createLine) + (lineNormal * glm::vec3(0.1f));
-            Renderer::QueueLineForDrawing(Line(normalBegin, normalEnd, WHITE));
+            Renderer_OLD::QueueLineForDrawing(Line(normalBegin, normalEnd, WHITE));
         }
 
         if (_hoveredVertex.hoverFound) {
-            Renderer::QueuePointForDrawing(Point(*_hoveredVertex.position + glm::vec3(0, 2, 0), RED));
+            Renderer_OLD::QueuePointForDrawing(Point(*_hoveredVertex.position + glm::vec3(0, 2, 0), RED));
         }
     }
 
@@ -458,31 +458,31 @@ void Floorplan::PrepareRenderFrame() {
             float z1 = std::min(_creatingFloorBegin.z, _creatingFloorEnd.z);
             float x2 = std::max(_creatingFloorBegin.x, _creatingFloorEnd.x);
             float z2 = std::max(_creatingFloorBegin.z, _creatingFloorEnd.z);
-            Renderer::QueuePointForDrawing(Point(glm::vec3(x1, 1, z1), YELLOW));
-            Renderer::QueuePointForDrawing(Point(glm::vec3(x1, 1, z2), YELLOW));
-            Renderer::QueuePointForDrawing(Point(glm::vec3(x2, 1, z1), YELLOW));
-            Renderer::QueuePointForDrawing(Point(glm::vec3(x2, 1, z2), YELLOW));
-            Renderer::QueueLineForDrawing(Line(glm::vec3(x1, 1, z1), glm::vec3(x1, 1, z2), WHITE));
-            Renderer::QueueLineForDrawing(Line(glm::vec3(x2, 1, z1), glm::vec3(x2, 1, z2), WHITE));
-            Renderer::QueueLineForDrawing(Line(glm::vec3(x1, 1, z1), glm::vec3(x2, 1, z1), WHITE));
-            Renderer::QueueLineForDrawing(Line(glm::vec3(x1, 1, z2), glm::vec3(x2, 1, z2), WHITE));
+            Renderer_OLD::QueuePointForDrawing(Point(glm::vec3(x1, 1, z1), YELLOW));
+            Renderer_OLD::QueuePointForDrawing(Point(glm::vec3(x1, 1, z2), YELLOW));
+            Renderer_OLD::QueuePointForDrawing(Point(glm::vec3(x2, 1, z1), YELLOW));
+            Renderer_OLD::QueuePointForDrawing(Point(glm::vec3(x2, 1, z2), YELLOW));
+            Renderer_OLD::QueueLineForDrawing(Line(glm::vec3(x1, 1, z1), glm::vec3(x1, 1, z2), WHITE));
+            Renderer_OLD::QueueLineForDrawing(Line(glm::vec3(x2, 1, z1), glm::vec3(x2, 1, z2), WHITE));
+            Renderer_OLD::QueueLineForDrawing(Line(glm::vec3(x1, 1, z1), glm::vec3(x2, 1, z1), WHITE));
+            Renderer_OLD::QueueLineForDrawing(Line(glm::vec3(x1, 1, z2), glm::vec3(x2, 1, z2), WHITE));
         }
 
         for (Floor& floor : Scene::_floors) {
-             Renderer::QueuePointForDrawing(Point(floor.v1.position, YELLOW));
-             Renderer::QueuePointForDrawing(Point(floor.v2.position, YELLOW));
-             Renderer::QueuePointForDrawing(Point(floor.v3.position, YELLOW));
-             Renderer::QueuePointForDrawing(Point(floor.v4.position, YELLOW));
+             Renderer_OLD::QueuePointForDrawing(Point(floor.v1.position, YELLOW));
+             Renderer_OLD::QueuePointForDrawing(Point(floor.v2.position, YELLOW));
+             Renderer_OLD::QueuePointForDrawing(Point(floor.v3.position, YELLOW));
+             Renderer_OLD::QueuePointForDrawing(Point(floor.v4.position, YELLOW));
 
-             Renderer::QueueLineForDrawing(Line(floor.v1.position, floor.v2.position, RED));
-             Renderer::QueueLineForDrawing(Line(floor.v1.position, floor.v4.position, RED));
-             Renderer::QueueLineForDrawing(Line(floor.v3.position, floor.v4.position, RED));
-             Renderer::QueueLineForDrawing(Line(floor.v3.position, floor.v2.position, RED));
+             Renderer_OLD::QueueLineForDrawing(Line(floor.v1.position, floor.v2.position, RED));
+             Renderer_OLD::QueueLineForDrawing(Line(floor.v1.position, floor.v4.position, RED));
+             Renderer_OLD::QueueLineForDrawing(Line(floor.v3.position, floor.v4.position, RED));
+             Renderer_OLD::QueueLineForDrawing(Line(floor.v3.position, floor.v2.position, RED));
         }
 
 
         if (_hoveredVertex.hoverFound) {
-            Renderer::QueuePointForDrawing(Point(*_hoveredVertex.position + glm::vec3(0, 2, 0), WHITE));
+            Renderer_OLD::QueuePointForDrawing(Point(*_hoveredVertex.position + glm::vec3(0, 2, 0), WHITE));
         }
     }
     
@@ -495,10 +495,10 @@ void Floorplan::PrepareRenderFrame() {
             if (MouseOverDoor(door)) {
                 color = WHITE;
             }
-            Renderer::QueuePointForDrawing(Point(door.GetFloorplanVertFrontLeft(0.0f), LIGHT_BLUE));
-            Renderer::QueuePointForDrawing(Point(door.GetFloorplanVertFrontRight(0.0f), LIGHT_BLUE));
-            Renderer::QueuePointForDrawing(Point(door.GetFloorplanVertBackLeft(0.0f), LIGHT_BLUE));
-            Renderer::QueuePointForDrawing(Point(door.GetFloorplanVertBackRight(0.0f), LIGHT_BLUE));
+            Renderer_OLD::QueuePointForDrawing(Point(door.GetFloorplanVertFrontLeft(0.0f), LIGHT_BLUE));
+            Renderer_OLD::QueuePointForDrawing(Point(door.GetFloorplanVertFrontRight(0.0f), LIGHT_BLUE));
+            Renderer_OLD::QueuePointForDrawing(Point(door.GetFloorplanVertBackLeft(0.0f), LIGHT_BLUE));
+            Renderer_OLD::QueuePointForDrawing(Point(door.GetFloorplanVertBackRight(0.0f), LIGHT_BLUE));
         }
         Triangle triA;
         triA.color = color;
@@ -510,8 +510,8 @@ void Floorplan::PrepareRenderFrame() {
         triB.p1 = door.GetFloorplanVertBackLeft(0);
         triB.p2 = door.GetFloorplanVertFrontRight(0);
         triB.p3 = door.GetFloorplanVertBackRight(0);
-        Renderer::QueueTriangleForSolidRendering(triA);
-        Renderer::QueueTriangleForSolidRendering(triB);
+        Renderer_OLD::QueueTriangleForSolidRendering(triA);
+        Renderer_OLD::QueueTriangleForSolidRendering(triB);
     }
 }
 

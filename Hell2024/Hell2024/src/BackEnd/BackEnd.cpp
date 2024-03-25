@@ -1,7 +1,7 @@
 #include "BackEnd.h"
 #include <iostream>
 #include <string>
-#include "../Renderer/Renderer.h"
+#include "../Renderer/Renderer_OLD.h"
 #include "../API/OpenGL/GL_backEnd.h"
 #include "../API/OpenGL/GL_renderer.h"
 #include "../API/OpenGL/GL_assetManager.h"
@@ -99,7 +99,7 @@ namespace BackEnd {
             glfwMakeContextCurrent(_window);
             OpenGLBackEnd::InitMinimum();
             OpenGLRenderer::InitMinimum();
-            Renderer::InitMinimumGL();
+            Renderer_OLD::InitMinimumGL();
             OpenGLAssetManager::LoadFont();
             OpenGLAssetManager::LoadAssetsMultithreaded();
         }
@@ -108,13 +108,12 @@ namespace BackEnd {
             // VulkanRenderer minimum init is tangled in the above function 
         }
 
-        glfwShowWindow(_window);
-
         // Init sub-systems
         Input::Init();
         Audio::Init();
         Physics::Init();
         InputMulti::Init();
+        glfwShowWindow(BackEnd::GetWindowPointer());
     }
 
     void BeginFrame() {
@@ -134,7 +133,6 @@ namespace BackEnd {
     }
 
     void UpdateSubSystems() {
-
         Input::Update();
         Audio::Update();
     }
@@ -203,7 +201,7 @@ namespace BackEnd {
         }
         if (GetAPI() == API::OPENGL) {
             //OpenGLBackEnd::HandleFrameBufferResized();
-            Renderer::RecreateFrameBuffers(EngineState::GetCurrentPlayer());
+            Renderer_OLD::RecreateFrameBuffers(EngineState::GetCurrentPlayer());
         }
         else {
             VulkanBackEnd::HandleFrameBufferResized();

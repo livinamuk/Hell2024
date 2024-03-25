@@ -2,11 +2,8 @@
 #include <map>
 #include <vector>
 #include <assert.h>
-#include "../../common.h"
 #include "Animation.h"
-//#include "Physics/Ragdoll.h"
-//#include "Renderer/Material.h"
-#include "../../Renderer/Shader.h"
+#include "../../common.h"
 
 struct Joint {
     const char* m_name;

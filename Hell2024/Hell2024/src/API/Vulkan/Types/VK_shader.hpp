@@ -1,7 +1,9 @@
 #pragma once
-#include "VK_Types.h"
+#include "Vulkan/vulkan.h"
+#include <string>
 #include <fstream>
 #include <sstream>
+#include <iostream>
 #include "shaderc/shaderc.hpp"
 
 namespace VulkanShaderUtil {
@@ -32,31 +34,20 @@ namespace Vulkan {
     };
 }
 
+
+
 std::string VulkanShaderUtil::ReadFile(std::string filepath) {
     std::string line;
     std::ifstream stream(filepath);
     std::stringstream ss;
     while (getline(stream, line)) {
-        // Check for includes
-        if (line.length() >= 8 && line.substr(0, 8) == "#include") {
-            // Get the file name
-            std::string filename = line.substr(line.find('"') + 1, line.rfind('"') - line.find('"') - 1);
-            // Add the contents
-            std::string line2;
-            std::ifstream stream2("res/shaders/" + filename);
-            while (getline(stream2, line2)) {
-                ss << line2 << "\n";
-            }
-        }
-        else {
-            ss << line << "\n";
-        }
+        ss << line << "\n";
     }
     return ss.str();
 }
 
 std::vector<uint32_t> VulkanShaderUtil::CompileFile(const std::string& source_name, shaderc_shader_kind kind, const std::string& source, std::string shaderPath, bool optimize) {
-   
+
     shaderc::Compiler compiler;
     shaderc::CompileOptions options;
 
@@ -78,7 +69,7 @@ std::vector<uint32_t> VulkanShaderUtil::CompileFile(const std::string& source_na
     return { module.cbegin(), module.cend() };
 }
 
-void VulkanShaderUtil::LoadShader(VkDevice device, std::string filePath, VkShaderStageFlagBits flag, VkShaderModule * outShaderModule) {
+void VulkanShaderUtil::LoadShader(VkDevice device, std::string filePath, VkShaderStageFlagBits flag, VkShaderModule* outShaderModule) {
 
     shaderc_shader_kind kind;
     if (flag == VK_SHADER_STAGE_VERTEX_BIT) {
@@ -100,7 +91,7 @@ void VulkanShaderUtil::LoadShader(VkDevice device, std::string filePath, VkShade
         kind = shaderc_compute_shader;
     }
 
-    std::string vertSource = VulkanShaderUtil::ReadFile("res/vulkan_shaders/" + filePath);
+    std::string vertSource = VulkanShaderUtil::ReadFile("res/shaders/Vulkan/" + filePath);
     std::vector<uint32_t> buffer = VulkanShaderUtil::CompileFile("shader_src", kind, vertSource, filePath, true);
 
     //create a new shader module, using the buffer we loaded

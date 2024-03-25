@@ -1,6 +1,4 @@
 #include "VK_assetManager.h"
-#include "Types/VK_mesh.h"
-#include "VK_util.hpp"
 
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
@@ -22,16 +20,17 @@
 // GET THIS OUT OF HERE
 #include "VK_BackEnd.h"
 #include "../OpenGL/Types/GL_model.h"
+#include "../../Util.hpp"
 // GET THIS OUT OF HERE
 // GET THIS OUT OF HERE
 // GET THIS OUT OF HERE
 
-std::vector<VulkanVertex> _vertices;		// ALL of em
-std::vector<uint32_t> _indices;		        // ALL of em
-std::unordered_map<std::string, VulkanModel> _models;
-std::vector<VulkanMesh> _meshes;
-uint32_t _vertexOffset = 0;			// insert index for next mesh
-uint32_t _indexOffset = 0;			// insert index for next mesh
+//std::vector<VulkanVertex> _vertices;		// ALL of em
+//std::vector<uint32_t> _indices;		        // ALL of em
+//std::unordered_map<std::string, VulkanModel> _models;
+//std::vector<VulkanMesh> _meshes;
+//uint32_t _vertexOffset = 0;			// insert index for next mesh
+//uint32_t _indexOffset = 0;			// insert index for next mesh
 std::vector<std::string> _loadingText;
 
 std::vector<std::string>& VulkanAssetManager::GetLoadingText() {
@@ -195,6 +194,7 @@ AssetFile PackMesh(MeshInfo* info, char* vertexData, char* indexData) {
     file.json = metadata.dump();
     return file;
 }
+/*
 VulkanMesh* VulkanAssetManager::GetMesh(int index) {
     if (index >= 0 && index < _meshes.size())
         return &_meshes[index];
@@ -213,7 +213,7 @@ VulkanModel* VulkanAssetManager::GetModelByName(const std::string& name) {
     }
 }
 
-int VulkanAssetManager::CreateMesh(std::vector<VulkanVertex>& vertices, std::vector<uint32_t>& indices) {
+int VulkanAssetManager::CreateMesh(std::vector<Vertex>& vertices, std::vector<uint32_t>& indices) {
 
     VulkanMesh& mesh = _meshes.emplace_back(VulkanMesh());
     mesh._vertexCount = (uint32_t)vertices.size();
@@ -222,19 +222,19 @@ int VulkanAssetManager::CreateMesh(std::vector<VulkanVertex>& vertices, std::vec
     mesh._indexOffset = _indexOffset;
 
     for (int i = 0; i < vertices.size(); i++)
-        _vertices.push_back(vertices[i]);
+        AssetManager::GetVertices().push_back(vertices[i]);
     for (int i = 0; i < indices.size(); i++)
-        _indices.push_back(indices[i]);
+        AssetManager::GetIndices().push_back(indices[i]);
 
     _vertexOffset += (uint32_t)vertices.size();
     _indexOffset += (uint32_t)indices.size();
     return _meshes.size() - 1;
-}
+}*/
 
 void VulkanAssetManager::LoadFont(VkDevice device, VmaAllocator allocator) {
     for (size_t i = 1; i <= 90; i++) {
         std::string filepath = "res/textures/font/char_" + std::to_string(i) + ".png";
-        Texture& texture = AssetManager::_textures.emplace_back();
+        Texture& texture = AssetManager::GetTextures().emplace_back();
         LoadImageFromFile(device, allocator, filepath.c_str(), texture.vkTexture, VkFormat::VK_FORMAT_R8G8B8A8_UNORM, true); // NO MIPS = false
     }
 }
@@ -242,7 +242,7 @@ void VulkanAssetManager::LoadFont(VkDevice device, VmaAllocator allocator) {
 void VulkanAssetManager::LoadHardCodedMesh() {
 
     /* Blitter quad */ {
-        VulkanVertex vertA, vertB, vertC, vertD;
+        Vertex vertA, vertB, vertC, vertD;
         vertA.position = { -1.0f, -1.0f, 0.0f };
         vertB.position = { -1.0f, 1.0f, 0.0f };
         vertC.position = { 1.0f,  1.0f, 0.0f };
@@ -251,19 +251,18 @@ void VulkanAssetManager::LoadHardCodedMesh() {
         vertB.uv = { 0.0f, 0.0f };
         vertC.uv = { 1.0f, 0.0f };
         vertD.uv = { 1.0f, 1.0f };
-        std::vector<VulkanVertex> vertices;
+        std::vector<Vertex> vertices;
         vertices.push_back(vertA);
         vertices.push_back(vertB);
         vertices.push_back(vertC);
         vertices.push_back(vertD);
         std::vector<uint32_t> indices = { 0, 1, 2, 0, 2, 3 };
-        VulkanModel model;
-        model._meshIndices.push_back(CreateMesh(vertices, indices));
-        _models["blitter_quad"] = model;
+        std::string name = "blitter_quad";
+        AssetManager::CreateMesh(name, vertices, indices);
     }
 
     /* Fullscreen quad */ {
-        VulkanVertex vertA, vertB, vertC, vertD;
+        Vertex vertA, vertB, vertC, vertD;
         vertA.position = { -1.0f, -1.0f, 0.0f };
         vertB.position = { -1.0f, 1.0f, 0.0f };
         vertC.position = { 1.0f,  1.0f, 0.0f };
@@ -272,15 +271,14 @@ void VulkanAssetManager::LoadHardCodedMesh() {
         vertB.uv = { 0.0f, 0.0f };
         vertC.uv = { 1.0f, 0.0f };
         vertD.uv = { 1.0f, 1.0f };
-        std::vector<VulkanVertex> vertices;
+        std::vector<Vertex> vertices;
         vertices.push_back(vertA);
         vertices.push_back(vertB);
         vertices.push_back(vertC);
         vertices.push_back(vertD);
         std::vector<uint32_t> indices = { 0, 1, 2, 0, 2, 3 };
-        VulkanModel model;
-        model._meshIndices.push_back(CreateMesh(vertices, indices));
-        _models["fullscreen_quad"] = model;
+        std::string name = "fullscreen_quad";
+        AssetManager::CreateMesh(name, vertices, indices);
     }
 }
 
@@ -321,7 +319,7 @@ VkImageViewCreateInfo ImageViewCreateInfo(VkFormat format, VkImage image, VkImag
 }
 
 bool VulkanAssetManager::LoadImageFromFile(VkDevice device, VmaAllocator allocator, const char* file, VulkanTexture& outTexture, VkFormat imageFormat, bool generateMips) {
-    VulkanFileInfo info = VulkanUtil::GetFileInfo(file);
+    FileInfo info = Util::GetFileInfo(file);
     std::string assetPath = "res/assets_vulkan/" + info.filename + ".tex";
 
     if (std::filesystem::exists(assetPath)) {
@@ -364,7 +362,7 @@ bool VulkanAssetManager::LoadImageFromFile(VkDevice device, VmaAllocator allocat
             textureInfo.pixelsize[1] = jsonData["height"];
             textureInfo.originalFile = jsonData["original_file"];
 
-            AllocatedBuffer stagingBuffer = VulkanUtil::CreateBuffer(allocator, textureInfo.textureSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY, VK_MEMORY_PROPERTY_HOST_CACHED_BIT);
+            AllocatedBuffer stagingBuffer = CreateBuffer(allocator, textureInfo.textureSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY, VK_MEMORY_PROPERTY_HOST_CACHED_BIT);
 
             void* data;
             vmaMapMemory(allocator, stagingBuffer._allocation, &data);
@@ -539,7 +537,7 @@ bool VulkanAssetManager::LoadImageFromFile(VkDevice device, VmaAllocator allocat
         }
 
         VkDeviceSize imageSize = outTexture.width * outTexture.height * 4;
-        AllocatedBuffer stagingBuffer = VulkanUtil::CreateBuffer(allocator, imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY, 0);
+        AllocatedBuffer stagingBuffer = CreateBuffer(allocator, imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY, 0);
 
         void* data;
         vmaMapMemory(allocator, stagingBuffer._allocation, &data);
@@ -703,17 +701,13 @@ bool VulkanAssetManager::LoadImageFromFile(VkDevice device, VmaAllocator allocat
 }
 
 bool VulkanAssetManager::LoadNextModel() {
-    static auto allFiles = std::filesystem::directory_iterator("res/models/");
 
+    static auto allFiles = std::filesystem::directory_iterator("res/models/");
     for (const auto& entry : allFiles) {
-        VulkanFileInfo info = VulkanUtil::GetFileInfo(entry);
+        FileInfo info = Util::GetFileInfo(entry);
         if (info.filetype == "obj") {
-            // If model doesn't exist, then create it
-            if (_models.find(info.filename) != _models.end()) {
-            }
-            else {
-                _models[info.filename] = VulkanModel();
-                OpenGLModel::CreateVulkanModel(info.fullpath.c_str(), _models[info.filename]);
+            if (!AssetManager::ModelExists(info.filename)) {
+                AssetManager::LoadModel(info.fullpath.c_str());
                 _loadingText.push_back("Loading " + info.fullpath);
                 return true;
             }
@@ -723,32 +717,20 @@ bool VulkanAssetManager::LoadNextModel() {
     return false;
 }
 
-std::vector<VulkanMesh>& VulkanAssetManager::GetMeshList() {
-    return _meshes;
-}
-
 void* VulkanAssetManager::GetMeshIndicePointer(int offset) {
-    return &_indices[offset];
+    return &AssetManager::GetIndices()[offset];
 }
 
 void* VulkanAssetManager::GetMeshVertexPointer(int offset) {
-    return &_vertices[offset];
+    return &AssetManager::GetVertices()[offset];
 }
 
-VulkanVertex VulkanAssetManager::GetVertex(int offset) {
-    return _vertices[offset];
+Vertex VulkanAssetManager::GetVertex(int offset) {
+    return AssetManager::GetVertices()[offset];
 }
 
 uint32_t VulkanAssetManager::GetIndex(int offset) {
-    return _indices[offset];
-}
-
-std::vector<VulkanVertex>& VulkanAssetManager::GetVertices_TEMPORARY() {
-    return _vertices;
-}
-
-std::vector<uint32_t>& VulkanAssetManager::GetIndices_TEMPORARY() {
-    return _indices;
+    return AssetManager::GetIndices()[offset];
 }
 
 bool VulkanAssetManager::LoadNextTexture(VkDevice device, VmaAllocator allocator) {
@@ -756,13 +738,13 @@ bool VulkanAssetManager::LoadNextTexture(VkDevice device, VmaAllocator allocator
     static auto allFiles = std::filesystem::directory_iterator("res/textures/");
 
     for (const auto& entry : allFiles) {
-        VulkanFileInfo info = VulkanUtil::GetFileInfo(entry);
+        FileInfo info = Util::GetFileInfo(entry);
         if (info.filetype == "png" || info.filetype == "tga" || info.filetype == "jpg") {
             if (!AssetManager::TextureExists(info.filename)) {
-                Texture& texture = AssetManager::_textures.emplace_back();
+                Texture& texture = AssetManager::GetTextures().emplace_back();
                 VkFormat imageFormat = VK_FORMAT_R8G8B8A8_UNORM;// VK_FORMAT_R8G8B8A8_SRGB;
                 if (info.materialType == "ALB" || info.filename.substr(0, 2) == "OS") {
-                    imageFormat = VK_FORMAT_R8G8B8A8_SRGB;
+                    imageFormat = VK_FORMAT_R8G8B8A8_UNORM;// VK_FORMAT_R8G8B8A8_SRGB;
                 }
                 LoadImageFromFile(device, allocator, info.fullpath.c_str(), texture.vkTexture, imageFormat, false); // no mips                
                 _loadingText.push_back("Loading " + info.fullpath);

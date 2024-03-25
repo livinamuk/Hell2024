@@ -102,7 +102,7 @@ void AnimatedGameObject::SetMeshEmissiveColorTextureByMeshName(std::string meshN
     }
     for (MeshRenderingEntry& meshRenderingEntry : _meshRenderingEntries) {
         if (meshRenderingEntry.meshName == meshName) {
-            meshRenderingEntry.emissiveColorTexutreIndex = AssetManager::GetTextureIndex(textureName);
+            meshRenderingEntry.emissiveColorTexutreIndex = AssetManager::GetTextureIndexByName(textureName);
         }
     }
 }
@@ -487,21 +487,15 @@ glm::vec3 AnimatedGameObject::GetAKS74UBarrelPostion() {
 }
 
 glm::vec3 AnimatedGameObject::GetShotgunBarrelPosition() {
-   // if (_name == "ShotgunTest") {
-        int boneIndex = _skinnedModel->m_BoneMapping["Weapon"];
-        glm::mat4 boneMatrix = _animatedTransforms.worldspace[boneIndex];
-        Transform offset;
-        offset.position = glm::vec3(82, 2, -10);
-        glm::mat4 m = GetModelMatrix() * boneMatrix * offset.to_mat4();
-        float x = m[3][0];
-        float y = m[3][1];
-        float z = m[3][2];
-     //  std::cout << "heDDDDDDDDDDDDDDDDDDDDDllon\n";
-        return glm::vec3(x, y, z);
-//    }
- //   else {
-        return glm::vec3(0);
- //   }
+    int boneIndex = _skinnedModel->m_BoneMapping["Weapon"];
+    glm::mat4 boneMatrix = _animatedTransforms.worldspace[boneIndex];
+    Transform offset;
+    offset.position = glm::vec3(82, 2, -10);
+    glm::mat4 m = GetModelMatrix() * boneMatrix * offset.to_mat4();
+    float x = m[3][0];
+    float y = m[3][1];
+    float z = m[3][2];
+    return glm::vec3(x, y, z);
 }
 
 void AnimatedGameObject::UpdateBoneTransformsFromBindPose() {

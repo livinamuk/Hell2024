@@ -184,8 +184,13 @@ namespace Scene {
     inline std::vector<RTInstance> _rtInstances;
     inline std::vector<Player> _players;
 
+    // New shit
     void LoadMapNEW(std::string mapPath);
+    int GetPlayerCount();
+    Player* GetPlayerByIndex(int index);
+    std::vector<RenderItem3D> GetAllRenderItems();
 
+    // Old shit
 	void LoadHardCodedObjects();
 	void LoadMap(std::string mapPath);
 	void SaveMap(std::string mapPath);

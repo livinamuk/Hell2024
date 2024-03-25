@@ -1,12 +1,12 @@
 #include "GL_renderer.h"
 #include "GL_assetManager.h"
 #include "GL_backEnd.h"
+#include "Types/GL_gBuffer.h"
+#include "Types/GL_shader.h"
 #include "Types/GL_types.h"
 #include "../../BackEnd/BackEnd.h"
-#include "../../Renderer/GBuffer.h"
 #include "../../Renderer/RendererCommon.h"
 #include "../../Renderer/TextBlitter.h"
-#include "../../Renderer/Shader.h"
 #include "../../Core/Scene.h"
 #include "../../Core/AssetManager.h"
 
@@ -26,15 +26,14 @@ namespace OpenGLRenderer {
 
     OpenGLMesh _quadMesh;
     std::vector<UIRenderInfo> _UIRenderInfos;
-
 }
 
 void DrawRenderItem(RenderItem3D& renderItem);
 void RenderUI(const std::vector<RenderItem2D>& renderItems);
 
 void OpenGLRenderer::HotloadShaders() {
-    _shaders.UI.Load("ui_new.vert", "ui_new.frag");
-    _shaders.geometry.Load("NEW_geometry.vert", "NEW_geometry.frag");
+    _shaders.UI.Load("ui.vert", "ui.frag");
+    _shaders.geometry.Load("geometry.vert", "geometry.frag");
 }
 
 void OpenGLRenderer::InitMinimum() {
@@ -121,6 +120,7 @@ void OpenGLRenderer::RenderWorld(std::vector<RenderItem3D>& renderItems) {
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
+    glBindVertexArray(OpenGLBackEnd::GetVertexDataVAO());
 
     // Shader
     _shaders.geometry.Use();
@@ -221,7 +221,6 @@ void DrawQuad2(int viewportWidth, int viewPortHeight, int textureWidth, int text
 
 void DrawRenderItem(RenderItem3D& renderItem) {
     Mesh* mesh = AssetManager::GetMeshByIndex(renderItem.meshIndex);
-    glBindVertexArray(OpenGLBackEnd::GetVertexDataVAO());
     glDrawElementsBaseVertex(GL_TRIANGLES, mesh->indexCount, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int) * mesh->baseIndex), mesh->baseVertex);
 }
 

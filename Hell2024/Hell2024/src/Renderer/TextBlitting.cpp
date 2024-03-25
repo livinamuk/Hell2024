@@ -1,5 +1,5 @@
 #include "TextBlitter.h"
-#include "../Renderer/Renderer.h"
+#include "../Renderer/Renderer_OLD.h"
 #include "../Core/AssetManager.h"
 
 namespace TextBlitter {
@@ -135,7 +135,7 @@ namespace TextBlitter {
 				renderInfo.textureName = "char_" + std::to_string(charPos + 1);
 				renderInfo.screenX = (int)(cursor_X - texWidth);
 				renderInfo.screenY = cursor_Y;
-				Renderer::QueueUIForRendering(renderInfo);
+                Renderer_OLD::QueueUIForRendering(renderInfo);
 
 				xcursor += texWidth + _charSpacing;
 			}
@@ -186,7 +186,7 @@ namespace TextBlitter {
 			renderInfo.textureName = "char_" + std::to_string(charPos + 1);
 			renderInfo.screenX = cursor_X - texWidth;
 			renderInfo.screenY = cursor_Y;
-			Renderer::QueueUIForRendering(renderInfo);
+            Renderer_OLD::QueueUIForRendering(renderInfo);
 
 			xcursor += texWidth + _charSpacing;
 		}
@@ -276,7 +276,7 @@ namespace TextBlitter {
 				renderInfo.screenX = (int)(cursor_X - texWidth);
 				renderInfo.screenY = (int)cursor_Y;
 				renderInfo.color = color;
-				Renderer::QueueUIForRendering(renderInfo);
+                Renderer_OLD::QueueUIForRendering(renderInfo);
 
 				xcursor += texWidth + _charSpacing;
 			}
@@ -392,7 +392,7 @@ namespace TextBlitter {
             std::string textureName = "char_" + std::to_string(charPos + 1);
 
             // Get texture index and dimensions
-            int textureIndex = AssetManager::GetTextureIndex(textureName);
+            int textureIndex = AssetManager::GetTextureIndexByName(textureName);
             Texture* texture = AssetManager::GetTextureByIndex(textureIndex);
             float texWidth = texture->GetWidth();
             float texHeight = texture->GetHeight();

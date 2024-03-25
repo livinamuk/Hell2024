@@ -1,7 +1,7 @@
 #pragma once
 #include "../Common.h"
 #include "../API/OpenGL/Types/GL_model.h"
-#include "../Renderer/Shader.h"
+#include "../API/OpenGL/Types/GL_shader.h"
 
 struct VolumetricBloodSplatter {
 
@@ -11,7 +11,6 @@ struct VolumetricBloodSplatter {
 	glm::vec3 m_front;
 
 	int m_type = 9;
-
 
 	VolumetricBloodSplatter(glm::vec3 position, glm::vec3 rotation, glm::vec3 front);
 	void Update(float deltaTime);

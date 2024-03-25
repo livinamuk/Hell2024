@@ -1,6 +1,6 @@
 #pragma once
 #include <string>
-#include "VK_types.h"
+#include "VK_allocation.hpp"
 
 class VulkanTexture {
 

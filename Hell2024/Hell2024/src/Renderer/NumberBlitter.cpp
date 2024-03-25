@@ -110,10 +110,19 @@ void NumberBlitter::Draw(const char* text, int xScreenCoord, int yScreenCoord, i
 			cursor_X -= w;
 		}
 
-		Vertex v1 = { glm::vec3(cursor_X, cursor_Y, 0), NRM_Y_UP, glm::vec2(tex_coord_L, 0) };
-		Vertex v2 = { glm::vec3(cursor_X, cursor_Y - h, 0), NRM_Y_UP, glm::vec2(tex_coord_L, 1) };
-		Vertex v3 = { glm::vec3(cursor_X + w, cursor_Y, 0), NRM_Y_UP, glm::vec2(tex_coord_R, 0) };
-		Vertex v4 = { glm::vec3(cursor_X + w, cursor_Y - h, 0), NRM_Y_UP, glm::vec2(tex_coord_R, 1) };
+        Vertex v1, v2, v3, v4;
+        v1.position = glm::vec3(cursor_X, cursor_Y, 0);
+        v2.position = glm::vec3(cursor_X, cursor_Y - h, 0);
+        v3.position = glm::vec3(cursor_X + w, cursor_Y, 0);
+        v4.position = glm::vec3(cursor_X + w, cursor_Y - h, 0);
+        v1.normal = NRM_Y_UP;
+        v2.normal = NRM_Y_UP;
+        v3.normal = NRM_Y_UP;
+        v4.normal = NRM_Y_UP;
+        v1.uv = glm::vec2(tex_coord_L, 0);
+        v2.uv = glm::vec2(tex_coord_L, 1);
+        v3.uv = glm::vec2(tex_coord_R, 0);
+        v4.uv = glm::vec2(tex_coord_R, 1);
 
 		vertices.push_back(v1);
 		vertices.push_back(v2);

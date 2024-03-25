@@ -82,6 +82,9 @@ void Ceiling::CreateVertexData() {
 }
 
 void Ceiling::UpdateRenderItem() {
+    Mesh* mesh = AssetManager::GetMeshByIndex(meshIndex);
+    renderItem.vertexOffset = mesh->baseVertex;
+    renderItem.indexOffset = mesh->baseIndex;
     renderItem.modelMatrix = glm::mat4(1);
     renderItem.meshIndex = meshIndex;
     renderItem.baseColorTextureIndex = AssetManager::GetMaterialByIndex(materialIndex)->_basecolor;

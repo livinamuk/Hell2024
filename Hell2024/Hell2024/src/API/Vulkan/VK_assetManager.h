@@ -1,7 +1,6 @@
 #pragma once
-#include "Types/VK_mesh.h"
 #include "Types/VK_texture.h"
-#include "Types/VK_types.h"
+#include "../../Common.h"
 
 struct AssetFile {
     char type[4];
@@ -59,24 +58,19 @@ struct MeshInfo {
 
 namespace VulkanAssetManager {
 
+    // Loading
     void LoadFont(VkDevice device, VmaAllocator allocator);
     void LoadHardCodedMesh();
     bool LoadNextTexture(VkDevice device, VmaAllocator allocator);
     bool LoadNextModel();
-
-    int CreateMesh(std::vector<VulkanVertex>& vertices, std::vector<uint32_t>& indices);
+    void AddLoadingText(std::string text);
+    std::vector<std::string>& GetLoadingText();
     bool ConvertImage(const std::string inputPath, const std::string outputPath);
     bool LoadImageFromFile(VkDevice device, VmaAllocator allocator, const char* file, VulkanTexture& outTexture, VkFormat imageFormat, bool generateMips);
 
-    VulkanVertex GetVertex(int offset);
+    // Vertex data
+    Vertex GetVertex(int offset);
     uint32_t GetIndex(int offset);
-    VulkanMesh* GetMesh(int index); 
-    VulkanModel* GetModelByName(const std::string& name);
-    std::vector<VulkanVertex>& GetVertices_TEMPORARY();
-    std::vector<uint32_t>& GetIndices_TEMPORARY();
-    std::vector<VulkanMesh>& GetMeshList();
     void* GetMeshIndicePointer(int offset);
     void* GetMeshVertexPointer(int offset);
-    std::vector<std::string>& GetLoadingText();
-    void AddLoadingText(std::string text);
 }

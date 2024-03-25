@@ -6,7 +6,7 @@
 #include "../API/OpenGL/GL_assetManager.h"
 #include "../BackEnd/BackEnd.h"
 #include "../Core/AssetManager.h"
-#include "../Renderer/Renderer.h"
+#include "../Renderer/Renderer_OLD.h"
 #include "../Renderer/TextBlitter.h"
 #include "../Util.hpp"
 #include "../EngineState.hpp"
@@ -75,6 +75,67 @@ void CreateCeilingsHack() {
         Scene::_ceilings.emplace_back(minX, minZ, maxX, maxZ, 2.5f, AssetManager::GetMaterialIndex("Ceiling"));
     }
 }
+
+std::vector<RenderItem3D> Scene::GetAllRenderItems() {
+
+    std::vector<RenderItem3D> renderItems;
+    
+    for (Wall& wall : Scene::_walls) {
+        renderItems.push_back(wall.GetRenderItem());
+    }
+    for (Floor& floor : Scene::_floors) {
+        renderItems.push_back(floor.GetRenderItem());
+    }
+    for (Ceiling& ceiling : Scene::_ceilings) {
+        renderItems.push_back(ceiling.GetRenderItem());
+    }
+
+    int meshIndex = AssetManager::GetMeshIndexByName("Sofa");
+    Mesh* mesh = AssetManager::GetMeshByIndex(meshIndex);
+
+    Transform sofaTransform;
+    sofaTransform.position = glm::vec3(2.0f, 0.1f, 0.1f);
+
+    RenderItem3D renderItem;
+    renderItem.modelMatrix = sofaTransform.to_mat4();
+    renderItem.meshIndex = meshIndex;
+    renderItem.vertexOffset = mesh->baseVertex;
+    renderItem.indexOffset = mesh->baseIndex;
+    renderItems.push_back(renderItem);
+
+    return renderItems;
+}
+
+
+//                   //
+//      Players      //
+//                   //
+
+int Scene::GetPlayerCount() {
+    return _players.size();
+}
+
+Player* Scene::GetPlayerByIndex(int index) {
+    if (index >= 0 && index < _players.size()) {
+        return &_players[index];
+    }
+    else {
+        std::cout << "Scene::GetPlayerByIndex(int index) failed because index was out of range. Size of _players is " << GetPlayerCount() << "\n";
+        return nullptr;
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1599,7 +1660,7 @@ void Scene::AddDoor(Door& door) {
 
 void Scene::CreatePointCloud() {
 
-    float pointSpacing = Renderer::GetPointCloudSpacing();;
+    float pointSpacing = Renderer_OLD::GetPointCloudSpacing();;
 
     _cloudPoints.clear();
 
@@ -1953,8 +2014,8 @@ void Scene::RecreateDataStructures() {
     CreateMeshData();
     CreatePointCloud();
     UpdateRTInstanceData();
-    Renderer::CreatePointCloudBuffer();
-    Renderer::CreateTriangleWorldVertexBuffer();
+    Renderer_OLD::CreatePointCloudBuffer();
+    Renderer_OLD::CreateTriangleWorldVertexBuffer();
     RecreateAllPhysicsObjects();
     CalculateLightBoundingVolumes();
 }

@@ -1,6 +1,6 @@
 #pragma once
 #include "../../vendor/im3d/im3d.h"
-#include "../Renderer/Shader.h"
+#include "../API/OpenGL/Types/GL_shader.h"
 #include "../Core/Input.h"
 
 namespace Gizmo {
@@ -33,9 +33,6 @@ namespace Gizmo {
         return g_transform;
     }
 
-    //enum State {TRANSLATE, ROTATE, SCALE};
-    //State g_state = TRANSLATE;
-
     inline glm::mat4 Im3dMat4ToGlmMat4(Im3d::Mat4 pxMatrix) {
         glm::mat4 matrix;
         for (int x = 0; x < 4; x++)
@@ -54,11 +51,10 @@ namespace Gizmo {
         return matrix;
     }
 
-
     void Init() {
-        g_TriangleShader.Load("im3d_triangles.vert", "im3d_triangles.frag");
-        g_LineShader.Load("im3d_lines.vert", "im3d_lines.frag", "im3d_lines.geom");
-        g_PointShader.Load("im3d_points.vert", "im3d_points.frag");
+        g_TriangleShader.LoadOLD("im3d_triangles.vert", "im3d_triangles.frag");
+        g_LineShader.LoadOLD("im3d_lines.vert", "im3d_lines.frag", "im3d_lines.geom");
+        g_PointShader.LoadOLD("im3d_points.vert", "im3d_points.frag");
         glGenBuffers(1, &g_Im3dVertexBuffer);;
         glGenVertexArrays(1, &g_Im3dVertexArray);
         glBindVertexArray(g_Im3dVertexArray);

@@ -474,10 +474,10 @@ void Player::Update(float deltaTime) {
 	float viewHeightTarget = crouching ? _viewHeightCrouching : _viewHeightStanding;
 	_currentViewHeight = Util::FInterpTo(_currentViewHeight, viewHeightTarget, deltaTime, _crouchDownSpeed);
     
-    float _breatheAmplitude = 0.00052f;
-    float _breatheFrequency = 8;
-    float _headBobAmplitude = 0.009505f;
-    float _headBobFrequency = 25.0f;
+    float _breatheAmplitude = 0.0004f;
+    float _breatheFrequency = 5;
+    float _headBobAmplitude = 0.008;
+    float _headBobFrequency = 17.0f;
     
     // Breathe bob
 	static float totalTime;
