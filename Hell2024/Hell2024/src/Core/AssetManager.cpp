@@ -63,42 +63,42 @@ namespace AssetManager {
 
 void AssetManager::FindAssetPaths() {
 
-    static auto modelPaths = std::filesystem::directory_iterator("res/models/");
+    auto modelPaths = std::filesystem::directory_iterator("res/models/");
     for (const auto& entry : modelPaths) {
         FileInfo info = Util::GetFileInfo(entry);
         if (info.filetype == "obj") {
             _modelPaths.push_back(info.fullpath.c_str());
         }
     }
-    static auto skinnedModelPaths = std::filesystem::directory_iterator("res/models/");
+    auto skinnedModelPaths = std::filesystem::directory_iterator("res/models/");
     for (const auto& entry : skinnedModelPaths) {
         FileInfo info = Util::GetFileInfo(entry);
         if (info.filetype == "fbx") {
             _skinnedModelPaths.push_back(info.fullpath.c_str());
         }
     }
-    static auto texturePaths = std::filesystem::directory_iterator("res/textures/");
+    auto texturePaths = std::filesystem::directory_iterator("res/textures/");
     for (const auto& entry : texturePaths) {
         FileInfo info = Util::GetFileInfo(entry);
         if (info.filetype == "png" || info.filetype == "jpg" || info.filetype == "tga") {
             _texturePaths.push_back(info.fullpath.c_str());
         }
     }
-    static auto uiTexturePaths = std::filesystem::directory_iterator("res/textures/ui/");
+    auto uiTexturePaths = std::filesystem::directory_iterator("res/textures/ui/");
     for (const auto& entry : uiTexturePaths) {
         FileInfo info = Util::GetFileInfo(entry);
         if (info.filetype == "png" || info.filetype == "jpg" || info.filetype == "tga") {
             _texturePaths.push_back(info.fullpath.c_str());
         }
     }
-    static auto vatTexturePaths = std::filesystem::directory_iterator("res/textures/exr/");
+    auto vatTexturePaths = std::filesystem::directory_iterator("res/textures/exr/");
     for (const auto& entry : vatTexturePaths) {
         FileInfo info = Util::GetFileInfo(entry);
         if (info.filetype == "exr") {
             _vatTexturePaths.push_back(info.fullpath.c_str());
         }
     }
-    static auto animationPaths = std::filesystem::directory_iterator("res/animations/");
+    auto animationPaths = std::filesystem::directory_iterator("res/animations/");
     for (const auto& entry : animationPaths) {
         FileInfo info = Util::GetFileInfo(entry);
         if (info.filetype == "fbx") {
@@ -637,12 +637,10 @@ void AssetManager::LoadModel(const std::string filepath) {
         }
 
         std::lock_guard<std::mutex> lock(_modelsMutex);
-        {
-            _models[modelIndex].AddMeshIndex(AssetManager::CreateMesh(shape.name, vertices, indices));
-        }
+        _models[modelIndex].AddMeshIndex(AssetManager::CreateMesh(shape.name, vertices, indices));
     }
 
-    // Build the bounding box
+    // Build the bounding box 
     float width = std::abs(maxPos.x - minPos.x);
     float height = std::abs(maxPos.y - minPos.y);
     float depth = std::abs(maxPos.z - minPos.z);

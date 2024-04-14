@@ -2260,20 +2260,6 @@ void DrawScene(Shader& shader) {
 
 
 
-        //for (int i = 0; i < gameObject._meshMaterialIndices.size(); i++) {
-            //AssetManager::BindMaterialByIndex(gameObject._meshMaterialIndices[i]);
-            //gameObject._model_OLD->_meshes[i].Draw();
-        //}
-
-        // Add Christmas bows to Christmas cubes
-        if (gameObject.GetName() == "Present") {
-			AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("Gold"));
-            static Model* model = AssetManager::GetModelByIndex(AssetManager::GetModelIndexByName("ChristmasBow"));
-            RenderItem3D renderItem;
-            renderItem.meshIndex = model->GetMeshIndices()[0];
-            DrawRenderItemm(renderItem);
-        }
-
 
         // Add globe back to lamp
         if (gameObject.GetName() == "Lamp") {        
