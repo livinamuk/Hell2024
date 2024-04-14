@@ -31,14 +31,15 @@ void Engine::Run() {
         BackEnd::UpdateSubSystems();
 
         // Load files from disk
-        if (AssetManager::IsStillLoading()) {
+        if (!AssetManager::LoadingComplete()) {
             AssetManager::LoadNextItem();
             Renderer::RenderLoadingScreen();
         }
         // Create game
         else if (!Game::IsLoaded()) {
             Game::Create();
-            AssetManager::UploadVertexData();
+            AssetManager::UploadVertexData(); 
+            AssetManager::UploadWeightedVertexData();
         }
         // The game
         else {
@@ -59,7 +60,7 @@ void Engine::RunOld() {
     BackEnd::Init(API::OPENGL);
 
     // Load files from disk
-    while (BackEnd::WindowIsOpen() && AssetManager::IsStillLoading()) {
+    while (BackEnd::WindowIsOpen() && !AssetManager::LoadingComplete()) {
         
         BackEnd::BeginFrame();
         BackEnd::UpdateSubSystems();
@@ -72,6 +73,8 @@ void Engine::RunOld() {
     
     // Init some shit
     if (BackEnd::WindowIsOpen()) {
+        AssetManager::UploadVertexData();
+        AssetManager::UploadWeightedVertexData();
         Scene::LoadMap("map.txt");
         Renderer_OLD::Init();
         Renderer_OLD::CreatePointCloudBuffer();
@@ -126,7 +129,7 @@ void Engine::RunOld() {
                 Physics::StepPhysics(fixedDeltaTime);
             }
             Engine::LazyKeyPresses();
-            Scene::Update(deltaTime);            
+            Scene::Update_OLD(deltaTime);            
 
             if (EngineState::GetEngineMode() == GAME) {
                 InputMulti::Update();
@@ -136,7 +139,7 @@ void Engine::RunOld() {
                 InputMulti::ResetMouseOffsets();
             }
 
-            Scene::CheckIfLightsAreDirty();
+            Scene::CheckForDirtyLights();
         }
         else if (EngineState::GetEngineMode() == FLOORPLAN) {
 
@@ -149,11 +152,11 @@ void Engine::RunOld() {
             EngineState::GetEngineMode() == EDITOR) {
 
             // Fullscreen
-            if (EngineState::GetSplitScreenMode() == SplitScreenMode::FULLSCREEN) {
+            if (Game::GetSplitscreenMode() == Game::SplitscreenMode::NONE) {
                 Renderer_OLD::RenderFrame(&Scene::_players[EngineState::GetCurrentPlayer()]);
             }
             // Splitscreen
-            else if (EngineState::GetSplitScreenMode() == SplitScreenMode::SPLITSCREEN) {
+            else if (Game::GetSplitscreenMode() == Game::SplitscreenMode::TWO_PLAYER) {
                 for (Player& player : Scene::_players) {
                     Renderer_OLD::RenderFrame(&player);
                 }
@@ -238,7 +241,7 @@ void Engine::LazyKeyPresses() {
         // This seems questionable
         // This seems questionable
         // This seems questionable
-		if (EngineState::GetSplitScreenMode() == SplitScreenMode::FULLSCREEN) {
+		if (Game::GetSplitscreenMode() == Game::SplitscreenMode::NONE) {
             Renderer_OLD::RecreateFrameBuffers(EngineState::GetCurrentPlayer());
 		}
         // This seems questionable
@@ -247,7 +250,7 @@ void Engine::LazyKeyPresses() {
 		Audio::PlayAudio(AUDIO_SELECT, 1.00f);
     }
     if (Input::KeyPressed(GLFW_KEY_V)) {
-		EngineState::NextSplitScreenMode();
+		Game::NextSplitScreenMode();
         Renderer_OLD::RecreateFrameBuffers(EngineState::GetCurrentPlayer());
 		Audio::PlayAudio(AUDIO_SELECT, 1.00f);
     }

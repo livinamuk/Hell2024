@@ -1,6 +1,7 @@
 #pragma once
 #include "../common.h"
 #include "../Physics/Physics.h"
+#include "../Renderer/RendererCommon.h"
 
 class Window {
 
@@ -11,8 +12,8 @@ public:
 
 	PxRigidStatic* raycastBody = NULL;
 	PxShape* raycastShape = NULL;
-	PxRigidStatic* raycastBodyTop = NULL;
-	PxShape* raycastShapeTop = NULL;
+	//PxRigidStatic* raycastBodyTop = NULL;
+	//PxShape* raycastShapeTop = NULL;
 
 	Window();
 	glm::mat4 GetModelMatrix();
@@ -26,4 +27,8 @@ public:
 
     glm::vec3 GetWorldSpaceCenter();
 
+    void UpdateRenderItems();
+    std::vector<RenderItem3D>& GetRenderItems();
+private:
+    std::vector<RenderItem3D> renderItems;
 };

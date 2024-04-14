@@ -1,12 +1,24 @@
 #include "Texture.h"
 #include "../BackEnd/BackEnd.h"
 
-void Texture::Load(const std::string_view filepath) {
-    if (BackEnd::GetAPI() == API::OPENGL) {        
-        glTexture.Load(filepath);
+/*
+void Texture::UploadToGPU(void* data, CMP_Texture* cmpTexture, int width, int height, int channelCount) {
+    if (BackEnd::GetAPI() == API::OPENGL) {
+        glTexture.UploadToGPU(data, cmpTexture, );
     }
     else if (BackEnd::GetAPI() == API::VULKAN) {
         // TO DO
+        return;
+    }
+}*/
+
+void Texture::Load(const std::string filepath) {
+    if (BackEnd::GetAPI() == API::OPENGL) {        
+        glTexture.Load(filepath);
+        glTexture.Bake();
+    }
+    else if (BackEnd::GetAPI() == API::VULKAN) {
+        vkTexture.Load(filepath);
         return;
     }
 }
@@ -30,6 +42,7 @@ int Texture::GetHeight() {
 }
 
 std::string& Texture::GetFilename() {
+    //return filename;
     if (BackEnd::GetAPI() == API::OPENGL) {
         return glTexture.GetFilename();
     }
@@ -45,4 +58,12 @@ std::string& Texture::GetFiletype() {
     else if (BackEnd::GetAPI() == API::VULKAN) {
         return vkTexture.GetFiletype();
     }
+}
+
+OpenGLTexture& Texture::GetGLTexture() {
+    return glTexture;
+}
+
+VulkanTexture& Texture::GetVKTexture() {
+    return vkTexture;
 }

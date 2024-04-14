@@ -70,8 +70,6 @@ namespace VulkanBackEnd {
     bool _thereAreStillAssetsToLoad = true;
     bool _forceCloseWindow;
 
-    void CreateBuffers();
-
     void FramebufferResizeCallback(GLFWwindow* window, int width, int height);     
 
     RayTracingScratchBuffer CreateScratchBuffer(VkDeviceSize size);
@@ -109,7 +107,10 @@ namespace VulkanBackEnd {
     }
     FrameData& GetCurrentFrame() {
         return _frames[GetFrameIndex()];
-    }    
+    }
+    FrameData& GetFrameByIndex(int index) {
+        return _frames[index];
+    }
     VmaAllocator GetAllocator() {
         return _allocator;
     }
@@ -153,15 +154,11 @@ void VulkanBackEnd::InitMinimum() {
     VulkanRenderer::CreateDescriptorSets();
     VulkanRenderer::CreatePipelinesMinimum();
 
-    VulkanAssetManager::LoadFont(_device, _allocator);
-    VulkanAssetManager::LoadHardCodedMesh();
-
-    AssetManager::UploadVertexData();
+    //AssetManager::UploadVertexData();
     //UploadUnsubmittedMeshes();
 
-    VulkanRenderer::UpdateSamplerDescriptorSet();
 
-    CreateBuffers();
+    VulkanRenderer::CreateStorageBuffers();
 }
 
 void VulkanBackEnd::SetGLFWSurface() {
@@ -216,6 +213,7 @@ void VulkanBackEnd::SelectPhysicalDevice() {
     features12.descriptorBindingPartiallyBound = true;
     features12.descriptorIndexing = true;
     features12.bufferDeviceAddress = true;
+    features12.scalarBlockLayout = true;
     selector.set_required_features_12(features12);
 
     VkPhysicalDeviceVulkan13Features features13 = {};
@@ -761,110 +759,8 @@ void VulkanBackEnd::ImmediateSubmit(std::function<void(VkCommandBuffer cmd)>&& f
     vkResetCommandPool(_device, _uploadContext._commandPool, 0);
 }
 
-void VulkanBackEnd::CreateBuffers() {
-
-    for (int i = 0; i < FRAME_OVERLAP; i++) {
-        _frames[i].buffers.globalShaderData.Create(_allocator, sizeof(GlobalShaderData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-        _frames[i].buffers.renderItems2D.Create(_allocator, sizeof(RenderItem2D) * MAX_RENDER_OBJECTS_2D, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-        _frames[i].buffers.renderItems3D.Create(_allocator, sizeof(RenderItem3D) * MAX_RENDER_OBJECTS_3D, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-   }
-   // renderItems3D.Create(_allocator, sizeof(RenderItem3D) * MAX_TLAS_OBJECT_COUNT, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-}
-
 bool VulkanBackEnd::StillLoading() {
     return _thereAreStillAssetsToLoad;
-}
-
-void VulkanBackEnd::LoadNextItem() {
-
-    // These return false if there is nothing to load
-    // meaning it will work its way down this function each game loop until everything is loaded
-
-    if (VulkanAssetManager::LoadNextTexture(_device, _allocator)) {
-        return;
-    }
-
-    if (VulkanAssetManager::LoadNextModel()) {
-        return;
-    }
-    else {
-    }
-    static bool shadersLoaded = false;
-    static bool shadersLoadedMessageSeen = false;
-    if (!shadersLoadedMessageSeen) {
-        shadersLoadedMessageSeen = true;
-        VulkanAssetManager::AddLoadingText("Compiling shaders...");
-        return;
-    }
-    if (!shadersLoaded) {
-        shadersLoaded = true;
-        VulkanRenderer::CreateShaders();
-        AssetManager::UploadVertexData(); 
-        VulkanRenderer::UpdateSamplerDescriptorSet();
-        AssetManager::BuildMaterials();
-    }
-
-    static bool pipelinesCreated = false;
-    static bool pipelinesCreatedMessageSeen = false;
-    if (!pipelinesCreatedMessageSeen) {
-        pipelinesCreatedMessageSeen = true;
-        VulkanAssetManager::AddLoadingText("Creating pipelines...");
-        return;
-    }
-    if (!pipelinesCreated) {
-        pipelinesCreated = true;
-        VulkanRenderer::CreatePipelines();
-    }
-
-    static bool renderTargetsCreated = false;
-    static bool renderTargetsCreatedMessageSeen = false;
-    if (!renderTargetsCreatedMessageSeen) {
-        renderTargetsCreatedMessageSeen = true;
-        VulkanAssetManager::AddLoadingText("Creating render targets...");
-        return;
-    }
-    if (!renderTargetsCreated) {
-        renderTargetsCreated = true;
-        VulkanRenderer::CreateShaders();
-        VulkanRenderer::CreatePipelines();
-    }
-
-    static bool rtSetup = false;
-    static bool rtSetupMSG = false;
-    if (!rtSetupMSG) {
-        rtSetupMSG = true;
-        VulkanAssetManager::AddLoadingText("Initializing raytracing...");
-        return;
-    }
-    if (!rtSetup) {
-        rtSetup = true;
-
-
-        //AssetManager::BuildMaterials();
-        //Scene::Init();						// Scene::Init creates wall geometry, and thus must run before upload_meshes
-        //CreateRayTracingBuffers();
-        //CreateTopLevelAccelerationStructure(Scene::GetMeshInstancesForSceneAccelerationStructure(), _frames[0]._sceneTLAS);
-        //CreateTopLevelAccelerationStructure(Scene::GetMeshInstancesForInventoryAccelerationStructure(), _frames[0]._inventoryTLAS);
-        
-        //VulkanRenderer::UpdateStaticDescriptorSet();
-        //Input::SetMousePos(_windowedModeExtent.width / 2, _windowedModeExtent.height / 2);
-    }
-
-    /*static bool meshUploaded = false;
-    static bool meshUploadedMSG = false;
-    if (!meshUploadedMSG) {
-        meshUploadedMSG = true;
-        AddLoadingText("Uploading mesh...");
-        return;
-    }
-    if (!meshUploaded) {
-        meshUploaded = true;
-        upload_meshes();
-    }*/
-
-    _thereAreStillAssetsToLoad = false;
-   // VulkanTextBlitter::ResetDebugText();
-
 }
 
 void VulkanBackEnd::PrepareSwapchainForPresent(VkCommandBuffer commandBuffer, uint32_t swapchainImageIndex) {
@@ -905,14 +801,13 @@ uint32_t alignedSize(uint32_t value, uint32_t alignment) {
 
 void VulkanBackEnd::UploadVertexData(std::vector<Vertex>& vertices, std::vector<uint32_t>& indices) {
 
-    // FIX ME
-    // FIX ME
-    // FIX ME
     if (_mainVertexBuffer._buffer != VK_NULL_HANDLE) {
-        //vmaDestroyBuffer(_allocator, _mainVertexBuffer._buffer, _mainVertexBuffer._allocation);
+        vkDeviceWaitIdle(_device);                                                                  // This feels fucked
+        vmaDestroyBuffer(_allocator, _mainVertexBuffer._buffer, _mainVertexBuffer._allocation);
     }
     if (_mainIndexBuffer._buffer != VK_NULL_HANDLE) {
-        //vmaDestroyBuffer(_allocator, _mainIndexBuffer._buffer, _mainIndexBuffer._allocation);
+        vkDeviceWaitIdle(_device);                                                                  // This feels fucked
+        vmaDestroyBuffer(_allocator, _mainIndexBuffer._buffer, _mainIndexBuffer._allocation);
     }
 
     /* Vertices */ {
@@ -997,15 +892,10 @@ void VulkanBackEnd::UploadVertexData(std::vector<Vertex>& vertices, std::vector<
         });
         vmaDestroyBuffer(_allocator, stagingBuffer._buffer, stagingBuffer._allocation);
     }
+}
 
-    //_vertexBufferDeviceAddress.deviceAddress = GetBufferDeviceAddress(_mainVertexBuffer._buffer);
-    //_indexBufferDeviceAddress.deviceAddress = GetBufferDeviceAddress(_mainIndexBuffer._buffer);
+void VulkanBackEnd::UploadWeightedVertexData(std::vector<WeightedVertex>& vertices, std::vector<uint32_t>& indices) {
 
-    // Uploaded
-
-    std::cout << "\nVulkanBackEnd::UploadVertexData()\n";
-    std::cout << "-Vertex count: " << AssetManager::GetVertices().size() << "\n";
-    std::cout << "-Index count: " << AssetManager::GetIndices().size() << "\n";
 }
 
 
@@ -1026,7 +916,7 @@ void VulkanBackEnd::InitRayTracing() {
         VulkanRenderer::GetRaytracingDescriptorSet().layout
     };
 
-    VulkanRenderer::GetRaytracer().CreatePipeline(_device, rtDescriptorSetLayouts, 2);
+    VulkanRenderer::GetRaytracer().CreateRaytracingPipeline(_device, rtDescriptorSetLayouts, 1);
     VulkanRenderer::GetRaytracer().CreateShaderBindingTable(_device, _allocator, _rayTracingPipelineProperties);
 }
 

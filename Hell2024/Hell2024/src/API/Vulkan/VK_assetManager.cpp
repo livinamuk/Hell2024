@@ -19,29 +19,13 @@
 // GET THIS OUT OF HERE
 // GET THIS OUT OF HERE
 #include "VK_BackEnd.h"
-#include "../OpenGL/Types/GL_model.h"
 #include "../../Util.hpp"
 // GET THIS OUT OF HERE
 // GET THIS OUT OF HERE
 // GET THIS OUT OF HERE
 
-//std::vector<VulkanVertex> _vertices;		// ALL of em
-//std::vector<uint32_t> _indices;		        // ALL of em
-//std::unordered_map<std::string, VulkanModel> _models;
-//std::vector<VulkanMesh> _meshes;
-//uint32_t _vertexOffset = 0;			// insert index for next mesh
-//uint32_t _indexOffset = 0;			// insert index for next mesh
-std::vector<std::string> _loadingText;
 
-std::vector<std::string>& VulkanAssetManager::GetLoadingText() {
-    return _loadingText;
-}
-
-void VulkanAssetManager::AddLoadingText(std::string text) {
-    _loadingText.push_back(text);
-}
-
-bool LoadBinaryFile(const char* path, AssetFile& outputFile) {
+bool VulkanAssetManager::LoadBinaryFile(const char* path, AssetFile& outputFile) {
     std::ifstream infile;
     infile.open(path, std::ios::binary);
     if (!infile.is_open()) {
@@ -193,93 +177,6 @@ AssetFile PackMesh(MeshInfo* info, char* vertexData, char* indexData) {
     metadata["compression"] = "LZ4";
     file.json = metadata.dump();
     return file;
-}
-/*
-VulkanMesh* VulkanAssetManager::GetMesh(int index) {
-    if (index >= 0 && index < _meshes.size())
-        return &_meshes[index];
-    else
-        return nullptr;
-}
-
-VulkanModel* VulkanAssetManager::GetModelByName(const std::string& name) {
-    auto it = _models.find(name);
-    if (it == _models.end()) {
-        std::cout << "GetModel() failed coz " << name << " was not found\n";
-        return nullptr;
-    }
-    else {
-        return &(*it).second;
-    }
-}
-
-int VulkanAssetManager::CreateMesh(std::vector<Vertex>& vertices, std::vector<uint32_t>& indices) {
-
-    VulkanMesh& mesh = _meshes.emplace_back(VulkanMesh());
-    mesh._vertexCount = (uint32_t)vertices.size();
-    mesh._indexCount = (uint32_t)indices.size();
-    mesh._vertexOffset = _vertexOffset;
-    mesh._indexOffset = _indexOffset;
-
-    for (int i = 0; i < vertices.size(); i++)
-        AssetManager::GetVertices().push_back(vertices[i]);
-    for (int i = 0; i < indices.size(); i++)
-        AssetManager::GetIndices().push_back(indices[i]);
-
-    _vertexOffset += (uint32_t)vertices.size();
-    _indexOffset += (uint32_t)indices.size();
-    return _meshes.size() - 1;
-}*/
-
-void VulkanAssetManager::LoadFont(VkDevice device, VmaAllocator allocator) {
-    for (size_t i = 1; i <= 90; i++) {
-        std::string filepath = "res/textures/font/char_" + std::to_string(i) + ".png";
-        Texture& texture = AssetManager::GetTextures().emplace_back();
-        LoadImageFromFile(device, allocator, filepath.c_str(), texture.vkTexture, VkFormat::VK_FORMAT_R8G8B8A8_UNORM, true); // NO MIPS = false
-    }
-}
-
-void VulkanAssetManager::LoadHardCodedMesh() {
-
-    /* Blitter quad */ {
-        Vertex vertA, vertB, vertC, vertD;
-        vertA.position = { -1.0f, -1.0f, 0.0f };
-        vertB.position = { -1.0f, 1.0f, 0.0f };
-        vertC.position = { 1.0f,  1.0f, 0.0f };
-        vertD.position = { 1.0f,  -1.0f, 0.0f };
-        vertA.uv = { 0.0f, 1.0f };
-        vertB.uv = { 0.0f, 0.0f };
-        vertC.uv = { 1.0f, 0.0f };
-        vertD.uv = { 1.0f, 1.0f };
-        std::vector<Vertex> vertices;
-        vertices.push_back(vertA);
-        vertices.push_back(vertB);
-        vertices.push_back(vertC);
-        vertices.push_back(vertD);
-        std::vector<uint32_t> indices = { 0, 1, 2, 0, 2, 3 };
-        std::string name = "blitter_quad";
-        AssetManager::CreateMesh(name, vertices, indices);
-    }
-
-    /* Fullscreen quad */ {
-        Vertex vertA, vertB, vertC, vertD;
-        vertA.position = { -1.0f, -1.0f, 0.0f };
-        vertB.position = { -1.0f, 1.0f, 0.0f };
-        vertC.position = { 1.0f,  1.0f, 0.0f };
-        vertD.position = { 1.0f,  -1.0f, 0.0f };
-        vertA.uv = { 0.0f, 1.0f };
-        vertB.uv = { 0.0f, 0.0f };
-        vertC.uv = { 1.0f, 0.0f };
-        vertD.uv = { 1.0f, 1.0f };
-        std::vector<Vertex> vertices;
-        vertices.push_back(vertA);
-        vertices.push_back(vertB);
-        vertices.push_back(vertC);
-        vertices.push_back(vertD);
-        std::vector<uint32_t> indices = { 0, 1, 2, 0, 2, 3 };
-        std::string name = "fullscreen_quad";
-        AssetManager::CreateMesh(name, vertices, indices);
-    }
 }
 
 bool VulkanAssetManager::ConvertImage(const std::string inputPath, const std::string outputPath) {
@@ -700,23 +597,6 @@ bool VulkanAssetManager::LoadImageFromFile(VkDevice device, VmaAllocator allocat
     return true;
 }
 
-bool VulkanAssetManager::LoadNextModel() {
-
-    static auto allFiles = std::filesystem::directory_iterator("res/models/");
-    for (const auto& entry : allFiles) {
-        FileInfo info = Util::GetFileInfo(entry);
-        if (info.filetype == "obj") {
-            if (!AssetManager::ModelExists(info.filename)) {
-                AssetManager::LoadModel(info.fullpath.c_str());
-                _loadingText.push_back("Loading " + info.fullpath);
-                return true;
-            }
-        }
-    }
-    // Everything is loaded
-    return false;
-}
-
 void* VulkanAssetManager::GetMeshIndicePointer(int offset) {
     return &AssetManager::GetIndices()[offset];
 }
@@ -733,26 +613,191 @@ uint32_t VulkanAssetManager::GetIndex(int offset) {
     return AssetManager::GetIndices()[offset];
 }
 
-bool VulkanAssetManager::LoadNextTexture(VkDevice device, VmaAllocator allocator) {
+void VulkanAssetManager::FeedTextureToGPU(VulkanTexture* outTexture, AssetFile* assetFile, bool generateMips) {
 
-    static auto allFiles = std::filesystem::directory_iterator("res/textures/");
+    VkDevice device = VulkanBackEnd::GetDevice();
+    VmaAllocator allocator = VulkanBackEnd::GetAllocator();
 
-    for (const auto& entry : allFiles) {
-        FileInfo info = Util::GetFileInfo(entry);
-        if (info.filetype == "png" || info.filetype == "tga" || info.filetype == "jpg") {
-            if (!AssetManager::TextureExists(info.filename)) {
-                Texture& texture = AssetManager::GetTextures().emplace_back();
-                VkFormat imageFormat = VK_FORMAT_R8G8B8A8_UNORM;// VK_FORMAT_R8G8B8A8_SRGB;
-                if (info.materialType == "ALB" || info.filename.substr(0, 2) == "OS") {
-                    imageFormat = VK_FORMAT_R8G8B8A8_UNORM;// VK_FORMAT_R8G8B8A8_SRGB;
-                }
-                LoadImageFromFile(device, allocator, info.fullpath.c_str(), texture.vkTexture, imageFormat, false); // no mips                
-                _loadingText.push_back("Loading " + info.fullpath);
+    if (assetFile->type[0] == 'T' &&
+        assetFile->type[1] == 'E' &&
+        assetFile->type[2] == 'X' &&
+        assetFile->type[3] == 'I') {
+        nlohmann::json jsonData = nlohmann::json::parse(assetFile->json);
 
-                return true;
-            }
+        TextureInfo textureInfo;
+        textureInfo.textureSize = jsonData["buffer_size"];
+
+        std::string formatString = jsonData["format"];
+        textureInfo.textureFormat = ParseTextureFormat(formatString.c_str());
+
+        std::string compressionString = jsonData["compression"];
+        textureInfo.compressionMode = ParseCompression(compressionString.c_str());
+
+        textureInfo.pixelsize[0] = jsonData["width"];
+        textureInfo.pixelsize[1] = jsonData["height"];
+        textureInfo.originalFile = jsonData["original_file"];
+
+        AllocatedBuffer stagingBuffer = CreateBuffer(allocator, textureInfo.textureSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY, VK_MEMORY_PROPERTY_HOST_CACHED_BIT);
+
+        void* data;
+        vmaMapMemory(allocator, stagingBuffer._allocation, &data);
+        UnpackTexture(&textureInfo, assetFile->binaryBlob.data(), assetFile->binaryBlob.size(), (char*)data);
+        vmaUnmapMemory(allocator, stagingBuffer._allocation);
+
+        outTexture->width = jsonData["width"];
+        outTexture->height = jsonData["height"];
+
+        VkExtent3D imageExtent;
+        imageExtent.width = static_cast<uint32_t>(outTexture->width);
+        imageExtent.height = static_cast<uint32_t>(outTexture->height);
+        imageExtent.depth = 1;
+
+        if (generateMips) {
+            outTexture->mipLevels = (uint32_t)floor(log2(std::max(outTexture->width, outTexture->height))) + 1;
         }
+        else {
+            outTexture->mipLevels = 1;
+        }
+
+        VkImageCreateInfo createInfo = {};
+        createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+        createInfo.pNext = nullptr;
+        createInfo.imageType = VK_IMAGE_TYPE_2D;
+        createInfo.format = outTexture->format;
+        createInfo.extent = imageExtent;
+        createInfo.mipLevels = outTexture->mipLevels;
+        createInfo.arrayLayers = 1;
+        createInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+        createInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+        createInfo.usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+        createInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+        createInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+
+        AllocatedImage newImage;
+
+        VmaAllocationCreateInfo dimg_allocinfo = {};
+        dimg_allocinfo.usage = VMA_MEMORY_USAGE_AUTO;
+
+        vmaCreateImage(allocator, &createInfo, &dimg_allocinfo, &newImage._image, &newImage._allocation, nullptr);
+
+        //transition image to transfer-receiver	
+        VulkanBackEnd::ImmediateSubmit([&](VkCommandBuffer cmd)
+        {
+            VkImageSubresourceRange range;
+            range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            range.baseMipLevel = 0;
+            range.levelCount = 1;
+            range.baseArrayLayer = 0;
+            range.layerCount = 1;
+            VkImageMemoryBarrier imageBarrier_toTransfer = {};
+            imageBarrier_toTransfer.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+            imageBarrier_toTransfer.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+            imageBarrier_toTransfer.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+            imageBarrier_toTransfer.image = newImage._image;
+            imageBarrier_toTransfer.subresourceRange = range;
+            imageBarrier_toTransfer.srcAccessMask = 0;
+            imageBarrier_toTransfer.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+            vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageBarrier_toTransfer);
+
+            VkBufferImageCopy copyRegion = {};
+            copyRegion.bufferOffset = 0;
+            copyRegion.bufferRowLength = 0;
+            copyRegion.bufferImageHeight = 0;
+            copyRegion.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            copyRegion.imageSubresource.mipLevel = 0;
+            copyRegion.imageSubresource.baseArrayLayer = 0;
+            copyRegion.imageSubresource.layerCount = 1;
+            copyRegion.imageExtent = imageExtent;
+
+            // First 1:1 copy for mip level 1
+            vkCmdCopyBufferToImage(cmd, stagingBuffer._buffer, newImage._image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copyRegion);
+
+            // Prepare that image to be read from
+            VkImageMemoryBarrier imageBarrier_toReadable = imageBarrier_toTransfer;
+            imageBarrier_toReadable.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+            imageBarrier_toReadable.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+            imageBarrier_toReadable.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+            imageBarrier_toReadable.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+            vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_ACCESS_TRANSFER_WRITE_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageBarrier_toReadable);
+
+            // Now walk the mip chain and copy down mips from n-1 to n
+            for (uint32_t i = 1; i < outTexture->mipLevels; i++)
+            {
+                VkImageBlit imageBlit{};
+
+                // Source
+                imageBlit.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+                imageBlit.srcSubresource.layerCount = 1;
+                imageBlit.srcSubresource.mipLevel = i - 1;
+                imageBlit.srcOffsets[1].x = int32_t(outTexture->width >> (i - 1));
+                imageBlit.srcOffsets[1].y = int32_t(outTexture->height >> (i - 1));
+                imageBlit.srcOffsets[1].z = 1;
+
+                // Destination
+                imageBlit.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+                imageBlit.dstSubresource.layerCount = 1;
+                imageBlit.dstSubresource.mipLevel = i;
+                imageBlit.dstOffsets[1].x = int32_t(outTexture->width >> i);
+                imageBlit.dstOffsets[1].y = int32_t(outTexture->height >> i);
+                imageBlit.dstOffsets[1].z = 1;
+
+                VkImageSubresourceRange mipSubRange = {};
+                mipSubRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+                mipSubRange.baseMipLevel = i;
+                mipSubRange.levelCount = 1;
+                mipSubRange.layerCount = 1;
+
+                // Prepare current mip level as image blit destination
+                VkImageMemoryBarrier imageBarrier_toReadable = imageBarrier_toTransfer;
+                imageBarrier_toReadable.image = newImage._image;
+                imageBarrier_toReadable.subresourceRange = mipSubRange;
+                imageBarrier_toReadable.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+                imageBarrier_toReadable.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+                imageBarrier_toReadable.srcAccessMask = 0;
+                imageBarrier_toReadable.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+                vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageBarrier_toReadable);
+
+                // Blit from previous level
+                vkCmdBlitImage(cmd, newImage._image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, newImage._image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &imageBlit, VK_FILTER_LINEAR);
+
+                // Prepare current mip level as image blit source for next level
+                VkImageMemoryBarrier barrier2 = imageBarrier_toTransfer;
+                barrier2.image = newImage._image;
+                barrier2.subresourceRange = mipSubRange;
+                barrier2.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+                barrier2.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+                barrier2.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+                barrier2.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+                vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier2);
+            }
+
+            // After the loop, all mip layers are in TRANSFER_SRC layout, so transition all to SHADER_READ
+            VkImageSubresourceRange subresourceRange = {};
+            subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            subresourceRange.levelCount = outTexture->mipLevels;
+            subresourceRange.layerCount = 1;
+
+            // Prepare current mip level as image blit source for next level
+            VkImageMemoryBarrier barrier = imageBarrier_toTransfer;
+            barrier.image = newImage._image;
+            barrier.subresourceRange = subresourceRange;
+            barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+            barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+            barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+            barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+            vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+        });
+
+        vmaDestroyBuffer(allocator, stagingBuffer._buffer, stagingBuffer._allocation);
+
+        outTexture->image = newImage;
+
+        // Image view  
+        VkImageViewCreateInfo imageinfo = ImageViewCreateInfo(outTexture->format, outTexture->image._image, VK_IMAGE_ASPECT_COLOR_BIT);
+        imageinfo.subresourceRange.levelCount = outTexture->mipLevels;
+
+        vkCreateImageView(device, &imageinfo, nullptr, &outTexture->imageView);
+
+        jsonData.clear();
     }
-    // Everything is loaded
-    return false;
 }

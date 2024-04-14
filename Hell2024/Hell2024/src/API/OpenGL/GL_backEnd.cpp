@@ -9,9 +9,15 @@ namespace OpenGLBackEnd {
     GLuint _vertexDataVAO = 0;
     GLuint _vertexDataVBO = 0;
     GLuint _vertexDataEBO = 0;
+    GLuint _weightedVertexDataVAO = 0;
+    GLuint _weightedVertexDataVBO = 0;
+    GLuint _weightedVertexDataEBO = 0;
 
     GLuint GetVertexDataVAO() {
         return _vertexDataVAO;
+    }
+    GLuint GetWeightedVertexDataVAO() {
+        return _weightedVertexDataVAO;
     }
 }
 
@@ -146,6 +152,46 @@ void OpenGLBackEnd::UploadVertexData(std::vector<Vertex>& vertices, std::vector<
     glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, uv));
     glEnableVertexAttribArray(3);
     glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, tangent));
+
+    glEnableVertexAttribArray(0);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
+}
+
+void OpenGLBackEnd::UploadWeightedVertexData(std::vector<WeightedVertex>& vertices, std::vector<uint32_t>& indices) {
+
+    if (vertices.empty() || indices.empty()) {
+        return;
+    }
+
+    if (_weightedVertexDataVAO != 0) {
+        glDeleteVertexArrays(1, &_weightedVertexDataVAO);
+        glDeleteBuffers(1, &_weightedVertexDataVBO);
+        glDeleteBuffers(1, &_weightedVertexDataEBO);
+    }
+
+    glGenVertexArrays(1, &_weightedVertexDataVAO);
+    glGenBuffers(1, &_weightedVertexDataVBO);
+    glGenBuffers(1, &_weightedVertexDataEBO);
+
+    glBindVertexArray(_weightedVertexDataVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, _weightedVertexDataVBO);
+    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(WeightedVertex), &vertices[0], GL_STATIC_DRAW);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, _weightedVertexDataEBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(uint32_t), &indices[0], GL_STATIC_DRAW);
+
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(WeightedVertex), (void*)0);
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(WeightedVertex), (void*)offsetof(WeightedVertex, normal));
+    glEnableVertexAttribArray(2);
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(WeightedVertex), (void*)offsetof(WeightedVertex, uv));
+    glEnableVertexAttribArray(3);
+    glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(WeightedVertex), (void*)offsetof(WeightedVertex, tangent));
+    glEnableVertexAttribArray(4);
+    glVertexAttribPointer(4, 4, GL_FLOAT, GL_INT, sizeof(WeightedVertex), (void*)offsetof(WeightedVertex, boneID));
+    glEnableVertexAttribArray(5);
+    glVertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, sizeof(WeightedVertex), (void*)offsetof(WeightedVertex, weight));
 
     glEnableVertexAttribArray(0);
     glBindBuffer(GL_ARRAY_BUFFER, 0);

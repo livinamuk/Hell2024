@@ -1,6 +1,8 @@
 #pragma once
 #include "Types/VK_descriptorSet.hpp"
 #include "Types/VK_raytracing.hpp"
+#include "../../Core/Light.h"
+#include "../../Renderer/RenderData.h"
 #include "../../Renderer/RendererCommon.h"
 #include "../../Util.hpp"
 
@@ -15,10 +17,11 @@ namespace VulkanRenderer {
     void CreateShaders();
     void CreateRenderTargets();
     void CreatePipelines();
+    void CreateStorageBuffers();
 
     // Descriptor Sets
     void UpdateSamplerDescriptorSet();
-    void UpdateDynamicDescriptorSetsAndTLAS(std::vector<RenderItem3D>& renderItems, GlobalShaderData& globalShaderData);
+    void UpdateRayTracingDecriptorSet();
     DescriptorSet& GetDynamicDescriptorSet();
     DescriptorSet& GetAllTexturesDescriptorSet();
     DescriptorSet& GetRenderTargetsDescriptorSet();
@@ -27,8 +30,9 @@ namespace VulkanRenderer {
     void HotloadShaders();
 
     // Drawing
-    void RenderLoadingScreen();
-    void RenderWorld(std::vector<RenderItem3D>& renderItems, GlobalShaderData& globalShaderData);
+    void RenderLoadingScreen(std::vector<RenderItem2D>& renderItems);
+    void RenderGame(RenderData& renderData);
+    //void RenderUI(std::vector<RenderItem2D>& renderItems, RenderDestination renderDestination);
 
     // Raytracing
     Raytracer& GetRaytracer();

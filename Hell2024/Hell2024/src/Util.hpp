@@ -21,6 +21,7 @@
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/ostreamwrapper.h>
 #include <rapidjson/prettywriter.h>
+#include "Renderer/RendererCommon.h"
 
 namespace Util {
 
@@ -234,10 +235,6 @@ namespace Util {
             vert1.normal = glm::vec3(0, 0, 1);
             vert2.normal = glm::vec3(0, 0, 1);
             vert3.normal = glm::vec3(0, 0, 1);
-            vert0.bitangent = glm::vec3(0, 1, 0);
-            vert1.bitangent = glm::vec3(0, 1, 0);
-            vert2.bitangent = glm::vec3(0, 1, 0);
-            vert3.bitangent = glm::vec3(0, 1, 0);
             vert0.tangent = glm::vec3(1, 0, 0);
             vert1.tangent = glm::vec3(1, 0, 0);
             vert2.tangent = glm::vec3(1, 0, 0);
@@ -273,8 +270,6 @@ namespace Util {
             glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, uv));
             glEnableVertexAttribArray(3);
             glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, tangent));
-            glEnableVertexAttribArray(4);
-            glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, bitangent));
         }
         glBindVertexArray(frontFacingPlaneVAO);
         glDrawElementsInstanced(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0, instanceCount);
@@ -369,24 +364,6 @@ namespace Util {
         return (stat(name.data(), &buffer) == 0);
     }
 
-    inline glm::mat4 GetVoxelModelMatrix(VoxelFace& voxel, float voxelSize) {
-        float x = voxel.x * voxelSize;
-        float y = voxel.y * voxelSize;
-        float z = voxel.z * voxelSize;
-        Transform transform;
-        transform.scale = glm::vec3(voxelSize);
-        transform.position = glm::vec3(x, y, z);
-        return transform.to_mat4();
-    }
-
-    inline glm::mat4 GetVoxelModelMatrix(int x, int y, int z, float voxelSize) {
-        Transform transform;
-        transform.scale = glm::vec3(voxelSize);
-        transform.position = glm::vec3(x, y, z) * voxelSize;
-        return transform.to_mat4();
-    }
-
-
     inline float FInterpTo(float current, float target, float deltaTime, float interpSpeed) {
         // If no interp speed, jump to target value
         if (interpSpeed <= 0.f)
@@ -443,9 +420,6 @@ namespace Util {
         vert0->tangent = tangent;
         vert1->tangent = tangent;
         vert2->tangent = tangent;
-        vert0->bitangent = bitangent;
-        vert1->bitangent = bitangent;
-        vert2->bitangent = bitangent;
     }
 
     inline float GetMaxXPointOfTri(Triangle& tri) {

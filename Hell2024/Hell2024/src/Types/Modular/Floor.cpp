@@ -55,8 +55,6 @@ void Floor::CreateMeshGL() {
     glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, uv));
     glEnableVertexAttribArray(3);
     glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, tangent));
-    glEnableVertexAttribArray(4);
-    glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, bitangent));
 }
 
 
@@ -103,7 +101,7 @@ void Floor::UpdateRenderItem() {
     renderItem.modelMatrix = glm::mat4(1);
     renderItem.meshIndex = meshIndex;
     renderItem.baseColorTextureIndex = AssetManager::GetMaterialByIndex(materialIndex)->_basecolor;
-    renderItem.normaTextureIndex = AssetManager::GetMaterialByIndex(materialIndex)->_normal;
+    renderItem.normalTextureIndex = AssetManager::GetMaterialByIndex(materialIndex)->_normal;
     renderItem.rmaTextureIndex = AssetManager::GetMaterialByIndex(materialIndex)->_rma;
 }
 

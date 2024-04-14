@@ -1,11 +1,15 @@
 #version 460
 #extension GL_EXT_ray_tracing : require
 #extension GL_EXT_nonuniform_qualifier : enable
+#extension GL_EXT_scalar_block_layout : require
 #extension GL_EXT_scalar_block_layout : enable
 #extension GL_EXT_shader_explicit_arithmetic_types_int64 : require
 
+
 struct RayPayload {
 	vec3 color;
+	vec3 hitPos;
+	vec3 normal;
 };
 
 struct RenderItem3D {
@@ -22,18 +26,21 @@ struct RenderItem3D {
 
 struct Vertex {
 	vec3 position;
-    float pad0;
     vec3 normal;
-    float pad1;
     vec2 texCoord;
-    float pad2;
-    float pad3;
     vec3 tangent;
-    float pad4;
-    vec3 bitangent;
-    float pad5;
-    vec4 weight;
-    ivec4 boneID;
+
+};
+
+struct Light {
+	float posX;
+	float posY;
+	float posZ;
+	float colorR;
+	float colorG;
+	float colorB;
+	float strength;
+	float radius;
 };
 
 hitAttributeEXT vec2 attribs;
@@ -43,11 +50,12 @@ layout(location = 1) rayPayloadEXT bool isShadowed;
 
 layout(set = 0, binding = 3) uniform accelerationStructureEXT topLevelAS;
 layout(std140,set = 0, binding = 2) readonly buffer A {RenderItem3D data[];} tlasInstances;
+layout(set = 0, binding = 4, scalar) readonly buffer B {Light data[];} lights;
 
 layout(set = 1, binding = 0) uniform sampler samp;
 layout(set = 1, binding = 1) uniform texture2D textures[1024];
 
-layout(set = 3, binding = 0) readonly buffer Vertices { Vertex v[]; } vertices;
+layout(set = 3, binding = 0, scalar) readonly buffer Vertices { Vertex v[]; } vertices;
 layout(set = 3, binding = 1) readonly buffer Indices { uint i[]; } indices;
 
 vec3 mixBary(vec3 a, vec3 b, vec3 c, vec3 barycentrics) {
@@ -102,38 +110,77 @@ void main() {
 	}
 
 	// World position	
-	const vec3 worldPos = (modelMatrix * vec4(pos0 * barycentrics.x + pos1 * barycentrics.y + pos2 * barycentrics.z, 1.0)).xyz;
+	//const vec3 worldPos = (modelMatrix * vec4(pos0 * barycentrics.x + pos1 * barycentrics.y + pos2 * barycentrics.z, 1.0)).xyz;
+	const vec3 worldPos = gl_WorldRayOriginEXT + gl_WorldRayDirectionEXT * gl_HitTEXT;
 
-	// Light
-	float lightStrength = 1.2;
-	float lightRadius = 5.6;
-	vec3 lightPosition = vec3(3.2, 2.2, 3.5);
 
-	vec3 lightDir = normalize(lightPosition - worldPos); 
-	float lightAttenuation =  smoothstep(lightRadius, 0, length(lightPosition - worldPos));
-	float irradiance = max(dot(lightDir, normal), 0.0) ;
-	irradiance *= lightAttenuation * lightStrength;	
 
-	// Shadow ray
-	vec3 origin = worldPos;
-	float shadowFactor = 1;
-	float minRayDist = 0.001;
-	float distanceToLight = distance(lightPosition.xyz, origin);
-	uint  flags  = gl_RayFlagsTerminateOnFirstHitEXT | gl_RayFlagsOpaqueEXT | gl_RayFlagsSkipClosestHitShaderEXT | gl_RayFlagsCullFrontFacingTrianglesEXT;     	
-	isShadowed  = true;
-	if (distanceToLight < lightRadius) {
-		traceRayEXT(topLevelAS,	flags, 0xFF, 0, 0, 1, origin, minRayDist, lightDir, distanceToLight, 1);		
-		if(isShadowed) {
-			shadowFactor = 0;
+	
+	vec3 combinedAttenuation = vec3(0);
+
+
+
+
+
+
+
+	// Get a Light
+
+	for (int i = 0; i < 8; i++) {
+
+		Light light = lights.data[i];
+
+		// Light
+		float lightStrength = 1.2;
+		float lightRadius = 5.6;
+		vec3 lightPosition = vec3(3.2, 2.2, 3.5);
+
+	
+		lightRadius = light.radius;
+		lightStrength = light.strength;
+		lightPosition = vec3(light.posX, light.posY, light.posZ);
+
+		vec3 lightDir = normalize(lightPosition - worldPos); 
+		float lightAttenuation =  smoothstep(lightRadius, 0, length(lightPosition - worldPos));
+		float irradiance = max(dot(lightDir, normal), 0.0) ;
+		irradiance *= lightAttenuation * lightStrength;	
+
+		// Shadow ray
+		vec3 origin = worldPos + (-gl_WorldRayDirectionEXT * 0.001);
+		float shadowFactor = 1;
+		float minRayDist = 0.00001;
+		float distanceToLight = distance(lightPosition.xyz, origin);
+		uint  flags  = gl_RayFlagsTerminateOnFirstHitEXT | gl_RayFlagsOpaqueEXT | gl_RayFlagsSkipClosestHitShaderEXT | gl_RayFlagsCullFrontFacingTrianglesEXT;     	
+		isShadowed = true;
+		if (distanceToLight < lightRadius) {
+			traceRayEXT(topLevelAS,	flags, 0xFF, 0, 0, 1, origin, minRayDist, lightDir, distanceToLight, 1);		
+			if(isShadowed) {
+				shadowFactor = 0;
+			}
 		}
+
+		combinedAttenuation += vec3(lightAttenuation) *  shadowFactor * irradiance;
+
 	}
 
 	// Debug output
-	vec3 color;
-	color = texture(sampler2D(textures[198], samp), texCoord).rgb;
-	color = normal;
-	color = vec3(texCoord, 0);
-	color = worldPos;
-	rayPayload.color = color * shadowFactor * irradiance;
+	//color = texture(sampler2D(textures[198], samp), texCoord).rgb;
+	//color = normal;
+	//color = vec3(texCoord, 0);
+	//color = worldPos;
+
+
+
+	
+
+	rayPayload.color = combinedAttenuation;// * worldPos;
+	rayPayload.hitPos = worldPos;
+	rayPayload.normal = normal;
+
+	/*	
+	rayPayload.color = vec3(0,0,0);
+	if (isShadowed) {
+		rayPayload.color.r = distanceToLight * 0.1;
+	}*/
 
 }

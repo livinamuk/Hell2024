@@ -1,5 +1,6 @@
 #include "Window.h"
 #include "../API/OpenGL/GL_assetManager.h"
+#include "../Core/AssetManager.h"
 #include "../Util.hpp"
 
 Window::Window() {
@@ -18,36 +19,29 @@ void Window::CleanUp() {
 	// If the raycastBody exists, then they all do, so remove the old ones
 	if (raycastBody) {
 		raycastBody->release();
-		raycastBodyTop->release();
+		//raycastBodyTop->release();
 		raycastShape->release();
-		raycastShapeTop->release();
+		//raycastShapeTop->release();
 	}
 }
 
 void Window::CreatePhysicsObjects() {
 
-	OpenGLModel* model = OpenGLAssetManager::GetModel("Glass");
-	if (!model) {
-		std::cout << "Failed to create Window physics object, cause could not find 'Glass.obj' model\n";
-		return;
-	}
+	
+    PxTriangleMesh* triangleMesh = Physics::CreateTriangleMeshFromModelIndex(AssetManager::GetModelIndexByName("Glass")); 
+	
 
 	CleanUp(); // removes old PhysX objects
 
 
 	{
 
-		OpenGLMesh* mesh = &model->_meshes[0];
-		if (!mesh->_triangleMesh) {
-			mesh->CreateTriangleMesh();
-		}
-
 		PhysicsFilterData filterData2;
 		filterData2.raycastGroup = RaycastGroup::RAYCAST_ENABLED;
 		filterData2.collisionGroup = NO_COLLISION;
 		filterData2.collidesWith = NO_COLLISION;
 		PxShapeFlags shapeFlags(PxShapeFlag::eSCENE_QUERY_SHAPE); // Most importantly NOT eSIMULATION_SHAPE. PhysX does not allow for tri mesh.
-		raycastShape = Physics::CreateShapeFromTriangleMesh(mesh->_triangleMesh, shapeFlags);
+		raycastShape = Physics::CreateShapeFromTriangleMesh(triangleMesh, shapeFlags);
 		raycastBody = Physics::CreateRigidStatic(Transform(), filterData2, raycastShape);
 
 		PhysicsObjectData* physicsObjectData = new PhysicsObjectData(PhysicsObjectType::GLASS, this);
@@ -56,7 +50,7 @@ void Window::CreatePhysicsObjects() {
 		PxMat44 m2 = Util::GlmMat4ToPxMat44(GetModelMatrix());
 		PxTransform transform2 = PxTransform(m2);
 		raycastBody->setGlobalPose(transform2);
-	}
+	}/*
 	{
 		OpenGLMesh* mesh = &model->_meshes[1];
 		if (!mesh->_triangleMesh) {
@@ -77,7 +71,7 @@ void Window::CreatePhysicsObjects() {
 		PxMat44 m2 = Util::GlmMat4ToPxMat44(GetModelMatrix());
 		PxTransform transform2 = PxTransform(m2);
 		raycastBodyTop->setGlobalPose(transform2);
-	}
+	}*/
 
 }
 
@@ -123,4 +117,36 @@ glm::vec3 Window::GetBackRightCorner() {
 
 glm::vec3 Window::GetWorldSpaceCenter() {
     return position + glm::vec3(0, 1.5f, 0);
+}
+
+
+void Window::UpdateRenderItems() {
+
+    renderItems.clear();
+
+    static uint32_t interiorMaterialIndex = AssetManager::GetMaterialIndex("Window");
+    static uint32_t exteriorMaterialIndex = AssetManager::GetMaterialIndex("WindowExterior");
+
+    Model* model = AssetManager::GetModelByIndex(AssetManager::GetModelIndexByName("Window"));
+
+    for (int i = 0; i < model->GetMeshIndices().size(); i++) {       
+        uint32_t& meshIndex = model->GetMeshIndices()[i];
+        uint32_t materialIndex = interiorMaterialIndex;
+        if (i == 4 || i == 5 || i == 6) {
+            materialIndex = exteriorMaterialIndex;
+        }
+        Mesh* mesh = AssetManager::GetMeshByIndex(meshIndex);
+        RenderItem3D& renderItem = renderItems.emplace_back();
+        renderItem.vertexOffset = mesh->baseVertex;
+        renderItem.indexOffset = mesh->baseIndex;
+        renderItem.modelMatrix = GetModelMatrix();
+        renderItem.meshIndex = meshIndex;
+        renderItem.baseColorTextureIndex = AssetManager::GetMaterialByIndex(materialIndex)->_basecolor;
+        renderItem.normalTextureIndex = AssetManager::GetMaterialByIndex(materialIndex)->_normal;
+        renderItem.rmaTextureIndex = AssetManager::GetMaterialByIndex(materialIndex)->_rma;
+    }
+}
+
+std::vector<RenderItem3D>& Window::GetRenderItems() {
+    return renderItems;
 }

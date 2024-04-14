@@ -18,7 +18,7 @@ namespace BackEnd {
     GLFWwindow* GetWindowPointer();
     const WindowedMode& GetWindowMode();
     void SetWindowPointer(GLFWwindow* window);
-    void CreateWindow(const WindowedMode& windowedMode);
+    void CreateGLFWWindow(const WindowedMode& windowedMode);
     void SetWindowedMode(const WindowedMode& windowedMode);
     void ToggleFullscreen();
     void ForceCloseWindow();

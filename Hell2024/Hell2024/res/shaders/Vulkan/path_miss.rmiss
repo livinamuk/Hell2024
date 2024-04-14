@@ -8,5 +8,5 @@ struct RayPayload {
 layout(location = 0) rayPayloadInEXT RayPayload rayPayload;
 
 void main() {
-    rayPayload.color = vec3(0, 0, 1);
+    rayPayload.color = vec3(0.01);
 }

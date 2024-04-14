@@ -1,24 +1,290 @@
 #version 460
 #extension GL_EXT_ray_tracing : enable
 
-layout(set = 0, binding = 0) uniform GlobalShaderData {
+layout(set = 0, binding = 0) readonly buffer CameraData {
     mat4 projection;
     mat4 projectionInverse;
     mat4 view;
     mat4 viewInverse;
-} globalShaderData;
+} cameraData;
+
 
 struct RayPayload {
 	vec3 color;
+	vec3 hitPos;
+	vec3 normal;
+};
+
+
+struct Light {
+	float posX;
+	float posY;
+	float posZ;
+	float colorR;
+	float colorG;
+	float colorB;
+	float strength;
+	float radius;
 };
 
 layout(location = 0) rayPayloadEXT RayPayload rayPayload;
+layout(location = 1) rayPayloadEXT bool isShadowed;
+
 layout(set = 0, binding = 3) uniform accelerationStructureEXT topLevelAS;
+layout(set = 0, binding = 4) readonly buffer B {Light data[];} lights;
+
+layout(set = 1, binding = 0) uniform sampler samp;
+
+layout(set = 2, binding = 0) uniform sampler2D baseColorTexture;
+layout(set = 2, binding = 1) uniform sampler2D normalTexture;
+layout(set = 2, binding = 2) uniform sampler2D rmaTexture;
+layout(set = 2, binding = 3) uniform sampler2D depthTexture;
 
 layout(set = 3, binding = 2, rgba8) uniform image2D outputImage;
 
+
+const float PI = 3.14159265359;
+
+
+
+
+
+
+
+
+
+/////////////////////////
+//                     //
+//   Direct Lighting   //
+
+
+float D_GGX(float NoH, float roughness) {
+  float alpha = roughness * roughness;
+  float alpha2 = alpha * alpha;
+  float NoH2 = NoH * NoH;
+  float b = (NoH2 * (alpha2 - 1.0) + 1.0);
+  return alpha2 / (PI * b * b);
+}
+
+float G1_GGX_Schlick(float NdotV, float roughness) {
+  //float r = roughness; // original
+  float r = 0.5 + 0.5 * roughness; // Disney remapping
+  float k = (r * r) / 2.0;
+  float denom = NdotV * (1.0 - k) + k;
+  return NdotV / denom;
+}
+
+float G_Smith(float NoV, float NoL, float roughness) {
+  float g1_l = G1_GGX_Schlick(NoL, roughness);
+  float g1_v = G1_GGX_Schlick(NoV, roughness);
+  return g1_l * g1_v;
+}
+
+vec3 fresnelSchlick(float cosTheta, vec3 F0) {
+    return F0 + (1.0 - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
+}
+
+vec3 microfacetBRDF(in vec3 L, in vec3 V, in vec3 N, in vec3 baseColor, in float metallicness, in float fresnelReflect, in float roughness, in vec3 WorldPos) {
+  vec3 H = normalize(V + L); // half vector
+  // all required dot products
+  float NoV = clamp(dot(N, V), 0.0, 1.0);
+  float NoL = clamp(dot(N, L), 0.0, 1.0);
+  float NoH = clamp(dot(N, H), 0.0, 1.0);
+  float VoH = clamp(dot(V, H), 0.0, 1.0);       
+  // F0 for dielectics in range [0.0, 0.16] 
+  // default FO is (0.16 * 0.5^2) = 0.04
+  vec3 f0 = vec3(0.16 * (fresnelReflect * fresnelReflect)); 
+  // f0 = vec3(0.125);
+  // in case of metals, baseColor contains F0
+  f0 = mix(f0, baseColor, metallicness);
+  // specular microfacet (cook-torrance) BRDF
+  vec3 F = fresnelSchlick(VoH, f0);
+  float D = D_GGX(NoH, roughness);
+  float G = G_Smith(NoV, NoL, roughness);
+  vec3 spec = (D * G * F) / max(4.0 * NoV * NoL, 0.001);  
+
+  // diffuse
+  vec3 notSpec = vec3(1.0) - F; // if not specular, use as diffuse
+  notSpec *= 1.0 - metallicness; // no diffuse for metals
+  vec3 diff = notSpec * baseColor / PI;   
+  spec *= 1.05;
+  vec3 result = diff + spec;
+
+  return result;
+}
+
+vec3 GetDirectLighting(vec3 lightPos, vec3 lightColor, float radius, float strength, vec3 Normal, vec3 WorldPos, vec3 baseColor, float roughness, float metallic) {
+	float fresnelReflect = 1.0; // 0.5 is what they used for box, 1.0 for demon
+
+	vec3 viewPos = cameraData.viewInverse[3].xyz;
+
+	vec3 viewDir = normalize(viewPos - WorldPos);    
+	float lightRadiance = strength * 1;// * 1.25;
+	vec3 lightDir = normalize(lightPos - WorldPos); 
+	float lightAttenuation = smoothstep(radius, 0, length(lightPos - WorldPos));
+	// lightAttenuation = clamp(lightAttenuation, 0.0, 0.9); // THIS IS WRONG, but does stop super bright region around light source and doesn't seem to affect anything else...
+	float irradiance = max(dot(lightDir, Normal), 0.0) ;
+	irradiance *= lightAttenuation * lightRadiance;		
+	vec3 brdf = microfacetBRDF(lightDir, viewDir, Normal, baseColor, metallic, fresnelReflect, roughness, WorldPos);
+	return brdf * irradiance * clamp(lightColor, 0, 1);
+}
+
+
+
+
+
+
+
+
+//////////////////////
+//                  //
+//   Tone mapping   //
+
+vec3 filmic(vec3 x) {
+  vec3 X = max(vec3(0.0), x - 0.004);
+  vec3 result = (X * (6.2 * X + 0.5)) / (X * (6.2 * X + 1.7) + 0.06);
+  return pow(result, vec3(2.2));
+}
+
+float filmic(float x) {
+  float X = max(0.0, x - 0.004);
+  float result = (X * (6.2 * X + 0.5)) / (X * (6.2 * X + 1.7) + 0.06);
+  return pow(result, 2.2);
+}
+
+vec3 Tonemap_ACES(const vec3 x) { // Narkowicz 2015, "ACES Filmic Tone Mapping Curve"
+    const float a = 2.51;
+    const float b = 0.03;
+    const float c = 2.43;
+    const float d = 0.59;
+    const float e = 0.14;
+    return (x * (a * x + b)) / (x * (c * x + d) + e);
+}
+
+
+
+
+
+
+
 void main() {
 
+	// Get UVs from pixel position
+	const vec2 pixelCenter = vec2(gl_LaunchIDEXT.xy) + vec2(0.5);
+	const vec2 texCoord = pixelCenter/vec2(gl_LaunchSizeEXT.xy);
+
+	// Sample G Buffer
+	vec3 baseColor = texture(baseColorTexture, texCoord).rgb;
+	baseColor.rgb = pow(baseColor.rgb, vec3(2.2));
+	vec3 normal = texture(normalTexture, texCoord).rgb;
+	vec3 rma = texture(rmaTexture, texCoord).rgb;
+	float z = texture(depthTexture, texCoord).x;// * 2.0f - 1.0f;
+	float roughness = rma.r;
+	float metallic = rma.g;
+
+	// Reconstruct position from depth	
+	const mat4 correction = mat4(1.0,  0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0,  0.0, 0.5, 0.0, 0.0,  0.0, 0.5, 1.0);	
+    vec2 clipSpaceTexCoord = texCoord;
+	vec4 clipSpacePosition = vec4(texCoord * 2.0 - 1.0, z, 1.0);
+    vec4 viewSpacePosition = cameraData.projectionInverse * clipSpacePosition;
+    viewSpacePosition /= viewSpacePosition.w;
+    vec4 worldSpacePosition = cameraData.viewInverse * viewSpacePosition;    
+    vec3 worldPos = worldSpacePosition.xyz;
+	
+	mat4 proj = cameraData.projection;
+	mat4 view = cameraData.view;	
+	mat4 inverseProjection = cameraData.projectionInverse;
+	mat4 inverseView = cameraData.viewInverse;	
+
+
+
+
+
+		// Get a Light
+
+		vec3 combinedAttenuation = vec3(0);
+		vec3 directLighting = vec3(0);
+
+		for (int i = 0; i < 8; i++) {
+
+			Light light = lights.data[i];
+
+			
+			vec3 lightPosition = vec3(light.posX, light.posY, light.posZ);
+			vec3 lightColor = vec3(light.colorR, light.colorG, light.colorB);
+
+			// Light
+			float lightStrength = 1.2;
+			float lightRadius = 5.6;
+
+	
+			lightRadius = light.radius;
+			lightStrength = light.strength;
+
+			vec3 lightDir = normalize(lightPosition - worldPos); 
+			float lightAttenuation =  smoothstep(lightRadius, 0, length(lightPosition - worldPos));
+			float irradiance = max(dot(lightDir, normal), 0.0) ;
+			irradiance *= lightAttenuation * lightStrength;	
+
+			// Shadow ray
+			vec3 origin = worldPos + (normal * vec3(0.01));// + (-gl_WorldRayDirectionEXT * 0.001);
+			float shadowFactor = 1;
+			float minRayDist = 0.00001;
+			float distanceToLight = distance(lightPosition.xyz, origin);
+			uint  flags  = gl_RayFlagsTerminateOnFirstHitEXT | gl_RayFlagsOpaqueEXT | gl_RayFlagsSkipClosestHitShaderEXT | gl_RayFlagsCullFrontFacingTrianglesEXT;     	
+			isShadowed = true;
+			if (distanceToLight < lightRadius) {
+				traceRayEXT(topLevelAS,	flags, 0xFF, 0, 0, 1, origin, minRayDist, lightDir, distanceToLight, 1);		
+				if(isShadowed) {
+					shadowFactor = 0;
+				} 
+				else {
+					vec3 ligthting = GetDirectLighting(lightPosition, lightColor, light.radius, light.strength, normal, worldPos, baseColor.rgb, roughness, metallic);
+					directLighting += ligthting;
+				}
+			}
+
+		//combinedAttenuation += vec3(lightAttenuation) *  shadowFactor * irradiance;
+
+	}
+	
+	
+	vec4 outputColor = vec4(directLighting, 1);
+
+	// FragColor.rgb = indirectLighting;    
+	//float d = distance(viewPos, WorldPos);
+	//float alpha = getFogFactor(d);
+	//vec3 FogColor = vec3(0.0);
+	//outputColor.rgb = mix(outputColor.rgb, FogColor, alpha);
+	outputColor.rgb = mix(outputColor.rgb, Tonemap_ACES(outputColor.rgb), 1.0);
+	outputColor.rgb = mix(outputColor.rgb, Tonemap_ACES(outputColor.rgb), 0.35);	
+	outputColor.rgb = pow(outputColor.rgb, vec3(1.0/2.2)); 
+
+	// Vignette         
+	vec2 uv = texCoord;//gl_FragCoord.xy / vec2(screenWidth * 1, screenHeight * 1);
+	uv *=  1.0 - uv.yx;           
+	float vig = uv.x*uv.y * 15.0;	// multiply with sth for intensity    
+	vig = pow(vig, 0.05);			// change pow for modifying the extend of the  vignette    
+	outputColor.rgb *= vec3(vig);
+	
+	// Some more YOLO tone mapping
+	outputColor.rgb = mix(outputColor.rgb, Tonemap_ACES(outputColor.rgb), 0.995);	
+
+	// Add the noise
+	// TO DO : FragColor.rgb = FragColor.rgb + (x * -noiseFactor) + (noiseFactor / 2);
+
+	// Contrast
+	float contrast = 1.15;
+	vec3 finalColor = outputColor.rgb;
+	outputColor.rgb = outputColor.rgb * contrast;
+
+	// Brightness
+	outputColor.rgb -= vec3(0.010);
+
+
+
+	//vec4 outputColor = vec4(normal, 1);
+/*
 	mat4 proj = globalShaderData.projection;
 	mat4 view = globalShaderData.view;
 	mat4 projInverse = globalShaderData.projectionInverse;
@@ -29,12 +295,14 @@ void main() {
 	vec2 d = inUV * 2.0 - 1.0;
 	vec4 origin = viewInverse * vec4(0,0,0,1);
 	vec4 target = projInverse * vec4(d.x, d.y, 1, 1) ;		
-	uint rayFlags = gl_RayFlagsOpaqueEXT;// | gl_RayFlagsCullFrontFacingTrianglesEXT;
+	uint rayFlags = gl_RayFlagsCullFrontFacingTrianglesEXT;
 	uint cullMask = 0xff;
 	float tmin = 0.001;
 	float tmax = 10000.0;
-
+	
 	rayPayload.color = vec3(0);
+	rayPayload.hitPos = vec3(0);
+	rayPayload.normal = vec3(0);
 
 	vec4 direction = viewInverse * vec4(normalize(target.xyz / target.w), 0);
 
@@ -42,8 +310,30 @@ void main() {
 	vec3 rayOrigin = origin.xyz;
 	
 	traceRayEXT(topLevelAS, rayFlags, cullMask, 0, 0, 0, rayOrigin, tmin, rayDirection, tmax, 0);		
-
+	
 	vec4 outputColor = vec4(rayPayload.color, 1);
+	
+	// Hack floor reflections
+	if (rayPayload.hitPos.y < 3.11) {
+		rayDirection = reflect(direction.xyz, rayPayload.normal);
+		rayOrigin = rayPayload.hitPos.xyz;	
+		traceRayEXT(topLevelAS, rayFlags, cullMask, 0, 0, 0, rayOrigin, tmin, rayDirection, tmax, 0);
+		outputColor += vec4(rayPayload.color, 1);
+		
+		rayDirection = reflect(rayDirection.xyz, rayPayload.normal);
+		rayOrigin = rayPayload.hitPos.xyz;	
+		traceRayEXT(topLevelAS, rayFlags, cullMask, 0, 0, 0, rayOrigin, tmin, rayDirection, tmax, 0);
+		outputColor += vec4(rayPayload.color, 1);
+
+		rayDirection = reflect(rayDirection.xyz, rayPayload.normal);
+		rayOrigin = rayPayload.hitPos.xyz;	
+		traceRayEXT(topLevelAS, rayFlags, cullMask, 0, 0, 0, rayOrigin, tmin, rayDirection, tmax, 0);
+		outputColor += vec4(rayPayload.color, 1);
+	}
+	*/
+
+	//outputColor.rgb = baseColor;
+
 	imageStore(outputImage, ivec2(gl_LaunchIDEXT.x, gl_LaunchIDEXT.y), outputColor);
 }
 

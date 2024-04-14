@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../Common.h"
+#include "../Renderer/RendererCommon.h"
 
 #pragma warning(push, 0)
 #include "PxPhysicsAPI.h"
@@ -73,6 +74,12 @@ namespace Physics {
 	inline CCTHitCallback _cctHitCallback;
 
 	PxRigidActor* GetGroundPlane();
+
+    PxConvexMesh* CreateConvexMeshFromModelIndex(int modelIndex);
+    PxTriangleMesh* CreateTriangleMeshFromModelIndex(int modelIndex);
+
+    std::vector<Vertex> GetDebugLineVertices(DebugLineRenderMode debugLineRenderMode, std::vector<PxRigidActor*> ignoreList);
+    
 }
 
 class ContactReportCallback : public PxSimulationEventCallback {

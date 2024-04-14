@@ -7,7 +7,7 @@
 #include "shaderc/shaderc.hpp"
 
 namespace VulkanShaderUtil {
-    inline void LoadShader(VkDevice device, std::string filePath, VkShaderStageFlagBits flag, VkShaderModule* outShaderModule);
+    inline bool LoadShader(VkDevice device, std::string filePath, VkShaderStageFlagBits flag, VkShaderModule* outShaderModule);
     inline std::string ReadFile(std::string filepath);
     inline std::vector<uint32_t> CompileFile(const std::string& source_name, shaderc_shader_kind kind, const std::string& source, std::string shaderPath, bool optimize = false);
 }
@@ -62,14 +62,14 @@ std::vector<uint32_t> VulkanShaderUtil::CompileFile(const std::string& source_na
     shaderc::SpvCompilationResult module = compiler.CompileGlslToSpv(source, kind, source_name.c_str(), options);
 
     if (module.GetCompilationStatus() != shaderc_compilation_status_success) {
-        std::cout << "ERROR IN: " << shaderPath << "\n";
+        std::cout << "\nERROR IN: " << shaderPath << "\n";
         std::cerr << module.GetErrorMessage();
         return std::vector<uint32_t>();
     }
     return { module.cbegin(), module.cend() };
 }
 
-void VulkanShaderUtil::LoadShader(VkDevice device, std::string filePath, VkShaderStageFlagBits flag, VkShaderModule* outShaderModule) {
+bool VulkanShaderUtil::LoadShader(VkDevice device, std::string filePath, VkShaderStageFlagBits flag, VkShaderModule* outShaderModule) {
 
     shaderc_shader_kind kind;
     if (flag == VK_SHADER_STAGE_VERTEX_BIT) {
@@ -94,6 +94,11 @@ void VulkanShaderUtil::LoadShader(VkDevice device, std::string filePath, VkShade
     std::string vertSource = VulkanShaderUtil::ReadFile("res/shaders/Vulkan/" + filePath);
     std::vector<uint32_t> buffer = VulkanShaderUtil::CompileFile("shader_src", kind, vertSource, filePath, true);
 
+    if (buffer.size() == 0) {
+        std::cout << "Failed to compile shader: " << filePath << "\n";
+        return false;
+    }
+
     //create a new shader module, using the buffer we loaded
     VkShaderModuleCreateInfo createInfo = {};
     createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
@@ -105,7 +110,7 @@ void VulkanShaderUtil::LoadShader(VkDevice device, std::string filePath, VkShade
     VkShaderModule shaderModule = nullptr;
     if (vkCreateShaderModule(device, &createInfo, nullptr, &shaderModule) != VK_SUCCESS) {
         std::cout << "vkCreateShaderModule FAILED for " << filePath << "\n";
-        return;
+        return false;
     }
     // Delete old version of shader, this is the case if hotloading
     if (outShaderModule != nullptr) {
@@ -121,5 +126,5 @@ void VulkanShaderUtil::LoadShader(VkDevice device, std::string filePath, VkShade
     //PFN_vkSetDebugUtilsObjectNameEXT vkSetDebugUtilsObjectNameEXT; 
     // this could be helpful to chase up?
     // this could be helpful to chase up?
-    return;
+    return true;
 }

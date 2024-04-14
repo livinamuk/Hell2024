@@ -33,10 +33,10 @@ struct Buffer {
         vmaUnmapMemory(allocator, allocation);
     }
 
-    void MapRange(VmaAllocator allocator, void* srcData, size_t size) {
+    void MapRange(VmaAllocator allocator, void* srcData, size_t memorySize) {
         void* data = nullptr;
         vmaMapMemory(allocator, allocation, &data);
-        memcpy(data, srcData, size);
+        memcpy(data, srcData, memorySize);
         vmaUnmapMemory(allocator, allocation);
     }
 

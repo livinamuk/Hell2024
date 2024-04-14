@@ -26,6 +26,7 @@ namespace VulkanBackEnd {
     void CreateSampler();
 
     void UploadVertexData(std::vector<Vertex>& vertices, std::vector<uint32_t>& indices);
+    void UploadWeightedVertexData(std::vector<WeightedVertex>& vertices, std::vector<uint32_t>& indices);
 
     void AddDebugName(VkBuffer buffer, const char* name);
     void AddDebugName(VkDescriptorSetLayout descriptorSetLayout, const char* name);
@@ -39,7 +40,8 @@ namespace VulkanBackEnd {
     VkSwapchainKHR GetSwapchain();
     int32_t GetFrameIndex();
     VkQueue GetGraphicsQueue();
-    FrameData& GetCurrentFrame(); 
+    FrameData& GetCurrentFrame();
+    FrameData& GetFrameByIndex(int index);
     VmaAllocator GetAllocator();
     VkDescriptorPool GetDescriptorPool();
     VkSampler GetSampler(); 

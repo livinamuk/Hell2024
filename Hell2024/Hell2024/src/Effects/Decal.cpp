@@ -24,7 +24,7 @@ glm::mat4 Decal::GetModelMatrix() {
 
     Transform localTranslation;
     localTranslation.position = localPosition;// +(normal * glm::vec3(0.001));
-    localTranslation.scale = glm::vec3(0.02f);
+    localTranslation.scale = glm::vec3(0.01f);
     //localTranslation.scale = glm::vec3(0.2);
 
     Transform localRotation;

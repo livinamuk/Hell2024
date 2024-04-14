@@ -13,4 +13,5 @@ void main() {
     FragColor = vec4(textureColor);
     FragColor.rgb *= color;
     FragColor.rgb *= overrideColor;
+	//FragColor.a = 0;
 }

@@ -6,19 +6,25 @@
 struct RigidComponent {
 public:
     int ID;
-    std::string name, correspondingJointName, shapeType;
+    //const char* name;
+    //const char* shapeType;
+    //const char* correspondingJointName;
+    std::string name;
+    std::string shapeType;
+    std::string correspondingJointName;
+    float capsuleLength, capsuleRadius;
+    float mass, friction, restitution, linearDamping, angularDamping, sleepThreshold;
+    PxRigidDynamic* pxRigidBody = nullptr;
+    PxVec3 angularMass;
+    PxQuat rotation;
     glm::mat4 restMatrix;
     glm::vec3 scaleAbsoluteVector;
     glm::vec3 boxExtents, offset;
-    float capsuleLength, capsuleRadius;
-    PxQuat rotation;
-    float mass, friction, restitution, linearDamping, angularDamping, sleepThreshold;
-    PxVec3 angularMass;
-    PxRigidDynamic* pxRigidBody = nullptr;
 };
 
 struct JointComponent {
 public:
+    //const char* name;
     std::string name;
     int parentID, childID;
     PxMat44 parentFrame, childFrame;

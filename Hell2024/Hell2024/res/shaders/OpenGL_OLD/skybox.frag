@@ -16,7 +16,7 @@ void main() {
     FragColor.g *= 0.5;
     FragColor.b *= 0.1;
     FragColor.a = 1.0;
-
+//	FragColor.rgb = vec3(0,0,0);
 
 //	contrastAdjust(FragColor, 2.0);
     //   FragColor.rgb = texture(cubeMap, TexCoords).rgb;

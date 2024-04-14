@@ -1,5 +1,6 @@
 
 #include "DebugMenu.h"
+#include "Game.h"
 #include "Audio.hpp"
 #include "Input.h"
 #include "Scene.h"
@@ -226,7 +227,7 @@ void DebugMenu::PressedEnter() {
 	else if (flag == MenuItemFlag::OPEN_EDITOR_MODE) {
 		_isOpen = false;
 		EngineState::_engineMode = EngineMode::EDITOR;
-		EngineState::_splitScreenMode == SplitScreenMode::FULLSCREEN;
+		Game::SetSplitscreenMode(Game::SplitscreenMode::NONE);
         Renderer_OLD::EnteredEditorMode();
 	}
 	// Load map

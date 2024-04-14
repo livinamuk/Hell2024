@@ -5,7 +5,10 @@
 #include "Input.h"
 #include "../EngineState.hpp"
 #include "../API/OpenGL/GL_assetManager.h"
+#include "../BackEnd/BackEnd.h"
 #include "../Core/AssetManager.h"
+
+#include "../EngineState.hpp"
 
 GameObject::GameObject() {
 }
@@ -320,6 +323,7 @@ void GameObject::Update(float deltaTime) {
         _aabb.extents = Util::PxVec3toGlmVec3(raycastRigidStatic.pxRigidStatic->getWorldBounds().getExtents());
         _aabb.position = Util::PxVec3toGlmVec3(raycastRigidStatic.pxRigidStatic->getWorldBounds().getCenter());
     }
+
 }
 
 
@@ -329,13 +333,13 @@ void GameObject::SetWakeOnStart(bool value) {
 
 void GameObject::UpdateEditorPhysicsObject() {
 	/*if (_editorRaycastBody) {
-		if (_modelMatrixMode == ModelMatrixMode::GAME_TRANSFORM) {
+		if (_model_OLDMatrixMode == ModelMatrixMode::GAME_TRANSFORM) {
 			PxQuat quat = Util::GlmQuatToPxQuat(GetWorldRotation());
 			PxVec3 position = Util::GlmVec3toPxVec3(GetWorldPosition());
 			PxTransform transform = PxTransform(position, quat);
 			_editorRaycastBody->setGlobalPose(transform);
 		}
-		else if (_modelMatrixMode == ModelMatrixMode::PHYSX_TRANSFORM && _collisionBody) {
+		else if (_model_OLDMatrixMode == ModelMatrixMode::PHYSX_TRANSFORM && _collisionBody) {
 			_editorRaycastBody->setGlobalPose(_collisionBody->getGlobalPose());
 		}
 		// Repair broken pointer 
@@ -382,6 +386,11 @@ glm::mat4 GameObject::GetGameWorldMatrix() {
 }
 
 void GameObject::AddForceToCollisionObject(glm::vec3 direction, float strength) {
+
+    if (EngineState::_skipPhysics) {
+        return;
+    }
+
 	if (!collisionRigidBody.Exists()) {
 		return;
 	}
@@ -394,13 +403,16 @@ void GameObject::AddForceToCollisionObject(glm::vec3 direction, float strength) 
 }
 
 void GameObject::UpdateRigidBodyMassAndInertia(float density) {
+    if (EngineState::_skipPhysics) {
+        return;
+    }
 	if (collisionRigidBody.pxRigidBody) {
 		PxRigidBodyExt::updateMassAndInertia(*collisionRigidBody.pxRigidBody, density);
 	}
 }
 
 
-void GameObject::SetAudioOnOpen(std::string filename, float volume) {
+void GameObject::SetAudioOnOpen(const char* filename, float volume) {
 	_audio.onOpen = { filename, volume };
 }
 
@@ -408,19 +420,13 @@ glm::vec3 GameObject::GetWorldSpaceOABBCenter() {
 	return GetWorldPosition() + _boundingBox.offsetFromModelOrigin;
 }
 
-void GameObject::SetAudioOnClose(std::string filename, float volume) {
+void GameObject::SetAudioOnClose(const char* filename, float volume) {
 	_audio.onClose = { filename, volume };
 }
 
-/*
-void GameObject::SetModelScaleWhenUsingPhysXTransform(glm::vec3 scale)
-{
-}*/
-
-void GameObject::SetAudioOnInteract(std::string filename, float volume) {
+void GameObject::SetAudioOnInteract(const char* filename, float volume) {
 	_audio.onInteract = { filename, volume };
 }
-
 
 void GameObject::SetOpenState(OpenState openState, float speed, float min, float max) {
 	_openState = openState;
@@ -429,36 +435,37 @@ void GameObject::SetOpenState(OpenState openState, float speed, float min, float
 	_maxOpenAmount = max;
 }
 
-void GameObject::SetModel(const std::string& name)
-{
-	_model = OpenGLAssetManager::GetModel(name);
-
-	if (_model) {
-		_meshMaterialIndices.resize(_model->_meshes.size());
-		//_meshMaterialTypes.resize(_model->_meshIndices.size());
-		//_meshTransforms.resize(_model->_meshIndices.size());
-	}
-	else {
-		std::cout << "Failed to set model '" << name << "', it does not exist.\n";
-	}
+void GameObject::SetModel(const std::string& name){
+    model = AssetManager::GetModelByIndex(AssetManager::GetModelIndexByName(name.c_str()));
+    if (model) {
+        _meshMaterialIndices.resize(model->GetMeshCount());
+    }
+    else {
+        std::cout << "Failed to set model '" << name << "', it does not exist.\n";
+    }
 }
 
 void GameObject::SetMeshMaterialByMeshName(std::string meshName, std::string materialName) {
 	int materialIndex = AssetManager::GetMaterialIndex(materialName);
-	if (_model && materialIndex != -1) {
-		for (int i = 0; i < _model->_meshes.size(); i++) {
-			if (_model->_meshes[i]._name == meshName) {
+	if (model && materialIndex != -1) {
+        for (int i = 0; i < model->GetMeshCount(); i++) {
+
+            if (AssetManager::GetMeshByIndex(model->GetMeshIndices()[i])->name == meshName) {
+            //if (model->GetMeshNameByIndex(i) == meshName) {
 				_meshMaterialIndices[i] = materialIndex;
 				return;
 			}
 		}
 	}
-	if (!_model) {
+	if (!model) {
 		std::cout << "Tried to call SetMeshMaterialByMeshName() but this GameObject has a nullptr model\n";
 	}
-	if (materialIndex == -1) {
+	else if (materialIndex == -1) {
 		std::cout << "Tried to call SetMeshMaterialByMeshName() but the material index was -1\n";
 	}
+    else {
+        std::cout << "Tried to call SetMeshMaterialByMeshName() but the meshName '" << meshName << "' not found\n";
+    }
 }
 
 
@@ -523,18 +530,18 @@ void GameObject::CreateEditorPhysicsObject() {
 	if (_editorRaycastShape) {
 		_editorRaycastShape->release();
 	}
-	if (!_model->_triangleMesh) {
-		_model->CreateTriangleMesh();
+	if (!_model_OLD->_triangleMesh) {
+		_model_OLD->CreateTriangleMesh();
 	}
 	PxShapeFlags shapeFlags(PxShapeFlag::eSCENE_QUERY_SHAPE);
-	_editorRaycastShape = Physics::CreateShapeFromTriangleMesh(_model->_triangleMesh, shapeFlags, Physics::GetDefaultMaterial(), _transform.scale);
+	_editorRaycastShape = Physics::CreateShapeFromTriangleMesh(_model_OLD->_triangleMesh, shapeFlags, Physics::GetDefaultMaterial(), _transform.scale);
 	_editorRaycastBody = Physics::CreateEditorRigidStatic(_transform, _editorRaycastShape, Physics::GetEditorScene());
 	if (_editorRaycastBody->userData) {
 		delete _editorRaycastBody->userData;
 	}
 	_editorRaycastBody->userData = new PhysicsObjectData(PhysicsObjectType::GAME_OBJECT, this);
 
-	//std::cout << "created editor object for GameObject with model " << _model->_name << "\n";
+	//std::cout << "created editor object for GameObject with model " << _model_OLD->_name << "\n";
 }*/
 
 const InteractType& GameObject::GetInteractType() {
@@ -568,6 +575,9 @@ void GameObject::DisableRespawnOnPickup() {
 }
 
 void GameObject::AddCollisionShape(PxShape* shape, PhysicsFilterData physicsFilterData) {
+    if (EngineState::_skipPhysics) {
+        return;
+    }
     if (!collisionRigidBody.Exists()) {
         collisionRigidBody.CreateRigidBody(_transform.to_mat4());
         collisionRigidBody.PutToSleep();
@@ -575,15 +585,21 @@ void GameObject::AddCollisionShape(PxShape* shape, PhysicsFilterData physicsFilt
     collisionRigidBody.AddCollisionShape(shape, physicsFilterData);
 }
 
-void GameObject::AddCollisionShapeFromConvexMesh(OpenGLMesh* mesh, PhysicsFilterData physicsFilterData, glm::vec3 scale) {
-    if (!collisionRigidBody.Exists()) {
+void GameObject::AddCollisionShapeFromModelIndex(unsigned int modelIndex, PhysicsFilterData physicsFilterData, glm::vec3 scale) {
+    if (EngineState::_skipPhysics) {
+        return;
+    }
+    if (model && !collisionRigidBody.Exists()) {
         collisionRigidBody.CreateRigidBody(_transform.to_mat4());
         collisionRigidBody.PutToSleep();
     }
-    collisionRigidBody.AddCollisionShapeFromConvexMesh(mesh, physicsFilterData, scale);
+    collisionRigidBody.AddCollisionShapeFromModelIndex(modelIndex, physicsFilterData, scale);
 }
 
 void GameObject::AddCollisionShapeFromBoundingBox(BoundingBox& boundingBox, PhysicsFilterData physicsFilterData) {
+    if (EngineState::_skipPhysics) {
+        return;
+    }
     if (!collisionRigidBody.Exists()) {
         collisionRigidBody.CreateRigidBody(_transform.to_mat4());
         collisionRigidBody.PutToSleep();
@@ -591,7 +607,11 @@ void GameObject::AddCollisionShapeFromBoundingBox(BoundingBox& boundingBox, Phys
     collisionRigidBody.AddCollisionShapeFromBoundingBox(boundingBox, physicsFilterData);
 }
 
+/*
 void GameObject::SetRaycastShapeFromMesh(OpenGLMesh* mesh) {
+    if (EngineState::_skipPhysics) {
+        return;
+    }
 	if (!mesh) {
 		return;
 	}
@@ -609,12 +629,28 @@ void GameObject::SetRaycastShapeFromMesh(OpenGLMesh* mesh) {
     raycastRigidStatic.pxShape = Physics::CreateShapeFromTriangleMesh(mesh->_triangleMesh, shapeFlags);
     raycastRigidStatic.pxRigidStatic = Physics::CreateRigidStatic(Transform(), filterData, raycastRigidStatic.pxShape);
     raycastRigidStatic.pxRigidStatic->userData = new PhysicsObjectData(PhysicsObjectType::GAME_OBJECT, this);
-}
+}*/
 
 void GameObject::UpdateRigidStatic() {
 
+    if (EngineState::_skipPhysics) {
+        return;
+    }
+
+    // check what calls this and fix the code below
+    // check what calls this and fix the code below
+    // check what calls this and fix the code below
+    // check what calls this and fix the code below
+
+    // actually the funciton below called this. and you've moved this into the SETSHAPE function of the rigidstatic, veryify this by deleting this func
+    // actually the funciton below called this. and you've moved this into the SETSHAPE function of the rigidstatic, veryify this by deleting this func
+    // actually the funciton below called this. and you've moved this into the SETSHAPE function of the rigidstatic, veryify this by deleting this func
+    // actually the funciton below called this. and you've moved this into the SETSHAPE function of the rigidstatic, veryify this by deleting this func
+
+
+    /*
     // REMOVE THIS! ITS A HACK CAUSE YOU HAVEN'T GOT THIS WORKING WHEN THE SHAPE IS NOT A TRI MESH
-    if (_model && _model->_name == "SmallCube") {
+    if (model && model->GetName() == "SmallCube") {
         return;
     }
 
@@ -642,18 +678,31 @@ void GameObject::UpdateRigidStatic() {
     }
     if (raycastRigidStatic.pxRigidStatic) {
         raycastRigidStatic.pxRigidStatic->setGlobalPose(PxTransform(Util::GlmMat4ToPxMat44(_modelMatrix)));
-    }
+    }*/
 }
 
-void GameObject::SetRaycastShapeFromModel(OpenGLModel* model) {	
+void GameObject::SetRaycastShapeFromModelIndex(unsigned int modelIndex) {
+
+    if (EngineState::_skipPhysics) {
+        return;
+    }
+
     if (!model) {
 		return;
 	}
-    raycastRigidStatic.model = model;
-    UpdateRigidStatic();
+    PxShapeFlags shapeFlags(PxShapeFlag::eSCENE_QUERY_SHAPE);
+    PxTriangleMesh* triangleMesh = Physics::CreateTriangleMeshFromModelIndex(modelIndex);
+    PxShape* shape = Physics::CreateShapeFromTriangleMesh(triangleMesh, shapeFlags, Physics::GetDefaultMaterial(), _transform.scale);
+    raycastRigidStatic.SetShape(shape, this);
 }
 
 void GameObject::SetRaycastShape(PxShape* shape) {
+
+
+    if (EngineState::_skipPhysics) {
+        return;
+    }
+
 	if (!shape) {
 		return;
 	}
@@ -674,12 +723,59 @@ void GameObject::SetModelMatrixMode(ModelMatrixMode modelMatrixMode) {
 }
 
 void GameObject::SetPhysicsTransform(glm::mat4 worldMatrix) {
+
+    if (EngineState::_skipPhysics) {
+        return;
+    }
+
 	collisionRigidBody.SetGlobalPose(worldMatrix);
 }
 
 void GameObject::CleanUp() {
     collisionRigidBody.CleanUp();
     raycastRigidStatic.CleanUp();
+}
+
+std::vector<Vertex> GameObject::GetAABBVertices() {
+    std::vector<Vertex> vertices;
+    glm::vec3 b = _aabb.extents;
+    glm::vec3 frontBottomLeft = _aabb.position + glm::vec3(-b.x, -b.y, -b.z);
+    glm::vec3 frontBottomRight = _aabb.position + glm::vec3(b.x, -b.y, -b.z);
+    glm::vec3 frontTopLeft = _aabb.position + glm::vec3(-b.x, b.y, -b.z);
+    glm::vec3 frontTopRight = _aabb.position + glm::vec3(b.x, b.y, -b.z);
+    glm::vec3 backBottomLeft = _aabb.position + glm::vec3(-b.x, -b.y, b.z);
+    glm::vec3 backBottomRight = _aabb.position + glm::vec3(b.x, -b.y, b.z);
+    glm::vec3 backTopLeft = _aabb.position + glm::vec3(-b.x, b.y, b.z);
+    glm::vec3 backTopRight = _aabb.position + glm::vec3(b.x, b.y, b.z);
+    glm::vec3 color = YELLOW;
+    if (HasMovedSinceLastFrame()) {
+        color = RED;
+    }
+    vertices.push_back(Vertex(frontBottomLeft, color));
+    vertices.push_back(Vertex(frontBottomRight, color));
+    vertices.push_back(Vertex(frontTopLeft, color));
+    vertices.push_back(Vertex(frontTopRight, color));
+    vertices.push_back(Vertex(frontBottomLeft, color));
+    vertices.push_back(Vertex(frontTopLeft, color));
+    vertices.push_back(Vertex(frontBottomRight, color));
+    vertices.push_back(Vertex(frontTopRight, color));
+    vertices.push_back(Vertex(backBottomLeft, color));
+    vertices.push_back(Vertex(backBottomRight, color));
+    vertices.push_back(Vertex(backTopLeft, color));
+    vertices.push_back(Vertex(backTopRight, color));
+    vertices.push_back(Vertex(backBottomLeft, color));
+    vertices.push_back(Vertex(backTopLeft, color));
+    vertices.push_back(Vertex(backBottomRight, color));
+    vertices.push_back(Vertex(backTopRight, color));
+    vertices.push_back(Vertex(frontBottomLeft, color));
+    vertices.push_back(Vertex(backBottomLeft, color));
+    vertices.push_back(Vertex(frontBottomRight, color));
+    vertices.push_back(Vertex(backBottomRight, color));
+    vertices.push_back(Vertex(frontTopLeft, color));
+    vertices.push_back(Vertex(backTopLeft, color));
+    vertices.push_back(Vertex(frontTopRight, color));
+    vertices.push_back(Vertex(backTopRight, color));
+    return vertices;
 }
 
 std::vector<Triangle> GameObject::GetTris() {
@@ -803,10 +899,12 @@ void GameObject::EnableRaycasting() {
 }
 
 bool GameObject::HasMovedSinceLastFrame() {
+
     return (
         _wasPickedUpLastFrame ||
         _wasRespawnedUpLastFrame ||
-        _aabb.position != _aabbPreviousFrame.position && _aabb.extents != _aabbPreviousFrame.extents
+        _aabb.position != _aabbPreviousFrame.position && _aabb.extents != _aabbPreviousFrame.extents ||
+        collisionRigidBody.IsInMotion()
     );
 }
 
@@ -864,3 +962,36 @@ void GameObject::SetCollidesWithGroup(PxU32 collisionGroup) {
     raycastRigidStatic.shape->setQueryFilterData(filterData);       // ray casts
     raycastRigidStatic.shape->setSimulationFilterData(filterData);  // collisions
 }*/
+
+
+void GameObject::UpdateRenderItems() {    
+    renderItems.clear();
+    for (int i = 0; i < model->GetMeshIndices().size(); i++) {
+        uint32_t& meshIndex = model->GetMeshIndices()[i];
+        int materialIndex = _meshMaterialIndices[i];
+        Mesh* mesh = AssetManager::GetMeshByIndex(meshIndex);
+        RenderItem3D& renderItem = renderItems.emplace_back();
+        renderItem.vertexOffset = mesh->baseVertex;
+        renderItem.indexOffset = mesh->baseIndex;
+        renderItem.modelMatrix = GetModelMatrix();
+        renderItem.meshIndex = meshIndex;
+        renderItem.baseColorTextureIndex = AssetManager::GetMaterialByIndex(materialIndex)->_basecolor;
+        renderItem.normalTextureIndex = AssetManager::GetMaterialByIndex(materialIndex)->_normal;
+        renderItem.rmaTextureIndex = AssetManager::GetMaterialByIndex(materialIndex)->_rma;
+    }
+}
+
+std::vector<RenderItem3D>& GameObject::GetRenderItems() {
+    return renderItems;
+}
+
+RenderItem3D* GameObject::GetRenderItemByIndex(int index) {
+    if (index >= 0 && index < renderItems.size()) {
+        return &renderItems[index];
+    }
+    else {
+        std::cout << "GameObject::GetRenderItemByIndex() failed. Index " << index << " out of range. Size is " << renderItems.size() << "!\n";
+        return nullptr;
+    }
+
+}

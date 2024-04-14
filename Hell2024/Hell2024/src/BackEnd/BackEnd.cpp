@@ -6,6 +6,7 @@
 #include "../API/OpenGL/GL_renderer.h"
 #include "../API/OpenGL/GL_assetManager.h"
 #include "../API/Vulkan/VK_backEnd.h"
+#include "../Core/AssetManager.h"
 #include "../Core/Audio.hpp"
 #include "../Core/Input.h"
 #include "../Core/InputMulti.h"
@@ -86,7 +87,7 @@ namespace BackEnd {
         _fullscreenHeight = _mode->height;
         _windowedWidth = width;
         _windowedHeight = height;
-        CreateWindow(WindowedMode::WINDOWED);       
+        CreateGLFWWindow(WindowedMode::WINDOWED);
         if (_window == NULL) {
             std::cout << "Failed to create GLFW window\n";
             glfwTerminate();
@@ -94,19 +95,21 @@ namespace BackEnd {
         }
         glfwSetFramebufferSizeCallback(_window, framebuffer_size_callback);
         glfwSetWindowFocusCallback(_window, window_focus_callback);
+
+        AssetManager::FindAssetPaths();
         
         if (GetAPI() == API::OPENGL) {
             glfwMakeContextCurrent(_window);
             OpenGLBackEnd::InitMinimum();
             OpenGLRenderer::InitMinimum();
-            Renderer_OLD::InitMinimumGL();
-            OpenGLAssetManager::LoadFont();
-            OpenGLAssetManager::LoadAssetsMultithreaded();
+            Renderer_OLD::InitMinimumGL(); 
+            glClipControl(GL_LOWER_LEFT, GL_ZERO_TO_ONE);
         }
         else if (GetAPI() == API::VULKAN) {
             VulkanBackEnd::InitMinimum(); 
             // VulkanRenderer minimum init is tangled in the above function 
         }
+        AssetManager::LoadFont();
 
         // Init sub-systems
         Input::Init();
@@ -135,6 +138,7 @@ namespace BackEnd {
     void UpdateSubSystems() {
         Input::Update();
         Audio::Update();
+        //Scene::Update();
     }
 
     void CleanUp() {
@@ -162,7 +166,7 @@ namespace BackEnd {
         _window = window;
     }
 
-    void CreateWindow(const WindowedMode& windowedMode) {
+    void CreateGLFWWindow(const WindowedMode& windowedMode) {
         if (windowedMode == WindowedMode::WINDOWED) {
             _currentWindowWidth = _windowedWidth;
             _currentWindowHeight = _windowedHeight; 
@@ -249,7 +253,8 @@ namespace BackEnd {
     }
 
     bool WindowIsMinimized() {
-        int width, height;
+        int width = 0;
+        int height = 0;
         glfwGetFramebufferSize(_window, &width, &height);
         return (width == 0 || height == 0);
     }

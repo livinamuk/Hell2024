@@ -1,17 +1,15 @@
 #pragma once
-#include "Animation/SkinnedModel.h"
+#include "../Types/SkinnedModel.h"
 #include "Ragdoll.h"
 
 struct MeshRenderingEntry {
     std::string meshName;
-    int indexCount = -1;
-    int baseIndex = -1;
-    int baseVertex = -1;
     int materialIndex = 0;
     int emissiveColorTexutreIndex = -1;
     bool blendingEnabled = false;
     bool drawingEnabled = true;
     bool renderAsGlass = false;
+    int meshIndex = -1;
 };
 
 struct AnimatedGameObject {
@@ -74,11 +72,22 @@ struct AnimatedGameObject {
     std::vector<glm::mat4> _debugTransformsA;
     std::vector<glm::mat4> _debugTransformsB;
     bool _hasRagdoll = false;
-    //std::vector<unsigned int> _skippedMeshIndices;
 
+    struct BoneDebugInfo {
+        const char* name;
+        const char* parentName;
+        glm::vec3 worldPos;
+        glm::vec3 parentWorldPos;
+    };
+    std::vector<BoneDebugInfo> _debugBoneInfo;
     bool _renderDebugBones = false;
-    std::vector<glm::vec3> _debugRigids;
-    std::vector<glm::vec3> _debugBones;
+
+    struct JointWorldMatrix {
+        const char* name;
+        glm::mat4 worldMatrix;
+    };
+
+    glm::vec3 FindClosestParentAnimatedNode(std::vector<JointWorldMatrix>& worldMatrices, int parentIndex);
 
 private:
 

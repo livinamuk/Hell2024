@@ -1738,7 +1738,6 @@ Result<Swapchain> SwapchainBuilder::build() const {
 		return Error{ SwapchainError::surface_handle_not_provided };
 	}
 
-	
 
 	auto desired_formats = info.desired_formats;
 	if (desired_formats.size() == 0) add_desired_formats(desired_formats);
@@ -1750,23 +1749,23 @@ Result<Swapchain> SwapchainBuilder::build() const {
 		return Error{ SwapchainError::failed_query_surface_support_details, surface_support_ret.vk_result() };
 	auto surface_support = surface_support_ret.value();
 
-	uint32_t image_count = info.min_image_count;
-	if (info.required_min_image_count >= 1) {
-		if (info.required_min_image_count < surface_support.capabilities.minImageCount)
-			return make_error_code(SwapchainError::required_min_image_count_too_low);
+    uint32_t image_count = info.min_image_count;
+    if (info.required_min_image_count >= 1) {
+	    if (info.required_min_image_count < surface_support.capabilities.minImageCount)
+		    return make_error_code(SwapchainError::required_min_image_count_too_low);
 
-		image_count = info.required_min_image_count;
-	} else if (info.min_image_count == 0) {
-		// We intentionally use minImageCount + 1 to maintain existing behavior, even if it typically results in triple buffering on most systems.
-		image_count = surface_support.capabilities.minImageCount + 1;
-	} else {
-		image_count = info.min_image_count;
-		if (image_count < surface_support.capabilities.minImageCount)
-			image_count = surface_support.capabilities.minImageCount;
-	}
-	if (surface_support.capabilities.maxImageCount > 0 && image_count > surface_support.capabilities.maxImageCount) {
-		image_count = surface_support.capabilities.maxImageCount;
-	}
+	    image_count = info.required_min_image_count;
+    } else if (info.min_image_count == 0) {
+	    // We intentionally use minImageCount + 1 to maintain existing behavior, even if it typically results in triple buffering on most systems.
+	    image_count = surface_support.capabilities.minImageCount + 1;
+    } else {
+	    image_count = info.min_image_count;
+	    if (image_count < surface_support.capabilities.minImageCount)
+		    image_count = surface_support.capabilities.minImageCount;
+    }
+    if (surface_support.capabilities.maxImageCount > 0 && image_count > surface_support.capabilities.maxImageCount) {
+	    image_count = surface_support.capabilities.maxImageCount;
+    }
 
 	VkSurfaceFormatKHR surface_format = detail::find_best_surface_format(surface_support.formats, desired_formats);
 

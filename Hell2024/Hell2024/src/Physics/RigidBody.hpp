@@ -2,8 +2,7 @@
 #include "Physics.h"
 #include "../Common.h"
 #include "../Util.hpp"
-#include "../API/OpenGL/Types/GL_mesh.h"
-#include "../API/OpenGL/Types/GL_model.h"
+#include "../Types/Model.hpp"
 
 struct RigidBody {
 
@@ -70,19 +69,13 @@ struct RigidBody {
         pxRigidBody->attachShape(*shape);
     }
 
-    void AddCollisionShapeFromConvexMesh(OpenGLMesh* mesh, PhysicsFilterData physicsFilterData, glm::vec3 scale) {
+    void AddCollisionShapeFromModelIndex(int modelIndex, PhysicsFilterData physicsFilterData, glm::vec3 scale) {
         if (!pxRigidBody) {
             std::cout << "Tried to add a collision shape to rigid body but pxRigidBody doesn't exist!\n";
             return;
         }
-        if (!mesh) {
-            std::cout << "You tried to add a collision shape from an invalid mesh!\n";
-            return;
-        }
-        if (!mesh->_convexMesh) {
-            mesh->CreateConvexMesh();
-        }
-        PxShape* shape = Physics::CreateShapeFromConvexMesh(mesh->_convexMesh, NULL, scale);
+        PxConvexMesh* convexMesh = Physics::CreateConvexMeshFromModelIndex(modelIndex);
+        PxShape* shape = Physics::CreateShapeFromConvexMesh(convexMesh, NULL, scale);
         PxFilterData filterData;
         filterData.word0 = (PxU32)physicsFilterData.raycastGroup;
         filterData.word1 = (PxU32)physicsFilterData.collisionGroup;
@@ -114,6 +107,17 @@ struct RigidBody {
         shape->setLocalPose(localShapeTransform);
     }
 
+    bool IsInMotion() {
+        if (pxRigidBody) {
+            PxVec3 linearVelocity = pxRigidBody->getLinearVelocity();
+            PxVec3 angularVelocity = pxRigidBody->getLinearVelocity();
+            return (linearVelocity.x != 0 || linearVelocity.y != 0 || linearVelocity.z != 0 || angularVelocity.x != 0 || angularVelocity.y != 0 || angularVelocity.z != 0);
+        }
+        else {
+            return false;
+        }
+    }
+
     void CleanUp() {
         if (pxRigidBody) {
             pxRigidBody->release();
@@ -128,6 +132,6 @@ struct RigidBody {
     }
 
 private:
-    std::vector<OpenGLModel*> collisionModels;
+    //std::vector<OpenGLModel*> collisionModels;
     std::vector<PxShape*> collisionShapes;
 };

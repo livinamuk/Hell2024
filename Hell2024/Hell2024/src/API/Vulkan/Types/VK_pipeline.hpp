@@ -2,7 +2,8 @@
 #include <glm/glm.hpp>
 #include <string>
 
-enum VertexDescriptionType { POSITION_NORMAL_TEXCOORD, POSITION_TEXCOORD, POSITION, ALL};
+enum VertexDescriptionType { POSITION_NORMAL_TEXCOORD, POSITION_TEXCOORD, POSITION_NORMAL, POSITION, ALL, ALL_WEIGHTED};
+enum AssemblyInputType {VERTEX_BUFFER_ONLY, VERTEX_BUFFER_INDEX_BUFFER};
 
 struct VertexInputDescription {
     std::vector<VkVertexInputBindingDescription> bindings;
@@ -42,9 +43,9 @@ struct Pipeline {
 
 	void CreatePipelineLayout(VkDevice device) {
 
-		if (_layout != VK_NULL_HANDLE) {
-			vkDestroyPipelineLayout(device, _layout, nullptr);
-		}
+        if (_layout != VK_NULL_HANDLE) {
+            vkDestroyPipelineLayout(device, _layout, nullptr);
+        }
 
 		VkPushConstantRange pushConstantRange;
 		pushConstantRange.offset = 0;
@@ -58,7 +59,7 @@ struct Pipeline {
 		createInfo.pPushConstantRanges = &pushConstantRange;
 		createInfo.pushConstantRangeCount = _pushConstantCount;
 		createInfo.pNext = nullptr;
-		VK_CHECK(vkCreatePipelineLayout(device, &createInfo, nullptr, &_layout));
+ 		VK_CHECK(vkCreatePipelineLayout(device, &createInfo, nullptr, &_layout));
 	}
 
 	void Cleanup(VkDevice device) {
@@ -67,6 +68,7 @@ struct Pipeline {
 	}
 
 	void SetVertexDescription(VertexDescriptionType type) {
+
 		// Main binding
 		_vertexDescription.Reset();
 		VkVertexInputBindingDescription mainBinding = {};
@@ -103,47 +105,49 @@ struct Pipeline {
         tangentAttribute.format = VK_FORMAT_R32G32B32_SFLOAT;
         tangentAttribute.offset = offsetof(Vertex, tangent);
 
-        // BiTangent
-        VkVertexInputAttributeDescription biTangentAttribute = {};
-        biTangentAttribute.binding = 0;
-        biTangentAttribute.location = 4;
-        biTangentAttribute.format = VK_FORMAT_R32G32B32_SFLOAT;
-        biTangentAttribute.offset = offsetof(Vertex, bitangent);
-
         // Weight
         VkVertexInputAttributeDescription weightAttribute = {};
         weightAttribute.binding = 0;
-        weightAttribute.location = 5;
+        weightAttribute.location = 4;
         weightAttribute.format = VK_FORMAT_R32G32B32_SFLOAT;
-        weightAttribute.offset = offsetof(Vertex, weight);
+        weightAttribute.offset = offsetof(WeightedVertex, weight);
 
         // BoneID
         VkVertexInputAttributeDescription boneIDAttribute = {};
         boneIDAttribute.binding = 0;
-        boneIDAttribute.location = 6;
+        boneIDAttribute.location = 5;
         boneIDAttribute.format = VK_FORMAT_R32G32B32_UINT;
-        boneIDAttribute.offset = offsetof(Vertex, boneID);
+        boneIDAttribute.offset = offsetof(WeightedVertex, boneID);
 
 		if (type == POSITION_NORMAL_TEXCOORD) {
 			_vertexDescription.attributes.push_back(positionAttribute);
 			_vertexDescription.attributes.push_back(normalAttribute);
 			_vertexDescription.attributes.push_back(uvAttribute);
-		}
+        }
+        else if (type == POSITION_NORMAL) {
+            _vertexDescription.attributes.push_back(positionAttribute);
+            _vertexDescription.attributes.push_back(normalAttribute);
+        }
         else if (type == POSITION_TEXCOORD) {
-	        _vertexDescription.attributes.push_back(positionAttribute);
-	        _vertexDescription.attributes.push_back(uvAttribute);
+            _vertexDescription.attributes.push_back(positionAttribute);
+            _vertexDescription.attributes.push_back(uvAttribute);
         }
         else if (type == POSITION) {
             _vertexDescription.attributes.push_back(positionAttribute);
         }
         else if (type == ALL) {
             _vertexDescription.attributes.push_back(positionAttribute);
-            //_vertexDescription.attributes.push_back(normalAttribute);
+            _vertexDescription.attributes.push_back(normalAttribute);
             _vertexDescription.attributes.push_back(uvAttribute);
-           // _vertexDescription.attributes.push_back(tangentAttribute);
-           // _vertexDescription.attributes.push_back(biTangentAttribute);
-          //  _vertexDescription.attributes.push_back(weightAttribute);
-          //  _vertexDescription.attributes.push_back(boneIDAttribute);
+            _vertexDescription.attributes.push_back(tangentAttribute);
+        }
+        else if (type == ALL_WEIGHTED) {
+            _vertexDescription.attributes.push_back(positionAttribute);
+            _vertexDescription.attributes.push_back(normalAttribute);
+            _vertexDescription.attributes.push_back(uvAttribute);
+            _vertexDescription.attributes.push_back(tangentAttribute);
+            _vertexDescription.attributes.push_back(weightAttribute);
+            _vertexDescription.attributes.push_back(boneIDAttribute);
         }
 	}
 
@@ -183,12 +187,14 @@ struct Pipeline {
 		_pushConstantSize = size;
 	}
 
-	void Build(VkDevice device, VkShaderModule vertexShader, VkShaderModule fragmentShader, int colorAttachmentCount) {
+    void Build(VkDevice device, VkShaderModule vertexShader, VkShaderModule fragmentShader, std::vector<VkFormat> colorAttachmentFormats, AssemblyInputType inputType) {
+           
+        int colorAttachmentCount = colorAttachmentFormats.size();
 
 		VkPipelineVertexInputStateCreateInfo vertexInputCreateInfo = {};
 		vertexInputCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-		vertexInputCreateInfo.pNext = nullptr;
-		vertexInputCreateInfo.pVertexAttributeDescriptions = _vertexDescription.attributes.data();
+        vertexInputCreateInfo.pNext = nullptr;
+        vertexInputCreateInfo.pVertexAttributeDescriptions = _vertexDescription.attributes.data();
 		vertexInputCreateInfo.vertexAttributeDescriptionCount = (uint32_t)_vertexDescription.attributes.size();
 		vertexInputCreateInfo.pVertexBindingDescriptions = _vertexDescription.bindings.data();
 		vertexInputCreateInfo.vertexBindingDescriptionCount = (uint32_t)_vertexDescription.bindings.size();
@@ -264,9 +270,9 @@ struct Pipeline {
 		colorBlendingCreateInfo.pNext = nullptr;
 		colorBlendingCreateInfo.logicOpEnable = VK_FALSE;
 		colorBlendingCreateInfo.logicOp = VK_LOGIC_OP_COPY;
-		colorBlendingCreateInfo.attachmentCount = colorAttachmentCount;
+		colorBlendingCreateInfo.attachmentCount = colorAttachmentFormats.size();
 		std::vector<VkPipelineColorBlendAttachmentState> blendAttachmentStates;
-		for (int i = 0; i < colorAttachmentCount; i++) {
+		for (int i = 0; i < colorAttachmentFormats.size(); i++) {
 			VkPipelineColorBlendAttachmentState attachmentState = {};
 			attachmentState.colorWriteMask = 0xF;
 			//attachmentState.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
@@ -293,7 +299,7 @@ struct Pipeline {
 		pipelineInfo.stageCount = shaderStages.size();
 		pipelineInfo.pStages = shaderStages.data();
 		pipelineInfo.pVertexInputState = &vertexInputCreateInfo;
-		pipelineInfo.pInputAssemblyState = &inputAssemblyCreateInfo;
+        pipelineInfo.pInputAssemblyState = &inputAssemblyCreateInfo;
 		pipelineInfo.pViewportState = &viewportState;
 		pipelineInfo.pRasterizationState = &rasterizationCreateInfo;
 		pipelineInfo.pMultisampleState = &multisampleCreateInfo;
@@ -307,8 +313,8 @@ struct Pipeline {
 
 		// New create info to define color, depth and stencil attachments at pipeline create time
 		std::vector<VkFormat> formats;
-		for (int i = 0; i < colorAttachmentCount; i++) {
-			formats.push_back(VK_FORMAT_R8G8B8A8_UNORM);
+		for (int i = 0; i < colorAttachmentFormats.size(); i++) {
+			formats.push_back(colorAttachmentFormats[i]);
 		}
 		VkPipelineRenderingCreateInfoKHR pipelineRenderingCreateInfo{};
 		pipelineRenderingCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR;

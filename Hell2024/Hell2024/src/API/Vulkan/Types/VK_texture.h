@@ -10,6 +10,7 @@ public:
     std::string& GetFilename();
     std::string& GetFiletype();
     void InsertImageBarrier(VkCommandBuffer cmdbuffer, VkImageLayout newImageLayout, VkAccessFlags dstAccessMask, VkPipelineStageFlags dstStageMask);
+    void Load(std::string_view path);
 
     int width = 0;
     int height = 0;

@@ -3,7 +3,20 @@
 #include "../../Core/AssetManager.h"
 #include "../../Core/Scene.h"
 
+float RoundToTwoDecimalPlaces(float var) {
+    float value = (int)(var * 100 + .5);
+    return (float)value / 100;
+}
+
 Wall::Wall(glm::vec3 begin, glm::vec3 end, float height, int materialIndex) {
+
+    begin.x = RoundToTwoDecimalPlaces(begin.x);
+    begin.y = RoundToTwoDecimalPlaces(begin.y);
+    begin.z = RoundToTwoDecimalPlaces(begin.z);
+    end.x = RoundToTwoDecimalPlaces(end.x);
+    end.y = RoundToTwoDecimalPlaces(end.y);
+    end.z = RoundToTwoDecimalPlaces(end.z);
+
     this->materialIndex = materialIndex;
     this->begin = begin;
     this->end = end;
@@ -347,8 +360,6 @@ void Wall::CreateMeshGL() {
     glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, uv));
     glEnableVertexAttribArray(3);
     glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, tangent));
-    glEnableVertexAttribArray(4);
-    glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, bitangent));
 }
 
 glm::vec3 Wall::GetNormal() {
@@ -365,17 +376,49 @@ void Wall::Draw() {
     glDrawArrays(GL_TRIANGLES, 0, vertices.size());
 }
 
-void Wall::UpdateRenderItem() {
+void Wall::UpdateRenderItems() {
+
+    renderItems.clear();
+
     Mesh* mesh = AssetManager::GetMeshByIndex(meshIndex);
+    RenderItem3D renderItem;
     renderItem.vertexOffset = mesh->baseVertex;
     renderItem.indexOffset = mesh->baseIndex;
     renderItem.modelMatrix = glm::mat4(1);
     renderItem.meshIndex = meshIndex;
     renderItem.baseColorTextureIndex = AssetManager::GetMaterialByIndex(materialIndex)->_basecolor;
-    renderItem.normaTextureIndex = AssetManager::GetMaterialByIndex(materialIndex)->_normal;
+    renderItem.normalTextureIndex = AssetManager::GetMaterialByIndex(materialIndex)->_normal;
     renderItem.rmaTextureIndex = AssetManager::GetMaterialByIndex(materialIndex)->_rma;
+    renderItems.push_back(renderItem);
+
+    static int ceilingTrimMeshIndex = AssetManager::GetModelByIndex(AssetManager::GetModelIndexByName("TrimCeiling"))->GetMeshIndices()[0];
+    static int floorTrimMeshIndex = AssetManager::GetModelByIndex(AssetManager::GetModelIndexByName("TrimFloor"))->GetMeshIndices()[0];
+
+    for (Transform& transform : ceilingTrims) {
+        RenderItem3D renderItem;
+        renderItem.vertexOffset = AssetManager::GetMeshByIndex(ceilingTrimMeshIndex)->baseVertex;
+        renderItem.indexOffset = AssetManager::GetMeshByIndex(ceilingTrimMeshIndex)->baseIndex;
+        renderItem.modelMatrix = transform.to_mat4();
+        renderItem.meshIndex = ceilingTrimMeshIndex;
+        renderItem.baseColorTextureIndex = AssetManager::GetMaterialByIndex(materialIndex)->_basecolor;
+        renderItem.normalTextureIndex = AssetManager::GetMaterialByIndex(materialIndex)->_normal;
+        renderItem.rmaTextureIndex = AssetManager::GetMaterialByIndex(materialIndex)->_rma;
+        renderItems.push_back(renderItem);
+    }
+
+    for (Transform& transform : floorTrims) {
+        RenderItem3D renderItem;
+        renderItem.vertexOffset = AssetManager::GetMeshByIndex(floorTrimMeshIndex)->baseVertex;
+        renderItem.indexOffset = AssetManager::GetMeshByIndex(floorTrimMeshIndex)->baseIndex;
+        renderItem.modelMatrix = transform.to_mat4();
+        renderItem.meshIndex = floorTrimMeshIndex;
+        renderItem.baseColorTextureIndex = AssetManager::GetMaterialByIndex(materialIndex)->_basecolor;
+        renderItem.normalTextureIndex = AssetManager::GetMaterialByIndex(materialIndex)->_normal;
+        renderItem.rmaTextureIndex = AssetManager::GetMaterialByIndex(materialIndex)->_rma;
+        renderItems.push_back(renderItem);
+    }    
 }
 
-RenderItem3D& Wall::GetRenderItem() {
-    return renderItem;
+std::vector<RenderItem3D>& Wall::GetRenderItems() {
+    return renderItems;
 }

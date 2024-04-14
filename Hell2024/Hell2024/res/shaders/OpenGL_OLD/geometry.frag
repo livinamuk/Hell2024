@@ -14,6 +14,7 @@ layout (binding = 3) uniform sampler2D emissiveColorTexture;
 in vec2 TexCoord;
 in vec3 WorldPos;
 
+uniform bool isAnimated;
 uniform vec3 viewPos;
 
 uniform mat4 view;
@@ -74,11 +75,19 @@ void main()
 		EmissiveOut.rgb = emissiveColor.rgb * 3;
 		EmissiveOut.a = 1;
 	}
+	//BaseColorOut.rgb = normal;
+
+	if (isAnimated) {
+	//	EmissiveOut.rgb = rma;
+	} else {
+	//	BaseColorOut.rgb = vec3(0,0,0);
+//		RMAOut.rgb = vec3(0,0,0);
+	}
 
     WorldSpacePositionOut = vec4(WorldPos, 1.0);
    // RMAOut.rgb = vec3(1,0,0);
    // RMAOut.a = 1.0;
 
 //    BaseColorOut = EmissiveOut;
-   //BaseColorOut.rgb = vec3(1,0,0);
+   //BaseColorOut.rgb = vec3(TexCoord,0);
 }

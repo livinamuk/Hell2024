@@ -10,6 +10,7 @@ public:
     std::unordered_map<std::string, int> _uniformsLocations;
 
     void Load(std::string vertexPath, std::string fragmentPath);
+    void Load(std::string vertexPath, std::string fragmentPath, std::string geomPath);
     void LoadOLD(std::string vertexPath, std::string fragmentPath);
     void LoadOLD(std::string vertexPath, std::string fragmentPath, std::string geomPath);
     void Use();

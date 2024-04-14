@@ -1,8 +1,6 @@
 #pragma once
 #include "../Common.h"
 #include "GameObject.h"
-#include "AnimatedGameObject.h"
-#include "Door.h"
 #include "Window.h"
 #include "Player.h"
 #include "../Physics/Physics.h"
@@ -12,6 +10,7 @@
 #include "VolumetricBloodSplatter.h"
 #include "../Util.hpp"
 
+#include "../Types/Modular/Door.h"
 #include "../Types/Modular/Ceiling.h"
 #include "../Types/Modular/Floor.h"
 #include "../Types/Modular/Toilet.hpp"
@@ -72,9 +71,6 @@ inline void SetNormalsAndTangentsFromVertices(Vertex* vert0, Vertex* vert1, Vert
     vert0->tangent = tangent;
     vert1->tangent = tangent;
     vert2->tangent = tangent;
-    vert0->bitangent = bitangent;
-    vert1->bitangent = bitangent;
-    vert2->bitangent = bitangent;
 }
 
 #define PROPOGATION_SPACING 1
@@ -158,6 +154,13 @@ struct PickUp {
 
 namespace Scene {
 
+
+    void Update(float deltaTime);
+
+
+
+
+    // OLD SHIT BELOW
     inline PxTriangleMesh* _sceneTriangleMesh = NULL;
     inline PxRigidStatic* _sceneRigidDynamic = NULL;
     inline PxShape* _sceneShape = NULL;
@@ -197,7 +200,7 @@ namespace Scene {
     void CreatePlayers();
    // void NewScene();
     void CleanUp();
-    void Update(float deltaTime);
+    void Update_OLD(float deltaTime);
     void LoadLightSetup(int index);
     GameObject* GetGameObjectByName(std::string);
     AnimatedGameObject* GetAnimatedGameObjectByName(std::string);
@@ -215,7 +218,7 @@ namespace Scene {
 	void RecreateAllPhysicsObjects();
 	void RemoveAllDecalsFromWindow(Window* window); 
     void CalculateLightBoundingVolumes();
-    void CheckIfLightsAreDirty();
+    void CheckForDirtyLights();
     void ResetGameObjectStates();
 
     void CreateVolumetricBlood(glm::vec3 position, glm::vec3 rotation, glm::vec3 front);

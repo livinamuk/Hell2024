@@ -10,9 +10,10 @@ struct FrameData {
     VkCommandBuffer _commandBuffer;
 
     struct Buffers {
-        Buffer globalShaderData;
+        Buffer cameraData;
         Buffer renderItems2D;
         Buffer renderItems3D;
+        Buffer lights;
     } buffers;
 
     AccelerationStructure tlas {};

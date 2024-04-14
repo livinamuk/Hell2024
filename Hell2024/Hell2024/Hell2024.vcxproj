@@ -138,11 +138,12 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <ClCompile Include="src\API\Vulkan\Types\VK_texture.cpp" />
     <ClCompile Include="src\Core\AssetManager.cpp" />
     <ClCompile Include="src\Core\DebugMenu.cpp" />
-    <ClCompile Include="src\Core\Animation\Animation.cpp" />
-    <ClCompile Include="src\Core\Animation\SkinnedModel.cpp" />
+    <ClCompile Include="src\Types\Animation.cpp" />
+    <ClCompile Include="src\Types\DetachedMesh.hpp" />
+    <ClCompile Include="src\Types\SkinnedModel.cpp" />
     <ClCompile Include="src\API\OpenGL\GL_assetManager.cpp" />
-    <ClCompile Include="src\Core\Door.cpp" />
-    <ClCompile Include="src\Core\ExrTexture.cpp" />
+    <ClCompile Include="src\Types\Modular\Door.cpp" />
+    <ClCompile Include="src\Types\ExrTexture.cpp" />
     <ClCompile Include="src\Renderer\Renderer.cpp" />
     <ClCompile Include="src\Types\Modular\Ceiling.cpp" />
     <ClCompile Include="src\Types\Modular\Floor.cpp" />
@@ -173,11 +174,8 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <ClCompile Include="src\Main.cpp" />
     <ClCompile Include="vendor\DDS\DDS_Helpers.cpp" />
     <ClCompile Include="src\API\OpenGL\Types\GL_gBuffer.cpp" />
-    <ClCompile Include="src\API\OpenGL\Types\GL_mesh.cpp" />
-    <ClCompile Include="src\API\OpenGL\Types\GL_model.cpp" />
     <ClCompile Include="src\Renderer\NumberBlitter.cpp" />
     <ClCompile Include="src\API\OpenGL\GL_renderer.cpp" />
-    <ClCompile Include="src\API\OpenGL\Types\GL_types.cpp" />
     <ClCompile Include="src\API\OpenGL\Types\GL_presentBuffer.cpp" />
     <ClCompile Include="src\Renderer\Renderer_OLD.cpp" />
     <ClCompile Include="src\API\OpenGL\Types\GL_shader.cpp" />
@@ -199,10 +197,12 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <ClCompile Include="vendor\VkBootstrap\VkBootstrap.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\API\OpenGL\Types\GL_detachedMesh.hpp" />
     <ClInclude Include="src\API\OpenGL\Types\GL_texture.h" />
     <ClInclude Include="src\API\Vulkan\Types\vk_allocation.hpp" />
     <ClInclude Include="src\API\Vulkan\Types\VK_buffer.h" />
     <ClInclude Include="src\API\Vulkan\Types\VK_frameData.hpp" />
+    <ClInclude Include="src\API\Vulkan\Types\VK_detachedMesh.hpp" />
     <ClInclude Include="src\API\Vulkan\Types\VK_raytracing.hpp" />
     <ClInclude Include="src\API\Vulkan\Types\VK_depthTarget.hpp" />
     <ClInclude Include="src\API\Vulkan\Types\VK_descriptorSet.hpp" />
@@ -213,12 +213,15 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <ClInclude Include="src\Core\Config.hpp" />
     <ClInclude Include="src\Core\DebugMenu.h" />
     <ClInclude Include="src\Common.h" />
-    <ClInclude Include="src\Core\Animation\Animation.h" />
-    <ClInclude Include="src\Core\Animation\SkinnedModel.h" />
+    <ClInclude Include="src\File\File.hpp" />
+    <ClInclude Include="src\Renderer\RenderData.h" />
+    <ClInclude Include="src\Types\Animation.h" />
+    <ClInclude Include="src\Types\SkinnedMesh.hpp" />
+    <ClInclude Include="src\Types\SkinnedModel.h" />
     <ClInclude Include="src\API\OpenGL\GL_assetManager.h" />
     <ClInclude Include="src\Core\Audio.hpp" />
-    <ClInclude Include="src\Core\Door.h" />
-    <ClInclude Include="src\Core\ExrTexture.h" />
+    <ClInclude Include="src\Types\Modular\Door.h" />
+    <ClInclude Include="src\Types\ExrTexture.h" />
     <ClInclude Include="src\Renderer\Renderer.h" />
     <ClInclude Include="src\Types\Modular\Ceiling.h" />
     <ClInclude Include="src\Types\Modular\Class.h" />
@@ -254,11 +257,9 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <ClInclude Include="src\Physics\RigidStatic.hpp" />
     <ClInclude Include="vendor\DDS\DDS_Helpers.h" />
     <ClInclude Include="src\API\OpenGL\Types\GL_gBuffer.h" />
-    <ClInclude Include="src\API\OpenGL\Types\GL_mesh.h" />
-    <ClInclude Include="src\API\OpenGL\Types\GL_model.h" />
     <ClInclude Include="src\Renderer\NumberBlitter.h" />
     <ClInclude Include="src\API\OpenGL\GL_renderer.h" />
-    <ClInclude Include="src\API\OpenGL\Types\GL_types.h" />
+    <ClInclude Include="src\API\OpenGL\Types\GL_frameBuffer.hpp" />
     <ClInclude Include="src\API\OpenGL\Types\GL_presentBuffer.h" />
     <ClInclude Include="src\Renderer\Renderer_OLD.h" />
     <ClInclude Include="src\BackEnd\BackEnd.h" />
@@ -268,7 +269,6 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <ClInclude Include="src\Types\Texture.h" />
     <ClInclude Include="src\API\OpenGL\Types\GL_texture3D.h" />
     <ClInclude Include="src\API\Vulkan\VK_assetManager.h" />
-    <ClInclude Include="src\API\Vulkan\Types\VK_mesh.hpp" />
     <ClInclude Include="src\API\Vulkan\Types\VK_pipeline.hpp" />
     <ClInclude Include="src\API\Vulkan\VK_renderer.h" />
     <ClInclude Include="src\Threading.h" />
@@ -289,6 +289,13 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <ClInclude Include="vendor\VulkanMemoryAllocator\include\vk_mem_alloc.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="res\shaders\OpenGL\GL_gbufferSkinned.frag" />
+    <None Include="res\shaders\OpenGL\GL_gbufferSkinned.vert" />
+    <None Include="res\shaders\OpenGL\GL_lighting.frag" />
+    <None Include="res\shaders\OpenGL\GL_lighting.vert" />
+    <None Include="res\shaders\OpenGL\GL_shadowMap.frag" />
+    <None Include="res\shaders\OpenGL\GL_shadowMap.geom" />
+    <None Include="res\shaders\OpenGL\GL_shadowMap.vert" />
     <None Include="res\shaders\OpenGL_OLD\animated_quad.frag" />
     <None Include="res\shaders\OpenGL_OLD\animated_quad.vert" />
     <None Include="res\shaders\OpenGL_OLD\blood_decals.frag" />
@@ -319,8 +326,8 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <None Include="res\shaders\OpenGL_OLD\geometry_instanced.vert" />
     <None Include="res\shaders\OpenGL_OLD\glass.frag" />
     <None Include="res\shaders\OpenGL_OLD\glass.vert" />
-    <None Include="res\shaders\OpenGL\geometry.frag" />
-    <None Include="res\shaders\OpenGL\geometry.vert" />
+    <None Include="res\shaders\OpenGL\GL_gbuffer.frag" />
+    <None Include="res\shaders\OpenGL\GL_gbuffer.vert" />
     <None Include="res\shaders\OpenGL_OLD\outline.frag" />
     <None Include="res\shaders\OpenGL_OLD\outline.vert" />
     <None Include="res\shaders\OpenGL_OLD\skin.comp" />
@@ -341,21 +348,24 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <None Include="res\shaders\OpenGL_OLD\test.vert" />
     <None Include="res\shaders\OpenGL_OLD\toilet_water.frag" />
     <None Include="res\shaders\OpenGL_OLD\toilet_water.vert" />
+    <None Include="res\shaders\OpenGL_OLD\tri.frag" />
+    <None Include="res\shaders\OpenGL_OLD\tri.vert" />
     <None Include="res\shaders\OpenGL_OLD\ui.frag" />
     <None Include="res\shaders\OpenGL_OLD\ui.vert" />
-    <None Include="res\shaders\OpenGL\ui.frag" />
-    <None Include="res\shaders\OpenGL\ui.vert" />
+    <None Include="res\shaders\OpenGL\GL_ui.frag" />
+    <None Include="res\shaders\OpenGL\GL_ui.vert" />
     <None Include="res\shaders\OpenGL_OLD\voxelize.frag" />
     <None Include="res\shaders\OpenGL_OLD\voxelize.vert" />
+    <None Include="res\shaders\Vulkan\VK_debug.frag" />
+    <None Include="res\shaders\Vulkan\VK_debug.vert" />
     <None Include="res\vulkan_shaders\closesthit.rchit" />
-    <None Include="res\shaders\Vulkan\lighting.frag" />
-    <None Include="res\shaders\Vulkan\lighting.vert" />
+    <None Include="res\shaders\Vulkan\VK_lighting.frag" />
+    <None Include="res\shaders\Vulkan\VK_lighting.vert" />
     <None Include="res\vulkan_shaders\miss.rmiss" />
     <None Include="res\shaders\Vulkan\path_closesthit.rchit" />
     <None Include="res\shaders\Vulkan\path_miss.rmiss" />
     <None Include="res\shaders\Vulkan\path_raygen.rgen" />
     <None Include="res\shaders\Vulkan\path_shadow.rmiss" />
-    <None Include="res\shaders\Vulkan\raycommon.glsl" />
     <None Include="res\vulkan_shaders\raygen.rgen" />
     <None Include="res\vulkan_shaders\shadow.rmiss" />
   </ItemGroup>

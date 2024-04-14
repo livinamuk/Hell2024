@@ -1,5 +1,6 @@
 #include "Player.h"
 #include "../Core/Audio.hpp"
+#include "../Core/Game.h"
 #include "../Core/Input.h"
 #include "../Core/InputMulti.h"
 #include "../BackEnd/BackEnd.h"
@@ -39,9 +40,6 @@ int Player::GetCurrentWeaponTotalAmmo() {
 }
 
 Player::Player() {
-}
-
-Player::Player(glm::vec3 position, glm::vec3 rotation) {
 
     Respawn();
 
@@ -191,12 +189,6 @@ void Player::CheckForItemPickOverlaps() {
 	if (_ignoreControl) {
 		return;
 	}
-
-  /*  if (Input::KeyPressed(HELL_KEY_SPACE)) {
-        for (auto& floor : Scene::_floors) {
-            std::cout << Util::Vec3ToString(floor.v1.position) << " " << Util::Vec3ToString(floor.v2.position) << " " << Util::Vec3ToString(floor.v3.position) << " " << Util::Vec3ToString(floor.v4.position) << "\n";
-        }
-    }*/
 
 	const PxGeometry& overlapShape = _itemPickupOverlapShape->getGeometry();
 	const PxTransform shapePose(_characterController->getActor()->getGlobalPose());
@@ -369,7 +361,7 @@ void Player::Update(float deltaTime) {
             PressedReload() ||
             PressedCrouch() ||
             PressedInteract() ||
-            PressedJump() ||
+            PresingJump() ||
             PressedNextWeapon() ||
             autoRespawn)
         {
@@ -478,6 +470,11 @@ void Player::Update(float deltaTime) {
     float _breatheFrequency = 5;
     float _headBobAmplitude = 0.008;
     float _headBobFrequency = 17.0f;
+
+    if (crouching) {
+        _breatheFrequency *= 0.5f;
+        _headBobFrequency *= 0.5f;
+    }
     
     // Breathe bob
 	static float totalTime;
@@ -558,9 +555,9 @@ void Player::Update(float deltaTime) {
 	}
 
 	// Jump
-    if (PressedJump() && !_ignoreControl && _isGrounded) {
+    if (PresingJump() && !_ignoreControl && _isGrounded) {
         _yVelocity = 4.75f; // magic value for jump strength
-        _yVelocity = 4.95f; // magic value for jump strength (had to change cause you could no longer jump thru window after fixing character controller height bug)
+        _yVelocity = 4.9f; // magic value for jump strength (had to change cause you could no longer jump thru window after fixing character controller height bug)
 		_isGrounded = false;
 	}
 
@@ -592,9 +589,16 @@ void Player::Update(float deltaTime) {
 			_footstepAudioTimer = 0;
 		else {
 			if (_isMoving && _footstepAudioTimer == 0) {
-				int random_number = std::rand() % 4 + 1;
-				std::string file = "player_step_" + std::to_string(random_number) + ".wav";
-				Audio::PlayAudio(file.c_str(), 0.5f);
+
+                // Audio
+                const std::vector<const char*> footstepFilenames = {
+                    "player_step_1.wav",
+                    "player_step_2.wav",
+                    "player_step_3.wav",
+                    "player_step_4.wav",
+                };
+                int random = rand() % 4;
+                Audio::PlayAudio(footstepFilenames[random], 0.5f);
 			}
 			float timerIncrement = crouching ? deltaTime * 0.75f : deltaTime;
 			_footstepAudioTimer += timerIncrement;
@@ -1208,9 +1212,13 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
                 if (_hasGlockSilencer) {
                     Audio::PlayAudio("Silenced.wav", 1.0f);
                 }
-                else {                    
-                    std::string audioName = "Glock_Fire" + std::to_string(random_number) + ".wav";
-                    Audio::PlayAudio(audioName, 1.0f);
+                else {
+                    const std::vector<const char*> footstepFilenames = {
+                        "Glock_Fire1.wav",
+                        "Glock_Fire2.wav",
+                        "Glock_Fire3.wav",
+                    };
+                    Audio::PlayAudio(footstepFilenames[random_number - 1], 1.0f);
                 }
                 std::string aninName = "Glock_Fire" + std::to_string(random_number);
                 _firstPersonWeapon.PlayAnimation(aninName, 1.5f);
@@ -1350,14 +1358,17 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
         // ADS fire
         if (PressingFire() && CanFire() && InADS() && _inventory.aks74uAmmo.clip > 0) {
             _weaponAction = ADS_FIRE;
-            int random_number = std::rand() % 3 + 1;
-            //std::string aninName = "AKS74U_Fire" + std::to_string(random_number);
-            std::string audioName = "AK47_Fire" + std::to_string(random_number) + ".wav";
-
             std::string  aninName = "AKS74U_ADS_Fire1";
 
+            const std::vector<const char*> footstepFilenames = {
+                "AK47_Fire1.wav",
+                "AK47_Fire2.wav",
+                "AK47_Fire3.wav",
+            };
+            int random_number = std::rand() % 3;
+            Audio::PlayAudio(footstepFilenames[random_number], 1.0f);       
+
             _firstPersonWeapon.PlayAnimation(aninName, 1.625f);
-            Audio::PlayAudio(audioName, 1.0f);
             SpawnMuzzleFlash();
             SpawnBullet(0.02, Weapon::AKS74U);
             SpawnAKS74UCasing();
@@ -1809,7 +1820,9 @@ void Player::SpawnBullet(float variance, Weapon type) {
 
 void Player::DropAKS7UMag() {
 
-    return;
+    if (true) {
+        return;
+    }
 
 	PhysicsFilterData magFilterData;
 	magFilterData.raycastGroup = RAYCAST_DISABLED;
@@ -1905,7 +1918,7 @@ void Player::CreateItemPickupOverlapShape() {
 	if (_itemPickupOverlapShape) {
 		_itemPickupOverlapShape->release();
 	}
-    float radius = PLAYER_CAPSULE_RADIUS + 0.05;
+    float radius = PLAYER_CAPSULE_RADIUS + 0.075;
     float halfHeight = PLAYER_CAPSULE_HEIGHT * 0.75f;
     _itemPickupOverlapShape = Physics::GetPhysics()->createShape(PxCapsuleGeometry(radius, halfHeight), *Physics::GetDefaultMaterial(), true);
 }
@@ -1943,7 +1956,7 @@ glm::mat4 Player::GetProjectionMatrix() {
     float width = (float)BackEnd::GetWindowedWidth();
     float height = (float)BackEnd::GetWindowedHeight();
 
-    if (EngineState::GetSplitScreenMode() == SplitScreenMode::SPLITSCREEN) {
+    if (Game::GetSplitscreenMode() == Game::SplitscreenMode::TWO_PLAYER) {
         height *= 0.5f;
     }
     return glm::perspective(_zoom, width / height, NEAR_PLANE, FAR_PLANE);
@@ -2096,9 +2109,9 @@ bool Player::PressingFire() {
     }
 }
 
-bool Player::PressedJump() {
+bool Player::PresingJump() {
     if (_inputType == InputType::KEYBOARD_AND_MOUSE) {
-        return InputMulti::KeyPressed(_keyboardIndex, _mouseIndex, _controls.JUMP);
+        return InputMulti::KeyDown(_keyboardIndex, _mouseIndex, _controls.JUMP);
     }
     else {
         //return InputMulti::ButtonPressed(_controllerIndex, _controls.JUMP);
@@ -2265,8 +2278,8 @@ void Player::DrawWeapons() {
         filterData666.collisionGroup = CollisionGroup::GENERIC_BOUNCEABLE;
         filterData666.collidesWith = (CollisionGroup)(ENVIROMENT_OBSTACLE | GENERIC_BOUNCEABLE);
         weapon.SetKinematic(false);
-        weapon.AddCollisionShapeFromConvexMesh(&OpenGLAssetManager::GetModel("AKS74U_Carlos_ConvexMesh")->_meshes[0], filterData666);
-        weapon.SetRaycastShapeFromModel(OpenGLAssetManager::GetModel("AKS74U_Carlos"));
+        weapon.AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("AKS74U_Carlos_ConvexMesh"), filterData666);
+        weapon.SetRaycastShapeFromModelIndex(AssetManager::GetModelIndexByName("AKS74U_Carlos"));
         weapon.SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
         weapon.UpdateRigidBodyMassAndInertia(50.0f);
         weapon.DisableRespawnOnPickup();
@@ -2289,8 +2302,8 @@ void Player::DrawWeapons() {
         filterData666.collisionGroup = CollisionGroup::GENERIC_BOUNCEABLE;
         filterData666.collidesWith = (CollisionGroup)(ENVIROMENT_OBSTACLE | GENERIC_BOUNCEABLE);
         weapon.SetKinematic(false);
-        weapon.AddCollisionShapeFromConvexMesh(&OpenGLAssetManager::GetModel("Shotgun_Isolated_ConvexMesh")->_meshes[0], filterData666);
-        weapon.SetRaycastShapeFromModel(OpenGLAssetManager::GetModel("Shotgun_Isolated"));
+        weapon.AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("Shotgun_Isolated_ConvexMesh"), filterData666);
+        weapon.SetRaycastShapeFromModelIndex(AssetManager::GetModelIndexByName("Shotgun_Isolated"));
         weapon.SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
         weapon.UpdateRigidBodyMassAndInertia(50.0f);
         weapon.DisableRespawnOnPickup();
@@ -2313,8 +2326,8 @@ void Player::DrawWeapons() {
         filterData666.collisionGroup = CollisionGroup::GENERIC_BOUNCEABLE;
         filterData666.collidesWith = (CollisionGroup)(ENVIROMENT_OBSTACLE | GENERIC_BOUNCEABLE);
         weapon.SetKinematic(false);
-        weapon.AddCollisionShapeFromConvexMesh(&OpenGLAssetManager::GetModel("Glock_Isolated_ConvexMesh")->_meshes[0], filterData666);
-        weapon.SetRaycastShapeFromModel(OpenGLAssetManager::GetModel("Glock_Isolated"));
+        weapon.AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("Glock_Isolated_ConvexMesh"), filterData666);
+        weapon.SetRaycastShapeFromModelIndex(AssetManager::GetModelIndexByName("Glock_Isolated"));
         weapon.SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
         weapon.UpdateRigidBodyMassAndInertia(200.0f);
         weapon.DisableRespawnOnPickup();
@@ -2371,7 +2384,7 @@ void Player::CheckForKnifeHit() {
                 knifeHit = true;
             }
 
-            if (knifeHit) {          
+            if (knifeHit) {
                 // apply damage
                 if (otherPlayer._health > 0) {
                     otherPlayer._health -= 20;// +rand() % 50;
@@ -2395,7 +2408,7 @@ void Player::CheckForKnifeHit() {
                         else {
                             otherPlayer = &Scene::_players[0];
                         }
-                        
+
                         glm::vec3 deathPosition = { otherPlayer->GetFeetPosition().x, 0.1, otherPlayer->GetFeetPosition().z };
                         deathPosition += (otherPlayer->_movementVector * 0.25f);
 
@@ -2406,9 +2419,20 @@ void Player::CheckForKnifeHit() {
 
                     }
                 }
+
                 // Audio
-                std::string file = "FLY_Bullet_Impact_Flesh_0" + std::to_string(rand() % 8 + 1) + ".wav";
-                Audio::PlayAudio(file.c_str(), 0.5f);
+                const std::vector<std::string> fleshImpactFilenames = {
+                    "FLY_Bullet_Impact_Flesh_1.wav",
+                    "FLY_Bullet_Impact_Flesh_2.wav",
+                    "FLY_Bullet_Impact_Flesh_3.wav",
+                    "FLY_Bullet_Impact_Flesh_4.wav",
+                    "FLY_Bullet_Impact_Flesh_5.wav",
+                    "FLY_Bullet_Impact_Flesh_6.wav",
+                    "FLY_Bullet_Impact_Flesh_7.wav",
+                    "FLY_Bullet_Impact_Flesh_8.wav",
+                };
+                int random = rand() % 8;
+                Audio::PlayAudio(fleshImpactFilenames[random], 0.5f);
             }
         }
     }

@@ -1,8 +1,10 @@
 
 #include "Game.h"
+#include "Input.h"
 #include "InputMulti.h"
 #include "Scene.h"
 #include "../BackEnd/BackEnd.h"
+#include "../Renderer/Renderer.h"
 
 namespace Game {
 
@@ -14,6 +16,8 @@ namespace Game {
     double _thisFrame = 0;
     double _deltaTimeAccumulator = 0.0;
     double _fixedDeltaTime = 1.0 / 60.0;
+
+    void EvaluateDebugKeyPresses();
 
     void Create() {
         _gameMode = GameMode::GAME;
@@ -44,14 +48,16 @@ namespace Game {
             Physics::StepPhysics(_fixedDeltaTime);
         }
 
+        // Debug key presses
+        EvaluateDebugKeyPresses();
+
         // Player update
         InputMulti::Update();
         for (Player& player : Scene::_players) {
             player.Update(deltaTime);
         }
         InputMulti::ResetMouseOffsets();
-
-        //Scene::Update(deltaTime);
+        Scene::Update(deltaTime);
     }
 
     const GameMode& GetGameMode() {
@@ -64,5 +70,26 @@ namespace Game {
 
     const SplitscreenMode& GetSplitscreenMode() {
         return _splitscreenMode;
+    }
+
+    void NextSplitScreenMode() {
+        int currentSplitScreenMode = (int)(_splitscreenMode);
+        currentSplitScreenMode++;
+        if (currentSplitScreenMode == (int)(SplitscreenMode::SPLITSCREEN_MODE_COUNT)) {
+            currentSplitScreenMode = 0;
+        }
+        _splitscreenMode = (SplitscreenMode)currentSplitScreenMode;
+    }
+
+    void SetSplitscreenMode(SplitscreenMode mode) {
+        _splitscreenMode = mode;
+    }
+
+    void EvaluateDebugKeyPresses() {
+
+        if (Input::KeyPressed(HELL_KEY_B)) {
+            Renderer::NextDebugLineRenderMode();
+            Audio::PlayAudio(AUDIO_SELECT, 1.00f);
+        }
     }
 }

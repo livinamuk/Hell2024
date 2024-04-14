@@ -75,7 +75,6 @@ public:
 	Inventory _inventory;
 
 	Player();
-	Player(glm::vec3 position, glm::vec3 rotation);
 
 	int GetCurrentWeaponClipAmmo();
 	int GetCurrentWeaponTotalAmmo(); 
@@ -175,13 +174,13 @@ public:
     bool PressedReload();
     bool PressedFire();
     bool PressingFire();
-    bool PressedJump();
+    bool PresingJump();
     bool PressedCrouch();
     bool PressedNextWeapon();
     bool PressingADS();
     bool PressedADS();
     bool PressedEscape();
-    bool PressedWindowsEnter();
+    //bool PressedWindowsEnter();
 
     // Dev keys
     bool PressedFullscreen();

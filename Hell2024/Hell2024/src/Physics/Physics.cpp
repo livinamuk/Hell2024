@@ -1,6 +1,8 @@
 #include "Physics.h"
 #include <vector>
+#include <unordered_map>
 #include "iostream"
+#include "../Core/AssetManager.h"
 #include "../Common.h"
 #include "../Util.hpp"
 
@@ -34,6 +36,9 @@ PxMaterial* _defaultMaterial = NULL;
 ContactReportCallback   _contactReportCallback;
 PxRigidStatic* _groundPlane = NULL;
 PxShape* _groundShape = NULL;
+
+std::unordered_map<int, PxConvexMesh*> _convexMeshes;
+std::unordered_map<int, PxTriangleMesh*> _triangleMeshes;
 
 void EnableRayCastingForShape(PxShape* shape) {
     PxFilterData filterData = shape->getQueryFilterData();
@@ -458,4 +463,139 @@ OverlapReport Physics::OverlapTest(const PxGeometry& overlapShape, const PxTrans
 		}
 	}
 	return result;
+}
+
+PxConvexMesh* Physics::CreateConvexMeshFromModelIndex(int modelIndex) {
+
+    // Create convex mesh if doesn't exist yet
+    if (!_convexMeshes.contains(modelIndex)) {
+
+        // Retrieve model if it exists
+        Model* model = AssetManager::GetModelByIndex(modelIndex);
+        if (!model) {
+            std::cout << "Physics::CreateConvexMeshFromModelIndex() failed. Index " << modelIndex << " was invalid!\n";
+            return nullptr;
+        }
+        // Create it
+        std::vector<PxVec3> vertices;
+        for (unsigned int meshIndex : model->GetMeshIndices()) {
+            Mesh* mesh = AssetManager::GetMeshByIndex(meshIndex);
+            for (int i = mesh->baseVertex; i < mesh->baseVertex + mesh->vertexCount; i++) {
+                Vertex& vertex = AssetManager::GetVertices()[i];
+                vertices.push_back(PxVec3(vertex.position.x, vertex.position.y, vertex.position.z));
+            }
+        }
+        if (vertices.size()) {
+            _convexMeshes[modelIndex] = Physics::CreateConvexMesh(vertices.size(), &vertices[0]);
+            return _convexMeshes[modelIndex];
+        }
+        std::cout << "Physics::CreateConvexMeshFromModelIndex() failed. Vertices has size 0!\n";
+        return nullptr;
+    }
+    // Return it if it already exists
+    else {
+        return _convexMeshes[modelIndex];
+    }
+    
+}
+
+PxTriangleMesh* Physics::CreateTriangleMeshFromModelIndex(int modelIndex) {
+
+    // Create convex mesh if doesn't exist yet
+    if (!_triangleMeshes.contains(modelIndex)) {
+
+        // Retrieve model if it exists
+        Model* model = AssetManager::GetModelByIndex(modelIndex);
+        if (!model) {
+            std::cout << "Physics::CreateTriangleMeshFromModelIndex() failed. Index " << modelIndex << " was invalid!\n";
+            return nullptr;
+        }
+        std::vector<PxVec3> pxvertices;
+        std::vector<unsigned int> pxindices;
+        int pxBaseVertex = 0;
+        for (unsigned int meshIndex : model->GetMeshIndices()) {
+            Mesh* mesh = AssetManager::GetMeshByIndex(meshIndex);
+            
+            for (int i = 0; i < mesh->vertexCount; i++) {
+                Vertex& vertex = AssetManager::GetVertices()[i + mesh->baseVertex];
+                pxvertices.push_back(PxVec3(vertex.position.x, vertex.position.y, vertex.position.z));
+                
+            }
+            for (int i = 0; i < mesh->indexCount; i++) {
+                unsigned int index = AssetManager::GetIndices()[i + mesh->baseIndex];
+                pxindices.push_back(index + pxBaseVertex);
+            }
+            pxBaseVertex = pxvertices.size();
+        }
+        if (pxvertices.size()) {
+            _triangleMeshes[modelIndex] = Physics::CreateTriangleMesh(pxvertices.size(), pxvertices.data(), pxindices.size() / 3, pxindices.data());
+            return  _triangleMeshes[modelIndex];
+        }
+        else {
+            std::cout << "Physics::CreateTriangleMeshFromModelIndex() failed. Vertices has size 0!\n";
+            return nullptr;
+        }
+    }
+    // Return it if it already exists
+    else {
+        return _triangleMeshes[modelIndex];
+    }
+}
+
+std::vector<Vertex> Physics::GetDebugLineVertices(DebugLineRenderMode debugLineRenderMode, std::vector<PxRigidActor*> ignoreList) {
+
+    // Prepare
+    PxU32 nbActors = _scene->getNbActors(PxActorTypeFlag::eRIGID_DYNAMIC | PxActorTypeFlag::eRIGID_STATIC);
+    if (nbActors) {
+        std::vector<PxRigidActor*> actors(nbActors);
+        _scene->getActors(PxActorTypeFlag::eRIGID_DYNAMIC | PxActorTypeFlag::eRIGID_STATIC, reinterpret_cast<PxActor**>(&actors[0]), nbActors);
+        for (PxRigidActor* actor : actors) {
+            if (actor == Physics::GetGroundPlane()) {
+                actor->setActorFlag(PxActorFlag::eVISUALIZATION, false);
+                continue;
+            }
+            PxShape* shape;
+            actor->getShapes(&shape, 1);
+            actor->setActorFlag(PxActorFlag::eVISUALIZATION, true);
+            for (PxRigidActor* ignoredActor : ignoreList) {
+                if (ignoredActor == actor) {
+                    actor->setActorFlag(PxActorFlag::eVISUALIZATION, false);
+                }
+            }
+            if (debugLineRenderMode == DebugLineRenderMode::PHYSX_RAYCAST) {
+                if (shape->getQueryFilterData().word0 == RaycastGroup::RAYCAST_DISABLED) {
+                    actor->setActorFlag(PxActorFlag::eVISUALIZATION, false);
+                }
+            }
+            else if (debugLineRenderMode == DebugLineRenderMode::PHYSX_COLLISION) {
+                if (shape->getQueryFilterData().word1 == CollisionGroup::NO_COLLISION) {
+                    actor->setActorFlag(PxActorFlag::eVISUALIZATION, false);
+                }
+            }
+        }
+    }
+    // Build vertices
+    std::vector<Vertex> vertices;
+    auto* renderBuffer = &_scene->getRenderBuffer();
+    for (unsigned int i = 0; i < renderBuffer->getNbLines(); i++) {
+        auto pxLine = renderBuffer->getLines()[i];
+        Vertex v1, v2;
+        v1.position = Util::PxVec3toGlmVec3(pxLine.pos0);
+        v2.position = Util::PxVec3toGlmVec3(pxLine.pos1);
+        if (debugLineRenderMode == DebugLineRenderMode::PHYSX_ALL) {
+            v1.normal = GREEN;
+            v2.normal = GREEN;
+        }
+        else if (debugLineRenderMode == DebugLineRenderMode::PHYSX_COLLISION) {
+            v1.normal = LIGHT_BLUE;
+            v2.normal = LIGHT_BLUE;
+        }
+        else if (debugLineRenderMode == DebugLineRenderMode::PHYSX_RAYCAST) {
+            v1.normal = RED;
+            v2.normal = RED;
+        }        
+        vertices.push_back(v1);
+        vertices.push_back(v2);
+    }
+    return vertices;
 }

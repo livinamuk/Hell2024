@@ -11,11 +11,11 @@ namespace Vulkan {
         VmaAllocation _allocation = VK_NULL_HANDLE;
         VkExtent3D _extent = {};
         VkFormat _format;
-        VkImageLayout _currentLayout = VK_IMAGE_LAYOUT_UNDEFINED;// VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-        VkAccessFlags _currentAccessMask = VK_ACCESS_MEMORY_READ_BIT;// VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-        VkPipelineStageFlags _currentStageFlags = VK_PIPELINE_STAGE_TRANSFER_BIT;// VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_TRANSFER_BIT;
+        VkImageLayout _currentLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        VkAccessFlags _currentAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+        VkPipelineStageFlags _currentStageFlags = VK_PIPELINE_STAGE_TRANSFER_BIT;
 
-        RenderTarget() {}
+        RenderTarget() = default;
 
         RenderTarget(VkDevice device, VmaAllocator allocator, VkFormat format, uint32_t width, uint32_t height, VkImageUsageFlags imageUsage, std::string debugName, VmaMemoryUsage memoryUsuage = VMA_MEMORY_USAGE_GPU_ONLY, VkMemoryPropertyFlags memoryFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) {
 
@@ -61,6 +61,10 @@ namespace Vulkan {
             nameInfo.pObjectName = debugName.c_str();
             PFN_vkSetDebugUtilsObjectNameEXT vkSetDebugUtilsObjectNameEXT = reinterpret_cast<PFN_vkSetDebugUtilsObjectNameEXT>(vkGetDeviceProcAddr(device, "vkSetDebugUtilsObjectNameEXT"));
             vkSetDebugUtilsObjectNameEXT(device, &nameInfo);
+        }
+
+        VkRect2D GetRenderArea() {
+            return { 0, 0, _extent.width, _extent.height };
         }
 
         int GetWidth() {

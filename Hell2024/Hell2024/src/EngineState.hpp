@@ -1,10 +1,13 @@
+#pragma once
 
 #include "Common.h"
 
 namespace EngineState {
 
+    inline bool _skipPhysics = false;
+
 	inline EngineMode _engineMode = GAME;
-	inline SplitScreenMode _splitScreenMode = SplitScreenMode::FULLSCREEN;
+	//inline SplitScreenMode _splitScreenMode = SplitScreenMode::FULLSCREEN;
 	inline glm::vec3 _mouseRay = glm::vec3(0);
 	inline int _currentPlayer = 0;
 	inline int _playerCount = 2;
@@ -18,9 +21,9 @@ namespace EngineState {
 	inline int GetPlayerCount() {
 		return _playerCount;
 	}
-	inline SplitScreenMode GetSplitScreenMode() {
+	/*inline SplitScreenMode GetSplitScreenMode() {
 		return _splitScreenMode;
-	}
+	}*/
 	inline EngineMode GetEngineMode() {
 		return _engineMode;
 	}
@@ -36,7 +39,7 @@ namespace EngineState {
 		std::cout << "Current player is: " << _currentPlayer << "\n";
 	}
 
-	inline void NextSplitScreenMode() {
+/*	inline void NextSplitScreenMode() {
 		int currentSplitScreenMode = (int)(_splitScreenMode);
         currentSplitScreenMode++;
 		if (currentSplitScreenMode == (int)(SplitScreenMode::SPLITSCREEN_MODE_COUNT)) {
@@ -44,7 +47,7 @@ namespace EngineState {
 		}
         _splitScreenMode = (SplitScreenMode)currentSplitScreenMode;
 		//std::cout << "Current player: " << _currentPlayer << "\n";
-	}
+	}*/
 
     // This is disgusting, find a better way to do this
     inline const std::vector<Weapon> weaponNamePointers = { KNIFE, GLOCK, SHOTGUN, AKS74U, MP7, WEAPON_COUNT };

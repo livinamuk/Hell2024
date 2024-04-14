@@ -65,7 +65,7 @@ void Ragdoll::LoadFromJSON(std::string filename, PxU32 collisionGroup) {
 
             std::string sourceTransform = components["MarkerUIComponent"].GetObject()["members"].GetObject()["sourceTransform"].GetString();
             sourceTransform = FindParentJointName(sourceTransform);
-            rigidComponent.correspondingJointName = sourceTransform;
+            rigidComponent.correspondingJointName = sourceTransform.c_str();
 
             rigidComponent.angularMass = Util::PxVec3FromJSONArray(components["RigidComponent"].GetObject()["members"].GetObject()["angularMass"].GetObject()["values"].GetArray());
 
@@ -78,8 +78,9 @@ void Ragdoll::LoadFromJSON(std::string filename, PxU32 collisionGroup) {
             JointComponent jointComponent;
             jointComponent.name = components["NameComponent"].GetObject()["members"].GetObject()["value"].GetString();
 
-
-            if (jointComponent.name.find("Absolute") != -1) {
+            // Ugly check to skip over absolute joints. Ask Marcus what they are!
+            std::string jointName = jointComponent.name;
+            if (jointName.find("Absolute") != -1) {
                 continue;
             } 
 
@@ -145,72 +146,60 @@ void Ragdoll::LoadFromJSON(std::string filename, PxU32 collisionGroup) {
     }
 
     for (RigidComponent& rigid : _rigidComponents) {
-        // Skip the scene rigid (it's outputted in the JSON export)
-        if (rigid.name == "rSceneShape")
-            continue;
-        // Apply scale
-        if (rigid.shapeType == "Capsule") {
-            rigid.capsuleRadius *= rigid.scaleAbsoluteVector.x;
-            rigid.capsuleLength *= rigid.scaleAbsoluteVector.y;
-        }
-        else if (rigid.shapeType == "Box") {
-            rigid.boxExtents.x *= rigid.scaleAbsoluteVector.x;
-            rigid.boxExtents.y *= rigid.scaleAbsoluteVector.y;
-            rigid.boxExtents.z *= rigid.scaleAbsoluteVector.z;
-        }
 
-        // Create rigid
-       // PxMat44 restMatrix = Util::GlmMat4ToPxMat44(rigid.restMatrix);
-        //PxMat44 spawnMatrix = Util::GlmMat4ToPxMat44(spawnTransform.to_mat4());
+        // Skip the scene rigid (it's outputted in the JSON export)
+        if (Util::StrCmp(rigid.name.c_str(), "rSceneShape")) {
+            continue;
+        }
+        
 
         rigid.pxRigidBody = Physics::CreateRigidDynamic(spawnTransform.to_mat4() * rigid.restMatrix, false);
         rigid.pxRigidBody->wakeUp();
 
-        //rigid.pxRigidBody->attachShape(*shape);
         rigid.pxRigidBody->setSolverIterationCounts(8, 1);
         rigid.pxRigidBody->setName("RAGDOLL");
 
-        // Create shape
-        if (rigid.shapeType == "Capsule") {
+        if (Util::StrCmp(rigid.shapeType.c_str(), "Capsule")) {
+
+            rigid.capsuleRadius *= rigid.scaleAbsoluteVector.x;
+            rigid.capsuleLength *= rigid.scaleAbsoluteVector.y;
+
             float halfExtent = rigid.capsuleLength * 0.5f;
             float radius = rigid.capsuleRadius;
-            //shape = physX.createShape(PxCapsuleGeometry(radius, halfExtent), *gMaterial);
 
             PxMaterial* material = Physics::GetDefaultMaterial();
             PxCapsuleGeometry geom = PxCapsuleGeometry(radius, halfExtent);
             PxShape* shape = PxRigidActorExt::createExclusiveShape(*rigid.pxRigidBody, geom, *material);
-
-
         }
-        else if (rigid.shapeType == "Box") {
+        else if (Util::StrCmp(rigid.shapeType.c_str(), "Box")) {
+
+            rigid.boxExtents.x *= rigid.scaleAbsoluteVector.x;
+            rigid.boxExtents.y *= rigid.scaleAbsoluteVector.y;
+            rigid.boxExtents.z *= rigid.scaleAbsoluteVector.z;
+
             float halfExtent = rigid.capsuleLength;
             float radius = rigid.capsuleRadius;
-            //shape = physX.createShape(PxBoxGeometry(rigid.boxExtents.x * 0.5, rigid.boxExtents.y * 0.5, rigid.boxExtents.z * 0.5), *gMaterial);
 
             PxMaterial* material = Physics::GetDefaultMaterial();
             PxBoxGeometry geom = PxBoxGeometry(rigid.boxExtents.x * 0.5f, rigid.boxExtents.y * 0.5f, rigid.boxExtents.z * 0.5f);
             PxShape* shape = PxRigidActorExt::createExclusiveShape(*rigid.pxRigidBody, geom, *material);
         }
 
-
         PxTransform offsetTranslation = PxTransform(PxVec3(rigid.offset.x, rigid.offset.y, rigid.offset.z));
         PxTransform offsetRotation = PxTransform(rigid.rotation);
-
-
 
         PxShape* shape;
         rigid.pxRigidBody->getShapes(&shape, 1);
         shape->setLocalPose(offsetTranslation.transform(offsetRotation));
 
-        if (rigid.name == "rMarker_CC_Base_Head") {
+        if (Util::StrCmp(rigid.name.c_str(), "rMarker_CC_Base_Head")) {
             rigid.pxRigidBody->setName("RAGDOLL_HEAD");
         }
-        if (rigid.name == "rMarker_CC_Base_NeckTwist01") {
+        else if (Util::StrCmp(rigid.name.c_str(), "rMarker_CC_Base_NeckTwist01")) {
             rigid.pxRigidBody->setName("RAGDOLL_NECK");
         }
         
         PxRigidBodyExt::setMassAndUpdateInertia(*rigid.pxRigidBody, rigid.mass);
-        //PxRigidBodyExt::setMassAndUpdateInertia(*rigid.pxRigidBody, 0.125f);
 
         PxFilterData filterData;
         filterData.word0 = collisionGroup;
@@ -431,7 +420,7 @@ void Ragdoll::DisableVisualization() {
 }
 
 void Ragdoll::EnableCollision() {
-    return;
+    /*
     for (RigidComponent& rigid : _rigidComponents) {
         PxShape* shape;
         rigid.pxRigidBody->getShapes(&shape, 1);
@@ -440,11 +429,11 @@ void Ragdoll::EnableCollision() {
         filterData.word2 = CollisionGroup::ENVIROMENT_OBSTACLE | CollisionGroup::GENERIC_BOUNCEABLE;
         shape->setQueryFilterData(filterData);
         shape->setSimulationFilterData(filterData);
-    }
+    }*/
 }
 
 void Ragdoll::DisableCollision() {
-    return;
+    /*return;
     for (RigidComponent& rigid : _rigidComponents) {
         PxShape* shape;
         rigid.pxRigidBody->getShapes(&shape, 1);
@@ -453,7 +442,7 @@ void Ragdoll::DisableCollision() {
         filterData.word2 = CollisionGroup::NO_COLLISION;
         shape->setQueryFilterData(filterData);
         shape->setSimulationFilterData(filterData);
-    }
+    }*/
 }
 
 

@@ -4,9 +4,8 @@ layout (location = 0) in vec3 aPos;
 layout (location = 1) in vec3 aNormal;
 layout (location = 2) in vec2 aTexCoord;
 layout (location = 3) in vec3 aTangent;
-layout (location = 4) in vec3 aBitangent;
-layout (location = 5) in ivec4 aBoneID;
-layout (location = 6) in vec4 aBoneWeight;
+layout (location = 4) in ivec4 aBoneID;
+layout (location = 5) in vec4 aBoneWeight;
 
 uniform mat4 projection;
 uniform mat4 view;
@@ -29,8 +28,9 @@ void main() {
 
 	TexCoord = aTexCoord;
 
-	if (isAnimated) {
+	// ANIMATED 
 
+	if (isAnimated) {
 		vec4 totalLocalPos = vec4(0.0);
 		vec4 totalNormal = vec4(0.0);
 		vec4 totalTangent = vec4(0.0);
@@ -49,33 +49,23 @@ void main() {
 			totalLocalPos += posePosition;		
 			totalNormal += worldNormal;	
 			totalTangent += worldTangent;	
-		}
-	
-	//	totalLocalPos = vec4(aPos, 1.0);
-		WorldPos = (model * vec4(totalLocalPos.xyz, 1)).xyz;
-
-		
+		}	
+		WorldPos = (model * vec4(totalLocalPos.xyz, 1)).xyz;		
 		attrNormal =  (model * vec4(normalize(totalNormal.xyz), 0)).xyz;
 		attrTangent =  (model * vec4(normalize(totalTangent.xyz), 0)).xyz;
 		attrBiTangent = normalize(cross(attrNormal,attrTangent));
 	}
 
 	// NOT ANIMATED
+
 	else {	
 
 		mat4 normalMatrix = transpose(inverse(model));
 		attrNormal = normalize((normalMatrix * vec4(aNormal, 0)).xyz);
 		attrTangent = (model * vec4(aTangent, 0.0)).xyz;
 		attrBiTangent = normalize(cross(attrNormal,attrTangent));
-
-		//attrTangent = (model * vec4(aBitangent, 0.0)).xyz;
 		WorldPos = (model * vec4(aPos.x, aPos.y, aPos.z, 1.0)).xyz;	
-		//attrNormal = transpose(inverse(mat3(model))) * aNormal;
-		//attrTangent = transpose(inverse(mat3(model))) * aTangent;
-		//attrBiTangent = normalize(cross(attrNormal,attrTangent));		
 	}
-		
-		//attrNormal = aNormal;
 
 	gl_Position = projection * view * vec4(WorldPos, 1.0);
 }

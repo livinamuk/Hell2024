@@ -250,8 +250,8 @@ vec3 GetIndirectLighting(vec3 WorldPos, vec3 Normal) { // Interpolate visible pr
 void main() {
 
     // Sample GBuffer
-    vec4 baseColor = texture(basecolorTexture, TexCoords).rgba;
-    baseColor.rgb = pow(baseColor.rgb, vec3(2.2));
+	vec4 baseColor = texture(basecolorTexture, TexCoords).rgba;
+	baseColor.rgb = pow(baseColor.rgb, vec3(2.2));
     vec3 normalMap =  texture2D(normalTexture, TexCoords).rgb;
     vec4 rma =  texture2D(rmaTexture, TexCoords);
     vec3 normal =  texture2D(normalTexture, TexCoords).rgb;
@@ -264,7 +264,7 @@ void main() {
     mat4 inverseProjection = (projectionMatrixIndex == 0) ? inverseProjectionWeapon : inverseProjectionScene;
     projectionMatrixIndex = 0;
 
-	float z = texture(depthTexture, TexCoords).x * 2.0f - 1.0f;
+	float z = texture(depthTexture, TexCoords).x;// * 2.0f - 1.0f;
     vec2 clipSpaceTexCoord = TexCoords;
 	vec4 clipSpacePosition = vec4(TexCoords * 2.0 - 1.0, z, 1.0);
     vec4 viewSpacePosition = inverseProjection * clipSpacePosition;
@@ -361,5 +361,5 @@ void main() {
 	//FragColor.a = 0.1;
 	//FragColor.rgb = vec3(baseColor.a);
 	// FragColor.rgb = vec3(WorldPos);
-	// FragColor.rgb = normal.rgb;
+	// FragColor.rgb = baseColor.rgb;
 }

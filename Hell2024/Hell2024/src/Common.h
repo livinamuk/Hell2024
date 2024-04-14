@@ -3,6 +3,7 @@
 #pragma warning(push, 0)
 #define GLM_FORCE_SILENT_WARNINGS
 #define GLM_ENABLE_EXPERIMENTAL
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <iostream>
@@ -16,7 +17,7 @@
 enum class API { OPENGL, VULKAN, UNDEFINED };
 enum class WindowedMode { WINDOWED, FULLSCREEN };
 
-enum class SplitScreenMode { FULLSCREEN, SPLITSCREEN, SPLITSCREEN_MODE_COUNT };
+//enum class SplitScreenMode { FULLSCREEN, SPLITSCREEN, SPLITSCREEN_MODE_COUNT };
 enum EngineMode { GAME = 0, FLOORPLAN, EDITOR };
 enum Weapon { KNIFE = 0, GLOCK, SHOTGUN, AKS74U, MP7, WEAPON_COUNT };
 enum WeaponAction {
@@ -97,10 +98,8 @@ enum WeaponAction {
 #define NORMAL_LOCATION		 1
 #define TEX_COORD_LOCATION   2
 #define TANGENT_LOCATION     3
-#define BITANGENT_LOCATION   4
-#define BONE_ID_LOCATION     5
-#define BONE_WEIGHT_LOCATION 6
-#define SMOOTH_NORMAL_LOCATION 7
+#define BONE_ID_LOCATION     4
+#define BONE_WEIGHT_LOCATION 5
 
 enum VB_TYPES {
     INDEX_BUFFER,
@@ -125,34 +124,6 @@ struct Transform {
         return m;
     };
 };
-
-struct Vertex {
-    glm::vec3 position = glm::vec3(0);
-    float pad0 = 0;
-    glm::vec3 normal = glm::vec3(0);
-    float pad1 = 0;
-    glm::vec2 uv = glm::vec2(0);
-    float pad2 = 0;
-    float pad3 = 0;
-    glm::vec3 tangent = glm::vec3(0);
-    float pad4 = 0;
-    glm::vec3 bitangent = glm::vec3(0);
-    float pad5 = 0;
-    glm::vec4 weight = glm::vec4(0);
-    glm::ivec4 boneID = glm::ivec4(0);
-
-    bool operator==(const Vertex& other) const {
-        return position == other.position && normal == other.normal && uv == other.uv;
-    }
-};
-
-namespace std {
-    template<> struct hash<Vertex> {
-        size_t operator()(Vertex const& vertex) const {
-            return ((hash<glm::vec3>()(vertex.position) ^ (hash<glm::vec3>()(vertex.normal) << 1)) >> 1) ^ (hash<glm::vec2>()(vertex.uv) << 1);
-        }
-    };
-}
 
 struct Point {
     glm::vec3 pos = { glm::vec3(0) };
@@ -179,28 +150,6 @@ struct Line {
         p2.color = color;
     }
 };
-
-struct VoxelFace {
-
-    int x = 0;
-    int y = 0;
-    int z = 0;
-    glm::vec3 baseColor;
-    glm::vec3 normal;
-    glm::vec3 accumulatedDirectLighting = { glm::vec3(0) };
-    glm::vec3 indirectLighting = { glm::vec3(0) };
-
-    VoxelFace(int x, int y, int z, glm::vec3 baseColor, glm::vec3 normal) {
-        this->x = x;
-        this->y = y;
-        this->z = z;
-        this->baseColor = baseColor;
-        this->normal = normal;
-    }
-};
-
-
-
 
 struct Triangle {
     glm::vec3 p1 = glm::vec3(0);

@@ -1,15 +1,12 @@
-#include <glad/glad.h>
-#include <GLFW/glfw3.h>
 #include <iostream>
 #include "GL_texture.h"
 #include "../../../Util.hpp"
 #include "../../vendor/DDS/DDS_Helpers.h"
 #include <stb_image.h>
 
-constexpr uint32_t GL_COMPRESSED_RGB_S3TC_DXT1_EXT = 0x83F0;
-constexpr uint32_t GL_COMPRESSED_RGBA_S3TC_DXT1_EXT = 0x83F1;
-constexpr uint32_t GL_COMPRESSED_RGBA_S3TC_DXT3_EXT = 0x83F2;
-constexpr uint32_t GL_COMPRESSED_RGBA_S3TC_DXT5_EXT = 0x83F3;
+GLuint64 OpenGLTexture::GetBindlessID() {
+    return bindlessID;
+}
 
 uint32_t cmpToOpenGlFormat(CMP_FORMAT format) {
     if (format == CMP_FORMAT_DXT1) {
@@ -30,22 +27,18 @@ void freeCMPTexture(CMP_Texture* t) {
     free(t->pData);
 }
 
-OpenGLTexture::OpenGLTexture(const std::string_view filepath) {
+OpenGLTexture::OpenGLTexture(const std::string filepath) {
     Load(filepath);
 }
 
-bool OpenGLTexture::Load(const std::string_view filepath) {
+bool OpenGLTexture::Load(const std::string filepath) {
 
     if (!Util::FileExists(filepath)) {
         std::cout << filepath << " does not exist.\n";
         return false;
     }
 
-    int pos = filepath.rfind("\\") + 1;
-    int pos2 = filepath.rfind("/") + 1;
-    _filename = filepath.substr(std::max(pos, pos2));
-    _filename = _filename.substr(0, _filename.length() - 4);
-    _filetype = filepath.substr(filepath.length() - 3);
+    _filename = Util::GetFilename(filepath);
 
     // Check if compressed version exists. If not, create one.
     std::string suffix = _filename.substr(_filename.length() - 3);
@@ -99,6 +92,7 @@ bool OpenGLTexture::Load(const std::string_view filepath) {
                 return false;
             }
             else {
+                std::cout << "saving compressed texture: " << compressedPath.c_str() << "\n";
                 SaveDDSFile(compressedPath.c_str(), destTexture);
             }
         }
@@ -206,7 +200,61 @@ bool OpenGLTexture::Load(const std::string_view filepath) {
     return true;
 }
 
+
+void OpenGLTexture::UploadToGPU(void* data, CMP_Texture* cmpTexture, int width, int height, int channelCount) {
+
+    if (_baked || !_data) {
+        return;
+    }
+    _baked = true;
+
+    if (_CMP_texture != nullptr) {
+        glGenerateMipmap(GL_TEXTURE_2D);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+        const uint32_t glFormat = cmpToOpenGlFormat(cmpTexture->format);
+        if (glFormat != 0xFFFFFFFF) {
+            uint32_t size2 = cmpTexture->dwDataSize;
+            glCompressedTexImage2D(GL_TEXTURE_2D, 0, glFormat, cmpTexture->dwWidth, cmpTexture->dwHeight, 0, size2, cmpTexture->pData);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 28);
+            glGenerateMipmap(GL_TEXTURE_2D);
+        }
+        freeCMPTexture(cmpTexture);
+    }
+    else {
+        glGenTextures(1, &ID);
+        glBindTexture(GL_TEXTURE_2D, ID);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+
+        GLint format = GL_RGB;
+        if (channelCount == 4)
+            format = GL_RGBA;
+        if (channelCount == 1)
+            format = GL_RED;
+
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+
+
+        bindlessID = glGetTextureHandleARB(ID);
+        glMakeTextureHandleResidentARB(bindlessID);
+        //glMakeTextureHandleNonResidentARB(bindlessID); to unbind
+
+        stbi_image_free(data);
+    }
+    _width = width;
+    _height = height;
+}
+
 bool OpenGLTexture::Bake() {
+
+    if (_baked) {
+        return true;
+    }
 
     _baked = true;
 
@@ -222,9 +270,6 @@ bool OpenGLTexture::Bake() {
         const uint32_t glFormat = cmpToOpenGlFormat(cmpTexture.format);
         //unsigned int blockSize = (glFormat == GL_COMPRESSED_RGBA_S3TC_DXT1_EXT) ? 8 : 16;
         if (glFormat != 0xFFFFFFFF) {
-            //uint32_t width = cmpTexture.dwWidth;
-            //uint32_t height = cmpTexture.dwHeight;
-            //uint32_t size1 = ((width + 3) / 4) * ((height + 3) / 4) * blockSize;
             uint32_t size2 = cmpTexture.dwDataSize;
             glCompressedTexImage2D(GL_TEXTURE_2D, 0, glFormat, cmpTexture.dwWidth, cmpTexture.dwHeight, 0, size2, cmpTexture.pData);
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 28);
@@ -254,6 +299,11 @@ bool OpenGLTexture::Bake() {
         format = GL_RED;
 
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, _width, _height, 0, format, GL_UNSIGNED_BYTE, _data);
+
+
+    bindlessID = glGetTextureHandleARB(ID);
+    glMakeTextureHandleResidentARB(bindlessID);
+    //glMakeTextureHandleNonResidentARB(bindlessID); to unbind
 
     stbi_image_free(_data);
     _data = nullptr;

@@ -213,7 +213,7 @@ void File::SaveMap(std::string mapName) {
 		SaveString(&object, "name", gameObject._name, allocator);
 		SaveString(&object, "parentName", gameObject._parentName, allocator);
 		SaveIntArray(&object, "meshMaterialIndices", gameObject._meshMaterialIndices, allocator);
-		SaveString(&object, "modelName", gameObject._model->_name, allocator);
+		SaveString(&object, "modelName", gameObject.model->GetName(), allocator);
 
 		
 

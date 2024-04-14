@@ -26,11 +26,11 @@ struct Wall {
 
     std::vector<Vertex> vertices;
     std::vector<uint32_t> indices;
-    RenderItem3D renderItem;
+    std::vector<RenderItem3D> renderItems;
     int meshIndex = -1;
 
     void CreateVertexData();
     void CreateMeshGL();
-    void UpdateRenderItem();
-    RenderItem3D& GetRenderItem();
+    void UpdateRenderItems();
+    std::vector<RenderItem3D>& GetRenderItems();
 };

@@ -108,6 +108,58 @@ void Shader::Load(std::string vertexPath, std::string fragmentPath) {
 }
 
 
+void Shader::Load(std::string vertexPath, std::string fragmentPath, std::string geomPath)
+{
+    std::string vertexSource = Util::ReadTextFromFile("res/shaders/OpenGL/" + vertexPath);
+    std::string fragmentSource = Util::ReadTextFromFile("res/shaders/OpenGL/" + fragmentPath);
+    std::string geometrySource = Util::ReadTextFromFile("res/shaders/OpenGL/" + geomPath);
+
+    const char* vShaderCode = vertexSource.c_str();
+    const char* fShaderCode = fragmentSource.c_str();
+    const char* gShaderCode = geometrySource.c_str();
+
+    unsigned int vertex, fragment, geometry;
+
+    vertex = glCreateShader(GL_VERTEX_SHADER);
+    glShaderSource(vertex, 1, &vShaderCode, NULL);
+    glCompileShader(vertex);
+    checkCompileErrors(vertex, "VERTEX");
+
+    fragment = glCreateShader(GL_FRAGMENT_SHADER);
+    glShaderSource(fragment, 1, &fShaderCode, NULL);
+    glCompileShader(fragment);
+    checkCompileErrors(fragment, "FRAGMENT");
+
+
+    geometry = glCreateShader(GL_GEOMETRY_SHADER);
+    glShaderSource(geometry, 1, &gShaderCode, NULL);
+    glCompileShader(geometry);
+    checkCompileErrors(geometry, "GEOMETRY");
+
+    int tempID = glCreateProgram();
+    glAttachShader(tempID, vertex);
+    glAttachShader(tempID, fragment);
+    glAttachShader(tempID, geometry);
+    glLinkProgram(tempID);
+
+    if (checkCompileErrors(tempID, "PROGRAM")) {
+        if (_ID != -1) {
+            glDeleteProgram(_ID);
+        }
+        _uniformsLocations.clear();
+        _ID = tempID;
+        //std::cout << "shader SUCCESFULLY compiled " << vertexPath << " " << fragmentPath << "\n";
+    }
+    else {
+        std::cout << "shader failed to compile " << vertexPath << " " << fragmentPath << "\n";
+    }
+
+
+    glDeleteShader(vertex);
+    glDeleteShader(fragment);
+    glDeleteShader(geometry);
+}
+
 
 void Shader::LoadOLD(std::string vertexPath, std::string fragmentPath, std::string geomPath)
 {

@@ -1,4 +1,6 @@
 #include "VK_texture.h"
+#include "../../../API/Vulkan/VK_assetManager.h"
+#include "../../../Util.hpp"
 
 int VulkanTexture::GetWidth() {
     return width;
@@ -38,4 +40,33 @@ void VulkanTexture::InsertImageBarrier(VkCommandBuffer cmdbuffer, VkImageLayout 
     currentLayout = newImageLayout;
     currentAccessMask = dstAccessMask;
     currentStageFlags = dstStageMask;
+}
+
+void VulkanTexture::Load(std::string_view filepath) {
+
+    FileInfo info = Util::GetFileInfo(std::string(filepath));
+    filename = info.filename;
+    filepath = info.fullpath;
+
+    // Create compressed version if it doesn't exist
+    std::string assetPath = "res/assets_vulkan/" + info.filename + ".tex";
+    if (!std::filesystem::exists(assetPath)) {
+        VulkanAssetManager::ConvertImage(info.fullpath, assetPath);
+    }
+
+    // Image format
+    if (info.materialType == "ALB") {
+        format = VK_FORMAT_R8G8B8A8_UNORM;
+    }
+    else {
+        format = VK_FORMAT_R8G8B8A8_UNORM; // VK_FORMAT_R8G8B8A8_SRGB;
+    }
+
+    // Load compressed file
+    AssetFile assetFile;
+    VulkanAssetManager::LoadBinaryFile(assetPath.c_str(), assetFile);
+
+    // Feed data to Vulkan
+    bool generateMips = false;
+    VulkanAssetManager::FeedTextureToGPU(this, &assetFile, generateMips);
 }

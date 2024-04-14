@@ -1,9 +1,10 @@
 #pragma once
 #include "Audio.hpp"
-#include "../API/OpenGL/Types/gl_model.h"
 #include "../Physics/RigidBody.hpp"
 #include "../Physics/RigidStatic.hpp"
 #include "../Physics/Physics.h"
+#include "../Renderer/RendererCommon.h"
+#include "../Types/Model.hpp"
 #include "../Util.hpp"
 
 enum class OpenState { NONE, CLOSED, CLOSING, OPEN, OPENING };
@@ -14,7 +15,9 @@ enum class PickUpType { NONE, GLOCK, GLOCK_AMMO, SHOTGUN, SHOTGUN_AMMO, AKS74U, 
 
 struct GameObject {
 public:
-    OpenGLModel* _model = nullptr;
+
+    //OpenGLModel* _model_OLD = nullptr;
+    Model* model = nullptr;
 	std::vector<int> _meshMaterialIndices;
 	Transform _transform;
 	Transform _openTransform;
@@ -81,10 +84,10 @@ public:
 	glm::vec3 _scaleWhenUsingPhysXTransform = glm::vec3(1);
 
 	void SetOpenAxis(OpenAxis openAxis);
-	void SetAudioOnInteract(std::string filename, float volume);
-	void SetAudioOnOpen(std::string filename, float volume);
-	void SetAudioOnClose(std::string filename, float volume);
-	void SetInteract(InteractType type, std::string text, std::function<void(void)> callback);
+	void SetAudioOnInteract(const char* filename, float volume);
+	void SetAudioOnOpen(const char* filename, float volume);
+	void SetAudioOnClose(const char* filename, float volume);
+	//void SetInteract(InteractType type, std::string text, std::function<void(void)> callback);
     void SetOpenState(OpenState openState, float speed, float min, float max);
     void SetPosition(glm::vec3 position);
     void SetRotation(glm::vec3 rotation);
@@ -104,7 +107,6 @@ public:
 	void SetName(std::string name);
 	void SetParentName(std::string name);
 	std::string GetParentName();
-	void SetScriptName(std::string name);
 	bool IsInteractable();
 	void Interact();
 	void Update(float deltaTime);
@@ -127,13 +129,13 @@ public:
 
 	//void CreateRigidBody(glm::mat4 matrix, bool kinematic);
 	void AddCollisionShape(PxShape* shape, PhysicsFilterData physicsFilterData);
-	void AddCollisionShapeFromConvexMesh(OpenGLMesh* mesh, PhysicsFilterData physicsFilterData, glm::vec3 scale = glm::vec3(1));
+	void AddCollisionShapeFromModelIndex(unsigned int modelIndex, PhysicsFilterData physicsFilterData, glm::vec3 scale = glm::vec3(1));
 	void AddCollisionShapeFromBoundingBox(BoundingBox& boundignBox, PhysicsFilterData physicsFilterData);
 	void UpdateRigidBodyMassAndInertia(float density);
     void PutRigidBodyToSleep();
 
-	void SetRaycastShapeFromMesh(OpenGLMesh* mesh);
-	void SetRaycastShapeFromModel(OpenGLModel* model);
+	//void SetRaycastShapeFromMesh(OpenGLMesh* mesh);
+	void SetRaycastShapeFromModelIndex(unsigned int modelIndex);
 	void SetRaycastShape(PxShape* shape);
 	
 	void SetModelMatrixMode(ModelMatrixMode modelMatrixMode);
@@ -149,10 +151,15 @@ public:
     void UpdateRigidStatic();
     void DisableRespawnOnPickup();
 
+    void UpdateRenderItems();
+    std::vector<RenderItem3D>& GetRenderItems();
+    RenderItem3D* GetRenderItemByIndex(int index);
 
-	std::vector<Triangle> GetTris();
+    std::vector<Triangle> GetTris();
+    std::vector<Vertex> GetAABBVertices();
 
 private:
+    std::vector<RenderItem3D> renderItems;
     bool _wasPickedUpLastFrame = false;
     bool _wasRespawnedUpLastFrame = false;
     bool _wakeOnStart = false;

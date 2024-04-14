@@ -26,10 +26,14 @@ struct Raytracer {
     AllocatedBuffer raygenShaderBindingTable;
     AllocatedBuffer missShaderBindingTable;
     AllocatedBuffer hitShaderBindingTable;
-    VkShaderModule rayGenShader = nullptr;
-    VkShaderModule rayMissShader = nullptr;
-    VkShaderModule closestHitShader = nullptr;
-    VkShaderModule rayshadowMissShader = nullptr;
+
+    struct ShaderStack {
+        VkShaderModule rayGen = nullptr;
+        VkShaderModule rayMiss = nullptr;
+        VkShaderModule closestHit = nullptr;
+        VkShaderModule rayshadowMiss = nullptr;
+    } shaderStack;
+
     VkStridedDeviceAddressRegionKHR raygenShaderSbtEntry{};
     VkStridedDeviceAddressRegionKHR missShaderSbtEntry{};
     VkStridedDeviceAddressRegionKHR hitShaderSbtEntry{};
@@ -63,15 +67,22 @@ struct Raytracer {
     PFN_vkSetDebugUtilsObjectNameEXT vkSetDebugUtilsObjectNameEXT;
 
     void DestroyShaders(VkDevice device) {
-        vkDestroyShaderModule(device, rayGenShader, nullptr);
-        vkDestroyShaderModule(device, rayMissShader, nullptr);
-        vkDestroyShaderModule(device, closestHitShader, nullptr);
-        vkDestroyShaderModule(device, rayshadowMissShader, nullptr);
-
-        rayGenShader = VK_NULL_HANDLE;
-        rayMissShader = VK_NULL_HANDLE;
-        closestHitShader = VK_NULL_HANDLE;
-        rayshadowMissShader = VK_NULL_HANDLE;
+        if (shaderStack.rayGen) {
+            vkDestroyShaderModule(device, shaderStack.rayGen, nullptr);
+            shaderStack.rayGen = VK_NULL_HANDLE;
+        }
+        if (shaderStack.rayMiss) {
+            vkDestroyShaderModule(device, shaderStack.rayMiss, nullptr);
+            shaderStack.rayGen = VK_NULL_HANDLE;
+        }
+        if (shaderStack.rayshadowMiss) {
+            vkDestroyShaderModule(device, shaderStack.rayshadowMiss, nullptr);
+            shaderStack.rayGen = VK_NULL_HANDLE;
+        }
+        if (shaderStack.closestHit) {
+            vkDestroyShaderModule(device, shaderStack.closestHit, nullptr);
+            shaderStack.rayGen = VK_NULL_HANDLE;
+        }
     }
 
     void Cleanup(VkDevice device, VmaAllocator allocator) {
@@ -84,11 +95,9 @@ struct Raytracer {
         vmaDestroyBuffer(allocator, raygenShaderBindingTable._buffer, raygenShaderBindingTable._allocation);
         vmaDestroyBuffer(allocator, missShaderBindingTable._buffer, missShaderBindingTable._allocation);
         vmaDestroyBuffer(allocator, hitShaderBindingTable._buffer, hitShaderBindingTable._allocation);
-
-        DestroyShaders(device);
     }
 
-    void LoadShaders(VkDevice device, std::string rayGenPath, std::string missPath, std::string shadowMissPath, std::string closestHitPath) {
+    bool LoadShaders(VkDevice device, std::string rayGenPath, std::string missPath, std::string shadowMissPath, std::string closestHitPath) {
 
         vkGetBufferDeviceAddressKHR = reinterpret_cast<PFN_vkGetBufferDeviceAddressKHR>(vkGetDeviceProcAddr(device, "vkGetBufferDeviceAddressKHR"));
         vkCmdBuildAccelerationStructuresKHR = reinterpret_cast<PFN_vkCmdBuildAccelerationStructuresKHR>(vkGetDeviceProcAddr(device, "vkCmdBuildAccelerationStructuresKHR"));
@@ -101,12 +110,19 @@ struct Raytracer {
         vkGetRayTracingShaderGroupHandlesKHR = reinterpret_cast<PFN_vkGetRayTracingShaderGroupHandlesKHR>(vkGetDeviceProcAddr(device, "vkGetRayTracingShaderGroupHandlesKHR"));
         vkCreateRayTracingPipelinesKHR = reinterpret_cast<PFN_vkCreateRayTracingPipelinesKHR>(vkGetDeviceProcAddr(device, "vkCreateRayTracingPipelinesKHR"));
 
+        ShaderStack tempShaderStack;
+        if (!VulkanShaderUtil::LoadShader(device, rayGenPath, VK_SHADER_STAGE_RAYGEN_BIT_KHR, &tempShaderStack.rayGen) ||
+            !VulkanShaderUtil::LoadShader(device, missPath, VK_SHADER_STAGE_MISS_BIT_KHR, &tempShaderStack.rayMiss) ||
+            !VulkanShaderUtil::LoadShader(device, closestHitPath, VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR, &tempShaderStack.closestHit) ||
+            !VulkanShaderUtil::LoadShader(device, shadowMissPath, VK_SHADER_STAGE_MISS_BIT_KHR, &tempShaderStack.rayshadowMiss)) {
+            return false;
+        }
+        shaderStack = tempShaderStack;
         shaderGroups.clear();
         shaderStages.clear();
 
         // Ray generation group
         {
-            VulkanShaderUtil::LoadShader(device, rayGenPath, VK_SHADER_STAGE_RAYGEN_BIT_KHR, &rayGenShader);
             VkRayTracingShaderGroupCreateInfoKHR shaderGroup{};
             shaderGroup.sType = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR;
             shaderGroup.type = VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR;
@@ -119,7 +135,7 @@ struct Raytracer {
             VkPipelineShaderStageCreateInfo pipelineShaderStageCreateInfo = {};
             pipelineShaderStageCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
             pipelineShaderStageCreateInfo.stage = VK_SHADER_STAGE_RAYGEN_BIT_KHR;
-            pipelineShaderStageCreateInfo.module = rayGenShader;
+            pipelineShaderStageCreateInfo.module = shaderStack.rayGen;
             pipelineShaderStageCreateInfo.pNext = nullptr;
             pipelineShaderStageCreateInfo.pName = "main";
             shaderStages.emplace_back(pipelineShaderStageCreateInfo);
@@ -127,7 +143,6 @@ struct Raytracer {
 
         // Miss group
         {
-            VulkanShaderUtil::LoadShader(device, missPath, VK_SHADER_STAGE_MISS_BIT_KHR, &rayMissShader);
             VkRayTracingShaderGroupCreateInfoKHR shaderGroup{};
             shaderGroup.sType = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR;
             shaderGroup.type = VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR;
@@ -140,20 +155,19 @@ struct Raytracer {
             VkPipelineShaderStageCreateInfo pipelineShaderStageCreateInfo = {};
             pipelineShaderStageCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
             pipelineShaderStageCreateInfo.stage = VK_SHADER_STAGE_MISS_BIT_KHR;
-            pipelineShaderStageCreateInfo.module = rayMissShader;
+            pipelineShaderStageCreateInfo.module = shaderStack.rayMiss;
             pipelineShaderStageCreateInfo.pNext = nullptr;
             pipelineShaderStageCreateInfo.pName = "main";
             shaderStages.emplace_back(pipelineShaderStageCreateInfo);
 
             // Second shader for shadows
-            VulkanShaderUtil::LoadShader(device, shadowMissPath, VK_SHADER_STAGE_MISS_BIT_KHR, &rayshadowMissShader);
             shaderGroup.generalShader = 2;
             shaderGroups.push_back(shaderGroup);
 
             VkPipelineShaderStageCreateInfo pipelineShaderStageCreateInfo2 = {};
             pipelineShaderStageCreateInfo2.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
             pipelineShaderStageCreateInfo2.stage = VK_SHADER_STAGE_MISS_BIT_KHR;
-            pipelineShaderStageCreateInfo2.module = rayshadowMissShader;
+            pipelineShaderStageCreateInfo2.module = shaderStack.rayshadowMiss;
             pipelineShaderStageCreateInfo2.pNext = nullptr;
             pipelineShaderStageCreateInfo2.pName = "main";
             shaderStages.emplace_back(pipelineShaderStageCreateInfo2);
@@ -162,7 +176,6 @@ struct Raytracer {
 
         // Closest hit group
         {
-            VulkanShaderUtil::LoadShader(device, closestHitPath, VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR, &closestHitShader);
             VkRayTracingShaderGroupCreateInfoKHR shaderGroup{};
             shaderGroup.sType = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR;
             shaderGroup.type = VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_KHR;
@@ -175,14 +188,15 @@ struct Raytracer {
             VkPipelineShaderStageCreateInfo pipelineShaderStageCreateInfo = {};
             pipelineShaderStageCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
             pipelineShaderStageCreateInfo.stage = VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR;
-            pipelineShaderStageCreateInfo.module = closestHitShader;
+            pipelineShaderStageCreateInfo.module = shaderStack.closestHit;
             pipelineShaderStageCreateInfo.pNext = nullptr;
             pipelineShaderStageCreateInfo.pName = "main";
             shaderStages.emplace_back(pipelineShaderStageCreateInfo);
         }
+        return true;
     }
 
-    void CreatePipeline(VkDevice device, std::vector<VkDescriptorSetLayout>& descriptorSetLayouts, uint32_t maxRecursionDepth) {
+    void CreateRaytracingPipeline(VkDevice device, std::vector<VkDescriptorSetLayout>& descriptorSetLayouts, uint32_t maxRecursionDepth) {
 
         if (pipeline != VK_NULL_HANDLE) {
             vkDestroyPipeline(device, pipeline, nullptr);
