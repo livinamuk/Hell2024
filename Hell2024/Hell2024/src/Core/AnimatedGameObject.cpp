@@ -219,6 +219,30 @@ glm::vec3 AnimatedGameObject::FindClosestParentAnimatedNode(std::vector<JointWor
     return glm::vec3(-1);
 }
 
+void AnimatedGameObject::UpdateRenderItems() {
+    int meshCount = _meshRenderingEntries.size();
+    renderItems.clear();
+    for (int i = 0; i < meshCount; i++) {
+        if (_meshRenderingEntries[i].drawingEnabled) {
+            RenderItem3D& renderItem = renderItems.emplace_back();
+            Material* material = AssetManager::GetMaterialByIndex(_meshRenderingEntries[i].materialIndex);
+            renderItem.meshIndex = _skinnedModel->GetMeshIndices()[i];
+            renderItem.baseColorTextureIndex = material->_basecolor;
+            renderItem.normalTextureIndex = material->_normal;
+            renderItem.rmaTextureIndex = material->_rma;
+            if (_hasRagdoll && _animationMode == AnimatedGameObject::AnimationMode::RAGDOLL) {
+                renderItem.modelMatrix = glm::mat4(1);
+            }
+            else {
+                renderItem.modelMatrix = GetModelMatrix();
+            }
+        }
+    }
+}
+
+std::vector<RenderItem3D>& AnimatedGameObject::GetRenderItems() {
+    return renderItems;
+}
 
 void AnimatedGameObject::CalculateBoneTransforms() {
 

@@ -25,6 +25,21 @@
 
 namespace Util {
 
+    inline std::string SplitscreenModeToString(SplitscreenMode mode) {
+        if (mode == SplitscreenMode::NONE) {
+            return "NONE";
+        }
+        else if (mode == SplitscreenMode::TWO_PLAYER) {
+            return "TWO_PLAYER";
+        }
+        else if (mode == SplitscreenMode::FOUR_PLAYER) {
+            return "FOUR_PLAYER";
+        }
+        else {
+            return "UNDEFINED";
+        }
+    }
+
     inline float SquaredDistPointAABB(const glm::vec3 p, const AABB& aabb) {
         auto check = [&](
             const double pn,

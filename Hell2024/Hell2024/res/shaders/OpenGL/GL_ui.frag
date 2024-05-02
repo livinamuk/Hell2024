@@ -17,4 +17,5 @@ void main() {
 
 	vec4 textureColor = texture(sampler2D(textureSamplers[textureIndex]), texCoord);    
     FragColor = vec4(textureColor);
+	FragColor.rgb *= vec3(colorTintR, colorTintG, colorTintB);
 }

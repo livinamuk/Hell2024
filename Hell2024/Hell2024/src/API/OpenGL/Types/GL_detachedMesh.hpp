@@ -24,6 +24,10 @@ public:
         return VAO;
     }
     void UpdateVertexBuffer(std::vector<Vertex>& vertices, std::vector<uint32_t>& indices) {
+
+        this->indices = indices;
+        this->vertices = vertices;
+
         if (VAO != 0) {
             glDeleteVertexArrays(1, &VAO);
             glDeleteBuffers(1, &VBO);

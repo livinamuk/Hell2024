@@ -38,8 +38,8 @@ struct VulkanDetachedMesh {
             vmaDestroyBuffer(allocator, indexBuffer._buffer, indexBuffer._allocation);
         }
 
-        vertexCount = vertices.size();
-        indexCount = indices.size();
+        vertexCount = (uint32_t)vertices.size();
+        indexCount = (uint32_t)indices.size();
 
 
         /* Vertices */ {

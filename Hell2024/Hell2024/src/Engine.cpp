@@ -79,7 +79,7 @@ void Engine::RunOld() {
         Renderer_OLD::Init();
         Renderer_OLD::CreatePointCloudBuffer();
         Renderer_OLD::CreateTriangleWorldVertexBuffer();
-        Scene::CreatePlayers();
+        Game::CreatePlayers(2);
         DebugMenu::Init();
     }
 
@@ -94,12 +94,14 @@ void Engine::RunOld() {
         BackEnd::BeginFrame();
 
         if (DebugMenu::IsOpen()) {
-            Scene::_players[0]._ignoreControl = true;
-            Scene::_players[1]._ignoreControl = true;
+            for (unsigned int i = 0; i < Game::GetPlayerCount(); i++) {
+                Game::GetPlayerByIndex(i)->_ignoreControl = true;
+            }
         }
         else {
-            Scene::_players[0]._ignoreControl = false;
-            Scene::_players[1]._ignoreControl = false;
+            for (unsigned int i = 0; i < Game::GetPlayerCount(); i++) {
+                Game::GetPlayerByIndex(i)->_ignoreControl = false;
+            }
         }
 
         lastFrame = thisFrame;
@@ -133,8 +135,8 @@ void Engine::RunOld() {
 
             if (EngineState::GetEngineMode() == GAME) {
                 InputMulti::Update();
-                for (Player& player : Scene::_players) {
-                    player.Update(deltaTime);
+                for (unsigned int i = 0; i < Game::GetPlayerCount(); i++) {
+                    Game::GetPlayerByIndex(i)->Update(deltaTime);
                 }
                 InputMulti::ResetMouseOffsets();
             }
@@ -152,13 +154,14 @@ void Engine::RunOld() {
             EngineState::GetEngineMode() == EDITOR) {
 
             // Fullscreen
-            if (Game::GetSplitscreenMode() == Game::SplitscreenMode::NONE) {
-                Renderer_OLD::RenderFrame(&Scene::_players[EngineState::GetCurrentPlayer()]);
+            if (Game::GetSplitscreenMode() == SplitscreenMode::NONE) {
+                Renderer_OLD::RenderFrame(Game::GetPlayerByIndex(EngineState::GetCurrentPlayer()));
             }
             // Splitscreen
-            else if (Game::GetSplitscreenMode() == Game::SplitscreenMode::TWO_PLAYER) {
-                for (Player& player : Scene::_players) {
-                    Renderer_OLD::RenderFrame(&player);
+            else if (Game::GetSplitscreenMode() == SplitscreenMode::TWO_PLAYER) {
+
+                for (unsigned int i = 0; i < Game::GetPlayerCount(); i++) {
+                    Renderer_OLD::RenderFrame(Game::GetPlayerByIndex(i));
                 }
             }
         }
@@ -192,30 +195,6 @@ void Engine::LazyKeyPresses() {
     if (Input::KeyPressed(GLFW_KEY_H)) {
         Renderer_OLD::HotloadShaders();
     }
-    if (Input::KeyPressed(HELL_KEY_1)) {
-        Scene::_players[0]._keyboardIndex = 0;
-        Scene::_players[1]._keyboardIndex = 1;
-        Scene::_players[0]._mouseIndex = 0;
-        Scene::_players[1]._mouseIndex = 1;
-    }
-    if (Input::KeyPressed(HELL_KEY_2)) {
-        Scene::_players[1]._keyboardIndex = 0;
-        Scene::_players[0]._keyboardIndex = 1;
-        Scene::_players[1]._mouseIndex = 0;
-        Scene::_players[0]._mouseIndex = 1;
-    }
-    if (Input::KeyPressed(HELL_KEY_3)) {
-        Scene::_players[0]._keyboardIndex = 0;
-        Scene::_players[1]._keyboardIndex = 1;
-        Scene::_players[1]._mouseIndex = 0;
-        Scene::_players[0]._mouseIndex = 1;
-    }
-    if (Input::KeyPressed(HELL_KEY_4)) {
-        Scene::_players[0]._keyboardIndex = 0;
-        Scene::_players[1]._keyboardIndex = 1;
-        Scene::_players[1]._mouseIndex = 0;
-        Scene::_players[0]._mouseIndex = 1;
-    }
     if (Input::KeyPressed(HELL_KEY_TAB)) {
 		Audio::PlayAudio(AUDIO_SELECT, 1.00f);
         DebugMenu::Toggle();
@@ -241,7 +220,7 @@ void Engine::LazyKeyPresses() {
         // This seems questionable
         // This seems questionable
         // This seems questionable
-		if (Game::GetSplitscreenMode() == Game::SplitscreenMode::NONE) {
+		if (Game::GetSplitscreenMode() == SplitscreenMode::NONE) {
             Renderer_OLD::RecreateFrameBuffers(EngineState::GetCurrentPlayer());
 		}
         // This seems questionable
@@ -261,9 +240,9 @@ void Engine::LazyKeyPresses() {
 
         // Hack to fix a bug on reload of the map
         // seems like it tries to look up some shit from the last frames camera raycast, and those physx objects are removed by this point
-        for (auto& player : Scene::_players) {
-            player._cameraRayResult.hitFound = false;
-        }
+        //for (auto& player : Scene::_players) {
+        //    player._cameraRayResult.hitFound = false;
+        //}
     }
 }
 

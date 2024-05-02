@@ -47,7 +47,6 @@ public:
         glGenTextures(1, &colorAttachment.handle);
         glBindTexture(GL_TEXTURE_2D, colorAttachment.handle);
         glTexStorage2D(GL_TEXTURE_2D, 1, internalFormat, width, height);
-        //glTexImage2D(GL_TEXTURE_2D, 0, colorAttachment.internalFormat, width, height, 0, GL_RGBA, GL_FLOAT, NULL);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -61,7 +60,6 @@ public:
         glGenTextures(1, &depthAttachment.handle);
         glBindTexture(GL_TEXTURE_2D, depthAttachment.handle);
         glTexStorage2D(GL_TEXTURE_2D, 1, internalFormat, width, height);
-        //glTexImage2D(GL_TEXTURE_2D, 0, depthAttachment.internalFormat, width, height, 0, GL_DEPTH_STENCIL, GL_FLOAT_32_UNSIGNED_INT_24_8_REV, NULL);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);

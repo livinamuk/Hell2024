@@ -9,8 +9,8 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
-#define PRESENT_WIDTH 768
-#define PRESENT_HEIGHT 432
+#define PRESENT_WIDTH 832//864//768
+#define PRESENT_HEIGHT 468 //432
 
 #define TEXTURE_ARRAY_SIZE 1024
 #define MAX_RENDER_OBJECTS_3D 4096
@@ -18,6 +18,15 @@
 #define MAX_TLAS_OBJECT_COUNT 4096
 #define FRAME_OVERLAP 2
 #define MAX_LIGHTS 32
+#define MAX_ANIMATED_TRANSFORMS 2048
+
+enum Alignment { 
+    CENTERED,
+    TOP_LEFT,
+    TOP_RIGHT,
+    BOTTOM_LEFT,
+    BOTTOM_RIGHT
+};
 
 struct GPULight {
     float posX;
@@ -46,7 +55,7 @@ struct RenderItem3D {
     int rmaTextureIndex;
     int vertexOffset;
     int indexOffset;
-    int padding0;
+    int animatedTransformsOffset;
     int padding1;
 };
 

@@ -180,6 +180,7 @@ float ShadowCalculation(samplerCube depthTex, vec3 lightPos, vec3 fragPos, vec3 
 void main() {
 	
 	vec3 baseColor = texture(baseColorTexture, TexCoords).rgb;
+	baseColor.rgb = pow(baseColor.rgb, vec3(2.2));
 	vec3 normal = texture(normalTexture, TexCoords).rgb;
 	vec3 rma = texture(rmaTexture, TexCoords).rgb;
 	float roughness = rma.r;
@@ -252,7 +253,7 @@ void main() {
 
 
 
-//	FragColor.rgb = normal;
+//	FragColor.rgb = baseColor;
 //	FragColor.rgb = vec3( shadow);  
 	//FragColor.g = 0;  
 //	FragColor.b = 0;  

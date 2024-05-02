@@ -265,15 +265,6 @@ void SetBlendState(bool state) {
     }
 }
 
-int GetPlayerIndexFromPlayerPointer(Player* player) {
-	for (int i = 0; i < Scene::_players.size(); i++) {
-		if (&Scene::_players[i] == player) {
-			return i;
-		}
-	}
-	return -1;
-}
-
 PlayerRenderTarget& GetPlayerRenderTarget(int playerIndex) {
 	return _playerRenderTargets[playerIndex];
 }
@@ -371,7 +362,7 @@ void Renderer_OLD::Init() {
 void Renderer_OLD::RenderLoadingScreen() {
 
     int desiredTotalLines = 40;
-    float linesPerPresentHeight = (float)PRESENT_HEIGHT / (float)TextBlitter::GetLineHeight();
+    float linesPerPresentHeight = (float)PRESENT_HEIGHT / (float)TextBlitter::GetLineHeight(BitmapFontType::STANDARD);
     float scaleRatio = (float)desiredTotalLines / (float)linesPerPresentHeight;
     float loadingScreenWidth = PRESENT_WIDTH * scaleRatio;
     float loadingScreenHeight = PRESENT_HEIGHT * scaleRatio;
@@ -383,9 +374,12 @@ void Renderer_OLD::RenderLoadingScreen() {
     for (int i = beginIndex; i < endIndex; i++) {
         text += AssetManager::GetLoadLog()[i] + "\n";
     }
-    TextBlitter::AddDebugText(text);
-    TextBlitter::CreateRenderItems(loadingScreenWidth, loadingScreenHeight);
-    OpenGLRenderer::RenderLoadingScreen(TextBlitter::GetRenderItems());
+
+    ivec2 location = ivec2(0.0f, loadingScreenHeight);
+    ivec2 viewportSize = ivec2(loadingScreenWidth, loadingScreenHeight);
+    std::vector<RenderItem2D> textItems = TextBlitter::CreateText(text, location, viewportSize, Alignment::TOP_RIGHT, BitmapFontType::STANDARD);
+
+    OpenGLRenderer::RenderLoadingScreen(textItems);
 }
 
 void Renderer_OLD::RenderFrame(Player* player) {
@@ -397,7 +391,7 @@ void Renderer_OLD::RenderFrame(Player* player) {
     _shaders.UI.Use();
     _shaders.UI.SetVec3("overrideColor", WHITE);
 
-    int playerIndex = GetPlayerIndexFromPlayerPointer(player);
+    int playerIndex = Game::GetPlayerIndexFromPlayerPointer(player);
     if (!player || playerIndex == -1) {
         return;
     }
@@ -516,21 +510,21 @@ void Renderer_OLD::RenderFrame(Player* player) {
     }
 
     // Blit that smaller FBO into the main frame buffer 
-    if (Game::GetSplitscreenMode() == Game::SplitscreenMode::NONE) {
+    if (Game::GetSplitscreenMode() == SplitscreenMode::NONE) {
         glBindFramebuffer(GL_READ_FRAMEBUFFER, playerRenderTarget.presentFrameBuffer.GetID());
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
         glReadBuffer(GL_COLOR_ATTACHMENT1);
         glBlitFramebuffer(0, 0, playerRenderTarget.presentFrameBuffer.GetWidth(), playerRenderTarget.presentFrameBuffer.GetHeight(), 0, 0, BackEnd::GetCurrentWindowWidth(), BackEnd::GetCurrentWindowHeight(), GL_COLOR_BUFFER_BIT, GL_NEAREST);
     }
-    else if (Game::GetSplitscreenMode() == Game::SplitscreenMode::TWO_PLAYER) {
+    else if (Game::GetSplitscreenMode() == SplitscreenMode::TWO_PLAYER) {
 
-        if (GetPlayerIndexFromPlayerPointer(player) == 0) {
+        if (Game::GetPlayerIndexFromPlayerPointer(player) == 0) {
             glBindFramebuffer(GL_READ_FRAMEBUFFER, playerRenderTarget.presentFrameBuffer.GetID());
             glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
             glReadBuffer(GL_COLOR_ATTACHMENT1);
             glBlitFramebuffer(0, 0, playerRenderTarget.presentFrameBuffer.GetWidth(), playerRenderTarget.presentFrameBuffer.GetHeight(), 0, BackEnd::GetCurrentWindowHeight() / 2, BackEnd::GetCurrentWindowWidth(), BackEnd::GetCurrentWindowHeight(), GL_COLOR_BUFFER_BIT, GL_NEAREST);
         }
-        if (GetPlayerIndexFromPlayerPointer(player) == 1) {
+        if (Game::GetPlayerIndexFromPlayerPointer(player) == 1) {
             glBindFramebuffer(GL_READ_FRAMEBUFFER, playerRenderTarget.presentFrameBuffer.GetID());
             glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
             glReadBuffer(GL_COLOR_ATTACHMENT1);
@@ -542,8 +536,6 @@ void Renderer_OLD::RenderFrame(Player* player) {
     for (Light& light : Scene::_lights) {
         light.isDirty = false;
     }
-
-    TextBlitter::ClearAllText();
 }
 
 
@@ -565,7 +557,7 @@ void RenderVATBlood(Player* player) {
 
 void ToietWaterPass(Player* player) {
 
-    int playerIndex = GetPlayerIndexFromPlayerPointer(player);
+    int playerIndex = Game::GetPlayerIndexFromPlayerPointer(player);
     PlayerRenderTarget& playerRenderTarget = GetPlayerRenderTarget(playerIndex);
     GBuffer& gBuffer = playerRenderTarget.gBuffer;
 
@@ -604,7 +596,7 @@ void GlassPass(Player* player) {
     glm::mat4 projection = player->GetProjectionMatrix();// Renderer::GetProjectionMatrix(_depthOfFieldScene);
     glm::mat4 view = player->GetViewMatrix();
 
-    int playerIndex = GetPlayerIndexFromPlayerPointer(player);
+    int playerIndex = Game::GetPlayerIndexFromPlayerPointer(player);
     PlayerRenderTarget& playerRenderTarget = GetPlayerRenderTarget(playerIndex);
     GBuffer& gBuffer = playerRenderTarget.gBuffer;
 
@@ -849,7 +841,7 @@ void BlurEmissiveBulbs(Player* player) {
     }
 
 
-	int playerIndex = GetPlayerIndexFromPlayerPointer(player);
+	int playerIndex = Game::GetPlayerIndexFromPlayerPointer(player);
 	PlayerRenderTarget& playerRenderTarget = GetPlayerRenderTarget(playerIndex);
 	GBuffer& gBuffer = playerRenderTarget.gBuffer;
 
@@ -1030,7 +1022,7 @@ void Renderer_OLD::EnteredEditorMode() {
 
     Audio::PlayAudio(AUDIO_SELECT, 1.00f);
 
-    Player* player = &Scene::_players[0];
+    Player* player = Game::GetPlayerByIndex(0);
     _editorViewMatrix = player->GetViewMatrix();
 
     glm::dmat4x4 inverseViewMatrix = glm::inverse(_editorViewMatrix);
@@ -1055,8 +1047,7 @@ glm::dvec3 rot3D(glm::dvec3 v, glm::dvec2 rot) {
 
 void Renderer_OLD::RenderEditorMode() {
 
-    Player* player = &Scene::_players[0]; 
-        
+    Player* player = Game::GetPlayerByIndex(0);        
     
            
     PlayerRenderTarget& playerRenderTarget = GetPlayerRenderTarget(0);
@@ -1100,7 +1091,7 @@ void Renderer_OLD::RenderEditorMode() {
     _hoveredEditorObject.rigidBody = nullptr;
     _hoveredEditorObject.type = PhysicsObjectType::UNDEFINED;
     PxU32 hitFlags = RaycastGroup::RAYCAST_ENABLED;
-    glm::vec3 rayOrigin = Scene::_players[0].GetViewPos();
+    glm::vec3 rayOrigin = Game::GetPlayerByIndex(0)->GetViewPos();
     glm::vec3 rayDirection = Util::GetMouseRay(projection, view, BackEnd::GetCurrentWindowWidth(), BackEnd::GetCurrentWindowHeight(), Input::GetMouseX(), Input::GetMouseY());
     auto hitResult = Util::CastPhysXRay(rayOrigin, rayDirection, 100, hitFlags, true);
     if (hitResult.hitFound) {
@@ -1231,7 +1222,7 @@ void Renderer_OLD::RenderEditorMode() {
     if (_selectedEditorObject.ptr) {
         glm::mat4 projection = player->GetProjectionMatrix();
         glm::mat4 view = player->GetViewMatrix();
-        int playerIndex = GetPlayerIndexFromPlayerPointer(player);
+        int playerIndex = Game::GetPlayerIndexFromPlayerPointer(player);
         PlayerRenderTarget& playerRenderTarget = GetPlayerRenderTarget(playerIndex);
         PresentFrameBuffer& presentFrameBuffer = playerRenderTarget.presentFrameBuffer;
         Gizmo::Draw(projection, view, presentFrameBuffer.GetWidth(), presentFrameBuffer.GetHeight());
@@ -1430,7 +1421,7 @@ void BlitDebugTexture(GLint fbo, GLenum colorAttachment, GLint srcWidth, GLint s
 
 void DrawHudLowRes(Player* player) {
 
-    int playerIndex = GetPlayerIndexFromPlayerPointer(player);
+    int playerIndex = Game::GetPlayerIndexFromPlayerPointer(player);
     PlayerRenderTarget& playerRenderTarget = GetPlayerRenderTarget(playerIndex);
     PresentFrameBuffer& presentFrameBuffer = playerRenderTarget.presentFrameBuffer;
     presentFrameBuffer.Bind();
@@ -1439,7 +1430,7 @@ void DrawHudLowRes(Player* player) {
     // Crosshair
     if (!player->_isDead) {
         std::string texture = "CrosshairDot";
-        if (player->CursorShouldBeInterect()) {
+        if (player->GetCrosshairType() == CrosshairType::INTERACT) {
             texture = "CrosshairSquare";
         }
         Renderer_OLD::QueueUIForRendering(texture, presentFrameBuffer.GetWidth() / 2, presentFrameBuffer.GetHeight() / 2, true, WHITE);
@@ -1464,7 +1455,7 @@ void DrawHudLowRes(Player* player) {
     else if (_mode == RenderMode::INDIRECT_LIGHT) {
         _shaders.lighting.SetInt("mode", 3);
     }
-
+    /*
     // Debug text
     if (_toggles.drawDebugText) {
 
@@ -1508,7 +1499,7 @@ void DrawHudLowRes(Player* player) {
         // Misc debug info
         TextBlitter::_debugTextToBilt += "View pos: " + Util::Vec3ToString(player->GetViewPos()) + "\n";
         TextBlitter::_debugTextToBilt += "View rot: " + Util::Vec3ToString(player->GetViewRotation()) + "\n";
-        TextBlitter::_debugTextToBilt += "Weapon Action: " + Util::WeaponActionToString(Scene::_players[playerIndex].GetWeaponAction()) + "\n";
+        TextBlitter::_debugTextToBilt += "Weapon Action: " + Util::WeaponActionToString(Game::GetPlayerByIndex(playerIndex)->GetWeaponAction()) + "\n";
         TextBlitter::_debugTextToBilt += "Blood decal count: " + std::to_string(Scene::_bloodDecals.size()) + "\n";
     
     }
@@ -1520,23 +1511,23 @@ void DrawHudLowRes(Player* player) {
     }
 
     // Pickup text
-    if (Game::GetSplitscreenMode() == Game::SplitscreenMode::NONE) {
+    if (Game::GetSplitscreenMode() == SplitscreenMode::NONE) {
         TextBlitter::BlitAtPosition(player->_pickUpText, 60, presentFrameBuffer.GetHeight() - 60, false, 1.0f);
     }
-    else if (Game::GetSplitscreenMode() == Game::SplitscreenMode::TWO_PLAYER) {
+    else if (Game::GetSplitscreenMode() == SplitscreenMode::TWO_PLAYER) {
         TextBlitter::BlitAtPosition(player->_pickUpText, 40, presentFrameBuffer.GetHeight() - 35, false, 1.0f);
     }
 
     //TextBlitter::_debugTextToBilt = "OpenGL c++\n";
     //TextBlitter::_debugTextToBilt += "First quarter medley";
     //TextBlitter::_debugTextToBilt = "\n";
-
+    */
     // Draw it
     glBindFramebuffer(GL_FRAMEBUFFER, presentFrameBuffer.GetID());
     glViewport(0, 0, presentFrameBuffer.GetWidth(), presentFrameBuffer.GetHeight());
     glDisable(GL_DEPTH_TEST);
     glDisable(GL_CULL_FACE);
-    TextBlitter::Update(1.0f / 60.0f);
+    //TextBlitter::Update(1.0f / 60.0f);
     Renderer_OLD::RenderUI(presentFrameBuffer.GetWidth(), presentFrameBuffer.GetHeight());
 }
 void DrawHudAmmo(Player* player) {
@@ -1545,7 +1536,7 @@ void DrawHudAmmo(Player* player) {
         return;
     }
 
-	int playerIndex = GetPlayerIndexFromPlayerPointer(player);
+	int playerIndex = Game::GetPlayerIndexFromPlayerPointer(player);
 	PlayerRenderTarget& playerRenderTarget = GetPlayerRenderTarget(playerIndex);
 	GBuffer& gBuffer = playerRenderTarget.gBuffer;
 
@@ -1559,7 +1550,7 @@ void DrawHudAmmo(Player* player) {
 	float viewportWidth = gBuffer.GetWidth();
 	float viewportHeight = gBuffer.GetHeight();
 
-    if (Game::GetSplitscreenMode() == Game::SplitscreenMode::TWO_PLAYER) {
+    if (Game::GetSplitscreenMode() == SplitscreenMode::TWO_PLAYER) {
         slashYPos = gBuffer.GetHeight() - 70.0f;
         scale = 1.05f;
     }
@@ -1584,7 +1575,7 @@ void GeometryPass(Player* player) {
     glm::mat4 projection = player->GetProjectionMatrix();// Renderer::GetProjectionMatrix(_depthOfFieldScene); // 1.0 for weapon, 0.9 for scene.
     glm::mat4 view = player->GetViewMatrix();
     
-    int playerIndex = GetPlayerIndexFromPlayerPointer(player);
+    int playerIndex = Game::GetPlayerIndexFromPlayerPointer(player);
     PlayerRenderTarget& playerRenderTarget = GetPlayerRenderTarget(playerIndex);
     GBuffer& gBuffer = playerRenderTarget.gBuffer;
 
@@ -1625,7 +1616,7 @@ void GeometryPass(Player* player) {
 
 void LightingPass(Player* player) {
 
-    int playerIndex = GetPlayerIndexFromPlayerPointer(player);
+    int playerIndex = Game::GetPlayerIndexFromPlayerPointer(player);
     PlayerRenderTarget& playerRenderTarget = GetPlayerRenderTarget(playerIndex);
     GBuffer& gBuffer = playerRenderTarget.gBuffer;
 
@@ -1682,23 +1673,12 @@ void LightingPass(Player* player) {
     _shaders.lighting.SetVec3("viewPos", player->GetViewPos());
     _shaders.lighting.SetFloat("propogationGridSpacing", _propogationGridSpacing);
 
-
-  //  GLint texture_units;
-  //  glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &texture_units);
-  //  std::cout << "texture_units: " << texture_units << "\n";
-
-
-	_shaders.lighting.SetVec3("player1MuzzleFlashPosition", Scene::_players[0].GetViewPos());
-	_shaders.lighting.SetVec3("player2MuzzleFlashPosition", Scene::_players[1].GetViewPos());
-	_shaders.lighting.SetBool("player1NeedsMuzzleFlash", Scene::_players[0].MuzzleFlashIsRequired());
-	_shaders.lighting.SetBool("player2NeedsMuzzleFlash", Scene::_players[1].MuzzleFlashIsRequired());
-
     DrawFullscreenQuad();
 }
 
 void DebugPass(Player* player) {
 
-    int playerIndex = GetPlayerIndexFromPlayerPointer(player);
+    int playerIndex = Game::GetPlayerIndexFromPlayerPointer(player);
     PlayerRenderTarget& playerRenderTarget = GetPlayerRenderTarget(playerIndex);
     PresentFrameBuffer& presentFrameBuffer = playerRenderTarget.presentFrameBuffer;
 
@@ -1875,51 +1855,7 @@ void DebugPass(Player* player) {
     }*/
 
 
-    // BROKEN!!!
-    for (GameObject& gameObject : Scene::_gameObjects) {
-        //debugPoints.push_back(gameObject.GetWorldSpaceOABBCenter());
-    }
 
-    for (Window& window : Scene::_windows) {
-
-	//	debugPoints.push_back(window.GetFrontLeftCorner());
-		//debugPoints.push_back(window.GetBackRightCorner());
-
-		////debugPoints.push_back(window.GetFrontRightCorner());
-		//debugPoints.push_back(window.GetBackLeftCorner());
-    }
-
-    /*
-    AnimatedGameObject* glock = Scene::GetAnimatedGameObjectByName("GLOCK_TEST");
-    int boneIndex = glock->_skinnedModel->m_BoneMapping["Barrel"];
-    glm::mat4 boneMatrix = glock->_animatedTransforms.worldspace[boneIndex];
-    Transform offset;
-    offset.position = glm::vec3(0, 2 + 2, 11);
-    glm::mat4 m = glock->GetModelMatrix() * boneMatrix * offset.to_mat4();
-    float x = m[3][0];
-    float y = m[3][1];
-    float z = m[3][2];
-    glm::vec3 pos = glm::vec3(x, y, z);   
-    debugPoints.push_back(pos);*/
-
-   /* auto& player1 = Scene::_players[1];
-
-    for (auto& point : player1._characterModel._debugBones) {
-        debugPoints.push_back(point);
-    }
-    player1._characterModel._debugBones.clear();*/
-
-
-    for (Player& player : Scene::_players) {
-        if (player._characterModel._renderDebugBones) {
-            for (auto& boneInfo : player._characterModel._debugBoneInfo) {
-                Point point;
-                point.color = RED;
-                point.pos = boneInfo.worldPos;
-                Renderer_OLD::QueuePointForDrawing(point);
-            }
-        }
-    }
 
     for (auto& pos : debugPoints) {
         Point point;
@@ -2099,7 +2035,7 @@ void Renderer_OLD::RecreateFrameBuffers(int currentPlayer) {
     int playerCount = EngineState::GetPlayerCount();
 
     // Adjust for splitscreen
-    if (Game::GetSplitscreenMode() == Game::SplitscreenMode::TWO_PLAYER) {
+    if (Game::GetSplitscreenMode() == SplitscreenMode::TWO_PLAYER) {
         height *= 0.5f;
     }
 
@@ -2488,10 +2424,10 @@ void DrawAnimatedScene(Shader& shader, Player* player) {
     shader.SetMat4("model", glm::mat4(1));
 
     // Render other players
-    for (Player& otherPlayer : Scene::_players) {
-        //if (&otherPlayer != player && !otherPlayer._isDead) {
-        if (&otherPlayer != player) {
-            DrawAnimatedObject(shader, &otherPlayer._characterModel);
+    for (unsigned int i = 0; i < Game::GetPlayerCount(); i++) {
+        Player* otherPlayer = Game::GetPlayerByIndex(i);
+        if (otherPlayer != player) {
+            DrawAnimatedObject(shader, &otherPlayer->_characterModel);
         }
 
 
@@ -2499,10 +2435,10 @@ void DrawAnimatedScene(Shader& shader, Player* player) {
         if (Input::KeyPressed(HELL_KEY_L)) {
 
             std::cout << "\nBONE TRANSFORMS\n";
-            for (int i = 0; i < otherPlayer._characterModel._animatedTransforms.names.size(); i++) {
+            for (int i = 0; i < otherPlayer->_characterModel._animatedTransforms.names.size(); i++) {
 
-                glm::mat4 matrix = otherPlayer._characterModel._animatedTransforms.worldspace[i];
-                std::string& name = otherPlayer._characterModel._animatedTransforms.names[i];
+                glm::mat4 matrix = otherPlayer->_characterModel._animatedTransforms.worldspace[i];
+                std::string& name = otherPlayer->_characterModel._animatedTransforms.names[i];
 
                 std::cout << i << ": " << name << "\n";
                // std::cout << Util::Mat4ToString(matrix) << "\n";
@@ -2510,8 +2446,8 @@ void DrawAnimatedScene(Shader& shader, Player* player) {
 
 
             std::cout << "\JOINT NAMES FROM SKINNED MODEL\n";
-            for (int i = 0; i < otherPlayer._characterModel._skinnedModel->m_joints.size(); i++) {
-                std::string name = otherPlayer._characterModel._skinnedModel->m_joints[i].m_name;
+            for (int i = 0; i < otherPlayer->_characterModel._skinnedModel->m_joints.size(); i++) {
+                std::string name = otherPlayer->_characterModel._skinnedModel->m_joints[i].m_name;
                 std::cout << i << ": " << name << "\n";
                 // std::cout << Util::Mat4ToString(matrix) << "\n";
             }
@@ -2888,7 +2824,7 @@ void Renderer_OLD::RenderFloorplanFrame() {
 	_shaders.geometry.Use();
 	_shaders.geometry.SetMat4("projection", Floorplan::GetProjectionMatrix());
 	_shaders.geometry.SetMat4("view", Floorplan::GetViewMatrix());
-	_shaders.geometry.SetVec3("viewPos", Scene::_players[0].GetViewPos());
+	_shaders.geometry.SetVec3("viewPos", Game::GetPlayerByIndex(0)->GetViewPos());
 	_shaders.geometry.SetVec3("camForward", glm::inverse(Floorplan::GetViewMatrix())[3]);
     _shaders.geometry.SetMat4("model", glm::mat4(1));
 
@@ -2984,7 +2920,7 @@ void Renderer_OLD::RenderFloorplanFrame() {
 	_shaders.lighting.SetMat4("inverseProjectionWeapon", glm::inverse(Floorplan::GetProjectionMatrix()));
 	_shaders.lighting.SetMat4("view", Floorplan::GetViewMatrix());
 	_shaders.lighting.SetMat4("inverseView", glm::inverse(Floorplan::GetViewMatrix()));
-    _shaders.lighting.SetVec3("viewPos", Scene::_players[0].GetViewPos());
+    _shaders.lighting.SetVec3("viewPos", Game::GetPlayerByIndex(0)->GetViewPos());
 	_shaders.lighting.SetFloat("propogationGridSpacing", _propogationGridSpacing);
 
 	DrawFullscreenQuad();
@@ -3049,7 +2985,7 @@ void DrawQuad2(int viewportWidth, int viewPortHeight, int xPos, int yPos, int xS
 }
 
 void Renderer_OLD::RenderDebugMenu() {
-
+    /*
 	glBindFramebuffer(GL_FRAMEBUFFER, _menuRenderTarget.fbo);
 	glViewport(0, 0, PRESENT_WIDTH, PRESENT_HEIGHT);
 	glClearColor(0, 0, 0, 0);
@@ -3144,7 +3080,7 @@ void Renderer_OLD::RenderDebugMenu() {
 	glEnable(GL_BLEND);
 	_shaders.UI.Use();
 	_shaders.UI.SetMat4("model", glm::mat4(1));
-    DrawFullscreenQuadWithNormals();
+    DrawFullscreenQuadWithNormals();*/
 }
 
 void Renderer_OLD::WipeShadowMaps() {
@@ -3373,7 +3309,7 @@ void DrawFullscreenQuadWithNormals() {
 
 void DrawMuzzleFlashes(Player* player) {
 
-    int playerIndex = GetPlayerIndexFromPlayerPointer(player);
+    int playerIndex = Game::GetPlayerIndexFromPlayerPointer(player);
     PlayerRenderTarget& playerRenderTarget = GetPlayerRenderTarget(playerIndex);
     GBuffer& gBuffer = playerRenderTarget.gBuffer;
 

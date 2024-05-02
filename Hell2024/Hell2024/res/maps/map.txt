@@ -404,7 +404,7 @@
                 0.10000000149011612
             ],
             "height": 2.4000000953674318,
-            "materialName": "WallPaper"
+            "materialName": "Ceiling2"
         },
         {
             "begin": [
@@ -418,7 +418,7 @@
                 0.10000000149011612
             ],
             "height": 2.4000000953674318,
-            "materialName": "WallPaper"
+            "materialName": "Ceiling2"
         },
         {
             "begin": [
@@ -432,7 +432,7 @@
                 2.799999952316284
             ],
             "height": 2.4000000953674318,
-            "materialName": "WallPaper"
+            "materialName": "Ceiling2"
         },
         {
             "begin": [
@@ -446,7 +446,7 @@
                 2.799999952316284
             ],
             "height": 2.4000000953674318,
-            "materialName": "WallPaper"
+            "materialName": "Ceiling2"
         },
         {
             "begin": [
@@ -460,7 +460,7 @@
                 7.199999809265137
             ],
             "height": 2.4000000953674318,
-            "materialName": "WallPaper"
+            "materialName": "Ceiling2"
         },
         {
             "begin": [
@@ -474,7 +474,7 @@
                 7.199999809265137
             ],
             "height": 2.4000000953674318,
-            "materialName": "WallPaper"
+            "materialName": "Ceiling2"
         },
         {
             "begin": [
@@ -488,7 +488,7 @@
                 10.100000381469727
             ],
             "height": 2.4000000953674318,
-            "materialName": "WallPaper"
+            "materialName": "Ceiling2"
         },
         {
             "begin": [
@@ -502,7 +502,7 @@
                 0.0
             ],
             "height": 2.4000000953674318,
-            "materialName": "WallPaper"
+            "materialName": "Ceiling2"
         },
         {
             "begin": [
@@ -516,7 +516,7 @@
                 10.0
             ],
             "height": 2.4000000953674318,
-            "materialName": "WallPaper"
+            "materialName": "Ceiling2"
         },
         {
             "begin": [
@@ -530,7 +530,7 @@
                 0.0
             ],
             "height": 2.4000000953674318,
-            "materialName": "WallPaper"
+            "materialName": "Ceiling2"
         },
         {
             "begin": [
@@ -544,7 +544,7 @@
                 4.400000095367432
             ],
             "height": 2.4000000953674318,
-            "materialName": "WallPaper"
+            "materialName": "Ceiling2"
         },
         {
             "begin": [
@@ -558,7 +558,7 @@
                 3.049999952316284
             ],
             "height": 2.4000000953674318,
-            "materialName": "WallPaper"
+            "materialName": "Ceiling2"
         },
         {
             "begin": [
@@ -572,7 +572,7 @@
                 4.25
             ],
             "height": 2.4000000953674318,
-            "materialName": "WallPaper"
+            "materialName": "Ceiling2"
         },
         {
             "begin": [
@@ -586,7 +586,7 @@
                 4.25
             ],
             "height": 2.4000000953674318,
-            "materialName": "WallPaper"
+            "materialName": "Ceiling2"
         },
         {
             "begin": [
@@ -600,7 +600,7 @@
                 3.049999952316284
             ],
             "height": 2.4000000953674318,
-            "materialName": "WallPaper"
+            "materialName": "Ceiling2"
         },
         {
             "begin": [
@@ -614,7 +614,7 @@
                 4.400000095367432
             ],
             "height": 2.4000000953674318,
-            "materialName": "WallPaper"
+            "materialName": "Ceiling2"
         },
         {
             "begin": [
@@ -628,7 +628,7 @@
                 2.799999952316284
             ],
             "height": 2.4000000953674318,
-            "materialName": "WallPaper"
+            "materialName": "Ceiling2"
         },
         {
             "begin": [
@@ -642,7 +642,7 @@
                 2.799999952316284
             ],
             "height": 2.4000000953674318,
-            "materialName": "WallPaper"
+            "materialName": "Ceiling2"
         }
     ],
     "Floors": [

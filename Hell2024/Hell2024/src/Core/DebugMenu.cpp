@@ -227,7 +227,7 @@ void DebugMenu::PressedEnter() {
 	else if (flag == MenuItemFlag::OPEN_EDITOR_MODE) {
 		_isOpen = false;
 		EngineState::_engineMode = EngineMode::EDITOR;
-		Game::SetSplitscreenMode(Game::SplitscreenMode::NONE);
+		Game::SetSplitscreenMode(SplitscreenMode::NONE);
         Renderer_OLD::EnteredEditorMode();
 	}
 	// Load map

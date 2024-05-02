@@ -1139,6 +1139,21 @@ ExrTexture* AssetManager::GetExrTextureByName(const std::string& name) {
     return nullptr;
 }
 
+ivec2 AssetManager::GetTextureSizeByName(const char* textureName) {
+
+    static std::unordered_map<const char*, int> textureIndices;
+    if (textureIndices.find(textureName) == textureIndices.end()) {
+        textureIndices[textureName] = AssetManager::GetTextureIndexByName(textureName);
+    }
+    Texture* texture = AssetManager::GetTextureByIndex(textureIndices[textureName]);
+    if (texture) {
+        return ivec2(texture->GetWidth(), texture->GetHeight());
+    }
+    else {
+        return ivec2(0, 0);
+    }
+}
+
 void AssetManager::CreateHardcodedModels() {
 
     /* Quad */ {

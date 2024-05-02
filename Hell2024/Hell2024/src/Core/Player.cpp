@@ -6,6 +6,8 @@
 #include "../BackEnd/BackEnd.h"
 #include "../API/OpenGL/GL_assetManager.h"
 #include "../Core/Scene.h"
+#include "../Renderer/TextBlitter.h"
+#include "../Renderer/RendererUtil.hpp"
 #include "../Common.h"
 #include "../Util.hpp"
 #include "AnimatedGameObject.h"
@@ -289,6 +291,8 @@ void Player::CheckForItemPickOverlaps() {
 
 void Player::UpdateRagdoll() {
 
+    _characterModel.UpdateRenderItems();
+
     // Collision only if dead
     if (_isDead) {
       //  _characterModel._ragdoll.EnableCollision();
@@ -355,6 +359,7 @@ void Player::Update(float deltaTime) {
 
     // Pressed Respawn
     bool autoRespawn = false;
+    //autoRespawn = true;
     //autoRespawn = true;
     if (_isDead && _timeSinceDeath > 3.25) {
         if (PressedFire() ||
@@ -865,9 +870,10 @@ void Player::Respawn() {
     SpawnPoint& spawnPoint = Scene::_spawnPoints[index];
 
     // Check you didn't just spawn on another player
-    for (auto& otherPlayer : Scene::_players) {
-        if (this != &otherPlayer) {
-            float distanceToOtherPlayer = glm::distance(spawnPoint.position, otherPlayer._position);
+    for (int i = 0; i < Game::GetPlayerCount(); i++) {
+        Player* otherPlayer = Game::GetPlayerByIndex(i);
+        if (this != otherPlayer) {
+            float distanceToOtherPlayer = glm::distance(spawnPoint.position, otherPlayer->_position);
             if (distanceToOtherPlayer < 1.0f) {
                 Respawn();
                 return;
@@ -1890,19 +1896,6 @@ float Player::GetRadius() {
 	return _radius;
 }
 
-bool Player::CursorShouldBeInterect() {
-	if (_cameraRayResult.physicsObjectType == DOOR) {
-		Door* door = (Door*)(_cameraRayResult.parent);
-        if (door) {
-            return door->IsInteractable(GetFeetPosition());
-        }
-	}
-	if (_cameraRayResult.physicsObjectType == GAME_OBJECT && _cameraRayResult.parent) {
-		GameObject* gameObject = (GameObject*)(_cameraRayResult.parent);
-		return gameObject->IsInteractable();	// TO DO: add interact distance for game objects
-	}
-	return false;
-}
 
 PxShape* Player::GetCharacterControllerShape() {
 	PxShape* shape;
@@ -1956,7 +1949,7 @@ glm::mat4 Player::GetProjectionMatrix() {
     float width = (float)BackEnd::GetWindowedWidth();
     float height = (float)BackEnd::GetWindowedHeight();
 
-    if (Game::GetSplitscreenMode() == Game::SplitscreenMode::TWO_PLAYER) {
+    if (Game::GetSplitscreenMode() == SplitscreenMode::TWO_PLAYER) {
         height *= 0.5f;
     }
     return glm::perspective(_zoom, width / height, NEAR_PLANE, FAR_PLANE);
@@ -2362,17 +2355,20 @@ void Player::Kill()  {
 
 void Player::CheckForKnifeHit() {
 
-    for (Player& otherPlayer : Scene::_players) {
+
+    for (int i = 0; i < Game::GetPlayerCount(); i++) {
+        Player* otherPlayer = Game::GetPlayerByIndex(i);
+
         // skip self
-        if (&otherPlayer == this)
+        if (otherPlayer == this)
             continue;
 
-        if (!otherPlayer._isDead) {
+        if (!otherPlayer->_isDead) {
 
             bool knifeHit = false;
 
             glm::vec3 myPos = GetViewPos();
-            glm::vec3 theirPos = otherPlayer.GetViewPos();
+            glm::vec3 theirPos = otherPlayer->GetViewPos();
             glm::vec3 forward = GetCameraForward() * glm::vec3(-1);
 
             glm::vec3 v = glm::normalize(myPos - theirPos);
@@ -2386,19 +2382,19 @@ void Player::CheckForKnifeHit() {
 
             if (knifeHit) {
                 // apply damage
-                if (otherPlayer._health > 0) {
-                    otherPlayer._health -= 20;// +rand() % 50;
+                if (otherPlayer->_health > 0) {
+                    otherPlayer->_health -= 20;// +rand() % 50;
 
-                    otherPlayer.GiveDamageColor();
+                    otherPlayer->GiveDamageColor();
 
                     // Are they dead???
-                    if (otherPlayer._health <= 0 && !otherPlayer._isDead)
+                    if (otherPlayer->_health <= 0 && !otherPlayer->_isDead)
                     {
-                        otherPlayer._health = 0;
+                        otherPlayer->_health = 0;
                         std::string file = "Death0.wav";
                         Audio::PlayAudio(file.c_str(), 1.0f);
 
-                        otherPlayer.Kill();
+                        otherPlayer->Kill();
                         _killCount++;
                         /*
                         Player* otherPlayer = NULL;
@@ -2436,6 +2432,133 @@ void Player::CheckForKnifeHit() {
             }
         }
     }
+}
+
+
+bool Player::IsDead() {
+    return _isDead;
+}
+bool Player::IsAlive() {
+    return !_isDead;
+}
+
+bool Player::RespawnAllowed() {
+    return _isDead && _timeSinceDeath > 3.25f;
+}
+
+CrosshairType Player::GetCrosshairType() {
+    
+    // None
+    if (IsDead()) {
+        return CrosshairType::NONE;
+    }
+
+    // Interact
+    else if (_cameraRayResult.physicsObjectType == DOOR) {
+        Door* door = (Door*)(_cameraRayResult.parent);
+        if (door && door->IsInteractable(GetFeetPosition())) {
+            return CrosshairType::INTERACT;
+        }
+    }
+    else if (_cameraRayResult.physicsObjectType == GAME_OBJECT && _cameraRayResult.parent) {
+        GameObject* gameObject = (GameObject*)(_cameraRayResult.parent);
+        return CrosshairType::INTERACT;
+    }
+
+    // Regular
+    return CrosshairType::REGULAR;
+    
+}
+
+std::vector<RenderItem2D> Player::GetHudRenderItems(ivec2 viewportSize) {
+
+    std::vector<RenderItem2D> renderItems;
+
+    ivec2 viewportCenter = { viewportSize.x * 0.5f, viewportSize.y * 0.5f };
+    ivec2 debugTextLocation = { 0, viewportSize.y };
+    ivec2 pickupTextLocation = { viewportSize.x * 0.08f, viewportSize.y * 0.10f };
+
+    if (Game::GetSplitscreenMode() == SplitscreenMode::TWO_PLAYER) {
+        pickupTextLocation = { viewportSize.x * 0.08f, viewportSize.y * 0.10f };
+    }
+    if (Game::GetSplitscreenMode() == SplitscreenMode::FOUR_PLAYER) {
+        pickupTextLocation = { viewportSize.x * 0.075f, viewportSize.y * 0.10f };
+    }
+
+    // Text
+    if (!Game::DebugTextIsEnabled() && IsAlive()) {        
+        std::string text;
+        text += "Health: " + std::to_string(_health) + "\n";
+        text += "Kills: " + std::to_string(_killCount) + "\n";
+        RendererUtil::AddRenderItems(renderItems, TextBlitter::CreateText(text, debugTextLocation, viewportSize, Alignment::TOP_LEFT, BitmapFontType::STANDARD));
+    }
+    
+    // Press Start
+    if (RespawnAllowed()) {
+      renderItems.push_back(RendererUtil::CreateRenderItem2D("PressStart", viewportCenter, viewportSize, Alignment::CENTERED));
+    }
+
+    if (IsAlive()) {
+
+        // Crosshair
+        switch (GetCrosshairType()) {
+        case CrosshairType::REGULAR:
+            renderItems.push_back(RendererUtil::CreateRenderItem2D("CrosshairDot", viewportCenter, viewportSize, Alignment::CENTERED));
+            break;
+        case CrosshairType::INTERACT:
+            renderItems.push_back(RendererUtil::CreateRenderItem2D("CrosshairSquare", viewportCenter, viewportSize, Alignment::CENTERED));
+            break;
+        default:
+            break;
+        }
+
+        // Pickup text
+        RendererUtil::AddRenderItems(renderItems, TextBlitter::CreateText(_pickUpText, pickupTextLocation, viewportSize, Alignment::BOTTOM_LEFT, BitmapFontType::STANDARD));
+    }
+
+    return renderItems;
+}
+
+std::vector<RenderItem2D> Player::GetHudRenderItemsHiRes(ivec2 viewportSize) {
+
+    std::vector<RenderItem2D> renderItems;
+
+    float ammoTextScale = 1.2;
+    ivec2 viewportCenter = { viewportSize.x * 0.5f, viewportSize.y * 0.5f };
+    ivec2 ammoSlashTextLocation = { viewportSize.x * 0.875f, viewportSize.y * 0.15f };
+
+    if (Game::GetSplitscreenMode() == SplitscreenMode::TWO_PLAYER) {
+        ammoTextScale = 1.1f; 
+        ammoSlashTextLocation = { viewportSize.x * 0.875f, viewportSize.y * 0.175f };
+    }
+    if (Game::GetSplitscreenMode() == SplitscreenMode::FOUR_PLAYER) {
+        ammoTextScale = 1.1f;
+        ammoSlashTextLocation = { viewportSize.x * 0.86f, viewportSize.y * 0.175f };
+    }
+
+    ivec2 ammoClipTextLocation = { ammoSlashTextLocation.x - int(TextBlitter::GetCharacterSize("/", BitmapFontType::AMMO_NUMBERS).x * 0.7f * ammoTextScale), ammoSlashTextLocation.y };
+    ivec2 ammoTotalTextLocation = { ammoSlashTextLocation.x + int(TextBlitter::GetCharacterSize("/", BitmapFontType::AMMO_NUMBERS).x * 1.6f * ammoTextScale), ammoSlashTextLocation.y };
+
+
+    if (IsAlive()) {
+
+        // Ammo
+        if (GetCurrentWeaponIndex() != Weapon::KNIFE) {
+            std::string clipText = std::to_string(GetCurrentWeaponClipAmmo());
+            std::string totalText = std::to_string(GetCurrentWeaponTotalAmmo());
+            if (GetCurrentWeaponClipAmmo() == 0) {
+                clipText = "[lr]" + clipText;
+            }
+            else {
+                clipText = "[lg]" + clipText;
+            }
+            RendererUtil::AddRenderItems(renderItems, TextBlitter::CreateText(totalText, ammoTotalTextLocation, viewportSize, Alignment::TOP_LEFT, BitmapFontType::AMMO_NUMBERS, glm::vec3(ammoTextScale * 0.8f)));
+            RendererUtil::AddRenderItems(renderItems, TextBlitter::CreateText("/", ammoSlashTextLocation, viewportSize, Alignment::TOP_LEFT, BitmapFontType::AMMO_NUMBERS, glm::vec3(ammoTextScale)));
+            RendererUtil::AddRenderItems(renderItems, TextBlitter::CreateText(clipText, ammoClipTextLocation, viewportSize, Alignment::TOP_RIGHT, BitmapFontType::AMMO_NUMBERS, glm::vec3(ammoTextScale)));
+        }
+    }
+
+    return renderItems;
 }
 
 

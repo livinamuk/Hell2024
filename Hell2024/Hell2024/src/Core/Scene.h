@@ -185,20 +185,15 @@ namespace Scene {
     inline std::vector<glm::vec3> _rtVertices;
     inline std::vector<RTMesh> _rtMesh;
     inline std::vector<RTInstance> _rtInstances;
-    inline std::vector<Player> _players;
 
     // New shit
     void LoadMapNEW(std::string mapPath);
-    int GetPlayerCount();
-    Player* GetPlayerByIndex(int index);
     std::vector<RenderItem3D> GetAllRenderItems();
 
     // Old shit
 	void LoadHardCodedObjects();
 	void LoadMap(std::string mapPath);
 	void SaveMap(std::string mapPath);
-    void CreatePlayers();
-   // void NewScene();
     void CleanUp();
     void Update_OLD(float deltaTime);
     void LoadLightSetup(int index);

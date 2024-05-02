@@ -9,7 +9,7 @@ unsigned int VAO = 0;
 unsigned int VBO = 0;
 std::string _NumSheet = "1234567890/";
 
-void NumberBlitter::Draw(const char* text, int xScreenCoord, int yScreenCoord, int renderWidth, int renderHeight, float scale, Justification justification) {
+void NumberBlitter::Draw(const char* text, int xScreenCoord, int yScreenCoord, int renderWidth, int renderHeight, float scale, Justification alignment) {
 
 /*	float renderTargetWidth = (float)viewportWidth;
 	float renderTargetHeight = (float)viewPortHeight;
@@ -40,7 +40,7 @@ void NumberBlitter::Draw(const char* text, int xScreenCoord, int yScreenCoord, i
 
 	for (int i = 0; i < strlen(text); i++)
 	{
-		if (justification == Justification::LEFT) {
+		if (alignment == Justification::LEFT) {
 			character = text[i];
 		}
 		else {
@@ -106,7 +106,7 @@ void NumberBlitter::Draw(const char* text, int xScreenCoord, int yScreenCoord, i
 		float w = charWidth / (screenWidth / 2) * (screenWidth / renderWidth);
 		float h = charHeight / (screenHeight / 2) * (screenHeight / renderHeight);
 
-		if (justification != Justification::LEFT) {
+		if (alignment != Justification::LEFT) {
 			cursor_X -= w;
 		}
 
@@ -129,7 +129,7 @@ void NumberBlitter::Draw(const char* text, int xScreenCoord, int yScreenCoord, i
 		vertices.push_back(v3);
 		vertices.push_back(v4);
 
-		if (justification == Justification::LEFT) {
+		if (alignment == Justification::LEFT) {
 			cursor_X += w;
 		}
 	}

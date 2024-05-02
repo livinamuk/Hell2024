@@ -198,6 +198,7 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\API\OpenGL\Types\GL_detachedMesh.hpp" />
+    <ClInclude Include="src\API\OpenGL\Types\GL_ShadowMap2.hpp" />
     <ClInclude Include="src\API\OpenGL\Types\GL_texture.h" />
     <ClInclude Include="src\API\Vulkan\Types\vk_allocation.hpp" />
     <ClInclude Include="src\API\Vulkan\Types\VK_buffer.h" />
@@ -215,6 +216,7 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <ClInclude Include="src\Common.h" />
     <ClInclude Include="src\File\File.hpp" />
     <ClInclude Include="src\Renderer\RenderData.h" />
+    <ClInclude Include="src\Renderer\RendererUtil.hpp" />
     <ClInclude Include="src\Types\Animation.h" />
     <ClInclude Include="src\Types\SkinnedMesh.hpp" />
     <ClInclude Include="src\Types\SkinnedModel.h" />
@@ -289,6 +291,10 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <ClInclude Include="vendor\VulkanMemoryAllocator\include\vk_mem_alloc.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="res\shaders\OpenGL\GL_flipBook.frag" />
+    <None Include="res\shaders\OpenGL\GL_flipBook.vert" />
+    <None Include="res\shaders\OpenGL\GL_debug.frag" />
+    <None Include="res\shaders\OpenGL\GL_debug.vert" />
     <None Include="res\shaders\OpenGL\GL_gbufferSkinned.frag" />
     <None Include="res\shaders\OpenGL\GL_gbufferSkinned.vert" />
     <None Include="res\shaders\OpenGL\GL_lighting.frag" />
@@ -358,6 +364,8 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <None Include="res\shaders\OpenGL_OLD\voxelize.vert" />
     <None Include="res\shaders\Vulkan\VK_debug.frag" />
     <None Include="res\shaders\Vulkan\VK_debug.vert" />
+    <None Include="res\shaders\Vulkan\VK_gbufferSkinned.frag" />
+    <None Include="res\shaders\Vulkan\VK_gbufferSkinned.vert" />
     <None Include="res\vulkan_shaders\closesthit.rchit" />
     <None Include="res\shaders\Vulkan\VK_lighting.frag" />
     <None Include="res\shaders\Vulkan\VK_lighting.vert" />

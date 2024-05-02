@@ -27,6 +27,9 @@ namespace VulkanRenderer {
     DescriptorSet& GetRenderTargetsDescriptorSet();
     DescriptorSet& GetRaytracingDescriptorSet(); 
 
+    // Render Targets
+    void CreatePlayerRenderTargets(int presentWidth, int presentHeight);
+
     void HotloadShaders();
 
     // Drawing
@@ -37,4 +40,6 @@ namespace VulkanRenderer {
     // Raytracing
     Raytracer& GetRaytracer();
     void LoadRaytracingFunctionPointer();
+
+    void PresentFinalImage();
 }

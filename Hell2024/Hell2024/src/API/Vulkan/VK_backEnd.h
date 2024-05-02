@@ -45,10 +45,14 @@ namespace VulkanBackEnd {
     VmaAllocator GetAllocator();
     VkDescriptorPool GetDescriptorPool();
     VkSampler GetSampler(); 
-    std::vector<VkImage>& GetSwapchainImages();
+    std::vector<VkImage>& GetSwapchainImages(); 
+    void AdvanceFrameIndex();
 
     inline AllocatedBuffer _mainVertexBuffer;
     inline AllocatedBuffer _mainIndexBuffer;
+
+    void BeginRendering();
+    //void EndRendering();
 
     // Raytracing
     void InitRayTracing();

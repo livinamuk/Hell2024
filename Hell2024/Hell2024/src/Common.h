@@ -16,8 +16,8 @@
 
 enum class API { OPENGL, VULKAN, UNDEFINED };
 enum class WindowedMode { WINDOWED, FULLSCREEN };
+enum class SplitscreenMode { NONE, TWO_PLAYER, FOUR_PLAYER, SPLITSCREEN_MODE_COUNT };
 
-//enum class SplitScreenMode { FULLSCREEN, SPLITSCREEN, SPLITSCREEN_MODE_COUNT };
 enum EngineMode { GAME = 0, FLOORPLAN, EDITOR };
 enum Weapon { KNIFE = 0, GLOCK, SHOTGUN, AKS74U, MP7, WEAPON_COUNT };
 enum WeaponAction {
@@ -81,6 +81,8 @@ enum WeaponAction {
 #define PURPLE  glm::vec3(1,0,1)
 #define GREY    glm::vec3(0.25f)
 #define LIGHT_BLUE    glm::vec3(0,1,1)
+#define LIGHT_GREEN   glm::vec3(0.16f, 0.78f, 0.23f)
+#define LIGHT_RED     glm::vec3(0.8f, 0.05f, 0.05f)
 #define GRID_COLOR    glm::vec3(0.509, 0.333, 0.490) * 0.5f
 
 #define SMALL_NUMBER		(float)9.99999993922529e-9
@@ -100,6 +102,34 @@ enum WeaponAction {
 #define TANGENT_LOCATION     3
 #define BONE_ID_LOCATION     4
 #define BONE_WEIGHT_LOCATION 5
+
+struct ivec2 {
+
+    int x;
+    int y;
+
+    ivec2() = default;
+
+    ivec2(int x_, int y_) {
+        x = x_;
+        y = y_;
+    }
+
+    ivec2(float x_, float y_) {
+        x = x_;
+        y = y_;
+    }
+
+    ivec2(double x_, double y_) {
+        x = x_;
+        y = y_;
+    }
+
+    ivec2(ivec2& other_) {
+        x = other_.x;
+        y = other_.y;
+    }
+};
 
 enum VB_TYPES {
     INDEX_BUFFER,
@@ -220,7 +250,9 @@ enum RaycastGroup {
     RAYCAST_DISABLED = 0,
     RAYCAST_ENABLED = 1,
     PLAYER_1_RAGDOLL = 2,
-    PLAYER_2_RAGDOLL = 4
+    PLAYER_2_RAGDOLL = 4,
+    PLAYER_3_RAGDOLL = 8,
+    PLAYER_4_RAGDOLL = 16
 };
 
 enum PhysicsObjectType { UNDEFINED = 0, GAME_OBJECT, GLASS, DOOR, SCENE_MESH, RAGDOLL_RIGID };

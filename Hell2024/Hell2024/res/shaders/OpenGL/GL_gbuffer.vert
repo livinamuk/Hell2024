@@ -26,7 +26,7 @@ struct RenderItem3D {
     int rmaTextureIndex;
     int vertexOffset;
     int indexOffset;
-    int padding0;
+    int animatedTransformsOffset;
     int padding1;
 };
 

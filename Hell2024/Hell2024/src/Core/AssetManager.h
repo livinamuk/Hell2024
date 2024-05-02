@@ -65,7 +65,8 @@ namespace AssetManager {
     int GetTextureIndexByName(const std::string& filename, bool ignoreWarning = false);
     bool TextureExists(const std::string& name);
     std::vector<Texture>& GetTextures();
-    void LoadFont();
+    void LoadFont(); 
+    ivec2 GetTextureSizeByName(const char* textureName);
 
     // EXR Textures
     ExrTexture* GetExrTextureByName(const std::string& name);

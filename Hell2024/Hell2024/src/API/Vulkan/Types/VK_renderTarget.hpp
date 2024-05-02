@@ -19,6 +19,10 @@ namespace Vulkan {
 
         RenderTarget(VkDevice device, VmaAllocator allocator, VkFormat format, uint32_t width, uint32_t height, VkImageUsageFlags imageUsage, std::string debugName, VmaMemoryUsage memoryUsuage = VMA_MEMORY_USAGE_GPU_ONLY, VkMemoryPropertyFlags memoryFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) {
 
+            //_currentLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+            //_currentAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+            //_currentStageFlags = VK_PIPELINE_STAGE_TRANSFER_BIT;
+
             _format = format;
             _extent = { width, height, 1 };
 
@@ -76,6 +80,9 @@ namespace Vulkan {
         }
 
         void cleanup(VkDevice device, VmaAllocator allocator) {
+            if (_allocation == VK_NULL_HANDLE) {
+                return;
+            }
             vkDestroyImageView(device, _view, nullptr);
             vmaDestroyImage(allocator, _image, _allocation);
         }

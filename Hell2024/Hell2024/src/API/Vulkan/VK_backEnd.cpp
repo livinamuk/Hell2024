@@ -123,6 +123,9 @@ namespace VulkanBackEnd {
     std::vector<VkImage>& GetSwapchainImages() {
         return _swapchainImages;
     }
+    void VulkanBackEnd::AdvanceFrameIndex() {
+        _frameNumber++;
+    }
 }
 
 bool VulkanBackEnd::FrameBufferWasResized() {

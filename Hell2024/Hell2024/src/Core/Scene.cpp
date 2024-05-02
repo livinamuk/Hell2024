@@ -6,6 +6,7 @@
 #include "../API/OpenGL/GL_assetManager.h"
 #include "../BackEnd/BackEnd.h"
 #include "../Core/AssetManager.h"
+#include "../Core/Game.h"
 #include "../Renderer/Renderer_OLD.h"
 #include "../Renderer/TextBlitter.h"
 #include "../Util.hpp"
@@ -21,7 +22,6 @@ namespace Scene {
 
     void CreateCeilingsHack();
     void EvaluateDebugKeyPresses();
-    void SetPlayerGroundedStates();
     void ProcessBullets();
 
 }
@@ -48,7 +48,7 @@ void Scene::Update(float deltaTime) {
     for (Window& window : _windows) {
         window.UpdateRenderItems();
     }
-    SetPlayerGroundedStates();
+    Game::SetPlayerGroundedStates();
     ProcessBullets();
 
     for (BulletCasing& bulletCasing : _bulletCasings) {
@@ -132,6 +132,7 @@ void Scene::CreateCeilingsHack() {
     }
 }
 
+
 std::vector<RenderItem3D> Scene::GetAllRenderItems() {
 
     std::vector<RenderItem3D> renderItems;
@@ -163,58 +164,19 @@ std::vector<RenderItem3D> Scene::GetAllRenderItems() {
 }
 
 
-//                   //
-//      Players      //
-//                   //
-
-int Scene::GetPlayerCount() {
-    return _players.size();
-}
-
-Player* Scene::GetPlayerByIndex(int index) {
-    if (index >= 0 && index < _players.size()) {
-        return &_players[index];
-    }
-    else {
-        std::cout << "Scene::GetPlayerByIndex(int index) failed because index was out of range. Size of _players is " << GetPlayerCount() << "\n";
-        return nullptr;
-    }
-}
-
-
 
 void Scene::EvaluateDebugKeyPresses() {
 
-    // Debug test spawn logic (respawns at same pos/rot)
-    if (Input::KeyPressed(HELL_KEY_J) && false) {
-        Scene::_players[0].Respawn();
-        Scene::_players[1].Respawn();
-    }
-    // Respawn all players at random location
-    if (Input::KeyPressed(HELL_KEY_K) && false) {
-
-        if (Scene::_players[0]._isDead) {
-            Scene::_players[0].Respawn();
-        }
-        if (Scene::_players[1]._isDead) {
-            Scene::_players[1].Respawn();
-        }
-    }
-    // Spawn player 2 to middle of main room
-    if (Input::KeyPressed(HELL_KEY_K)) {
-        Scene::_players[1].Respawn();
-        Scene::_players[1].SetPosition(glm::vec3(3.0f, 0.1f, 3.5f));
-        Audio::PlayAudio("RE_Beep.wav", 0.75);
-    }
+ 
     // Set spawn point
-    if (Input::KeyPressed(HELL_KEY_K) && false) {
+    /*if (Input::KeyPressed(HELL_KEY_K) && false) {
         SpawnPoint spawnPoint;
-        spawnPoint.position = Scene::_players[0].GetFeetPosition();
-        spawnPoint.rotation = Scene::_players[0].GetCameraRotation();
+        spawnPoint.position = Scene::Game::_players[0].GetFeetPosition();
+        spawnPoint.rotation = Scene::Game::_players[0].GetCameraRotation();
         _spawnPoints.push_back(spawnPoint);
         std::cout << "Position: " << Util::Vec3ToString(spawnPoint.position) << "\n";
         std::cout << "Rotation: " << Util::Vec3ToString(spawnPoint.rotation) << "\n";
-    }
+    }*/
 }
 
 
@@ -237,8 +199,6 @@ void Scene::EvaluateDebugKeyPresses() {
 float door2X = 2.05f;
 int _volumetricBloodObjectsSpawnedThisFrame = 0;
 
-void SetPlayerGroundedStates();
-void ProcessBullets();
 
 
 
@@ -270,11 +230,6 @@ void Scene::Update_OLD(float deltaTime) {
     }
     
 
-    for (RigidComponent& rigid : Scene::_players[0]._characterModel._ragdoll._rigidComponents) {
-        PxShape* shape;
-        rigid.pxRigidBody->getShapes(&shape, 1);
-        shape->setFlag(PxShapeFlag::eVISUALIZATION, false);
-    }
 
     
 
@@ -306,7 +261,7 @@ void Scene::Update_OLD(float deltaTime) {
 		//ak->_editorRaycastBody->setGlobalPose(trans);
     }
 
-    SetPlayerGroundedStates();
+    Game::SetPlayerGroundedStates();
     ProcessBullets();
 
     for (BulletCasing& bulletCasing : _bulletCasings) {
@@ -385,16 +340,7 @@ void Scene::CheckForDirtyLights() {
     }
 }
 
-void Scene::SetPlayerGroundedStates() {
-    for (Player& player : Scene::_players) {
-        player._isGrounded = false;
-        for (auto& report : Physics::_characterCollisionReports) {
-            if (report.characterController == player._characterController && report.hitNormal.y > 0.5f) {
-                player._isGrounded = true;
-            }
-        }
-    }
-}
+
 
 void Scene::ProcessBullets() {
 
@@ -477,28 +423,14 @@ void Scene::ProcessBullets() {
                             if (parentPlayerHit->_health == 0) {
 
                                 parentPlayerHit->Kill();
-                                if (parentPlayerHit != &Scene::_players[0]) {
-                                    Scene::_players[0]._killCount++;
-
-                                    /*glm::vec3 deathPosition = {parentPlayerHit->GetFeetPosition().x, 0.1, parentPlayerHit->GetFeetPosition().z};
-                                    deathPosition += (Scene::_players[0]._movementVector * 0.25f);
-                                    AnimatedGameObject* dyingGuy = Scene::GetAnimatedGameObjectByName("DyingGuy");
-                                    dyingGuy->SetRotationY(Scene::_players[0].GetViewRotation().y);
-                                    dyingGuy->SetPosition(deathPosition);
-                                    dyingGuy->PlayAnimation("DyingGuy_Death", 1.0f);*/
+                                if (parentPlayerHit != Game::GetPlayerByIndex(0)) {
+                                    Game::GetPlayerByIndex(0)->_killCount++;
                                 }
-                                if (parentPlayerHit != &Scene::_players[1]) {
-                                    Scene::_players[1]._killCount++;
-                                    /*
-                                    glm::vec3 deathPosition = { parentPlayerHit->GetFeetPosition().x, 0.1, parentPlayerHit->GetFeetPosition().z };
-                                    deathPosition += (Scene::_players[1]._movementVector * 0.25f);
-                                    AnimatedGameObject* dyingGuy = Scene::GetAnimatedGameObjectByName("DyingGuy");
-                                    dyingGuy->SetRotationY(Scene::_players[1].GetViewRotation().y);
-                                    dyingGuy->SetPosition(deathPosition);
-                                    dyingGuy->PlayAnimation("DyingGuy_Death", 1.0f);*/
+                                if (parentPlayerHit != Game::GetPlayerByIndex(1)) {
+                                    Game::GetPlayerByIndex(1)->_killCount++;
                                 }
 
-                                for (RigidComponent& rigidComponent : Scene::_players[1]._characterModel._ragdoll._rigidComponents) {
+                                for (RigidComponent& rigidComponent : parentPlayerHit->_characterModel._ragdoll._rigidComponents) {
                                     float strength = 75;
                                     if (bullet.type == SHOTGUN) {
                                         strength = 20;
@@ -1450,37 +1382,6 @@ void Scene::LoadMap(std::string mapPath) {
 
 void Scene::SaveMap(std::string mapPath) {
 	File::SaveMap(mapPath);
-}
-
-void Scene::CreatePlayers() {
-    _players.clear();
-    _players.push_back(Player());
-	if (EngineState::GetPlayerCount() == 2) {
-		_players.push_back(Player());
-    }
-
-    _players[0]._keyboardIndex = 0;
-    _players[1]._keyboardIndex = 1;
-    _players[0]._mouseIndex = 0;
-    _players[1]._mouseIndex = 1;
-
-    PxU32 p1RagdollCollisionGroupFlags = RaycastGroup::PLAYER_1_RAGDOLL;
-    PxU32 p2RagdollCollisionGroupFlags = RaycastGroup::PLAYER_2_RAGDOLL;
-
-    _players[0]._characterModel.LoadRagdoll("UnisexGuy3.rag", p1RagdollCollisionGroupFlags);
-    _players[1]._characterModel.LoadRagdoll("UnisexGuy3.rag", p2RagdollCollisionGroupFlags);
-
-    _players[0]._interactFlags = RaycastGroup::RAYCAST_ENABLED;
-    _players[0]._interactFlags &= ~RaycastGroup::PLAYER_1_RAGDOLL;
-
-    _players[1]._interactFlags = RaycastGroup::RAYCAST_ENABLED;
-    _players[1]._interactFlags &= ~RaycastGroup::PLAYER_2_RAGDOLL;
-
-    _players[0]._bulletFlags = RaycastGroup::RAYCAST_ENABLED | RaycastGroup::PLAYER_2_RAGDOLL;
-    _players[1]._bulletFlags = RaycastGroup::RAYCAST_ENABLED | RaycastGroup::PLAYER_1_RAGDOLL;
-
-    _players[0]._playerName = "Orion";
-    _players[1]._playerName = "CrustyAssCracker";
 }
 
 

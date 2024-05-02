@@ -26,15 +26,18 @@ struct RenderItem3D {
     int rmaTextureIndex;
     int vertexOffset;
     int indexOffset;
-    int padding0;
+    int animatedTransformsOffset;
     int padding1;
 };
 
-layout(std430, binding = 1) readonly buffer renderItems {
+layout(std430, binding = 4) readonly buffer animatedTranforms {
+    mat4 AnimatedTranforms[];
+};
+
+layout(std430, binding = 5) readonly buffer renderItems {
     RenderItem3D RenderItems[];
 };
 
-uniform mat4 skinningMats[85];
 
 void main() {
 
@@ -43,6 +46,7 @@ void main() {
 	BaseColorTextureIndex =  RenderItems[gl_DrawID].baseColorTextureIndex;
 	NormalTextureIndex =  RenderItems[gl_DrawID].normalTextureIndex;
 	RMATextureIndex =  RenderItems[gl_DrawID].rmaTextureIndex;
+	const int animatedTransformsOffset = RenderItems[gl_DrawID].animatedTransformsOffset;
 
 	mat4 normalMatrix = transpose(inverse(model));						// FIX THIS IMMEDIATELY AKA LATER
 	attrNormal = normalize((normalMatrix * vec4(aNormal, 0)).xyz);
@@ -61,7 +65,8 @@ void main() {
 	vec4 vertexTangent = vec4(aTangent, 0.0);
 
 	for(int i=0;i<4;i++)  {
-		mat4 jointTransform = skinningMats[int(aBoneID[i])];
+
+		mat4 jointTransform = AnimatedTranforms[int(aBoneID[i]) + animatedTransformsOffset];
 		vec4 posePosition =  jointTransform  * vertexPosition * aBoneWeight[i];
 			
 		vec4 worldNormal = jointTransform * vertexNormal * aBoneWeight[i];
@@ -69,7 +74,8 @@ void main() {
 
 		totalLocalPos += posePosition;		
 		totalNormal += worldNormal;	
-		totalTangent += worldTangent;	
+		totalTangent += worldTangent;
+		
 	}	
 	vec3 WorldPos = (model * vec4(totalLocalPos.xyz, 1)).xyz;		
 	attrNormal =  (model * vec4(normalize(totalNormal.xyz), 0)).xyz;

@@ -21,7 +21,7 @@ struct DescriptorSet {
 
     void BuildSetLayout(VkDevice device) {
         VkDescriptorSetLayoutCreateInfo setinfo = {};
-        setinfo.bindingCount = bindings.size();
+        setinfo.bindingCount = (uint32_t)bindings.size();
         setinfo.flags = 0;
         setinfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
         setinfo.pBindings = bindings.data();

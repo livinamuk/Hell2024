@@ -89,6 +89,9 @@ struct AnimatedGameObject {
 
     glm::vec3 FindClosestParentAnimatedNode(std::vector<JointWorldMatrix>& worldMatrices, int parentIndex);
 
+    void UpdateRenderItems();
+    std::vector<RenderItem3D>& GetRenderItems();
+
 private:
 
 	void UpdateAnimation(float deltaTime);
@@ -100,6 +103,7 @@ private:
 	float _animationSpeed = 1.0f;
 	std::string _name;
 	bool _animationIsComplete = true;
+    std::vector<RenderItem3D> renderItems;
 
 
 };

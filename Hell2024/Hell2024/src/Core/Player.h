@@ -27,6 +27,12 @@ enum InputType {
     CONTROLLER
 };
 
+enum CrosshairType {
+    NONE,
+    REGULAR,
+    INTERACT
+};
+
 struct PlayerControls {
     unsigned int WALK_FORWARD = HELL_KEY_W;
     unsigned int WALK_BACKWARD = HELL_KEY_S;
@@ -120,7 +126,6 @@ public:
 	float GetMuzzleFlashTime();
 	float GetMuzzleFlashRotation();
 	float GetRadius();
-	bool CursorShouldBeInterect();
 	void CreateCharacterController(glm::vec3 position);
 	//void WipeYVelocityToZeroIfHeadHitCeiling();
 	PxShape* GetCharacterControllerShape();
@@ -211,6 +216,13 @@ public:
     float _currentSpeed = 0.0f;
 
     void ForceSetViewMatrix(glm::mat4 viewMatrix);
+    std::vector<RenderItem2D> GetHudRenderItems(ivec2 viewportSize);
+    std::vector<RenderItem2D> GetHudRenderItemsHiRes(ivec2 viewportSize);
+    CrosshairType GetCrosshairType();
+
+    bool IsDead();
+    bool IsAlive();
+    bool RespawnAllowed();
 
 private:
 

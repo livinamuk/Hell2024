@@ -9,6 +9,5 @@ namespace OpenGLRenderer {
     void RenderGame(RenderData& renderData);
     void HotloadShaders();
     void BindBindlessTextures();
-    void ResizeRenderTargets();
     void CreatePlayerRenderTargets(int presentWidth, int presentHeight);
 }

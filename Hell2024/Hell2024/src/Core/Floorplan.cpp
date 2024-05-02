@@ -381,7 +381,7 @@ void Floorplan::CeilingModeUpdate() {
 
 void Floorplan::PrepareRenderFrame() {
 
-    TextBlitter::Update(1.0f / 60.0f);
+    /*TextBlitter::Update(1.0f / 60.0f);
     TextBlitter::ClearAllText();
 
     if (_mode == Floorplan::WALLS) {
@@ -406,6 +406,7 @@ void Floorplan::PrepareRenderFrame() {
     TextBlitter::_debugTextToBilt += "Ceilings: " + std::to_string(Scene::_ceilings.size()) + "\n";
     TextBlitter::_debugTextToBilt += "Doors: " + std::to_string(Scene::_doors.size()) + "\n";
     TextBlitter::_debugTextToBilt += "CloudPoints: " + std::to_string(Scene::_cloudPoints.size()) + "\n";
+    */
 
     /*
     // Draw grid
