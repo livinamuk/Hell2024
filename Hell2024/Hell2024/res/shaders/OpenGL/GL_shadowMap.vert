@@ -5,17 +5,22 @@ layout (location = 6) in vec4 aBoneWeight;
 
 struct RenderItem3D {
     mat4 modelMatrix;
+    mat4 inverseModelMatrix; 
     int meshIndex;
     int baseColorTextureIndex;
     int normalTextureIndex;
     int rmaTextureIndex;
     int vertexOffset;
     int indexOffset;
-    int padding0;
-    int padding1;
+    int animatedTransformsOffset; 
+    int castShadow;
+    int useEmissiveMask;
+    float emissiveColorR;
+    float emissiveColorG;
+    float emissiveColorB;
 };
 
-layout(std430, binding = 1) readonly buffer renderItems {
+layout(std430, binding = 12) readonly buffer renderItems {
     RenderItem3D RenderItems[];
 };
 
@@ -26,7 +31,7 @@ out vec3 FragPos;
 
 void main()
 {
-	mat4 model = RenderItems[gl_DrawID].modelMatrix;
+	mat4 model = RenderItems[gl_InstanceID + gl_BaseInstance].modelMatrix;
 
 	vec4 worldPos;
 	vec4 totalLocalPos = vec4(0.0);

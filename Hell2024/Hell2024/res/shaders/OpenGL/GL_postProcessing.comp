@@ -1,0 +1,24 @@
+#version 430 core
+
+layout (local_size_x = 16, local_size_y = 4, local_size_z = 1) in;
+layout(rgba8, binding = 0) uniform image2D tex;
+
+uniform float finalImageColorContrast;
+uniform vec3 finalImageColorTint;
+
+void contrastAdjust( inout vec3 color, in float c) {
+    float t = 0.5 - c * 0.5; 
+    color.rgb = color.rgb * c + t;
+}
+
+void main() {
+
+	ivec2 texCoord = ivec2(gl_GlobalInvocationID.xy);
+
+    vec3 color = imageLoad(tex, texCoord).rgb;
+	color *= finalImageColorTint;
+    contrastAdjust(color, finalImageColorContrast);	
+
+	imageStore(tex, texCoord, vec4(color, 1));
+}
+

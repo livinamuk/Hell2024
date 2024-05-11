@@ -29,6 +29,8 @@ namespace AssetManager {
     Mesh* GetQuadMesh();
     int GetMeshIndexByName(const std::string& name);
     int CreateMesh(std::string name, std::vector<Vertex>& vertices, std::vector<uint32_t>& indices);
+    unsigned int GetQuadMeshIndex();
+    unsigned int GetUpFacingPlaneMeshIndex();
 
     // Models
     Model* GetModelByIndex(int index);

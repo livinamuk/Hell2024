@@ -251,9 +251,9 @@ void main() {
 
 
 
+	
+//	FragColor.rgb = vec3( normal);  
 
-
-//	FragColor.rgb = baseColor;
 //	FragColor.rgb = vec3( shadow);  
 	//FragColor.g = 0;  
 //	FragColor.b = 0;  

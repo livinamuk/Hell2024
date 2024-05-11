@@ -4,6 +4,7 @@
 layout (location = 0) out vec4 BaseColorOut;
 layout (location = 1) out vec4 NormalsOut;
 layout (location = 2) out vec4 RMAOut;
+layout (location = 6) out vec4 EmssiveMask;
 
 in flat int BaseColorTextureIndex;
 in flat int NormalTextureIndex;
@@ -32,4 +33,5 @@ void main() {
     BaseColorOut = baseColor;
     NormalsOut.rgb = normal;
     RMAOut = rma;
+	EmssiveMask = vec4(0,0,0,0);
 }

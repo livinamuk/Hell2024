@@ -16,7 +16,7 @@ void main()
 
 	vec3 bloodColor = vec3(0.2, 0, 0); //  vec4(0.31, 0, 0, 1);
 	
-	  bloodColor.r += 0.2;
+	bloodColor.r += 0.2;
 	gAlbedo.rgba = vec4(bloodColor, 1);
     gNormal =  normalize(v_WorldNormal);
     gRMA = vec3(0.15, 0.85, 0);

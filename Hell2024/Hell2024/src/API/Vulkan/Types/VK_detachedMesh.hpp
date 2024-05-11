@@ -22,6 +22,8 @@ struct VulkanDetachedMesh {
     void UpdateVertexBuffer(std::vector<Vertex>& vertices, std::vector<uint32_t>& indices) {
 
         if (vertices.size() == 0 || indices.size() == 0) {
+            vertexCount = 0;
+            indexCount = 0;
             return;
         }
 

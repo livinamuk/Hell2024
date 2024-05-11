@@ -166,6 +166,11 @@ public:
 	float _pickUpTextTimer = 0;
     float _zoom = 1.0f;
 
+
+
+    float finalImageContrast = 1.0f;
+    glm::vec3 finalImageColorTint = glm::vec3(0);
+
     bool PressingWalkForward();
     bool PressingWalkBackward();
     bool PressingWalkLeft();

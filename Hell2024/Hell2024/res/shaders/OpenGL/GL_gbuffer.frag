@@ -4,13 +4,16 @@
 layout (location = 0) out vec4 BaseColorOut;
 layout (location = 1) out vec4 NormalsOut;
 layout (location = 2) out vec4 RMAOut;
+layout (location = 6) out vec4 EmssiveMask;
 
 in flat int BaseColorTextureIndex;
 in flat int NormalTextureIndex;
 in flat int RMATextureIndex;
+in flat int useEmissiveMask;
 in vec3 attrNormal;
 in vec3 attrTangent;
 in vec3 attrBiTangent;
+in vec3 emissiveColor;
 
 readonly restrict layout(std430, binding = 0) buffer textureSamplerers { 
 	uvec2 textureSamplers[]; 
@@ -18,11 +21,10 @@ readonly restrict layout(std430, binding = 0) buffer textureSamplerers {
 
 in vec2 TexCoord;
 
-uniform int textureIndex;
-
 void main() {
 
-    vec4 baseColor = texture(sampler2D(textureSamplers[BaseColorTextureIndex]), TexCoord);    
+    vec4 baseColor = texture(sampler2D(textureSamplers[BaseColorTextureIndex]), TexCoord);   
+    //baseColor = texture(sampler2D(textureSamplers[253]), TexCoord);    
     vec4 normalMap = texture(sampler2D(textureSamplers[NormalTextureIndex]), TexCoord);    
     vec4 rma = texture(sampler2D(textureSamplers[RMATextureIndex]), TexCoord);  
 
@@ -32,4 +34,10 @@ void main() {
     BaseColorOut = baseColor;
     NormalsOut.rgb = normal;
     RMAOut = rma;
+
+	if (useEmissiveMask == 1) {
+		EmssiveMask.rgb = vec3(rma.b) * emissiveColor;
+		EmssiveMask.a = 1.0;
+	}
+
 }

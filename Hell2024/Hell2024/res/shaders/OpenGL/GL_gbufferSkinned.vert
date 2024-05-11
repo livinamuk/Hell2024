@@ -20,6 +20,7 @@ out vec3 attrBiTangent;
 
 struct RenderItem3D {
     mat4 modelMatrix;
+    mat4 inverseModelMatrix;
     int meshIndex;
     int baseColorTextureIndex;
     int normalTextureIndex;
@@ -28,6 +29,10 @@ struct RenderItem3D {
     int indexOffset;
     int animatedTransformsOffset;
     int padding1;
+    int padding2;
+    int padding3;
+    int padding4;
+    int padding5;
 };
 
 layout(std430, binding = 4) readonly buffer animatedTranforms {
@@ -43,18 +48,16 @@ void main() {
 
 	TexCoord = aTexCoord;	
 	mat4 model = RenderItems[gl_DrawID].modelMatrix;
+	mat4 inverseModel = RenderItems[gl_DrawID].modelMatrix;
 	BaseColorTextureIndex =  RenderItems[gl_DrawID].baseColorTextureIndex;
 	NormalTextureIndex =  RenderItems[gl_DrawID].normalTextureIndex;
 	RMATextureIndex =  RenderItems[gl_DrawID].rmaTextureIndex;
 	const int animatedTransformsOffset = RenderItems[gl_DrawID].animatedTransformsOffset;
 
-	mat4 normalMatrix = transpose(inverse(model));						// FIX THIS IMMEDIATELY AKA LATER
+	mat4 normalMatrix = transpose(inverseModel);						// FIX THIS IMMEDIATELY AKA LATER
 	attrNormal = normalize((normalMatrix * vec4(aNormal, 0)).xyz);
 	attrTangent = (model * vec4(aTangent, 0.0)).xyz;
 	attrBiTangent = normalize(cross(attrNormal,attrTangent));
-
-
-
 
 	vec4 totalLocalPos = vec4(0.0);
 	vec4 totalNormal = vec4(0.0);
@@ -81,7 +84,7 @@ void main() {
 	attrNormal =  (model * vec4(normalize(totalNormal.xyz), 0)).xyz;
 	attrTangent =  (model * vec4(normalize(totalTangent.xyz), 0)).xyz;
 	attrBiTangent = normalize(cross(attrNormal,attrTangent));
-
+	
 	gl_Position = projection * view * vec4(WorldPos, 1.0);
 
 }

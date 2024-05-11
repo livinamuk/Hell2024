@@ -191,7 +191,7 @@ int _dirtyProbeCount;
 std::vector<glm::mat4> _glockMatrices;
 std::vector<glm::mat4> _aks74uMatrices;
 
-enum RenderMode { COMPOSITE, DIRECT_LIGHT, INDIRECT_LIGHT, POINT_CLOUD, MODE_COUNT } _mode;
+RenderMode _mode;
 DebugLineRenderMode _debugLineRenderMode_OLD;
 
 
@@ -636,7 +636,6 @@ void GlassPass(Player* player) {
         DrawModel(GlassModel);
     }
     _shaders.glass.SetBool("isWindow", false);
-
 
 
 
@@ -3184,13 +3183,13 @@ float Renderer_OLD::GetPointCloudSpacing() {
 
 void Renderer_OLD::NextMode() {
     _mode = (RenderMode)(int(_mode) + 1);
-    if (_mode == MODE_COUNT)
+    if (_mode == RENDER_MODE_COUNT)
         _mode = (RenderMode)0;
 }
 
 void Renderer_OLD::PreviousMode() {
     if (int(_mode) == 0)
-        _mode = RenderMode(int(MODE_COUNT) - 1);
+        _mode = RenderMode(int(RENDER_MODE_COUNT) - 1);
     else
         _mode = (RenderMode)(int(_mode) - 1);
 }
@@ -3540,13 +3539,13 @@ void Renderer_OLD::CreatePointCloudBuffer() {
     glGenBuffers(1, &_pointCloud.VBO);
     glBindVertexArray(_pointCloud.VAO);
     glBindBuffer(GL_ARRAY_BUFFER, _pointCloud.VBO);
-    glBufferData(GL_ARRAY_BUFFER, _pointCloud.vertexCount * sizeof(CloudPoint), &Scene::_cloudPoints[0], GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, _pointCloud.vertexCount * sizeof(CloudPointOld), &Scene::_cloudPoints[0], GL_STATIC_DRAW);
     glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, sizeof(CloudPoint), (void*)0);
+    glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, sizeof(CloudPointOld), (void*)0);
     glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, sizeof(CloudPoint), (void*)offsetof(CloudPoint, normal));
+    glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, sizeof(CloudPointOld), (void*)offsetof(CloudPointOld, normal));
     glEnableVertexAttribArray(2);
-    glVertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, sizeof(CloudPoint), (void*)offsetof(CloudPoint, directLighting));
+    glVertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, sizeof(CloudPointOld), (void*)offsetof(CloudPointOld, directLighting));
     glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
 }
 
@@ -3798,7 +3797,7 @@ void CalculateDirtyCloudPoints() {
     _dirtyPointCloudIndices.clear();
     _dirtyPointCloudIndices.reserve(Scene::_cloudPoints.size());
     for (int j = 0; j < Scene::_cloudPoints.size(); j++) {
-        CloudPoint& cloudPoint = Scene::_cloudPoints[j];
+        CloudPointOld& cloudPoint = Scene::_cloudPoints[j];
         for (auto& light : Scene::_lights) {
             const float lightRadiusSquared = light.radius * light.radius;
             if (light.isDirty) {

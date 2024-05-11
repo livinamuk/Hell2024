@@ -16,12 +16,16 @@ struct RenderItem3D {
     mat4 modelMatrix;
     int meshIndex;
     int baseColorTextureIndex;
-    int normaTextureIndex;
+    int normalTextureIndex;
     int rmaTextureIndex;
-	int vertexOffset;
-	int indexOffset;
-	int padding0;
-	int padding1;
+    int vertexOffset;
+    int indexOffset;
+    int animatedTransformsOffset;
+    int padding1;
+    int padding2;
+    int padding3;
+    int padding4;
+    int padding5;
 };
 
 struct Vertex {
@@ -65,7 +69,7 @@ vec3 mixBary(vec3 a, vec3 b, vec3 c, vec3 barycentrics) {
 void main() {
 
 	// Get vertex data from hit
-	RenderItem3D renderItem = tlasInstances.data[gl_InstanceID];
+	RenderItem3D renderItem = tlasInstances.data[gl_InstanceCustomIndexEXT]; // was gl_InstanceID
 	mat4 modelMatrix = renderItem.modelMatrix;
 	int vertexOffset = renderItem.vertexOffset;
 	int indexOffset = renderItem.indexOffset;

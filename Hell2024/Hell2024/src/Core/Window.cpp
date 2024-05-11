@@ -140,6 +140,7 @@ void Window::UpdateRenderItems() {
         renderItem.vertexOffset = mesh->baseVertex;
         renderItem.indexOffset = mesh->baseIndex;
         renderItem.modelMatrix = GetModelMatrix();
+        renderItem.inverseModelMatrix = inverse(renderItem.modelMatrix);
         renderItem.meshIndex = meshIndex;
         renderItem.baseColorTextureIndex = AssetManager::GetMaterialByIndex(materialIndex)->_basecolor;
         renderItem.normalTextureIndex = AssetManager::GetMaterialByIndex(materialIndex)->_normal;

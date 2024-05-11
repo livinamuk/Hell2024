@@ -385,6 +385,7 @@ void Wall::UpdateRenderItems() {
     renderItem.vertexOffset = mesh->baseVertex;
     renderItem.indexOffset = mesh->baseIndex;
     renderItem.modelMatrix = glm::mat4(1);
+    renderItem.inverseModelMatrix = inverse(renderItem.modelMatrix);
     renderItem.meshIndex = meshIndex;
     renderItem.baseColorTextureIndex = AssetManager::GetMaterialByIndex(materialIndex)->_basecolor;
     renderItem.normalTextureIndex = AssetManager::GetMaterialByIndex(materialIndex)->_normal;
@@ -399,6 +400,7 @@ void Wall::UpdateRenderItems() {
         renderItem.vertexOffset = AssetManager::GetMeshByIndex(ceilingTrimMeshIndex)->baseVertex;
         renderItem.indexOffset = AssetManager::GetMeshByIndex(ceilingTrimMeshIndex)->baseIndex;
         renderItem.modelMatrix = transform.to_mat4();
+        renderItem.inverseModelMatrix = inverse(renderItem.modelMatrix);
         renderItem.meshIndex = ceilingTrimMeshIndex;
         renderItem.baseColorTextureIndex = AssetManager::GetMaterialByIndex(materialIndex)->_basecolor;
         renderItem.normalTextureIndex = AssetManager::GetMaterialByIndex(materialIndex)->_normal;
@@ -411,6 +413,7 @@ void Wall::UpdateRenderItems() {
         renderItem.vertexOffset = AssetManager::GetMeshByIndex(floorTrimMeshIndex)->baseVertex;
         renderItem.indexOffset = AssetManager::GetMeshByIndex(floorTrimMeshIndex)->baseIndex;
         renderItem.modelMatrix = transform.to_mat4();
+        renderItem.inverseModelMatrix = inverse(renderItem.modelMatrix);
         renderItem.meshIndex = floorTrimMeshIndex;
         renderItem.baseColorTextureIndex = AssetManager::GetMaterialByIndex(materialIndex)->_basecolor;
         renderItem.normalTextureIndex = AssetManager::GetMaterialByIndex(materialIndex)->_normal;

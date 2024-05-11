@@ -6,6 +6,10 @@ layout(set = 0, binding = 0) readonly buffer CameraData {
     mat4 projectionInverse;
     mat4 view;
     mat4 viewInverse;
+	float viewportWidth;
+	float viewportHeight;
+	float padding0;
+	float padding1;
 } cameraData;
 
 
@@ -32,6 +36,7 @@ layout(location = 1) rayPayloadEXT bool isShadowed;
 
 layout(set = 0, binding = 3) uniform accelerationStructureEXT topLevelAS;
 layout(set = 0, binding = 4) readonly buffer B {Light data[];} lights;
+//layout(set = 0, binding = 4, scalar) readonly buffer B {Light data[];} lights;
 
 layout(set = 1, binding = 0) uniform sampler samp;
 
@@ -240,19 +245,28 @@ void main() {
 		uint  flags  = gl_RayFlagsTerminateOnFirstHitEXT | gl_RayFlagsOpaqueEXT | gl_RayFlagsSkipClosestHitShaderEXT | gl_RayFlagsCullFrontFacingTrianglesEXT;     	
 		isShadowed = true;
 			
+			
+			//	vec3 ligthting = GetDirectLighting(lightPosition, lightColor, light.radius, light.strength, normal, worldPos, baseColor.rgb, roughness, metallic);
+			//	directLighting += ligthting;
+
 		if (distanceToLight < lightRadius) {
 			traceRayEXT(topLevelAS,	flags, 0xFF, 0, 0, 1, origin, minRayDist, lightDir, distanceToLight, 1);		
 			if(isShadowed) {
 				shadowFactor = 0;
+				//directLighting += vec3(1, 0, 0);
 			} 
 
 			// If ray made it to the light source then calculate the direct lighting contribution
 			else {
 				vec3 ligthting = GetDirectLighting(lightPosition, lightColor, light.radius, light.strength, normal, worldPos, baseColor.rgb, roughness, metallic);
 				directLighting += ligthting;
+	//			directLighting += vec3(0.1);
+//		directLighting += vec3(lightColor * 0.01);
 			}
 		}
-
+		else {
+			//directLighting += vec3(1, 0, 0);
+		}
 
 	}
 	
@@ -343,6 +357,14 @@ void main() {
 	//outputColor.rgb = baseColor;
 
 	imageStore(outputImage, ivec2(gl_LaunchIDEXT.x, gl_LaunchIDEXT.y), outputColor);
+
+	
+	//Light light = lights.data[0];
+
+			
+	//vec3 lightPosition = vec3(light.posX, light.posY, light.posZ);
+	//vec3 lightColor = vec3(light.colorR, light.colorG, light.colorB);
+	//imageStore(outputImage, ivec2(gl_LaunchIDEXT.x, gl_LaunchIDEXT.y), vec4(worldPos, 1.0));
 }
 
 

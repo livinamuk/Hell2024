@@ -20,8 +20,14 @@ extern "C" {
 
 #include "Engine.h"
 #include <iostream>
+#include "Core/JSON.hpp"
+#include "Core/WeaponManager.hpp"
 
 int main() {
+
+    // WeaponManager::Init();
+    // return 0;
+
     std::cout << "We are all alone on life's journey, held captive by the limitations of human consciousness.\n";
     Engine::Run();
     return 0;

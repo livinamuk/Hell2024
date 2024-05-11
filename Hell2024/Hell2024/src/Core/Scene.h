@@ -78,11 +78,6 @@ inline void SetNormalsAndTangentsFromVertices(Vertex* vert0, Vertex* vert1, Vert
 #define PROPOGATION_HEIGHT (MAP_HEIGHT / PROPOGATION_SPACING)
 #define PROPOGATION_DEPTH (MAP_DEPTH / PROPOGATION_SPACING)
 
-struct CloudPoint {
-    glm::vec4 position = glm::vec4(0);
-    glm::vec4 normal = glm::vec4(0);
-    glm::vec4 directLighting = glm::vec4(0);
-};
 
 
 struct SpawnPoint {
@@ -178,7 +173,7 @@ namespace Scene {
 	inline std::vector<Door> _doors;
     inline std::vector<Floor> _floors;
     inline std::vector<Ceiling> _ceilings;
-    inline std::vector<CloudPoint> _cloudPoints;
+    inline std::vector<CloudPointOld> _cloudPoints;
     inline std::vector<GameObject> _gameObjects;
     inline std::vector<AnimatedGameObject> _animatedGameObjects;
     inline std::vector<Light> _lights;
@@ -189,6 +184,7 @@ namespace Scene {
     // New shit
     void LoadMapNEW(std::string mapPath);
     std::vector<RenderItem3D> GetAllRenderItems();
+    std::vector<RenderItem3D> CreateDecalRenderItems();
 
     // Old shit
 	void LoadHardCodedObjects();

@@ -779,6 +779,43 @@ void Player::Update(float deltaTime) {
     if (_isDead) {
         _health = 0;
     }
+
+
+
+
+    finalImageColorTint = glm::vec3(1, 1, 1);
+    finalImageContrast = 1;
+
+    if (IsAlive() && _isOutside) {
+        finalImageColorTint = RED;
+        finalImageColorTint.g = _outsideDamageAudioTimer;
+        finalImageColorTint.b = _outsideDamageAudioTimer;
+    }
+
+    if (IsAlive() && _damageColorTimer < 1.0f) {
+        finalImageColorTint.g = _damageColorTimer + 0.75;
+        finalImageColorTint.b = _damageColorTimer + 0.75;
+        finalImageColorTint.g = std::min(finalImageColorTint.g, 1.0f);
+        finalImageColorTint.b = std::min(finalImageColorTint.b, 1.0f);
+    }
+
+    if (IsDead()) {
+
+        // Make it red
+        if (_timeSinceDeath > 0) {
+            finalImageColorTint.g *= 0.25f;
+            finalImageColorTint.b *= 0.25f;
+            finalImageContrast = 1.2f;
+        }
+        // Darken it after 3 seconds
+        float waitTime = 3;
+        if (_timeSinceDeath > waitTime) {
+            float val = (_timeSinceDeath - waitTime) * 10;
+            finalImageColorTint.r -= val;
+        }
+    }
+
+
 }
 
 
@@ -1721,6 +1758,7 @@ void Player::SpawnGlockCasing() {
 	body->setAngularVelocity(PxVec3(Util::RandomFloat(0.0f, 100.0f), Util::RandomFloat(0.0f, 100.0f), Util::RandomFloat(0.0f, 100.0f)));
     //body->userData = (void*)&CasingType::BULLET_CASING;
     body->userData = (void*)&EngineState::weaponNamePointers[GLOCK];
+    body->setName("BulletCasing");
 
  // std::cout << 
 
@@ -1758,6 +1796,7 @@ void Player::SpawnShotgunShell() {
     body->addForce(force);
     //body->userData = (void*)&CasingType::SHOTGUN_SHELL;
     body->userData = (void*)&EngineState::weaponNamePointers[SHOTGUN];
+    body->setName("ShotgunShell");
 
     //body->setAngularVelocity(PxVec3(Util::RandomFloat(0.0f, 50.0f), Util::RandomFloat(0.0f, 50.0f), Util::RandomFloat(0.0f, 50.0f)));
     //shape->release();
@@ -1791,6 +1830,7 @@ void Player::SpawnAKS74UCasing() {
 	body->setAngularVelocity(PxVec3(Util::RandomFloat(0.0f, 50.0f), Util::RandomFloat(0.0f, 50.0f), Util::RandomFloat(0.0f, 50.0f)));
     //body->userData = (void*)&CasingType::BULLET_CASING;
     body->userData = (void*)&EngineState::weaponNamePointers[AKS74U];
+    body->setName("BulletCasing");
 
 
     //shape->release();
@@ -1880,7 +1920,7 @@ void Player::DropAKS7UMag() {
 }
 
 float Player::GetMuzzleFlashTime() {
-	return _muzzleFlashTimer;
+    return _muzzleFlashTimer;
 }
 
 float Player::GetMuzzleFlashRotation() {
@@ -2528,11 +2568,11 @@ std::vector<RenderItem2D> Player::GetHudRenderItemsHiRes(ivec2 viewportSize) {
     ivec2 ammoSlashTextLocation = { viewportSize.x * 0.875f, viewportSize.y * 0.15f };
 
     if (Game::GetSplitscreenMode() == SplitscreenMode::TWO_PLAYER) {
-        ammoTextScale = 1.1f; 
+        ammoTextScale = 1.2f; 
         ammoSlashTextLocation = { viewportSize.x * 0.875f, viewportSize.y * 0.175f };
     }
     if (Game::GetSplitscreenMode() == SplitscreenMode::FOUR_PLAYER) {
-        ammoTextScale = 1.1f;
+        ammoTextScale = 1.2f;
         ammoSlashTextLocation = { viewportSize.x * 0.86f, viewportSize.y * 0.175f };
     }
 

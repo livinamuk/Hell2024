@@ -20,31 +20,60 @@ layout(set = 0, binding = 0) readonly buffer CameraData {
     mat4 projectionInverse;
     mat4 view;
     mat4 viewInverse;
+	float viewportWidth;
+	float viewportHeight;
+	float padding0;
+	float padding1;
 } cameraData;
 
 struct RenderItem3D {
     mat4 modelMatrix;
+    mat4 inverseModelMatrix; 
     int meshIndex;
     int baseColorTextureIndex;
     int normalTextureIndex;
     int rmaTextureIndex;
     int vertexOffset;
     int indexOffset;
-    int padding0;
-    int padding1;
+    int animatedTransformsOffset; 
+    int castShadow;
+    int useEmissiveMask;
+    float emissiveColorR;
+    float emissiveColorG;
+    float emissiveColorB;
 };
 
 
-layout(std140,set = 0, binding = 2) readonly buffer A {RenderItem3D data[];} renderItems;
+struct InstanceData {
+    mat4 modelMatrix; 
+    mat4 inverseModelMatrix; 
+    int baseColorTextureIndex;
+    int normalTextureIndex;
+    int rmaTextureIndex;
+    int emissiveTextureIndex;
+};
+
+
+layout(set = 0, binding = 2) readonly buffer A {RenderItem3D data[];} renderItems;
+//layout(set = 0, binding = 5) readonly buffer B {InstanceData data[];} instanceData;
 
 void main() {	
 
 	mat4 proj = cameraData.projection;
 	mat4 view = cameraData.view;		
+
 	mat4 model = renderItems.data[gl_InstanceIndex].modelMatrix;
 	BaseColorTextureIndex =  renderItems.data[gl_InstanceIndex].baseColorTextureIndex;
 	NormalTextureIndex =  renderItems.data[gl_InstanceIndex].normalTextureIndex;
 	RMATextureIndex =  renderItems.data[gl_InstanceIndex].rmaTextureIndex;
+	
+	//model = instanceData.data[gl_InstanceIndex].modelMatrix;
+	//BaseColorTextureIndex =  instanceData.data[gl_InstanceIndex].baseColorTextureIndex;
+	//NormalTextureIndex =  instanceData.data[gl_InstanceIndex].normalTextureIndex;
+	//RMATextureIndex =  instanceData.data[gl_InstanceIndex].rmaTextureIndex;
+
+
+
 
 	mat4 normalMatrix = transpose(inverse(model));						// FIX THIS IMMEDIATELY AKA LATER
 	attrNormal = normalize((normalMatrix * vec4(vNormal, 0)).xyz);

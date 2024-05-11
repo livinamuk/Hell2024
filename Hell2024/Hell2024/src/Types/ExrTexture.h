@@ -25,7 +25,6 @@ public:
 	int gExrWidth, gExrHeight;
 	float* gExrRGBA;
 	int gMousePosX, gMousePosY;
-	const char* layername = NULL;
 
     std::string _filename;
     std::string _filetype;

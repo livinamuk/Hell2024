@@ -138,6 +138,7 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <ClCompile Include="src\API\Vulkan\Types\VK_texture.cpp" />
     <ClCompile Include="src\Core\AssetManager.cpp" />
     <ClCompile Include="src\Core\DebugMenu.cpp" />
+    <ClCompile Include="src\Renderer\PointCloud.cpp" />
     <ClCompile Include="src\Types\Animation.cpp" />
     <ClCompile Include="src\Types\DetachedMesh.hpp" />
     <ClCompile Include="src\Types\SkinnedModel.cpp" />
@@ -209,12 +210,15 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <ClInclude Include="src\API\Vulkan\Types\VK_descriptorSet.hpp" />
     <ClInclude Include="src\API\Vulkan\Types\VK_renderTarget.hpp" />
     <ClInclude Include="src\API\Vulkan\Types\VK_texture.h" />
+    <ClInclude Include="src\Core\JSON.hpp" />
+    <ClInclude Include="src\Core\WeaponManager.hpp" />
     <ClInclude Include="src\ErrorChecking.h" />
     <ClInclude Include="src\Core\AssetManager.h" />
     <ClInclude Include="src\Core\Config.hpp" />
     <ClInclude Include="src\Core\DebugMenu.h" />
     <ClInclude Include="src\Common.h" />
     <ClInclude Include="src\File\File.hpp" />
+    <ClInclude Include="src\Renderer\PointCloud.h" />
     <ClInclude Include="src\Renderer\RenderData.h" />
     <ClInclude Include="src\Renderer\RendererUtil.hpp" />
     <ClInclude Include="src\Types\Animation.h" />
@@ -291,14 +295,28 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <ClInclude Include="vendor\VulkanMemoryAllocator\include\vk_mem_alloc.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="res\shaders\OpenGL\GL_bloodDecals.frag" />
+    <None Include="res\shaders\OpenGL\GL_bloodDecals.vert" />
+    <None Include="res\shaders\OpenGL\GL_bloodVAT.frag" />
+    <None Include="res\shaders\OpenGL\GL_bloodVAT.vert" />
+    <None Include="res\shaders\OpenGL\GL_blur.frag" />
+    <None Include="res\shaders\OpenGL\GL_blurHorizontal.vert" />
+    <None Include="res\shaders\OpenGL\GL_blurVertical.vert" />
+    <None Include="res\shaders\OpenGL\GL_decals.frag" />
+    <None Include="res\shaders\OpenGL\GL_decals.vert" />
+    <None Include="res\shaders\OpenGL\GL_emissiveComposite.comp" />
     <None Include="res\shaders\OpenGL\GL_flipBook.frag" />
     <None Include="res\shaders\OpenGL\GL_flipBook.vert" />
     <None Include="res\shaders\OpenGL\GL_debug.frag" />
     <None Include="res\shaders\OpenGL\GL_debug.vert" />
     <None Include="res\shaders\OpenGL\GL_gbufferSkinned.frag" />
     <None Include="res\shaders\OpenGL\GL_gbufferSkinned.vert" />
+    <None Include="res\shaders\OpenGL\GL_glass.frag" />
+    <None Include="res\shaders\OpenGL\GL_glass.vert" />
+    <None Include="res\shaders\OpenGL\GL_glassComposite.comp" />
     <None Include="res\shaders\OpenGL\GL_lighting.frag" />
     <None Include="res\shaders\OpenGL\GL_lighting.vert" />
+    <None Include="res\shaders\OpenGL\GL_postProcessing.comp" />
     <None Include="res\shaders\OpenGL\GL_shadowMap.frag" />
     <None Include="res\shaders\OpenGL\GL_shadowMap.geom" />
     <None Include="res\shaders\OpenGL\GL_shadowMap.vert" />

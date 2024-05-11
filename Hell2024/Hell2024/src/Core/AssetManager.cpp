@@ -48,6 +48,7 @@ namespace AssetManager {
     int _nextWeightedIndexInsert = 0;
 
     int _quadMeshIndex = 0;
+    int _upFacingPlaneMeshIndex = 0;
 
     // Async
     std::mutex _modelsMutex;
@@ -96,6 +97,7 @@ void AssetManager::FindAssetPaths() {
         FileInfo info = Util::GetFileInfo(entry);
         if (info.filetype == "exr") {
             _vatTexturePaths.push_back(info.fullpath.c_str());
+            _texturePaths.push_back(info.fullpath.c_str());
         }
     }
     auto animationPaths = std::filesystem::directory_iterator("res/animations/");
@@ -703,6 +705,14 @@ int AssetManager::CreateMesh(std::string name, std::vector<Vertex>& vertices, st
     return _meshes.size() - 1;
 }
 
+unsigned int AssetManager::GetQuadMeshIndex() {
+    return _quadMeshIndex;
+}
+
+unsigned int AssetManager::GetUpFacingPlaneMeshIndex() {
+    return _upFacingPlaneMeshIndex;
+}
+
 Mesh* AssetManager::GetQuadMesh() {
     return &_meshes[_quadMeshIndex];
 }
@@ -1187,6 +1197,39 @@ void AssetManager::CreateHardcodedModels() {
         model.SetName("Quad");
         model.AddMeshIndex(AssetManager::CreateMesh(name, vertices, indices));    
         _quadMeshIndex = model.GetMeshIndices()[0];
+    }
+
+    /* Upfacing Plane */ {
+        Vertex vertA, vertB, vertC, vertD;
+        vertA.position = glm::vec3(-0.5, 0, 0.5);
+        vertB.position = glm::vec3(0.5, 0, 0.5f);
+        vertC.position = glm::vec3(0.5, 0, -0.5);
+        vertD.position = glm::vec3(-0.5, 0, -0.5);
+        vertA.uv = { 0.0f, 1.0f };
+        vertB.uv = { 1.0f, 1.0f };
+        vertC.uv = { 1.0f, 0.0f };
+        vertD.uv = { 0.0f, 0.0f };
+        vertA.normal = glm::vec3(0, 1, 0);
+        vertB.normal = glm::vec3(0, 1, 0);
+        vertC.normal = glm::vec3(0, 1, 0);
+        vertD.normal = glm::vec3(0, 1, 0);
+        vertA.tangent = glm::vec3(0, 0, 1);
+        vertB.tangent = glm::vec3(0, 0, 1);
+        vertC.tangent = glm::vec3(0, 0, 1);
+        vertD.tangent = glm::vec3(0, 0, 1);
+        std::vector<Vertex> vertices;
+        vertices.push_back(vertA);
+        vertices.push_back(vertB);
+        vertices.push_back(vertC);
+        vertices.push_back(vertD);
+        std::vector<uint32_t> indices = { 0, 1, 2, 2, 3, 0 };
+        std::string name = "UpFacingPLane";
+
+        std::lock_guard<std::mutex> lock(_modelsMutex);
+        Model& model = _models.emplace_back();
+        model.SetName("UpFacingPLane");
+        model.AddMeshIndex(AssetManager::CreateMesh(name, vertices, indices));
+        _upFacingPlaneMeshIndex = model.GetMeshIndices()[0];
     }
 
     UploadVertexData();

@@ -1,0 +1,27 @@
+#version 460 core
+
+layout (local_size_x = 16, local_size_y = 4, local_size_z = 1) in;
+layout(rgba8, binding = 0) uniform image2D tex;
+layout (binding = 1) uniform sampler2D blurBuffer0ColorB;
+layout (binding = 2) uniform sampler2D blurBuffer1ColorB;
+layout (binding = 3) uniform sampler2D blurBuffer2ColorB;
+layout (binding = 4) uniform sampler2D blurBuffer3ColorB;
+
+uniform float screenWidth;
+uniform float screenHeight;
+
+void main() {
+
+	ivec2 texCoord = ivec2(gl_GlobalInvocationID.xy);
+    vec3 color = imageLoad(tex, texCoord).rgb;
+
+	vec2 uv = vec2(texCoord.x / screenWidth, texCoord.y / screenHeight); 
+		
+	color += texture(blurBuffer0ColorB, uv).rgb;
+	color += texture(blurBuffer1ColorB, uv).rgb;
+	color += texture(blurBuffer2ColorB, uv).rgb;
+	color += texture(blurBuffer3ColorB, uv).rgb;
+
+	imageStore(tex, texCoord, vec4(color, 1));
+}
+

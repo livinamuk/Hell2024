@@ -99,6 +99,7 @@ void Floor::UpdateRenderItem() {
     renderItem.vertexOffset = mesh->baseVertex;
     renderItem.indexOffset = mesh->baseIndex;
     renderItem.modelMatrix = glm::mat4(1);
+    renderItem.inverseModelMatrix = inverse(renderItem.modelMatrix);
     renderItem.meshIndex = meshIndex;
     renderItem.baseColorTextureIndex = AssetManager::GetMaterialByIndex(materialIndex)->_basecolor;
     renderItem.normalTextureIndex = AssetManager::GetMaterialByIndex(materialIndex)->_normal;

@@ -15,29 +15,48 @@ struct BlitDstCoords {
 };
 
 struct MuzzleFlashData {
-    glm::vec3 worldPos = glm::vec3(0);
-    glm::vec3 viewRotation = glm::vec3(0);
-    float time = 0;
-    unsigned int countRaw = 0;
-    unsigned int countColumn = 0;
-    int frameIndex = 0;
+    glm::mat4 modelMatrix;
+    unsigned int rows = 0;
+    unsigned int columns = 0;
     float interpolate = 0.0f;
+    int frameIndex = 0;
+};
+
+struct MultiDrawIndirectDrawInfo {
+    std::vector<DrawIndexedIndirectCommand> commands;
+    std::vector<RenderItem3D> renderItems;
 };
 
 struct RenderData {
+
     CameraData cameraData;
+
+    MultiDrawIndirectDrawInfo bulletHoleDecalDrawInfo;
+    MultiDrawIndirectDrawInfo geometryDrawInfo;
+    MultiDrawIndirectDrawInfo glassDrawInfo;
+    MultiDrawIndirectDrawInfo shadowMapGeometryDrawInfo;
+    MultiDrawIndirectDrawInfo bloodDecalDrawInfo;
+    MultiDrawIndirectDrawInfo bloodVATDrawInfo;
+
     std::vector<RenderItem2D> renderItems2D;
     std::vector<RenderItem2D> renderItems2DHiRes;
-    std::vector<RenderItem3D> renderItems3D;
+
     std::vector<RenderItem3D> animatedRenderItems3D;
-    //std::vector<AnimatedRenderItem3D> animatedRenderItems3D;
+    std::vector<glm::mat4>* animatedTransforms;
     std::vector<GPULight> lights;
+
     DetachedMesh* debugLinesMesh = nullptr;
     DetachedMesh* debugPointsMesh = nullptr;
+
     bool renderDebugLines = false;
     int playerIndex = 0;
+
     BlitDstCoords blitDstCoords;
     BlitDstCoords blitDstCoordsPresent;
     MuzzleFlashData muzzleFlashData;
-    std::vector<glm::mat4>* animatedTransforms;
+    glm::vec3 finalImageColorTint;
+    float finalImageColorContrast;
+    RenderMode renderMode;
+
 };
+

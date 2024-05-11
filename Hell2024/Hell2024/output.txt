@@ -1,0 +1,11 @@
+{
+    "array": [
+        1,
+        2,
+        3
+    ],
+    "bool": true,
+    "float": 4.26,
+    "int": 666,
+    "string": "hello cruel world"
+}

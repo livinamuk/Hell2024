@@ -67,15 +67,20 @@ struct Pipeline {
 		vkDestroyPipelineLayout(device, _layout, nullptr);
 	}
 
-	void SetVertexDescription(VertexDescriptionType type) {
+    void SetVertexDescription(VertexDescriptionType type) {
 
-		// Main binding
-		_vertexDescription.Reset();
-		VkVertexInputBindingDescription mainBinding = {};
-		mainBinding.binding = 0;
-		mainBinding.stride = sizeof(Vertex);
-		mainBinding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-		_vertexDescription.bindings.push_back(mainBinding);
+	    // Main binding
+	    _vertexDescription.Reset();
+	    VkVertexInputBindingDescription mainBinding = {};
+	    mainBinding.binding = 0;
+        if (type != ALL_WEIGHTED) {
+            mainBinding.stride = sizeof(Vertex);
+        }
+        else {
+            mainBinding.stride = sizeof(WeightedVertex);
+        }
+	    mainBinding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+	    _vertexDescription.bindings.push_back(mainBinding);
 
         // Position
         VkVertexInputAttributeDescription positionAttribute = {};
@@ -105,19 +110,19 @@ struct Pipeline {
         tangentAttribute.format = VK_FORMAT_R32G32B32_SFLOAT;
         tangentAttribute.offset = offsetof(Vertex, tangent);
 
-        // Weight
-        VkVertexInputAttributeDescription weightAttribute = {};
-        weightAttribute.binding = 0;
-        weightAttribute.location = 4;
-        weightAttribute.format = VK_FORMAT_R32G32B32_SFLOAT;
-        weightAttribute.offset = offsetof(WeightedVertex, weight);
-
         // BoneID
         VkVertexInputAttributeDescription boneIDAttribute = {};
         boneIDAttribute.binding = 0;
-        boneIDAttribute.location = 5;
-        boneIDAttribute.format = VK_FORMAT_R32G32B32_UINT;
+        boneIDAttribute.location = 4;
+        boneIDAttribute.format = VK_FORMAT_R32G32B32A32_SINT;
         boneIDAttribute.offset = offsetof(WeightedVertex, boneID);
+
+        // Weight
+        VkVertexInputAttributeDescription weightAttribute = {};
+        weightAttribute.binding = 0;
+        weightAttribute.location = 5;
+        weightAttribute.format = VK_FORMAT_R32G32B32A32_SFLOAT;
+        weightAttribute.offset = offsetof(WeightedVertex, weight);
 
 		if (type == POSITION_NORMAL_TEXCOORD) {
 			_vertexDescription.attributes.push_back(positionAttribute);
@@ -146,8 +151,8 @@ struct Pipeline {
             _vertexDescription.attributes.push_back(normalAttribute);
             _vertexDescription.attributes.push_back(uvAttribute);
             _vertexDescription.attributes.push_back(tangentAttribute);
-            _vertexDescription.attributes.push_back(weightAttribute);
             _vertexDescription.attributes.push_back(boneIDAttribute);
+            _vertexDescription.attributes.push_back(weightAttribute);
         }
 	}
 

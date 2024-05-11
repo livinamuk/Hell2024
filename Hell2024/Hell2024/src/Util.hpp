@@ -25,6 +25,34 @@
 
 namespace Util {
 
+    inline std::string DebugLineRenderModeToString(DebugLineRenderMode mode) {
+
+        if (mode == DebugLineRenderMode::SHOW_NO_LINES) {
+            return "NONE";
+        }
+        else if (mode == DebugLineRenderMode::PHYSX_ALL) {
+            return "PHYSX_ALL";
+        }
+        else if (mode == DebugLineRenderMode::PHYSX_RAYCAST) {
+            return "PHYSX_RAYCAST";
+        }
+        else if (mode == DebugLineRenderMode::PHYSX_COLLISION) {
+            return "PHYSX_COLLISION";
+        }
+        else if (mode == DebugLineRenderMode::RAYTRACE_LAND) {
+            return "RAYTRACE_LAND";
+        }
+        else if (mode == DebugLineRenderMode::PHYSX_EDITOR) {
+            return "PHYSX_EDITOR";
+        }
+        else if (mode == DebugLineRenderMode::BOUNDING_BOXES) {
+            return "BOUNDING_BOXES";
+        }
+        else {
+            return "UNDEFINED";
+        }
+    }
+
     inline std::string SplitscreenModeToString(SplitscreenMode mode) {
         if (mode == SplitscreenMode::NONE) {
             return "NONE";
@@ -34,6 +62,24 @@ namespace Util {
         }
         else if (mode == SplitscreenMode::FOUR_PLAYER) {
             return "FOUR_PLAYER";
+        }
+        else {
+            return "UNDEFINED";
+        }
+    }
+
+    inline std::string RenderModeToString(RenderMode mode) {
+        if (mode == RenderMode::COMPOSITE) {
+            return "COMPOSITE";
+        }
+        else if (mode == RenderMode::POINT_CLOUD) {
+            return "POINT_CLOUD";
+        }
+        else if (mode == RenderMode::DIRECT_LIGHT) {
+            return "DIRECT_LIGHT";
+        }
+        else if (mode == RenderMode::INDIRECT_LIGHT) {
+            return "INDIRECT_LIGHT";
         }
         else {
             return "UNDEFINED";

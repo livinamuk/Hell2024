@@ -14,20 +14,27 @@ out vec2 TexCoord;
 out flat int BaseColorTextureIndex;
 out flat int NormalTextureIndex;
 out flat int RMATextureIndex;
+out flat int useEmissiveMask;
 out vec3 attrNormal;
 out vec3 attrTangent;
 out vec3 attrBiTangent;
+out vec3 emissiveColor;
 
 struct RenderItem3D {
     mat4 modelMatrix;
+    mat4 inverseModelMatrix; 
     int meshIndex;
     int baseColorTextureIndex;
     int normalTextureIndex;
     int rmaTextureIndex;
     int vertexOffset;
     int indexOffset;
-    int animatedTransformsOffset;
-    int padding1;
+    int animatedTransformsOffset; 
+    int castShadow;
+    int useEmissiveMask;
+    float emissiveColorR;
+    float emissiveColorG;
+    float emissiveColorB;
 };
 
 layout(std430, binding = 1) readonly buffer renderItems {
@@ -37,12 +44,18 @@ layout(std430, binding = 1) readonly buffer renderItems {
 void main() {
 
 	TexCoord = aTexCoord;	
-	mat4 model = RenderItems[gl_DrawID].modelMatrix;
-	BaseColorTextureIndex =  RenderItems[gl_DrawID].baseColorTextureIndex;
-	NormalTextureIndex =  RenderItems[gl_DrawID].normalTextureIndex;
-	RMATextureIndex =  RenderItems[gl_DrawID].rmaTextureIndex;
+	mat4 model = RenderItems[gl_InstanceID + gl_BaseInstance].modelMatrix;
+	mat4 invereseModel = RenderItems[gl_InstanceID + gl_BaseInstance].inverseModelMatrix;
+	BaseColorTextureIndex =  RenderItems[gl_InstanceID+ gl_BaseInstance].baseColorTextureIndex;
+	NormalTextureIndex =  RenderItems[gl_InstanceID+ gl_BaseInstance].normalTextureIndex;
+	RMATextureIndex =  RenderItems[gl_InstanceID+ gl_BaseInstance].rmaTextureIndex;
+	
+	useEmissiveMask = RenderItems[gl_InstanceID+ gl_BaseInstance].useEmissiveMask;
+	emissiveColor.r = RenderItems[gl_InstanceID+ gl_BaseInstance].emissiveColorR;
+	emissiveColor.g = RenderItems[gl_InstanceID+ gl_BaseInstance].emissiveColorG;
+	emissiveColor.b = RenderItems[gl_InstanceID+ gl_BaseInstance].emissiveColorB;
 
-	mat4 normalMatrix = transpose(inverse(model));						// FIX THIS IMMEDIATELY AKA LATER
+	mat4 normalMatrix = transpose(invereseModel);
 	attrNormal = normalize((normalMatrix * vec4(aNormal, 0)).xyz);
 	attrTangent = (model * vec4(aTangent, 0.0)).xyz;
 	attrBiTangent = normalize(cross(attrNormal,attrTangent));

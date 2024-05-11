@@ -31,6 +31,8 @@ OpenGLTexture::OpenGLTexture(const std::string filepath) {
     Load(filepath);
 }
 
+#include "tinyexr.h"
+
 bool OpenGLTexture::Load(const std::string filepath) {
 
     if (!Util::FileExists(filepath)) {
@@ -39,6 +41,52 @@ bool OpenGLTexture::Load(const std::string filepath) {
     }
 
     _filename = Util::GetFilename(filepath);
+    _filetype = Util::GetFileInfo(filepath).filetype;
+
+    // Is it a VAT texture?
+    if (_filetype == "exr") {
+
+        // Get EXR Layers
+        const char* err = nullptr;
+        const char** layer_names = nullptr;
+        int num_layers = 0;
+        bool status = EXRLayers(filepath.c_str(), &layer_names, &num_layers, &err);
+        if (err) {
+            fprintf(stderr, "EXR error = %s\n", err);
+        }
+        if (status != 0) {
+            fprintf(stderr, "Load EXR err: %s\n", err);
+            std::cout << " GetEXRLayers() FAILED \n";
+        }
+        if (num_layers > 0) {
+            fprintf(stdout, "EXR Contains %i Layers\n", num_layers);
+            for (int i = 0; i < (int)num_layers; ++i) {
+                fprintf(stdout, "Layer %i : %s\n", i + 1, layer_names[i]);
+            }
+        }
+        free(layer_names);
+
+        // Load the RGBA
+        int width, height;
+        const char* layername = NULL;
+        status = LoadEXRWithLayer(&_floatData, &_width, &_height, filepath.c_str(), layername, &err);
+        if (err) {
+            fprintf(stderr, "EXR error = %s\n", err);
+        }
+        if (status != 0) {
+            fprintf(stderr, "Load EXR err: %s\n", err);
+            std::cout << " LoadEXRRGBA() FAILED \n";
+        }
+
+        std::cout << "Loaded EXR: " << filepath << "\n";
+        return true;
+    }
+
+
+
+
+
+
 
     // Check if compressed version exists. If not, create one.
     std::string suffix = _filename.substr(_filename.length() - 3);
@@ -208,6 +256,11 @@ void OpenGLTexture::UploadToGPU(void* data, CMP_Texture* cmpTexture, int width, 
     }
     _baked = true;
 
+
+    if (_filetype == "exr") {
+        return;
+    }
+
     if (_CMP_texture != nullptr) {
         glGenerateMipmap(GL_TEXTURE_2D);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -228,8 +281,6 @@ void OpenGLTexture::UploadToGPU(void* data, CMP_Texture* cmpTexture, int width, 
         glBindTexture(GL_TEXTURE_2D, ID);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 
         GLint format = GL_RGB;
         if (channelCount == 4)
@@ -237,14 +288,17 @@ void OpenGLTexture::UploadToGPU(void* data, CMP_Texture* cmpTexture, int width, 
         if (channelCount == 1)
             format = GL_RED;
 
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, format, GL_UNSIGNED_BYTE, data);
-
+        else {
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+            stbi_image_free(data);
+        }
 
         bindlessID = glGetTextureHandleARB(ID);
         glMakeTextureHandleResidentARB(bindlessID);
         //glMakeTextureHandleNonResidentARB(bindlessID); to unbind
 
-        stbi_image_free(data);
     }
     _width = width;
     _height = height;
@@ -281,7 +335,7 @@ bool OpenGLTexture::Bake() {
         return true;
     }
 
-    if (_data == nullptr) {
+    if (_data == nullptr && _floatData == nullptr) {
         return false;
     }
 
@@ -289,8 +343,6 @@ bool OpenGLTexture::Bake() {
     glBindTexture(GL_TEXTURE_2D, ID);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 
     GLint format = GL_RGB;
     if (_NumOfChannels == 4)
@@ -298,14 +350,24 @@ bool OpenGLTexture::Bake() {
     if (_NumOfChannels == 1)
         format = GL_RED;
 
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, _width, _height, 0, format, GL_UNSIGNED_BYTE, _data);
 
+    if (_filetype == "exr") {
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16, _width, _height, 0, GL_RGBA, GL_FLOAT, _floatData);
+        free(_floatData);
+    }
+    else {
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, _width, _height, 0, format, GL_UNSIGNED_BYTE, _data);
+        stbi_image_free(_data);
+    }
 
     bindlessID = glGetTextureHandleARB(ID);
     glMakeTextureHandleResidentARB(bindlessID);
     //glMakeTextureHandleNonResidentARB(bindlessID); to unbind
 
-    stbi_image_free(_data);
     _data = nullptr;
     return true;
 }

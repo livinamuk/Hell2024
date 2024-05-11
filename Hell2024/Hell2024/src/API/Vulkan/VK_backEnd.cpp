@@ -207,6 +207,7 @@ void VulkanBackEnd::SelectPhysicalDevice() {
     VkPhysicalDeviceFeatures features = {};
     features.samplerAnisotropy = true;
     features.shaderInt64 = true;
+    features.multiDrawIndirect = true;
     selector.set_required_features(features);
 
     VkPhysicalDeviceVulkan12Features features12 = {};
@@ -899,6 +900,115 @@ void VulkanBackEnd::UploadVertexData(std::vector<Vertex>& vertices, std::vector<
 
 void VulkanBackEnd::UploadWeightedVertexData(std::vector<WeightedVertex>& vertices, std::vector<uint32_t>& indices) {
 
+    /*
+    if (_mainSkinnedVertexBuffer._buffer != VK_NULL_HANDLE) {
+        vkDeviceWaitIdle(_device);                                                                  // This feels fucked
+        vmaDestroyBuffer(_allocator, _mainSkinnedVertexBuffer._buffer, _mainSkinnedVertexBuffer._allocation);
+    }
+    if (_mainSkinnedIndexBuffer._buffer != VK_NULL_HANDLE) {
+        vkDeviceWaitIdle(_device);                                                                  // This feels fucked
+        vmaDestroyBuffer(_allocator, _mainSkinnedIndexBuffer._buffer, _mainSkinnedIndexBuffer._allocation);
+    }*/
+
+    /* Vertices */ {
+
+        const size_t bufferSize = vertices.size() * sizeof(WeightedVertex);
+        VkBufferCreateInfo stagingBufferInfo = {};
+        stagingBufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+        stagingBufferInfo.pNext = nullptr;
+        stagingBufferInfo.size = bufferSize;
+        stagingBufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+        VmaAllocationCreateInfo vmaallocInfo = {};
+        vmaallocInfo.usage = VMA_MEMORY_USAGE_CPU_ONLY;
+        AllocatedBuffer stagingBuffer;
+        VK_CHECK(vmaCreateBuffer(_allocator, &stagingBufferInfo, &vmaallocInfo, &stagingBuffer._buffer, &stagingBuffer._allocation, nullptr));
+        AddDebugName(stagingBuffer._buffer, "stagingBuffer");
+        void* data;
+        vmaMapMemory(_allocator, stagingBuffer._allocation, &data);
+        memcpy(data, vertices.data(), bufferSize);
+        vmaUnmapMemory(_allocator, stagingBuffer._allocation);
+        VkBufferCreateInfo vertexBufferInfo = {};
+        vertexBufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+        vertexBufferInfo.pNext = nullptr;
+        vertexBufferInfo.size = bufferSize;
+        vertexBufferInfo.usage =
+            VK_BUFFER_USAGE_TRANSFER_DST_BIT |
+            VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT |
+            VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR |
+            VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
+            VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+
+        vmaallocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+        VK_CHECK(vmaCreateBuffer(_allocator, &vertexBufferInfo, &vmaallocInfo, &_mainSkinnedVertexBuffer._buffer, &_mainSkinnedVertexBuffer._allocation, nullptr));
+        AddDebugName(_mainSkinnedVertexBuffer._buffer, "Main Skinned Vertex Buffer");
+        ImmediateSubmit([=](VkCommandBuffer cmd) {
+            VkBufferCopy copy;
+            copy.dstOffset = 0;
+            copy.srcOffset = 0;
+            copy.size = bufferSize;
+            vkCmdCopyBuffer(cmd, stagingBuffer._buffer, _mainSkinnedVertexBuffer._buffer, 1, &copy);
+        });
+        vmaDestroyBuffer(_allocator, stagingBuffer._buffer, stagingBuffer._allocation);
+
+        int objectCount = 1;
+    }
+
+    /* Indices */ {
+
+        const size_t bufferSize = indices.size() * sizeof(uint32_t);
+        VkBufferCreateInfo stagingBufferInfo = {};
+        stagingBufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+        stagingBufferInfo.pNext = nullptr;
+        stagingBufferInfo.size = bufferSize;
+        stagingBufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+        VmaAllocationCreateInfo vmaallocInfo = {};
+        vmaallocInfo.usage = VMA_MEMORY_USAGE_CPU_ONLY;
+        AllocatedBuffer stagingBuffer;
+        VK_CHECK(vmaCreateBuffer(_allocator, &stagingBufferInfo, &vmaallocInfo, &stagingBuffer._buffer, &stagingBuffer._allocation, nullptr));
+        AddDebugName(stagingBuffer._buffer, "stagingBufferIndices");
+        void* data;
+        vmaMapMemory(_allocator, stagingBuffer._allocation, &data);
+        memcpy(data, indices.data(), bufferSize);
+        vmaUnmapMemory(_allocator, stagingBuffer._allocation);
+        VkBufferCreateInfo bufferInfo = {};
+        bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+        bufferInfo.pNext = nullptr;
+        bufferInfo.size = bufferSize;
+        bufferInfo.usage =
+            VK_BUFFER_USAGE_TRANSFER_DST_BIT |
+            VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT |
+            VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR |
+            VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
+            VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+        vmaallocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+        VK_CHECK(vmaCreateBuffer(_allocator, &bufferInfo, &vmaallocInfo, &_mainSkinnedIndexBuffer._buffer, &_mainSkinnedIndexBuffer._allocation, nullptr));
+        AddDebugName(_mainSkinnedIndexBuffer._buffer, "Main Skinned Index Buffer");
+        ImmediateSubmit([=](VkCommandBuffer cmd) {
+            VkBufferCopy copy;
+            copy.dstOffset = 0;
+            copy.srcOffset = 0;
+            copy.size = bufferSize;
+            vkCmdCopyBuffer(cmd, stagingBuffer._buffer, _mainSkinnedIndexBuffer._buffer, 1, &copy);
+        });
+        vmaDestroyBuffer(_allocator, stagingBuffer._buffer, stagingBuffer._allocation);
+    }
+/*
+    std::cout << "Weighted vertex uploaded to Vulkan GPU brain\n\n\n";
+
+
+    std::cout << "\n\nVERTICES\n";
+
+    for (int i = 0; i < 50; i++) {
+        std::cout << i << ": " << Util::Vec3ToString(vertices[i].position) << "\n";
+    }
+
+    std::cout << "\n\INDICES\n";
+
+    for (int i = 0; i < 50; i++) {
+        std::cout << i << ": " << indices[i] << "\n";
+    }
+    std::cout << "\n\\n";*/
+
 }
 
 
@@ -939,6 +1049,12 @@ std::vector<VkAccelerationStructureInstanceKHR> VulkanBackEnd::CreateTLASInstanc
     int instanceCustomIndex = 0;
     std::vector<VkAccelerationStructureInstanceKHR> instances;
     for (RenderItem3D& renderItem : renderItems) {
+
+        // Replace this with a bit flag maybe? cause castShadow is not even what this checking here.
+        if (!renderItem.castShadow) {
+            continue;
+        }
+
         Mesh* mesh = AssetManager::GetMeshByIndex(renderItem.meshIndex);
         VkAccelerationStructureInstanceKHR& instance = instances.emplace_back(VkAccelerationStructureInstanceKHR());
         instance.transform = GlmMat4ToVkTransformMatrix(renderItem.modelMatrix);

@@ -20,6 +20,10 @@ layout(set = 0, binding = 0) readonly buffer CameraData {
     mat4 projectionInverse;
     mat4 view;
     mat4 viewInverse;
+	float viewportWidth;
+	float viewportHeight;
+	float padding0;
+	float padding1;
 } cameraData;
 
 const float PI = 3.14159265359;
@@ -279,7 +283,11 @@ void main() {
 	//outFragColor.b *= 0.00;
 //	outFragColor.rgb = WorldPos;
 
+//	outFragColor.rgb = baseColor.rgb;
+
 	if (normal == vec3(0,0,0)) {
 		outFragColor.rgb = vec3(0,0,0);
 	}
+
+	outFragColor.rgb = outFragColor.rgb;
 }

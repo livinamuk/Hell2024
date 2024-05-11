@@ -17,13 +17,14 @@
 #include "Player.h"
 #include "Audio.hpp"
 
+int _volumetricBloodObjectsSpawnedThisFrame = 0;
 
 namespace Scene {
 
     void CreateCeilingsHack();
     void EvaluateDebugKeyPresses();
     void ProcessBullets();
-
+    void DestroyAllDecals();
 }
 
 void Scene::Update(float deltaTime) {
@@ -31,9 +32,11 @@ void Scene::Update(float deltaTime) {
     CheckForDirtyLights();
 
     if (Input::KeyPressed(HELL_KEY_N)) {
+        Physics::ClearCollisionLists();
         for (GameObject& gameObject : _gameObjects) {
             gameObject.LoadSavedState();
         }
+        DestroyAllDecals();
         std::cout << "Loaded scene save state\n";
     }
 
@@ -68,7 +71,27 @@ void Scene::Update(float deltaTime) {
         animatedGameObject.Update(deltaTime);
     }
 
+    // Update vat blood
+    _volumetricBloodObjectsSpawnedThisFrame = 0;
+    for (vector<VolumetricBloodSplatter>::iterator it = _volumetricBloodSplatters.begin(); it != _volumetricBloodSplatters.end();) {
+         if (it->m_CurrentTime < 0.9f) {
+            it->Update(deltaTime);
+            ++it;
+         }
+         else {
+             it = _volumetricBloodSplatters.erase(it);
+         }
+    }
+
     ProcessPhysicsCollisions();
+}
+
+void Scene::DestroyAllDecals() {
+
+    for (Decal& decal : _decals) {
+        decal.CleanUp();
+    }
+    _decals.clear();
 }
 
 void Scene::LoadMapNEW(std::string mapPath) {
@@ -160,10 +183,198 @@ std::vector<RenderItem3D> Scene::GetAllRenderItems() {
         renderItems.insert(std::end(renderItems), std::begin(window.GetRenderItems()), std::end(window.GetRenderItems()));
     }
 
+    // Casings
+    static Material* glockCasingMaterial = AssetManager::GetMaterialByIndex(AssetManager::GetMaterialIndex("BulletCasing"));
+    static Material* shotgunShellMaterial = AssetManager::GetMaterialByIndex(AssetManager::GetMaterialIndex("Shell"));
+    static Material* aks74uCasingMaterial = AssetManager::GetMaterialByIndex(AssetManager::GetMaterialIndex("Casing_AkS74U"));
+    static int glockCasingMeshIndex = AssetManager::GetModelByIndex(AssetManager::GetModelIndexByName("BulletCasing"))->GetMeshIndices()[0];
+    static int shotgunShellMeshIndex = AssetManager::GetModelByIndex(AssetManager::GetModelIndexByName("Shell"))->GetMeshIndices()[0];
+    static int aks74uCasingMeshIndex = AssetManager::GetModelByIndex(AssetManager::GetModelIndexByName("BulletCasing_AK"))->GetMeshIndices()[0];
+    for (BulletCasing& casing : Scene::_bulletCasings) {
+        RenderItem3D& renderItem = renderItems.emplace_back();
+        renderItem.modelMatrix = casing.modelMatrix;
+        renderItem.inverseModelMatrix = inverse(renderItem.modelMatrix);
+        renderItem.castShadow = false;
+        if (casing.type == GLOCK) {
+            renderItem.baseColorTextureIndex = glockCasingMaterial->_basecolor;
+            renderItem.rmaTextureIndex = glockCasingMaterial->_rma;
+            renderItem.normalTextureIndex = glockCasingMaterial->_normal;
+            renderItem.meshIndex = glockCasingMeshIndex;
+        }
+        if (casing.type == SHOTGUN) {
+            renderItem.baseColorTextureIndex = shotgunShellMaterial->_basecolor;
+            renderItem.rmaTextureIndex = shotgunShellMaterial->_rma;
+            renderItem.normalTextureIndex = shotgunShellMaterial->_normal;
+            renderItem.meshIndex = shotgunShellMeshIndex;
+        }
+        if (casing.type == AKS74U) {
+            renderItem.baseColorTextureIndex = aks74uCasingMaterial->_basecolor;
+            renderItem.rmaTextureIndex = aks74uCasingMaterial->_rma;
+            renderItem.normalTextureIndex = aks74uCasingMaterial->_normal;
+            renderItem.meshIndex = aks74uCasingMeshIndex;
+        }
+    }
+
+    // Light bulbs
+
+
+    for (Light& light : Scene::_lights) {
+
+
+        Transform transform;
+        transform.position = light.position;
+        glm::mat4 lightBulbWorldMatrix = transform.to_mat4();
+
+        static Material* light0Material = AssetManager::GetMaterialByIndex(AssetManager::GetMaterialIndex("Light"));
+        static Material* wallMountedLightMaterial = AssetManager::GetMaterialByIndex(AssetManager::GetMaterialIndex("LightWall"));
+
+        static int lightBulb0MeshIndex = AssetManager::GetModelByIndex(AssetManager::GetModelIndexByName("Light0_Bulb"))->GetMeshIndices()[0];
+        static int lightMount0MeshIndex = AssetManager::GetModelByIndex(AssetManager::GetModelIndexByName("Light0_Mount"))->GetMeshIndices()[0];
+        static int lightCord0MeshIndex = AssetManager::GetModelByIndex(AssetManager::GetModelIndexByName("Light0_Cord"))->GetMeshIndices()[0];
+        static Model* wallMountedLightmodel = AssetManager::GetModelByIndex(AssetManager::GetModelIndexByName("LightWallMounted"));
+
+     //   std::cout << "MESH COUNT: " << AssetManager::GetModelByIndex(AssetManager::GetModelIndexByName("LightWallMounted"))->GetMeshIndices().size() << "\n";
+
+        if (light.type == 0) {
+            RenderItem3D& renderItem = renderItems.emplace_back();
+            renderItem.meshIndex = lightBulb0MeshIndex;
+            renderItem.modelMatrix = lightBulbWorldMatrix;
+            renderItem.inverseModelMatrix = inverse(renderItem.modelMatrix);
+            renderItem.baseColorTextureIndex = light0Material->_basecolor;
+            renderItem.rmaTextureIndex = light0Material->_rma;
+            renderItem.normalTextureIndex = light0Material->_normal;
+            renderItem.castShadow = false;
+            renderItem.useEmissiveMask = 1.0f;
+            renderItem.emissiveColor = light.color;
+
+
+            // Find mount position and draw it if the ray hits the ceiling
+            PxU32 raycastFlags = RaycastGroup::RAYCAST_ENABLED;
+            PhysXRayResult rayResult = Util::CastPhysXRay(light.position, glm::vec3(0, 1, 0), 2, raycastFlags);
+
+            if (rayResult.hitFound) {
+
+                Transform mountTransform;
+                mountTransform.position = rayResult.hitPosition;
+
+                RenderItem3D& renderItemMount = renderItems.emplace_back();
+                renderItemMount.meshIndex = lightMount0MeshIndex;
+                renderItemMount.modelMatrix = mountTransform.to_mat4();
+                renderItemMount.inverseModelMatrix = inverse(renderItem.modelMatrix);
+                renderItemMount.baseColorTextureIndex = light0Material->_basecolor;
+                renderItemMount.rmaTextureIndex = light0Material->_rma;
+                renderItemMount.normalTextureIndex = light0Material->_normal;
+                renderItemMount.castShadow = false;
+
+                Transform cordTransform;
+                cordTransform.position = light.position;
+                cordTransform.scale.y = abs(rayResult.hitPosition.y - light.position.y);
+
+                RenderItem3D& renderItemCord = renderItems.emplace_back();
+                renderItemCord.meshIndex = lightCord0MeshIndex;
+                renderItemCord.modelMatrix = cordTransform.to_mat4();
+                renderItemCord.inverseModelMatrix = inverse(renderItem.modelMatrix);
+                renderItemCord.baseColorTextureIndex = light0Material->_basecolor;
+                renderItemCord.rmaTextureIndex = light0Material->_rma;
+                renderItemCord.normalTextureIndex = light0Material->_normal;
+                renderItemCord.castShadow = false;
+
+            }
+
+        }
+        else if (light.type == 1) {
+
+            for (int j = 0; j < wallMountedLightmodel->GetMeshCount(); j++) {
+                RenderItem3D& renderItem = renderItems.emplace_back();
+                renderItem.meshIndex = wallMountedLightmodel->GetMeshIndices()[j];
+                renderItem.modelMatrix = lightBulbWorldMatrix;
+                renderItem.inverseModelMatrix = inverse(renderItem.modelMatrix);
+                renderItem.baseColorTextureIndex = wallMountedLightMaterial->_basecolor;
+                renderItem.rmaTextureIndex = wallMountedLightMaterial->_rma;
+                renderItem.normalTextureIndex = wallMountedLightMaterial->_normal;
+                renderItem.castShadow = false;
+                renderItem.useEmissiveMask = 1.0f;
+                renderItem.emissiveColor = light.color;
+            }
+        }
+
+        /*
+        Transform transform;
+        transform.position = light.position;
+        shader.SetVec3("lightColor", light.color);
+        shader.SetMat4("model", transform.to_mat4());
+
+        if (light.type == 0) {
+            AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("Light"));
+
+            DrawModel(AssetManager::GetModelByIndex(AssetManager::GetModelIndexByName("Light0_Bulb")));
+
+            // Find mount position
+            PxU32 raycastFlags = RaycastGroup::RAYCAST_ENABLED;
+            PhysXRayResult rayResult = Util::CastPhysXRay(light.position, glm::vec3(0, 1, 0), 2, raycastFlags);
+            if (rayResult.hitFound) {
+                Transform mountTransform;
+                mountTransform.position = rayResult.hitPosition;
+                shader.SetMat4("model", mountTransform.to_mat4());
+
+                DrawModel(AssetManager::GetModelByIndex(AssetManager::GetModelIndexByName("Light0_Mount")));
+
+                // Stretch the cord
+                Transform cordTransform;
+                cordTransform.position = light.position;
+                cordTransform.scale.y = abs(rayResult.hitPosition.y - light.position.y);
+                shader.SetMat4("model", cordTransform.to_mat4());
+                DrawModel(AssetManager::GetModelByIndex(AssetManager::GetModelIndexByName("Light0_Cord")));
+
+            }
+        }
+        else if (light.type == 1) {
+            AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("LightWall"));
+            DrawModel(AssetManager::GetModelByIndex(AssetManager::GetModelIndexByName("LightWallMounted")));
+        }*/
+    }
+
+
+
     return renderItems;
 }
 
 
+std::vector<RenderItem3D> Scene::CreateDecalRenderItems() {
+
+    static Material* bulletHolePlasterMaterial = AssetManager::GetMaterialByIndex(AssetManager::GetMaterialIndex("BulletHole_Plaster"));
+    static Material* bulletHoleGlassMaterial = AssetManager::GetMaterialByIndex(AssetManager::GetMaterialIndex("BulletHole_Glass"));
+
+    std::vector<RenderItem3D> renderItems;
+    renderItems.reserve(Scene::_decals.size());
+
+    // Wall bullet decals
+    for (Decal& decal : Scene::_decals) {
+        if (decal.type == Decal::Type::REGULAR) {
+            RenderItem3D& renderItem = renderItems.emplace_back();
+            renderItem.modelMatrix = decal.GetModelMatrix();
+            renderItem.inverseModelMatrix = inverse(renderItem.modelMatrix);
+            renderItem.baseColorTextureIndex = bulletHolePlasterMaterial->_basecolor;
+            renderItem.rmaTextureIndex = bulletHolePlasterMaterial->_rma;
+            renderItem.normalTextureIndex = bulletHolePlasterMaterial->_normal;
+            renderItem.meshIndex = AssetManager::GetQuadMeshIndex();
+        }
+    }
+
+    // Glass bullet decals
+    for (Decal& decal : Scene::_decals) {
+        if (decal.type == Decal::Type::GLASS) {
+            RenderItem3D& renderItem = renderItems.emplace_back();
+            renderItem.modelMatrix = decal.GetModelMatrix();
+            renderItem.inverseModelMatrix = inverse(renderItem.modelMatrix);
+            renderItem.baseColorTextureIndex = bulletHoleGlassMaterial->_basecolor;
+            renderItem.rmaTextureIndex = bulletHoleGlassMaterial->_rma;
+            renderItem.normalTextureIndex = bulletHoleGlassMaterial->_normal;
+            renderItem.meshIndex = AssetManager::GetQuadMeshIndex();
+        }
+    }
+    return renderItems;
+}
 
 void Scene::EvaluateDebugKeyPresses() {
 
@@ -197,10 +408,6 @@ void Scene::EvaluateDebugKeyPresses() {
 
 
 float door2X = 2.05f;
-int _volumetricBloodObjectsSpawnedThisFrame = 0;
-
-
-
 
 void Scene::CreateVolumetricBlood(glm::vec3 position, glm::vec3 rotation, glm::vec3 front) {
     // Spawn a max of 4 per frame
@@ -1463,7 +1670,7 @@ void Scene::CreatePointCloud() {
         for (float x = pointSpacing * 0.5f; x < wallLength; x += pointSpacing) {
             glm::vec3 pos = wall.begin + (dir * x);
             for (float y = pointSpacing * 0.5f; y < wall.height; y += pointSpacing) {
-                CloudPoint cloudPoint;
+                CloudPointOld cloudPoint;
                 cloudPoint.position = glm::vec4(pos, 0);
                 cloudPoint.position.y = wall.begin.y + y;
                 glm::vec3 wallVector = glm::normalize(wall.end - wall.begin);
@@ -1487,7 +1694,7 @@ void Scene::CreatePointCloud() {
         //float floorDepth = floor.z2 - floor.z1;
         for (float x = minX + (pointSpacing * 0.5f); x < maxX; x += pointSpacing) {
             for (float z = minZ + (pointSpacing * 0.5f); z < maxZ; z += pointSpacing) {
-                CloudPoint cloudPoint;
+                CloudPointOld cloudPoint;
                 cloudPoint.position = glm::vec4(x, floorHeight, z, 0);
                 cloudPoint.normal = glm::vec4(NRM_Y_UP, 0);
                 _cloudPoints.push_back(cloudPoint);
@@ -1522,7 +1729,7 @@ void Scene::CreatePointCloud() {
         float ceilingDepth = ceiling.z2 - ceiling.z1;
         for (float x = pointSpacing * 0.5f; x < ceilingWidth; x += pointSpacing) {
             for (float z = pointSpacing * 0.5f; z < ceilingDepth; z += pointSpacing) {
-                CloudPoint cloudPoint;
+                CloudPointOld cloudPoint;
                 cloudPoint.position = glm::vec4(ceiling.x1 + x, ceiling.height, ceiling.z1 + z, 0);
                 cloudPoint.normal = glm::vec4(NRM_Y_DOWN, 0);
                 _cloudPoints.push_back(cloudPoint);
@@ -1722,48 +1929,26 @@ void Scene::RemoveAllDecalsFromWindow(Window* window) {
 
 void Scene::ProcessPhysicsCollisions() {
 
-    /* if (Input::KeyPressed(HELL_KEY_9)) {
-         for (int i = 0; i < 555; i++) {
-             Audio::PlayAudio("BulletCasingBounce.wav", 1.0);
-         }
-     }*/
-    bool playedShellSound = false;
+    bool bulletCasingCollision = false;
+    bool shotgunShellCollision = false;
 
     for (CollisionReport& report : Physics::GetCollisions()) {
-
-        PxRigidActor* actorA = (PxRigidActor*)report.rigidA;
-        PxRigidActor* actorB = (PxRigidActor*)report.rigidB;
-        PxShape* shapeA;
-        PxShape* shapeB;
-        actorA->getShapes(&shapeA, 1);
-        actorB->getShapes(&shapeB, 1);
-        CollisionGroup groupA = (CollisionGroup)shapeA->getQueryFilterData().word1;
-        CollisionGroup groupB = (CollisionGroup)shapeB->getQueryFilterData().word1;
-
-        if (groupA & BULLET_CASING) {
-            //BulletCasing* casing = (BulletCasing*)actorA->userData;
-            //casing->CollisionResponse();
-            playedShellSound = true;
+        const char* nameA = report.rigidA->getName();
+        const char* nameB = report.rigidB->getName();
+        if (nameA == "BulletCasing" ||
+            nameB == "BulletCasing") {
+            bulletCasingCollision = true;
+        }        
+        if (nameA == "ShotgunShell" ||
+            nameB == "ShotgunShell") {
+            shotgunShellCollision = true;
         }
-        else if (groupB & BULLET_CASING) {
-            //BulletCasing* casing = (BulletCasing*)actorB->userData;
-            //casing->CollisionResponse();
-            playedShellSound = true;
-        }
-
-        if (playedShellSound) {
-
-          //  if (actorA->userData == (void*)&CasingType::SHOTGUN_SHELL) {
-
-            if (actorA->userData == (void*)&EngineState::weaponNamePointers[SHOTGUN]) {
-                Audio::PlayAudio("ShellFloorBounce.wav", Util::RandomFloat(0.1f, 0.2f));
-                break;
-            }
-            else {
-                Audio::PlayAudio("BulletCasingBounce.wav", Util::RandomFloat(0.2f, 0.3f));
-                break;
-            }
-        }
+    }
+    if (bulletCasingCollision) {
+        Audio::PlayAudio("BulletCasingBounce.wav", Util::RandomFloat(0.2f, 0.3f));
+    }
+    if (shotgunShellCollision) {
+        Audio::PlayAudio("ShellFloorBounce.wav", Util::RandomFloat(0.1f, 0.2f));
     }
 
     Physics::ClearCollisionLists();

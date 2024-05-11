@@ -91,46 +91,14 @@ public:
 	void onAdvance(const PxRigidBody* const*, const PxTransform*, const PxU32) {}
 	void onContact(const PxContactPairHeader& pairHeader, const PxContactPair* /*pairs*/, PxU32 /*nbPairs*/) {
 
-		/*PX_UNUSED((pairHeader));
-		std::vector<PxContactPairPoint> contactPoints;
-
-		for (PxU32 i = 0; i < nbPairs; i++) {
-			PxU32 contactCount = pairs[i].contactCount;
-			if (contactCount) {
-				contactPoints.resize(contactCount);
-				pairs[i].extractContacts(&contactPoints[0], contactCount);
-
-				for (PxU32 j = 0; j < contactCount; j++) {
-
-					contactPoints[j].internalFaceIndex0;
-
-					if (!pairHeader.actors[0] || !pairHeader.actors[1]) {
-						continue;
-					}
-
-					gContactPositions.push_back(contactPoints[j].position);
-					gContactImpulses.push_back(contactPoints[j].impulse);
-				}
-			}
-		}*/
-
-
 		if (!pairHeader.actors[0] || !pairHeader.actors[1]) {
 			return;
 		}
+
 		CollisionReport report;
-		report.rigidA = (PxActor*)pairHeader.actors[0];
-		report.rigidB = (PxActor*)pairHeader.actors[1];
-		//	report.parentA = (PxRigidActor*)report.rigidA->userData;
-		//	report.parentB = (PxRigidActor*)report.rigidB->userData;
-			/*report.rigidA = (PxRigidActor*)pairHeader.actors[0];
-			report.rigidB = (PxRigidActor*)pairHeader.actors[1];
-			report.rigidA->getShapes(&report.shapeA, 1);
-			report.rigidB->getShapes(&report.shapeB, 1);
-			report.groupA = (CollisionGroup)report.shapeA->getQueryFilterData().word1;
-			report.groupB = (CollisionGroup)report.shapeB->getQueryFilterData().word1;
-			report.parentA = report.rigidA->userData;
-			report.parentB = report.rigidB->userData;*/
+		report.rigidA = pairHeader.actors[0];
+		report.rigidB = pairHeader.actors[1];
+
 		Physics::_collisionReports.push_back(report);
 	}
 };

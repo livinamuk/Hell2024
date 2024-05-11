@@ -50,6 +50,8 @@ namespace VulkanBackEnd {
 
     inline AllocatedBuffer _mainVertexBuffer;
     inline AllocatedBuffer _mainIndexBuffer;
+    inline AllocatedBuffer _mainSkinnedVertexBuffer;
+    inline AllocatedBuffer _mainSkinnedIndexBuffer;
 
     void BeginRendering();
     //void EndRendering();

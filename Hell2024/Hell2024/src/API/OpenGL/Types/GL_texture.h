@@ -28,6 +28,7 @@ private:
     std::string _filetype;
     std::unique_ptr<CMP_Texture> _CMP_texture;
     unsigned char* _data = nullptr;
+    float* _floatData = nullptr;
     int _NumOfChannels = 0;
     int _width = 0;
     int _height = 0;

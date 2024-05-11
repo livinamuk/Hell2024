@@ -4,6 +4,7 @@
 #include "InputMulti.h"
 #include "Scene.h"
 #include "../BackEnd/BackEnd.h"
+#include "../Renderer/PointCloud.h"
 #include "../Renderer/Renderer.h"
 
 namespace Game {
@@ -29,6 +30,7 @@ namespace Game {
         _thisFrame = _lastFrame;
         _isLoaded = true;
         Scene::LoadMapNEW("map.txt");
+        PointCloud::Create();
         CreatePlayers(4);
     }
 
@@ -203,6 +205,14 @@ namespace Game {
 
         if (Input::KeyPressed(HELL_KEY_B)) {
             Renderer::NextDebugLineRenderMode();
+            Audio::PlayAudio(AUDIO_SELECT, 1.00f);
+        }
+        if (Input::KeyPressed(HELL_KEY_Z)) {
+            Renderer::PreviousRenderMode();
+            Audio::PlayAudio(AUDIO_SELECT, 1.00f);
+        }
+        if (Input::KeyPressed(HELL_KEY_X)) {
+            Renderer::NextRenderMode();
             Audio::PlayAudio(AUDIO_SELECT, 1.00f);
         }
 
