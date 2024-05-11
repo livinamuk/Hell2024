@@ -62,7 +62,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>vendor\nlohmann_json\include;vendor\lz4\include;vendor\VulkanMemoryAllocator\include;vendor\VulkanSDK\1.3.250.0\Include;vendor\tinyexr;vendor\compressonator\include;vendor\tracy\public;vendor\tinyobj;vendor\GLFW\include;vendor\glm;vendor\glad\include;vendor\stb_image;vendor\fmod\include;vendor\assimp\include;vendor\rapidjson\include;vendor\physx\include;vendor\thread_pool\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>vendor\nlohmann_json\include;vendor\lz4\include;vendor\VulkanMemoryAllocator\include;vendor\VulkanSDK\1.3.250.0\Include;vendor\tinyexr;vendor\compressonator\include;vendor\tracy\public;vendor\tinyobj;vendor\GLFW\include;vendor\glm;vendor\glad\include;vendor\stb_image;vendor\fmod\include;vendor\assimp\include;vendor\rapidjson\include;vendor\physx\include;vendor\thread_pool\include;vendor\VkBootstrap</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
