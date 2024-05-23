@@ -10,4 +10,6 @@ namespace OpenGLRenderer {
     void HotloadShaders();
     void BindBindlessTextures();
     void CreatePlayerRenderTargets(int presentWidth, int presentHeight);
+    void UpdatePointCloud();
+    void PresentFinalImage();
 }

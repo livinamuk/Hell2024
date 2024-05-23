@@ -1,5 +1,5 @@
 #pragma once
-#include "../Types/SkinnedModel.h"
+#include "../Renderer/Types/SkinnedModel.h"
 #include "Ragdoll.h"
 
 struct MeshRenderingEntry {

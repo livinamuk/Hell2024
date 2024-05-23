@@ -62,9 +62,6 @@ void ExrTexture::Load(std::string filepath) {
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16, gExrWidth, gExrHeight, 0, GL_RGBA, GL_FLOAT, gExrRGBA);
 }
 
-
-#include "../BackEnd/BackEnd.h"
-
 std::string& ExrTexture::GetFilename() {
     /*if (BackEnd::GetAPI() == API::OPENGL) {
         return glTexture.GetFilename();

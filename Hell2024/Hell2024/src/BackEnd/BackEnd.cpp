@@ -4,7 +4,6 @@
 #include "../Renderer/Renderer_OLD.h"
 #include "../API/OpenGL/GL_backEnd.h"
 #include "../API/OpenGL/GL_renderer.h"
-#include "../API/OpenGL/GL_assetManager.h"
 #include "../API/Vulkan/VK_backEnd.h"
 #include "../Core/AssetManager.h"
 #include "../Core/Audio.hpp"

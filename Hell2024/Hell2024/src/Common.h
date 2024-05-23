@@ -38,6 +38,8 @@ enum WeaponAction {
     ADS_FIRE
 };
 
+#define PLAYER_COUNT 4
+
 #define AUDIO_SELECT "SELECT.wav"
 #define ENV_MAP_SIZE 2048
 
@@ -287,7 +289,36 @@ enum CollisionGroup {
     RAGDOLL = 32,
 };
 
-struct AABB {
+struct AABB2 {
     glm::vec3 position = glm::vec3(0);
     glm::vec3 extents = glm::vec3(0);
+};
+
+inline glm::vec3 fminf(const glm::vec3& a, const glm::vec3& b) { return glm::vec3(std::min(a.x, b.x), std::min(a.y, b.y), std::min(a.z, b.z)); }
+inline glm::vec3 fmaxf(const glm::vec3& a, const glm::vec3& b) { return glm::vec3(std::max(a.x, b.x), std::max(a.y, b.y), std::max(a.z, b.z)); }
+
+struct AABB {
+    AABB() {}
+    AABB(glm::vec3 min, glm::vec3 max) {
+        boundsMin = min;
+        boundsMax = max;
+    }
+    void Grow(AABB& b) {
+        if (b.boundsMin.x != 1e30f && b.boundsMin.x != -1e30f) {
+            Grow(b.boundsMin); Grow(b.boundsMax);
+        }
+    }
+    void Grow(glm::vec3 p) {
+        boundsMin = fminf(boundsMin, p);
+        boundsMax = fmaxf(boundsMax, p);
+    }
+    float Area() {
+        glm::vec3 e = boundsMax - boundsMin; // box extent
+        return e.x * e.y + e.y * e.z + e.z * e.x;
+    }
+    glm::vec3 GetCenter() {
+        return { (boundsMin.x + boundsMax.x) / 2, (boundsMin.y + boundsMax.y) / 2, (boundsMin.z + boundsMax.z) / 2 };
+    }
+    glm::vec3 boundsMin = glm::vec3(1e30f);
+    glm::vec3 boundsMax = glm::vec3(-1e30f);
 };

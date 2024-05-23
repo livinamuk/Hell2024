@@ -1,21 +1,7 @@
 #pragma once
 #include <glm/glm.hpp>
 #include <string>
-
-enum VertexDescriptionType { POSITION_NORMAL_TEXCOORD, POSITION_TEXCOORD, POSITION_NORMAL, POSITION, ALL, ALL_WEIGHTED};
-enum AssemblyInputType {VERTEX_BUFFER_ONLY, VERTEX_BUFFER_INDEX_BUFFER};
-
-struct VertexInputDescription {
-    std::vector<VkVertexInputBindingDescription> bindings;
-    std::vector<VkVertexInputAttributeDescription> attributes;
-    VkPipelineVertexInputStateCreateFlags flags = 0;
-
-    void Reset() {
-        bindings.clear();
-        attributes.clear();
-        flags = 0;
-    }
-};
+#include "../VK_common.h"
 
 struct Pipeline {
 
@@ -47,10 +33,16 @@ struct Pipeline {
             vkDestroyPipelineLayout(device, _layout, nullptr);
         }
 
-		VkPushConstantRange pushConstantRange;
+        VkPushConstantRange pushConstantRange;
+        pushConstantRange.offset = 0;
+        pushConstantRange.size = sizeof(PushConstants);
+        pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+        _pushConstantCount = 1;
+
+		/*VkPushConstantRange pushConstantRange;
 		pushConstantRange.offset = 0;
 		pushConstantRange.size = _pushConstantSize;
-		pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+		pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;*/
 
 		VkPipelineLayoutCreateInfo createInfo{};
 		createInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
@@ -73,7 +65,7 @@ struct Pipeline {
 	    _vertexDescription.Reset();
 	    VkVertexInputBindingDescription mainBinding = {};
 	    mainBinding.binding = 0;
-        if (type != ALL_WEIGHTED) {
+        if (type != VertexDescriptionType::ALL_WEIGHTED) {
             mainBinding.stride = sizeof(Vertex);
         }
         else {
@@ -124,29 +116,29 @@ struct Pipeline {
         weightAttribute.format = VK_FORMAT_R32G32B32A32_SFLOAT;
         weightAttribute.offset = offsetof(WeightedVertex, weight);
 
-		if (type == POSITION_NORMAL_TEXCOORD) {
+		if (type == VertexDescriptionType::POSITION_NORMAL_TEXCOORD) {
 			_vertexDescription.attributes.push_back(positionAttribute);
 			_vertexDescription.attributes.push_back(normalAttribute);
 			_vertexDescription.attributes.push_back(uvAttribute);
         }
-        else if (type == POSITION_NORMAL) {
+        else if (type == VertexDescriptionType::POSITION_NORMAL) {
             _vertexDescription.attributes.push_back(positionAttribute);
             _vertexDescription.attributes.push_back(normalAttribute);
         }
-        else if (type == POSITION_TEXCOORD) {
+        else if (type == VertexDescriptionType::POSITION_TEXCOORD) {
             _vertexDescription.attributes.push_back(positionAttribute);
             _vertexDescription.attributes.push_back(uvAttribute);
         }
-        else if (type == POSITION) {
+        else if (type == VertexDescriptionType::POSITION) {
             _vertexDescription.attributes.push_back(positionAttribute);
         }
-        else if (type == ALL) {
+        else if (type == VertexDescriptionType::ALL) {
             _vertexDescription.attributes.push_back(positionAttribute);
             _vertexDescription.attributes.push_back(normalAttribute);
             _vertexDescription.attributes.push_back(uvAttribute);
             _vertexDescription.attributes.push_back(tangentAttribute);
         }
-        else if (type == ALL_WEIGHTED) {
+        else if (type == VertexDescriptionType::ALL_WEIGHTED) {
             _vertexDescription.attributes.push_back(positionAttribute);
             _vertexDescription.attributes.push_back(normalAttribute);
             _vertexDescription.attributes.push_back(uvAttribute);
@@ -192,7 +184,7 @@ struct Pipeline {
 		_pushConstantSize = size;
 	}
 
-    void Build(VkDevice device, VkShaderModule vertexShader, VkShaderModule fragmentShader, std::vector<VkFormat> colorAttachmentFormats, AssemblyInputType inputType) {
+    void Build(VkDevice device, VkShaderModule vertexShader, VkShaderModule fragmentShader, std::vector<VkFormat> colorAttachmentFormats) {
            
         int colorAttachmentCount = colorAttachmentFormats.size();
 
@@ -262,7 +254,6 @@ struct Pipeline {
 		std::vector<VkPipelineShaderStageCreateInfo> shaderStages;
 		shaderStages.push_back(vertexShaderCreateInfo);
 		shaderStages.push_back(fragmentShaderCreateInfo);
-
 
 		VkPipelineViewportStateCreateInfo viewportState = {};
 		viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;

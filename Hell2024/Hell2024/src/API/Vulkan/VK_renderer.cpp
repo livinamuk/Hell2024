@@ -1,17 +1,21 @@
 ﻿#include "VK_renderer.h"
 #include "VK_backend.h"
 #include "VK_assetManager.h"
+#include "VK_util.hpp"
 #include "../../Renderer/RenderData.h"
 #include "../../Renderer/RendererCommon.h"
 #include "Types/VK_depthTarget.hpp"
 #include "Types/VK_descriptorSet.hpp"
+#include "Types/VK_computePipeline.hpp"
 #include "Types/VK_pipeline.hpp"
 #include "Types/VK_renderTarget.hpp"
 #include "Types/VK_shader.hpp"
 #include "Types/VK_detachedMesh.hpp"
 #include "../../BackEnd/BackEnd.h"
 #include "../../Core/AssetManager.h"
+#include "../../Core/Game.h"
 #include "../../Core/Scene.h"
+#include "../../Renderer/GlobalIllumination.h"
 #include "../../Renderer/TextBlitter.h"
 
 namespace VulkanRenderer {
@@ -21,11 +25,15 @@ namespace VulkanRenderer {
         Vulkan::Shader gBufferSkinned;
         Vulkan::Shader lighting;
         Vulkan::Shader textBlitter;
-        Vulkan::Shader debug;
+        Vulkan::Shader debugSolidColor;
+        Vulkan::Shader debugPointCloud;
+        Vulkan::Shader bulletDecals;
+        Vulkan::Shader debugProbes;
+        Vulkan::ComputeShader postProcessing;
     } _shaders;
 
     struct RenderTargets {
-        Vulkan::RenderTarget fullsizeFinalImage;
+        Vulkan::RenderTarget finalImage;
         Vulkan::RenderTarget present;
         Vulkan::RenderTarget loadingScreen;
         Vulkan::RenderTarget gBufferBasecolor;
@@ -45,6 +53,10 @@ namespace VulkanRenderer {
         Pipeline uiHiRes;
         Pipeline debugLines;
         Pipeline debugPoints;
+        Pipeline debugPointCloud;
+        Pipeline debugProbes;
+        Pipeline bulletHoleDecals;
+        ComputePipeline computeTest;
     } _pipelines;
 
     struct DescriptorSets {
@@ -53,6 +65,7 @@ namespace VulkanRenderer {
         DescriptorSet renderTargets;
         DescriptorSet raytracing;
         DescriptorSet uiHiRes;
+        DescriptorSet globalIllumination;
     } _descriptorSets;
 
     Raytracer _raytracer;
@@ -69,6 +82,7 @@ namespace VulkanRenderer {
     void SetViewportSize(VkCommandBuffer commandBuffer, int width, int height);
     void SetViewportSize(VkCommandBuffer commandBuffer, Vulkan::RenderTarget renderTarget);
     void BindPipeline(VkCommandBuffer commandBuffer, Pipeline& pipeline);
+    void BindPipeline(VkCommandBuffer commandBuffer, ComputePipeline& pipeline);
     void BindDescriptorSet(VkCommandBuffer commandBuffer, Pipeline& pipeline, uint32_t setIndex, DescriptorSet& descriptorSet);
     void BindRayTracingPipeline(VkCommandBuffer commandBuffer, VkPipeline pipeline);
     void BindRayTracingDescriptorSet(VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout, uint32_t setIndex, DescriptorSet& descriptorSet);
@@ -80,16 +94,18 @@ namespace VulkanRenderer {
     //                                            // 
 
     void BeginRendering();
-    void UpdateIndirectCommandBuffer(RenderData& renderData);
+    //void UpdateIndirectCommandBuffer(RenderData& renderData);
     void GeometryPass(RenderData& renderData);
     void LightingPass();
     void DownScaleGBuffer();
     void RaytracingPass();
     void RenderUI(std::vector<RenderItem2D>& renderItems, Vulkan::RenderTarget& renderTarget, Pipeline pipeline, DescriptorSet descriptorSet, bool clearScreen);
     void DebugPass(RenderData& renderData);
+    void DebugPassProbePass(RenderData& renderData);
     void EndRendering(Vulkan::RenderTarget& renderTarget, RenderData& renderData);
     void EndLoadingScreenRendering(Vulkan::RenderTarget& renderTarget, RenderData& renderData);
-
+    void PostProcessingPass(RenderData& renderData);
+    void DrawBulletDecals(RenderData& renderData);
 
     //                   //
     //      Shaders      //
@@ -102,10 +118,17 @@ namespace VulkanRenderer {
 
     void CreateShaders() {
         VkDevice device = VulkanBackEnd::GetDevice();
+
         _shaders.gBuffer.Load(device, "VK_gbuffer.vert", "VK_gbuffer.frag");
         _shaders.gBufferSkinned.Load(device, "VK_gbufferSkinned.vert", "VK_gbufferSkinned.frag");
         _shaders.lighting.Load(device, "VK_lighting.vert", "VK_lighting.frag");
-        _shaders.debug.Load(device, "VK_debug.vert", "VK_debug.frag");
+        _shaders.debugSolidColor.Load(device, "VK_debug_solidColor.vert", "VK_debug_solidColor.frag");
+        _shaders.debugPointCloud.Load(device, "VK_debug_pointCloud.vert", "VK_debug_pointCloud.frag");
+        _shaders.debugProbes.Load(device, "VK_debug_probes.vert", "VK_debug_probes.frag");
+        _shaders.bulletDecals.Load(device, "VK_bullet_decals.vert", "VK_bullet_decals.frag");
+        
+        _shaders.postProcessing.Load(device, "VK_postProcessing.comp");
+
         _raytracer.LoadShaders(device, "path_raygen.rgen", "path_miss.rmiss", "path_shadow.rmiss", "path_closesthit.rchit");
     }
 
@@ -147,7 +170,7 @@ namespace VulkanRenderer {
         _pipelines.ui.SetDepthTest(false);
         _pipelines.ui.SetDepthWrite(false);
         _pipelines.ui.SetCompareOp(VK_COMPARE_OP_ALWAYS);
-        _pipelines.ui.Build(device, _shaders.textBlitter.vertexShader, _shaders.textBlitter.fragmentShader, {VK_FORMAT_R8G8B8A8_UNORM}, VERTEX_BUFFER_INDEX_BUFFER);
+        _pipelines.ui.Build(device, _shaders.textBlitter.vertexShader, _shaders.textBlitter.fragmentShader, {VK_FORMAT_R8G8B8A8_UNORM});
         
         _pipelines.uiHiRes.PushDescriptorSetLayout(_descriptorSets.uiHiRes.layout);
         _pipelines.uiHiRes.PushDescriptorSetLayout(_descriptorSets.allTextures.layout);
@@ -160,7 +183,7 @@ namespace VulkanRenderer {
         _pipelines.uiHiRes.SetDepthTest(false);
         _pipelines.uiHiRes.SetDepthWrite(false);
         _pipelines.uiHiRes.SetCompareOp(VK_COMPARE_OP_ALWAYS);
-        _pipelines.uiHiRes.Build(device, _shaders.textBlitter.vertexShader, _shaders.textBlitter.fragmentShader, { VK_FORMAT_R8G8B8A8_UNORM }, VERTEX_BUFFER_INDEX_BUFFER);
+        _pipelines.uiHiRes.Build(device, _shaders.textBlitter.vertexShader, _shaders.textBlitter.fragmentShader, { VK_FORMAT_R8G8B8A8_UNORM });
 
     }
 
@@ -180,7 +203,7 @@ namespace VulkanRenderer {
         _pipelines.gBuffer.SetDepthTest(true);
         _pipelines.gBuffer.SetDepthWrite(true);
         _pipelines.gBuffer.SetCompareOp(VK_COMPARE_OP_LESS_OR_EQUAL);
-        _pipelines.gBuffer.Build(device, _shaders.gBuffer.vertexShader, _shaders.gBuffer.fragmentShader, { VK_FORMAT_R8G8B8A8_UNORM, VK_FORMAT_R16G16B16A16_SNORM, VK_FORMAT_R8G8B8A8_UNORM, VK_FORMAT_R16G16B16A16_SFLOAT }, VERTEX_BUFFER_INDEX_BUFFER);
+        _pipelines.gBuffer.Build(device, _shaders.gBuffer.vertexShader, _shaders.gBuffer.fragmentShader, { VK_FORMAT_R8G8B8A8_UNORM, VK_FORMAT_R16G16B16A16_SNORM, VK_FORMAT_R8G8B8A8_UNORM, VK_FORMAT_R16G16B16A16_SFLOAT });
 
         // GBuffer Skinned
         _pipelines.gBufferSkinned.PushDescriptorSetLayout(_descriptorSets.dynamic.layout);
@@ -194,7 +217,7 @@ namespace VulkanRenderer {
         _pipelines.gBufferSkinned.SetDepthTest(true);
         _pipelines.gBufferSkinned.SetDepthWrite(true);
         _pipelines.gBufferSkinned.SetCompareOp(VK_COMPARE_OP_LESS_OR_EQUAL);
-        _pipelines.gBufferSkinned.Build(device, _shaders.gBufferSkinned.vertexShader, _shaders.gBufferSkinned.fragmentShader, { VK_FORMAT_R8G8B8A8_UNORM, VK_FORMAT_R16G16B16A16_SNORM, VK_FORMAT_R8G8B8A8_UNORM, VK_FORMAT_R16G16B16A16_SFLOAT }, VERTEX_BUFFER_INDEX_BUFFER);
+        _pipelines.gBufferSkinned.Build(device, _shaders.gBufferSkinned.vertexShader, _shaders.gBufferSkinned.fragmentShader, { VK_FORMAT_R8G8B8A8_UNORM, VK_FORMAT_R16G16B16A16_SNORM, VK_FORMAT_R8G8B8A8_UNORM, VK_FORMAT_R16G16B16A16_SFLOAT });
 
         // Lighting
         _pipelines.lighting.PushDescriptorSetLayout(_descriptorSets.dynamic.layout);
@@ -209,7 +232,7 @@ namespace VulkanRenderer {
         _pipelines.lighting.SetDepthTest(false);
         _pipelines.lighting.SetDepthWrite(false);
         _pipelines.lighting.SetCompareOp(VK_COMPARE_OP_ALWAYS);
-        _pipelines.lighting.Build(device, _shaders.lighting.vertexShader, _shaders.lighting.fragmentShader, { VK_FORMAT_R8G8B8A8_UNORM }, VERTEX_BUFFER_INDEX_BUFFER);
+        _pipelines.lighting.Build(device, _shaders.lighting.vertexShader, _shaders.lighting.fragmentShader, { VK_FORMAT_R8G8B8A8_UNORM });
 
         // Debug lines
         _pipelines.debugLines.PushDescriptorSetLayout(_descriptorSets.dynamic.layout);
@@ -222,7 +245,7 @@ namespace VulkanRenderer {
         _pipelines.debugLines.SetDepthTest(false);
         _pipelines.debugLines.SetDepthWrite(false);
         _pipelines.debugLines.SetCompareOp(VK_COMPARE_OP_ALWAYS);
-        _pipelines.debugLines.Build(device, _shaders.debug.vertexShader, _shaders.debug.fragmentShader, { VK_FORMAT_R8G8B8A8_UNORM }, VERTEX_BUFFER_ONLY);
+        _pipelines.debugLines.Build(device, _shaders.debugSolidColor.vertexShader, _shaders.debugSolidColor.fragmentShader, { VK_FORMAT_R8G8B8A8_UNORM });
 
         // Debug points
         _pipelines.debugPoints.PushDescriptorSetLayout(_descriptorSets.dynamic.layout);
@@ -235,7 +258,58 @@ namespace VulkanRenderer {
         _pipelines.debugPoints.SetDepthTest(false);
         _pipelines.debugPoints.SetDepthWrite(false);
         _pipelines.debugPoints.SetCompareOp(VK_COMPARE_OP_ALWAYS);
-        _pipelines.debugPoints.Build(device, _shaders.debug.vertexShader, _shaders.debug.fragmentShader, { VK_FORMAT_R8G8B8A8_UNORM }, VERTEX_BUFFER_ONLY);
+        _pipelines.debugPoints.Build(device, _shaders.debugSolidColor.vertexShader, _shaders.debugSolidColor.fragmentShader, { VK_FORMAT_R8G8B8A8_UNORM });
+
+        // Debug Probes
+        _pipelines.debugProbes.PushDescriptorSetLayout(_descriptorSets.dynamic.layout);
+        _pipelines.debugProbes.PushDescriptorSetLayout(_descriptorSets.globalIllumination.layout);
+        _pipelines.debugProbes.CreatePipelineLayout(device);
+        _pipelines.debugProbes.SetVertexDescription(VertexDescriptionType::POSITION);;
+        _pipelines.debugProbes.SetTopology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
+        _pipelines.debugProbes.SetPolygonMode(VK_POLYGON_MODE_FILL);
+        _pipelines.debugProbes.SetCullModeFlags(VK_CULL_MODE_BACK_BIT);
+        _pipelines.debugProbes.SetColorBlending(false);
+        _pipelines.debugProbes.SetDepthTest(true);
+        _pipelines.debugProbes.SetDepthWrite(false);
+        _pipelines.debugProbes.SetCompareOp(VK_COMPARE_OP_LESS_OR_EQUAL);
+        _pipelines.debugProbes.Build(device, _shaders.debugProbes.vertexShader, _shaders.debugProbes.fragmentShader, { VK_FORMAT_R8G8B8A8_UNORM });
+
+        // Compute test
+        _pipelines.computeTest.PushDescriptorSetLayout(_descriptorSets.renderTargets.layout);
+        _pipelines.computeTest.PushDescriptorSetLayout(_descriptorSets.dynamic.layout);
+        _pipelines.computeTest.Build(device, _shaders.postProcessing.computeShader);
+        
+        // Debug point cloud
+        _pipelines.debugPointCloud.PushDescriptorSetLayout(_descriptorSets.dynamic.layout);
+        _pipelines.debugPointCloud.PushDescriptorSetLayout(_descriptorSets.globalIllumination.layout);
+        _pipelines.debugPointCloud.PushDescriptorSetLayout(_descriptorSets.raytracing.layout);
+        _pipelines.debugPointCloud.CreatePipelineLayout(device);
+        _pipelines.debugPointCloud.SetVertexDescription(VertexDescriptionType::NONE);;
+        _pipelines.debugPointCloud.SetTopology(VK_PRIMITIVE_TOPOLOGY_POINT_LIST);
+        _pipelines.debugPointCloud.SetPolygonMode(VK_POLYGON_MODE_FILL);
+        _pipelines.debugPointCloud.SetCullModeFlags(VK_CULL_MODE_NONE);
+        _pipelines.debugPointCloud.SetColorBlending(false);
+        _pipelines.debugPointCloud.SetDepthTest(false);
+        _pipelines.debugPointCloud.SetDepthWrite(false);
+        _pipelines.debugPointCloud.SetCompareOp(VK_COMPARE_OP_ALWAYS);
+        _pipelines.debugPointCloud.Build(device, _shaders.debugPointCloud.vertexShader, _shaders.debugPointCloud.fragmentShader, { VK_FORMAT_R8G8B8A8_UNORM });
+   
+        
+        // Bullet hole decals
+        _pipelines.bulletHoleDecals.PushDescriptorSetLayout(_descriptorSets.dynamic.layout);
+        _pipelines.bulletHoleDecals.PushDescriptorSetLayout(_descriptorSets.allTextures.layout);
+        _pipelines.bulletHoleDecals.CreatePipelineLayout(device);
+        _pipelines.bulletHoleDecals.SetVertexDescription(VertexDescriptionType::ALL);;
+        _pipelines.bulletHoleDecals.SetTopology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
+        _pipelines.bulletHoleDecals.SetPolygonMode(VK_POLYGON_MODE_FILL);
+        _pipelines.bulletHoleDecals.SetCullModeFlags(VK_CULL_MODE_BACK_BIT);
+        _pipelines.bulletHoleDecals.SetColorBlending(false);
+        _pipelines.bulletHoleDecals.SetDepthTest(true);
+        _pipelines.bulletHoleDecals.SetDepthWrite(true);
+        _pipelines.bulletHoleDecals.SetCompareOp(VK_COMPARE_OP_LESS_OR_EQUAL);
+        _pipelines.bulletHoleDecals.Build(device, _shaders.bulletDecals.vertexShader, _shaders.bulletDecals.fragmentShader, { VK_FORMAT_R8G8B8A8_UNORM, VK_FORMAT_R16G16B16A16_SNORM, VK_FORMAT_R8G8B8A8_UNORM, VK_FORMAT_R16G16B16A16_SFLOAT });
+
+           
     }
 
 
@@ -260,7 +334,7 @@ namespace VulkanRenderer {
         _renderTargets.loadingScreen = Vulkan::RenderTarget(device, allocator, format, PRESENT_WIDTH * scaleRatio, PRESENT_HEIGHT * scaleRatio, usageFlags, "Loading Screen Render Target");
  
         usageFlags = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-        _renderTargets.fullsizeFinalImage = Vulkan::RenderTarget(device, allocator, VK_FORMAT_R8G8B8A8_UNORM, PRESENT_WIDTH, PRESENT_HEIGHT, usageFlags, "Full Size Final Image Render Target");
+        _renderTargets.finalImage = Vulkan::RenderTarget(device, allocator, VK_FORMAT_R8G8B8A8_UNORM, PRESENT_WIDTH, PRESENT_HEIGHT, usageFlags, "Final Image Render Target");
 
         CreatePlayerRenderTargets(PRESENT_WIDTH, PRESENT_HEIGHT);
     }
@@ -337,14 +411,16 @@ namespace VulkanRenderer {
         vkCreateDescriptorPool(device, &pool_info, nullptr, &descriptorPool);
 
         // Dynamic 
-        _descriptorSets.dynamic.AddBinding(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 0, 1, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR);	// camera data
+        _descriptorSets.dynamic.AddBinding(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 0, 1, VK_SHADER_STAGE_COMPUTE_BIT | VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR);	// camera data
         _descriptorSets.dynamic.AddBinding(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, 1, VK_SHADER_STAGE_VERTEX_BIT); // 2D Render items
         _descriptorSets.dynamic.AddBinding(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 2, 1, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR); // 3D Render items
-        _descriptorSets.dynamic.AddBinding(VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR, 3, 1, VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR); // TLAS
+        _descriptorSets.dynamic.AddBinding(VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR, 3, 1, VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR | VK_SHADER_STAGE_FRAGMENT_BIT); // TLAS
         _descriptorSets.dynamic.AddBinding(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 4, 1, VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR); // Lights
         _descriptorSets.dynamic.AddBinding(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 5, 1, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR); // Geometry Instance Data
         _descriptorSets.dynamic.AddBinding(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 6, 1, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR); // Animated 3D Render items
         _descriptorSets.dynamic.AddBinding(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 7, 1, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR); // Animated transforms
+        _descriptorSets.dynamic.AddBinding(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 8, 1, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR); // Bullet decal instance data
+        _descriptorSets.dynamic.AddBinding(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 9, 1, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR); // tlas render items instance data
         _descriptorSets.dynamic.BuildSetLayout(device);
         _descriptorSets.dynamic.AllocateSet(device, descriptorPool);
         VulkanBackEnd::AddDebugName(_descriptorSets.dynamic.layout, "Dynamic Descriptor Set Layout");
@@ -369,11 +445,11 @@ namespace VulkanRenderer {
         // Render Targets
         _descriptorSets.renderTargets.AddBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 0, 1, VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_FRAGMENT_BIT); // Base color
         _descriptorSets.renderTargets.AddBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, 1, VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_FRAGMENT_BIT); // Normals
-        _descriptorSets.renderTargets.AddBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 3, 1, VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_FRAGMENT_BIT); // Depth texture
         _descriptorSets.renderTargets.AddBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 2, 1, VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_FRAGMENT_BIT); // RMA
         _descriptorSets.renderTargets.AddBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 3, 1, VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_FRAGMENT_BIT); // Depth texture
-        _descriptorSets.renderTargets.AddBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 4, 1, VK_SHADER_STAGE_FRAGMENT_BIT); // Raytracing output
-        _descriptorSets.renderTargets.AddBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 5, 1, VK_SHADER_STAGE_FRAGMENT_BIT); // GBuffer position texture
+        _descriptorSets.renderTargets.AddBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 4, 1, VK_SHADER_STAGE_FRAGMENT_BIT);    // Raytracing output
+        _descriptorSets.renderTargets.AddBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 5, 1, VK_SHADER_STAGE_FRAGMENT_BIT);    // GBuffer position texture
+        _descriptorSets.renderTargets.AddBinding(VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 6, 1, VK_SHADER_STAGE_COMPUTE_BIT);              // Lighting texture
         _descriptorSets.renderTargets.BuildSetLayout(device);
         _descriptorSets.renderTargets.AllocateSet(device, descriptorPool);
         VulkanBackEnd::AddDebugName(_descriptorSets.renderTargets.layout, "Render Targets Descriptor Set Layout");
@@ -385,6 +461,12 @@ namespace VulkanRenderer {
         _descriptorSets.raytracing.BuildSetLayout(device);
         _descriptorSets.raytracing.AllocateSet(device, descriptorPool);
         VulkanBackEnd::AddDebugName(_descriptorSets.raytracing.layout, "Raytracing Descriptor Set Layout");
+
+        // Global illumination
+        _descriptorSets.globalIllumination.AddBinding(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 0, 1, VK_SHADER_STAGE_VERTEX_BIT); // Point cloud
+        _descriptorSets.globalIllumination.BuildSetLayout(device);
+        _descriptorSets.globalIllumination.AllocateSet(device, descriptorPool);
+        VulkanBackEnd::AddDebugName(_descriptorSets.globalIllumination.layout, "Global Illumination Descriptor Set Layout");
 
         // All textures UPDATE
         VkDescriptorImageInfo samplerImageInfo = {};
@@ -438,6 +520,8 @@ namespace VulkanRenderer {
         _descriptorSets.renderTargets.Update(device, 4, 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, &storageImageDescriptor);
         storageImageDescriptor.imageView = _renderTargets.gBufferPosition._view;
         _descriptorSets.renderTargets.Update(device, 5, 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, &storageImageDescriptor);
+        storageImageDescriptor.imageView = _renderTargets.lighting._view;
+        _descriptorSets.renderTargets.Update(device, 6, 1, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, &storageImageDescriptor);
     }
     
     void UpdateRayTracingDecriptorSet() {
@@ -452,6 +536,11 @@ namespace VulkanRenderer {
         _descriptorSets.raytracing.Update(device, 2, 1, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, &storageImageDescriptor);
     }
     
+    void UpdateGlobalIlluminationDescriptorSet() {
+        VkDevice device = VulkanBackEnd::GetDevice();
+        _descriptorSets.globalIllumination.Update(device, 0, 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VulkanBackEnd::GetPointCloudBuffer()->buffer);
+    }
+    
     //                           //
     //      Storage Buffers      //
     //                           //
@@ -460,15 +549,26 @@ namespace VulkanRenderer {
         for (int i = 0; i < FRAME_OVERLAP; i++) {
             VmaAllocator allocator = VulkanBackEnd::GetAllocator();
             FrameData& frame = VulkanBackEnd::GetFrameByIndex(i);
-            frame.buffers.cameraData.Create(allocator, sizeof(CameraData), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
             frame.buffers.renderItems2D.Create(allocator, sizeof(RenderItem2D) * MAX_RENDER_OBJECTS_2D, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
             frame.buffers.renderItems2DHiRes.Create(allocator, sizeof(RenderItem2D) * MAX_RENDER_OBJECTS_2D, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-            frame.buffers.renderItems3D.Create(allocator, sizeof(RenderItem3D) * MAX_RENDER_OBJECTS_3D, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
             frame.buffers.animatedRenderItems3D.Create(allocator, sizeof(RenderItem3D) * MAX_RENDER_OBJECTS_3D, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
             frame.buffers.lights.Create(allocator, sizeof(GPULight) * MAX_LIGHTS, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-            frame.buffers.indirectCommands.Create(allocator, sizeof(DrawIndexedIndirectCommand) * MAX_INDIRECT_COMMANDS, VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-            frame.buffers.geometryInstanceData.Create(allocator, sizeof(InstanceData) * MAX_RENDER_OBJECTS_3D, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
             frame.buffers.animatedTransforms.Create(allocator, sizeof(glm::mat4) * MAX_ANIMATED_TRANSFORMS, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+            frame.buffers.bulletDecalInstanceData.Create(allocator, sizeof(RenderItem3D) * MAX_DECAL_COUNT, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+            frame.buffers.tlasRenderItems.Create(allocator, sizeof(RenderItem3D) * MAX_RENDER_OBJECTS_3D, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+
+            frame.buffers.renderItems3D.Create(allocator, sizeof(RenderItem3D) * MAX_RENDER_OBJECTS_3D * PLAYER_COUNT, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+
+            frame.buffers.cameraData.Create(allocator, sizeof(CameraData) * PLAYER_COUNT, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+            frame.buffers.geometryInstanceData.Create(allocator, sizeof(InstanceData) * MAX_RENDER_OBJECTS_3D * PLAYER_COUNT, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+            // Player draw command buffers
+            for (int i = 0; i < 4; i++) {
+                frame.buffers.drawCommandBuffers[i].geometry.Create(allocator, sizeof(DrawIndexedIndirectCommand) * MAX_INDIRECT_COMMANDS, VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+                frame.buffers.drawCommandBuffers[i].bulletHoleDecals.Create(allocator, sizeof(DrawIndexedIndirectCommand) * MAX_INDIRECT_COMMANDS, VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+            }
 
             VulkanBackEnd::AddDebugName(frame.buffers.cameraData.buffer, "CamerarData");
             VulkanBackEnd::AddDebugName(frame.buffers.renderItems2D.buffer, "RenderItems2D");
@@ -554,8 +654,16 @@ namespace VulkanRenderer {
         vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline._handle);
     }
 
+    void BindPipeline(VkCommandBuffer commandBuffer, ComputePipeline& pipeline) {
+        vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline.GetHandle());
+    }
+
     void BindDescriptorSet(VkCommandBuffer commandBuffer, Pipeline& pipeline, uint32_t setIndex, DescriptorSet& descriptorSet) {
         vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline._layout, setIndex, 1, &descriptorSet.handle, 0, nullptr);
+    }
+
+    void BindDescriptorSet(VkCommandBuffer commandBuffer, ComputePipeline& pipeline, uint32_t setIndex, DescriptorSet& descriptorSet) {
+        vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.GetLayout(), setIndex, 1, &descriptorSet.handle, 0, nullptr);
     }
 
     void BindRayTracingPipeline(VkCommandBuffer commandBuffer, VkPipeline pipeline) {
@@ -593,10 +701,10 @@ namespace VulkanRenderer {
         region.srcOffsets[1].z = 1;	
         region.srcOffsets[0].x = 0;
         region.dstOffsets[0].x = blitDstCoords.dstX0; //0
-        region.dstOffsets[0].y = blitDstCoords.dstY0; //0
+        region.dstOffsets[0].y = blitDstCoords.dstY1; //0
         region.dstOffsets[0].z = 0;
         region.dstOffsets[1].x = blitDstCoords.dstX1;// BackEnd::GetCurrentWindowWidth();
-        region.dstOffsets[1].y = blitDstCoords.dstY1;// BackEnd::GetCurrentWindowHeight();
+        region.dstOffsets[1].y = blitDstCoords.dstY0;// BackEnd::GetCurrentWindowHeight();
         region.dstOffsets[1].z = 1;
         region.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
         region.srcSubresource.mipLevel = 0;
@@ -687,7 +795,7 @@ namespace VulkanRenderer {
         VkCommandBuffer commandBuffer = currentFrame._commandBuffer;
 
 
-        BlitRenderTarget(commandBuffer, renderTarget, _renderTargets.fullsizeFinalImage, VkFilter::VK_FILTER_NEAREST, renderData.blitDstCoordsPresent);
+        BlitRenderTarget(commandBuffer, renderTarget, _renderTargets.finalImage, VkFilter::VK_FILTER_NEAREST, renderData.blitDstCoordsPresent);
 
         VkResult result;
         static uint32_t swapchainImageIndex;
@@ -698,8 +806,23 @@ namespace VulkanRenderer {
         blitDstCoords.dstY0 = 0;
         blitDstCoords.dstX1 = BackEnd::GetCurrentWindowWidth();
         blitDstCoords.dstY1 = BackEnd::GetCurrentWindowHeight();
-        BlitRenderTargetIntoSwapChain(commandBuffer, _renderTargets.fullsizeFinalImage, swapchainImageIndex, blitDstCoords);
-        
+
+     
+      // BlitRenderTargetIntoSwapChain(commandBuffer, _renderTargets.finalImage, swapchainImageIndex, blitDstCoords);
+       
+        //BlitRenderTargetIntoSwapChain(commandBuffer, _renderTargets.gBufferBasecolor, swapchainImageIndex, blitDstCoords);
+        BlitRenderTargetIntoSwapChain(commandBuffer, _renderTargets.raytracing, swapchainImageIndex, blitDstCoords);
+
+
+        /*
+        VkCommandBufferBeginInfo commandBufferBeginInfo = CommandBufferBeginInfo();
+        VK_CHECK(vkEndCommandBuffer(commandBuffer));
+        VK_CHECK(vkResetCommandBuffer(commandBuffer, 0));
+        VK_CHECK(vkBeginCommandBuffer(commandBuffer, &commandBufferBeginInfo));
+        */
+
+
+
         VulkanBackEnd::PrepareSwapchainForPresent(commandBuffer, swapchainImageIndex);
         VK_CHECK(vkEndCommandBuffer(commandBuffer));
 
@@ -790,7 +913,45 @@ namespace VulkanRenderer {
     //      Indirect commands
     //
 
-    void UpdateIndirectCommandBuffer(RenderData& renderData) {
+    void UpdateIndirectCommandBuffer(VkBuffer commandsBuffer, std::vector<DrawIndexedIndirectCommand>& commands) {
+
+        if (commands.empty()) {
+            return;
+        }
+
+        VkDevice device = VulkanBackEnd::GetDevice();
+        VmaAllocator allocator = VulkanBackEnd::GetAllocator();
+        FrameData& currentFrame = VulkanBackEnd::GetCurrentFrame();
+        const size_t bufferSize = commands.size() * sizeof(DrawIndexedIndirectCommand);
+
+        VkBufferCreateInfo stagingBufferInfo = {};
+        stagingBufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+        stagingBufferInfo.pNext = nullptr;
+        stagingBufferInfo.size = bufferSize;
+        stagingBufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+        VmaAllocationCreateInfo vmaallocInfo = {};
+        vmaallocInfo.usage = VMA_MEMORY_USAGE_CPU_ONLY;
+        AllocatedBuffer stagingBuffer;
+        VK_CHECK(vmaCreateBuffer(allocator, &stagingBufferInfo, &vmaallocInfo, &stagingBuffer._buffer, &stagingBuffer._allocation, nullptr));
+        VulkanBackEnd::AddDebugName(stagingBuffer._buffer, "stagingBuffer");
+
+        void* data;
+        vmaMapMemory(allocator, stagingBuffer._allocation, &data);
+        memcpy(data, commands.data(), bufferSize);
+        vmaUnmapMemory(allocator, stagingBuffer._allocation);
+
+        VulkanBackEnd::ImmediateSubmit([=](VkCommandBuffer cmd) {
+            VkBufferCopy copy;
+            copy.dstOffset = 0;
+            copy.srcOffset = 0;
+            copy.size = bufferSize;
+            vkCmdCopyBuffer(cmd, stagingBuffer._buffer, commandsBuffer, 1, &copy);
+        });
+
+        vmaDestroyBuffer(allocator, stagingBuffer._buffer, stagingBuffer._allocation);
+    }
+
+    /*void UpdateIndirectCommandBuffer(RenderData& renderData) {
 
         VkDevice device = VulkanBackEnd::GetDevice();
         VmaAllocator allocator = VulkanBackEnd::GetAllocator();
@@ -823,7 +984,7 @@ namespace VulkanRenderer {
         });
         
         vmaDestroyBuffer(allocator, stagingBuffer._buffer, stagingBuffer._allocation);
-    }
+    }*/
 
 
     //                  //
@@ -876,6 +1037,25 @@ namespace VulkanRenderer {
         EndLoadingScreenRendering(_renderTargets.loadingScreen, renderData);
     }
 
+    void PostProcessingPass(RenderData& renderData) {
+
+        VkDevice device = VulkanBackEnd::GetDevice();
+        FrameData& currentFrame = VulkanBackEnd::GetCurrentFrame();
+        VkCommandBuffer commandBuffer = currentFrame._commandBuffer;
+
+        _renderTargets.lighting.insertImageBarrier(commandBuffer, VK_IMAGE_LAYOUT_GENERAL, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT);
+
+        vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, _pipelines.computeTest.GetHandle());
+        vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, _pipelines.computeTest.GetLayout(), 0, 1, &_descriptorSets.renderTargets.handle, 0, nullptr);
+        vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, _pipelines.computeTest.GetLayout(), 1, 1, &_descriptorSets.dynamic.handle, 0, nullptr);
+        vkCmdDispatch(commandBuffer, _renderTargets.lighting.GetWidth() / 16, _renderTargets.lighting.GetHeight() / 4, 1);
+
+   /*     std::cout << renderData.cameraData[0].finalImageColorR << " ";
+        std::cout << renderData.cameraData[0].finalImageColorG << " ";
+        std::cout << renderData.cameraData[0].finalImageColorB << "\n";
+        */
+    }
+
     void VulkanRenderer::RenderGame(RenderData& renderData) {
 
         if (BackEnd::WindowIsMinimized()) {
@@ -885,29 +1065,50 @@ namespace VulkanRenderer {
 
         // Feed data to GPU
         WaitForFence();
-        if (renderData.playerIndex == 0) {
-            UpdateTLAS(renderData.geometryDrawInfo.renderItems); 
-            UpdateStorageBuffer(_descriptorSets.dynamic, 4, currentFrame.buffers.lights, renderData.lights.data(), sizeof(GPULight) * renderData.lights.size());
-        }        
-        UpdateIndirectCommandBuffer(renderData);
-        UpdateStorageBuffer(_descriptorSets.dynamic, 0, currentFrame.buffers.cameraData, &renderData.cameraData, sizeof(CameraData));
-        UpdateStorageBuffer(_descriptorSets.dynamic, 2, currentFrame.buffers.renderItems3D, renderData.geometryDrawInfo.renderItems.data(), sizeof(RenderItem3D) * renderData.geometryDrawInfo.renderItems.size());
+
+        UpdateTLAS(renderData.geometryDrawInfo.renderItems);
+        UpdateStorageBuffer(_descriptorSets.dynamic, 4, currentFrame.buffers.lights, renderData.lights.data(), sizeof(GPULight) * renderData.lights.size());
+
+
+        // Commands
+        for (int i = 0; i < renderData.playerCount; i++) {
+            UpdateIndirectCommandBuffer(currentFrame.buffers.drawCommandBuffers[i].geometry.buffer, renderData.geometryIndirectDrawInfo.playerDrawCommands[i]);
+            UpdateIndirectCommandBuffer(currentFrame.buffers.drawCommandBuffers[i].bulletHoleDecals.buffer, renderData.bulletHoleDecalIndirectDrawInfo.playerDrawCommands[i]);
+        }
+
+        // Shader storage objects
+        UpdateStorageBuffer(_descriptorSets.dynamic, 2, currentFrame.buffers.renderItems3D, renderData.geometryIndirectDrawInfo.instanceData.data(), sizeof(RenderItem3D) * renderData.geometryIndirectDrawInfo.instanceData.size());        
+        UpdateStorageBuffer(_descriptorSets.dynamic, 8, currentFrame.buffers.bulletDecalInstanceData, renderData.bulletHoleDecalIndirectDrawInfo.instanceData.data(), sizeof(RenderItem3D) * renderData.bulletHoleDecalIndirectDrawInfo.instanceData.size());
+
+
+        UpdateStorageBuffer(_descriptorSets.dynamic, 0, currentFrame.buffers.cameraData, &renderData.cameraData, sizeof(CameraData) * PLAYER_COUNT);
+     //   UpdateStorageBuffer(_descriptorSets.dynamic, 2, currentFrame.buffers.renderItems3D, renderData.geometryDrawInfo.renderItems.data(), sizeof(RenderItem3D) * renderData.geometryDrawInfo.renderItems.size());
         UpdateStorageBuffer(_descriptorSets.uiHiRes, 1, currentFrame.buffers.renderItems2DHiRes, renderData.renderItems2DHiRes.data(), sizeof(RenderItem2D) * renderData.renderItems2DHiRes.size());
         UpdateStorageBuffer(_descriptorSets.dynamic, 1, currentFrame.buffers.renderItems2D, renderData.renderItems2D.data(), sizeof(RenderItem2D) * renderData.renderItems2D.size());
         //UpdateStorageBuffer(_descriptorSets.dynamic, 5, currentFrame.buffers.geometryInstanceData, renderData.geometryInstanceData.data(), sizeof(RenderItem3D) * renderData.geometryInstanceData.size());
         UpdateStorageBuffer(_descriptorSets.dynamic, 6, currentFrame.buffers.animatedRenderItems3D, renderData.animatedRenderItems3D.data(), sizeof(RenderItem3D) * renderData.animatedRenderItems3D.size());
         UpdateStorageBuffer(_descriptorSets.dynamic, 7, currentFrame.buffers.animatedTransforms, (*renderData.animatedTransforms).data(), sizeof(glm::mat4) * (*renderData.animatedTransforms).size());
+        UpdateStorageBuffer(_descriptorSets.dynamic, 9, currentFrame.buffers.tlasRenderItems, renderData.shadowMapGeometryDrawInfo.renderItems.data(), sizeof(RenderItem3D) * renderData.shadowMapGeometryDrawInfo.renderItems.size());
+       
+
+        
+        
         ResetFence();
 
         // Render passes
         BeginRendering();
+
         GeometryPass(renderData);
+        DrawBulletDecals(renderData);
         RaytracingPass();
-        LightingPass();        
+        /*
+        LightingPass(); 
+        DebugPassProbePass(renderData);
+        PostProcessingPass(renderData);
         RenderUI(renderData.renderItems2DHiRes, _renderTargets.lighting, _pipelines.uiHiRes, _descriptorSets.uiHiRes, false);        
         DownScaleGBuffer();
         DebugPass(renderData);
-        RenderUI(renderData.renderItems2D, _renderTargets.present, _pipelines.ui, _descriptorSets.dynamic, false);
+        RenderUI(renderData.renderItems2D, _renderTargets.present, _pipelines.ui, _descriptorSets.dynamic, false);*/
         EndRendering(_renderTargets.present, renderData);
     }
 
@@ -1004,33 +1205,100 @@ namespace VulkanRenderer {
         vkCmdBeginRendering(commandBuffer, &renderingInfo);
         SetViewportSize(commandBuffer, _renderTargets.present);
 
+        // Debug lines
         if (linesMesh.GetVertexCount()) {
             BindPipeline(commandBuffer, _pipelines.debugLines);
             BindDescriptorSet(commandBuffer, _pipelines.debugLines, 0, _descriptorSets.dynamic);
             vkCmdBindVertexBuffers(commandBuffer, 0, 1, &linesMesh.vertexBuffer._buffer, &offset);
-            vkCmdBindIndexBuffer(commandBuffer, linesMesh.indexBuffer._buffer, 0, VK_INDEX_TYPE_UINT32);
             vkCmdDraw(commandBuffer, linesMesh.GetVertexCount(), 1, 0, 0);
         }
+        // Debug points
         if (pointsMesh.GetVertexCount()) {
             BindPipeline(commandBuffer, _pipelines.debugPoints);
             BindDescriptorSet(commandBuffer, _pipelines.debugPoints, 0, _descriptorSets.dynamic);
             vkCmdBindVertexBuffers(commandBuffer, 0, 1, &pointsMesh.vertexBuffer._buffer, &offset);
-            vkCmdBindIndexBuffer(commandBuffer, pointsMesh.indexBuffer._buffer, 0, VK_INDEX_TYPE_UINT32);
             vkCmdDraw(commandBuffer, pointsMesh.GetVertexCount(), 1, 0, 0);
+        }
+        // Point cloud
+        if (renderData.renderMode == RenderMode::POINT_CLOUD) {
+            BindPipeline(commandBuffer, _pipelines.debugPointCloud);
+            BindDescriptorSet(commandBuffer, _pipelines.debugPointCloud, 0, _descriptorSets.dynamic);
+            BindDescriptorSet(commandBuffer, _pipelines.debugPointCloud, 1, _descriptorSets.globalIllumination);
+            vkCmdDraw(commandBuffer, GlobalIllumination::GetPointCloud().size(), 1, 0, 0);
+        }
+
+        vkCmdEndRendering(commandBuffer);
+    }
+
+
+    void DebugPassProbePass(RenderData& renderData) {
+
+        static int cubeMeshIndex = AssetManager::GetModelByIndex(AssetManager::GetModelIndexByName("Cube"))->GetMeshIndices()[0];
+
+        VkCommandBuffer commandBuffer = VulkanBackEnd::GetCurrentFrame()._commandBuffer;
+
+        std::vector<VkRenderingAttachmentInfoKHR> colorAttachments;
+        VkRenderingAttachmentInfoKHR colorAttachment = {};
+        colorAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR;
+        colorAttachment.imageLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL_KHR;
+        colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+        colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+        colorAttachment.clearValue = { 0.0, 0.0, 0, 0 };
+        colorAttachment.imageView = _renderTargets.lighting._view;
+        colorAttachments.push_back(colorAttachment);
+
+        VkRenderingAttachmentInfoKHR depthStencilAttachment{};
+        depthStencilAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR;
+        depthStencilAttachment.imageView = _renderTargets.gbufferDepth._view;
+        depthStencilAttachment.imageLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL_KHR;
+        depthStencilAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+        depthStencilAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+        depthStencilAttachment.clearValue.depthStencil = { 1.0f, 0 };
+
+        VkRenderingInfoKHR renderingInfo{};
+        renderingInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO_KHR;
+        renderingInfo.renderArea = { 0, 0, _renderTargets.lighting._extent.width, _renderTargets.lighting._extent.height };
+        renderingInfo.layerCount = 1;
+        renderingInfo.colorAttachmentCount = colorAttachments.size();
+        renderingInfo.pColorAttachments = colorAttachments.data();
+        renderingInfo.pDepthAttachment = &depthStencilAttachment;
+        renderingInfo.pStencilAttachment = nullptr;
+
+        VkDeviceSize offset = 0;
+        vkCmdBeginRendering(commandBuffer, &renderingInfo);
+        SetViewportSize(commandBuffer, _renderTargets.lighting);
+        BindPipeline(commandBuffer, _pipelines.debugProbes);
+        BindDescriptorSet(commandBuffer, _pipelines.debugProbes, 0, _descriptorSets.dynamic);
+        BindDescriptorSet(commandBuffer, _pipelines.debugProbes, 1, _descriptorSets.globalIllumination);
+        vkCmdBindVertexBuffers(commandBuffer, 0, 1, &VulkanBackEnd::_mainVertexBuffer._buffer, &offset);
+        vkCmdBindIndexBuffer(commandBuffer, VulkanBackEnd::_mainIndexBuffer._buffer, 0, VK_INDEX_TYPE_UINT32);
+
+        Mesh* mesh = AssetManager::GetMeshByIndex(cubeMeshIndex);
+
+        if (renderData.renderMode == RenderMode::POINT_CLOUD_PROPAGATION_GRID ||
+            renderData.renderMode == RenderMode::PROPAGATION_GRID) {
+            LightVolume* lightVolume = GlobalIllumination::GetLightVolumeByIndex(0);
+            if (lightVolume) {
+                vkCmdDrawIndexed(commandBuffer, mesh->indexCount, GlobalIllumination::GetPointCloud().size(), mesh->baseIndex, mesh->baseVertex, 0);
+            }
         }
 
         vkCmdEndRendering(commandBuffer);
     }
 
     /*
-    
+
      █▀▀█ █▀▀ █▀▀█ █▀▄▀█ █▀▀ ▀▀█▀▀ █▀▀█ █  █ 　 █▀▀█ █▀▀█ █▀▀ █▀▀
      █ ▄▄ █▀▀ █  █ █ ▀ █ █▀▀   █   █▄▄▀ ▀▀▀█ 　 █▄▄█ █▄▄█ ▀▀█ ▀▀█
      █▄▄█ ▀▀▀ ▀▀▀▀ ▀   ▀ ▀▀▀   ▀   ▀ ▀▀ ▀▀▀▀ 　 ▀    ▀  ▀ ▀▀▀ ▀▀▀  */
 
     void GeometryPass(RenderData& renderData) {
 
-        std::vector<RenderItem3D>& renderItems = renderData.geometryDrawInfo.renderItems;
+        SplitscreenMode splitscreenMode = Game::GetSplitscreenMode();
+        unsigned int renderTargetWidth = _renderTargets.gBufferBasecolor.GetWidth();
+        unsigned int renderTargetHeight = _renderTargets.gBufferBasecolor.GetHeight();
+
+        //std::vector<RenderItem3D>& renderItems = renderData.geometryDrawInfo.renderItems;
         std::vector<RenderItem3D>& animatedRenderItems = renderData.animatedRenderItems3D;
 
         VkCommandBuffer commandBuffer = VulkanBackEnd::GetCurrentFrame()._commandBuffer;
@@ -1061,7 +1329,7 @@ namespace VulkanRenderer {
 
         VkRenderingInfoKHR renderingInfo{};
         renderingInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO_KHR;
-        renderingInfo.renderArea = { 0, 0, _renderTargets.gBufferBasecolor._extent.width, _renderTargets.gBufferBasecolor._extent.height };
+        renderingInfo.renderArea = { 0, 0, renderTargetWidth, renderTargetHeight };
         renderingInfo.layerCount = 1;
         renderingInfo.colorAttachmentCount = colorAttachments.size();
         renderingInfo.pColorAttachments = colorAttachments.data();
@@ -1069,10 +1337,10 @@ namespace VulkanRenderer {
         renderingInfo.pStencilAttachment = nullptr;
 
         vkCmdBeginRendering(commandBuffer, &renderingInfo);
-        SetViewportSize(commandBuffer, _renderTargets.gBufferBasecolor);
-        VkDeviceSize offset = 0;
+
 
         // Non skinned mesh
+        VkDeviceSize offset = 0;
         BindPipeline(commandBuffer, _pipelines.gBuffer);
         BindDescriptorSet(commandBuffer, _pipelines.gBuffer, 0, _descriptorSets.dynamic);
         BindDescriptorSet(commandBuffer, _pipelines.gBuffer, 1, _descriptorSets.allTextures);
@@ -1082,9 +1350,23 @@ namespace VulkanRenderer {
         vkCmdBindIndexBuffer(commandBuffer, indexbuffer._buffer, 0, VK_INDEX_TYPE_UINT32);
         int32_t frameIndex = VulkanBackEnd::GetFrameIndex();
         FrameData& frame = VulkanBackEnd::GetFrameByIndex(frameIndex); 
-        VkBuffer indirectBuffer = frame.buffers.indirectCommands.buffer;
-        uint32_t indirectDrawCount = renderData.geometryDrawInfo.commands.size();        
-        vkCmdDrawIndexedIndirect(commandBuffer, indirectBuffer, 0, indirectDrawCount, sizeof(VkDrawIndexedIndirectCommand));
+
+        for (int i = 0; i < renderData.playerCount; i++) {
+
+            SetViewport(commandBuffer, i, splitscreenMode, renderTargetWidth, renderTargetHeight);
+
+            PushConstants pushConstants;
+            pushConstants.playerIndex = i;
+            pushConstants.instanceOffset = renderData.geometryIndirectDrawInfo.instanceDataOffests[i];
+            vkCmdPushConstants(commandBuffer, _pipelines.gBuffer._layout, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(PushConstants), &pushConstants);
+
+            VkBuffer indirectBuffer = frame.buffers.drawCommandBuffers[i].geometry.buffer;
+            uint32_t indirectDrawCount = renderData.geometryIndirectDrawInfo.playerDrawCommands[i].size();
+            vkCmdDrawIndexedIndirect(commandBuffer, indirectBuffer, 0, indirectDrawCount, sizeof(VkDrawIndexedIndirectCommand));
+        }
+
+
+
         
         // Skinned mesh
         BindPipeline(commandBuffer, _pipelines.gBufferSkinned);
@@ -1102,6 +1384,79 @@ namespace VulkanRenderer {
 
         vkCmdEndRendering(commandBuffer);
      
+    }
+
+
+    void DrawBulletDecals(RenderData& renderData) {
+
+        SplitscreenMode splitscreenMode = Game::GetSplitscreenMode();
+        unsigned int renderTargetWidth = _renderTargets.gBufferBasecolor.GetWidth();
+        unsigned int renderTargetHeight = _renderTargets.gBufferBasecolor.GetHeight();
+
+        VkCommandBuffer commandBuffer = VulkanBackEnd::GetCurrentFrame()._commandBuffer;
+
+        std::vector<VkRenderingAttachmentInfoKHR> colorAttachments;
+        VkRenderingAttachmentInfoKHR colorAttachment = {};
+        colorAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR;
+        colorAttachment.imageLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL_KHR;
+        colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+        colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+        colorAttachment.clearValue = { 0.0, 0.0, 0, 0 };
+        colorAttachment.imageView = _renderTargets.gBufferBasecolor._view;
+        colorAttachments.push_back(colorAttachment);
+        colorAttachment.imageView = _renderTargets.gBufferNormal._view;
+        colorAttachments.push_back(colorAttachment);
+        colorAttachment.imageView = _renderTargets.gBufferRMA._view;
+        colorAttachments.push_back(colorAttachment);
+        colorAttachment.imageView = _renderTargets.gBufferPosition._view;
+        colorAttachments.push_back(colorAttachment);
+
+        VkRenderingAttachmentInfoKHR depthStencilAttachment{};
+        depthStencilAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR;
+        depthStencilAttachment.imageView = _renderTargets.gbufferDepth._view;
+        depthStencilAttachment.imageLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL_KHR;
+        depthStencilAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+        depthStencilAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+        depthStencilAttachment.clearValue.depthStencil = { 1.0f, 0 };
+
+        VkRenderingInfoKHR renderingInfo{};
+        renderingInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO_KHR;
+        renderingInfo.renderArea = { 0, 0, renderTargetWidth, renderTargetHeight };
+        renderingInfo.layerCount = 1;
+        renderingInfo.colorAttachmentCount = colorAttachments.size();
+        renderingInfo.pColorAttachments = colorAttachments.data();
+        renderingInfo.pDepthAttachment = &depthStencilAttachment;
+        renderingInfo.pStencilAttachment = nullptr;
+
+        vkCmdBeginRendering(commandBuffer, &renderingInfo);
+
+        // Non skinned mesh
+        VkDeviceSize offset = 0;
+        BindPipeline(commandBuffer, _pipelines.bulletHoleDecals);
+        BindDescriptorSet(commandBuffer, _pipelines.bulletHoleDecals, 0, _descriptorSets.dynamic);
+        BindDescriptorSet(commandBuffer, _pipelines.bulletHoleDecals, 1, _descriptorSets.allTextures);
+        auto& vertexbuffer = VulkanBackEnd::_mainVertexBuffer;
+        auto& indexbuffer = VulkanBackEnd::_mainIndexBuffer;
+        vkCmdBindVertexBuffers(commandBuffer, 0, 1, &vertexbuffer._buffer, &offset);
+        vkCmdBindIndexBuffer(commandBuffer, indexbuffer._buffer, 0, VK_INDEX_TYPE_UINT32);
+        int32_t frameIndex = VulkanBackEnd::GetFrameIndex();
+        FrameData& frame = VulkanBackEnd::GetFrameByIndex(frameIndex);
+
+        for (int i = 0; i < renderData.playerCount; i++) {
+
+            SetViewport(commandBuffer, i, splitscreenMode, renderTargetWidth, renderTargetHeight);
+
+            PushConstants pushConstants;
+            pushConstants.playerIndex = i;
+            pushConstants.instanceOffset = renderData.bulletHoleDecalIndirectDrawInfo.instanceDataOffests[i];
+            vkCmdPushConstants(commandBuffer, _pipelines.bulletHoleDecals._layout, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(PushConstants), &pushConstants);
+
+            VkBuffer indirectBuffer = frame.buffers.drawCommandBuffers[i].bulletHoleDecals.buffer;
+            uint32_t indirectDrawCount = renderData.bulletHoleDecalIndirectDrawInfo.playerDrawCommands[i].size();
+            vkCmdDrawIndexedIndirect(commandBuffer, indirectBuffer, 0, indirectDrawCount, sizeof(VkDrawIndexedIndirectCommand));
+        }
+
+        vkCmdEndRendering(commandBuffer);
     }
 
     /*    
@@ -1183,8 +1538,8 @@ namespace VulkanRenderer {
         _renderTargets.gBufferNormal.insertImageBarrier(commandBuffer, VK_IMAGE_LAYOUT_GENERAL, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT);
         _renderTargets.gBufferRMA.insertImageBarrier(commandBuffer, VK_IMAGE_LAYOUT_GENERAL, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT);
         _renderTargets.gbufferDepth.InsertImageBarrier(commandBuffer, VK_IMAGE_LAYOUT_GENERAL, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT);
-
         _renderTargets.raytracing.insertImageBarrier(commandBuffer, VK_IMAGE_LAYOUT_GENERAL, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT);
+
         vkCmdTraceRaysKHR(commandBuffer, &_raytracer.raygenShaderSbtEntry, &_raytracer.missShaderSbtEntry, &_raytracer.hitShaderSbtEntry, &_raytracer.callableShaderSbtEntry, width, height, 1);
     }
 }

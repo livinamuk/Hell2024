@@ -1,5 +1,4 @@
 #include "Door.h"
-#include "../../API/OpenGL/GL_assetManager.h"
 #include "../../Core/AssetManager.h"
 #include "../../Core/Player.h"
 #include "../../Core/Audio.hpp"
@@ -56,9 +55,18 @@ void Door::Update(float deltaTime) {
 
     // AABB
     if (raycastBody) {
+
         _aabbPreviousFrame = _aabb;
-        _aabb.extents = Util::PxVec3toGlmVec3(raycastBody->getWorldBounds().getExtents());
-        _aabb.position = Util::PxVec3toGlmVec3(raycastBody->getWorldBounds().getCenter());
+
+        glm::vec3 extents = Util::PxVec3toGlmVec3(raycastBody->getWorldBounds().getExtents());
+        glm::vec3 center = Util::PxVec3toGlmVec3(raycastBody->getWorldBounds().getCenter());
+        glm::vec3 minBounds = center - extents;
+        glm::vec3 maxBounds = center + extents;
+
+        _aabb = AABB(minBounds, maxBounds);
+
+        //_aabb.extents = Util::PxVec3toGlmVec3(raycastBody->getWorldBounds().getExtents());
+        //_aabb.position = Util::PxVec3toGlmVec3(raycastBody->getWorldBounds().getCenter());
     }
 }
 
@@ -186,7 +194,9 @@ glm::vec3 Door::GetWorldDoorWayCenter() {
 }
 
 bool Door::HasMovedSinceLastFrame() {
-    return (_aabb.position != _aabbPreviousFrame.position && _aabb.extents != _aabbPreviousFrame.extents);
+    return (_aabb.boundsMin != _aabbPreviousFrame.boundsMin &&
+        _aabb.boundsMax != _aabbPreviousFrame.boundsMax &&
+        _aabb.GetCenter() != _aabbPreviousFrame.GetCenter());
 }
 
 

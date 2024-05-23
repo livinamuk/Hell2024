@@ -5,7 +5,6 @@
 #include "Util.hpp"
 
 #include "API/OpenGL/GL_BackEnd.h"
-#include "API/OpenGL/gl_assetManager.h"
 #include "API/Vulkan/VK_BackEnd.h"
 #include "Core/AssetManager.h"
 #include "Core/Audio.hpp"

@@ -134,17 +134,21 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="src\API\OpenGL\Types\GL_cubemapTexutre.cpp" />
     <ClCompile Include="src\API\OpenGL\Types\GL_texture.cpp" />
     <ClCompile Include="src\API\Vulkan\Types\VK_texture.cpp" />
+    <ClCompile Include="src\API\Vulkan\Types\VK_texture3D.cpp" />
     <ClCompile Include="src\Core\AssetManager.cpp" />
     <ClCompile Include="src\Core\DebugMenu.cpp" />
-    <ClCompile Include="src\Renderer\PointCloud.cpp" />
+    <ClCompile Include="src\Renderer\GlobalIllumination.cpp" />
+    <ClCompile Include="src\Renderer\Types\CubemapTexutre.cpp" />
+    <ClCompile Include="src\Renderer\Types\ExrTexture.cpp" />
+    <ClCompile Include="src\Renderer\Types\LighjVolume.cpp" />
+    <ClCompile Include="src\Renderer\Types\SkinnedModel.cpp" />
+    <ClCompile Include="src\Renderer\Types\Texture.cpp" />
+    <ClCompile Include="src\Renderer\Types\Texture3D.cpp" />
     <ClCompile Include="src\Types\Animation.cpp" />
-    <ClCompile Include="src\Types\DetachedMesh.hpp" />
-    <ClCompile Include="src\Types\SkinnedModel.cpp" />
-    <ClCompile Include="src\API\OpenGL\GL_assetManager.cpp" />
     <ClCompile Include="src\Types\Modular\Door.cpp" />
-    <ClCompile Include="src\Types\ExrTexture.cpp" />
     <ClCompile Include="src\Renderer\Renderer.cpp" />
     <ClCompile Include="src\Types\Modular\Ceiling.cpp" />
     <ClCompile Include="src\Types\Modular\Floor.cpp" />
@@ -181,7 +185,6 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <ClCompile Include="src\Renderer\Renderer_OLD.cpp" />
     <ClCompile Include="src\API\OpenGL\Types\GL_shader.cpp" />
     <ClCompile Include="src\API\OpenGL\Types\GL_shadowMap.cpp" />
-    <ClCompile Include="src\Types\Texture.cpp" />
     <ClCompile Include="src\API\OpenGL\Types\GL_texture3D.cpp" />
     <ClCompile Include="src\API\Vulkan\VK_assetManager.cpp" />
     <ClCompile Include="src\API\Vulkan\VK_renderer.cpp" />
@@ -198,11 +201,13 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <ClCompile Include="vendor\VkBootstrap\VkBootstrap.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\API\OpenGL\Types\GL_cubemapTexture.h" />
     <ClInclude Include="src\API\OpenGL\Types\GL_detachedMesh.hpp" />
     <ClInclude Include="src\API\OpenGL\Types\GL_ShadowMap2.hpp" />
     <ClInclude Include="src\API\OpenGL\Types\GL_texture.h" />
     <ClInclude Include="src\API\Vulkan\Types\vk_allocation.hpp" />
     <ClInclude Include="src\API\Vulkan\Types\VK_buffer.h" />
+    <ClInclude Include="src\API\Vulkan\Types\VK_computePipeline.hpp" />
     <ClInclude Include="src\API\Vulkan\Types\VK_frameData.hpp" />
     <ClInclude Include="src\API\Vulkan\Types\VK_detachedMesh.hpp" />
     <ClInclude Include="src\API\Vulkan\Types\VK_raytracing.hpp" />
@@ -210,6 +215,9 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <ClInclude Include="src\API\Vulkan\Types\VK_descriptorSet.hpp" />
     <ClInclude Include="src\API\Vulkan\Types\VK_renderTarget.hpp" />
     <ClInclude Include="src\API\Vulkan\Types\VK_texture.h" />
+    <ClInclude Include="src\API\Vulkan\Types\VK_texture3D.h" />
+    <ClInclude Include="src\API\Vulkan\VK_common.h" />
+    <ClInclude Include="src\API\Vulkan\Vk_util.hpp" />
     <ClInclude Include="src\Core\JSON.hpp" />
     <ClInclude Include="src\Core\WeaponManager.hpp" />
     <ClInclude Include="src\ErrorChecking.h" />
@@ -218,12 +226,22 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <ClInclude Include="src\Core\DebugMenu.h" />
     <ClInclude Include="src\Common.h" />
     <ClInclude Include="src\File\File.hpp" />
+    <ClInclude Include="src\Renderer\GlobalIllumination.h" />
     <ClInclude Include="src\Renderer\PointCloud.h" />
     <ClInclude Include="src\Renderer\RenderData.h" />
     <ClInclude Include="src\Renderer\RendererUtil.hpp" />
+    <ClInclude Include="src\Renderer\Types\CubemapTexture.h" />
+    <ClInclude Include="src\Renderer\Types\DetachedMesh.hpp" />
+    <ClInclude Include="src\Renderer\Types\ExrTexture.h" />
+    <ClInclude Include="src\Renderer\Types\LightVolume.h" />
+    <ClInclude Include="src\Renderer\Types\Mesh.hpp" />
+    <ClInclude Include="src\Renderer\Types\Model.hpp" />
+    <ClInclude Include="src\Renderer\Types\SkinnedMesh.hpp" />
+    <ClInclude Include="src\Renderer\Types\SkinnedModel.h" />
+    <ClInclude Include="src\Renderer\Types\Texture.h" />
+    <ClInclude Include="src\Renderer\Types\Texture3D.h" />
     <ClInclude Include="src\Types\Animation.h" />
     <ClInclude Include="src\Types\SkinnedMesh.hpp" />
-    <ClInclude Include="src\Types\SkinnedModel.h" />
     <ClInclude Include="src\API\OpenGL\GL_assetManager.h" />
     <ClInclude Include="src\Core\Audio.hpp" />
     <ClInclude Include="src\Types\Modular\Door.h" />

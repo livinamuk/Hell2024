@@ -4,9 +4,9 @@
 #include "GL_texture3D.h"
 #include "../../../Util.hpp"
 
-Texture3D::Texture3D() {}
+OpenGLTexture3D::OpenGLTexture3D() {}
 
-Texture3D::Texture3D(int width, int height, int depth){
+void OpenGLTexture3D::Create(int width, int height, int depth){
 	_width = width;
 	_height = height;
 	_depth = depth;
@@ -20,23 +20,23 @@ Texture3D::Texture3D(int width, int height, int depth){
 	glTexImage3D(GL_TEXTURE_3D, 0, GL_RGBA32F, _width, _height, _depth, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
 }
 
-unsigned int Texture3D::GetID() {
+unsigned int OpenGLTexture3D::GetID() {
 	return _ID;
 }
 
-unsigned int Texture3D::GetWidth() {
+unsigned int OpenGLTexture3D::GetWidth() {
 	return _width;
 }
 
-unsigned int Texture3D::GetHeight() {
+unsigned int OpenGLTexture3D::GetHeight() {
 	return _height;
 }
 
-unsigned int Texture3D::GetDepth() {
+unsigned int OpenGLTexture3D::GetDepth() {
 	return _depth;
 }
 
-void Texture3D::Bind(unsigned int slot) {
+void OpenGLTexture3D::Bind(unsigned int slot) {
 	glActiveTexture(GL_TEXTURE0 + slot);
 	glBindTexture(GL_TEXTURE_3D, _ID);
 }

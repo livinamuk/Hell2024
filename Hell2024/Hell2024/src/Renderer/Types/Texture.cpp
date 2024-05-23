@@ -1,16 +1,5 @@
 #include "Texture.h"
-#include "../BackEnd/BackEnd.h"
-
-/*
-void Texture::UploadToGPU(void* data, CMP_Texture* cmpTexture, int width, int height, int channelCount) {
-    if (BackEnd::GetAPI() == API::OPENGL) {
-        glTexture.UploadToGPU(data, cmpTexture, );
-    }
-    else if (BackEnd::GetAPI() == API::VULKAN) {
-        // TO DO
-        return;
-    }
-}*/
+#include "../../BackEnd/BackEnd.h"
 
 void Texture::Load(const std::string filepath) {
     if (BackEnd::GetAPI() == API::OPENGL) {        

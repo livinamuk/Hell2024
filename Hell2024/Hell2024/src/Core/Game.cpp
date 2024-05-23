@@ -4,7 +4,7 @@
 #include "InputMulti.h"
 #include "Scene.h"
 #include "../BackEnd/BackEnd.h"
-#include "../Renderer/PointCloud.h"
+#include "../Renderer/GlobalIllumination.h"
 #include "../Renderer/Renderer.h"
 
 namespace Game {
@@ -23,14 +23,19 @@ namespace Game {
     void EvaluateDebugKeyPresses(); 
 
     void Create() {
+
         _gameMode = GameMode::GAME;
         _multiplayerMode = MultiplayerMode::LOCAL;
         _splitscreenMode = SplitscreenMode::NONE;
         _lastFrame = glfwGetTime();
         _thisFrame = _lastFrame;
         _isLoaded = true;
+
         Scene::LoadMapNEW("map.txt");
-        PointCloud::Create();
+
+        GlobalIllumination::CreatePointCloud();
+        GlobalIllumination::CreateLightVolume(7.0f, 2.7f, 11.0f, 0.0f, 0.0f, 0.0f);
+
         CreatePlayers(4);
     }
 

@@ -1,11 +1,12 @@
 #pragma once
 #include "../Common.h"
-#include "../Types/ExrTexture.h"
-#include "../Types/Mesh.hpp"
-#include "../Types/Model.hpp"
-#include "../Types/SkinnedMesh.hpp"
-#include "../Types/SkinnedModel.h"
-#include "../Types/Texture.h"
+#include "../Renderer/Types/CubemapTexture.h"
+#include "../Renderer/Types/ExrTexture.h"
+#include "../Renderer/Types/Mesh.hpp"
+#include "../Renderer/Types/Model.hpp"
+#include "../Renderer/Types/SkinnedMesh.hpp"
+#include "../Renderer/Types/SkinnedModel.h"
+#include "../Renderer/Types/Texture.h"
 
 namespace AssetManager {
 
@@ -29,8 +30,15 @@ namespace AssetManager {
     Mesh* GetQuadMesh();
     int GetMeshIndexByName(const std::string& name);
     int CreateMesh(std::string name, std::vector<Vertex>& vertices, std::vector<uint32_t>& indices);
-    unsigned int GetQuadMeshIndex();
+
     unsigned int GetUpFacingPlaneMeshIndex();
+    unsigned int GetQuadMeshIndex();
+    unsigned int GetQuadMeshIndexSplitscreenTop();
+    unsigned int GetQuadMeshIndexSplitscreenBottom();
+    unsigned int GetQuadMeshIndexQuadscreenTopLeft();
+    unsigned int GetQuadMeshIndexQuadscreenTopRight();
+    unsigned int GetQuadMeshIndexQuadscreenBottomLeft();
+    unsigned int GetQuadMeshIndexQuadscreenBottomRight();
 
     // Models
     Model* GetModelByIndex(int index);
@@ -69,6 +77,10 @@ namespace AssetManager {
     std::vector<Texture>& GetTextures();
     void LoadFont(); 
     ivec2 GetTextureSizeByName(const char* textureName);
+
+    // Cubemap Textures
+    CubemapTexture* GetCubemapTextureByIndex(const int index);
+    int GetCubemapTextureIndexByName(const std::string& name);
 
     // EXR Textures
     ExrTexture* GetExrTextureByName(const std::string& name);

@@ -12,9 +12,17 @@ layout(set = 0, binding = 0) readonly buffer CameraData {
     mat4 view;
     mat4 viewInverse;
 	float viewportWidth;
-	float viewportHeight;
-	float padding0;
-	float padding1;
+	float viewportHeight;   
+    float viewportOffsetX;
+    float viewportOffsetY; 
+	float clipSpaceXMin;
+    float clipSpaceXMax;
+    float clipSpaceYMin;
+    float clipSpaceYMax;
+	float finalImageColorContrast;
+    float finalImageColorR;
+    float finalImageColorG;
+    float finalImageColorB;
 } cameraData;
 
 void main() {	

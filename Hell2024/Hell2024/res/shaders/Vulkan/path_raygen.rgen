@@ -1,22 +1,37 @@
 #version 460
 #extension GL_EXT_ray_tracing : enable
+#extension GL_EXT_ray_query : enable
 
-layout(set = 0, binding = 0) readonly buffer CameraData {
+struct CameraData {
     mat4 projection;
     mat4 projectionInverse;
     mat4 view;
     mat4 viewInverse;
 	float viewportWidth;
-	float viewportHeight;
-	float padding0;
-	float padding1;
+	float viewportHeight;   
+    float viewportOffsetX;
+    float viewportOffsetY; 
+	float clipSpaceXMin;
+    float clipSpaceXMax;
+    float clipSpaceYMin;
+    float clipSpaceYMax;
+	float finalImageColorContrast;
+    float finalImageColorR;
+    float finalImageColorG;
+    float finalImageColorB;
+};
+
+layout(set = 0, binding = 0) readonly buffer BUFFER_CAM_DATA {
+    CameraData[4] data;
 } cameraData;
 
 
 struct RayPayload {
-	vec3 color;
-	vec3 hitPos;
-	vec3 normal;
+	vec4 color;
+	int lightIndex;
+	float viewPosX;
+	float viewPosY;
+	float viewPosZ;
 };
 
 
@@ -89,7 +104,7 @@ vec3 fresnelSchlick(float cosTheta, vec3 F0) {
     return F0 + (1.0 - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
 }
 
-vec3 microfacetBRDF(in vec3 L, in vec3 V, in vec3 N, in vec3 baseColor, in float metallicness, in float fresnelReflect, in float roughness, in vec3 WorldPos) {
+vec3 microfacetBRDF(in vec3 L, in vec3 V, in vec3 N, in vec3 baseColor, in float metallicness, in float fresnelReflect, in float roughness, in vec3 WorldPos, out vec3 outColor) {
   vec3 H = normalize(V + L); // half vector
   // all required dot products
   float NoV = clamp(dot(N, V), 0.0, 1.0);
@@ -122,16 +137,22 @@ vec3 microfacetBRDF(in vec3 L, in vec3 V, in vec3 N, in vec3 baseColor, in float
   test *= metallicness;
   //result = vec3(test * test);
 
+  outColor = vec3(test * test);
+
   float test2 = (spec.x + spec.y + spec.z) * 0.33;
  // result = vec3(spec);
 
   return result;
 }
 
-vec3 GetDirectLighting(vec3 lightPos, vec3 lightColor, float radius, float strength, vec3 Normal, vec3 WorldPos, vec3 baseColor, float roughness, float metallic) {
+struct DirectLightingResult {
+	vec3 color;
+	vec3 specularAmount;
+};
+
+DirectLightingResult GetDirectLighting(vec3 lightPos, vec3 lightColor, float radius, float strength, vec3 Normal, vec3 WorldPos, vec3 baseColor, float roughness, float metallic, vec3 viewPos) {
 	float fresnelReflect = 1.0; // 0.5 is what they used for box, 1.0 for demon
 
-	vec3 viewPos = cameraData.viewInverse[3].xyz;
 
 	vec3 viewDir = normalize(viewPos - WorldPos);    
 	float lightRadiance = strength * 1;// * 1.25;
@@ -140,8 +161,18 @@ vec3 GetDirectLighting(vec3 lightPos, vec3 lightColor, float radius, float stren
 	// lightAttenuation = clamp(lightAttenuation, 0.0, 0.9); // THIS IS WRONG, but does stop super bright region around light source and doesn't seem to affect anything else...
 	float irradiance = max(dot(lightDir, Normal), 0.0) ;
 	irradiance *= lightAttenuation * lightRadiance;		
-	vec3 brdf = microfacetBRDF(lightDir, viewDir, Normal, baseColor, metallic, fresnelReflect, roughness, WorldPos);
-	return brdf * irradiance * clamp(lightColor, 0, 1);
+
+
+
+	DirectLightingResult result;	
+	vec3 brdf = microfacetBRDF(lightDir, viewDir, Normal, baseColor, metallic, fresnelReflect, roughness, WorldPos, result.specularAmount);
+
+	
+	result.color =  brdf * irradiance * clamp(lightColor, 0, 1);
+
+	return result;
+
+	//return brdf * irradiance * clamp(lightColor, 0, 1);
 }
 
 
@@ -178,17 +209,46 @@ vec3 Tonemap_ACES(const vec3 x) { // Narkowicz 2015, "ACES Filmic Tone Mapping C
 
 
 
-
-
-
+float map(float value, float min1, float max1, float min2, float max2) {
+	float perc = (value - min1) / (max1 - min1);
+	return perc * (max2 - min2) + min2;
+}
 
 void main() {
 
 	// Get UVs from pixel position
 	const vec2 pixelCenter = vec2(gl_LaunchIDEXT.xy) + vec2(0.5);
 	const vec2 texCoord = pixelCenter/vec2(gl_LaunchSizeEXT.xy);
+	
+	int playerIndex = int(texture(normalTexture, texCoord).a * 4 + 0.5);
 
+	mat4 proj = cameraData.data[playerIndex].projection;
+	mat4 view = cameraData.data[playerIndex].view;
+	mat4 projectionInverse = cameraData.data[playerIndex].projectionInverse;
+	mat4 viewInverse = cameraData.data[playerIndex].viewInverse;
+	vec3 viewPos = cameraData.data[playerIndex].viewInverse[3].xyz;
+	
+	float clipSpaceXMin = cameraData.data[playerIndex].clipSpaceXMin;
+	float clipSpaceXMax = cameraData.data[playerIndex].clipSpaceXMax;
+	float clipSpaceYMin = cameraData.data[playerIndex].clipSpaceYMin;
+	float clipSpaceYMax = cameraData.data[playerIndex].clipSpaceYMax;
+	
+	//clipSpaceXMin = 0;
+	//clipSpaceXMax = 1;
+	//clipSpaceYMin = 0.5;
+	//clipSpaceYMax = 1.0;
+	
+	//clipSpaceXMin = 0;
+	//clipSpaceXMax = 1;
+	//clipSpaceYMin = 0.0;
+	//clipSpaceYMax = 1.0;
+
+
+	
+
+	vec2 d = texCoord * 2.0 - 1.0;
 	// Sample G Buffer
+
 	vec3 baseColor = texture(baseColorTexture, texCoord).rgb;
 	baseColor.rgb = pow(baseColor.rgb, vec3(2.2));
 	vec3 normal = texture(normalTexture, texCoord).rgb;
@@ -200,88 +260,126 @@ void main() {
 	// Reconstruct position from depth	
 	const mat4 correction = mat4(1.0,  0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0,  0.0, 0.5, 0.0, 0.0,  0.0, 0.5, 1.0);	
     vec2 clipSpaceTexCoord = texCoord;
-	vec4 clipSpacePosition = vec4(texCoord * 2.0 - 1.0, z, 1.0);
-    vec4 viewSpacePosition = cameraData.projectionInverse * clipSpacePosition;
+	clipSpaceTexCoord.x = map(clipSpaceTexCoord.x, clipSpaceXMin, clipSpaceXMax, 0.0, 1.0);
+	clipSpaceTexCoord.y = map(clipSpaceTexCoord.y, clipSpaceYMin, clipSpaceYMax, 0.0, 1.0);
+	vec4 clipSpacePosition = vec4(clipSpaceTexCoord * 2.0 - 1.0, z, 1.0);
+    vec4 viewSpacePosition = projectionInverse * clipSpacePosition;
     viewSpacePosition /= viewSpacePosition.w;
-    vec4 worldSpacePosition = cameraData.viewInverse * viewSpacePosition;    
-    vec3 worldPos = worldSpacePosition.xyz;
+    vec4 worldSpacePosition = viewInverse * viewSpacePosition;    
+    vec3 WorldPos = worldSpacePosition.xyz;
 	
-	mat4 proj = cameraData.projection;
-	mat4 view = cameraData.view;	
-	mat4 inverseProjection = cameraData.projectionInverse;
-	mat4 inverseView = cameraData.viewInverse;	
+
+
+	//float z = texture(depthTexture, TexCoords).x;
+	/*
+    vec2 clipSpaceTexCoord = texCoord;
+	clipSpaceTexCoord.x = map(clipSpaceTexCoord.x, clipSpaceXMin, clipSpaceXMax, 0.0, 1.0);
+	clipSpaceTexCoord.y = map(clipSpaceTexCoord.y, clipSpaceYMin, clipSpaceYMax, 0.0, 1.0);
+	vec4 clipSpacePosition = vec4(clipSpaceTexCoord * 2.0 - 1.0, z, 1.0);
+    vec4 viewSpacePosition = projectionInverse * clipSpacePosition;
+    viewSpacePosition /= viewSpacePosition.w;
+    vec4 worldSpacePosition = viewInverse * viewSpacePosition;    
+    vec3 WorldPos = worldSpacePosition.xyz;
+
+
+	*/
 
 
 
 
-	vec3 directLighting = vec3(0);
+	vec3 color = vec3(0, 0, 0);
+
+	vec4 target = projectionInverse * vec4(d.x, d.y, 1, 1) ;		
+	uint flags = gl_RayFlagsCullFrontFacingTrianglesEXT;
+	uint cullMask = 0xff;
+	float minRayDist = 0.001;
+	float maxRayDist = 1000.0;
+
+	vec4 cameraDirection = viewInverse * vec4(normalize(target.xyz / target.w), 0);	
+	//vec3 rayDirection = reflect(cameraDirection.xyz, normal);
+
+	
+
+	rayPayload.color = vec4(0, 0, 1, 1);
+	rayPayload.viewPosX = viewPos.x;
+	rayPayload.viewPosY = viewPos.y;
+	rayPayload.viewPosZ = viewPos.z;
+
+
+	vec3 debugColor = vec3(1,0,0);
 
 	for (int i = 0; i < 8; i++) {
 
-		Light light = lights.data[i];
-
-			
+		Light light = lights.data[i];		
 		vec3 lightPosition = vec3(light.posX, light.posY, light.posZ);
 		vec3 lightColor = vec3(light.colorR, light.colorG, light.colorB);
+		vec3 L = normalize(lightPosition - WorldPos);
+		float dist = distance(lightPosition, WorldPos); 
+		
+		//vec3 rayDirection = reflect(L, normal);
+		vec3 rayDirection = reflect(cameraDirection.rgb, normal);
 
-		// Light
-		float lightStrength = 1.2;
-		float lightRadius = 5.6;
+		
+			//debugColor =  rayDirection * vec3(-1, 1, 1);
 
-	
-		lightRadius = light.radius;
-		lightStrength = light.strength;
+		rayQueryEXT rayQuery;
+		rayQueryInitializeEXT(rayQuery, topLevelAS, gl_RayFlagsTerminateOnFirstHitEXT, 0xFF, WorldPos, 0.01, L, dist);
 
-		vec3 lightDir = normalize(lightPosition - worldPos); 
-		float lightAttenuation =  smoothstep(lightRadius, 0, length(lightPosition - worldPos));
-		float irradiance = max(dot(lightDir, normal), 0.0) ;
-		irradiance *= lightAttenuation * lightStrength;	
+		// Traverse the acceleration structure and store information about the first intersection (if any)
+		rayQueryProceedEXT(rayQuery);
 
-		// Shadow ray
-		vec3 origin = worldPos + (normal * vec3(0.01));
-		float shadowFactor = 1;
-		float minRayDist = 0.00001;
-		float distanceToLight = distance(lightPosition.xyz, origin);
-		uint  flags  = gl_RayFlagsTerminateOnFirstHitEXT | gl_RayFlagsOpaqueEXT | gl_RayFlagsSkipClosestHitShaderEXT | gl_RayFlagsCullFrontFacingTrianglesEXT;     	
-		isShadowed = true;
-			
-			
-			//	vec3 ligthting = GetDirectLighting(lightPosition, lightColor, light.radius, light.strength, normal, worldPos, baseColor.rgb, roughness, metallic);
-			//	directLighting += ligthting;
-
-		if (distanceToLight < lightRadius) {
-			traceRayEXT(topLevelAS,	flags, 0xFF, 0, 0, 1, origin, minRayDist, lightDir, distanceToLight, 1);		
-			if(isShadowed) {
-				shadowFactor = 0;
-				//directLighting += vec3(1, 0, 0);
-			} 
-
-			// If ray made it to the light source then calculate the direct lighting contribution
-			else {
-				vec3 ligthting = GetDirectLighting(lightPosition, lightColor, light.radius, light.strength, normal, worldPos, baseColor.rgb, roughness, metallic);
-				directLighting += ligthting;
-	//			directLighting += vec3(0.1);
-//		directLighting += vec3(lightColor * 0.01);
-			}
+		// If the intersection has hit a triangle, the fragment is shadowed
+		if (rayQueryGetIntersectionTypeEXT(rayQuery, true) == gl_RayQueryCommittedIntersectionTriangleEXT ) {
+			//color = vec3(0,0,0);
 		}
+		// If not, begin the adventure
 		else {
-			//directLighting += vec3(1, 0, 0);
+
+			// TODO: calculate direct lighting
+
+			// REFLECTION:
+			
+			//traceRayEXT(topLevelAS,	flags, 0xFF, 0, 0, 1, WorldPos, minRayDist, rayDirection, maxRayDist, 1);
+			
+			rayPayload.lightIndex = i;
+
+			traceRayEXT(topLevelAS, flags, cullMask, 0, 0, 0, WorldPos, minRayDist, rayDirection, maxRayDist, 0);
+
+			vec3 reflectedColor = rayPayload.color.xyz;
+
+			vec3 outColor2 = vec3(0,0,0);
+
+			DirectLightingResult result = GetDirectLighting(lightPosition, lightColor, light.radius, light.strength, normal, WorldPos, baseColor.rgb, roughness, metallic, viewPos);
+
+			//color = directLigthting + reflectedColor;
+			//color = directLigthting;
+			//color = outColor2;
+			
+			//color += mix(result.color, reflectedColor, metallic);
+			
+			color += result.color + (result.specularAmount * reflectedColor * roughness) ;
+		//	color =  result.color + reflectedColor;
+			//color +=  reflectedColor;
+			//color = reflectedColor;
+
+			//color = normal;
+			//color = vec3(1, 1, 1);
 		}
 
-	}
-	
-	
-	vec4 outputColor = vec4(directLighting, 1);
 
-	// FragColor.rgb = indirectLighting;    
-	//float d = distance(viewPos, WorldPos);
-	//float alpha = getFogFactor(d);
-	//vec3 FogColor = vec3(0.0);
-	//outputColor.rgb = mix(outputColor.rgb, FogColor, alpha);
+
+
+		
+	}
+
+	
+	vec4 outputColor = vec4(color, 1); 
+
 	outputColor.rgb = mix(outputColor.rgb, Tonemap_ACES(outputColor.rgb), 1.0);
 	outputColor.rgb = mix(outputColor.rgb, Tonemap_ACES(outputColor.rgb), 0.35);	
 	outputColor.rgb = pow(outputColor.rgb, vec3(1.0/2.2)); 
 
+	
 	// Vignette         
 	vec2 uv = texCoord;//gl_FragCoord.xy / vec2(screenWidth * 1, screenHeight * 1);
 	uv *=  1.0 - uv.yx;           
@@ -303,68 +401,14 @@ void main() {
 	// Brightness
 	outputColor.rgb -= vec3(0.010);
 
-
-
-	//vec4 outputColor = vec4(normal, 1);
-/*
-	mat4 proj = globalShaderData.projection;
-	mat4 view = globalShaderData.view;
-	mat4 projInverse = globalShaderData.projectionInverse;
-	mat4 viewInverse = globalShaderData.viewInverse;
-
-	const vec2 pixelCenter = vec2(gl_LaunchIDEXT.xy) + vec2(0.5);
-	const vec2 inUV = pixelCenter/vec2(gl_LaunchSizeEXT.xy);
-	vec2 d = inUV * 2.0 - 1.0;
-	vec4 origin = viewInverse * vec4(0,0,0,1);
-	vec4 target = projInverse * vec4(d.x, d.y, 1, 1) ;		
-	uint rayFlags = gl_RayFlagsCullFrontFacingTrianglesEXT;
-	uint cullMask = 0xff;
-	float tmin = 0.001;
-	float tmax = 10000.0;
+	//outputColor.rgb = vec3(pIndex);
 	
-	rayPayload.color = vec3(0);
-	rayPayload.hitPos = vec3(0);
-	rayPayload.normal = vec3(0);
-
-	vec4 direction = viewInverse * vec4(normalize(target.xyz / target.w), 0);
-
-	vec3 rayDirection = normalize(direction.xyz);
-	vec3 rayOrigin = origin.xyz;
+	//outputColor.rgb = debugColor;
 	
-	traceRayEXT(topLevelAS, rayFlags, cullMask, 0, 0, 0, rayOrigin, tmin, rayDirection, tmax, 0);		
-	
-	vec4 outputColor = vec4(rayPayload.color, 1);
-	
-	// Hack floor reflections
-	if (rayPayload.hitPos.y < 3.11) {
-		rayDirection = reflect(direction.xyz, rayPayload.normal);
-		rayOrigin = rayPayload.hitPos.xyz;	
-		traceRayEXT(topLevelAS, rayFlags, cullMask, 0, 0, 0, rayOrigin, tmin, rayDirection, tmax, 0);
-		outputColor += vec4(rayPayload.color, 1);
-		
-		rayDirection = reflect(rayDirection.xyz, rayPayload.normal);
-		rayOrigin = rayPayload.hitPos.xyz;	
-		traceRayEXT(topLevelAS, rayFlags, cullMask, 0, 0, 0, rayOrigin, tmin, rayDirection, tmax, 0);
-		outputColor += vec4(rayPayload.color, 1);
-
-		rayDirection = reflect(rayDirection.xyz, rayPayload.normal);
-		rayOrigin = rayPayload.hitPos.xyz;	
-		traceRayEXT(topLevelAS, rayFlags, cullMask, 0, 0, 0, rayOrigin, tmin, rayDirection, tmax, 0);
-		outputColor += vec4(rayPayload.color, 1);
-	}
-	*/
-
-	//outputColor.rgb = baseColor;
-
-	imageStore(outputImage, ivec2(gl_LaunchIDEXT.x, gl_LaunchIDEXT.y), outputColor);
+	imageStore(outputImage, ivec2(gl_LaunchIDEXT.x, gl_LaunchIDEXT.y),  outputColor);
 
 	
-	//Light light = lights.data[0];
-
-			
-	//vec3 lightPosition = vec3(light.posX, light.posY, light.posZ);
-	//vec3 lightColor = vec3(light.colorR, light.colorG, light.colorB);
-	//imageStore(outputImage, ivec2(gl_LaunchIDEXT.x, gl_LaunchIDEXT.y), vec4(worldPos, 1.0));
 }
+
 
 

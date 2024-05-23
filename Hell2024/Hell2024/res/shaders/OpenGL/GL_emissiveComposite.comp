@@ -9,11 +9,18 @@ layout (binding = 4) uniform sampler2D blurBuffer3ColorB;
 
 uniform float screenWidth;
 uniform float screenHeight;
+uniform int viewportOffsetX;
+uniform int viewportOffsetY;
 
 void main() {
 
 	ivec2 texCoord = ivec2(gl_GlobalInvocationID.xy);
-    vec3 color = imageLoad(tex, texCoord).rgb;
+	
+	ivec2 finalTexCoord = texCoord;
+	finalTexCoord.x += viewportOffsetX;
+	finalTexCoord.y += viewportOffsetY;
+
+    vec3 color = imageLoad(tex, finalTexCoord).rgb;
 
 	vec2 uv = vec2(texCoord.x / screenWidth, texCoord.y / screenHeight); 
 		
@@ -22,6 +29,7 @@ void main() {
 	color += texture(blurBuffer2ColorB, uv).rgb;
 	color += texture(blurBuffer3ColorB, uv).rgb;
 
-	imageStore(tex, texCoord, vec4(color, 1));
+
+	imageStore(tex, finalTexCoord, vec4(color, 1));
 }
 

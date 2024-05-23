@@ -15,10 +15,8 @@ namespace VulkanShaderUtil {
 namespace Vulkan {
 
     struct Shader {
-
         VkShaderModule vertexShader;
         VkShaderModule fragmentShader;
-
         void Load(VkDevice device, std::string vertexPath, std::string fragmentPath) {
             VulkanShaderUtil::LoadShader(device, vertexPath, VK_SHADER_STAGE_VERTEX_BIT, &vertexShader);
             VulkanShaderUtil::LoadShader(device, fragmentPath, VK_SHADER_STAGE_FRAGMENT_BIT, &fragmentShader);
@@ -26,12 +24,15 @@ namespace Vulkan {
     };
 
     struct ComputeShader {
-
+        VkShaderModule computeShader;
+        void Load(VkDevice device, std::string computePath) {
+            VulkanShaderUtil::LoadShader(device, computePath, VK_SHADER_STAGE_COMPUTE_BIT, &computeShader);
+        }
     };
 
-    struct RayTracingShader {
-
-    };
+    //struct RayTracingShader {
+    //
+    //};
 }
 
 

@@ -41,5 +41,8 @@ namespace VulkanRenderer {
     Raytracer& GetRaytracer();
     void LoadRaytracingFunctionPointer();
 
+    // Global illumination
+    void UpdateGlobalIlluminationDescriptorSet();
+
     void PresentFinalImage();
 }

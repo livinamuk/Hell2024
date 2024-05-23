@@ -4,7 +4,7 @@
 #include "Types/vk_allocation.hpp"
 #include "Types/vk_frameData.hpp"
 #include "../../Common.h"
-#include "../../Types/Mesh.hpp"
+#include "../../Renderer/Types/Mesh.hpp"
 #include "../../Renderer/RendererCommon.h"
 
 namespace VulkanBackEnd {
@@ -64,5 +64,9 @@ namespace VulkanBackEnd {
     void CreateTopLevelAccelerationStructure(std::vector<VkAccelerationStructureInstanceKHR> instances, AccelerationStructure& outTLAS);
     std::vector<VkAccelerationStructureInstanceKHR> CreateTLASInstancesFromRenderItems(std::vector<RenderItem3D>& renderItems);
 
+    // Point Cloud
+    void CreatePointCloudVertexBuffer(std::vector<CloudPoint>& pointCloud);
+    Buffer* GetPointCloudBuffer();
+    void DestroyPointCloudBuffer();
 };
 

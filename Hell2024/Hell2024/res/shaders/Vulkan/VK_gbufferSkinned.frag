@@ -10,6 +10,7 @@ layout (location = 5) in vec3 attrNormal;
 layout (location = 6) in vec3 attrTangent;
 layout (location = 7) in vec3 attrBiTangent;
 layout (location = 8) in vec3 WorldPos;
+layout (location = 9) in flat int playerIndex;
 
 
 layout (location = 0) out vec4 baseColorOut;
@@ -29,7 +30,7 @@ void main() {
 	vec3 normal = normalize(tbn * (normalMap.rgb * 2.0 - 1.0));
 	
 	baseColorOut = vec4(baseColor.rgb, 1.0);
-	normalOut = vec4(normal, 1.0);
+	normalOut = vec4(normal, float(playerIndex) * 0.25);
 	rmaOut = vec4(rma, 1.0);
     positionOut = vec4(WorldPos, 1.0);
 

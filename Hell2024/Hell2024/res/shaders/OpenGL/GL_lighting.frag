@@ -12,6 +12,11 @@ in vec2 TexCoords;
 uniform mat4 inverseProjection;
 uniform mat4 inverseView;
 
+uniform float clipSpaceXMin;
+uniform float clipSpaceXMax;
+uniform float clipSpaceYMin;
+uniform float clipSpaceYMax;
+
 const float PI = 3.14159265359;
 
 struct Light {
@@ -176,6 +181,11 @@ float ShadowCalculation(samplerCube depthTex, vec3 lightPos, vec3 fragPos, vec3 
     return 1 - shadow;
 }
 
+float map(float value, float min1, float max1, float min2, float max2) {
+	float perc = (value - min1) / (max1 - min1);
+	return perc * (max2 - min2) + min2;
+}
+
 
 void main() {
 	
@@ -189,7 +199,9 @@ void main() {
 	// Position from depth reconsturction
 	float z = texture(depthTexture, TexCoords).x;
     vec2 clipSpaceTexCoord = TexCoords;
-	vec4 clipSpacePosition = vec4(TexCoords * 2.0 - 1.0, z, 1.0);
+	clipSpaceTexCoord.x = map(clipSpaceTexCoord.x, clipSpaceXMin, clipSpaceXMax, 0.0, 1.0);
+	clipSpaceTexCoord.y = map(clipSpaceTexCoord.y, clipSpaceYMin, clipSpaceYMax, 0.0, 1.0);
+	vec4 clipSpacePosition = vec4(clipSpaceTexCoord * 2.0 - 1.0, z, 1.0);
     vec4 viewSpacePosition = inverseProjection * clipSpacePosition;
     viewSpacePosition /= viewSpacePosition.w;
     vec4 worldSpacePosition = inverseView * viewSpacePosition;    
@@ -249,14 +261,17 @@ void main() {
 	FragColor.rgb -= vec3(0.010);
 
 
-
+	//FragColor.rgb = vec3(TexCoords, 0);
 
 	
-//	FragColor.rgb = vec3( normal);  
+//	FragColor.rgb = vec3( baseColor);  
+//	FragColor.rgb = vec3( WorldPos);  
+	//FragColor.rgb = vec3( 1,1,0);  
 
 //	FragColor.rgb = vec3( shadow);  
 	//FragColor.g = 0;  
 //	FragColor.b = 0;  
 	FragColor.a = 1; 
 
+	
 }

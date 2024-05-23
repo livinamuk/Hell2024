@@ -4,7 +4,6 @@
 #include "Config.hpp"
 #include "Input.h"
 #include "../EngineState.hpp"
-#include "../API/OpenGL/GL_assetManager.h"
 #include "../BackEnd/BackEnd.h"
 #include "../Core/AssetManager.h"
 
@@ -320,10 +319,12 @@ void GameObject::Update(float deltaTime) {
     // AABB
     if (raycastRigidStatic.pxRigidStatic) {
         _aabbPreviousFrame = _aabb;
-        _aabb.extents = Util::PxVec3toGlmVec3(raycastRigidStatic.pxRigidStatic->getWorldBounds().getExtents());
-        _aabb.position = Util::PxVec3toGlmVec3(raycastRigidStatic.pxRigidStatic->getWorldBounds().getCenter());
+        glm::vec3 extents = Util::PxVec3toGlmVec3(raycastRigidStatic.pxRigidStatic->getWorldBounds().getExtents());
+        glm::vec3 center = Util::PxVec3toGlmVec3(raycastRigidStatic.pxRigidStatic->getWorldBounds().getCenter());
+        glm::vec3 minBounds = center - extents;
+        glm::vec3 maxBounds = center + extents;
+        _aabb = AABB(minBounds, maxBounds);
     }
-
 }
 
 
@@ -737,45 +738,12 @@ void GameObject::CleanUp() {
 }
 
 std::vector<Vertex> GameObject::GetAABBVertices() {
-    std::vector<Vertex> vertices;
-    glm::vec3 b = _aabb.extents;
-    glm::vec3 frontBottomLeft = _aabb.position + glm::vec3(-b.x, -b.y, -b.z);
-    glm::vec3 frontBottomRight = _aabb.position + glm::vec3(b.x, -b.y, -b.z);
-    glm::vec3 frontTopLeft = _aabb.position + glm::vec3(-b.x, b.y, -b.z);
-    glm::vec3 frontTopRight = _aabb.position + glm::vec3(b.x, b.y, -b.z);
-    glm::vec3 backBottomLeft = _aabb.position + glm::vec3(-b.x, -b.y, b.z);
-    glm::vec3 backBottomRight = _aabb.position + glm::vec3(b.x, -b.y, b.z);
-    glm::vec3 backTopLeft = _aabb.position + glm::vec3(-b.x, b.y, b.z);
-    glm::vec3 backTopRight = _aabb.position + glm::vec3(b.x, b.y, b.z);
+
     glm::vec3 color = YELLOW;
     if (HasMovedSinceLastFrame()) {
         color = RED;
     }
-    vertices.push_back(Vertex(frontBottomLeft, color));
-    vertices.push_back(Vertex(frontBottomRight, color));
-    vertices.push_back(Vertex(frontTopLeft, color));
-    vertices.push_back(Vertex(frontTopRight, color));
-    vertices.push_back(Vertex(frontBottomLeft, color));
-    vertices.push_back(Vertex(frontTopLeft, color));
-    vertices.push_back(Vertex(frontBottomRight, color));
-    vertices.push_back(Vertex(frontTopRight, color));
-    vertices.push_back(Vertex(backBottomLeft, color));
-    vertices.push_back(Vertex(backBottomRight, color));
-    vertices.push_back(Vertex(backTopLeft, color));
-    vertices.push_back(Vertex(backTopRight, color));
-    vertices.push_back(Vertex(backBottomLeft, color));
-    vertices.push_back(Vertex(backTopLeft, color));
-    vertices.push_back(Vertex(backBottomRight, color));
-    vertices.push_back(Vertex(backTopRight, color));
-    vertices.push_back(Vertex(frontBottomLeft, color));
-    vertices.push_back(Vertex(backBottomLeft, color));
-    vertices.push_back(Vertex(frontBottomRight, color));
-    vertices.push_back(Vertex(backBottomRight, color));
-    vertices.push_back(Vertex(frontTopLeft, color));
-    vertices.push_back(Vertex(backTopLeft, color));
-    vertices.push_back(Vertex(frontTopRight, color));
-    vertices.push_back(Vertex(backTopRight, color));
-    return vertices;
+    return Util::GetAABBVertices(_aabb, color);
 }
 
 std::vector<Triangle> GameObject::GetTris() {
@@ -903,7 +871,7 @@ bool GameObject::HasMovedSinceLastFrame() {
     return (
         _wasPickedUpLastFrame ||
         _wasRespawnedUpLastFrame ||
-        _aabb.position != _aabbPreviousFrame.position && _aabb.extents != _aabbPreviousFrame.extents ||
+        _aabb.boundsMin != _aabbPreviousFrame.boundsMin && _aabb.boundsMax != _aabbPreviousFrame.boundsMax && _aabb.GetCenter() != _aabbPreviousFrame.GetCenter() ||
         collisionRigidBody.IsInMotion()
     );
 }

@@ -5,7 +5,6 @@
 #include "../Util.hpp"
 #include "Input.h"
 #include "../Core/AssetManager.h"
-#include "../API/OpenGL/GL_assetManager.h"
 
 void AnimatedGameObject::Update(float deltaTime) {
 

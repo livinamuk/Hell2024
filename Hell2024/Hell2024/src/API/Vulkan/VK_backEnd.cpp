@@ -89,6 +89,7 @@ namespace VulkanBackEnd {
     //inline VkDeviceOrHostAddressConstKHR _indexBufferDeviceAddress{};
     //inline VkDeviceOrHostAddressConstKHR _transformBufferDeviceAddress{};
     inline AllocatedBuffer _rtInstancesBuffer;
+    inline Buffer _pointCloudBuffer;
 
     VkDevice GetDevice() {
         return _device;
@@ -194,15 +195,23 @@ void VulkanBackEnd::SelectPhysicalDevice() {
     selector.add_required_extension(VK_NV_DEVICE_DIAGNOSTIC_CHECKPOINTS_EXTENSION_NAME);	// aftermath
     selector.add_required_extension(VK_NV_DEVICE_DIAGNOSTICS_CONFIG_EXTENSION_NAME);		// aftermath
 
-    VkPhysicalDeviceRayTracingPipelineFeaturesKHR enabledRayTracingPipelineFeatures{};
-    enabledRayTracingPipelineFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR;
-    enabledRayTracingPipelineFeatures.rayTracingPipeline = VK_TRUE;
-    enabledRayTracingPipelineFeatures.pNext = nullptr;
+    selector.add_required_extension(VK_KHR_RAY_QUERY_EXTENSION_NAME);
 
-    VkPhysicalDeviceAccelerationStructureFeaturesKHR enabledAccelerationStructureFeatures{};
-    enabledAccelerationStructureFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR;
-    enabledAccelerationStructureFeatures.accelerationStructure = VK_TRUE;
-    enabledAccelerationStructureFeatures.pNext = &enabledRayTracingPipelineFeatures;
+    VkPhysicalDeviceRayTracingPipelineFeaturesKHR rayTracingPipelineFeatures{};
+    rayTracingPipelineFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR;
+    rayTracingPipelineFeatures.rayTracingPipeline = VK_TRUE;
+    rayTracingPipelineFeatures.rayTraversalPrimitiveCulling = VK_TRUE;
+    rayTracingPipelineFeatures.pNext = nullptr;
+
+    VkPhysicalDeviceAccelerationStructureFeaturesKHR accelerationStructureFeatures{};
+    accelerationStructureFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR;
+    accelerationStructureFeatures.accelerationStructure = VK_TRUE;
+    accelerationStructureFeatures.pNext = &rayTracingPipelineFeatures;
+
+    VkPhysicalDeviceRayQueryFeaturesKHR rayQueryFeatures{};
+    rayQueryFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_QUERY_FEATURES_KHR;
+    rayQueryFeatures.rayQuery = VK_TRUE;
+    rayQueryFeatures.pNext = &accelerationStructureFeatures;
 
     VkPhysicalDeviceFeatures features = {};
     features.samplerAnisotropy = true;
@@ -223,7 +232,7 @@ void VulkanBackEnd::SelectPhysicalDevice() {
     VkPhysicalDeviceVulkan13Features features13 = {};
     features13.maintenance4 = true;
     features13.dynamicRendering = true;
-    features13.pNext = &enabledAccelerationStructureFeatures;	// you probably want to confirm this chaining of pNexts works when shit goes wrong.
+    features13.pNext = &rayQueryFeatures;	// you probably want to confirm this chaining of pNexts works when shit goes wrong.
     selector.set_required_features_13(features13);
 
     selector.set_minimum_version(1, 3);
@@ -241,21 +250,21 @@ void VulkanBackEnd::SelectPhysicalDevice() {
     vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &extensionCount, availableExtensions.data());
 
     // Check if extension is supported
-    bool maintenance4ExtensionSupported = false;
+    //bool maintenance4ExtensionSupported = false;
     for (const auto& extension : availableExtensions) {
-        if (std::string(extension.extensionName) == VK_KHR_MAINTENANCE_4_EXTENSION_NAME) {
-            maintenance4ExtensionSupported = true;
-            //std::cout << "VK_KHR_maintenance4 is supported\n";
+        if (std::string(extension.extensionName) == VK_KHR_RAY_QUERY_EXTENSION_NAME) {
+            //maintenance4ExtensionSupported = true;
+            std::cout << "VK_KHR_RAY_QUERY_EXTENSION_NAME is supported\n";
             break;
         }
     }
     // Specify the extensions to enable
-    std::vector<const char*> enabledExtensions = {
-        VK_KHR_MAINTENANCE_4_EXTENSION_NAME
-    };
-    if (!maintenance4ExtensionSupported) {
-        throw std::runtime_error("Required extension not supported");
-    }
+    //std::vector<const char*> enabledExtensions = {
+    //    VK_KHR_MAINTENANCE_4_EXTENSION_NAME
+    //};
+    //if (!maintenance4ExtensionSupported) {
+    //    throw std::runtime_error("Required extension not supported");
+   // }
 
     vkb::Device vkbDevice = deviceBuilder.build().value();
     _device = vkbDevice.device;
@@ -1198,6 +1207,50 @@ void VulkanBackEnd::CreateTopLevelAccelerationStructure(std::vector<VkAccelerati
 
     // deal with this
     vmaDestroyBuffer(_allocator, _rtInstancesBuffer._buffer, _rtInstancesBuffer._allocation);
+}
+
+
+//                       //
+//      Point Cloud      //
+//                       //
+
+void VulkanBackEnd::CreatePointCloudVertexBuffer(std::vector<CloudPoint>& pointCloud) {
+
+    const size_t bufferSize = sizeof(CloudPoint) * pointCloud.size();
+    _pointCloudBuffer.Create(_allocator, bufferSize, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+    VkBufferCreateInfo stagingBufferInfo = {};
+    stagingBufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    stagingBufferInfo.pNext = nullptr;
+    stagingBufferInfo.size = bufferSize;
+    stagingBufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+    VmaAllocationCreateInfo vmaallocInfo = {};
+    vmaallocInfo.usage = VMA_MEMORY_USAGE_CPU_ONLY;
+    AllocatedBuffer stagingBuffer;
+    VK_CHECK(vmaCreateBuffer(_allocator, &stagingBufferInfo, &vmaallocInfo, &stagingBuffer._buffer, &stagingBuffer._allocation, nullptr));
+    AddDebugName(stagingBuffer._buffer, "stagingBuffer");
+
+    void* data;
+    vmaMapMemory(_allocator, stagingBuffer._allocation, &data);
+    memcpy(data, pointCloud.data(), bufferSize);
+    vmaUnmapMemory(_allocator, stagingBuffer._allocation);
+
+    ImmediateSubmit([=](VkCommandBuffer cmd) {
+        VkBufferCopy copy;
+        copy.dstOffset = 0;
+        copy.srcOffset = 0;
+        copy.size = bufferSize;
+        vkCmdCopyBuffer(cmd, stagingBuffer._buffer, _pointCloudBuffer.buffer, 1, &copy);
+    });
+
+}
+
+Buffer* VulkanBackEnd::GetPointCloudBuffer() {
+    return &_pointCloudBuffer;
+}
+
+void VulkanBackEnd::DestroyPointCloudBuffer() {
+    _pointCloudBuffer.Destroy(_allocator);
 }
 
 

@@ -2,11 +2,18 @@
 #extension GL_EXT_ray_tracing : enable
 
 struct RayPayload {
-	vec3 color;
+	vec4 color;
+	int lightIndex;
+	int padding0;
+	int padding1;
+	int padding2;
 };
+
 
 layout(location = 0) rayPayloadInEXT RayPayload rayPayload;
 
 void main() {
-    rayPayload.color = vec3(0.01);
+
+	rayPayload.color = vec4(0,0,0,0);
+
 }

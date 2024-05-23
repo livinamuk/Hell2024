@@ -25,6 +25,22 @@
 
 namespace Util {
 
+    inline std::string Lowercase(std::string& str) {
+        std::string result = "";
+        for (auto& c : str) {
+            result += std::tolower(c);
+        }
+        return result;
+    }
+
+    inline std::string Uppercase(std::string& str) {
+        std::string result = "";
+        for (auto& c : str) {
+            result += std::toupper(c);
+        }
+        return result;
+    }
+
     inline std::string DebugLineRenderModeToString(DebugLineRenderMode mode) {
 
         if (mode == DebugLineRenderMode::SHOW_NO_LINES) {
@@ -47,6 +63,21 @@ namespace Util {
         }
         else if (mode == DebugLineRenderMode::BOUNDING_BOXES) {
             return "BOUNDING_BOXES";
+        }
+        else if (mode == DebugLineRenderMode::RTX_LAND_AABBS) {
+            return "RTX_LAND_AABBS";
+        }
+        else if (mode == DebugLineRenderMode::RTX_LAND_TRIS) {
+            return "RTX_LAND_TRIS";
+        }
+        else if (mode == DebugLineRenderMode::RTX_LAND_TOP_LEVEL_ACCELERATION_STRUCTURE) {
+            return "RTX_LAND_TOP_LEVEL_ACCELERATION_STRUCTURE";
+        }
+        else if (mode == DebugLineRenderMode::RTX_LAND_BOTTOM_LEVEL_ACCELERATION_STRUCTURES) {
+            return "RTX_LAND_BOTTOM_LEVEL_ACCELERATION_STRUCTURES";
+        }
+        else if (mode == DebugLineRenderMode::RTX_LAND_TOP_AND_BOTTOM_LEVEL_ACCELERATION_STRUCTURES) {
+            return "RTX_LAND_TOP_AND_BOTTOM_LEVEL_ACCELERATION_STRUCTURES";
         }
         else {
             return "UNDEFINED";
@@ -81,9 +112,52 @@ namespace Util {
         else if (mode == RenderMode::INDIRECT_LIGHT) {
             return "INDIRECT_LIGHT";
         }
+        else if (mode == RenderMode::PROPAGATION_GRID) {
+            return "PROPAGATION_GRID";
+        }
+        else if (mode == RenderMode::POINT_CLOUD_PROPAGATION_GRID) {
+            return "POINT_CLOUD_PROPAGATION_GRID";
+        }
         else {
             return "UNDEFINED";
         }
+    }
+
+    inline std::vector<Vertex> GetAABBVertices(AABB& aabb, glm::vec3 color) {
+        std::vector<Vertex> vertices;
+        glm::vec4 frontTopLeft = glm::vec4(aabb.boundsMin.x, aabb.boundsMax.y, aabb.boundsMax.z, 1.0f);
+        glm::vec4 frontTopRight = glm::vec4(aabb.boundsMax.x, aabb.boundsMax.y, aabb.boundsMax.z, 1.0f);
+        glm::vec4 frontBottomLeft = glm::vec4(aabb.boundsMin.x, aabb.boundsMin.y, aabb.boundsMax.z, 1.0f);
+        glm::vec4 frontBottomRight = glm::vec4(aabb.boundsMax.x, aabb.boundsMin.y, aabb.boundsMax.z, 1.0f);
+        glm::vec4 backTopLeft = glm::vec4(aabb.boundsMin.x, aabb.boundsMax.y, aabb.boundsMin.z, 1.0f);
+        glm::vec4 backTopRight = glm::vec4(aabb.boundsMax.x, aabb.boundsMax.y, aabb.boundsMin.z, 1.0f);
+        glm::vec4 backBottomLeft = glm::vec4(aabb.boundsMin.x, aabb.boundsMin.y, aabb.boundsMin.z, 1.0f);
+        glm::vec4 backBottomRight = glm::vec4(aabb.boundsMax.x, aabb.boundsMin.y, aabb.boundsMin.z, 1.0f);
+        vertices.push_back(Vertex(frontBottomLeft, color));
+        vertices.push_back(Vertex(frontBottomRight, color));
+        vertices.push_back(Vertex(frontTopLeft, color));
+        vertices.push_back(Vertex(frontTopRight, color));
+        vertices.push_back(Vertex(frontBottomLeft, color));
+        vertices.push_back(Vertex(frontTopLeft, color));
+        vertices.push_back(Vertex(frontBottomRight, color));
+        vertices.push_back(Vertex(frontTopRight, color));
+        vertices.push_back(Vertex(backBottomLeft, color));
+        vertices.push_back(Vertex(backBottomRight, color));
+        vertices.push_back(Vertex(backTopLeft, color));
+        vertices.push_back(Vertex(backTopRight, color));
+        vertices.push_back(Vertex(backBottomLeft, color));
+        vertices.push_back(Vertex(backTopLeft, color));
+        vertices.push_back(Vertex(backBottomRight, color));
+        vertices.push_back(Vertex(backTopRight, color));
+        vertices.push_back(Vertex(frontBottomLeft, color));
+        vertices.push_back(Vertex(backBottomLeft, color));
+        vertices.push_back(Vertex(frontBottomRight, color));
+        vertices.push_back(Vertex(backBottomRight, color));
+        vertices.push_back(Vertex(frontTopLeft, color));
+        vertices.push_back(Vertex(backTopLeft, color));
+        vertices.push_back(Vertex(frontTopRight, color));
+        vertices.push_back(Vertex(backTopRight, color));
+        return vertices;
     }
 
     inline float SquaredDistPointAABB(const glm::vec3 p, const AABB& aabb) {
@@ -105,11 +179,9 @@ namespace Util {
         };
         // Squared distance
         double sq = 0.0;
-        glm::vec3 min = aabb.position - aabb.extents;
-        glm::vec3 max = aabb.position + aabb.extents;
-        sq += check(p.x, min.x, max.x);
-        sq += check(p.y, min.y, max.y);
-        sq += check(p.z, min.z, max.z);
+        sq += check(p.x, aabb.boundsMin.x, aabb.boundsMax.x);
+        sq += check(p.y, aabb.boundsMin.y, aabb.boundsMax.y);
+        sq += check(p.z, aabb.boundsMin.z, aabb.boundsMax.z);
         return (float)sq;
     }
 
@@ -639,11 +711,14 @@ namespace Util {
 
 		const auto stem{ path.has_stem() ? path.stem().string() : "" };
 
+        std::string filetype = path.has_extension() ? path.extension().string().substr(1) : "";  // remove dot
+
+
         return FileInfo{
             path.string(),
             path.parent_path().string(),
             stem,
-            path.has_extension() ? path.extension().string().substr(1) : "", // remove dot
+            Lowercase(filetype),
             get_material_type(stem)
         };
     }

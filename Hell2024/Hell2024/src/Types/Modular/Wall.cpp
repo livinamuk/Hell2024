@@ -340,6 +340,16 @@ void Wall::CreateVertexData() {
     for (uint32_t i = 0; i < vertices.size(); i++) {
         indices.push_back(i);
     }
+
+    // Create AABB
+    glm::vec3 boundsMin = glm::vec3(1e30f);
+    glm::vec3 boundsMax = glm::vec3(-1e30f);
+    for (int i = 0; i < indices.size(); i++) {
+        Vertex* vertex = &vertices[indices[i]];
+        boundsMin = fminf(boundsMin, vertex->position);
+        boundsMax = fmaxf(boundsMax, vertex->position);
+    }
+    aabb = AABB(boundsMin, boundsMax);
 }
 
 void Wall::CreateMeshGL() {

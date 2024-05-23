@@ -92,6 +92,16 @@ void Floor::CreateVertexData() {
     vertices.push_back(v1);
 
     indices = { 0, 1, 2, 3, 4, 5 };
+
+    // Create AABB
+    glm::vec3 boundsMin = glm::vec3(1e30f);
+    glm::vec3 boundsMax = glm::vec3(-1e30f);
+    for (int i = 0; i < indices.size(); i++) {
+        Vertex* vertex = &vertices[indices[i]];
+        boundsMin = fminf(boundsMin, vertex->position);
+        boundsMax = fmaxf(boundsMax, vertex->position);
+    }
+    aabb = AABB(boundsMin, boundsMax);
 }
 
 void Floor::UpdateRenderItem() {

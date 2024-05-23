@@ -1,20 +1,21 @@
 #version 430 core
 
 layout (local_size_x = 16, local_size_y = 4, local_size_z = 1) in;
-layout(rgba8, binding = 0) uniform image2D tex;
-layout(rgba8, binding = 1) uniform image2D glassTex;
+layout(rgba8, binding = 0) uniform image2D finalLightingTexture;
+layout(rgba8, binding = 1) uniform image2D glassTexure;
 
-uniform float screenWidth;
-uniform float screenHeight;
+uniform int viewportOffsetX;
+uniform int viewportOffsetY;
 
 void main() {
 
 	ivec2 texCoord = ivec2(gl_GlobalInvocationID.xy);
-    vec3 color = imageLoad(tex, texCoord).rgb;
-    vec3 glassColor = imageLoad(glassTex, texCoord).rgb;
-	if (glassColor != vec3(0, 0, 0)) {
-		color = glassColor;
-	}
-	imageStore(tex, texCoord, vec4(color, 1));
+	texCoord.x += viewportOffsetX;
+	texCoord.y += viewportOffsetY;
+
+    vec3 finalLighting = imageLoad(finalLightingTexture, texCoord).rgb;
+    vec3 glassColor = imageLoad(glassTexure, texCoord).rgb;
+	finalLighting += glassColor;
+	imageStore(finalLightingTexture, texCoord, vec4(finalLighting, 1));
 }
 

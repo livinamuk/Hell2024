@@ -3,7 +3,6 @@
 #include <future>
 #include <thread>
 
-#include "../API/OpenGL/GL_assetManager.h"
 #include "../BackEnd/BackEnd.h"
 #include "../Core/AssetManager.h"
 #include "../Core/Game.h"
@@ -373,6 +372,12 @@ std::vector<RenderItem3D> Scene::CreateDecalRenderItems() {
             renderItem.meshIndex = AssetManager::GetQuadMeshIndex();
         }
     }
+
+    //int baseVertex = AssetManager::GetMeshByIndex(AssetManager::GetQuadMeshIndex())->baseVertex;
+    //int vertexCount = AssetManager::GetMeshByIndex(AssetManager::GetQuadMeshIndex())->indexCount;
+    //std::cout << "base vertex in real life:" << baseVertex << "\n";
+    //std::cout << "index count in real life:" << vertexCount << "\n";
+
     return renderItems;
 }
 
@@ -1933,6 +1938,15 @@ void Scene::ProcessPhysicsCollisions() {
     bool shotgunShellCollision = false;
 
     for (CollisionReport& report : Physics::GetCollisions()) {
+
+        if (!report.rigidA || !report.rigidB) {
+            if (!report.rigidA)
+                std::cout << "report.rigidA was nullptr, ESCAPING!\n";
+            if (!report.rigidB)
+                std::cout << "report.rigidB was nullptr, ESCAPING!\n";
+            continue;
+        }
+
         const char* nameA = report.rigidA->getName();
         const char* nameB = report.rigidB->getName();
         if (nameA == "BulletCasing" ||

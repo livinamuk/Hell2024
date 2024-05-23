@@ -18,6 +18,7 @@
 namespace AssetManager {
 
     std::vector<std::string> _texturePaths;
+    std::vector<std::string> _cubemapTexturePaths;
     std::vector<std::string> _vatTexturePaths;
     std::vector<std::string> _modelPaths;
     std::vector<std::string> _skinnedModelPaths;
@@ -39,7 +40,8 @@ namespace AssetManager {
     std::vector<Animation*> _animations;
     std::vector<Texture> _textures; 
     std::vector<ExrTexture> _exrTextures;
-    std::vector<Material> _materials;
+    std::vector<Material> _materials; 
+    std::vector<CubemapTexture> _cubemapTextures;
 
     // Used to new data insert into the vectors above
     int _nextVertexInsert = 0;
@@ -47,8 +49,14 @@ namespace AssetManager {
     int _nextWeightedVertexInsert = 0;
     int _nextWeightedIndexInsert = 0;
 
-    int _quadMeshIndex = 0;
     int _upFacingPlaneMeshIndex = 0;
+    int _quadMeshIndex = 0;
+    int _quadMeshIndexSplitscreenTop = 0;
+    int _quadMeshIndexSplitscreenBottom = 0;
+    int _quadMeshIndexQuadscreenTopLeft = 0;
+    int _quadMeshIndexQuadscreenTopRight = 0;
+    int _quadMeshIndexQuadscreenBottomLeft = 0;
+    int _quadMeshIndexQuadscreenBottomRight = 0;
 
     // Async
     std::mutex _modelsMutex;
@@ -83,6 +91,16 @@ void AssetManager::FindAssetPaths() {
         FileInfo info = Util::GetFileInfo(entry);
         if (info.filetype == "png" || info.filetype == "jpg" || info.filetype == "tga") {
             _texturePaths.push_back(info.fullpath.c_str());
+        }
+    }
+    auto skyboxTexturePaths = std::filesystem::directory_iterator("res/textures/skybox/");
+    for (const auto& entry : skyboxTexturePaths) {
+        FileInfo info = Util::GetFileInfo(entry);
+        if (info.filetype == "png" || info.filetype == "jpg" || info.filetype == "tga") {
+            if (info.filename.substr(info.filename.length() - 5) == "Right") {
+                std::cout << info.fullpath << "\n";
+                _cubemapTexturePaths.push_back(info.fullpath.c_str());
+            }
         }
     }
     auto uiTexturePaths = std::filesystem::directory_iterator("res/textures/ui/");
@@ -158,10 +176,25 @@ void AssetManager::LoadNextItem() {
         _futures.push_back(std::async(std::launch::async, LoadTexture, path));
         AddItemToLoadLog(path);
         */
+        if (BackEnd::GetAPI() == API::VULKAN && Util::GetFileInfo(_texturePaths[0]).filetype == "exr") {
+            _texturePaths.erase(_texturePaths.begin());
+            return;
+        }        
+
         Texture& texture = _textures.emplace_back();
         texture.Load(_texturePaths[0].c_str());
         AddItemToLoadLog(_texturePaths[0]);
         _texturePaths.erase(_texturePaths.begin());
+        return;
+    }
+    if (_cubemapTexturePaths.size()) {
+        CubemapTexture& cubemapTexture = _cubemapTextures.emplace_back();
+        FileInfo fileInfo = Util::GetFileInfo(_cubemapTexturePaths[0]);
+        cubemapTexture.SetName(fileInfo.filename.substr(0, fileInfo.filename.length() - 6));
+        cubemapTexture.SetFiletype(fileInfo.filetype);
+        cubemapTexture.Load();        
+        //AddItemToLoadLog(_cubemapTexturePaths[0]);
+        _cubemapTexturePaths.erase(_cubemapTexturePaths.begin());
         return;
     }
     if (_vatTexturePaths.size()) {
@@ -642,6 +675,8 @@ void AssetManager::LoadModel(const std::string filepath) {
         _models[modelIndex].AddMeshIndex(AssetManager::CreateMesh(shape.name, vertices, indices));
     }
 
+
+
     // Build the bounding box 
     float width = std::abs(maxPos.x - minPos.x);
     float height = std::abs(maxPos.y - minPos.y);
@@ -708,7 +743,24 @@ int AssetManager::CreateMesh(std::string name, std::vector<Vertex>& vertices, st
 unsigned int AssetManager::GetQuadMeshIndex() {
     return _quadMeshIndex;
 }
-
+unsigned int AssetManager::GetQuadMeshIndexSplitscreenTop() {
+    return _quadMeshIndexSplitscreenTop;
+}
+unsigned int AssetManager::GetQuadMeshIndexSplitscreenBottom() {
+    return _quadMeshIndexSplitscreenBottom;
+}
+unsigned int AssetManager::GetQuadMeshIndexQuadscreenTopLeft() {
+    return _quadMeshIndexQuadscreenTopLeft;
+}
+unsigned int AssetManager::GetQuadMeshIndexQuadscreenTopRight() {
+    return _quadMeshIndexQuadscreenTopRight;
+}
+unsigned int AssetManager::GetQuadMeshIndexQuadscreenBottomLeft() {
+    return _quadMeshIndexQuadscreenBottomLeft;
+}
+unsigned int AssetManager::GetQuadMeshIndexQuadscreenBottomRight() {
+    return _quadMeshIndexQuadscreenBottomRight;
+}
 unsigned int AssetManager::GetUpFacingPlaneMeshIndex() {
     return _upFacingPlaneMeshIndex;
 }
@@ -876,6 +928,28 @@ std::string& AssetManager::GetMaterialNameByIndex(int index) {
     return _materials[index]._name;
 }
 
+
+/////////////////////////////////
+//                             //
+//      CubemapTextures        //
+
+CubemapTexture* AssetManager::GetCubemapTextureByIndex(const int index) {
+    if (index >= 0 && index < _cubemapTextures.size()) {
+        return &_cubemapTextures[index];
+    }
+    std::cout << "AssetManager::GetCubemapTextureByIndex() failed because index '" << index << "' is out of range. Size is " << _cubemapTextures.size() << "!\n";
+    return nullptr;
+}
+
+int AssetManager::GetCubemapTextureIndexByName(const std::string& name) {
+    for (int i = 0; i < _cubemapTextures.size(); i++) {
+        if (_cubemapTextures[i].GetName() == name) {
+            return i;
+        }
+    }
+    std::cout << "AssetManager::GetCubemapTextureIndexByName() failed because '" << name << "' does not exist\n";
+    return -1;
+}
 
 //////////////////////////
 //                      //
@@ -1193,10 +1267,78 @@ void AssetManager::CreateHardcodedModels() {
         std::string name = "Quad";
 
         std::lock_guard<std::mutex> lock(_modelsMutex);
+
         Model& model = _models.emplace_back();
-        model.SetName("Quad");
-        model.AddMeshIndex(AssetManager::CreateMesh(name, vertices, indices));    
+        model.SetName(name);
+        model.AddMeshIndex(AssetManager::CreateMesh("Fullscreen", vertices, indices));
+  
+        vertices[0].position = { -1.0f, 0.0f, 0.0f };
+        vertices[1].position = { -1.0f, 1.0f, 0.0f };
+        vertices[2].position = { 1.0f,  1.0f, 0.0f };
+        vertices[3].position = { 1.0f,  0.0f, 0.0f };
+        vertices[0].uv = { 0.0f, 0.5f };
+        vertices[1].uv = { 0.0f, 1.0f };
+        vertices[2].uv = { 1.0f, 1.0f };
+        vertices[3].uv = { 1.0f, 0.5f };
+        model.AddMeshIndex(AssetManager::CreateMesh("SplitscreenTop", vertices, indices));
+
+        vertices[0].position = { -1.0f, -1.0f, 0.0f };
+        vertices[1].position = { -1.0f, 0.0f, 0.0f };
+        vertices[2].position = { 1.0f,  0.0f, 0.0f };
+        vertices[3].position = { 1.0f,  -1.0f, 0.0f };
+        vertices[0].uv = { 0.0f, 0.0f };
+        vertices[1].uv = { 0.0f, 0.5f };
+        vertices[2].uv = { 1.0f, 0.5f };
+        vertices[3].uv = { 1.0f, 0.0f };
+        model.AddMeshIndex(AssetManager::CreateMesh("SplitscreenBottom", vertices, indices));
+
+        vertices[0].position = { -1.0f, 0.0f, 0.0f };
+        vertices[1].position = { -1.0f, 1.0f, 0.0f };
+        vertices[2].position = { 0.0f,  1.0f, 0.0f };
+        vertices[3].position = { 0.0f,  0.0f, 0.0f };
+        vertices[0].uv = { 0.0f, 0.5f };
+        vertices[1].uv = { 0.0f, 1.0f };
+        vertices[2].uv = { 0.5f, 1.0f };
+        vertices[3].uv = { 0.5f, 0.5f };
+        model.AddMeshIndex(AssetManager::CreateMesh("QuadscreenTopLeft", vertices, indices));
+
+        vertices[0].position = { 0.0f, 0.0f, 0.0f };
+        vertices[1].position = { 0.0f, 1.0f, 0.0f };
+        vertices[2].position = { 1.0f,  1.0f, 0.0f };
+        vertices[3].position = { 1.0f,  0.0f, 0.0f };
+        vertices[0].uv = { 0.5f, 0.5f };
+        vertices[1].uv = { 0.5f, 1.0f };
+        vertices[2].uv = { 1.0f, 1.0f };
+        vertices[3].uv = { 1.0f, 0.5f };
+        model.AddMeshIndex(AssetManager::CreateMesh("QuadscreenTopRight", vertices, indices));
+
+        vertices[0].position = { -1.0f, -1.0f, 0.0f };
+        vertices[1].position = { -1.0f,  0.0f, 0.0f };
+        vertices[2].position = {  0.0f,  0.0f, 0.0f };
+        vertices[3].position = {  0.0f, -1.0f, 0.0f };
+        vertices[0].uv = { 0.0f, 0.0f };
+        vertices[1].uv = { 0.0f, 0.5f };
+        vertices[2].uv = { 0.5f, 0.5f };
+        vertices[3].uv = { 0.5f, 0.0f };
+        model.AddMeshIndex(AssetManager::CreateMesh("QuadscreenBottomLeft", vertices, indices));
+
+        vertices[0].position = { 0.0f, -1.0f, 0.0f };
+        vertices[1].position = { 0.0f,  0.0f, 0.0f };
+        vertices[2].position = { 1.0f,  0.0f, 0.0f };
+        vertices[3].position = { 1.0f, -1.0f, 0.0f };
+        vertices[0].uv = { 0.5f, 0.0f };
+        vertices[1].uv = { 0.5f, 0.5f };
+        vertices[2].uv = { 1.0f, 0.5f };
+        vertices[3].uv = { 1.0f, 0.0f };
+        model.AddMeshIndex(AssetManager::CreateMesh("QuadscreenBottomRight", vertices, indices));
+
         _quadMeshIndex = model.GetMeshIndices()[0];
+        _quadMeshIndexSplitscreenTop = model.GetMeshIndices()[1];
+        _quadMeshIndexSplitscreenBottom = model.GetMeshIndices()[2];
+        _quadMeshIndexQuadscreenTopLeft = model.GetMeshIndices()[3];
+        _quadMeshIndexQuadscreenTopRight = model.GetMeshIndices()[4];
+        _quadMeshIndexQuadscreenBottomLeft = model.GetMeshIndices()[5];
+        _quadMeshIndexQuadscreenBottomRight = model.GetMeshIndices()[6];
     }
 
     /* Upfacing Plane */ {

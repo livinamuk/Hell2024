@@ -6,6 +6,67 @@
 
 namespace RendererUtil {
     
+    inline ViewportInfo CreateViewportInfo(int playerIndex, SplitscreenMode splitscreenMode, int totalWidth, int totalHeight) {
+        ViewportInfo info;
+        if (splitscreenMode == SplitscreenMode::NONE) {
+            if (playerIndex == 0) {
+                info.width = totalWidth;
+                info.height = totalHeight;
+                info.xOffset = 0;
+                info.yOffset = 0;
+                return info;
+            }
+        }
+        if (splitscreenMode == SplitscreenMode::TWO_PLAYER) {
+            if (playerIndex == 0) {
+                info.width = totalWidth;
+                info.height = totalHeight * 0.5f;
+                info.xOffset = 0;
+                info.yOffset = totalHeight * 0.5f;
+                return info;
+            }
+            else if (playerIndex == 1) {
+                info.width = totalWidth;
+                info.height = totalHeight * 0.5f;
+                info.xOffset = 0;
+                info.yOffset = 0;
+                return info;
+            }
+        }
+        if (splitscreenMode == SplitscreenMode::FOUR_PLAYER) {
+            if (playerIndex == 0) {
+                info.width = totalWidth * 0.5f;
+                info.height = totalHeight * 0.5f;
+                info.xOffset = 0;
+                info.yOffset = totalHeight * 0.5f;
+                return info;
+            }
+            else if (playerIndex == 1) {
+                info.width = totalWidth * 0.5f;
+                info.height = totalHeight * 0.5f;
+                info.xOffset = totalWidth * 0.5f;
+                info.yOffset = totalHeight * 0.5f;
+                return info;
+            }
+            else if (playerIndex == 2) {
+                info.width = totalWidth * 0.5f;
+                info.height = totalHeight * 0.5f;
+                info.xOffset = 0;
+                info.yOffset = 0;
+                return info;
+            }
+            else if (playerIndex == 3) {
+                info.width = totalWidth * 0.5f;
+                info.height = totalHeight * 0.5f;
+                info.xOffset = totalWidth * 0.5f;
+                info.yOffset = 0;
+                return info;
+            }
+        }
+        std::cout << "CreateViewportInfo() called with invalid player index/splitscreen mode combination!\n";
+        return info;
+    }
+
     inline void AddRenderItems(std::vector<RenderItem2D>& dst, const std::vector<RenderItem2D>& src) {
         dst.reserve(dst.size() + src.size());
         dst.insert(std::end(dst), std::begin(src), std::end(src));

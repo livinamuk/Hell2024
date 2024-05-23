@@ -1,7 +1,6 @@
 #version 460
 #extension GL_KHR_vulkan_glsl : enable
 
-
 layout (location = 0) in vec3 normal;
 layout (location = 1) in vec2 texCoord;
 
@@ -15,15 +14,27 @@ layout(set = 2, binding = 3) uniform sampler2D depthTexture;
 layout(set = 2, binding = 4) uniform sampler2D raytracingOutput;
 layout(set = 2, binding = 5) uniform sampler2D positionTexture;
 
-layout(set = 0, binding = 0) readonly buffer CameraData {
+struct CameraData {
     mat4 projection;
     mat4 projectionInverse;
     mat4 view;
     mat4 viewInverse;
 	float viewportWidth;
-	float viewportHeight;
-	float padding0;
-	float padding1;
+	float viewportHeight;   
+    float viewportOffsetX;
+    float viewportOffsetY; 
+	float clipSpaceXMin;
+    float clipSpaceXMax;
+    float clipSpaceYMin;
+    float clipSpaceYMax;
+	float finalImageColorContrast;
+    float finalImageColorR;
+    float finalImageColorG;
+    float finalImageColorB;
+};
+
+layout(set = 0, binding = 0) readonly buffer A {
+    CameraData[4] data;
 } cameraData;
 
 const float PI = 3.14159265359;
@@ -160,7 +171,7 @@ vec3 microfacetBRDF(in vec3 L, in vec3 V, in vec3 N, in vec3 baseColor, in float
 vec3 GetDirectLighting(vec3 lightPos, vec3 lightColor, float radius, float strength, vec3 Normal, vec3 WorldPos, vec3 baseColor, float roughness, float metallic) {
 	float fresnelReflect = 1.0; // 0.5 is what they used for box, 1.0 for demon
 
-	vec3 viewPos = cameraData.viewInverse[3].xyz;
+	vec3 viewPos = cameraData.data[0].viewInverse[3].xyz;
 
 	vec3 viewDir = normalize(viewPos - WorldPos);    
 	float lightRadiance = strength * 1;// * 1.25;
@@ -177,8 +188,12 @@ vec3 GetDirectLighting(vec3 lightPos, vec3 lightColor, float radius, float stren
 
 
 
-
 void main() {
+
+	mat4 proj = cameraData.data[0].projection;
+	mat4 view = cameraData.data[0].view;
+	mat4 projectionInverse = cameraData.data[0].projectionInverse;
+	mat4 viewInverse = cameraData.data[0].viewInverse;
 
 	// Sample render targets
 	vec3 baseColor = texture(baseColorTexture, texCoord).rgb;
@@ -190,17 +205,13 @@ void main() {
 
 	// Reconstruct position from depth	
 	const mat4 correction = mat4(1.0,  0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0,  0.0, 0.5, 0.0, 0.0,  0.0, 0.5, 1.0);	
-    vec2 clipSpaceTexCoord = texCoord;
+	vec2 clipSpaceTexCoord = texCoord;
 	vec4 clipSpacePosition = vec4(texCoord * 2.0 - 1.0, z, 1.0);
-    vec4 viewSpacePosition = cameraData.projectionInverse * clipSpacePosition;
-    viewSpacePosition /= viewSpacePosition.w;
-    vec4 worldSpacePosition = cameraData.viewInverse * viewSpacePosition;    
-    vec3 WorldPos = worldSpacePosition.xyz;
+	vec4 viewSpacePosition = projectionInverse * clipSpacePosition;
+	viewSpacePosition /= viewSpacePosition.w;
+	vec4 worldSpacePosition = viewInverse * viewSpacePosition;    
+	vec3 WorldPos = worldSpacePosition.xyz;
 	
-	mat4 proj = cameraData.projection;
-	mat4 view = cameraData.view;	
-	mat4 inverseProjection = cameraData.projectionInverse;
-	mat4 inverseView = cameraData.viewInverse;	
 
 
 
@@ -223,7 +234,7 @@ void main() {
 	
 	outFragColor.rgb = directLighting;
 	
-	vec3 viewPos = cameraData.viewInverse[3].xyz;
+	vec3 viewPos = viewInverse[3].xyz;
 	float d = distance(viewPos, WorldPos);
 	float alpha = getFogFactor(d);
 	vec3 FogColor = vec3(0.0);
@@ -290,4 +301,7 @@ void main() {
 	}
 
 	outFragColor.rgb = outFragColor.rgb;
+
+	
+	//outFragColor.rgb = vec3(baseColor);
 }

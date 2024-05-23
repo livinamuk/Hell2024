@@ -4,7 +4,6 @@
 #include "../Core/Input.h"
 #include "../Core/InputMulti.h"
 #include "../BackEnd/BackEnd.h"
-#include "../API/OpenGL/GL_assetManager.h"
 #include "../Core/Scene.h"
 #include "../Renderer/TextBlitter.h"
 #include "../Renderer/RendererUtil.hpp"

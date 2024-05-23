@@ -1,11 +1,11 @@
 #pragma once
 #include <string>
 
-class Texture3D
+class OpenGLTexture3D
 {
 public: // Methods
-	Texture3D();
-	Texture3D(int width, int height, int depth);
+    OpenGLTexture3D();
+    void Create(int width, int height, int depth);
 	void Bind(unsigned int slot);
 	unsigned int GetID();
 	unsigned int GetWidth();

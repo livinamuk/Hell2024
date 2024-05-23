@@ -14,16 +14,29 @@ layout (location = 5) out vec3 attrNormal;
 layout (location = 6) out vec3 attrTangent;
 layout (location = 7) out vec3 attrBiTangent;
 layout (location = 8) out vec3 WorldPos;
+layout (location = 9) out flat int playerIndex;
 
-layout(set = 0, binding = 0) readonly buffer CameraData {
+struct CameraData {
     mat4 projection;
     mat4 projectionInverse;
     mat4 view;
     mat4 viewInverse;
 	float viewportWidth;
-	float viewportHeight;
-	float padding0;
-	float padding1;
+	float viewportHeight;   
+    float viewportOffsetX;
+    float viewportOffsetY; 
+	float clipSpaceXMin;
+    float clipSpaceXMax;
+    float clipSpaceYMin;
+    float clipSpaceYMax;
+	float finalImageColorContrast;
+    float finalImageColorR;
+    float finalImageColorG;
+    float finalImageColorB;
+};
+
+layout(set = 0, binding = 0) readonly buffer CAMERA_DATA_BUFFER {
+    CameraData[4] data;
 } cameraData;
 
 struct RenderItem3D {
@@ -43,29 +56,26 @@ struct RenderItem3D {
     float emissiveColorB;
 };
 
-
-struct InstanceData {
-    mat4 modelMatrix; 
-    mat4 inverseModelMatrix; 
-    int baseColorTextureIndex;
-    int normalTextureIndex;
-    int rmaTextureIndex;
-    int emissiveTextureIndex;
-};
-
-
 layout(set = 0, binding = 2) readonly buffer A {RenderItem3D data[];} renderItems;
-//layout(set = 0, binding = 5) readonly buffer B {InstanceData data[];} instanceData;
+
+layout( push_constant ) uniform constants {
+	int playerIndex;
+	int instanceOffset;
+	int emptpy;
+	int emptp2;
+} PushConstants;
 
 void main() {	
 
-	mat4 proj = cameraData.projection;
-	mat4 view = cameraData.view;		
+	mat4 proj = cameraData.data[PushConstants.playerIndex].projection;
+	mat4 view = cameraData.data[PushConstants.playerIndex].view;
 
-	mat4 model = renderItems.data[gl_InstanceIndex].modelMatrix;
-	BaseColorTextureIndex =  renderItems.data[gl_InstanceIndex].baseColorTextureIndex;
-	NormalTextureIndex =  renderItems.data[gl_InstanceIndex].normalTextureIndex;
-	RMATextureIndex =  renderItems.data[gl_InstanceIndex].rmaTextureIndex;
+	int index = gl_InstanceIndex + (PushConstants.instanceOffset);
+
+	mat4 model = renderItems.data[index].modelMatrix;
+	BaseColorTextureIndex =  renderItems.data[index].baseColorTextureIndex;
+	NormalTextureIndex =  renderItems.data[index].normalTextureIndex;
+	RMATextureIndex =  renderItems.data[index].rmaTextureIndex;
 	
 	//model = instanceData.data[gl_InstanceIndex].modelMatrix;
 	//BaseColorTextureIndex =  instanceData.data[gl_InstanceIndex].baseColorTextureIndex;
@@ -83,5 +93,7 @@ void main() {
 	WorldPos = (model * vec4(vPosition, 1.0)).xyz;
 
 	texCoord = vTexCoord;
+	playerIndex = PushConstants.playerIndex;
+
 	gl_Position = proj * view * vec4(WorldPos, 1.0);
 }

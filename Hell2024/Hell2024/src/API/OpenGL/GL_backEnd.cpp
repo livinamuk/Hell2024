@@ -12,13 +12,32 @@ namespace OpenGLBackEnd {
     GLuint _weightedVertexDataVAO = 0;
     GLuint _weightedVertexDataVBO = 0;
     GLuint _weightedVertexDataEBO = 0;
+    GLuint _pointCloudVAO = 0;
+    GLuint _pointCloudVBO = 0;
 
     GLuint GetVertexDataVAO() {
         return _vertexDataVAO;
     }
+
+    GLuint GetVertexDataVBO() {
+        return _vertexDataVBO;
+    }
+
+    GLuint GetVertexDataEBO() {
+        return _vertexDataEBO;
+    }
+
     GLuint GetWeightedVertexDataVAO() {
         return _weightedVertexDataVAO;
     }
+
+    GLuint GetPointCloudVAO() {
+        return _pointCloudVAO;
+    }
+    GLuint GetPointCloudVBO() {
+        return _pointCloudVBO;
+    }
+
 }
 
 GLenum glCheckError_(const char* file, int line) {
@@ -198,5 +217,28 @@ void OpenGLBackEnd::UploadWeightedVertexData(std::vector<WeightedVertex>& vertic
     glBindVertexArray(0);
 }
 
+void OpenGLBackEnd::CreatePointCloudVertexBuffer(std::vector<CloudPoint>& pointCloud) {
 
+    if (_pointCloudVAO != 0) {
+        glDeleteVertexArrays(1, &_pointCloudVAO);
+        glDeleteBuffers(1, &_pointCloudVBO);
+    }
 
+    glGenVertexArrays(1, &_pointCloudVAO);
+    glGenBuffers(1, &_pointCloudVBO);
+
+    glBindVertexArray(_pointCloudVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, _pointCloudVBO);
+    glBufferData(GL_ARRAY_BUFFER, pointCloud.size() * sizeof(CloudPoint), &pointCloud[0], GL_STATIC_DRAW);
+
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(CloudPoint), (void*)0);
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(CloudPoint), (void*)offsetof(CloudPoint, normal));
+    glEnableVertexAttribArray(2);
+    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(CloudPoint), (void*)offsetof(CloudPoint, directLighting));
+
+    glEnableVertexAttribArray(0);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
+}

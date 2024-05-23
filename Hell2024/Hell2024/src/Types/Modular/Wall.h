@@ -12,7 +12,6 @@ struct Wall {
     GLuint VAO = 0;
     GLuint VBO = 0;
  
-
     int materialIndex = 0;
     float wallHeight = 2.4f;
     Wall(glm::vec3 begin, glm::vec3 end, float height, int materialIndex);
@@ -23,7 +22,6 @@ struct Wall {
     std::vector<Transform> floorTrims;
     std::vector<Line> collisionLines;
 
-
     std::vector<Vertex> vertices;
     std::vector<uint32_t> indices;
     std::vector<RenderItem3D> renderItems;
@@ -33,4 +31,6 @@ struct Wall {
     void CreateMeshGL();
     void UpdateRenderItems();
     std::vector<RenderItem3D>& GetRenderItems();
+
+    AABB aabb;
 };

@@ -12,6 +12,9 @@
 #define PRESENT_WIDTH 832
 #define PRESENT_HEIGHT 468
 
+#define POINT_CLOUD_SPACING 0.4f
+#define PROBE_SPACING 0.375f
+
 #define TEXTURE_ARRAY_SIZE 1024
 #define MAX_RENDER_OBJECTS_3D 4096
 #define MAX_RENDER_OBJECTS_2D 4096
@@ -34,6 +37,12 @@ enum Alignment {
     BOTTOM_RIGHT
 };
 
+struct ViewportInfo {
+    int width = 0;
+    int height = 0;
+    int xOffset = 0;
+    int yOffset = 0;
+};
 
 struct DrawIndexedIndirectCommand {
     uint32_t indexCount;
@@ -110,10 +119,21 @@ struct CameraData {
     glm::mat4 projectionInverse = glm::mat4(1);
     glm::mat4 view = glm::mat4(1);
     glm::mat4 viewInverse = glm::mat4(1);
+
     float viewportWidth = 0;
     float viewportHeight = 0;
-    float padding0 = 0;
-    float padding1 = 0;
+    float viewportOffsetX = 0;
+    float viewportOffsetY = 0;
+
+    float clipSpaceXMin;
+    float clipSpaceXMax;
+    float clipSpaceYMin;
+    float clipSpaceYMax;
+
+    float finalImageColorContrast;
+    float finalImageColorR;
+    float finalImageColorG;
+    float finalImageColorB;
 };
 
 struct BoundingBox {
@@ -181,13 +201,27 @@ enum DebugLineRenderMode {
     RAYTRACE_LAND,
     PHYSX_EDITOR,
     BOUNDING_BOXES,
+    RTX_LAND_AABBS,
+    RTX_LAND_TRIS,
+    RTX_LAND_TOP_LEVEL_ACCELERATION_STRUCTURE,
+    RTX_LAND_BOTTOM_LEVEL_ACCELERATION_STRUCTURES,
+    RTX_LAND_TOP_AND_BOTTOM_LEVEL_ACCELERATION_STRUCTURES,
     DEBUG_LINE_MODE_COUNT
 };
 
 enum RenderMode {
     COMPOSITE, 
     DIRECT_LIGHT, 
-    INDIRECT_LIGHT, 
+    INDIRECT_LIGHT,
     POINT_CLOUD,
+    POINT_CLOUD_PROPAGATION_GRID,
+    PROPAGATION_GRID,
     RENDER_MODE_COUNT
+};
+
+struct CloudPoint {
+    glm::vec3 position = glm::vec3(0);
+    glm::vec3 normal = glm::vec3(0);
+    glm::vec3 directLighting = glm::vec3(0);
+    glm::vec3 padding;
 };

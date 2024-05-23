@@ -5,7 +5,6 @@
 #include "TextBlitter.h"
 #include "../common.h"
 
-#include "../API/OpenGL/GL_assetManager.h"
 #include "../API/OpenGL/GL_renderer.h"
 #include "../API/OpenGL/GL_backEnd.h"
 #include "../API/OpenGL/Types/GL_gBuffer.h"
@@ -26,7 +25,6 @@
 #include "../Core/Player.h"
 #include "../Core/Scene.h"
 #include "../Effects/MuzzleFlash.h"
-#include "../Types/Texture.h"
 #include "../Physics/Physics.h"
 #include "../Util.hpp"
 
@@ -1359,12 +1357,12 @@ void SkyBoxPass(Player* player) {
 
 		// Load cubemap textures
 		std::vector<std::string> skyboxTextureFilePaths;
-		skyboxTextureFilePaths.push_back("res/textures/skybox/right.png");
-		skyboxTextureFilePaths.push_back("res/textures/skybox/left.png");
-		skyboxTextureFilePaths.push_back("res/textures/skybox/top.png");
-		skyboxTextureFilePaths.push_back("res/textures/skybox/bottom.png");
-		skyboxTextureFilePaths.push_back("res/textures/skybox/front.png");
-		skyboxTextureFilePaths.push_back("res/textures/skybox/back.png");
+		skyboxTextureFilePaths.push_back("res/textures/skybox/NightSky_Right.png");
+		skyboxTextureFilePaths.push_back("res/textures/skybox/NightSky_Left.png");
+		skyboxTextureFilePaths.push_back("res/textures/skybox/NightSky_Top.png");
+		skyboxTextureFilePaths.push_back("res/textures/skybox/NightSky_Bottom.png");
+		skyboxTextureFilePaths.push_back("res/textures/skybox/NightSky_Front.png");
+		skyboxTextureFilePaths.push_back("res/textures/skybox/NightSky_Back.png");
 		_skyboxTexture.Create(skyboxTextureFilePaths);
 
     }
@@ -3870,15 +3868,15 @@ void CalculateDirtyProbeCoords() {
 
 void QueueAABBForRenering(AABB& aabb, glm::vec3 color) {
 
-    glm::vec3 b = aabb.extents;
-    glm::vec3 frontBottomLeft = aabb.position + glm::vec3(-b.x, -b.y, -b.z);
-    glm::vec3 frontBottomRight = aabb.position + glm::vec3(b.x, -b.y, -b.z);
-    glm::vec3 frontTopLeft = aabb.position + glm::vec3(-b.x, b.y, -b.z);
-    glm::vec3 frontTopRight = aabb.position + glm::vec3(b.x, b.y, -b.z);
-    glm::vec3 backBottomLeft = aabb.position + glm::vec3(-b.x, -b.y, b.z);
-    glm::vec3 backBottomRight = aabb.position + glm::vec3(b.x, -b.y, b.z);
-    glm::vec3 backTopLeft = aabb.position + glm::vec3(-b.x, b.y, b.z);
-    glm::vec3 backTopRight = aabb.position + glm::vec3(b.x, b.y, b.z);
+    std::vector<Vertex> vertices;
+    glm::vec4 frontTopLeft = glm::vec4(aabb.boundsMin.x, aabb.boundsMax.y, aabb.boundsMax.z, 1.0f);
+    glm::vec4 frontTopRight = glm::vec4(aabb.boundsMax.x, aabb.boundsMax.y, aabb.boundsMax.z, 1.0f);
+    glm::vec4 frontBottomLeft = glm::vec4(aabb.boundsMin.x, aabb.boundsMin.y, aabb.boundsMax.z, 1.0f);
+    glm::vec4 frontBottomRight = glm::vec4(aabb.boundsMax.x, aabb.boundsMin.y, aabb.boundsMax.z, 1.0f);
+    glm::vec4 backTopLeft = glm::vec4(aabb.boundsMin.x, aabb.boundsMax.y, aabb.boundsMin.z, 1.0f);
+    glm::vec4 backTopRight = glm::vec4(aabb.boundsMax.x, aabb.boundsMax.y, aabb.boundsMin.z, 1.0f);
+    glm::vec4 backBottomLeft = glm::vec4(aabb.boundsMin.x, aabb.boundsMin.y, aabb.boundsMin.z, 1.0f);
+    glm::vec4 backBottomRight = glm::vec4(aabb.boundsMax.x, aabb.boundsMin.y, aabb.boundsMin.z, 1.0f);
 
     Line line;
     line.p1.color = color;

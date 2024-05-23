@@ -1,7 +1,6 @@
 #include "NumberBlitter.h"
 #include <algorithm>
 #include <iostream>
-#include "../API/OpenGL/GL_assetManager.h"
 #include "../API/OpenGL/GL_backEnd.h"
 
 

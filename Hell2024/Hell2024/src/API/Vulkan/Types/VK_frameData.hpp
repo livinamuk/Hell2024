@@ -9,6 +9,11 @@ struct FrameData {
     VkCommandPool _commandPool;
     VkCommandBuffer _commandBuffer;
 
+    struct DrawCommandBuffers {
+        Buffer geometry;
+        Buffer bulletHoleDecals;
+    };
+
     struct Buffers {
         Buffer cameraData;
         Buffer renderItems2D;
@@ -17,8 +22,12 @@ struct FrameData {
         Buffer animatedRenderItems3D;
         Buffer animatedTransforms;
         Buffer lights;
-        Buffer indirectCommands;
+
+        DrawCommandBuffers drawCommandBuffers[4]; // one struct for each player
+
         Buffer geometryInstanceData;
+        Buffer bulletDecalInstanceData;
+        Buffer tlasRenderItems;
     } buffers;
 
     AccelerationStructure tlas {};

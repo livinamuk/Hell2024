@@ -1,8 +1,19 @@
 #version 460
-#extension GL_EXT_ray_tracing : require
+#extension GL_EXT_ray_tracing : enable
 
-layout(location = 1) rayPayloadInEXT bool isShadowed;
+struct RayPayload {
+	vec4 color;
+	int lightIndex;
+	int padding0;
+	int padding1;
+	int padding2;
+};
+
+
+layout(location = 0) rayPayloadInEXT RayPayload rayPayload;
 
 void main() {
-	isShadowed = false;
+
+	rayPayload.color = vec4(1,1,1,1);
+
 }

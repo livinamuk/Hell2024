@@ -2,7 +2,7 @@
 #include "Physics.h"
 #include "../Common.h"
 #include "../Util.hpp"
-#include "../Types/Model.hpp"
+#include "../Renderer/Types/Model.hpp"
 
 struct RigidBody {
 

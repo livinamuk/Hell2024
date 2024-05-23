@@ -1,5 +1,4 @@
 #include "VolumetricBloodSplatter.h"
-#include "../API/OpenGL/GL_assetManager.h"
 #include "../API/OpenGL/GL_backEnd.h"
 #include "../Core/AssetManager.h"
 

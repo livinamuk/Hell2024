@@ -5,6 +5,8 @@ layout(rgba8, binding = 0) uniform image2D tex;
 
 uniform float finalImageColorContrast;
 uniform vec3 finalImageColorTint;
+uniform int viewportOffsetX;
+uniform int viewportOffsetY;
 
 void contrastAdjust( inout vec3 color, in float c) {
     float t = 0.5 - c * 0.5; 
@@ -14,11 +16,13 @@ void contrastAdjust( inout vec3 color, in float c) {
 void main() {
 
 	ivec2 texCoord = ivec2(gl_GlobalInvocationID.xy);
+	texCoord.x += viewportOffsetX;
+	texCoord.y += viewportOffsetY;
 
     vec3 color = imageLoad(tex, texCoord).rgb;
 	color *= finalImageColorTint;
     contrastAdjust(color, finalImageColorContrast);	
 
-	imageStore(tex, texCoord, vec4(color, 1));
+//	imageStore(tex, texCoord, vec4(color, 1));
 }
 

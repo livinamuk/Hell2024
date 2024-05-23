@@ -27,4 +27,6 @@ struct Floor {
     void CreateVertexData();
     void UpdateRenderItem();
     RenderItem3D& GetRenderItem();
+
+    AABB aabb;
 };

@@ -2,8 +2,8 @@
 #include <map>
 #include <vector>
 #include <assert.h>
-#include "Animation.h"
-#include "../Renderer/RendererCommon.h"
+#include "../../Types/Animation.h"
+#include "../RendererCommon.h"
 #include "SkinnedMesh.hpp"
 
 struct Joint {
@@ -92,14 +92,6 @@ public:
     unsigned int m_NumBones;
     std::vector<BoneInfo> m_BoneInfo;
     glm::mat4 m_GlobalInverseTransform;
-
-    //std::vector<SkinnedMesh> _skinnedMeshes;
-    
-    /*void BackAllMesh() {
-        for (SkinnedMesh& skinnedMesh : _skinnedMeshes) {
-            skinnedMesh.Bake();
-        }
-    }*/
 
     void AddMeshIndex(uint32_t index) {
         meshIndices.push_back(index);

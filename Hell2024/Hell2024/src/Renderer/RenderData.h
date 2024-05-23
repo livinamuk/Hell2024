@@ -1,6 +1,6 @@
 #pragma once
 #include "RendererCommon.h"
-#include "../Types/DetachedMesh.hpp"
+#include "Types/DetachedMesh.hpp"
 
 struct AnimatedRenderItem3D {
     std::vector<RenderItem3D> renderItems;
@@ -27,9 +27,35 @@ struct MultiDrawIndirectDrawInfo {
     std::vector<RenderItem3D> renderItems;
 };
 
+/*struct MultiDrawIndirectCommands {
+    std::vector<DrawIndexedIndirectCommand> geometry;
+    std::vector<DrawIndexedIndirectCommand> decals;
+};*/
+
+struct RenderItems {
+    std::vector<RenderItem3D> geometry;
+    std::vector<RenderItem3D> decals;
+};
+
+/*struct PlayerDrawCommands {
+    std::vector<DrawIndexedIndirectCommand> geometry;
+};*/
+
+struct IndirectDrawInfo {
+    uint32_t instanceDataOffests[4];
+    std::vector<RenderItem3D> instanceData;
+    std::vector<DrawIndexedIndirectCommand> playerDrawCommands[4];
+};
+
+struct PushConstants {
+    int playerIndex;
+    int instanceOffset;
+    int emptpy;
+    int emptp2;
+};
+
 struct RenderData {
 
-    CameraData cameraData;
 
     MultiDrawIndirectDrawInfo bulletHoleDecalDrawInfo;
     MultiDrawIndirectDrawInfo geometryDrawInfo;
@@ -58,5 +84,17 @@ struct RenderData {
     float finalImageColorContrast;
     RenderMode renderMode;
 
+
+    RenderItems renderItems;
+
+    std::vector<RenderItem3D> geometryRenderItems;
+
+
+    int playerCount = 1;
+
+    CameraData cameraData[4];
+    IndirectDrawInfo geometryIndirectDrawInfo;
+    IndirectDrawInfo bulletHoleDecalIndirectDrawInfo;
+    
 };
 

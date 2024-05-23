@@ -8,15 +8,20 @@
 #include "../Core/Input.h"
 #include "../Core/Player.h"
 #include "../Core/Scene.h"
-#include "../Renderer/PointCloud.h"
+#include "../Renderer/GlobalIllumination.h"
 #include "../Renderer/RenderData.h"
 #include "../Renderer/TextBlitter.h"
-
 #include "../Renderer/RendererUtil.hpp"
-
 #include "../Effects/MuzzleFlash.h"
 
-CameraData CreateCameraData(unsigned int playerIndex);
+
+//void CreateGeometryDrawCommands(RenderData& renderData);
+
+IndirectDrawInfo CreateIndirectDrawInfo(std::vector<RenderItem3D>& potentialRenderItems, int playerCount);
+
+
+
+//CameraData CreateCameraData(unsigned int playerIndex);
 std::vector<RenderItem2D> CreateRenderItems2D(unsigned int playerIndex, ivec2 viewportSize);
 std::vector<RenderItem3D> CreateRenderItems3D();
 std::vector<RenderItem3D> CreateGlassRenderItems();
@@ -28,7 +33,8 @@ void UpdateDebugPointsMesh();
 void RenderGame(RenderData& renderData);
 void RenderEditor3D(RenderData& renderData);
 void RenderEditorTopDown(RenderData& renderData);
-void ResizeRenderTargets();
+//void ResizeRenderTargets();
+void PresentFinalImage();
 MuzzleFlashData GetMuzzleFlashData(unsigned int playerIndex);
 
 DetachedMesh _debugLinesMesh;
@@ -80,6 +86,7 @@ std::vector<RenderItem2D> CreateRenderItems2D(unsigned int playerIndex, ivec2 vi
         text += "Splitscreen mode: " + Util::SplitscreenModeToString(Game::GetSplitscreenMode()) + "\n";
         text += "Render mode: " + Util::RenderModeToString(_renderMode) + "\n";
         text += "Line mode: " + Util::DebugLineRenderModeToString(_debugLineRenderMode) + "\n";
+        text += "Cam pos: " + Util::Vec3ToString(Game::GetPlayerByIndex(playerIndex)->GetViewPos()) + "\n";
 
         RendererUtil::AddRenderItems(renderItems, TextBlitter::CreateText(text, { 0, viewportSize.y }, viewportSize, Alignment::TOP_LEFT, BitmapFontType::STANDARD));
     }
@@ -137,6 +144,29 @@ void UpdateDebugLinesMesh() {
     else if (_debugLineRenderMode == DebugLineRenderMode::BOUNDING_BOXES) {
         for (GameObject& gameObject : Scene::_gameObjects) {
             std::vector<Vertex> aabbVertices = gameObject.GetAABBVertices();
+            vertices.reserve(vertices.size() + aabbVertices.size());
+            vertices.insert(std::end(vertices), std::begin(aabbVertices), std::end(aabbVertices));
+        }
+    }
+
+    else if (_debugLineRenderMode == DebugLineRenderMode::RTX_LAND_AABBS) {
+        for (Wall& wall : Scene::_walls) {
+            std::vector<Vertex> aabbVertices = Util::GetAABBVertices(wall.aabb, GREEN);
+            vertices.reserve(vertices.size() + aabbVertices.size());
+            vertices.insert(std::end(vertices), std::begin(aabbVertices), std::end(aabbVertices));
+        }
+        for (Floor& floor : Scene::_floors) {
+            std::vector<Vertex> aabbVertices = Util::GetAABBVertices(floor.aabb, GREEN);
+            vertices.reserve(vertices.size() + aabbVertices.size());
+            vertices.insert(std::end(vertices), std::begin(aabbVertices), std::end(aabbVertices));
+        }
+        for (Ceiling& ceiling : Scene::_ceilings) {
+            std::vector<Vertex> aabbVertices = Util::GetAABBVertices(ceiling.aabb, GREEN);
+            vertices.reserve(vertices.size() + aabbVertices.size());
+            vertices.insert(std::end(vertices), std::begin(aabbVertices), std::end(aabbVertices));
+        }
+        for (Door& door : Scene::_doors) {
+            std::vector<Vertex> aabbVertices = Util::GetAABBVertices(door._aabb, GREEN);
             vertices.reserve(vertices.size() + aabbVertices.size());
             vertices.insert(std::end(vertices), std::begin(aabbVertices), std::end(aabbVertices));
         }
@@ -277,15 +307,14 @@ void UpdateDebugPointsMesh() {
     std::vector<uint32_t> indices;
 
     // Point cloud
-    if (_renderMode == POINT_CLOUD) {
+    /*if (_renderMode == POINT_CLOUD) {
         for (CloudPoint& point : PointCloud::GetCloud()) {
             Vertex v;
             v.position = point.position;
             v.normal = point.normal;// point.directLighting;
             vertices.push_back(v);
         }
-    }
-
+    }*/
 
     for (int i = 0; i < vertices.size(); i++) {
         indices.push_back(i);
@@ -294,15 +323,20 @@ void UpdateDebugPointsMesh() {
     _debugPointsMesh.UpdateVertexBuffer(vertices, indices);
 }
 
+/*
 CameraData CreateCameraData(unsigned int playerIndex) {
 
     Player* player = Game::GetPlayerByIndex(playerIndex);
 
     CameraData cameraData;
-    cameraData.projection = player->GetProjectionMatrix();
-    cameraData.projectionInverse = glm::inverse(cameraData.projection);
-    cameraData.view = player->GetViewMatrix();
-    cameraData.viewInverse = glm::inverse(cameraData.view);
+    cameraData[0].projection = player->GetProjectionMatrix();
+    cameraData[0].projectionInverse = glm::inverse(cameraData[0].projection);
+    cameraData[0].view = player->GetViewMatrix();
+    cameraData[0].viewInverse = glm::inverse(cameraData[0].view);
+    cameraData[0].finalImageColorR = Game::GetPlayerByIndex(playerIndex)->finalImageColorTint.x;
+    cameraData[0].finalImageColorG = Game::GetPlayerByIndex(playerIndex)->finalImageColorTint.y;
+    cameraData[0].finalImageColorB = Game::GetPlayerByIndex(playerIndex)->finalImageColorTint.z;
+    cameraData[0].finalImageColorContrast = Game::GetPlayerByIndex(playerIndex)->finalImageContrast;
 
     // Viewport size
     ivec2 viewportSize = { PRESENT_WIDTH, PRESENT_HEIGHT };
@@ -319,10 +353,66 @@ CameraData CreateCameraData(unsigned int playerIndex) {
         viewportDoubleSize.y *= 0.5;
     }
 
-    cameraData.viewportWidth = viewportDoubleSize.x;
-    cameraData.viewportHeight = viewportDoubleSize.y;
-    return cameraData;
-}
+    cameraData[0].viewportWidth = viewportDoubleSize.x;
+    cameraData[0].viewportHeight = viewportDoubleSize.y;
+
+    // Clipspace range
+    if (Game::GetSplitscreenMode() == SplitscreenMode::NONE) {
+        cameraData[0].clipSpaceXMin = 0.0f;
+        cameraData[0].clipSpaceXMax = 1.0f;
+        cameraData[0].clipSpaceYMin = 0.0f;
+        cameraData[0].clipSpaceYMax = 1.0f;
+    }
+    else if (Game::GetSplitscreenMode() == SplitscreenMode::TWO_PLAYER) {
+        if (playerIndex == 0) {
+            cameraData[0].clipSpaceXMin = 0.0f;
+            cameraData[0].clipSpaceXMax = 1.0f;
+            cameraData[0].clipSpaceYMin = 0.5f;
+            cameraData[0].clipSpaceYMax = 1.0f;
+        }
+        if (playerIndex == 1) {
+            cameraData[0].clipSpaceXMin = 0.0f;
+            cameraData[0].clipSpaceXMax = 1.0f;
+            cameraData[0].clipSpaceYMin = 0.0f;
+            cameraData[0].clipSpaceYMax = 0.5f;
+        }
+    }
+    else if (Game::GetSplitscreenMode() == SplitscreenMode::FOUR_PLAYER) {
+        if (playerIndex == 0) {
+            cameraData[0].clipSpaceXMin = 0.0f;
+            cameraData[0].
+            
+            XMax = 0.5f;
+            cameraData[0].clipSpaceYMin = 0.5f;
+            cameraData[0].clipSpaceYMax = 1.0f;
+        }
+        if (playerIndex == 1) {
+            cameraData[0].clipSpaceXMin = 0.5f;
+            cameraData[0].clipSpaceXMax = 1.0f;
+            cameraData[0].clipSpaceYMin = 0.5f;
+            cameraData[0].clipSpaceYMax = 1.0f;
+        }
+        if (playerIndex == 2) {
+            cameraData[0].clipSpaceXMin = 0.0f;
+            cameraData[0].clipSpaceXMax = 0.5f;
+            cameraData[0].clipSpaceYMin = 0.0f;
+            cameraData[0].clipSpaceYMax = 0.5f;
+        }
+        if (playerIndex == 3) {
+            cameraData[0].clipSpaceXMin = 0.5f;
+            cameraData[0].clipSpaceXMax = 1.0f;
+            cameraData[0].clipSpaceYMin = 0.0f;
+            cameraData[0].clipSpaceYMax = 0.5f;
+        }
+    }
+
+    ViewportInfo viewportInfo = RendererUtil::CreateViewportInfo(playerIndex, Game::GetSplitscreenMode(), PRESENT_WIDTH * 2, PRESENT_HEIGHT * 2);
+    cameraData[0].viewportOffsetX = viewportInfo.xOffset;
+    cameraData[0].viewportOffsetY = viewportInfo.yOffset;
+
+
+    return cameraData;*..
+}*/
 
 void QueueAnimatedGameObjectForRendering(AnimatedGameObject& animatedGameObject) {
     std:vector<RenderItem3D>& renderItems = animatedGameObject.GetRenderItems();
@@ -770,6 +860,50 @@ std::vector<RenderItem3D> CreateBloodVATRenderItems() {
     return renderItems;
 }
 
+struct Frustum {
+
+    bool ContainsAABB(glm::vec3 aabbMin, glm::vec3 aabbMax) {
+        return true;
+    }
+
+};
+
+std::vector<DrawIndexedIndirectCommand> CreateMultiDrawIndirectCommands(std::vector<RenderItem3D>& renderItems) {
+
+    std::vector<DrawIndexedIndirectCommand> commands;
+    std::sort(renderItems.begin(), renderItems.end());
+    int baseInstance = 0;
+
+    for (RenderItem3D& renderItem : renderItems) {
+
+        Mesh* mesh = AssetManager::GetMeshByIndex(renderItem.meshIndex);
+        bool found = false;
+
+        // Does a draw command already exist for this mesh? 
+        for (auto& cmd : commands) {
+            // If so then increment the instance count
+            if (cmd.baseVertex == mesh->baseVertex) {
+                cmd.instanceCount++;
+                baseInstance++;
+                found = true;
+                break;
+            }
+        }
+        // If not, then create the command
+        if (!found) {
+            auto& cmd = commands.emplace_back();
+            cmd.indexCount = mesh->indexCount;
+            cmd.firstIndex = mesh->baseIndex;
+            cmd.baseVertex = mesh->baseVertex;
+            cmd.baseInstance = baseInstance;
+            cmd.instanceCount = 1;
+            baseInstance++;
+        }
+    }
+    return commands;
+}
+
+
 MultiDrawIndirectDrawInfo CreateMultiDrawIndirectDrawInfo(std::vector<RenderItem3D>& renderItems) {
 
     MultiDrawIndirectDrawInfo drawInfo;
@@ -839,12 +973,35 @@ RenderData CreateRenderData(int playerIndex) {
 
     RenderData renderData;
 
+    // Player count
+    if (Game::GetSplitscreenMode() == SplitscreenMode::NONE) {
+        renderData.playerCount = 1;
+    }
+    else if (Game::GetSplitscreenMode() == SplitscreenMode::TWO_PLAYER) {
+        renderData.playerCount = 2;
+    }
+    else if (Game::GetSplitscreenMode() == SplitscreenMode::FOUR_PLAYER) {
+        renderData.playerCount = 4;
+    }
+
+
+    // Create render items
+    renderData.renderItems.geometry = CreateRenderItems3D();
+    renderData.renderItems.decals = Scene::CreateDecalRenderItems();
+
+    // Sort render items by mesh index
+    std::sort(renderData.renderItems.geometry.begin(), renderData.renderItems.geometry.end());
+    std::sort(renderData.renderItems.decals.begin(), renderData.renderItems.decals.end());
+
+    // Create draw commands
+    //renderData.drawCommandsP1.geometry = 
+
     renderData.lights = CreateGPULights();
     renderData.debugLinesMesh = &_debugLinesMesh;
     renderData.debugPointsMesh = &_debugPointsMesh;
     renderData.renderDebugLines = (_debugLineRenderMode != DebugLineRenderMode::SHOW_NO_LINES);
     renderData.playerIndex = playerIndex;
-    renderData.cameraData = CreateCameraData(playerIndex);
+    //renderData.cameraData = CreateCameraData(playerIndex);
     renderData.renderItems2D = CreateRenderItems2D(playerIndex, viewportSize);
     renderData.renderItems2DHiRes = Game::GetPlayerByIndex(playerIndex)->GetHudRenderItemsHiRes(viewportDoubleSize);
     renderData.blitDstCoords = GetBlitDstCoords(playerIndex);
@@ -862,6 +1019,112 @@ RenderData CreateRenderData(int playerIndex) {
     renderData.bloodDecalDrawInfo = CreateMultiDrawIndirectDrawInfo(bloodDecalRenderItems);
     renderData.shadowMapGeometryDrawInfo = CreateMultiDrawIndirectDrawInfo(shadowMapGeometryRenderItems);
     renderData.bloodVATDrawInfo = CreateMultiDrawIndirectDrawInfo(bloodVATRenderItems);
+
+
+
+
+    // Camera data
+    for (int i = 0; i < renderData.playerCount; i++) {
+        Player* player = Game::GetPlayerByIndex(i);
+        renderData.cameraData[i].projection = player->GetProjectionMatrix();
+        renderData.cameraData[i].projectionInverse = glm::inverse(renderData.cameraData[i].projection);
+        renderData.cameraData[i].view = player->GetViewMatrix();
+        renderData.cameraData[i].viewInverse = glm::inverse(renderData.cameraData[i].view);
+        renderData.cameraData[i].finalImageColorR = Game::GetPlayerByIndex(playerIndex)->finalImageColorTint.x;
+        renderData.cameraData[i].finalImageColorG = Game::GetPlayerByIndex(playerIndex)->finalImageColorTint.y;
+        renderData.cameraData[i].finalImageColorB = Game::GetPlayerByIndex(playerIndex)->finalImageColorTint.z;
+        renderData.cameraData[i].finalImageColorContrast = Game::GetPlayerByIndex(playerIndex)->finalImageContrast;
+
+
+
+
+
+
+        // Viewport size
+        ivec2 viewportSize = { PRESENT_WIDTH, PRESENT_HEIGHT };
+        ivec2 viewportDoubleSize = { PRESENT_WIDTH * 2, PRESENT_HEIGHT * 2 };
+
+        if (Game::GetSplitscreenMode() == SplitscreenMode::TWO_PLAYER) {
+            viewportSize.y *= 0.5;
+            viewportDoubleSize.y *= 0.5;
+        }
+        if (Game::GetSplitscreenMode() == SplitscreenMode::FOUR_PLAYER) {
+            viewportSize.x *= 0.5;
+            viewportSize.y *= 0.5;
+            viewportDoubleSize.x *= 0.5;
+            viewportDoubleSize.y *= 0.5;
+        }
+
+        renderData.cameraData[i].viewportWidth = viewportDoubleSize.x;
+        renderData.cameraData[i].viewportHeight = viewportDoubleSize.y;
+
+        // Clipspace range
+        if (Game::GetSplitscreenMode() == SplitscreenMode::NONE) {
+            renderData.cameraData[i].clipSpaceXMin = 0.0f;
+            renderData.cameraData[i].clipSpaceXMax = 1.0f;
+            renderData.cameraData[i].clipSpaceYMin = 0.0f;
+            renderData.cameraData[i].clipSpaceYMax = 1.0f;
+        }
+        else if (Game::GetSplitscreenMode() == SplitscreenMode::TWO_PLAYER) {
+            if (i == 0) {
+                renderData.cameraData[i].clipSpaceXMin = 0.0f;
+                renderData.cameraData[i].clipSpaceXMax = 1.0f;
+                renderData.cameraData[i].clipSpaceYMin = 0.5f;
+                renderData.cameraData[i].clipSpaceYMax = 1.0f;
+            }
+            if (i == 1) {
+                renderData.cameraData[i].clipSpaceXMin = 0.0f;
+                renderData.cameraData[i].clipSpaceXMax = 1.0f;
+                renderData.cameraData[i].clipSpaceYMin = 0.0f;
+                renderData.cameraData[i].clipSpaceYMax = 0.5f;
+            }
+        }
+        else if (Game::GetSplitscreenMode() == SplitscreenMode::FOUR_PLAYER) {
+            if (i == 0) {
+                renderData.cameraData[i].clipSpaceXMin = 0.0f;
+                renderData.cameraData[i].clipSpaceXMax = 0.5f;
+                renderData.cameraData[i].clipSpaceYMin = 0.5f;
+                renderData.cameraData[i].clipSpaceYMax = 1.0f;
+            }
+            if (i == 1) {
+                renderData.cameraData[i].clipSpaceXMin = 0.5f;
+                renderData.cameraData[i].clipSpaceXMax = 1.0f;
+                renderData.cameraData[i].clipSpaceYMin = 0.5f;
+                renderData.cameraData[i].clipSpaceYMax = 1.0f;
+            }
+            if (i == 2) {
+                renderData.cameraData[i].clipSpaceXMin = 0.0f;
+                renderData.cameraData[i].clipSpaceXMax = 0.5f;
+                renderData.cameraData[i].clipSpaceYMin = 0.0f;
+                renderData.cameraData[i].clipSpaceYMax = 0.5f;
+            }
+            if (i == 3) {
+                renderData.cameraData[i].clipSpaceXMin = 0.5f;
+                renderData.cameraData[i].clipSpaceXMax = 1.0f;
+                renderData.cameraData[i].clipSpaceYMin = 0.0f;
+                renderData.cameraData[i].clipSpaceYMax = 0.5f;
+            }
+        }
+
+        ViewportInfo viewportInfo = RendererUtil::CreateViewportInfo(i, Game::GetSplitscreenMode(), PRESENT_WIDTH * 2, PRESENT_HEIGHT * 2);
+        renderData.cameraData[i].viewportOffsetX = viewportInfo.xOffset;
+        renderData.cameraData[i].viewportOffsetY = viewportInfo.yOffset;
+    }
+
+
+
+
+
+
+
+
+
+    std::vector<RenderItem3D> geometryRenderItems2 = CreateRenderItems3D();
+    std::vector<RenderItem3D> bulletHoleDecalRenderItems = Scene::CreateDecalRenderItems();
+
+    renderData.geometryIndirectDrawInfo = CreateIndirectDrawInfo(geometryRenderItems2, 4);
+    renderData.bulletHoleDecalIndirectDrawInfo = CreateIndirectDrawInfo(bulletHoleDecalRenderItems, 4);
+
      
     return renderData;
 }
@@ -893,6 +1156,16 @@ std::vector<RenderItem3D> CreateGlassRenderItems() {
     return renderItems;
 }
 
+void Renderer::UpdatePointCloud() {
+
+    if (BackEnd::GetAPI() == API::OPENGL) {
+        OpenGLRenderer::UpdatePointCloud();
+    }
+    else if (BackEnd::GetAPI() == API::VULKAN) {
+        // TODO: VulkanRenderer::UpdatePointCloud();
+    }
+}
+
 /*
 
 ██████╗ ███████╗███╗   ██╗██████╗ ███████╗██████╗     ███████╗██████╗  █████╗ ███╗   ███╗███████╗
@@ -902,7 +1175,58 @@ std::vector<RenderItem3D> CreateGlassRenderItems() {
 ██║  ██║███████╗██║ ╚████║██████╔╝███████╗██║  ██║    ██║     ██║  ██║██║  ██║██║ ╚═╝ ██║███████╗
 ╚═╝  ╚═╝╚══════╝╚═╝  ╚═══╝╚═════╝ ╚══════╝╚═╝  ╚═╝    ╚═╝     ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝     ╚═╝╚══════╝ */
 
+IndirectDrawInfo CreateIndirectDrawInfo(std::vector<RenderItem3D>& potentialRenderItems, int playerCount) {
+
+    IndirectDrawInfo drawInfo;
+    std::vector<RenderItem3D> playerRenderItems[PLAYER_COUNT];
+
+    // Allocate memory
+    drawInfo.instanceData.reserve(MAX_RENDER_OBJECTS_3D * PLAYER_COUNT);
+    for (int i = 0; i < PLAYER_COUNT; i++) {
+        playerRenderItems[i].reserve(MAX_RENDER_OBJECTS_3D);
+        drawInfo.playerDrawCommands[i].reserve(MAX_INDIRECT_COMMANDS);
+    }
+
+    // Create draw commands for each player, frustum culling against the potential render items
+    for (int playerIndex = 0; playerIndex < playerCount; playerIndex++) {
+        for (int i = 0; i < potentialRenderItems.size(); i++) {
+
+            RenderItem3D& renderItem = potentialRenderItems[i];
+
+            /*
+            glm::vec4 position = renderItem.modelMatrix[3];
+            if (playerIndex == 0 && position.x > 8) {
+                continue;
+            }
+            if (playerIndex == 2 && position.x > 4) {
+                continue;
+            }*/
+
+            playerRenderItems[playerIndex].push_back(renderItem);
+        }
+        drawInfo.playerDrawCommands[playerIndex] = CreateMultiDrawIndirectCommands(playerRenderItems[playerIndex]);
+    }
+
+    // Calculate per player instance data offsets
+    int baseInstance = 0;
+    for (int playerIndex = 0; playerIndex < playerCount; playerIndex++) {
+        drawInfo.instanceDataOffests[playerIndex] = baseInstance;
+        baseInstance += playerRenderItems[playerIndex].size();
+    }
+
+    // Copy everything into one giant sequential vector
+    for (int playerIndex = 0; playerIndex < playerCount; playerIndex++) {
+        drawInfo.instanceData.insert(drawInfo.instanceData.end(), playerRenderItems[playerIndex].begin(), playerRenderItems[playerIndex].end());
+    }
+
+    return drawInfo;
+}
+
+
 void Renderer::RenderFrame() {
+
+    // Global illumination
+    UpdatePointCloud();
 
     // Update debug mesh
     UpdateDebugLinesMesh();
@@ -911,13 +1235,16 @@ void Renderer::RenderFrame() {
     // Resize render targets if required
     if (Input::KeyPressed(HELL_KEY_V)) {
         Game::NextSplitScreenMode();
-        ResizeRenderTargets();
+        //ResizeRenderTargets();
     }
 
     // Game
     if (Game::GetGameMode() == Game::GameMode::GAME) {
 
-        if (Game::GetMultiplayerMode() == Game::MultiplayerMode::NONE ||
+        RenderData renderData = CreateRenderData(0);
+        RenderGame(renderData);
+
+        /*if (Game::GetMultiplayerMode() == Game::MultiplayerMode::NONE ||
             Game::GetMultiplayerMode() == Game::MultiplayerMode::ONLINE) {
             RenderData renderData = CreateRenderData(0);
             RenderGame(renderData);
@@ -932,17 +1259,19 @@ void Renderer::RenderFrame() {
                 for (int i = 0; i < 2; i++) {
                     RenderData renderData = CreateRenderData(i);
                     RenderGame(renderData);
+                    break;
                 }
             }
             if (Game::GetSplitscreenMode() == SplitscreenMode::FOUR_PLAYER) {
                 for (int i = 0; i < 4; i++) {
                     RenderData renderData = CreateRenderData(i);
                     RenderGame(renderData);
+                    break;
                 }
             }
-        }
+        }*/
 
-        //PresentFinalImage();
+        PresentFinalImage();
     }
     // 3D editor
     else if (Game::GetGameMode() == Game::GameMode::EDITOR_3D) {
@@ -1022,6 +1351,7 @@ void Renderer::HotloadShaders() {
     }
 }
 
+/*
 void ResizeRenderTargets() {
 
     SplitscreenMode splitscreenMode = Game::GetSplitscreenMode();
@@ -1038,59 +1368,90 @@ void ResizeRenderTargets() {
     }
     
     if (BackEnd::GetAPI() == API::OPENGL) {
-        OpenGLRenderer::CreatePlayerRenderTargets(width, height);
+        //OpenGLRenderer::CreatePlayerRenderTargets(width, height);
     }
     else if (BackEnd::GetAPI() == API::VULKAN) {
-        VulkanRenderer::CreatePlayerRenderTargets(width, height);
+        //VulkanRenderer::CreatePlayerRenderTargets(width, height);
     }
-}
+}*/
+
+inline std::vector<DebugLineRenderMode> _allowedDebugLineRenderModes = {
+    //PHYSX_ALL,
+    //PHYSX_RAYCAST,
+    //PHYSX_COLLISION,
+    //RAYTRACE_LAND,
+    //PHYSX_EDITOR,
+    BOUNDING_BOXES,
+    RTX_LAND_AABBS,
+    //RTX_LAND_TRIS,
+    //RTX_LAND_TOP_LEVEL_ACCELERATION_STRUCTURE,
+    //RTX_LAND_BOTTOM_LEVEL_ACCELERATION_STRUCTURES,
+    //RTX_LAND_TOP_AND_BOTTOM_LEVEL_ACCELERATION_STRUCTURES,
+};
 
 void Renderer::NextDebugLineRenderMode() {
     _debugLineRenderMode = (DebugLineRenderMode)(int(_debugLineRenderMode) + 1);
-    if (_debugLineRenderMode == PHYSX_ALL) {
-        _debugLineRenderMode = (DebugLineRenderMode)(int(_debugLineRenderMode) + 1);
-    }
-    if (_debugLineRenderMode == PHYSX_RAYCAST) {
-        _debugLineRenderMode = (DebugLineRenderMode)(int(_debugLineRenderMode) + 1);
-    }
-    if (_debugLineRenderMode == PHYSX_COLLISION && false) {
-        _debugLineRenderMode = (DebugLineRenderMode)(int(_debugLineRenderMode) + 1);
-    }
-    if (_debugLineRenderMode == RAYTRACE_LAND) {
-        _debugLineRenderMode = (DebugLineRenderMode)(int(_debugLineRenderMode) + 1);
-    }
-    if (_debugLineRenderMode == PHYSX_EDITOR) {
-        _debugLineRenderMode = (DebugLineRenderMode)(int(_debugLineRenderMode) + 1);
-    }
-    if (_debugLineRenderMode == BOUNDING_BOXES && false) {
-        _debugLineRenderMode = (DebugLineRenderMode)(int(_debugLineRenderMode) + 1);
-    }
     if (_debugLineRenderMode == DEBUG_LINE_MODE_COUNT) {
         _debugLineRenderMode = (DebugLineRenderMode)0;
     }
+    // If mode isn't in available modes list, then go to next
+    bool allowed = false;
+    for (auto& avaliableMode : _allowedDebugLineRenderModes) {
+        if (_debugLineRenderMode == avaliableMode) {
+            allowed = true;
+            break;
+        }
+    }
+    if (!allowed && _debugLineRenderMode != DebugLineRenderMode::SHOW_NO_LINES) {
+        NextDebugLineRenderMode();
+    }
 }
+
+inline static std::vector<RenderMode> _allowedRenderModes = {
+    COMPOSITE,
+    //DIRECT_LIGHT,
+    //INDIRECT_LIGHT,
+    POINT_CLOUD,
+    PROPAGATION_GRID,
+    POINT_CLOUD_PROPAGATION_GRID,
+};
 
 void Renderer::NextRenderMode() {
     _renderMode = (RenderMode)(int(_renderMode) + 1);
-    if (_renderMode == RENDER_MODE_COUNT) {
+    if (_renderMode == DEBUG_LINE_MODE_COUNT) {
         _renderMode = (RenderMode)0;
     }
-    // Hack
-    if (_renderMode == DIRECT_LIGHT) {
-        _renderMode = POINT_CLOUD;
+    // If mode isn't in available modes list, then go to next
+    bool allowed = false;
+    for (auto& avaliableMode : _allowedRenderModes) {
+        if (_renderMode == avaliableMode) {
+            allowed = true;
+            break;
+        }
+    }
+    if (!allowed && _renderMode != RenderMode::COMPOSITE) {
+        NextRenderMode();
     }
 }
 
 void Renderer::PreviousRenderMode() {
+
     if (_renderMode == (RenderMode)(0)) {
-        _renderMode = (RenderMode)((int)(RENDER_MODE_COUNT) - 1);
+        _renderMode = (RenderMode)((int)(RENDER_MODE_COUNT)-1);
     }
     else {
         _renderMode = (RenderMode)(int(_renderMode) - 1);
     }
-    // Hack
-    if (_renderMode == INDIRECT_LIGHT) {
-        _renderMode = COMPOSITE;
+    // If mode isn't in available modes list, then go to next
+    bool allowed = false;
+    for (auto& avaliableMode : _allowedRenderModes) {
+        if (_renderMode == avaliableMode) {
+            allowed = true;
+            break;
+        }
+    }
+    if (!allowed) {
+        PreviousRenderMode();
     }
 }
 
@@ -1098,7 +1459,7 @@ void Renderer::PreviousRenderMode() {
 void PresentFinalImage() {
 
     if (BackEnd::GetAPI() == API::OPENGL) {
-        // Nothing yet
+        OpenGLRenderer::PresentFinalImage();
     }
     else if (BackEnd::GetAPI() == API::VULKAN) {
         VulkanRenderer::PresentFinalImage();
