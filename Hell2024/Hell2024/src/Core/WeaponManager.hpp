@@ -1,4 +1,4 @@
-#pragma once
+/*#pragma once
 #include <string>
 #include <vector>
 #include "JSON.hpp"
@@ -125,4 +125,4 @@ namespace WeaponManager {
 
     }
 
-}
+}*/

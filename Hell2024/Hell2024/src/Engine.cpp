@@ -12,6 +12,7 @@
 #include "Core/Game.h"
 #include "Core/Floorplan.h"
 #include "Core/Input.h"
+#include "Core/WeaponManager.h"
 #include "Core/InputMulti.h"
 #include "Physics/Physics.h"
 #include "Core/Player.h"
@@ -29,6 +30,8 @@ void Engine::Run() {
         BackEnd::BeginFrame();
         BackEnd::UpdateSubSystems();
 
+        WeaponManager::Init();
+
         // Load files from disk
         if (!AssetManager::LoadingComplete()) {
             AssetManager::LoadNextItem();
@@ -37,8 +40,24 @@ void Engine::Run() {
         // Create game
         else if (!Game::IsLoaded()) {
             Game::Create();
-            AssetManager::UploadVertexData(); 
+            AssetManager::UploadVertexData();
             AssetManager::UploadWeightedVertexData();
+
+
+           // SkinnedModel* ptr = AssetManager::GetSkinnedModelByName("UniSexGuyScaled");
+            SkinnedModel* ptr = AssetManager::GetSkinnedModelByName("Glock");
+            for (int i = 0; i < ptr->GetMeshCount(); i++) {
+
+                SkinnedMesh* mesh = AssetManager::GetSkinnedMeshByIndex(ptr->GetMeshIndices()[i]);
+
+                std::cout << i << ": " << mesh->name << "\n";
+                std::cout << "vertexCount: " << mesh->vertexCount << "\n";
+                std::cout << "indexCount: " << mesh->indexCount << "\n";
+                std::cout << "baseVertexGlobal: " << mesh->baseVertexGlobal << "\n";
+                std::cout << "baseVertexLocal: " << mesh->baseVertexLocal << "\n";
+                std::cout << "baseIndex: " << mesh->baseIndex << "\n\n";
+
+            }
         }
         // The game
         else {
@@ -60,16 +79,16 @@ void Engine::RunOld() {
 
     // Load files from disk
     while (BackEnd::WindowIsOpen() && !AssetManager::LoadingComplete()) {
-        
+
         BackEnd::BeginFrame();
         BackEnd::UpdateSubSystems();
-        
+
         AssetManager::LoadNextItem();
         Renderer_OLD::RenderLoadingScreen();
 
         BackEnd::EndFrame();
     }
-    
+
     // Init some shit
     if (BackEnd::WindowIsOpen()) {
         AssetManager::UploadVertexData();
@@ -116,7 +135,7 @@ void Engine::RunOld() {
             EngineState::GetEngineMode() == FLOORPLAN) {
             Input::ShowCursor();
         }
-                
+
         // Update
         Input::Update();
         DebugMenu::Update();
@@ -130,7 +149,7 @@ void Engine::RunOld() {
                 Physics::StepPhysics(fixedDeltaTime);
             }
             Engine::LazyKeyPresses();
-            Scene::Update_OLD(deltaTime);            
+            Scene::Update_OLD(deltaTime);
 
             if (EngineState::GetEngineMode() == GAME) {
                 InputMulti::Update();
@@ -147,7 +166,7 @@ void Engine::RunOld() {
             Engine::LazyKeyPressesEditor();
             Floorplan::Update(deltaTime);
         }
-              
+
         // Render
         if (EngineState::GetEngineMode() == GAME ||
             EngineState::GetEngineMode() == EDITOR) {
@@ -256,7 +275,7 @@ void Engine::LazyKeyPressesEditor() {
     if (Input::KeyPressed(GLFW_KEY_Z)) {
         Floorplan::PreviousMode();
         Audio::PlayAudio(AUDIO_SELECT, 1.00f);
-	}	
+	}
     if (Input::KeyPressed(GLFW_KEY_H)) {
         Renderer_OLD::HotloadShaders();
 	}

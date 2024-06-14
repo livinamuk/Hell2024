@@ -13,10 +13,10 @@ namespace AssetManager {
     // Asset Loading
     void FindAssetPaths();
     void LoadNextItem();
-    void AddItemToLoadLog(std::string item); 
+    void AddItemToLoadLog(std::string item);
     bool LoadingComplete();
     std::vector<std::string>& GetLoadLog();
-    
+
     // Vertex data
     std::vector<Vertex>& GetVertices();
     std::vector<uint32_t>& GetIndices();
@@ -55,7 +55,7 @@ namespace AssetManager {
     // Skinned Mesh
     SkinnedMesh* GetSkinnedMeshByIndex(int index);
     int GetSkinnedMeshIndexByName(const std::string& name);
-    int CreateSkinnedMesh(std::string name, std::vector<WeightedVertex>& vertices, std::vector<uint32_t>& indices);
+    int CreateSkinnedMesh(std::string name, std::vector<WeightedVertex>& vertices, std::vector<uint32_t>& indices, uint32_t baseVertexLocal);
 
     // Animations
     Animation* GetAnimationByName(const std::string& name);
@@ -75,7 +75,7 @@ namespace AssetManager {
     int GetTextureIndexByName(const std::string& filename, bool ignoreWarning = false);
     bool TextureExists(const std::string& name);
     std::vector<Texture>& GetTextures();
-    void LoadFont(); 
+    void LoadFont();
     ivec2 GetTextureSizeByName(const char* textureName);
 
     // Cubemap Textures

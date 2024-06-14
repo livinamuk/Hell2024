@@ -33,7 +33,7 @@ int TextBlitter::GetLineHeight(BitmapFontType fontType) {
 
 ivec2 TextBlitter::GetCharacterSize(const char* character, BitmapFontType fontType) {
 
-   
+
     if (fontType == BitmapFontType::STANDARD) {
         static std::unordered_map<const char*, ivec2> standardFontTextureSizes;
         if (standardFontTextureSizes.find(character) == standardFontTextureSizes.end()) {
@@ -41,7 +41,7 @@ ivec2 TextBlitter::GetCharacterSize(const char* character, BitmapFontType fontTy
             std::string textureName = "char_" + std::to_string(charPos + 1);
             standardFontTextureSizes[character] = AssetManager::GetTextureSizeByName(textureName.c_str());
         }
-        return standardFontTextureSizes[character];        
+        return standardFontTextureSizes[character];
     }
     else if (fontType == BitmapFontType::AMMO_NUMBERS) {
         static std::unordered_map<const char*, ivec2> ammoNumbersFontTextureSizes;
@@ -50,7 +50,7 @@ ivec2 TextBlitter::GetCharacterSize(const char* character, BitmapFontType fontTy
             std::string textureName = "num_" + std::to_string(charPos);
             ammoNumbersFontTextureSizes[character] = AssetManager::GetTextureSizeByName(textureName.c_str());
         }
-        return ammoNumbersFontTextureSizes[character];        
+        return ammoNumbersFontTextureSizes[character];
     }
     else {
         return ivec2(0, 0);
@@ -123,7 +123,7 @@ std::vector<RenderItem2D> TextBlitter::CreateText(std::string text, ivec2 locati
 
         std::string textureName = "";
         size_t charPos = std::string::npos;
-                
+
         if (fontType == BitmapFontType::STANDARD) {
             charPos = _charSheet.find(character);
             textureName = "char_" + std::to_string(charPos + 1);
@@ -153,7 +153,7 @@ std::vector<RenderItem2D> TextBlitter::CreateText(std::string text, ivec2 locati
         transform.scale = glm::vec3(width, height * -1, 1);
 
         if (BackEnd::GetAPI() == API::VULKAN) {
-            transform.position.y *= -1;
+            //transform.position.y *= -1;
         }
 
         RenderItem2D renderItem;

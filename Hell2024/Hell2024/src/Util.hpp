@@ -5,7 +5,6 @@
 #include <iostream>
 #include <string>
 #include <vector>
-//#include <glm/glm.hpp>
 #include "Common.h"
 #include "glm/gtx/intersect.hpp"
 #include <random>

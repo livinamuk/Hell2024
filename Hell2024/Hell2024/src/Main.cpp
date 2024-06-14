@@ -25,6 +25,22 @@ extern "C" {
 
 int main() {
 
+    int thickness = 2;
+    int size = thickness * 2 + 1;
+    for (int i = 0; i < size * size; i++) {
+
+        int gl_InstanceID = i;
+        int indX = gl_InstanceID / size;
+        int indY = gl_InstanceID % size;
+
+        indX -= thickness;
+        indY -= thickness;
+
+        std::cout << indX << " " << indY << "\n";
+    }
+    //return 0;
+
+
     // WeaponManager::Init();
     // return 0;
 

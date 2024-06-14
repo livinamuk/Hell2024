@@ -11,10 +11,31 @@ enum class OpenState { NONE, CLOSED, CLOSING, OPEN, OPENING };
 enum class OpenAxis { NONE, TRANSLATE_X, TRANSLATE_Y, TRANSLATE_Z, ROTATION_POS_X, ROTATION_POS_Y, ROTATION_POS_Z, ROTATION_NEG_X, ROTATION_NEG_Y, ROTATION_NEG_Z };
 enum class InteractType { NONE, TEXT, QUESTION, PICKUP, CALLBACK_ONLY };
 enum class ModelMatrixMode { GAME_TRANSFORM, PHYSX_TRANSFORM };
-enum class PickUpType { NONE, GLOCK, GLOCK_AMMO, SHOTGUN, SHOTGUN_AMMO, AKS74U, AKS74U_AMMO, AKS74U_SCOPE };
+
+enum class CollisionType { NONE, STATIC_ENVIROMENT, BOUNCEABLE, PICKUP, BULLET_CASING };
 
 struct GameObject {
+
+private:
+    CollisionType m_collisionType = CollisionType::NONE;   
+
 public:
+    GameObject() = default;
+    void SetCollisionType(CollisionType collisionType);
+
+
+
+    RigidBody m_collisionRigidBody;
+    RigidStatic m_raycastRigidStatic;
+
+
+
+
+
+
+public:
+
+
 
     //OpenGLModel* _model_OLD = nullptr;
     Model* model = nullptr;
@@ -30,8 +51,7 @@ public:
 	float _openSpeed = 0;
     bool _respawns = true;
 
-    RigidBody collisionRigidBody;
-    RigidStatic raycastRigidStatic;
+
 
 private:
 
@@ -41,8 +61,6 @@ private:
 		
 	ModelMatrixMode _modelMatrixMode = ModelMatrixMode::GAME_TRANSFORM;
 	BoundingBox _boundingBox;
-	//std::vector<PxShape*> _collisionShapes;
-
 
 	struct AudioEffects {
 		AudioEffectInfo onOpen;
@@ -55,7 +73,6 @@ private:
 
 
 public:
-	GameObject();
 	glm::mat4 GetModelMatrix();
 	std::string GetName();
 
@@ -67,15 +84,7 @@ public:
     void SetKinematic(bool value);
     void DisableRaycasting();
     void EnableRaycasting();
-    void SetCollisionGroup(CollisionGroup collisionGroup);
     
-    
-    
-    void SetCollidesWithGroup(PxU32 collisionGroup) {
-
-
-
-    }
     AABB _aabb;
     AABB _aabbPreviousFrame;
 
@@ -117,11 +126,9 @@ public:
 	const InteractType& GetInteractType();
 	OpenState& GetOpenState();
 	void SetTransform(Transform& transform);
-	void SetInteractToAffectAnotherObject(std::string objectName);
 	void SetMeshMaterialByMeshName(std::string meshName, std::string materialName);
 	void PickUp();
 	void SetPickUpType(PickUpType pickupType);
-	void DisablePickUp();
 	bool IsCollectable();
 	bool IsCollected();
 	PickUpType GetPickUpType();
@@ -129,8 +136,8 @@ public:
 
 	//void CreateRigidBody(glm::mat4 matrix, bool kinematic);
 	void AddCollisionShape(PxShape* shape, PhysicsFilterData physicsFilterData);
-	void AddCollisionShapeFromModelIndex(unsigned int modelIndex, PhysicsFilterData physicsFilterData, glm::vec3 scale = glm::vec3(1));
-	void AddCollisionShapeFromBoundingBox(BoundingBox& boundignBox, PhysicsFilterData physicsFilterData);
+	void AddCollisionShapeFromModelIndex(unsigned int modelIndex, glm::vec3 scale = glm::vec3(1));
+	void AddCollisionShapeFromBoundingBox(BoundingBox& boundignBox);
 	void UpdateRigidBodyMassAndInertia(float density);
     void PutRigidBodyToSleep();
 

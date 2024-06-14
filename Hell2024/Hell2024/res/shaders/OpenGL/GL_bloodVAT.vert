@@ -4,8 +4,8 @@
 layout (location = 0) in vec3 a_Position;
 layout (location = 2) in vec2 a_Texcoord;
 
-layout(location = 0) uniform mat4 projection;
-layout(location = 1) uniform mat4 view;
+//layout(location = 0) uniform mat4 projection;
+//layout(location = 1) uniform mat4 view;
 //layout(location = 2) uniform mat4 u_MatrixWorld;
 //layout(location = 4) uniform float u_Time;
 
@@ -41,9 +41,34 @@ layout(std430, binding = 15) readonly buffer renderItems {
     RenderItem3D RenderItems[];
 };
 
+struct CameraData {
+    mat4 projection;
+    mat4 projectionInverse;
+    mat4 view;
+    mat4 viewInverse;
+	float viewportWidth;
+	float viewportHeight;   
+    float viewportOffsetX;
+    float viewportOffsetY; 
+	float clipSpaceXMin;
+    float clipSpaceXMax;
+    float clipSpaceYMin;
+    float clipSpaceYMax;
+	float finalImageColorContrast;
+    float finalImageColorR;
+    float finalImageColorG;
+    float finalImageColorB;
+};
+
+layout(std430, binding = 16) readonly buffer CameraDataArray {
+    CameraData cameraDataArray[];
+};
+
 out vec3 Normal;
 out vec3 v_ViewDir;
 out vec3 v_fragPos;
+
+uniform int playerIndex;
 
 float LinearToGammaSpaceExact (float value) {
     if (value <= 0.0F)
@@ -61,6 +86,9 @@ vec3 LinearToGammaSpace (vec3 linRGB) {
 }
 
 void main() {
+	
+	mat4 projection = cameraDataArray[playerIndex].projection;
+	mat4 view = cameraDataArray[playerIndex].view;
 
 	mat4 model = RenderItems[gl_InstanceID + gl_BaseInstance].modelMatrix;
 	mat4 invereseModel = RenderItems[gl_InstanceID + gl_BaseInstance].inverseModelMatrix;

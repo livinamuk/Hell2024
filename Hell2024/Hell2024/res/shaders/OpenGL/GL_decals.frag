@@ -18,6 +18,8 @@ readonly restrict layout(std430, binding = 0) buffer textureSamplerers {
 	uvec2 textureSamplers[]; 
 };
 
+uniform int playerIndex;
+
 
 void main() {
 
@@ -34,7 +36,7 @@ void main() {
     float metallic = 0.1;
 
     BaseColorOut = vec4(baseColor.rgb, 1.0f);
-    NormalsOut = vec4(Normal, 1.0);
+    NormalsOut = vec4(Normal, float(playerIndex) * 0.25);
     RMAOut =  vec4(roughness, metallic, 1, 1.0);
 
 	

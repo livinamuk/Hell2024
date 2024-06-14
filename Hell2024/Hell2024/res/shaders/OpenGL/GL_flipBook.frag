@@ -14,6 +14,8 @@ in vec3 FragPos;
 
 
 void main() {
+
+	//discard;
 	vec2 sizeTile =  vec2(1.0 / u_CountColumn, 1.0 / u_CountRaw);
 
 	int frameIndex0 =  u_FrameIndex - 1;
@@ -28,5 +30,6 @@ void main() {
 	vec3 tint = vec3(1, 1, 1);
 	vec4 color = mix(color0, color1, u_TimeLerp) * vec4(tint, 1.0);	
 	FragColor = color.rgba;
+	//FragColor = vec4(1, 1, 0, 1);
 	  
 }

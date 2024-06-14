@@ -9,12 +9,14 @@ layout (location = 5) in vec4 aBoneWeight;
 
 uniform mat4 projection;
 uniform mat4 view;
+uniform int playerIndex;
 
 out vec2 TexCoord;
 out flat int BaseColorTextureIndex;
 out flat int NormalTextureIndex;
 out flat int RMATextureIndex;
 out flat int useEmissiveMask;
+out flat int PlayerIndex;
 out vec3 attrNormal;
 out vec3 attrTangent;
 out vec3 attrBiTangent;
@@ -61,5 +63,6 @@ void main() {
 	attrBiTangent = normalize(cross(attrNormal,attrTangent));
 
 	gl_Position = projection * view * model * vec4(aPos, 1.0);
+	PlayerIndex = playerIndex;
 
 }

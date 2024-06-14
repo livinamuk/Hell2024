@@ -60,8 +60,8 @@ void DebugMenu::Init() {
 		auto& editObjects = scene.AddItem("Edit objects",MenuItemFlag::UNDEFINED, nullptr); {
 
 			auto& editGameObjects = editObjects.AddItem("Game Objects",MenuItemFlag::UNDEFINED, nullptr); {
-				for (int i = 0; i < Scene::_gameObjects.size() && i < 20; i++) {
-					GameObject& gameObject = Scene::_gameObjects[i];
+				for (int i = 0; i < Scene::GetGameObjectCount() && i < 20; i++) {
+					GameObject& gameObject = Scene::GetGamesObjects()[i];
 					editGameObjects.AddItem(gameObject.GetName(),MenuItemFlag::EDIT_GAME_OBJECT, nullptr);
 				}
 			}
@@ -125,16 +125,16 @@ void DebugMenu::UpdateWindowMenuPointers() {
 
 void DebugMenu::UpdateGameObjectMenuPointers() {
 	_gameObjectsMenu.subMenu.clear();
-	_gameObjectsMenu.AddItem("Name", MenuItemFlag::STRING, &Scene::_gameObjects[_selectedGameObjectIndex]._name);
-	_gameObjectsMenu.AddItem("Parent Name", MenuItemFlag::STRING, &Scene::_gameObjects[_selectedGameObjectIndex]._parentName);
+	_gameObjectsMenu.AddItem("Name", MenuItemFlag::STRING, &Scene::GetGamesObjects()[_selectedGameObjectIndex]._name);
+	_gameObjectsMenu.AddItem("Parent Name", MenuItemFlag::STRING, &Scene::GetGamesObjects()[_selectedGameObjectIndex]._parentName);
 	_gameObjectsMenu.AddItem("", MenuItemFlag::UNDEFINED, nullptr);
-	_gameObjectsMenu.AddItem("X Position", MenuItemFlag::FLOAT, &Scene::_gameObjects[_selectedGameObjectIndex]._transform.position.x);
-	_gameObjectsMenu.AddItem("Y Position", MenuItemFlag::FLOAT, &Scene::_gameObjects[_selectedGameObjectIndex]._transform.position.y);
-	_gameObjectsMenu.AddItem("Z Position", MenuItemFlag::FLOAT, &Scene::_gameObjects[_selectedGameObjectIndex]._transform.position.z);
+    _gameObjectsMenu.AddItem("X Position", MenuItemFlag::FLOAT, &Scene::GetGamesObjects()[_selectedGameObjectIndex]._transform.position.x);
+    _gameObjectsMenu.AddItem("Y Position", MenuItemFlag::FLOAT, &Scene::GetGamesObjects()[_selectedGameObjectIndex]._transform.position.y);
+    _gameObjectsMenu.AddItem("Z Position", MenuItemFlag::FLOAT, &Scene::GetGamesObjects()[_selectedGameObjectIndex]._transform.position.z);
 	_gameObjectsMenu.AddItem("", MenuItemFlag::UNDEFINED, nullptr);
-	_gameObjectsMenu.AddItem("X Rotation", MenuItemFlag::FLOAT, &Scene::_gameObjects[_selectedGameObjectIndex]._transform.rotation.x);
-	_gameObjectsMenu.AddItem("Y Rotation", MenuItemFlag::FLOAT, &Scene::_gameObjects[_selectedGameObjectIndex]._transform.rotation.y);
-    _gameObjectsMenu.AddItem("Z Rotation", MenuItemFlag::FLOAT, &Scene::_gameObjects[_selectedGameObjectIndex]._transform.rotation.z);
+    _gameObjectsMenu.AddItem("X Rotation", MenuItemFlag::FLOAT, &Scene::GetGamesObjects()[_selectedGameObjectIndex]._transform.rotation.x);
+    _gameObjectsMenu.AddItem("Y Rotation", MenuItemFlag::FLOAT, &Scene::GetGamesObjects()[_selectedGameObjectIndex]._transform.rotation.y);
+    _gameObjectsMenu.AddItem("Z Rotation", MenuItemFlag::FLOAT, &Scene::GetGamesObjects()[_selectedGameObjectIndex]._transform.rotation.z);
     _gameObjectsMenu.AddItem("", MenuItemFlag::UNDEFINED, nullptr);
 	_gameObjectsMenu.AddItem("Remove", MenuItemFlag::REMOVE_GAME_OBJECT, nullptr);
 }
@@ -364,7 +364,7 @@ void DebugMenu::IncreaseValue() {
 
 
 	if (_currentMenuItem == &_gameObjectsMenu) {
-		GameObject& gameObject = Scene::_gameObjects[_selectedGameObjectIndex];
+		GameObject& gameObject = Scene::GetGamesObjects()[_selectedGameObjectIndex];
 		if (flag == MenuItemFlag::FLOAT) {
 			*(float*)ptr += 0.1f;
 		}
@@ -401,7 +401,7 @@ void DebugMenu::DecreaseValue() {
 	}
 
 	if (_currentMenuItem == &_gameObjectsMenu) {
-		GameObject& gameObject = Scene::_gameObjects[_selectedGameObjectIndex];
+		GameObject& gameObject = Scene::GetGamesObjects()[_selectedGameObjectIndex];
 		if (flag == MenuItemFlag::FLOAT) {
 			*(float*)ptr -= 0.1f;
 		}

@@ -17,6 +17,8 @@
 enum class API { OPENGL, VULKAN, UNDEFINED };
 enum class WindowedMode { WINDOWED, FULLSCREEN };
 enum class SplitscreenMode { NONE, TWO_PLAYER, FOUR_PLAYER, SPLITSCREEN_MODE_COUNT };
+enum class BulletHoleDecalType { REGULAR, GLASS }; 
+enum class PickUpType { NONE, GLOCK, GLOCK_AMMO, SHOTGUN, SHOTGUN_AMMO, AKS74U, AKS74U_AMMO, AKS74U_SCOPE };
 
 enum EngineMode { GAME = 0, FLOORPLAN, EDITOR };
 enum Weapon { KNIFE = 0, GLOCK, SHOTGUN, AKS74U, MP7, WEAPON_COUNT };
@@ -112,21 +114,12 @@ struct ivec2 {
 
     ivec2() = default;
 
-    ivec2(int x_, int y_) {
-        x = x_;
-        y = y_;
+    //cpp file
+    template <typename T>
+    ivec2(T x_, T y_) {
+        x = (int)x_;
+        y = (int)y_;
     }
-
-    ivec2(float x_, float y_) {
-        x = x_;
-        y = y_;
-    }
-
-    ivec2(double x_, double y_) {
-        x = x_;
-        y = y_;
-    }
-
     ivec2(ivec2& other_) {
         x = other_.x;
         y = other_.y;

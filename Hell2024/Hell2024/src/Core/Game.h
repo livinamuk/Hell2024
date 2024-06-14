@@ -22,4 +22,7 @@ namespace Game {
     const SplitscreenMode& GetSplitscreenMode();
     const bool DebugTextIsEnabled();
 
+    // Pickups
+    void SpawnPickup(PickUpType pickupType, glm::vec3 position, glm::vec3 rotation, bool wakeOnStart);
+
 }

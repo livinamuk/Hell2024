@@ -16,8 +16,8 @@ struct Pipeline {
 	VkFormat _depthFormat = VK_FORMAT_D32_SFLOAT;
 	VkFormat _stencilFormat = VK_FORMAT_UNDEFINED;
 	std::string _debugName = "NO_NAME";
-	uint32_t _pushConstantCount = 0;
-	uint32_t _pushConstantSize = 0;
+	uint32_t m_pushConstantCount = 0;
+	uint32_t m_pushConstantSize = 0;
 
 	bool _colorBlendEnable = false;
 	bool _depthWrite = false;
@@ -35,9 +35,8 @@ struct Pipeline {
 
         VkPushConstantRange pushConstantRange;
         pushConstantRange.offset = 0;
-        pushConstantRange.size = sizeof(PushConstants);
+        pushConstantRange.size = m_pushConstantSize;
         pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
-        _pushConstantCount = 1;
 
 		/*VkPushConstantRange pushConstantRange;
 		pushConstantRange.offset = 0;
@@ -49,7 +48,7 @@ struct Pipeline {
 		createInfo.setLayoutCount = (uint32_t)_descriptorSetLayouts.size();
 		createInfo.pSetLayouts = _descriptorSetLayouts.data();
 		createInfo.pPushConstantRanges = &pushConstantRange;
-		createInfo.pushConstantRangeCount = _pushConstantCount;
+		createInfo.pushConstantRangeCount = m_pushConstantCount;
 		createInfo.pNext = nullptr;
  		VK_CHECK(vkCreatePipelineLayout(device, &createInfo, nullptr, &_layout));
 	}
@@ -176,16 +175,13 @@ struct Pipeline {
 		_compareOp = op;
 	}
 
-	void SetPushConstantCount(uint32_t count) {
-		_pushConstantCount = count;
-	}
-
-	void SetPushConstantSize(uint32_t size) {
-		_pushConstantSize = size;
-	}
+    void SetPushConstantSize(uint32_t bufferSize) {
+        m_pushConstantSize = bufferSize;
+        m_pushConstantCount = 1;
+    }
 
     void Build(VkDevice device, VkShaderModule vertexShader, VkShaderModule fragmentShader, std::vector<VkFormat> colorAttachmentFormats) {
-           
+
         int colorAttachmentCount = colorAttachmentFormats.size();
 
 		VkPipelineVertexInputStateCreateInfo vertexInputCreateInfo = {};
@@ -201,7 +197,7 @@ struct Pipeline {
 		inputAssemblyCreateInfo.pNext = nullptr;
 		inputAssemblyCreateInfo.topology = _topology;
 		inputAssemblyCreateInfo.primitiveRestartEnable = VK_FALSE;
-		
+
 		VkPipelineRasterizationStateCreateInfo rasterizationCreateInfo = {};
 		rasterizationCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
 		rasterizationCreateInfo.pNext = nullptr;
@@ -323,7 +319,7 @@ struct Pipeline {
 		VkPipeline newPipeline;
 		if (vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &newPipeline) != VK_SUCCESS) {
 			std::cout << "failed to create pipeline\n";
-			_handle = VK_NULL_HANDLE; 
+			_handle = VK_NULL_HANDLE;
 		}
 		else {
 			if (_handle != VK_NULL_HANDLE) {

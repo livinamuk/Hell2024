@@ -10,8 +10,8 @@ uniform int viewportOffsetY;
 void main() {
 
 	ivec2 texCoord = ivec2(gl_GlobalInvocationID.xy);
-	texCoord.x += viewportOffsetX;
-	texCoord.y += viewportOffsetY;
+	//texCoord.x += viewportOffsetX;
+	//texCoord.y += viewportOffsetY;
 
     vec3 finalLighting = imageLoad(finalLightingTexture, texCoord).rgb;
     vec3 glassColor = imageLoad(glassTexure, texCoord).rgb;

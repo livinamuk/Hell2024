@@ -5,14 +5,10 @@
 #include <string>
 #include <iostream>
 
-//inline bool FileExists2(const std::string& name) {
-//	struct stat buffer;
-//	return (stat(name.c_str(), &buffer) == 0);
-//}
-
 struct AudioHandle {
 	FMOD::Sound* sound = nullptr;
 	FMOD::Channel* channel = nullptr;
+    std::string filename;
 };
 
 struct AudioEffectInfo {
@@ -22,13 +18,14 @@ struct AudioEffectInfo {
 
 namespace Audio {
 
-	inline std::unordered_map<std::string, FMOD::Sound*> _loadedAudio;
-	inline  int _currentChannel = 0;
+	inline std::unordered_map<std::string, FMOD::Sound*> g_loadedAudio;
+	inline  int g_nextFreeChannel = 0;
 	inline  constexpr int AUDIO_CHANNEL_COUNT = 512;
-	inline  FMOD::System* _system;
-	inline  FMOD_RESULT _result;
+	inline  FMOD::System* g_system;
+    inline std::vector<AudioHandle> g_activeAudio;
 
-	inline bool succeededOrWarn(const std::string& message, FMOD_RESULT result) {
+	inline bool SucceededOrWarn(const std::string& message, FMOD_RESULT result) {
+
 		if (result != FMOD_OK) {
 			std::cout << message << ": " << result << " " << FMOD_ErrorString(result) << "\n";
 			return false;
@@ -37,54 +34,103 @@ namespace Audio {
 	}
 
 	inline void Init() {
-		// Create the main system object.
-		_result = FMOD::System_Create(&_system);
-		if (!succeededOrWarn("FMOD: Failed to create system object", _result))
+
+        // Create the main system object.
+        FMOD_RESULT result = FMOD::System_Create(&g_system);
+		if (!SucceededOrWarn("FMOD: Failed to create system object", result))
 			return;
+
 		// Initialize FMOD.
-		_result = _system->init(AUDIO_CHANNEL_COUNT, FMOD_INIT_NORMAL, nullptr);
-		if (!succeededOrWarn("FMOD: Failed to initialize system object", _result))
+        result = g_system->init(AUDIO_CHANNEL_COUNT, FMOD_INIT_NORMAL, nullptr);
+		if (!SucceededOrWarn("FMOD: Failed to initialize system object", result))
 			return;
+
 		// Create the channel group.
 		FMOD::ChannelGroup* channelGroup = nullptr;
-		_result = _system->createChannelGroup("inGameSoundEffects", &channelGroup);
-		if (!succeededOrWarn("FMOD: Failed to create in-game sound effects channel group", _result))
+        result = g_system->createChannelGroup("inGameSoundEffects", &channelGroup);
+		if (!SucceededOrWarn("FMOD: Failed to create in-game sound effects channel group", result))
 			return;
 	}
 
 	inline void Update() {
-		_system->update();
+
+        // Remove handles to any audio that has finished playing
+        for (int i = 0; i < g_activeAudio.size(); i++) {
+            AudioHandle& handle = g_activeAudio[i];
+            FMOD::Sound* currentSound;
+            unsigned int position;
+            unsigned int length;
+            handle.channel->getPosition(&position, FMOD_TIMEUNIT_MS);
+            handle.sound->getLength(&length, FMOD_TIMEUNIT_MS);
+            if (position >= length) {
+                //std::cout << handle.filename << " finished\n";
+                g_activeAudio.erase(g_activeAudio.begin() + i);
+                i--;
+                break;
+            }
+        }
+        // Update FMOD internal hive mind
+        g_system->update();
 	}
+
+    inline void StopAudio(std::string filename) {
+        for (int i = 0; i < g_activeAudio.size(); i++) {
+            AudioHandle& handle = g_activeAudio[i];
+            if (handle.filename == filename) {
+                handle.channel->stop();
+                g_activeAudio.erase(g_activeAudio.begin() + i);
+            }
+        }
+        g_system->update();
+    }
 
 	inline void LoadAudio(std::string name) {
 
-		//if (!FileExists2(name)) {
-		//	std::cout << "LoadAudio() failed because " << name << " does not exist!!!\n";
-		//}
-
 		FMOD_MODE eMode = FMOD_DEFAULT;
 		FMOD::Sound* sound = nullptr;
-		_system->createSound(("res/audio/" + name).c_str(), eMode, nullptr, & sound);
-		_loadedAudio[name] = sound;
+		g_system->createSound(("res/audio/" + name).c_str(), eMode, nullptr, & sound);
+		g_loadedAudio[name] = sound;
 	}
 
-	inline FMOD::Sound* PlayAudio(std::string name, float volume) {
+	inline AudioHandle PlayAudio(std::string filename, float volume, bool stopIfPlaying = false) {
+
 		// Load if needed
-		if (_loadedAudio.find(name) == _loadedAudio.end()) {
-			LoadAudio(name);
+		if (g_loadedAudio.find(filename) == g_loadedAudio.end()) {
+			LoadAudio(filename);
 		}
-		// Plaay
-		FMOD::Sound* sound = _loadedAudio[name];
-		FMOD::Channel* channel = nullptr;
-		_system->playSound(sound, nullptr, false, &channel);
-		channel->setVolume(volume);
-		return sound;
+        // Stop if you told it to
+        if (stopIfPlaying) {
+        //   StopAudio(filename);
+        }
+
+        FMOD::Channel* freeChannel = nullptr;
+        g_system->getChannel(g_nextFreeChannel, &freeChannel);
+        g_nextFreeChannel++;
+
+        if (g_nextFreeChannel == AUDIO_CHANNEL_COUNT) {
+            g_nextFreeChannel = 0;
+        }
+
+        // Plaay
+        //FMOD::Channel* freeChannel = nullptr;
+        //FMOD_RESULT result = g_system->getChannel(-1, &freeChannel);
+
+        //system->playSound(FMOD_CHANNEL_FREE, Sound, false, &Channel);
+
+        //AudioHandle& handle = g_activeAudio.emplace_back();
+        AudioHandle handle;
+        handle.sound = g_loadedAudio[filename];
+        handle.filename = filename;
+        handle.channel = freeChannel;
+		g_system->playSound(handle.sound, nullptr, false, &handle.channel);
+        handle.channel->setVolume(volume);
+		return handle;
 	}
 
 	inline AudioHandle LoopAudio(const char* name, float volume) {
 		AudioHandle handle;
-		handle.sound = _loadedAudio[name];
-		_system->playSound(handle.sound, nullptr, false, &handle.channel);
+		handle.sound = g_loadedAudio[name];
+		g_system->playSound(handle.sound, nullptr, false, &handle.channel);
 		handle.channel->setVolume(volume);
 		handle.channel->setMode(FMOD_LOOP_NORMAL);
 		handle.sound->setMode(FMOD_LOOP_NORMAL);
@@ -92,107 +138,3 @@ namespace Audio {
 		return handle;
 	}
 };
-
-
-
-
-/*
-
-#pragma once
-#include <unordered_map>
-#include "fmod.hpp"
-#include <fmod_errors.h>
-#include <string>
-#include <iostream>
-
-//inline bool FileExists2(const std::string& name) {
-//	struct stat buffer;
-//	return (stat(name.c_str(), &buffer) == 0);
-//}
-
-struct AudioHandle {
-    FMOD::Sound* sound = nullptr;
-    FMOD::Channel* channel = nullptr;
-};
-
-struct AudioEffectInfo {
-    const char* filename = "";
-    float volume = 0.0f;
-};
-
-namespace Audio {
-
-    inline std::unordered_map<const char*, FMOD::Sound*> _loadedAudio;
-    inline  int _currentChannel = 0;
-    inline  constexpr int AUDIO_CHANNEL_COUNT = 512;
-    inline  FMOD::System* _system;
-    inline  FMOD_RESULT _result;
-
-    inline bool succeededOrWarn(const std::string& message, FMOD_RESULT result) {
-        if (result != FMOD_OK) {
-            std::cout << message << ": " << result << " " << FMOD_ErrorString(result) << "\n";
-            return false;
-        }
-        return true;
-    }
-
-    inline void Init() {
-        // Create the main system object.
-        _result = FMOD::System_Create(&_system);
-        if (!succeededOrWarn("FMOD: Failed to create system object", _result))
-            return;
-        // Initialize FMOD.
-        _result = _system->init(AUDIO_CHANNEL_COUNT, FMOD_INIT_NORMAL, nullptr);
-        if (!succeededOrWarn("FMOD: Failed to initialize system object", _result))
-            return;
-        // Create the channel group.
-        FMOD::ChannelGroup* channelGroup = nullptr;
-        _result = _system->createChannelGroup("inGameSoundEffects", &channelGroup);
-        if (!succeededOrWarn("FMOD: Failed to create in-game sound effects channel group", _result))
-            return;
-    }
-
-    inline void Update() {
-        _system->update();
-    }
-
-    inline void LoadAudio(const char* name) {
-
-        //if (!FileExists2(name)) {
-        //	std::cout << "LoadAudio() failed because " << name << " does not exist!!!\n";
-        //}
-
-        FMOD_MODE eMode = FMOD_DEFAULT;
-        FMOD::Sound* sound = nullptr;
-        std::string path = "res/audio/" + std::string(name);
-        _system->createSound(path.c_str(), eMode, nullptr, & sound);
-        _loadedAudio[name] = sound;
-    }
-
-    inline FMOD::Sound* PlayAudio(const char* name, float volume) {
-        // Load if needed
-        if (_loadedAudio.find(name) == _loadedAudio.end()) {
-            LoadAudio(name);
-        }
-        // Plaay
-        FMOD::Sound* sound = _loadedAudio[name];
-        FMOD::Channel* channel = nullptr;
-        _system->playSound(sound, nullptr, false, &channel);
-        channel->setVolume(volume);
-        return sound;
-    }
-
-    inline AudioHandle LoopAudio(const char* name, float volume) {
-        AudioHandle handle;
-        handle.sound = _loadedAudio[name];
-        _system->playSound(handle.sound, nullptr, false, &handle.channel);
-        handle.channel->setVolume(volume);
-        handle.channel->setMode(FMOD_LOOP_NORMAL);
-        handle.sound->setMode(FMOD_LOOP_NORMAL);
-        handle.sound->setLoopCount(-1);
-        return handle;
-    }
-};
-
-
-*/

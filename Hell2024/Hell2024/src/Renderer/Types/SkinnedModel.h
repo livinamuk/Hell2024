@@ -11,7 +11,7 @@ struct Joint {
     int m_parentIndex;
     glm::mat4 m_inverseBindTransform;
     glm::mat4 m_currentFinalTransform;
-};   
+};
 
 struct AnimatedTransforms {
     std::vector<glm::mat4> local;
@@ -24,7 +24,7 @@ struct AnimatedTransforms {
         names.resize(size);
     }
 
-    size_t GetSize() {
+    const size_t GetSize() {
         return local.size();
     }
 };
@@ -80,8 +80,8 @@ public:
     void CalcInterpolatedScaling(glm::vec3& Out, float AnimationTime, const AnimatedNode* animatedNode);
     void CalcInterpolatedRotation(glm::quat& Out, float AnimationTime, const AnimatedNode* animatedNode);
     void CalcInterpolatedPosition(glm::vec3& Out, float AnimationTime, const AnimatedNode* animatedNode);
-    int FindAnimatedNodeIndex(float AnimationTime, const AnimatedNode* animatedNode);        
-    const AnimatedNode* FindAnimatedNode(Animation* animation, const char* NodeName);     
+    int FindAnimatedNodeIndex(float AnimationTime, const AnimatedNode* animatedNode);
+    const AnimatedNode* FindAnimatedNode(Animation* animation, const char* NodeName);
 
 
     std::vector<Joint> m_joints;
@@ -92,6 +92,7 @@ public:
     unsigned int m_NumBones;
     std::vector<BoneInfo> m_BoneInfo;
     glm::mat4 m_GlobalInverseTransform;
+    uint32_t m_vertexCount = 0;
 
     void AddMeshIndex(uint32_t index) {
         meshIndices.push_back(index);

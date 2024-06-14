@@ -1,4 +1,4 @@
-
+﻿
 #include "Game.h"
 #include "Input.h"
 #include "InputMulti.h"
@@ -17,10 +17,10 @@ namespace Game {
     double _thisFrame = 0;
     double _deltaTimeAccumulator = 0.0;
     double _fixedDeltaTime = 1.0 / 60.0;
-    std::vector<Player> _players;    
+    std::vector<Player> _players;
     bool _showDebugText = false;
 
-    void EvaluateDebugKeyPresses(); 
+    void EvaluateDebugKeyPresses();
 
     void Create() {
 
@@ -69,9 +69,9 @@ namespace Game {
         Scene::Update(deltaTime);
 
         // Player weapon transforms
-        for (Player& player: _players) {
-            player.GetFirstPersonWeapon().UpdateRenderItems();
-        }
+        //for (Player& player: _players) {
+        //    player.GetFirstPersonWeapon().UpdateRenderItems();    // refactoring to elsewwhere
+        //}
     }
 
     void CreatePlayers(unsigned int playerCount) {
@@ -79,7 +79,7 @@ namespace Game {
         _players.clear();
 
         for (int i = 0; i < playerCount; i++) {
-            Game::_players.push_back(Player());
+            Game::_players.push_back(Player(i));
         }
 
         SetPlayerKeyboardAndMouseIndex(0, 0, 0);
@@ -92,8 +92,13 @@ namespace Game {
         PxU32 p3RagdollCollisionGroupFlags = RaycastGroup::PLAYER_3_RAGDOLL;
         PxU32 p4RagdollCollisionGroupFlags = RaycastGroup::PLAYER_4_RAGDOLL;
 
-        Game::_players[0]._characterModel.LoadRagdoll("UnisexGuy3.rag", p1RagdollCollisionGroupFlags);
-        Game::_players[1]._characterModel.LoadRagdoll("UnisexGuy3.rag", p2RagdollCollisionGroupFlags);
+        AnimatedGameObject* p1characterModel = Scene::GetAnimatedGameObjectByIndex(Game::_players[0].GetCharacterModelAnimatedGameObjectIndex());
+        AnimatedGameObject* p2characterModel = Scene::GetAnimatedGameObjectByIndex(Game::_players[1].GetCharacterModelAnimatedGameObjectIndex());
+        AnimatedGameObject* p3characterModel = Scene::GetAnimatedGameObjectByIndex(Game::_players[2].GetCharacterModelAnimatedGameObjectIndex());
+        AnimatedGameObject* p4characterModel = Scene::GetAnimatedGameObjectByIndex(Game::_players[3].GetCharacterModelAnimatedGameObjectIndex());
+
+        p1characterModel->LoadRagdoll("UnisexGuy3.rag", p1RagdollCollisionGroupFlags);
+        p2characterModel->LoadRagdoll("UnisexGuy3.rag", p2RagdollCollisionGroupFlags);
         Game::_players[0]._interactFlags = RaycastGroup::RAYCAST_ENABLED;
         Game::_players[0]._interactFlags &= ~RaycastGroup::PLAYER_1_RAGDOLL;
         Game::_players[1]._interactFlags = RaycastGroup::RAYCAST_ENABLED;
@@ -104,20 +109,20 @@ namespace Game {
         Game::_players[1]._playerName = "CrustyAssCracker";
 
         if (_players.size() == 4) {
-            Game::_players[2]._characterModel.LoadRagdoll("UnisexGuy3.rag", p3RagdollCollisionGroupFlags);
-            Game::_players[3]._characterModel.LoadRagdoll("UnisexGuy3.rag", p4RagdollCollisionGroupFlags);
+            p3characterModel->LoadRagdoll("UnisexGuy3.rag", p3RagdollCollisionGroupFlags);
+            p4characterModel->LoadRagdoll("UnisexGuy3.rag", p4RagdollCollisionGroupFlags);
             Game::_players[2]._interactFlags = RaycastGroup::RAYCAST_ENABLED;
             Game::_players[2]._interactFlags &= ~RaycastGroup::PLAYER_3_RAGDOLL;
             Game::_players[3]._interactFlags = RaycastGroup::RAYCAST_ENABLED;
-            Game::_players[3]._interactFlags &= ~RaycastGroup::PLAYER_4_RAGDOLL; 
+            Game::_players[3]._interactFlags &= ~RaycastGroup::PLAYER_4_RAGDOLL;
             Game::_players[2]._bulletFlags = RaycastGroup::RAYCAST_ENABLED | RaycastGroup::PLAYER_1_RAGDOLL | RaycastGroup::PLAYER_2_RAGDOLL | RaycastGroup::PLAYER_4_RAGDOLL;
             Game::_players[3]._bulletFlags = RaycastGroup::RAYCAST_ENABLED | RaycastGroup::PLAYER_1_RAGDOLL | RaycastGroup::PLAYER_2_RAGDOLL | RaycastGroup::PLAYER_3_RAGDOLL;
             Game::_players[2]._playerName = "P3";
             Game::_players[3]._playerName = "P4";
         }
-               
 
-        for (RigidComponent& rigid : _players[0]._characterModel._ragdoll._rigidComponents) {
+
+        for (RigidComponent& rigid : p1characterModel->_ragdoll._rigidComponents) {
             PxShape* shape;
             rigid.pxRigidBody->getShapes(&shape, 1);
             shape->setFlag(PxShapeFlag::eVISUALIZATION, false);
@@ -159,7 +164,7 @@ namespace Game {
             }
         }
     }
-    
+
     const int GetPlayerIndexFromPlayerPointer(Player* player) {
         for (int i = 0; i < _players.size(); i++) {
             if (&_players[i] == player) {
@@ -269,5 +274,39 @@ namespace Game {
 
     const bool DebugTextIsEnabled() {
         return _showDebugText;
+    }
+
+
+    /*
+
+    █▀█ ▀█▀ █▀▀ █ █   █ █ █▀█ █▀▀
+    █▀▀  █  █   █▀▄   █ █ █▀▀ ▀▀█
+    ▀   ▀▀▀ ▀▀▀ ▀ ▀   ▀▀▀ ▀   ▀▀▀  */
+
+    void SpawnPickup(PickUpType pickupType, glm::vec3 position, glm::vec3 rotation, bool wakeOnStart) {
+
+        if (pickupType == PickUpType::NONE) {
+            return;
+        }
+
+        Scene::CreateGameObject();
+        GameObject* pickup = Scene::GetGameObjectByIndex(Scene::GetGameObjectCount() - 1);
+        pickup->SetPosition(position);
+        pickup->SetRotation(rotation);
+        pickup->SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
+        pickup->PutRigidBodyToSleep();
+        pickup->SetCollisionType(CollisionType::PICKUP);
+        pickup->SetKinematic(false);
+        pickup->SetWakeOnStart(wakeOnStart);
+
+        if (pickupType == PickUpType::GLOCK_AMMO) {
+            pickup->SetModel("GlockAmmoBox");
+            pickup->SetName("GlockAmmo_PickUp");
+            pickup->SetMeshMaterial("GlockAmmoBox");
+            pickup->SetPickUpType(PickUpType::GLOCK_AMMO);
+            pickup->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("GlockAmmoBox_ConvexMesh"));
+            pickup->SetRaycastShapeFromModelIndex(AssetManager::GetModelIndexByName("GlockAmmoBox_ConvexMesh"));
+            pickup->UpdateRigidBodyMassAndInertia(150.0f);
+        }
     }
 }

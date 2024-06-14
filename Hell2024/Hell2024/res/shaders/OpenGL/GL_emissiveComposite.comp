@@ -7,28 +7,45 @@ layout (binding = 2) uniform sampler2D blurBuffer1ColorB;
 layout (binding = 3) uniform sampler2D blurBuffer2ColorB;
 layout (binding = 4) uniform sampler2D blurBuffer3ColorB;
 
-uniform float screenWidth;
-uniform float screenHeight;
-uniform int viewportOffsetX;
-uniform int viewportOffsetY;
+struct CameraData {
+    mat4 projection;
+    mat4 projectionInverse;
+    mat4 view;
+    mat4 viewInverse;
+	float viewportWidth;
+	float viewportHeight;
+    float viewportOffsetX;
+    float viewportOffsetY;
+	float clipSpaceXMin;
+    float clipSpaceXMax;
+    float clipSpaceYMin;
+    float clipSpaceYMax;
+	float finalImageColorContrast;
+    float finalImageColorR;
+    float finalImageColorG;
+    float finalImageColorB;
+};
+
+layout(std430, binding = 16) readonly buffer CameraDataArray {
+    CameraData cameraDataArray[];
+};
+
+uniform int playerIndex;
 
 void main() {
 
 	ivec2 texCoord = ivec2(gl_GlobalInvocationID.xy);
-	
+	vec2 uv = vec2(texCoord.x / cameraDataArray[playerIndex].viewportWidth, texCoord.y / cameraDataArray[playerIndex].viewportHeight);
+
 	ivec2 finalTexCoord = texCoord;
-	finalTexCoord.x += viewportOffsetX;
-	finalTexCoord.y += viewportOffsetY;
+	finalTexCoord.x += int(cameraDataArray[playerIndex].viewportOffsetX);
+	finalTexCoord.y +=int(cameraDataArray[playerIndex].viewportOffsetY);
 
     vec3 color = imageLoad(tex, finalTexCoord).rgb;
-
-	vec2 uv = vec2(texCoord.x / screenWidth, texCoord.y / screenHeight); 
-		
 	color += texture(blurBuffer0ColorB, uv).rgb;
 	color += texture(blurBuffer1ColorB, uv).rgb;
 	color += texture(blurBuffer2ColorB, uv).rgb;
 	color += texture(blurBuffer3ColorB, uv).rgb;
-
 
 	imageStore(tex, finalTexCoord, vec4(color, 1));
 }

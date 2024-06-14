@@ -13,6 +13,10 @@ struct RigidBody {
         return pxRigidBody != NULL;
     }
 
+    std::vector<PxShape*>& GetCollisionShapes() {
+        return collisionShapes;
+    }
+
     void SetGlobalPose(glm::mat4 matrix) {
         PxMat44 physXGlobalPose = Util::GlmMat4ToPxMat44(matrix);
         pxRigidBody->setGlobalPose(PxTransform(physXGlobalPose));
@@ -69,33 +73,25 @@ struct RigidBody {
         pxRigidBody->attachShape(*shape);
     }
 
-    void AddCollisionShapeFromModelIndex(int modelIndex, PhysicsFilterData physicsFilterData, glm::vec3 scale) {
+    void AddCollisionShapeFromModelIndex(int modelIndex, PxFilterData filterData, glm::vec3 scale) {
         if (!pxRigidBody) {
             std::cout << "Tried to add a collision shape to rigid body but pxRigidBody doesn't exist!\n";
             return;
         }
         PxConvexMesh* convexMesh = Physics::CreateConvexMeshFromModelIndex(modelIndex);
         PxShape* shape = Physics::CreateShapeFromConvexMesh(convexMesh, NULL, scale);
-        PxFilterData filterData;
-        filterData.word0 = (PxU32)physicsFilterData.raycastGroup;
-        filterData.word1 = (PxU32)physicsFilterData.collisionGroup;
-        filterData.word2 = (PxU32)physicsFilterData.collidesWith;
         shape->setQueryFilterData(filterData);       // ray casts
         shape->setSimulationFilterData(filterData);  // collisions
         collisionShapes.push_back(shape);
         pxRigidBody->attachShape(*shape);
     }
 
-    void AddCollisionShapeFromBoundingBox(BoundingBox& boundingBox, PhysicsFilterData physicsFilterData) {
+    void AddCollisionShapeFromBoundingBox(BoundingBox& boundingBox, PxFilterData filterData) {
         if (!pxRigidBody) {
             std::cout << "Tried to add a collision shape to rigid body but pxRigidBody doesn't exist!\n";
             return;
         }
         PxShape* shape = Physics::CreateBoxShape(boundingBox.size.x * 0.5f, boundingBox.size.y * 0.5f, boundingBox.size.z * 0.5f);
-        PxFilterData filterData;
-        filterData.word0 = (PxU32)physicsFilterData.raycastGroup;
-        filterData.word1 = (PxU32)physicsFilterData.collisionGroup;
-        filterData.word2 = (PxU32)physicsFilterData.collidesWith;
         shape->setQueryFilterData(filterData);       // ray casts
         shape->setSimulationFilterData(filterData);  // collisions
         collisionShapes.push_back(shape);
@@ -132,6 +128,5 @@ struct RigidBody {
     }
 
 private:
-    //std::vector<OpenGLModel*> collisionModels;
     std::vector<PxShape*> collisionShapes;
 };

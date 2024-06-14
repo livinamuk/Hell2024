@@ -22,10 +22,10 @@ IndirectDrawInfo CreateIndirectDrawInfo(std::vector<RenderItem3D>& potentialRend
 
 
 //CameraData CreateCameraData(unsigned int playerIndex);
-std::vector<RenderItem2D> CreateRenderItems2D(unsigned int playerIndex, ivec2 viewportSize);
+std::vector<RenderItem2D> CreateRenderItems2D(ivec2 presentSize, int playerCount);
+std::vector<RenderItem2D> CreateRenderItems2DHiRes(ivec2 gBufferSize, int playerCount);
 std::vector<RenderItem3D> CreateRenderItems3D();
 std::vector<RenderItem3D> CreateGlassRenderItems();
-std::vector<RenderItem3D> CreateAnimatedRenderItems(unsigned int playerIndex);
 std::vector<GPULight> CreateGPULights();
 BlitDstCoords GetBlitDstCoords(unsigned int playerIndex);
 void UpdateDebugLinesMesh();
@@ -36,6 +36,7 @@ void RenderEditorTopDown(RenderData& renderData);
 //void ResizeRenderTargets();
 void PresentFinalImage();
 MuzzleFlashData GetMuzzleFlashData(unsigned int playerIndex);
+std::vector<SkinnedRenderItem> GetSkinnedRenderItemsForPlayer(int playerIndex);
 
 DetachedMesh _debugLinesMesh;
 DetachedMesh _debugPointsMesh;
@@ -46,7 +47,7 @@ std::vector<glm::mat4> _instanceMatrices;
 //std::vector<glm::mat4> _decalMatrices;
 
 /*
- 
+
 ██████╗ ███████╗███╗   ██╗██████╗ ███████╗██████╗     ██████╗  █████╗ ████████╗ █████╗
 ██╔══██╗██╔════╝████╗  ██║██╔══██╗██╔════╝██╔══██╗    ██╔══██╗██╔══██╗╚══██╔══╝██╔══██╗
 ██████╔╝█████╗  ██╔██╗ ██║██║  ██║█████╗  ██████╔╝    ██║  ██║███████║   ██║   ███████║
@@ -76,25 +77,39 @@ std::vector<RenderItem2D> CreateLoadingScreenRenderItems() {
     return TextBlitter::CreateText(text, location, viewportSize, Alignment::TOP_LEFT, BitmapFontType::STANDARD);
 }
 
-std::vector<RenderItem2D> CreateRenderItems2D(unsigned int playerIndex, ivec2 viewportSize) {
+std::vector<RenderItem2D> CreateRenderItems2D(ivec2 presentSize, int playerCount) {
 
     std::vector<RenderItem2D> renderItems;
-    
-    // Debug Text
-    if (Game::DebugTextIsEnabled()) {
-        std::string text = "";
-        text += "Splitscreen mode: " + Util::SplitscreenModeToString(Game::GetSplitscreenMode()) + "\n";
-        text += "Render mode: " + Util::RenderModeToString(_renderMode) + "\n";
-        text += "Line mode: " + Util::DebugLineRenderModeToString(_debugLineRenderMode) + "\n";
-        text += "Cam pos: " + Util::Vec3ToString(Game::GetPlayerByIndex(playerIndex)->GetViewPos()) + "\n";
 
-        RendererUtil::AddRenderItems(renderItems, TextBlitter::CreateText(text, { 0, viewportSize.y }, viewportSize, Alignment::TOP_LEFT, BitmapFontType::STANDARD));
+    for (int i = 0; i < playerCount; i++) {
+
+        // Debug Text
+        if (Game::DebugTextIsEnabled()) {
+            std::string text = "";
+            text += "Splitscreen mode: " + Util::SplitscreenModeToString(Game::GetSplitscreenMode()) + "\n";
+            text += "Render mode: " + Util::RenderModeToString(_renderMode) + "\n";
+            text += "Line mode: " + Util::DebugLineRenderModeToString(_debugLineRenderMode) + "\n";
+            text += "Cam pos: " + Util::Vec3ToString(Game::GetPlayerByIndex(i)->GetViewPos()) + "\n";
+            int x = RendererUtil::GetViewportLeftX(i, Game::GetSplitscreenMode(), presentSize.x, presentSize.y);
+            int y = RendererUtil::GetViewportTopY(i, Game::GetSplitscreenMode(), presentSize.x, presentSize.y);
+            RendererUtil::AddRenderItems(renderItems, TextBlitter::CreateText(text, { x, y }, presentSize, Alignment::TOP_LEFT, BitmapFontType::STANDARD));
+        }
+
+        // Player HUD
+        std::vector<RenderItem2D> playerHUD = Game::GetPlayerByIndex(i)->GetHudRenderItems(presentSize);
+        RendererUtil::AddRenderItems(renderItems, playerHUD);
+
     }
 
-    // Player HUD
-    std::vector<RenderItem2D> playerHUD = Game::GetPlayerByIndex(playerIndex)->GetHudRenderItems(viewportSize);
-    RendererUtil::AddRenderItems(renderItems, playerHUD);
+    return renderItems;
+}
 
+std::vector<RenderItem2D> CreateRenderItems2DHiRes(ivec2 gbufferSize, int playerCount) {
+
+    std::vector<RenderItem2D> renderItems;
+    for (int i = 0; i < playerCount; i++) {
+        RendererUtil::AddRenderItems(renderItems, Game::GetPlayerByIndex(i)->GetHudRenderItemsHiRes(gbufferSize));
+    }
     return renderItems;
 }
 
@@ -129,20 +144,23 @@ void UpdateDebugLinesMesh() {
 
     std::vector<PxRigidActor*> ignoreList;
 
-    for (auto r : Game::GetPlayerByIndex(0)->_characterModel._ragdoll._rigidComponents) {
+    // Skip debug lines for player 0 ragdoll
+    Player* player = Game::GetPlayerByIndex(0);
+    AnimatedGameObject* characterModel = Scene::GetAnimatedGameObjectByIndex(player->GetCharacterModelAnimatedGameObjectIndex());
+    for (auto r : characterModel->_ragdoll._rigidComponents) {
         ignoreList.push_back(r.pxRigidBody);
     }
-        
+
     if (_debugLineRenderMode == DebugLineRenderMode::PHYSX_ALL ||
         _debugLineRenderMode == DebugLineRenderMode::PHYSX_COLLISION ||
         _debugLineRenderMode == DebugLineRenderMode::PHYSX_RAYCAST ||
-        _debugLineRenderMode == DebugLineRenderMode::PHYSX_EDITOR) {      
+        _debugLineRenderMode == DebugLineRenderMode::PHYSX_EDITOR) {
         std::vector<Vertex> physicsDebugLineVertices = Physics::GetDebugLineVertices(_debugLineRenderMode, ignoreList);
         vertices.reserve(vertices.size() + physicsDebugLineVertices.size());
         vertices.insert(std::end(vertices), std::begin(physicsDebugLineVertices), std::end(physicsDebugLineVertices));
     }
     else if (_debugLineRenderMode == DebugLineRenderMode::BOUNDING_BOXES) {
-        for (GameObject& gameObject : Scene::_gameObjects) {
+        for (GameObject& gameObject : Scene::GetGamesObjects()) {
             std::vector<Vertex> aabbVertices = gameObject.GetAABBVertices();
             vertices.reserve(vertices.size() + aabbVertices.size());
             vertices.insert(std::end(vertices), std::begin(aabbVertices), std::end(aabbVertices));
@@ -297,7 +315,7 @@ void UpdateDebugLinesMesh() {
 
     for (int i = 0; i < vertices.size(); i++) {
         indices.push_back(i);
-    }    
+    }
     _debugLinesMesh.UpdateVertexBuffer(vertices, indices);
 }
 
@@ -306,166 +324,16 @@ void UpdateDebugPointsMesh() {
     std::vector<Vertex> vertices;
     std::vector<uint32_t> indices;
 
-    // Point cloud
-    /*if (_renderMode == POINT_CLOUD) {
-        for (CloudPoint& point : PointCloud::GetCloud()) {
-            Vertex v;
-            v.position = point.position;
-            v.normal = point.normal;// point.directLighting;
-            vertices.push_back(v);
-        }
-    }*/
+    int index = Game::GetPlayerByIndex(0)->GetFirstPersonWeaponAnimatedGameObjectIndex();
+   // index = Game::GetPlayerByIndex(1)->GetCharacterModelAnimatedGameObjectIndex();
+    AnimatedGameObject* object = Scene::GetAnimatedGameObjectByIndex(index);
+    SkinnedModel* skinnedModel = object->_skinnedModel;
 
     for (int i = 0; i < vertices.size(); i++) {
         indices.push_back(i);
     }
 
     _debugPointsMesh.UpdateVertexBuffer(vertices, indices);
-}
-
-/*
-CameraData CreateCameraData(unsigned int playerIndex) {
-
-    Player* player = Game::GetPlayerByIndex(playerIndex);
-
-    CameraData cameraData;
-    cameraData[0].projection = player->GetProjectionMatrix();
-    cameraData[0].projectionInverse = glm::inverse(cameraData[0].projection);
-    cameraData[0].view = player->GetViewMatrix();
-    cameraData[0].viewInverse = glm::inverse(cameraData[0].view);
-    cameraData[0].finalImageColorR = Game::GetPlayerByIndex(playerIndex)->finalImageColorTint.x;
-    cameraData[0].finalImageColorG = Game::GetPlayerByIndex(playerIndex)->finalImageColorTint.y;
-    cameraData[0].finalImageColorB = Game::GetPlayerByIndex(playerIndex)->finalImageColorTint.z;
-    cameraData[0].finalImageColorContrast = Game::GetPlayerByIndex(playerIndex)->finalImageContrast;
-
-    // Viewport size
-    ivec2 viewportSize = { PRESENT_WIDTH, PRESENT_HEIGHT };
-    ivec2 viewportDoubleSize = { PRESENT_WIDTH * 2, PRESENT_HEIGHT * 2 };
-
-    if (Game::GetSplitscreenMode() == SplitscreenMode::TWO_PLAYER) {
-        viewportSize.y *= 0.5;
-        viewportDoubleSize.y *= 0.5;
-    }
-    if (Game::GetSplitscreenMode() == SplitscreenMode::FOUR_PLAYER) {
-        viewportSize.x *= 0.5;
-        viewportSize.y *= 0.5;
-        viewportDoubleSize.x *= 0.5;
-        viewportDoubleSize.y *= 0.5;
-    }
-
-    cameraData[0].viewportWidth = viewportDoubleSize.x;
-    cameraData[0].viewportHeight = viewportDoubleSize.y;
-
-    // Clipspace range
-    if (Game::GetSplitscreenMode() == SplitscreenMode::NONE) {
-        cameraData[0].clipSpaceXMin = 0.0f;
-        cameraData[0].clipSpaceXMax = 1.0f;
-        cameraData[0].clipSpaceYMin = 0.0f;
-        cameraData[0].clipSpaceYMax = 1.0f;
-    }
-    else if (Game::GetSplitscreenMode() == SplitscreenMode::TWO_PLAYER) {
-        if (playerIndex == 0) {
-            cameraData[0].clipSpaceXMin = 0.0f;
-            cameraData[0].clipSpaceXMax = 1.0f;
-            cameraData[0].clipSpaceYMin = 0.5f;
-            cameraData[0].clipSpaceYMax = 1.0f;
-        }
-        if (playerIndex == 1) {
-            cameraData[0].clipSpaceXMin = 0.0f;
-            cameraData[0].clipSpaceXMax = 1.0f;
-            cameraData[0].clipSpaceYMin = 0.0f;
-            cameraData[0].clipSpaceYMax = 0.5f;
-        }
-    }
-    else if (Game::GetSplitscreenMode() == SplitscreenMode::FOUR_PLAYER) {
-        if (playerIndex == 0) {
-            cameraData[0].clipSpaceXMin = 0.0f;
-            cameraData[0].
-            
-            XMax = 0.5f;
-            cameraData[0].clipSpaceYMin = 0.5f;
-            cameraData[0].clipSpaceYMax = 1.0f;
-        }
-        if (playerIndex == 1) {
-            cameraData[0].clipSpaceXMin = 0.5f;
-            cameraData[0].clipSpaceXMax = 1.0f;
-            cameraData[0].clipSpaceYMin = 0.5f;
-            cameraData[0].clipSpaceYMax = 1.0f;
-        }
-        if (playerIndex == 2) {
-            cameraData[0].clipSpaceXMin = 0.0f;
-            cameraData[0].clipSpaceXMax = 0.5f;
-            cameraData[0].clipSpaceYMin = 0.0f;
-            cameraData[0].clipSpaceYMax = 0.5f;
-        }
-        if (playerIndex == 3) {
-            cameraData[0].clipSpaceXMin = 0.5f;
-            cameraData[0].clipSpaceXMax = 1.0f;
-            cameraData[0].clipSpaceYMin = 0.0f;
-            cameraData[0].clipSpaceYMax = 0.5f;
-        }
-    }
-
-    ViewportInfo viewportInfo = RendererUtil::CreateViewportInfo(playerIndex, Game::GetSplitscreenMode(), PRESENT_WIDTH * 2, PRESENT_HEIGHT * 2);
-    cameraData[0].viewportOffsetX = viewportInfo.xOffset;
-    cameraData[0].viewportOffsetY = viewportInfo.yOffset;
-
-
-    return cameraData;*..
-}*/
-
-void QueueAnimatedGameObjectForRendering(AnimatedGameObject& animatedGameObject) {
-    std:vector<RenderItem3D>& renderItems = animatedGameObject.GetRenderItems();
-    for (auto& renderItem : renderItems) {
-        renderItem.animatedTransformsOffset = _animatedTransforms.size();
-    }
-    _animatedTransforms.insert(std::end(_animatedTransforms), std::begin(animatedGameObject._animatedTransforms.local), std::end(animatedGameObject._animatedTransforms.local));
-}
-
-std::vector<RenderItem3D> CreateAnimatedRenderItems(unsigned int playerIndex) {
-
-    _animatedTransforms.clear();
-    std::vector<RenderItem3D> renderItems;
-
-    Player* player = Game::GetPlayerByIndex(playerIndex);
-    if (player->IsAlive()) {
-        AnimatedGameObject& animatedGameObject = player->GetFirstPersonWeapon();
-        QueueAnimatedGameObjectForRendering(animatedGameObject);
-        renderItems.insert(std::end(renderItems), std::begin(animatedGameObject.GetRenderItems()), std::end(animatedGameObject.GetRenderItems()));
-
-    }
-
-    for (int i = 0; i < 4; i++) {
-        if (playerIndex != i) {
-            AnimatedGameObject& animatedGameObject = Game::GetPlayerByIndex(i)->_characterModel;
-            QueueAnimatedGameObjectForRendering(animatedGameObject);
-            renderItems.insert(std::end(renderItems), std::begin(animatedGameObject.GetRenderItems()), std::end(animatedGameObject.GetRenderItems()));
-        }
-    }
-
-    return renderItems;
-}
-
-std::vector<AnimatedRenderItem3D> CreateAnimatedRenderItems_UNUSED(unsigned int playerIndex) {
-
-    std::vector<AnimatedRenderItem3D> animatedRenderItems;
-
-    std::vector<AnimatedGameObject*> animatedGameObjectsToRender;
-    for (int i = 0; i < 4; i++) {
-        if (playerIndex != i) {
-            animatedGameObjectsToRender.push_back(&Game::GetPlayerByIndex(i)->_characterModel);
-        }
-    }
-    animatedGameObjectsToRender.push_back(&Game::GetPlayerByIndex(playerIndex)->GetFirstPersonWeapon());
-
-    // Maybe rewrite this to use i style for loop and resize the vector on creation
-    for (AnimatedGameObject* animatedGameObject: animatedGameObjectsToRender) {
-        AnimatedRenderItem3D animatedRenderItem;
-        animatedRenderItem.renderItems = animatedGameObject->GetRenderItems();
-        animatedRenderItem.animatedTransforms = &animatedGameObject->_animatedTransforms.local;
-        animatedRenderItems.push_back(animatedRenderItem);
-    }
-    return animatedRenderItems;
 }
 
 BlitDstCoords GetBlitDstCoordsPresent(unsigned int playerIndex) {
@@ -476,28 +344,28 @@ BlitDstCoords GetBlitDstCoordsPresent(unsigned int playerIndex) {
     coords.dstY1 = PRESENT_HEIGHT;
     if (playerIndex == 2) {
         if (Game::GetSplitscreenMode() == SplitscreenMode::TWO_PLAYER) {
-            coords.dstY0 = PRESENT_HEIGHT * 0.5f;
+            coords.dstY0 = PRESENT_HEIGHT / 2;
             coords.dstY1 = PRESENT_HEIGHT;
         }
         if (Game::GetSplitscreenMode() == SplitscreenMode::FOUR_PLAYER) {
             coords.dstX0 = 0;
-            coords.dstX1 = PRESENT_WIDTH * 0.5f;
-            coords.dstY0 = PRESENT_HEIGHT * 0.5f;
+            coords.dstX1 = PRESENT_WIDTH / 2;
+            coords.dstY0 = PRESENT_HEIGHT / 2;
             coords.dstY1 = PRESENT_HEIGHT;
         }
     }
     if (playerIndex == 3) {
 
         if (Game::GetSplitscreenMode() == SplitscreenMode::TWO_PLAYER) {
-            coords.dstY0 = PRESENT_HEIGHT * 0.5f;
+            coords.dstY0 = PRESENT_HEIGHT / 2;
             coords.dstY1 = PRESENT_HEIGHT;
             coords.dstY0 = 0;
-            coords.dstY1 = PRESENT_HEIGHT * 0.5f;
+            coords.dstY1 = PRESENT_HEIGHT / 2;
         }
         if (Game::GetSplitscreenMode() == SplitscreenMode::FOUR_PLAYER) {
-            coords.dstX0 = PRESENT_WIDTH * 0.5f;
+            coords.dstX0 = PRESENT_WIDTH / 2;
             coords.dstX1 = PRESENT_WIDTH;
-            coords.dstY0 = PRESENT_HEIGHT * 0.5f;
+            coords.dstY0 = PRESENT_HEIGHT / 2;
             coords.dstY1 = PRESENT_HEIGHT;
         }
     }
@@ -507,13 +375,13 @@ BlitDstCoords GetBlitDstCoordsPresent(unsigned int playerIndex) {
             coords.dstX0 = 0;
             coords.dstX1 = PRESENT_WIDTH;
             coords.dstY0 = 0;
-            coords.dstY1 = PRESENT_HEIGHT * 0.5f;
+            coords.dstY1 = PRESENT_HEIGHT / 2;
         }
         if (Game::GetSplitscreenMode() == SplitscreenMode::FOUR_PLAYER) {
             coords.dstX0 = 0;
-            coords.dstX1 = PRESENT_WIDTH * 0.5f;
+            coords.dstX1 = PRESENT_WIDTH / 2;
             coords.dstY0 = 0;
-            coords.dstY1 = PRESENT_HEIGHT * 0.5f;
+            coords.dstY1 = PRESENT_HEIGHT / 2;
         }
     }
     if (playerIndex == 1) {
@@ -521,14 +389,14 @@ BlitDstCoords GetBlitDstCoordsPresent(unsigned int playerIndex) {
         if (Game::GetSplitscreenMode() == SplitscreenMode::TWO_PLAYER) {
             coords.dstX0 = 0;
             coords.dstX1 = PRESENT_WIDTH;
-            coords.dstY0 = PRESENT_HEIGHT * 0.5f;
+            coords.dstY0 = PRESENT_HEIGHT / 2;
             coords.dstY1 = PRESENT_HEIGHT;
         }
         if (Game::GetSplitscreenMode() == SplitscreenMode::FOUR_PLAYER) {
-            coords.dstX0 = PRESENT_WIDTH * 0.5f;
+            coords.dstX0 = PRESENT_WIDTH / 2;
             coords.dstX1 = PRESENT_WIDTH;
             coords.dstY0 = 0;
-            coords.dstY1 = PRESENT_HEIGHT * 0.5f;
+            coords.dstY1 = PRESENT_HEIGHT / 2;
         }
     }
 
@@ -593,22 +461,13 @@ BlitDstCoords GetBlitDstCoords(unsigned int playerIndex) {
             coords.dstY1 = BackEnd::GetCurrentWindowHeight() * 0.5f;
         }
     }
-
-
-    /*if (Game::GetSplitscreenMode() != SplitscreenMode::NONE) {
-        if (BackEnd::GetAPI() == API::VULKAN) {
-            coords.dstY0 -= BackEnd::GetCurrentWindowHeight() * 0.5f;
-            coords.dstY1 -= BackEnd::GetCurrentWindowHeight() * 0.5f;
-        }
-    }*/
-
     return coords;
 }
 
 MuzzleFlashData GetMuzzleFlashData(unsigned int playerIndex) {
 
     Player* player = Game::GetPlayerByIndex(playerIndex);
-    
+
     int rows = 5;
     int columns = 4;
     float time =player->GetMuzzleFlashTime() * 0.25f;
@@ -620,16 +479,7 @@ MuzzleFlashData GetMuzzleFlashData(unsigned int playerIndex) {
 
     glm::vec3 viewRotation = player->GetViewRotation();
 
-    glm::vec3 worldPos = glm::vec3(0);
-    if (player->GetCurrentWeaponIndex() == GLOCK) {
-        worldPos = player->GetGlockBarrelPosition();
-    }
-    else if (player->GetCurrentWeaponIndex() == AKS74U) {
-        worldPos = player->GetFirstPersonWeapon().GetAKS74UBarrelPostion();
-    }
-    else if (player->GetCurrentWeaponIndex() == SHOTGUN) {
-        worldPos = player->GetFirstPersonWeapon().GetShotgunBarrelPosition();
-    }
+    glm::vec3 worldPos = player->GetBarrelPosition();
 
     Transform worldTransform;
     worldTransform.position = worldPos;
@@ -646,128 +496,37 @@ MuzzleFlashData GetMuzzleFlashData(unsigned int playerIndex) {
     }
 
     MuzzleFlashData muzzleFlashData;
-    muzzleFlashData.rows = rows;
-    muzzleFlashData.columns = columns;
+    muzzleFlashData.RowCount = rows;
+    muzzleFlashData.ColumnCont = columns;
     muzzleFlashData.frameIndex = frameIndex;
-    muzzleFlashData.interpolate = interpolate;
+    muzzleFlashData.timeLerp = interpolate;
     muzzleFlashData.modelMatrix = worldTransform.to_mat4() * localTransform.to_mat4();
 
     return muzzleFlashData;
 }
 
-/*
-std::vector<glm::mat4> GetGlockCasingMatrics() {
-
-    std::vector<glm::mat4> matrices;
-    matrices.reserve(Scene::_bulletCasings.size());
-
-    for (BulletCasing& casing : Scene::_bulletCasings) {
-        if (casing.type == GLOCK) {
-            matrices.push_back(casing.GetModelMatrix());
-        }
-    }
-    return matrices;
-}*/
-
-std::vector<RenderItem3DInstanced> CreateRenderItems3DInstanced() {
-    
-    _instanceMatrices.clear();
-
-    static Material* glockCasingMaterial = AssetManager::GetMaterialByIndex(AssetManager::GetMaterialIndex("BulletCasing"));
-    static Material* shotgunShellMaterial = AssetManager::GetMaterialByIndex(AssetManager::GetMaterialIndex("Shell"));
-    static Material* aks74uCasingMaterial = AssetManager::GetMaterialByIndex(AssetManager::GetMaterialIndex("Casing_AkS74U"));
-    static int glockCasingMeshIndex = AssetManager::GetModelByIndex(AssetManager::GetModelIndexByName("BulletCasing"))->GetMeshIndices()[0];
-    static int shotgunShellMeshIndex = AssetManager::GetModelByIndex(AssetManager::GetModelIndexByName("Shell"))->GetMeshIndices()[0];
-    static int aks74uCasingMeshIndex = AssetManager::GetModelByIndex(AssetManager::GetModelIndexByName("BulletCasing_AK"))->GetMeshIndices()[0];
-
-    std::vector<RenderItem3DInstanced> renderItems;
-
-    // Glock casings
-    int instanceCount = 0;
-    int modelMatrixOffset = 0;
-    for (BulletCasing& casing : Scene::_bulletCasings) {
-        if (casing.type == GLOCK) {
-            _instanceMatrices.push_back(casing.GetModelMatrix());
-            instanceCount++;
-        }
-    }
-    RenderItem3DInstanced renderItem;
-    renderItem.instanceCount = instanceCount;
-    renderItem.modelMatrixOffset = modelMatrixOffset;
-    renderItem.baseColorTextureIndex = glockCasingMaterial->_basecolor;
-    renderItem.rmaTextureIndex = glockCasingMaterial->_rma;
-    renderItem.normalTextureIndex = glockCasingMaterial->_normal;
-    renderItem.meshIndex = glockCasingMeshIndex;
-    renderItems.push_back(renderItem);
-
-    // Shotgun shells
-    instanceCount = 0;
-    modelMatrixOffset = _instanceMatrices.size();
-    for (BulletCasing& casing : Scene::_bulletCasings) {
-        if (casing.type == SHOTGUN) {
-            _instanceMatrices.push_back(casing.GetModelMatrix());
-            instanceCount++;
-        }
-    }
-    renderItem.instanceCount = instanceCount;
-    renderItem.modelMatrixOffset = modelMatrixOffset;
-    renderItem.baseColorTextureIndex = shotgunShellMaterial->_basecolor;
-    renderItem.rmaTextureIndex = shotgunShellMaterial->_rma;
-    renderItem.normalTextureIndex = shotgunShellMaterial->_normal;
-    renderItem.meshIndex = shotgunShellMeshIndex;
-    renderItems.push_back(renderItem);
-
-    // AKS74U shells
-    instanceCount = 0;
-    modelMatrixOffset = _instanceMatrices.size();
-    for (BulletCasing& casing : Scene::_bulletCasings) {
-        if (casing.type == AKS74U) {
-            _instanceMatrices.push_back(casing.GetModelMatrix());
-            instanceCount++;
-        }
-    }
-    renderItem.instanceCount = instanceCount;
-    renderItem.modelMatrixOffset = modelMatrixOffset;
-    renderItem.baseColorTextureIndex = aks74uCasingMaterial->_basecolor;
-    renderItem.rmaTextureIndex = aks74uCasingMaterial->_rma;
-    renderItem.normalTextureIndex = aks74uCasingMaterial->_normal;
-    renderItem.meshIndex = aks74uCasingMeshIndex;
-    renderItems.push_back(renderItem);
-
-    return renderItems;
-}
 
 std::vector<RenderItem3D> CreateDecalRenderItems() {
 
     static Material* bulletHolePlasterMaterial = AssetManager::GetMaterialByIndex(AssetManager::GetMaterialIndex("BulletHole_Plaster"));
     static Material* bulletHoleGlassMaterial = AssetManager::GetMaterialByIndex(AssetManager::GetMaterialIndex("BulletHole_Glass"));
-
     std::vector<RenderItem3D> renderItems;
-    renderItems.reserve(Scene::_decals.size());
+    renderItems.reserve(Scene::GetBulletHoleDecalCount());
 
-    // Wall bullet decals
-    for (Decal& decal : Scene::_decals) {
-        if (decal.type == Decal::Type::REGULAR) {
-            RenderItem3D renderItem;
-            renderItem.modelMatrix = decal.GetModelMatrix();
+    for (int i = 0; i < Scene::GetBulletHoleDecalCount(); i++) {
+        BulletHoleDecal* decal = Scene::GetBulletHoleDecalByIndex(i);
+        RenderItem3D& renderItem = renderItems.emplace_back();
+        renderItem.modelMatrix = decal->GetModelMatrix();
+        renderItem.meshIndex = AssetManager::GetQuadMeshIndex();
+        if (decal->GetType() == BulletHoleDecalType::REGULAR) {
             renderItem.baseColorTextureIndex = bulletHolePlasterMaterial->_basecolor;
             renderItem.rmaTextureIndex = bulletHolePlasterMaterial->_rma;
             renderItem.normalTextureIndex = bulletHolePlasterMaterial->_normal;
-            renderItem.meshIndex = AssetManager::GetQuadMeshIndex();
-            renderItems.push_back(renderItem);
         }
-    }
-
-    // Glass bullet decals
-    for (Decal& decal : Scene::_decals) {
-        if (decal.type == Decal::Type::GLASS) {
-            RenderItem3D renderItem;
-            renderItem.modelMatrix = decal.GetModelMatrix();
+        else if (decal->GetType() == BulletHoleDecalType::GLASS) {
             renderItem.baseColorTextureIndex = bulletHoleGlassMaterial->_basecolor;
             renderItem.rmaTextureIndex = bulletHoleGlassMaterial->_rma;
             renderItem.normalTextureIndex = bulletHoleGlassMaterial->_normal;
-            renderItem.meshIndex = AssetManager::GetQuadMeshIndex();
-            renderItems.push_back(renderItem);
         }
     }
     return renderItems;
@@ -784,12 +543,12 @@ std::vector<RenderItem3D> CreateBloodDecalRenderItems() {
     renderItems.reserve(Scene::_bloodDecals.size());
 
     for (BloodDecal& decal : Scene::_bloodDecals) {
-    
+
         RenderItem3D& renderItem = renderItems.emplace_back();
         renderItem.meshIndex = AssetManager::GetUpFacingPlaneMeshIndex();
         renderItem.modelMatrix = decal.modelMatrix;
         renderItem.inverseModelMatrix = glm::inverse(renderItem.modelMatrix);
-        
+
         if (decal.type == 0) {
             renderItem.baseColorTextureIndex = textureIndexType0;
         }
@@ -879,7 +638,7 @@ std::vector<DrawIndexedIndirectCommand> CreateMultiDrawIndirectCommands(std::vec
         Mesh* mesh = AssetManager::GetMeshByIndex(renderItem.meshIndex);
         bool found = false;
 
-        // Does a draw command already exist for this mesh? 
+        // Does a draw command already exist for this mesh?
         for (auto& cmd : commands) {
             // If so then increment the instance count
             if (cmd.baseVertex == mesh->baseVertex) {
@@ -916,7 +675,7 @@ MultiDrawIndirectDrawInfo CreateMultiDrawIndirectDrawInfo(std::vector<RenderItem
     for (RenderItem3D& renderItem : drawInfo.renderItems) {
         Mesh* mesh = AssetManager::GetMeshByIndex(renderItem.meshIndex);
         bool found = false;
-        // Does a draw command already exist for this mesh? 
+        // Does a draw command already exist for this mesh?
         for (auto& cmd : drawInfo.commands) {
             // If so then increment the instance count
             if (cmd.baseVertex == mesh->baseVertex) {
@@ -940,7 +699,25 @@ MultiDrawIndirectDrawInfo CreateMultiDrawIndirectDrawInfo(std::vector<RenderItem
     return drawInfo;
 }
 
-RenderData CreateRenderData(int playerIndex) {
+std::vector<SkinnedRenderItem> GetSkinnedRenderItemsForPlayer (int playerIndex) {
+
+    Player* player = Game::GetPlayerByIndex(playerIndex);
+    std::vector<SkinnedRenderItem> skinnedMeshRenderItems;
+
+    for (int i = 0; i < Scene::GetAnimatedGameObjectCount(); i++) {
+        AnimatedGameObject* animatedGameObject = Scene::GetAnimatedGameObjectByIndex(i);
+
+        if (animatedGameObject->GetFlag() == AnimatedGameObject::Flag::CHARACTER_MODEL && i == player->GetCharacterModelAnimatedGameObjectIndex() ||
+            animatedGameObject->GetFlag() == AnimatedGameObject::Flag::FIRST_PERSON_WEAPON && i != player->GetFirstPersonWeaponAnimatedGameObjectIndex()) {
+            continue;
+        }
+        std::vector<SkinnedRenderItem>& items = animatedGameObject->GetSkinnedMeshRenderItems();
+        skinnedMeshRenderItems.insert(skinnedMeshRenderItems.end(), items.begin(), items.end());
+    }
+    return skinnedMeshRenderItems;
+}
+
+RenderData CreateRenderData() {
 
     // Viewport size
     ivec2 viewportSize = { PRESENT_WIDTH, PRESENT_HEIGHT };
@@ -956,6 +733,9 @@ RenderData CreateRenderData(int playerIndex) {
         viewportDoubleSize.x *= 0.5;
         viewportDoubleSize.y *= 0.5;
     }
+
+    ivec2 presentSize = { PRESENT_WIDTH, PRESENT_HEIGHT };
+    ivec2 gbufferSize = { PRESENT_WIDTH, PRESENT_HEIGHT };
 
     std::vector<RenderItem3D> decalRenderItems = Scene::CreateDecalRenderItems();
     std::vector<RenderItem3D> geometryRenderItems = CreateRenderItems3D();
@@ -985,6 +765,7 @@ RenderData CreateRenderData(int playerIndex) {
     }
 
 
+
     // Create render items
     renderData.renderItems.geometry = CreateRenderItems3D();
     renderData.renderItems.decals = Scene::CreateDecalRenderItems();
@@ -993,24 +774,23 @@ RenderData CreateRenderData(int playerIndex) {
     std::sort(renderData.renderItems.geometry.begin(), renderData.renderItems.geometry.end());
     std::sort(renderData.renderItems.decals.begin(), renderData.renderItems.decals.end());
 
-    // Create draw commands
-    //renderData.drawCommandsP1.geometry = 
-
     renderData.lights = CreateGPULights();
     renderData.debugLinesMesh = &_debugLinesMesh;
     renderData.debugPointsMesh = &_debugPointsMesh;
     renderData.renderDebugLines = (_debugLineRenderMode != DebugLineRenderMode::SHOW_NO_LINES);
-    renderData.playerIndex = playerIndex;
-    //renderData.cameraData = CreateCameraData(playerIndex);
-    renderData.renderItems2D = CreateRenderItems2D(playerIndex, viewportSize);
-    renderData.renderItems2DHiRes = Game::GetPlayerByIndex(playerIndex)->GetHudRenderItemsHiRes(viewportDoubleSize);
-    renderData.blitDstCoords = GetBlitDstCoords(playerIndex);
-    renderData.blitDstCoordsPresent = GetBlitDstCoordsPresent(playerIndex);
-    renderData.animatedRenderItems3D = CreateAnimatedRenderItems(playerIndex);
-    renderData.muzzleFlashData = GetMuzzleFlashData(playerIndex);
+    renderData.renderItems2D = CreateRenderItems2D(presentSize, renderData.playerCount);
+    renderData.renderItems2DHiRes = CreateRenderItems2DHiRes(gbufferSize, renderData.playerCount);
+    renderData.blitDstCoords = GetBlitDstCoords(0);
+    renderData.blitDstCoordsPresent = GetBlitDstCoordsPresent(0);
+
+
+    for (int i = 0; i < renderData.playerCount; i++) {
+        renderData.muzzleFlashData[i] = GetMuzzleFlashData(i);
+    }
+
     renderData.animatedTransforms = &_animatedTransforms;
-    renderData.finalImageColorTint = Game::GetPlayerByIndex(playerIndex)->finalImageColorTint;
-    renderData.finalImageColorContrast = Game::GetPlayerByIndex(playerIndex)->finalImageContrast;
+    renderData.finalImageColorTint = Game::GetPlayerByIndex(0)->finalImageColorTint;
+    renderData.finalImageColorContrast = Game::GetPlayerByIndex(0)->finalImageContrast;
     renderData.renderMode = _renderMode;
 
     renderData.geometryDrawInfo = CreateMultiDrawIndirectDrawInfo(geometryRenderItems);
@@ -1021,8 +801,6 @@ RenderData CreateRenderData(int playerIndex) {
     renderData.bloodVATDrawInfo = CreateMultiDrawIndirectDrawInfo(bloodVATRenderItems);
 
 
-
-
     // Camera data
     for (int i = 0; i < renderData.playerCount; i++) {
         Player* player = Game::GetPlayerByIndex(i);
@@ -1030,15 +808,10 @@ RenderData CreateRenderData(int playerIndex) {
         renderData.cameraData[i].projectionInverse = glm::inverse(renderData.cameraData[i].projection);
         renderData.cameraData[i].view = player->GetViewMatrix();
         renderData.cameraData[i].viewInverse = glm::inverse(renderData.cameraData[i].view);
-        renderData.cameraData[i].finalImageColorR = Game::GetPlayerByIndex(playerIndex)->finalImageColorTint.x;
-        renderData.cameraData[i].finalImageColorG = Game::GetPlayerByIndex(playerIndex)->finalImageColorTint.y;
-        renderData.cameraData[i].finalImageColorB = Game::GetPlayerByIndex(playerIndex)->finalImageColorTint.z;
-        renderData.cameraData[i].finalImageColorContrast = Game::GetPlayerByIndex(playerIndex)->finalImageContrast;
-
-
-
-
-
+        renderData.cameraData[i].colorMultiplierR = Game::GetPlayerByIndex(i)->finalImageColorTint.x;
+        renderData.cameraData[i].colorMultiplierG = Game::GetPlayerByIndex(i)->finalImageColorTint.y;
+        renderData.cameraData[i].colorMultiplierB = Game::GetPlayerByIndex(i)->finalImageColorTint.z;
+        renderData.cameraData[i].contrast = Game::GetPlayerByIndex(i)->finalImageContrast;
 
         // Viewport size
         ivec2 viewportSize = { PRESENT_WIDTH, PRESENT_HEIGHT };
@@ -1114,10 +887,42 @@ RenderData CreateRenderData(int playerIndex) {
 
 
 
+    // Get everything you need to skin
+    renderData.animatedGameObjectsToSkin = Scene::GetAnimatedGamesObjectsToSkin();
 
+    // Now conjoin all their matrices in one big ol' buffer
+    uint32_t baseAnimatedTransformIndex = 0;
+    uint32_t baseSkinnedVertex = 0;
 
+    for (int i = 0; i < renderData.animatedGameObjectsToSkin.size(); i++) {
+        AnimatedGameObject& animatedGameObject = *renderData.animatedGameObjectsToSkin[i];
 
+        animatedGameObject.SetBaseSkinnedVertex(baseSkinnedVertex);
+        animatedGameObject.SetBaseTransformIndex(baseAnimatedTransformIndex);
 
+        const size_t transformCount = animatedGameObject.GetAnimatedTransformCount();
+        //renderData.animatedGameObjectsToSkin.push_back(&animatedGameObject);
+        renderData.baseAnimatedTransformIndices.push_back(baseAnimatedTransformIndex);
+        renderData.skinningTransforms.insert(renderData.skinningTransforms.end(), animatedGameObject._animatedTransforms.local.begin(), animatedGameObject._animatedTransforms.local.end());
+        baseAnimatedTransformIndex += animatedGameObject._animatedTransforms.GetSize();
+        baseSkinnedVertex += animatedGameObject.GetVerteXCount();
+    }
+
+    // Create render items
+    for (AnimatedGameObject* animatedGameObject : renderData.animatedGameObjectsToSkin) {
+        animatedGameObject->CreateSkinnedMeshRenderItems();
+    }
+
+    // Get per player animated render items
+    renderData.skinnedRenderItems[0] = GetSkinnedRenderItemsForPlayer(0);
+    renderData.skinnedRenderItems[1] = GetSkinnedRenderItemsForPlayer(1);
+    renderData.skinnedRenderItems[2] = GetSkinnedRenderItemsForPlayer(2);
+    renderData.skinnedRenderItems[3] = GetSkinnedRenderItemsForPlayer(3);
+
+    //std::vector<SkinnedRenderItem> allSkinnedRenderItems;
+    for (int i = 0; i < renderData.playerCount; i++) {
+        renderData.allSkinnedRenderItems.insert(renderData.allSkinnedRenderItems.end(), renderData.skinnedRenderItems[i].begin(), renderData.skinnedRenderItems[i].end());
+    }
 
     std::vector<RenderItem3D> geometryRenderItems2 = CreateRenderItems3D();
     std::vector<RenderItem3D> bulletHoleDecalRenderItems = Scene::CreateDecalRenderItems();
@@ -1125,7 +930,9 @@ RenderData CreateRenderData(int playerIndex) {
     renderData.geometryIndirectDrawInfo = CreateIndirectDrawInfo(geometryRenderItems2, 4);
     renderData.bulletHoleDecalIndirectDrawInfo = CreateIndirectDrawInfo(bulletHoleDecalRenderItems, 4);
 
-     
+
+
+
     return renderData;
 }
 
@@ -1235,42 +1042,14 @@ void Renderer::RenderFrame() {
     // Resize render targets if required
     if (Input::KeyPressed(HELL_KEY_V)) {
         Game::NextSplitScreenMode();
-        //ResizeRenderTargets();
+        Renderer::RecreateBlurBuffers();
     }
 
     // Game
     if (Game::GetGameMode() == Game::GameMode::GAME) {
 
-        RenderData renderData = CreateRenderData(0);
+        RenderData renderData = CreateRenderData();
         RenderGame(renderData);
-
-        /*if (Game::GetMultiplayerMode() == Game::MultiplayerMode::NONE ||
-            Game::GetMultiplayerMode() == Game::MultiplayerMode::ONLINE) {
-            RenderData renderData = CreateRenderData(0);
-            RenderGame(renderData);
-        }
-        else if (Game::GetMultiplayerMode() == Game::MultiplayerMode::LOCAL) {
-
-            if (Game::GetSplitscreenMode() == SplitscreenMode::NONE) {
-                RenderData renderData = CreateRenderData(0);
-                RenderGame(renderData);
-            }
-            if (Game::GetSplitscreenMode() == SplitscreenMode::TWO_PLAYER) {
-                for (int i = 0; i < 2; i++) {
-                    RenderData renderData = CreateRenderData(i);
-                    RenderGame(renderData);
-                    break;
-                }
-            }
-            if (Game::GetSplitscreenMode() == SplitscreenMode::FOUR_PLAYER) {
-                for (int i = 0; i < 4; i++) {
-                    RenderData renderData = CreateRenderData(i);
-                    RenderGame(renderData);
-                    break;
-                }
-            }
-        }*/
-
         PresentFinalImage();
     }
     // 3D editor
@@ -1358,7 +1137,7 @@ void ResizeRenderTargets() {
 
     int width = PRESENT_WIDTH;
     int height = PRESENT_HEIGHT;
-    
+
     if (splitscreenMode == SplitscreenMode::TWO_PLAYER) {
         height *= 0.5f;
     }
@@ -1366,7 +1145,7 @@ void ResizeRenderTargets() {
         width *= 0.5f;
         height *= 0.5f;
     }
-    
+
     if (BackEnd::GetAPI() == API::OPENGL) {
         //OpenGLRenderer::CreatePlayerRenderTargets(width, height);
     }
@@ -1463,5 +1242,15 @@ void PresentFinalImage() {
     }
     else if (BackEnd::GetAPI() == API::VULKAN) {
         VulkanRenderer::PresentFinalImage();
+    }
+}
+
+void Renderer::RecreateBlurBuffers() {
+
+    if (BackEnd::GetAPI() == API::OPENGL) {
+        OpenGLRenderer::RecreateBlurBuffers();
+    }
+    else if (BackEnd::GetAPI() == API::VULKAN) {
+        // TO DO!!! VulkanRenderer::RecreateBlurBuffers();
     }
 }

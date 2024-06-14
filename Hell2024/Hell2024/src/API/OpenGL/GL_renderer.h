@@ -12,4 +12,5 @@ namespace OpenGLRenderer {
     void CreatePlayerRenderTargets(int presentWidth, int presentHeight);
     void UpdatePointCloud();
     void PresentFinalImage();
+    void RecreateBlurBuffers();
 }

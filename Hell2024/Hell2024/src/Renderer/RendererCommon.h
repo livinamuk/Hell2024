@@ -28,8 +28,9 @@
 #define MAX_DECAL_COUNT 4096
 #define MAX_BLOOD_DECAL_COUNT 1024
 #define MAX_VAT_INSTANCE_COUNT 16
+#define MAX_SKINNED_MESH 96
 
-enum Alignment { 
+enum Alignment {
     CENTERED,
     TOP_LEFT,
     TOP_RIGHT,
@@ -69,30 +70,23 @@ struct RenderItem2D {
     float colorTintG;
     float colorTintB;
     int textureIndex;
-}; 
-
-struct InstanceData {
-    glm::mat4 modelMatrix;
-    glm::mat4 inverseModelMatrix;
-    int baseColorTextureIndex;
-    int normalTextureIndex;
-    int rmaTextureIndex;
-    int useEmissiveMask = 0; // 0 for nothing, 1 for emissive output 
-    glm::vec3 emissiveColor;
-    int padding0;
 };
 
 struct RenderItem3D {
+
     glm::mat4 modelMatrix = glm::mat4(1);
     glm::mat4 inverseModelMatrix = glm::mat4(1);
+
     int meshIndex;
     int baseColorTextureIndex;
     int normalTextureIndex;
     int rmaTextureIndex;
+
     int vertexOffset;
     int indexOffset;
-    int animatedTransformsOffset; 
+    int animatedTransformsOffset;
     int castShadow = 1;             // if 0 then currently also it is not included in the TLAS
+
     int useEmissiveMask = 0;
     glm::vec3 emissiveColor = glm::vec3(0);
 
@@ -102,19 +96,30 @@ struct RenderItem3D {
     }
 };
 
-struct RenderItem3DInstanced {
-    int meshIndex;
+
+
+struct SkinnedRenderItem {
+
+    glm::mat4 modelMatrix = glm::mat4(1);
+    glm::mat4 inverseModelMatrix = glm::mat4(1);
+
+    int originalMeshIndex;
+    int b;// vertexBufferIndex;
     int baseColorTextureIndex;
     int normalTextureIndex;
+
     int rmaTextureIndex;
-    int vertexOffset;
-    int indexOffset;
-    int instanceCount;
-    int modelMatrixOffset;
+    int castShadow = 1;
+    int useEmissiveMask = 0;
+    int baseVertex;
+
+    glm::vec3 emissiveColor = glm::vec3(0);
+    int c;// padding1;
 };
 
 
 struct CameraData {
+
     glm::mat4 projection = glm::mat4(1);
     glm::mat4 projectionInverse = glm::mat4(1);
     glm::mat4 view = glm::mat4(1);
@@ -130,10 +135,10 @@ struct CameraData {
     float clipSpaceYMin;
     float clipSpaceYMax;
 
-    float finalImageColorContrast;
-    float finalImageColorR;
-    float finalImageColorG;
-    float finalImageColorB;
+    float contrast;
+    float colorMultiplierR;
+    float colorMultiplierG;
+    float colorMultiplierB;
 };
 
 struct BoundingBox {
@@ -210,8 +215,8 @@ enum DebugLineRenderMode {
 };
 
 enum RenderMode {
-    COMPOSITE, 
-    DIRECT_LIGHT, 
+    COMPOSITE,
+    DIRECT_LIGHT,
     INDIRECT_LIGHT,
     POINT_CLOUD,
     POINT_CLOUD_PROPAGATION_GRID,

@@ -1,6 +1,7 @@
 #pragma once
 #include "RendererCommon.h"
 #include "Types/DetachedMesh.hpp"
+#include "../Core/AnimatedGameObject.h"
 
 struct AnimatedRenderItem3D {
     std::vector<RenderItem3D> renderItems;
@@ -16,10 +17,16 @@ struct BlitDstCoords {
 
 struct MuzzleFlashData {
     glm::mat4 modelMatrix;
+    int frameIndex;
+    int RowCount;
+    int ColumnCont;
+    float timeLerp;
+    /*
+    glm::mat4 modelMatrix;
     unsigned int rows = 0;
     unsigned int columns = 0;
     float interpolate = 0.0f;
-    int frameIndex = 0;
+    int frameIndex = 0;*/
 };
 
 struct MultiDrawIndirectDrawInfo {
@@ -54,6 +61,29 @@ struct PushConstants {
     int emptp2;
 };
 
+struct SkinningPushConstants {
+    int vertexCount;
+    int baseInputVertex;
+    int baseOutputVertex;
+    int animatedGameObjectIndex;
+};
+
+struct SkinnedMeshPushConstants {
+    int playerIndex;
+    int renderItemIndex;
+    int emptpy;
+    int emptp2;
+};
+
+/*
+struct FlipBookData {
+    glm::mat4 modelMatrix;
+    int frameIndex;
+    int RowCount;
+    int ColumnCont;
+    float timeLerp;
+};*/
+
 struct RenderData {
 
 
@@ -67,7 +97,7 @@ struct RenderData {
     std::vector<RenderItem2D> renderItems2D;
     std::vector<RenderItem2D> renderItems2DHiRes;
 
-    std::vector<RenderItem3D> animatedRenderItems3D;
+    std::vector<RenderItem3D> animatedRenderItems3D; // remove me
     std::vector<glm::mat4>* animatedTransforms;
     std::vector<GPULight> lights;
 
@@ -75,11 +105,10 @@ struct RenderData {
     DetachedMesh* debugPointsMesh = nullptr;
 
     bool renderDebugLines = false;
-    int playerIndex = 0;
 
     BlitDstCoords blitDstCoords;
     BlitDstCoords blitDstCoordsPresent;
-    MuzzleFlashData muzzleFlashData;
+    MuzzleFlashData muzzleFlashData[4];
     glm::vec3 finalImageColorTint;
     float finalImageColorContrast;
     RenderMode renderMode;
@@ -92,9 +121,18 @@ struct RenderData {
 
     int playerCount = 1;
 
+    //FlipBookData flipBookData[4];
     CameraData cameraData[4];
     IndirectDrawInfo geometryIndirectDrawInfo;
     IndirectDrawInfo bulletHoleDecalIndirectDrawInfo;
-    
+
+    std::vector<SkinnedRenderItem> skinnedRenderItems[4];
+
+    std::vector<SkinnedRenderItem> allSkinnedRenderItems;
+
+    std::vector<AnimatedGameObject*> animatedGameObjectsToSkin;
+    std::vector<uint32_t> baseAnimatedTransformIndices;
+    std::vector<glm::mat4> skinningTransforms;
+
 };
 

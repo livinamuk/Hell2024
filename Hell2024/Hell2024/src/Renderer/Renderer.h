@@ -7,6 +7,7 @@ namespace Renderer {
     void HotloadShaders();
     void NextRenderMode();
     void PreviousRenderMode();
-    void NextDebugLineRenderMode(); 
+    void NextDebugLineRenderMode();
     void UpdatePointCloud();
+    void RecreateBlurBuffers();
 }

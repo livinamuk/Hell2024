@@ -23,6 +23,10 @@ uniform int textureIndex;
 
 void main() {
 
+
+	//discard;
+
+
     vec4 baseColor = texture(sampler2D(textureSamplers[BaseColorTextureIndex]), TexCoord);    
     vec4 normalMap = texture(sampler2D(textureSamplers[NormalTextureIndex]), TexCoord);    
     vec4 rma = texture(sampler2D(textureSamplers[RMATextureIndex]), TexCoord);  

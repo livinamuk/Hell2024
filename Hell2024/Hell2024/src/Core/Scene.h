@@ -1,11 +1,13 @@
 #pragma once
 #include "../Common.h"
 #include "GameObject.h"
+#include "AnimatedGameObject.h"
 #include "Window.h"
 #include "Player.h"
 #include "../Physics/Physics.h"
+#include "../Effects/BloodDecal.hpp"
 #include "../Effects/BulletCasing.h"
-#include "../Effects/Decal.h"
+#include "../Effects/BulletHoleDecal.hpp"
 #include "Light.h"
 #include "VolumetricBloodSplatter.h"
 #include "../Util.hpp"
@@ -13,32 +15,8 @@
 #include "../Types/Modular/Door.h"
 #include "../Types/Modular/Ceiling.h"
 #include "../Types/Modular/Floor.h"
-#include "../Types/Modular/Toilet.hpp"
+#include "../Types/Modular/Toilet.h"
 #include "../Types/Modular/Wall.h"
-
-struct BloodDecal {
-    Transform transform;
-    Transform localOffset;
-    int type;
-    glm::mat4 modelMatrix;
-
-    BloodDecal(Transform transform, int type) {
-        this->transform = transform;
-        this->type = type;
-        if (type != 2) {
-            localOffset.position.z = 0.55f;
-            transform.scale = glm::vec3(2.0f);
-        }
-        else {
-            localOffset.rotation.y = Util::RandomFloat(0, HELL_PI * 2);;
-            transform.scale = glm::vec3(1.5f);
-        }
-        modelMatrix = transform.to_mat4() * localOffset.to_mat4();
-    }
-};
-
-
-
 
 inline float RandFloat(float min, float max) {
     return min + static_cast <float> (rand()) / (static_cast <float> (RAND_MAX / (max - min)));
@@ -152,8 +130,26 @@ namespace Scene {
 
     void Update(float deltaTime);
 
+    // Decals
+    void CreateBulletDecal(glm::vec3 localPosition, glm::vec3 localNormal, PxRigidBody* parent, BulletHoleDecalType type);
+    BulletHoleDecal* GetBulletHoleDecalByIndex(int32_t index);
+    const size_t GetBulletHoleDecalCount();
 
+    // Game Objects
+    int32_t CreateGameObject();
+    GameObject* GetGameObjectByIndex(int32_t index);
+    GameObject* GetGameObjectByName(std::string name);
+    std::vector<GameObject>& GetGamesObjects();
+    void UpdateGameObjects(float deltaTime);
+    const size_t GetGameObjectCount();
 
+    // Animated Game Objects
+    int32_t CreateAnimatedGameObject();
+    AnimatedGameObject* GetAnimatedGameObjectByIndex(int32_t index);
+    std::vector<AnimatedGameObject>& GetAnimatedGamesObjects();
+    std::vector<AnimatedGameObject*> GetAnimatedGamesObjectsToSkin();
+    //void UpdateAnimatedGameObjects(float deltaTime);
+    const size_t GetAnimatedGameObjectCount();
 
     // OLD SHIT BELOW
     inline PxTriangleMesh* _sceneTriangleMesh = NULL;
@@ -167,15 +163,14 @@ namespace Scene {
     inline std::vector<SpawnPoint> _spawnPoints;
     inline std::vector<Bullet> _bullets;
     inline std::vector<BulletCasing> _bulletCasings;
-    inline std::vector<Decal> _decals;
+
 	inline std::vector<Wall> _walls;
 	inline std::vector<Window> _windows;
 	inline std::vector<Door> _doors;
     inline std::vector<Floor> _floors;
     inline std::vector<Ceiling> _ceilings;
     inline std::vector<CloudPointOld> _cloudPoints;
-    inline std::vector<GameObject> _gameObjects;
-    inline std::vector<AnimatedGameObject> _animatedGameObjects;
+    //inline std::vector<GameObject> _gameObjects;
     inline std::vector<Light> _lights;
     inline std::vector<glm::vec3> _rtVertices;
     inline std::vector<RTMesh> _rtMesh;
@@ -193,9 +188,8 @@ namespace Scene {
     void CleanUp();
     void Update_OLD(float deltaTime);
     void LoadLightSetup(int index);
-    GameObject* GetGameObjectByName(std::string);
-    AnimatedGameObject* GetAnimatedGameObjectByName(std::string);
-    std::vector<AnimatedGameObject>& GetAnimatedGameObjects();
+    //AnimatedGameObject* GetAnimatedGameObjectByName(std::string);
+   // std::vector<AnimatedGameObject>& GetAnimatedGameObjects();
     void CreatePointCloud();
     void CreateMeshData();
     void AddLight(Light& light);
@@ -207,12 +201,13 @@ namespace Scene {
     //void CreateScenePhysicsObjects();
     void ProcessPhysicsCollisions();
 	void RecreateAllPhysicsObjects();
-	void RemoveAllDecalsFromWindow(Window* window); 
+	void RemoveAllDecalsFromWindow(Window* window);
     void CalculateLightBoundingVolumes();
     void CheckForDirtyLights();
     void ResetGameObjectStates();
 
     void CreateVolumetricBlood(glm::vec3 position, glm::vec3 rotation, glm::vec3 front);
+
 
     //Player* GetPlayerFromCharacterControler(PxController* characterController);
 }

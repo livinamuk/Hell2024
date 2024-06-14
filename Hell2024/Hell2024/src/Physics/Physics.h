@@ -12,6 +12,7 @@
 //#pragma warning( disable : 6495 ) // Always initialize a member variable
 using namespace physx;
 
+
 struct PhysicsFilterData {
 	RaycastGroup raycastGroup = RaycastGroup::RAYCAST_DISABLED;
 	CollisionGroup collisionGroup = CollisionGroup::NO_COLLISION;

@@ -6,7 +6,7 @@ layout (location = 2) in vec2 vTexCoord;
 
 layout (location = 1) out vec2 texCoord;
 
-void main() {	
-	texCoord = vec2(vTexCoord.x, 1 - vTexCoord.y);
+void main() {
+	texCoord = vec2(vTexCoord.x, vTexCoord.y);
 	gl_Position = vec4(vPosition, 1.0);
 }

@@ -9,13 +9,13 @@ layout (binding = 5) uniform samplerCube shadowMap[16];
 
 in vec2 TexCoords;
 
-uniform mat4 inverseProjection;
-uniform mat4 inverseView;
+//uniform mat4 inverseProjection;
+//uniform mat4 inverseView;
 
-uniform float clipSpaceXMin;
-uniform float clipSpaceXMax;
-uniform float clipSpaceYMin;
-uniform float clipSpaceYMax;
+//uniform float clipSpaceXMin;
+//uniform float clipSpaceXMax;
+//uniform float clipSpaceYMin;
+//uniform float clipSpaceYMax;
 
 const float PI = 3.14159265359;
 
@@ -30,8 +30,32 @@ struct Light {
 	float radius;
 };
 
+struct CameraData {
+    mat4 projection;
+    mat4 projectionInverse;
+    mat4 view;
+    mat4 viewInverse;
+	float viewportWidth;
+	float viewportHeight;
+    float viewportOffsetX;
+    float viewportOffsetY;
+	float clipSpaceXMin;
+    float clipSpaceXMax;
+    float clipSpaceYMin;
+    float clipSpaceYMax;
+	float finalImageColorContrast;
+    float finalImageColorR;
+    float finalImageColorG;
+    float finalImageColorB;
+};
+
 layout(std430, binding = 2) readonly buffer Lights {
     Light lights[];
+};
+
+
+layout(std430, binding = 16) readonly buffer CameraDataArray {
+    CameraData cameraDataArray[];
 };
 
 //////////////////////
@@ -111,10 +135,10 @@ vec3 microfacetBRDF(in vec3 L, in vec3 V, in vec3 N, in vec3 baseColor, in float
   float NoV = clamp(dot(N, V), 0.0, 1.0);
   float NoL = clamp(dot(N, L), 0.0, 1.0);
   float NoH = clamp(dot(N, H), 0.0, 1.0);
-  float VoH = clamp(dot(V, H), 0.0, 1.0);       
-  // F0 for dielectics in range [0.0, 0.16] 
+  float VoH = clamp(dot(V, H), 0.0, 1.0);
+  // F0 for dielectics in range [0.0, 0.16]
   // default FO is (0.16 * 0.5^2) = 0.04
-  vec3 f0 = vec3(0.16 * (fresnelReflect * fresnelReflect)); 
+  vec3 f0 = vec3(0.16 * (fresnelReflect * fresnelReflect));
   // f0 = vec3(0.125);
   // in case of metals, baseColor contains F0
   f0 = mix(f0, baseColor, metallicness);
@@ -122,29 +146,28 @@ vec3 microfacetBRDF(in vec3 L, in vec3 V, in vec3 N, in vec3 baseColor, in float
   vec3 F = fresnelSchlick(VoH, f0);
   float D = D_GGX(NoH, roughness);
   float G = G_Smith(NoV, NoL, roughness);
-  vec3 spec = (D * G * F) / max(4.0 * NoV * NoL, 0.001);  
+  vec3 spec = (D * G * F) / max(4.0 * NoV * NoL, 0.001);
 
   // diffuse
   vec3 notSpec = vec3(1.0) - F; // if not specular, use as diffuse
   notSpec *= 1.0 - metallicness; // no diffuse for metals
-  vec3 diff = notSpec * baseColor / PI;   
+  vec3 diff = notSpec * baseColor / PI;
   spec *= 1.05;
   vec3 result = diff + spec;
 
   return result;
 }
 
-vec3 GetDirectLighting(vec3 lightPos, vec3 lightColor, float radius, float strength, vec3 Normal, vec3 WorldPos, vec3 baseColor, float roughness, float metallic) {
+vec3 GetDirectLighting(vec3 lightPos, vec3 lightColor, float radius, float strength, vec3 Normal, vec3 WorldPos, vec3 baseColor, float roughness, float metallic, vec3 viewPos) {
 	float fresnelReflect = 1.0; // 0.5 is what they used for box, 1.0 for demon
 
-	vec3 viewPos = inverseView[3].xyz;
-	vec3 viewDir = normalize(viewPos - WorldPos);    
+	vec3 viewDir = normalize(viewPos - WorldPos);
 	float lightRadiance = strength * 1;// * 1.25;
-	vec3 lightDir = normalize(lightPos - WorldPos); 
+	vec3 lightDir = normalize(lightPos - WorldPos);
 	float lightAttenuation = smoothstep(radius, 0, length(lightPos - WorldPos));
 	// lightAttenuation = clamp(lightAttenuation, 0.0, 0.9); // THIS IS WRONG, but does stop super bright region around light source and doesn't seem to affect anything else...
 	float irradiance = max(dot(lightDir, Normal), 0.0) ;
-	irradiance *= lightAttenuation * lightRadiance;		
+	irradiance *= lightAttenuation * lightRadiance;
 	vec3 brdf = microfacetBRDF(lightDir, viewDir, Normal, baseColor, metallic, fresnelReflect, roughness, WorldPos);
 	return brdf * irradiance * clamp(lightColor, 0, 1);
 }
@@ -154,7 +177,7 @@ vec3 GetDirectLighting(vec3 lightPos, vec3 lightColor, float radius, float stren
 //   Shadow mapping   //
 
 vec3 gridSamplingDisk[20] = vec3[](
-   vec3(1, 1,  1), vec3( 1, -1,  1), vec3(-1, -1,  1), vec3(-1, 1,  1), 
+   vec3(1, 1,  1), vec3( 1, -1,  1), vec3(-1, -1,  1), vec3(-1, 1,  1),
    vec3(1, 1, -1), vec3( 1, -1, -1), vec3(-1, -1, -1), vec3(-1, 1, -1),
    vec3(1, 1,  0), vec3( 1, -1,  0), vec3(-1, -1,  0), vec3(-1, 1,  0),
    vec3(1, 0,  1), vec3(-1,  0,  1), vec3( 1,  0, -1), vec3(-1, 0, -1),
@@ -188,14 +211,43 @@ float map(float value, float min1, float max1, float min2, float max2) {
 
 
 void main() {
-	
+
+	//int playerIndex = 1;
+	int playerIndex = int(texture(normalTexture, TexCoords).a * 4 + 0.5);
+
+	mat4 inverseProjection = cameraDataArray[playerIndex].projectionInverse;
+	mat4 inverseView = cameraDataArray[playerIndex].viewInverse;
+	vec3 viewPos = cameraDataArray[playerIndex].viewInverse[3].xyz;
+	float clipSpaceXMin = cameraDataArray[playerIndex].clipSpaceXMin;
+	float clipSpaceXMax = cameraDataArray[playerIndex].clipSpaceXMax;
+	float clipSpaceYMin = cameraDataArray[playerIndex].clipSpaceYMin;
+	float clipSpaceYMax = cameraDataArray[playerIndex].clipSpaceYMax;
+
+	/*
+	int playerIndex = int(texture(normalTexture, texCoord).a * 4 + 0.5);
+
+	mat4 proj = cameraData.data[playerIndex].projection;
+	mat4 view = cameraData.data[playerIndex].view;
+	mat4 projectionInverse = cameraData.data[playerIndex].projectionInverse;
+	mat4 viewInverse = cameraData.data[playerIndex].viewInverse;
+	vec3 viewPos = cameraData.data[playerIndex].viewInverse[3].xyz;
+
+	float clipSpaceXMin = cameraData.data[playerIndex].clipSpaceXMin;
+	float clipSpaceXMax = cameraData.data[playerIndex].clipSpaceXMax;
+	float clipSpaceYMin = cameraData.data[playerIndex].clipSpaceYMin;
+	float clipSpaceYMax = cameraData.data[playerIndex].clipSpaceYMax;*/
+
+
 	vec3 baseColor = texture(baseColorTexture, TexCoords).rgb;
 	baseColor.rgb = pow(baseColor.rgb, vec3(2.2));
 	vec3 normal = texture(normalTexture, TexCoords).rgb;
 	vec3 rma = texture(rmaTexture, TexCoords).rgb;
 	float roughness = rma.r;
 	float metallic = rma.g;
-		
+
+	float test = texture(normalTexture, TexCoords).a;
+
+
 	// Position from depth reconsturction
 	float z = texture(depthTexture, TexCoords).x;
     vec2 clipSpaceTexCoord = TexCoords;
@@ -204,22 +256,21 @@ void main() {
 	vec4 clipSpacePosition = vec4(clipSpaceTexCoord * 2.0 - 1.0, z, 1.0);
     vec4 viewSpacePosition = inverseProjection * clipSpacePosition;
     viewSpacePosition /= viewSpacePosition.w;
-    vec4 worldSpacePosition = inverseView * viewSpacePosition;    
+    vec4 worldSpacePosition = inverseView * viewSpacePosition;
     vec3 WorldPos = worldSpacePosition.xyz;
-	
-	vec3 viewPos = inverseView[3].xyz;
+
 
 
 	vec3 directLighting = vec3(0);
 
 	for (int i = 0; i < 8; i++) {
-		Light light = lights[i];	
+		Light light = lights[i];
 		vec3 lightPosition = vec3(light.posX, light.posY, light.posZ);
 		vec3 lightColor = vec3(light.colorR, light.colorG, light.colorB);
 		float lightRadius = light.radius;
 		float lightStrength = light.strength;
-		const vec3 lightDirection = normalize(lightPosition - WorldPos); 
-		vec3 ligthting = GetDirectLighting(lightPosition, lightColor, lightRadius, lightStrength, normal, WorldPos, baseColor.rgb, roughness, metallic);
+		const vec3 lightDirection = normalize(lightPosition - WorldPos);
+		vec3 ligthting = GetDirectLighting(lightPosition, lightColor, lightRadius, lightStrength, normal, WorldPos, baseColor.rgb, roughness, metallic, viewPos);
 		float shadow = ShadowCalculation(shadowMap[i], lightPosition, WorldPos, viewPos, normal);
 		directLighting += ligthting * vec3(shadow);
 	}
@@ -230,25 +281,25 @@ void main() {
 
 
 
-	// FragColor.rgb = indirectLighting;    
+	// FragColor.rgb = indirectLighting;
 	//float d = distance(viewPos, WorldPos);
 	//float alpha = getFogFactor(d);
 	//vec3 FogColor = vec3(0.0);
 	//FragColor.rgb = mix(FragColor.rgb, FogColor, alpha);
 	FragColor.rgb = mix(FragColor.rgb, Tonemap_ACES(FragColor.rgb), 1.0);
-	FragColor.rgb = mix(FragColor.rgb, Tonemap_ACES(FragColor.rgb), 0.35);	
-	FragColor.rgb = pow(FragColor.rgb, vec3(1.0/2.2)); 
+	FragColor.rgb = mix(FragColor.rgb, Tonemap_ACES(FragColor.rgb), 0.35);
+	FragColor.rgb = pow(FragColor.rgb, vec3(1.0/2.2));
 
-	// Vignette         
+	// Vignette
 	vec2 uv = TexCoords;
-	uv *=  1.0 - uv.yx;           
-	float vig = uv.x*uv.y * 15.0;	// multiply with sth for intensity    
-	vig = pow(vig, 0.05);			// change pow for modifying the extend of the  vignette    
+	uv *=  1.0 - uv.yx;
+	float vig = uv.x*uv.y * 15.0;	// multiply with sth for intensity
+	vig = pow(vig, 0.05);			// change pow for modifying the extend of the  vignette
 	FragColor.rgb *= vec3(vig);
 
 	// Some more YOLO tone mapping
-	FragColor.rgb = mix(FragColor.rgb, Tonemap_ACES(FragColor.rgb), 0.995);	
-	
+	FragColor.rgb = mix(FragColor.rgb, Tonemap_ACES(FragColor.rgb), 0.995);
+
 	// Add the noise
 	// TO DO: FragColor.rgb = FragColor.rgb + (x * -noiseFactor) + (noiseFactor / 2);
 
@@ -263,15 +314,21 @@ void main() {
 
 	//FragColor.rgb = vec3(TexCoords, 0);
 
-	
-//	FragColor.rgb = vec3( baseColor);  
-//	FragColor.rgb = vec3( WorldPos);  
-	//FragColor.rgb = vec3( 1,1,0);  
 
-//	FragColor.rgb = vec3( shadow);  
-	//FragColor.g = 0;  
-//	FragColor.b = 0;  
-	FragColor.a = 1; 
+//	FragColor.rgb = vec3( normal);
+//	FragColor.rgb = vec3( WorldPos);
+	//FragColor.rgb = vec3( 1,1,0);
 
-	
+//	FragColor.rgb = vec3( baseColor);
+	//FragColor.g = 0;
+//	FragColor.b = 0;
+
+
+//	FragColor.rgb = vec3( TexCoords, 0); ]
+	//FragColor.rgb = vec3( texture(normalTexture, TexCoords).a);
+
+
+	FragColor.a = 1;
+
+
 }

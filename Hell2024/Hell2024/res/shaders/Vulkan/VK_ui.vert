@@ -19,10 +19,10 @@ struct RenderItem2D {
 
 layout(std140,set = 0, binding = 1) readonly buffer A {RenderItem2D data[];} renderItems;
 
-void main() {	
+void main() {
 	mat4 modelMatrix = renderItems.data[gl_InstanceIndex].modelMatrix;
 	textureIndex = renderItems.data[gl_InstanceIndex].textureIndex;
 	color = vec3(renderItems.data[gl_InstanceIndex].colorTintR, renderItems.data[gl_InstanceIndex].colorTintG, renderItems.data[gl_InstanceIndex].colorTintB);
 	gl_Position = modelMatrix * vec4(vPosition, 1.0);
-	texCoord = vec2(vTexCoord.x, 1- vTexCoord.y);
+	texCoord = vec2(vTexCoord.x, vTexCoord.y);
 }

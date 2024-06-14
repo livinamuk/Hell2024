@@ -232,6 +232,8 @@ void main() {
 	float clipSpaceXMax = cameraData.data[playerIndex].clipSpaceXMax;
 	float clipSpaceYMin = cameraData.data[playerIndex].clipSpaceYMin;
 	float clipSpaceYMax = cameraData.data[playerIndex].clipSpaceYMax;
+
+
 	
 	//clipSpaceXMin = 0;
 	//clipSpaceXMax = 1;

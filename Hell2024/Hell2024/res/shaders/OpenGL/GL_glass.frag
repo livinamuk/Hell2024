@@ -9,17 +9,13 @@ in flat int BaseColorTextureIndex;
 in flat int NormalTextureIndex;
 in flat int RMATextureIndex;
 
-layout (binding = 0) uniform sampler2D finalLighting;
-
 layout (binding = 1) uniform sampler2D normalTexture;
 layout (binding = 2) uniform sampler2D rmaTexture;
 layout (binding = 3) uniform sampler2D depthTexture;
 layout (binding = 4) uniform sampler2D basecolorTexture;
 layout (binding = 7) uniform sampler2D brdfTexture;
 
-uniform float screenWidth;
-uniform float screenHeight;
-uniform vec3 viewPos;
+in vec3 viewPos;
 uniform bool isWindow;
 
 in vec3 attrNormal;
@@ -143,8 +139,6 @@ vec3 GetDirectLighting(vec3 lightPos, vec3 lightColor, float radius, float stren
 
 void main() {
 
-    vec2 uv = gl_FragCoord.xy / vec2(screenWidth, screenHeight);    
-  
     vec4 baseColor = texture(sampler2D(textureSamplers[BaseColorTextureIndex]), TexCoords);  
 	baseColor.rgb = pow(baseColor.rgb, vec3(2.2));
     vec4 normalMap = texture(sampler2D(textureSamplers[NormalTextureIndex]), TexCoords);  
@@ -164,6 +158,7 @@ void main() {
 	   directLight.rgb = pow(directLight.rgb, vec3(1.0/2.2)); 
        color += directLight;
 	} 
-
+	
 	FragColor = vec4(color.rgb, 1);
+	//FragColor = vec4(1, 0, 1, 1);
 }

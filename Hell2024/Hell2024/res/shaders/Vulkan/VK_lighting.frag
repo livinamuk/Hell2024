@@ -13,6 +13,7 @@ layout(set = 2, binding = 2) uniform sampler2D rmaTexture;
 layout(set = 2, binding = 3) uniform sampler2D depthTexture;
 layout(set = 2, binding = 4) uniform sampler2D raytracingOutput;
 layout(set = 2, binding = 5) uniform sampler2D positionTexture;
+layout(set = 2, binding = 7) uniform sampler2D glassTexture;
 
 struct CameraData {
     mat4 projection;
@@ -20,9 +21,9 @@ struct CameraData {
     mat4 view;
     mat4 viewInverse;
 	float viewportWidth;
-	float viewportHeight;   
+	float viewportHeight;
     float viewportOffsetX;
-    float viewportOffsetY; 
+    float viewportOffsetY;
 	float clipSpaceXMin;
     float clipSpaceXMax;
     float clipSpaceYMin;
@@ -145,10 +146,10 @@ vec3 microfacetBRDF(in vec3 L, in vec3 V, in vec3 N, in vec3 baseColor, in float
   float NoV = clamp(dot(N, V), 0.0, 1.0);
   float NoL = clamp(dot(N, L), 0.0, 1.0);
   float NoH = clamp(dot(N, H), 0.0, 1.0);
-  float VoH = clamp(dot(V, H), 0.0, 1.0);       
-  // F0 for dielectics in range [0.0, 0.16] 
+  float VoH = clamp(dot(V, H), 0.0, 1.0);
+  // F0 for dielectics in range [0.0, 0.16]
   // default FO is (0.16 * 0.5^2) = 0.04
-  vec3 f0 = vec3(0.16 * (fresnelReflect * fresnelReflect)); 
+  vec3 f0 = vec3(0.16 * (fresnelReflect * fresnelReflect));
   // f0 = vec3(0.125);
   // in case of metals, baseColor contains F0
   f0 = mix(f0, baseColor, metallicness);
@@ -156,12 +157,12 @@ vec3 microfacetBRDF(in vec3 L, in vec3 V, in vec3 N, in vec3 baseColor, in float
   vec3 F = fresnelSchlick(VoH, f0);
   float D = D_GGX(NoH, roughness);
   float G = G_Smith(NoV, NoL, roughness);
-  vec3 spec = (D * G * F) / max(4.0 * NoV * NoL, 0.001);  
+  vec3 spec = (D * G * F) / max(4.0 * NoV * NoL, 0.001);
 
   // diffuse
   vec3 notSpec = vec3(1.0) - F; // if not specular, use as diffuse
   notSpec *= 1.0 - metallicness; // no diffuse for metals
-  vec3 diff = notSpec * baseColor / PI;   
+  vec3 diff = notSpec * baseColor / PI;
   spec *= 1.05;
   vec3 result = diff + spec;
 
@@ -173,13 +174,13 @@ vec3 GetDirectLighting(vec3 lightPos, vec3 lightColor, float radius, float stren
 
 	vec3 viewPos = cameraData.data[0].viewInverse[3].xyz;
 
-	vec3 viewDir = normalize(viewPos - WorldPos);    
+	vec3 viewDir = normalize(viewPos - WorldPos);
 	float lightRadiance = strength * 1;// * 1.25;
-	vec3 lightDir = normalize(lightPos - WorldPos); 
+	vec3 lightDir = normalize(lightPos - WorldPos);
 	float lightAttenuation = smoothstep(radius, 0, length(lightPos - WorldPos));
 	// lightAttenuation = clamp(lightAttenuation, 0.0, 0.9); // THIS IS WRONG, but does stop super bright region around light source and doesn't seem to affect anything else...
 	float irradiance = max(dot(lightDir, Normal), 0.0) ;
-	irradiance *= lightAttenuation * lightRadiance;		
+	irradiance *= lightAttenuation * lightRadiance;
 	vec3 brdf = microfacetBRDF(lightDir, viewDir, Normal, baseColor, metallic, fresnelReflect, roughness, WorldPos);
 	return brdf * irradiance * clamp(lightColor, 0, 1);
 }
@@ -203,25 +204,25 @@ void main() {
 	float z = texture(depthTexture, texCoord).x;// * 2.0f - 1.0f;
     vec3 raytracingOutputColor = texture(raytracingOutput, texCoord).rgb;
 
-	// Reconstruct position from depth	
-	const mat4 correction = mat4(1.0,  0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0,  0.0, 0.5, 0.0, 0.0,  0.0, 0.5, 1.0);	
+	// Reconstruct position from depth
+	const mat4 correction = mat4(1.0,  0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0,  0.0, 0.5, 0.0, 0.0,  0.0, 0.5, 1.0);
 	vec2 clipSpaceTexCoord = texCoord;
 	vec4 clipSpacePosition = vec4(texCoord * 2.0 - 1.0, z, 1.0);
 	vec4 viewSpacePosition = projectionInverse * clipSpacePosition;
 	viewSpacePosition /= viewSpacePosition.w;
-	vec4 worldSpacePosition = viewInverse * viewSpacePosition;    
+	vec4 worldSpacePosition = viewInverse * viewSpacePosition;
 	vec3 WorldPos = worldSpacePosition.xyz;
-	
 
 
 
 
-	
+
+
 	//Light light = lights.data[i];
 
 	const vec3 lightPosition = vec3(3.2, 2.2, 3.5);
-	const vec3 lightDirection = normalize(lightPosition - WorldPos); 
-	float NdotL = max(dot(normal, lightDirection), 0.0);   
+	const vec3 lightDirection = normalize(lightPosition - WorldPos);
+	float NdotL = max(dot(normal, lightDirection), 0.0);
 	vec3 color = vec3(NdotL);
 
 	const vec3 lightColor = vec3(1.0, 0.7799999713897705, 0.5289999842643738);
@@ -231,18 +232,18 @@ void main() {
 	const float metallic = rma.g;
 
 	vec3 directLighting = GetDirectLighting(lightPosition, lightColor, lightRadius, lightStrength, normal, WorldPos, baseColor, roughness, metallic);
-	
+
 	outFragColor.rgb = directLighting;
-	
+
 	vec3 viewPos = viewInverse[3].xyz;
 	float d = distance(viewPos, WorldPos);
 	float alpha = getFogFactor(d);
 	vec3 FogColor = vec3(0.0);
 	outFragColor.rgb = mix(outFragColor.rgb, FogColor, alpha);
 	outFragColor.rgb = mix(outFragColor.rgb, Tonemap_ACES(outFragColor.rgb), 1.0);
-	outFragColor.rgb = mix(outFragColor.rgb, Tonemap_ACES(outFragColor.rgb), 0.35);	
-	outFragColor.rgb = pow(outFragColor.rgb, vec3(1.0/2.2)); 
-		
+	outFragColor.rgb = mix(outFragColor.rgb, Tonemap_ACES(outFragColor.rgb), 0.35);
+	outFragColor.rgb = pow(outFragColor.rgb, vec3(1.0/2.2));
+
 	// Noise
 	/*vec2 uv = gl_FragCoord.xy / vec2(screenWidth, screenHeight);
 	vec2 filmRes = vec2(screenWidth, screenHeight);
@@ -256,18 +257,18 @@ void main() {
 	float noiseSpeed = 30.0;
 	float x = rand(uv + rand(vec2(int(time * noiseSpeed), int(-time * noiseSpeed))));
 	float noiseFactor = 0.04;
-        
-	// Vignette         
+
+	// Vignette
 	uv = gl_FragCoord.xy / vec2(screenWidth * 1, screenHeight * 1);
-	uv *=  1.0 - uv.yx;           
-	float vig = uv.x*uv.y * 15.0;	// multiply with sth for intensity    
-	vig = pow(vig, 0.05);			// change pow for modifying the extend of the  vignette    
+	uv *=  1.0 - uv.yx;
+	float vig = uv.x*uv.y * 15.0;	// multiply with sth for intensity
+	vig = pow(vig, 0.05);			// change pow for modifying the extend of the  vignette
 	outFragColor.rgb *= vec3(vig);
 	*/
 	// Some more YOLO tone mapping
 
-	outFragColor.rgb = mix(outFragColor.rgb, Tonemap_ACES(outFragColor.rgb), 0.995);	
-	
+	outFragColor.rgb = mix(outFragColor.rgb, Tonemap_ACES(outFragColor.rgb), 0.995);
+
 	// Add the noise
 	//outFragColor.rgb = outFragColor.rgb + (x * -noiseFactor) + (noiseFactor / 2);
 
@@ -278,17 +279,17 @@ void main() {
 
 	// Brightness
 	outFragColor.rgb -= vec3(0.010);
-		
+
 	//outFragColor.a = baseColor.a;
 
     outFragColor.a = 1;
 
-	
+
 	//outFragColor.rgb = baseColor;
-	
+
 	outFragColor.rgb = vec3(raytracingOutputColor);
 	//outFragColor.rgb = vec3(raytracingOutputColor) * WorldPos;
-	
+
 	//outFragColor.r *= outFragColor.r * 3.5;
 	//outFragColor.g *= 0.00;
 	//outFragColor.b *= 0.00;
@@ -302,6 +303,15 @@ void main() {
 
 	outFragColor.rgb = outFragColor.rgb;
 
-	
+
+
+	vec3 glassColor = texture(glassTexture, texCoord).rgb;
+
+
+	//outFragColor.rgb = baseColor.rgb;
+	outFragColor.rgb += glassColor.rgb;
+
+
+
 	//outFragColor.rgb = vec3(baseColor);
 }

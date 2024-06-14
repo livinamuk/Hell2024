@@ -1,4 +1,5 @@
 #include "GL_backEnd.h"
+#include "Types/GL_vertexBuffer.hpp"
 #include "../../Core/AssetManager.h"
 #include "../../Util.hpp"
 #include <iostream>
@@ -9,9 +10,15 @@ namespace OpenGLBackEnd {
     GLuint _vertexDataVAO = 0;
     GLuint _vertexDataVBO = 0;
     GLuint _vertexDataEBO = 0;
+
     GLuint _weightedVertexDataVAO = 0;
     GLuint _weightedVertexDataVBO = 0;
     GLuint _weightedVertexDataEBO = 0;
+
+    GLuint g_skinnedVertexDataVAO = 0;
+    GLuint g_skinnedVertexDataVBO = 0;
+    GLuint g_allocatedSkinnedVertexBufferSize = 0;
+
     GLuint _pointCloudVAO = 0;
     GLuint _pointCloudVBO = 0;
 
@@ -31,13 +38,29 @@ namespace OpenGLBackEnd {
         return _weightedVertexDataVAO;
     }
 
+    GLuint GetWeightedVertexDataVBO() {
+        return _weightedVertexDataVBO;
+    }
+
+    GLuint GetWeightedVertexDataEBO() {
+        return _weightedVertexDataEBO;
+    }
+
+    GLuint GetSkinnedVertexDataVAO() {
+        return g_skinnedVertexDataVAO;
+    }
+
+    GLuint GetSkinnedVertexDataVBO() {
+        return g_skinnedVertexDataVBO;
+    }
+
     GLuint GetPointCloudVAO() {
         return _pointCloudVAO;
     }
+
     GLuint GetPointCloudVBO() {
         return _pointCloudVBO;
     }
-
 }
 
 GLenum glCheckError_(const char* file, int line) {
@@ -72,7 +95,7 @@ void APIENTRY glDebugOutput(GLenum source, GLenum type, unsigned int id, GLenum 
         case GL_DEBUG_SOURCE_THIRD_PARTY:     std::cout << "Source: Third Party"; break;
         case GL_DEBUG_SOURCE_APPLICATION:     std::cout << "Source: Application"; break;
         case GL_DEBUG_SOURCE_OTHER:           std::cout << "Source: Other"; break;
-    } 
+    }
     std::cout << "\n";
     switch (type) {
         case GL_DEBUG_TYPE_ERROR:               std::cout << "Type: Error"; break;
@@ -84,14 +107,14 @@ void APIENTRY glDebugOutput(GLenum source, GLenum type, unsigned int id, GLenum 
         case GL_DEBUG_TYPE_PUSH_GROUP:          std::cout << "Type: Push Group"; break;
         case GL_DEBUG_TYPE_POP_GROUP:           std::cout << "Type: Pop Group"; break;
         case GL_DEBUG_TYPE_OTHER:               std::cout << "Type: Other"; break;
-    } 
+    }
     std::cout << "\n";
     switch (severity) {
         case GL_DEBUG_SEVERITY_HIGH:         std::cout << "Severity: high"; break;
         case GL_DEBUG_SEVERITY_MEDIUM:       std::cout << "Severity: medium"; break;
         case GL_DEBUG_SEVERITY_LOW:          std::cout << "Severity: low"; break;
         case GL_DEBUG_SEVERITY_NOTIFICATION: std::cout << "Severity: notification"; break;
-    } 
+    }
     std::cout << "\n\n\n";
 }
 
@@ -140,9 +163,41 @@ void OpenGLBackEnd::InitMinimum() {
     else {
         std::cout << "Debug GL context not available\n";
     }
-        
+
     // Clear screen to black
     glClear(GL_COLOR_BUFFER_BIT);
+}
+
+void OpenGLBackEnd::AllocateSkinnedVertexBufferSpace(int vertexCount) {
+
+    if (g_skinnedVertexDataVAO == 0) {
+        glGenVertexArrays(1, &g_skinnedVertexDataVAO);
+    }
+    // Check if there is enough space
+    if (g_allocatedSkinnedVertexBufferSize < vertexCount * sizeof(Vertex)) {
+
+        // Destroy old VBO
+        if (g_skinnedVertexDataVBO != 0) {
+            glDeleteBuffers(1, &g_skinnedVertexDataVBO);
+        }
+
+        // Create new one
+        glBindVertexArray(g_skinnedVertexDataVAO);
+        glGenBuffers(1, &g_skinnedVertexDataVBO);
+        glBindBuffer(GL_ARRAY_BUFFER, g_skinnedVertexDataVBO);
+        glBufferData(GL_ARRAY_BUFFER, vertexCount * sizeof(Vertex), nullptr, GL_STATIC_DRAW);
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)0);
+        glEnableVertexAttribArray(1);
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, normal));
+        glEnableVertexAttribArray(2);
+        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, uv));
+        glEnableVertexAttribArray(3);
+        glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, tangent));
+        glEnableVertexAttribArray(0);
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+        g_allocatedSkinnedVertexBufferSize = vertexCount * sizeof(Vertex);
+    }
 }
 
 void OpenGLBackEnd::UploadVertexData(std::vector<Vertex>& vertices, std::vector<uint32_t>& indices) {

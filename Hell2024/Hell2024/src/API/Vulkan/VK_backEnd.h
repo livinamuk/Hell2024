@@ -8,7 +8,7 @@
 #include "../../Renderer/RendererCommon.h"
 
 namespace VulkanBackEnd {
-    
+
     void CreateVulkanInstance();
 
     void InitMinimum();
@@ -44,16 +44,19 @@ namespace VulkanBackEnd {
     FrameData& GetFrameByIndex(int index);
     VmaAllocator GetAllocator();
     VkDescriptorPool GetDescriptorPool();
-    VkSampler GetSampler(); 
-    std::vector<VkImage>& GetSwapchainImages(); 
+    VkSampler GetSampler();
+    std::vector<VkImage>& GetSwapchainImages();
     void AdvanceFrameIndex();
 
     inline AllocatedBuffer _mainVertexBuffer;
     inline AllocatedBuffer _mainIndexBuffer;
-    inline AllocatedBuffer _mainSkinnedVertexBuffer;
-    inline AllocatedBuffer _mainSkinnedIndexBuffer;
+    inline AllocatedBuffer _mainWeightedVertexBuffer;
+    inline AllocatedBuffer _mainWeightedIndexBuffer;
+    inline AllocatedBuffer g_mainSkinnedVertexBuffer;
 
-    void BeginRendering();
+    void AllocateSkinnedVertexBufferSpace(int vertexCount);
+
+    //void BeginRendering();
     //void EndRendering();
 
     // Raytracing

@@ -24,11 +24,11 @@ namespace VulkanBackEnd {
 
     VkDevice _device;
     VkInstance _instance;
-    VmaAllocator _allocator; 
+    VmaAllocator _allocator;
     VkSurfaceKHR _surface;
     VkSwapchainKHR _swapchain;
-    VkFormat _swachainImageFormat; 
-    VkSampler _sampler; 
+    VkFormat _swachainImageFormat;
+    VkSampler _sampler;
     VkDescriptorPool _descriptorPool;
     VkExtent2D _renderTargetPresentExtent = { 768 , 432 };
     VkExtent2D _windowedModeExtent = { 2280, 1620 };
@@ -46,12 +46,14 @@ namespace VulkanBackEnd {
     FrameData _frames[FRAME_OVERLAP];
     int _frameNumber = { 0 };
 
+    uint32_t g_allocatedSkinnedVertexBufferSize = 0;
+
     PFN_vkGetBufferDeviceAddressKHR vkGetBufferDeviceAddressKHR;
     PFN_vkCreateAccelerationStructureKHR vkCreateAccelerationStructureKHR;
     PFN_vkGetAccelerationStructureBuildSizesKHR vkGetAccelerationStructureBuildSizesKHR;
     PFN_vkGetAccelerationStructureDeviceAddressKHR vkGetAccelerationStructureDeviceAddressKHR;
     PFN_vkCmdBuildAccelerationStructuresKHR vkCmdBuildAccelerationStructuresKHR;
-    PFN_vkBuildAccelerationStructuresKHR vkBuildAccelerationStructuresKHR;    
+    PFN_vkBuildAccelerationStructuresKHR vkBuildAccelerationStructuresKHR;
     PFN_vkGetRayTracingShaderGroupHandlesKHR vkGetRayTracingShaderGroupHandlesKHR;
     PFN_vkCreateRayTracingPipelinesKHR vkCreateRayTracingPipelinesKHR;
     PFN_vkDebugMarkerSetObjectTagEXT pfnDebugMarkerSetObjectTag;
@@ -70,13 +72,13 @@ namespace VulkanBackEnd {
     bool _thereAreStillAssetsToLoad = true;
     bool _forceCloseWindow;
 
-    void FramebufferResizeCallback(GLFWwindow* window, int width, int height);     
+    void FramebufferResizeCallback(GLFWwindow* window, int width, int height);
 
     RayTracingScratchBuffer CreateScratchBuffer(VkDeviceSize size);
-    
-   
+
+
    // void CreateTopLevelAccelerationStructure(std::vector<VkAccelerationStructureInstanceKHR> instances, AccelerationStructure& outTLAS);
-    
+
 
     //void UpdateStaticDescriptorSet();
 
@@ -147,7 +149,7 @@ void VulkanBackEnd::InitMinimum() {
     SetGLFWSurface();
     SelectPhysicalDevice();
     CreateSwapchain();
-        
+
     VulkanRenderer::CreateMinimumShaders();
     VulkanRenderer::CreateRenderTargets();
 
@@ -157,10 +159,6 @@ void VulkanBackEnd::InitMinimum() {
 
     VulkanRenderer::CreateDescriptorSets();
     VulkanRenderer::CreatePipelinesMinimum();
-
-    //AssetManager::UploadVertexData();
-    //UploadUnsubmittedMeshes();
-
 
     VulkanRenderer::CreateStorageBuffers();
 }
@@ -948,14 +946,14 @@ void VulkanBackEnd::UploadWeightedVertexData(std::vector<WeightedVertex>& vertic
             VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
 
         vmaallocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
-        VK_CHECK(vmaCreateBuffer(_allocator, &vertexBufferInfo, &vmaallocInfo, &_mainSkinnedVertexBuffer._buffer, &_mainSkinnedVertexBuffer._allocation, nullptr));
-        AddDebugName(_mainSkinnedVertexBuffer._buffer, "Main Skinned Vertex Buffer");
+        VK_CHECK(vmaCreateBuffer(_allocator, &vertexBufferInfo, &vmaallocInfo, &_mainWeightedVertexBuffer._buffer, &_mainWeightedVertexBuffer._allocation, nullptr));
+        AddDebugName(_mainWeightedVertexBuffer._buffer, "Main Weighted Vertex Buffer");
         ImmediateSubmit([=](VkCommandBuffer cmd) {
             VkBufferCopy copy;
             copy.dstOffset = 0;
             copy.srcOffset = 0;
             copy.size = bufferSize;
-            vkCmdCopyBuffer(cmd, stagingBuffer._buffer, _mainSkinnedVertexBuffer._buffer, 1, &copy);
+            vkCmdCopyBuffer(cmd, stagingBuffer._buffer, _mainWeightedVertexBuffer._buffer, 1, &copy);
         });
         vmaDestroyBuffer(_allocator, stagingBuffer._buffer, stagingBuffer._allocation);
 
@@ -990,14 +988,14 @@ void VulkanBackEnd::UploadWeightedVertexData(std::vector<WeightedVertex>& vertic
             VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
             VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
         vmaallocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
-        VK_CHECK(vmaCreateBuffer(_allocator, &bufferInfo, &vmaallocInfo, &_mainSkinnedIndexBuffer._buffer, &_mainSkinnedIndexBuffer._allocation, nullptr));
-        AddDebugName(_mainSkinnedIndexBuffer._buffer, "Main Skinned Index Buffer");
+        VK_CHECK(vmaCreateBuffer(_allocator, &bufferInfo, &vmaallocInfo, &_mainWeightedIndexBuffer._buffer, &_mainWeightedIndexBuffer._allocation, nullptr));
+        AddDebugName(_mainWeightedIndexBuffer._buffer, "Main Weighted Index Buffer");
         ImmediateSubmit([=](VkCommandBuffer cmd) {
             VkBufferCopy copy;
             copy.dstOffset = 0;
             copy.srcOffset = 0;
             copy.size = bufferSize;
-            vkCmdCopyBuffer(cmd, stagingBuffer._buffer, _mainSkinnedIndexBuffer._buffer, 1, &copy);
+            vkCmdCopyBuffer(cmd, stagingBuffer._buffer, _mainWeightedIndexBuffer._buffer, 1, &copy);
         });
         vmaDestroyBuffer(_allocator, stagingBuffer._buffer, stagingBuffer._allocation);
     }
@@ -1054,7 +1052,7 @@ VkTransformMatrixKHR GlmMat4ToVkTransformMatrix(glm::mat4 matrix) {
 }
 
 std::vector<VkAccelerationStructureInstanceKHR> VulkanBackEnd::CreateTLASInstancesFromRenderItems(std::vector<RenderItem3D>& renderItems) {
-  
+
     int instanceCustomIndex = 0;
     std::vector<VkAccelerationStructureInstanceKHR> instances;
     for (RenderItem3D& renderItem : renderItems) {
@@ -1260,4 +1258,31 @@ void VulkanBackEnd::DestroyPointCloudBuffer() {
 
 void VulkanBackEnd::FramebufferResizeCallback(GLFWwindow* window, int width, int height) {
     _frameBufferResized = true;
+}
+
+
+
+
+void VulkanBackEnd::AllocateSkinnedVertexBufferSpace(int vertexCount) {
+
+    // Check if there is enough space
+    if (g_allocatedSkinnedVertexBufferSize < vertexCount * sizeof(Vertex)) {
+
+        // Destroy old buffer
+        if (g_mainSkinnedVertexBuffer._buffer != VK_NULL_HANDLE) {
+            vmaDestroyBuffer(_allocator, g_mainSkinnedVertexBuffer._buffer, g_mainSkinnedVertexBuffer._allocation);
+        }
+        // Create new one
+        VmaAllocationCreateInfo vmaallocInfo = {};
+        vmaallocInfo.usage = VMA_MEMORY_USAGE_CPU_ONLY;
+        VkBufferCreateInfo vertexBufferInfo = {};
+        vertexBufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+        vertexBufferInfo.pNext = nullptr;
+        vertexBufferInfo.size = vertexCount * sizeof(Vertex);
+        vertexBufferInfo.usage = VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+        vmaallocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+        VK_CHECK(vmaCreateBuffer(VulkanBackEnd::GetAllocator(), &vertexBufferInfo, &vmaallocInfo, &g_mainSkinnedVertexBuffer._buffer, &g_mainSkinnedVertexBuffer._allocation, nullptr));
+        VulkanBackEnd::AddDebugName(g_mainSkinnedVertexBuffer._buffer, "Detached Vertex Buffer");
+        g_allocatedSkinnedVertexBufferSize = vertexCount * sizeof(Vertex);
+    }
 }

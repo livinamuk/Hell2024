@@ -140,6 +140,9 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <ClCompile Include="src\API\Vulkan\Types\VK_texture3D.cpp" />
     <ClCompile Include="src\Core\AssetManager.cpp" />
     <ClCompile Include="src\Core\DebugMenu.cpp" />
+    <ClCompile Include="src\Core\WeaponManager.cpp" />
+    <ClCompile Include="src\Renderer\RendererStorage.cpp" />
+    <ClCompile Include="src\Renderer\Types\VertexBuffer.cpp" />
     <ClCompile Include="src\Renderer\GlobalIllumination.cpp" />
     <ClCompile Include="src\Renderer\Types\CubemapTexutre.cpp" />
     <ClCompile Include="src\Renderer\Types\ExrTexture.cpp" />
@@ -159,6 +162,7 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <ClCompile Include="src\Core\Game.cpp" />
     <ClCompile Include="src\Core\GameObject.cpp" />
     <ClCompile Include="src\Core\Game.h" />
+    <ClCompile Include="src\Types\Modular\Toilet.cpp" />
     <ClCompile Include="src\Types\Modular\Wall.cpp" />
     <ClCompile Include="src\BackEnd\BackEnd.cpp" />
     <ClCompile Include="src\API\OpenGL\GL_backEnd.cpp" />
@@ -173,7 +177,6 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <ClCompile Include="src\Core\VolumetricBloodSplatter.cpp" />
     <ClCompile Include="src\Core\Window.cpp" />
     <ClCompile Include="src\Effects\BulletCasing.cpp" />
-    <ClCompile Include="src\Effects\Decal.cpp" />
     <ClCompile Include="src\Effects\MuzzleFlash.cpp" />
     <ClCompile Include="src\Engine.cpp" />
     <ClCompile Include="src\Main.cpp" />
@@ -205,6 +208,7 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <ClInclude Include="src\API\OpenGL\Types\GL_detachedMesh.hpp" />
     <ClInclude Include="src\API\OpenGL\Types\GL_ShadowMap2.hpp" />
     <ClInclude Include="src\API\OpenGL\Types\GL_texture.h" />
+    <ClInclude Include="src\API\OpenGL\Types\GL_vertexBuffer.hpp" />
     <ClInclude Include="src\API\Vulkan\Types\vk_allocation.hpp" />
     <ClInclude Include="src\API\Vulkan\Types\VK_buffer.h" />
     <ClInclude Include="src\API\Vulkan\Types\VK_computePipeline.hpp" />
@@ -216,9 +220,14 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <ClInclude Include="src\API\Vulkan\Types\VK_renderTarget.hpp" />
     <ClInclude Include="src\API\Vulkan\Types\VK_texture.h" />
     <ClInclude Include="src\API\Vulkan\Types\VK_texture3D.h" />
+    <ClInclude Include="src\API\Vulkan\Types\VK_vertexBuffer.hpp" />
     <ClInclude Include="src\API\Vulkan\VK_common.h" />
     <ClInclude Include="src\API\Vulkan\Vk_util.hpp" />
     <ClInclude Include="src\Core\JSON.hpp" />
+    <ClInclude Include="src\Core\WeaponManager.h" />
+    <ClInclude Include="src\Effects\BloodDecal.hpp" />
+    <ClInclude Include="src\Renderer\RendererStorage.h" />
+    <ClInclude Include="src\Renderer\Types\VertexBuffer.h" />
     <ClInclude Include="src\Core\WeaponManager.hpp" />
     <ClInclude Include="src\ErrorChecking.h" />
     <ClInclude Include="src\Core\AssetManager.h" />
@@ -259,7 +268,7 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <ClInclude Include="src\Core\InputMulti.h" />
     <ClInclude Include="src\Core\Light.h" />
     <ClInclude Include="src\Types\Modular\ModularCommon.h" />
-    <ClInclude Include="src\Types\Modular\Toilet.hpp" />
+    <ClInclude Include="src\Types\Modular\Toilet.h" />
     <ClInclude Include="src\Types\Modular\Wall.h" />
     <ClInclude Include="src\Core\Ragdoll.h" />
     <ClInclude Include="src\Core\VolumetricBloodSplatter.h" />
@@ -273,7 +282,7 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <ClInclude Include="src\Renderer\TextBlitter.h" />
     <ClInclude Include="src\Core\Window.h" />
     <ClInclude Include="src\Effects\BulletCasing.h" />
-    <ClInclude Include="src\Effects\Decal.h" />
+    <ClInclude Include="src\Effects\BulletHoleDecal.hpp" />
     <ClInclude Include="src\Effects\MuzzleFlash.h" />
     <ClInclude Include="src\Engine.h" />
     <ClInclude Include="src\Math.h" />
@@ -317,6 +326,7 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <None Include="res\shaders\OpenGL\GL_bloodDecals.vert" />
     <None Include="res\shaders\OpenGL\GL_bloodVAT.frag" />
     <None Include="res\shaders\OpenGL\GL_bloodVAT.vert" />
+    <None Include="res\shaders\OpenGL\GL_bloom.comp" />
     <None Include="res\shaders\OpenGL\GL_blur.frag" />
     <None Include="res\shaders\OpenGL\GL_blurHorizontal.vert" />
     <None Include="res\shaders\OpenGL\GL_blurVertical.vert" />
@@ -335,6 +345,7 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <None Include="res\shaders\OpenGL\GL_lighting.frag" />
     <None Include="res\shaders\OpenGL\GL_lighting.vert" />
     <None Include="res\shaders\OpenGL\GL_postProcessing.comp" />
+    <None Include="res\shaders\OpenGL\GL_sandbox.comp" />
     <None Include="res\shaders\OpenGL\GL_shadowMap.frag" />
     <None Include="res\shaders\OpenGL\GL_shadowMap.geom" />
     <None Include="res\shaders\OpenGL\GL_shadowMap.vert" />
@@ -398,10 +409,15 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <None Include="res\shaders\OpenGL\GL_ui.vert" />
     <None Include="res\shaders\OpenGL_OLD\voxelize.frag" />
     <None Include="res\shaders\OpenGL_OLD\voxelize.vert" />
+    <None Include="res\shaders\Vulkan\VK_compute_skin.comp" />
     <None Include="res\shaders\Vulkan\VK_debug.frag" />
     <None Include="res\shaders\Vulkan\VK_debug.vert" />
+    <None Include="res\shaders\Vulkan\VK_flipbook.frag" />
+    <None Include="res\shaders\Vulkan\VK_flipbook.vert" />
     <None Include="res\shaders\Vulkan\VK_gbufferSkinned.frag" />
     <None Include="res\shaders\Vulkan\VK_gbufferSkinned.vert" />
+    <None Include="res\shaders\Vulkan\VK_glass.frag" />
+    <None Include="res\shaders\Vulkan\VK_glass.vert" />
     <None Include="res\vulkan_shaders\closesthit.rchit" />
     <None Include="res\shaders\Vulkan\VK_lighting.frag" />
     <None Include="res\shaders\Vulkan\VK_lighting.vert" />

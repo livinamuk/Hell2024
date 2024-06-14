@@ -5,7 +5,7 @@
 
 
 
-
+/*
 void FbxImporter::LoadSkinnedModel(std::string filename, SkinnedModel& skinnedModel) {
 
     FileInfo fileInfo = Util::GetFileInfo(filename);
@@ -20,7 +20,7 @@ void FbxImporter::LoadSkinnedModel(std::string filename, SkinnedModel& skinnedMo
         std::cout << "Error: " << importer.GetErrorString() << "\n";
         return;
     }
-    
+
     skinnedModel.m_GlobalInverseTransform = Util::aiMatrix4x4ToGlm(scene->mRootNode->mTransformation);
     skinnedModel.m_GlobalInverseTransform = glm::inverse(skinnedModel.m_GlobalInverseTransform);
     InitFromScene(skinnedModel, scene, filename);
@@ -30,8 +30,10 @@ void FbxImporter::LoadSkinnedModel(std::string filename, SkinnedModel& skinnedMo
     importer.FreeScene();
     return;
 }
+*/
 
-bool FbxImporter::InitFromScene(SkinnedModel& skinnedModel, const aiScene* pScene, const std::string& /*Filename*/, const bool bake) {
+/*
+bool FbxImporter::InitFromScene(SkinnedModel& skinnedModel, const aiScene* pScene, const std::string& Filename, const bool bake) {
 
     // Load bones
     for (int i = 0; i < pScene->mNumMeshes; i++) {
@@ -116,7 +118,9 @@ bool FbxImporter::InitFromScene(SkinnedModel& skinnedModel, const aiScene* pScen
     }
     return true;
 }
+*/
 
+/*
 
 void FbxImporter::GrabSkeleton(SkinnedModel& skinnedModel, const aiNode* pNode, int parentIndex)
 {
@@ -128,15 +132,15 @@ void FbxImporter::GrabSkeleton(SkinnedModel& skinnedModel, const aiNode* pNode, 
     joint.m_inverseBindTransform = Util::aiMatrix4x4ToGlm(pNode->mTransformation);
     joint.m_parentIndex = parentIndex;
 
-    parentIndex = (int)skinnedModel.m_joints.size(); // don't do your head in with why this works, just be thankful it does.. 
+    parentIndex = (int)skinnedModel.m_joints.size(); // don't do your head in with why this works, just be thankful it does..
     // well its actually pretty clear. if u look below
 
     skinnedModel.m_joints.push_back(joint);
-     
+
     for (unsigned int i = 0; i < pNode->mNumChildren; i++) {
         GrabSkeleton(skinnedModel, pNode->mChildren[i], parentIndex);
     }
-}
+}*/
 
 
 Animation *FbxImporter::LoadAnimation(const std::string &filename) {
@@ -184,7 +188,7 @@ Animation *FbxImporter::LoadAnimation(const std::string &filename) {
     // Resize the vector big enough for each pose
     int nodeCount = aiAnim->mNumChannels;
    // int poseCount = aiAnim->mChannels[0]->mNumPositionKeys;
-      
+
     // trying the assimp way now. coz why fight it.
     for (int n = 0; n < nodeCount; n++)
     {

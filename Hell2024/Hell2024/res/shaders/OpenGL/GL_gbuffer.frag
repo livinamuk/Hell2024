@@ -10,6 +10,7 @@ in flat int BaseColorTextureIndex;
 in flat int NormalTextureIndex;
 in flat int RMATextureIndex;
 in flat int useEmissiveMask;
+in flat int PlayerIndex;
 in vec3 attrNormal;
 in vec3 attrTangent;
 in vec3 attrBiTangent;
@@ -36,11 +37,13 @@ void main() {
 
     BaseColorOut = baseColor;
     NormalsOut.rgb = normal;
+	NormalsOut.a = float(PlayerIndex) * 0.25;
     RMAOut = rma;
 
 	if (useEmissiveMask == 1) {
 		EmssiveMask.rgb = vec3(rma.b) * emissiveColor;
 		EmssiveMask.a = 1.0;
 	}
+
 
 }

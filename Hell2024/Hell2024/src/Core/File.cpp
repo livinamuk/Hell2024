@@ -92,7 +92,7 @@ void File::LoadMap(std::string mapName) {
 	}
 
 	if (false) {
-		if (document.HasMember("GameObjects")) {
+		/*if (document.HasMember("GameObjects")) {
 			const rapidjson::Value& objects = document["GameObjects"];
 			for (rapidjson::SizeType i = 0; i < objects.Size(); i++) {
 
@@ -117,7 +117,7 @@ void File::LoadMap(std::string mapName) {
 				gameObject.SetModel(modelName);
 				gameObject._meshMaterialIndices = meshIndices;
 			}
-		}
+		}*/
 	}
 
 
@@ -196,7 +196,7 @@ void File::SaveMap(std::string mapName) {
         lights.PushBack(object, allocator);
     }
 
-	for (GameObject& gameObject : Scene::_gameObjects) {
+	/*for (GameObject& gameObject : Scene::_gameObjects) {
 		rapidjson::Value object(rapidjson::kObjectType);
 
 
@@ -218,7 +218,7 @@ void File::SaveMap(std::string mapName) {
 		
 
 		gameObjects.PushBack(object, allocator);
-	}
+	}*/
 
 	for (Wall& wall : Scene::_walls) {
 		rapidjson::Value object(rapidjson::kObjectType);

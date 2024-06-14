@@ -1,5 +1,6 @@
 #pragma once
 #include "../Renderer/Types/SkinnedModel.h"
+#include "../Renderer/Types/VertexBuffer.h"
 #include "Ragdoll.h"
 
 struct MeshRenderingEntry {
@@ -12,9 +13,45 @@ struct MeshRenderingEntry {
     int meshIndex = -1;
 };
 
+struct JointWorldMatrix {
+    const char* name;
+    glm::mat4 worldMatrix;
+};
+
+/*
+struct JointInfo {
+    const char* name;
+    glm::mat4 worldTransform;
+};*/
+
 struct AnimatedGameObject {
 
     enum AnimationMode { BINDPOSE, ANIMATION, RAGDOLL };
+    enum class Flag { FIRST_PERSON_WEAPON, CHARACTER_MODEL, NONE };
+
+private:
+    std::vector<SkinnedRenderItem> m_skinnedMeshRenderItems;
+    uint32_t m_baseTransformIndex = 0;
+    uint32_t m_baseSkinnedVertex = 0;
+    int32_t m_playerIndex = -1;
+    Flag m_flag = Flag::NONE;
+
+public:
+
+    std::vector<JointWorldMatrix> m_jointWorldMatrices;
+
+    const size_t GetAnimatedTransformCount();
+    void CreateSkinnedMeshRenderItems();
+    std::vector<SkinnedRenderItem>& GetSkinnedMeshRenderItems();
+    void SetBaseTransformIndex(uint32_t index);
+    void SetBaseSkinnedVertex(uint32_t index);
+    uint32_t GetBaseSkinnedVertex();
+    void SetFlag(Flag flag);
+    void SetPlayerIndex(int32_t index);
+    const Flag GetFlag();
+    const int32_t GetPlayerIndex();
+    const uint32_t GetVerteXCount();
+    std::vector<uint32_t> m_skinnedBufferIndices;
 
 	void Update(float deltaTime);
 	void SetName(std::string name);
@@ -39,8 +76,8 @@ struct AnimatedGameObject {
 	glm::mat4 GetBoneWorldMatrixFromBoneName(std::string name);
 
 	std::string GetName();
-	glm::mat4 GetModelMatrix();
-	bool IsAnimationComplete(); 
+	const glm::mat4 GetModelMatrix();
+	bool IsAnimationComplete();
 	bool AnimationIsPastPercentage(float percent);
     glm::vec3 GetScale();
 
@@ -65,7 +102,7 @@ struct AnimatedGameObject {
     void DestroyRagdoll();
     void EnableDrawingForAllMesh();
     void EnableDrawingForMeshByMeshName(std::string meshName);
-    void DisableDrawingForMeshByMeshName(std::string meshName); 
+    void DisableDrawingForMeshByMeshName(std::string meshName);
     void PrintMeshNames();
     void EnableBlendingByMeshIndex(int index);
 
@@ -79,23 +116,25 @@ struct AnimatedGameObject {
         glm::vec3 worldPos;
         glm::vec3 parentWorldPos;
     };
+
     std::vector<BoneDebugInfo> _debugBoneInfo;
     bool _renderDebugBones = false;
 
-    struct JointWorldMatrix {
-        const char* name;
-        glm::mat4 worldMatrix;
-    };
+
 
     glm::vec3 FindClosestParentAnimatedNode(std::vector<JointWorldMatrix>& worldMatrices, int parentIndex);
 
-    void UpdateRenderItems();
-    std::vector<RenderItem3D>& GetRenderItems();
+    void SetBaseTransfromIndex(int index) {
+        baseTransformIndex = index;
+    }
+    int GetBaseTransfromIndex() {
+        return baseTransformIndex;
+    }
 
 private:
 
 	void UpdateAnimation(float deltaTime);
-	void CalculateBoneTransforms();	
+	void CalculateBoneTransforms();
 
 	Animation* _currentAnimation = nullptr;
 	bool _loopAnimation = false;
@@ -103,7 +142,7 @@ private:
 	float _animationSpeed = 1.0f;
 	std::string _name;
 	bool _animationIsComplete = true;
-    std::vector<RenderItem3D> renderItems;
+    int baseTransformIndex = -1;
 
 
 };

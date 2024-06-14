@@ -38,9 +38,9 @@ namespace AssetManager {
     std::vector<SkinnedModel> _skinnedModels;
     std::vector<SkinnedMesh> _skinnedMeshes;
     std::vector<Animation*> _animations;
-    std::vector<Texture> _textures; 
+    std::vector<Texture> _textures;
     std::vector<ExrTexture> _exrTextures;
-    std::vector<Material> _materials; 
+    std::vector<Material> _materials;
     std::vector<CubemapTexture> _cubemapTextures;
 
     // Used to new data insert into the vectors above
@@ -143,7 +143,7 @@ bool AssetManager::LoadingComplete() {
         _animationPaths.empty() &&
         _vatTexturePaths.empty() &&
         _materialsCreated &&
-        _hardCodedModelsCreated && 
+        _hardCodedModelsCreated &&
         _finalInitComplete
         );
 }
@@ -179,7 +179,7 @@ void AssetManager::LoadNextItem() {
         if (BackEnd::GetAPI() == API::VULKAN && Util::GetFileInfo(_texturePaths[0]).filetype == "exr") {
             _texturePaths.erase(_texturePaths.begin());
             return;
-        }        
+        }
 
         Texture& texture = _textures.emplace_back();
         texture.Load(_texturePaths[0].c_str());
@@ -192,7 +192,7 @@ void AssetManager::LoadNextItem() {
         FileInfo fileInfo = Util::GetFileInfo(_cubemapTexturePaths[0]);
         cubemapTexture.SetName(fileInfo.filename.substr(0, fileInfo.filename.length() - 6));
         cubemapTexture.SetFiletype(fileInfo.filetype);
-        cubemapTexture.Load();        
+        cubemapTexture.Load();
         //AddItemToLoadLog(_cubemapTexturePaths[0]);
         _cubemapTexturePaths.erase(_cubemapTexturePaths.begin());
         return;
@@ -230,7 +230,6 @@ void AssetManager::LoadNextItem() {
         else if (BackEnd::GetAPI() == API::VULKAN) {
             VulkanRenderer::CreateShaders();
             VulkanRenderer::UpdateSamplerDescriptorSet();
-            VulkanRenderer::UpdateRayTracingDecriptorSet();
             VulkanRenderer::CreatePipelines();
         }
         _finalInitComplete = true;
@@ -320,6 +319,8 @@ void AssetManager::LoadSkinnedModel(const std::string filepath) {
     //FbxImporter::LoadSkinnedModel(_skinnedModelPaths[0].c_str(), skinnedModel);
 
     int skinnedModelIndex = -1;
+    int totalVertexCount = 0;
+    int baseVertexLocal = 0;
     std::map<std::string, unsigned int> boneMapping;
     int boneCount = 0;
 
@@ -434,12 +435,15 @@ void AssetManager::LoadSkinnedModel(const std::string filepath) {
                 }
             }
             std::lock_guard<std::mutex> lock(_skinnedModelsMutex);
-            _skinnedModels[skinnedModelIndex].AddMeshIndex(AssetManager::CreateSkinnedMesh(meshName, vertices, indices));
+            _skinnedModels[skinnedModelIndex].AddMeshIndex(AssetManager::CreateSkinnedMesh(meshName, vertices, indices, baseVertexLocal));
+            totalVertexCount += vertices.size();
+            baseVertexLocal += vertices.size();
         }
 
     }
     std::lock_guard<std::mutex> lock(_skinnedModelsMutex);
     _skinnedModels[skinnedModelIndex].m_GlobalInverseTransform = globalInverseTransform;
+    _skinnedModels[skinnedModelIndex].m_vertexCount = totalVertexCount;
     GrabSkeleton(_skinnedModels[skinnedModelIndex], scene->mRootNode, -1);
 
     importer.FreeScene();
@@ -677,7 +681,7 @@ void AssetManager::LoadModel(const std::string filepath) {
 
 
 
-    // Build the bounding box 
+    // Build the bounding box
     float width = std::abs(maxPos.x - minPos.x);
     float height = std::abs(maxPos.y - minPos.y);
     float depth = std::abs(maxPos.z - minPos.z);
@@ -792,10 +796,11 @@ int AssetManager::GetMeshIndexByName(const std::string& name) {
 //                         //
 //      Skinned Mesh       //
 
-int AssetManager::CreateSkinnedMesh(std::string name, std::vector<WeightedVertex>& vertices, std::vector<uint32_t>& indices) {
+int AssetManager::CreateSkinnedMesh(std::string name, std::vector<WeightedVertex>& vertices, std::vector<uint32_t>& indices, uint32_t baseVertexLocal) {
 
     SkinnedMesh& mesh = _skinnedMeshes.emplace_back();
-    mesh.baseVertex = _nextWeightedVertexInsert;
+    mesh.baseVertexGlobal = _nextWeightedVertexInsert;
+    mesh.baseVertexLocal = baseVertexLocal;
     mesh.baseIndex = _nextWeightedIndexInsert;
     mesh.vertexCount = (uint32_t)vertices.size();
     mesh.indexCount = (uint32_t)indices.size();
@@ -860,7 +865,7 @@ void AssetManager::BuildMaterials() {
     for (int i = 0; i < AssetManager::GetTextureCount(); i++) {
 
         Texture& texture = *AssetManager::GetTextureByIndex(i);
-    
+
         if (texture.GetFilename().substr(texture.GetFilename().length() - 3) == "ALB") {
             Material& material = _materials.emplace_back(Material());
             material._name = texture.GetFilename().substr(0, texture.GetFilename().length() - 4);
@@ -956,7 +961,7 @@ int AssetManager::GetCubemapTextureIndexByName(const std::string& name) {
 //      Textures        //
 
 void AssetManager::LoadTexture(const std::string filepath) {
-    
+
     int textureIndex = -1;
     int width = 0;
     int height = 0;
@@ -1116,12 +1121,12 @@ void AssetManager::LoadTexture(const std::string filepath) {
                 }
             }
             // For everything else just load the raw texture. Compression fucks up UI elements.
-            else {                    
+            else {
                 stbi_set_flip_vertically_on_load(false);
                 data = stbi_load(filepath.data(), &width, &height, &channelCount, 0);
                 compressed = false;
             }
-        }      
+        }
         CMP_Texture* cmpTexture = &destTexture;
         if (!compressed) {
             cmpTexture = nullptr;
@@ -1131,14 +1136,14 @@ void AssetManager::LoadTexture(const std::string filepath) {
         textureIndex = _textures.size();
         Texture& texture = _textures.emplace_back(Texture(filename, width, height, channelCount));
         texture.GetGLTexture().UploadToGPU(data, cmpTexture, width, height, channelCount);
-               
+
         return;
     }
 
 
 
     else if (BackEnd::GetAPI() == API::VULKAN) {
-   
+
     }
 
 
@@ -1249,7 +1254,7 @@ void AssetManager::CreateHardcodedModels() {
         vertA.uv = { 0.0f, 0.0f };
         vertB.uv = { 0.0f, 1.0f };
         vertC.uv = { 1.0f, 1.0f };
-        vertD.uv = { 1.0f, 0.0f };		
+        vertD.uv = { 1.0f, 0.0f };
         vertA.normal = glm::vec3(0, 0, 1);
         vertB.normal = glm::vec3(0, 0, 1);
         vertC.normal = glm::vec3(0, 0, 1);
@@ -1271,7 +1276,7 @@ void AssetManager::CreateHardcodedModels() {
         Model& model = _models.emplace_back();
         model.SetName(name);
         model.AddMeshIndex(AssetManager::CreateMesh("Fullscreen", vertices, indices));
-  
+
         vertices[0].position = { -1.0f, 0.0f, 0.0f };
         vertices[1].position = { -1.0f, 1.0f, 0.0f };
         vertices[2].position = { 1.0f,  1.0f, 0.0f };

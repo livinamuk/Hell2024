@@ -4,8 +4,6 @@ layout (location = 0) in vec3 aPos;
 layout (location = 1) in vec3 aNormal;
 layout (location = 2) in vec2 aTexCoord;
 
-uniform mat4 projection;
-uniform mat4 view;
 out vec2 TexCoord;
 out vec3 Normal;
 
@@ -34,9 +32,37 @@ layout(std430, binding = 13) readonly buffer renderItems {
     RenderItem3D RenderItems[];
 };
 
+uniform int playerIndex;
+
+struct CameraData {
+    mat4 projection;
+    mat4 projectionInverse;
+    mat4 view;
+    mat4 viewInverse;
+	float viewportWidth;
+	float viewportHeight;   
+    float viewportOffsetX;
+    float viewportOffsetY; 
+	float clipSpaceXMin;
+    float clipSpaceXMax;
+    float clipSpaceYMin;
+    float clipSpaceYMax;
+	float finalImageColorContrast;
+    float finalImageColorR;
+    float finalImageColorG;
+    float finalImageColorB;
+};
+
+layout(std430, binding = 16) readonly buffer CameraDataArray {
+    CameraData cameraDataArray[];
+};
+
 void main() {
 
 	TexCoord = aTexCoord;
+	
+	mat4 projection = cameraDataArray[playerIndex].projection;
+	mat4 view = cameraDataArray[playerIndex].view;
 	
 	mat4 model = RenderItems[gl_InstanceID + gl_BaseInstance].modelMatrix;
 	mat4 invereseModel = RenderItems[gl_InstanceID + gl_BaseInstance].inverseModelMatrix;

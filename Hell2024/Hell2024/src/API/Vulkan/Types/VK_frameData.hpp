@@ -12,6 +12,7 @@ struct FrameData {
     struct DrawCommandBuffers {
         Buffer geometry;
         Buffer bulletHoleDecals;
+        Buffer glass;
     };
 
     struct Buffers {
@@ -22,12 +23,17 @@ struct FrameData {
         Buffer animatedRenderItems3D;
         Buffer animatedTransforms;
         Buffer lights;
+        Buffer glassRendeItems;
 
         DrawCommandBuffers drawCommandBuffers[4]; // one struct for each player
 
         Buffer geometryInstanceData;
         Buffer bulletDecalInstanceData;
         Buffer tlasRenderItems;
+
+        Buffer skinningTransforms;
+        Buffer skinningTransformBaseIndices;
+
     } buffers;
 
     AccelerationStructure tlas {};

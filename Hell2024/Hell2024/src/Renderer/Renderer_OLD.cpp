@@ -165,11 +165,11 @@ bool _depthOfFieldScene = 0.9f;
 bool _depthOfFieldWeapon = 1.0f;
 const float _propogationGridSpacing = 0.375f;
 const float _pointCloudSpacing = 0.4f;
-const float _maxPropogationDistance = 2.6f; 
+const float _maxPropogationDistance = 2.6f;
 const float _maxDistanceSquared = _maxPropogationDistance * _maxPropogationDistance;
 float _mapWidth = 16;
 float _mapHeight = 8;
-float _mapDepth = 16; 
+float _mapDepth = 16;
 //std::vector<int> _newDirtyPointCloudIndices;
 int _floorVertexCount;
 
@@ -200,7 +200,7 @@ void DrawAnimatedScene(Shader& shader, Player* player);
 void DrawShadowMapScene(Shader& shader);
 void DrawBulletDecals(Player* player);
 void DrawCasingProjectiles(Player* player);
-void DrawFullscreenQuad(); 
+void DrawFullscreenQuad();
 void DrawFullscreenQuadWithNormals();
 void DrawMuzzleFlashes(Player* player);
 void BlurEmissiveBulbs(Player* player);
@@ -236,7 +236,7 @@ void DrawMeshh(int meshIndex) {
 void DrawSkinnedMeshh(int meshIndex) {
     SkinnedMesh* mesh = AssetManager::GetSkinnedMeshByIndex(meshIndex);
     glBindVertexArray(OpenGLBackEnd::GetWeightedVertexDataVAO());
-    glDrawElementsBaseVertex(GL_TRIANGLES, mesh->indexCount, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int) * mesh->baseIndex), mesh->baseVertex);
+    glDrawElementsBaseVertex(GL_TRIANGLES, mesh->indexCount, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int) * mesh->baseIndex), mesh->baseVertexGlobal);
 }
 
 void DrawModel(Model* model) {
@@ -270,7 +270,7 @@ PlayerRenderTarget& GetPlayerRenderTarget(int playerIndex) {
 void Renderer_OLD::InitMinimumGL() {
 
     _shaders.UI.LoadOLD("ui.vert", "ui.frag");
-    
+
     _menuRenderTarget.Create(PRESENT_WIDTH, PRESENT_HEIGHT);
     glBindFramebuffer(GL_FRAMEBUFFER, _menuRenderTarget.fbo);
     glGenTextures(1, &_menuRenderTarget.texture);
@@ -319,7 +319,7 @@ void Renderer_OLD::Init() {
     _shaders.blurHorizontal.LoadOLD("blurHorizontal.vert", "blur.frag");
     _shaders.toiletWater.LoadOLD("toilet_water.vert", "toilet_water.frag");
     _shaders.tri.LoadOLD("tri.vert", "tri.frag");
-    
+
   //  _cubeMesh = MeshUtil::CreateCube(1.0f, 1.0f, true);
 
     RecreateFrameBuffers(0);
@@ -382,7 +382,7 @@ void Renderer_OLD::RenderLoadingScreen() {
 
 void Renderer_OLD::RenderFrame(Player* player) {
 
-    if (BackEnd::WindowIsMinimized()) { 
+    if (BackEnd::WindowIsMinimized()) {
         return;
     }
 
@@ -410,8 +410,8 @@ void Renderer_OLD::RenderFrame(Player* player) {
         CalculateDirtyProbeCoords();
         ComputePass(); // Fills the indirect lighting data structures
     }
-    GeometryPass(player);  
-    RenderVATBlood(player);   
+    GeometryPass(player);
+    RenderVATBlood(player);
     DrawInstancedBloodDecals(&_shaders.bloodDecals, player);
     DrawBulletDecals(player);
     DrawCasingProjectiles(player);
@@ -440,7 +440,7 @@ void Renderer_OLD::RenderFrame(Player* player) {
         glEnable(GL_DEPTH_TEST);
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_3D, _progogationGridTexture);
-        
+
         static Model* cubeModel = AssetManager::GetModelByIndex(AssetManager::GetModelIndexByName("Cube"));
         Mesh* mesh = AssetManager::GetMeshByIndex(cubeModel->GetMeshIndices()[0]);
         glBindVertexArray(OpenGLBackEnd::GetVertexDataVAO());
@@ -507,7 +507,7 @@ void Renderer_OLD::RenderFrame(Player* player) {
         _selectedEditorObject.type = PhysicsObjectType::UNDEFINED;
     }
 
-    // Blit that smaller FBO into the main frame buffer 
+    // Blit that smaller FBO into the main frame buffer
     if (Game::GetSplitscreenMode() == SplitscreenMode::NONE) {
         glBindFramebuffer(GL_READ_FRAMEBUFFER, playerRenderTarget.presentFrameBuffer.GetID());
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
@@ -586,7 +586,7 @@ void ToietWaterPass(Player* player) {
         DrawModel(AssetManager::GetModelByIndex(AssetManager::GetModelIndexByName("ToiletWater")));
     }
 
-    glDisable(GL_BLEND);        
+    glDisable(GL_BLEND);
 }
 
 void GlassPass(Player* player) {
@@ -630,7 +630,7 @@ void GlassPass(Player* player) {
     _shaders.glass.SetBool("isWindow", true);
     for (Window& window : Scene::_windows) {
         _shaders.glass.SetMat4("model", window.GetModelMatrix());
-        static Model* GlassModel = AssetManager::GetModelByIndex(AssetManager::GetModelIndexByName("Glass"));      
+        static Model* GlassModel = AssetManager::GetModelByIndex(AssetManager::GetModelIndexByName("Glass"));
         DrawModel(GlassModel);
     }
     _shaders.glass.SetBool("isWindow", false);
@@ -638,7 +638,7 @@ void GlassPass(Player* player) {
 
 
     // draw the scope
-    if (player->GetCurrentWeaponIndex() == AKS74U && !player->InADS() && player->_hasAKS74UScope) {
+    /*if (player->GetCurrentWeaponIndex() == AKS74U && !player->InADS() && player->_hasAKS74UScope) {
         AnimatedGameObject* ak = &player->GetFirstPersonWeapon();
         SkinnedModel* skinnedModel = ak->_skinnedModel;
         int boneIndex = skinnedModel->m_BoneMapping["Weapon"];
@@ -651,13 +651,13 @@ void GlassPass(Player* player) {
            // AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("Scope"));
            // OpenGLAssetManager::GetModel("ScopeACOG")->_meshes[3].Draw();
         }
-    }
+    }*/
 
 
     _shaders.glass.SetBool("isAnimated", true);
 
-    if (player->GetCurrentWeaponIndex() == GLOCK) {
-    
+    /*if (player->GetCurrentWeaponIndex() == GLOCK) {
+
         AnimatedGameObject* animatedGameObject = &player->GetFirstPersonWeapon();
         Shader& shader = _shaders.glass;
 
@@ -699,7 +699,7 @@ void GlassPass(Player* player) {
         SetBlendState(false);
     }
     _shaders.glass.SetBool("isAnimated", false);
-
+    */
 
 
 
@@ -842,7 +842,7 @@ void BlurEmissiveBulbs(Player* player) {
 	PlayerRenderTarget& playerRenderTarget = GetPlayerRenderTarget(playerIndex);
 	GBuffer& gBuffer = playerRenderTarget.gBuffer;
 
-	
+
 
     // first round
 
@@ -900,7 +900,7 @@ void BlurEmissiveBulbs(Player* player) {
 	_shaders.blurVertical.SetFloat("targetHeight", _blurBuffers[2].height);
 	DrawFullScreenQuad();
 
-    
+
 	// forth round
 
 	glBindFramebuffer(GL_FRAMEBUFFER, _blurBuffers[3].FBO);
@@ -919,8 +919,8 @@ void BlurEmissiveBulbs(Player* player) {
 	_shaders.blurVertical.Use();
 	_shaders.blurVertical.SetFloat("targetHeight", _blurBuffers[3].height);
 	DrawFullScreenQuad();
-  
-  
+
+
 }
 
 #include "../Core/Gizmo.hpp"
@@ -1044,12 +1044,12 @@ glm::dvec3 rot3D(glm::dvec3 v, glm::dvec2 rot) {
 
 void Renderer_OLD::RenderEditorMode() {
 
-    Player* player = Game::GetPlayerByIndex(0);        
-    
-           
+    Player* player = Game::GetPlayerByIndex(0);
+
+
     PlayerRenderTarget& playerRenderTarget = GetPlayerRenderTarget(0);
     GBuffer& gBuffer = playerRenderTarget.gBuffer;
-    PresentFrameBuffer& presentFrameBuffer = playerRenderTarget.presentFrameBuffer;               
+    PresentFrameBuffer& presentFrameBuffer = playerRenderTarget.presentFrameBuffer;
     glm::mat4 projection = player->GetProjectionMatrix();
     glm::mat4 view = player->GetViewMatrix();
     glm::vec3 viewPos = player->GetViewPos();
@@ -1129,8 +1129,8 @@ void Renderer_OLD::RenderEditorMode() {
     // Draw hovered object outline
     if (_hoveredEditorObject.ptr && !Input::LeftMouseDown() && !Gizmo::HasHover()) {
         GameObject* hoveredGameObject = nullptr;
-        for (auto& gameObject : Scene::_gameObjects) {
-            if (gameObject.raycastRigidStatic.pxRigidStatic == _hoveredEditorObject.rigidBody) {
+        for (auto& gameObject : Scene::GetGamesObjects()) {
+            if (gameObject.m_raycastRigidStatic.pxRigidStatic == _hoveredEditorObject.rigidBody) {
                 hoveredGameObject = &gameObject;
                 break;
             }
@@ -1170,8 +1170,8 @@ void Renderer_OLD::RenderEditorMode() {
     // Draw selected object outline
     if (_selectedEditorObject.ptr) {
         GameObject* selectedGameObject = nullptr;
-        for (auto& gameObject : Scene::_gameObjects) {
-            if (gameObject.raycastRigidStatic.pxRigidStatic == _selectedEditorObject.rigidBody) {
+        for (auto& gameObject : Scene::GetGamesObjects()) {
+            if (gameObject.m_raycastRigidStatic.pxRigidStatic == _selectedEditorObject.rigidBody) {
                 selectedGameObject = &gameObject;
                 break;
             }
@@ -1214,7 +1214,7 @@ void Renderer_OLD::RenderEditorMode() {
     glDisable(GL_STENCIL_TEST);
     _shaders.outline.SetInt("offsetX", 0); // reset x offset
     _shaders.outline.SetInt("offsetY", 0); // reset y offset
-       
+
     // Draw the gizmo
     if (_selectedEditorObject.ptr) {
         glm::mat4 projection = player->GetProjectionMatrix();
@@ -1310,7 +1310,7 @@ void SkyBoxPass(Player* player) {
 
     if (_cubeVao == 0) {
 
-		// Init cube vertices (for skybox)	
+		// Init cube vertices (for skybox)
 		std::vector<glm::vec3> cubeVertices;
 		std::vector<unsigned int> cubeIndices;
 		float d = 0.5f;
@@ -1423,7 +1423,7 @@ void DrawHudLowRes(Player* player) {
     PresentFrameBuffer& presentFrameBuffer = playerRenderTarget.presentFrameBuffer;
     presentFrameBuffer.Bind();
     glDrawBuffer(GL_COLOR_ATTACHMENT1);
-    
+
     // Crosshair
     if (!player->_isDead) {
         std::string texture = "CrosshairDot";
@@ -1498,7 +1498,7 @@ void DrawHudLowRes(Player* player) {
         TextBlitter::_debugTextToBilt += "View rot: " + Util::Vec3ToString(player->GetViewRotation()) + "\n";
         TextBlitter::_debugTextToBilt += "Weapon Action: " + Util::WeaponActionToString(Game::GetPlayerByIndex(playerIndex)->GetWeaponAction()) + "\n";
         TextBlitter::_debugTextToBilt += "Blood decal count: " + std::to_string(Scene::_bloodDecals.size()) + "\n";
-    
+
     }
     // Health and killcount
     else {
@@ -1565,13 +1565,13 @@ void DrawHudAmmo(Player* player) {
         _shaders.UI.SetVec3("color", WHITE);
         NumberBlitter::Draw("/", slashXPos, slashYPos, viewportWidth, viewportHeight, scale, NumberBlitter::Justification::LEFT);
         NumberBlitter::Draw(totalAmmo.c_str(), slashXPos + 17, slashYPos, viewportWidth, viewportHeight, scale * 0.8f, NumberBlitter::Justification::LEFT);
-    } 
+    }
 }
 
 void GeometryPass(Player* player) {
     glm::mat4 projection = player->GetProjectionMatrix();// Renderer::GetProjectionMatrix(_depthOfFieldScene); // 1.0 for weapon, 0.9 for scene.
     glm::mat4 view = player->GetViewMatrix();
-    
+
     int playerIndex = Game::GetPlayerIndexFromPlayerPointer(player);
     PlayerRenderTarget& playerRenderTarget = GetPlayerRenderTarget(playerIndex);
     GBuffer& gBuffer = playerRenderTarget.gBuffer;
@@ -1592,7 +1592,7 @@ void GeometryPass(Player* player) {
     _shaders.geometry.SetVec3("camForward", player->GetCameraForward());
     DrawAnimatedScene(_shaders.geometry, player);
     DrawScene(_shaders.geometry);
-
+    /*
     // Draw scope
     if (player->GetCurrentWeaponIndex() == AKS74U && player->_hasAKS74UScope) {
         AnimatedGameObject* ak = &player->GetFirstPersonWeapon();
@@ -1608,7 +1608,7 @@ void GeometryPass(Player* player) {
          //   AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("Scope"));
          //   OpenGLAssetManager::GetModel("ScopeACOG")->_meshes[1].Draw();
         }
-    }
+    }*/
 }
 
 void LightingPass(Player* player) {
@@ -1624,7 +1624,7 @@ void LightingPass(Player* player) {
 
     _shaders.lighting.Use();
     _shaders.lighting.SetFloat("time", totalTime);
-    _shaders.lighting.SetFloat("sinTime", sinTime);    
+    _shaders.lighting.SetFloat("sinTime", sinTime);
 
     gBuffer.Bind();
     glDrawBuffer(GL_COLOR_ATTACHMENT3);
@@ -1656,7 +1656,7 @@ void LightingPass(Player* player) {
     _shaders.lighting.SetInt("lightsCount", std::min((int)lights.size(), 16));
 
     static float time = 0;
-    time += 0.01f; 
+    time += 0.01f;
     _shaders.lighting.SetMat4("model", glm::mat4(1));
     _shaders.lighting.SetFloat("time", time);
     _shaders.lighting.SetFloat("screenWidth", gBuffer.GetWidth());
@@ -1719,7 +1719,7 @@ void DebugPass(Player* player) {
         }
     }
 
-    // Draw casings  
+    // Draw casings
       _points.clear();
       _shaders.solidColor.Use();
       _shaders.solidColor.SetBool("uniformColor", false);
@@ -1733,7 +1733,7 @@ void DebugPass(Player* player) {
       glDisable(GL_DEPTH_TEST);
       glDisable(GL_CULL_FACE);
       RenderImmediate();
-      
+
 
     _points.clear();
     _shaders.solidColor.Use();
@@ -1744,9 +1744,9 @@ void DebugPass(Player* player) {
 
     //////////////////////////////////////////////
     //                                          //
-    //  !!! DEBUG POINTS ARE RENDERED HERE !!!  //   
+    //  !!! DEBUG POINTS ARE RENDERED HERE !!!  //
     //                                          //  and they work, so don't fret, just got for it
-    
+
     /*
     AnimatedGameObject* ak = Scene::GetAnimatedGameObjectByName("AKS74U");
     glm::mat4 matrix = ak->GetBoneWorldMatrixFromBoneName("Magazine");
@@ -1830,7 +1830,7 @@ void DebugPass(Player* player) {
         }
 
 
-    }*/ 
+    }*/
 
     /*
     AnimatedGameObject* unisexGuy = &Scene::_players[1]._characterModel;
@@ -1884,7 +1884,7 @@ void DebugPass(Player* player) {
     */
 
     //////////////////////////////////////////////////////////////////////////////////////////////
-    
+
 
 
     glm::vec3 color = GREEN;
@@ -1909,12 +1909,12 @@ void DebugPass(Player* player) {
                 if (shape->getQueryFilterData().word0 == RaycastGroup::RAYCAST_DISABLED) {
                     actor->setActorFlag(PxActorFlag::eVISUALIZATION, false);
                 }
-            }    
+            }
             else if (_debugLineRenderMode_OLD == DebugLineRenderMode::PHYSX_COLLISION) {
                 color = LIGHT_BLUE;
                 if (shape->getQueryFilterData().word1 == CollisionGroup::NO_COLLISION) {
                     actor->setActorFlag(PxActorFlag::eVISUALIZATION, false);
-                } 
+                }
             }
         }
     }
@@ -1927,8 +1927,8 @@ void DebugPass(Player* player) {
 
     // Debug lines
     if (_debugLineRenderMode_OLD == DebugLineRenderMode::BOUNDING_BOXES) {
-        for (GameObject& gameObject : Scene::_gameObjects) {
-            if (gameObject.raycastRigidStatic.pxRigidStatic) {
+        for (GameObject& gameObject : Scene::GetGamesObjects()) {
+            if (gameObject.m_raycastRigidStatic.pxRigidStatic) {
                 if (gameObject.HasMovedSinceLastFrame()) {
                     QueueAABBForRenering(gameObject._aabb, RED);
                 }
@@ -1994,7 +1994,7 @@ void DebugPass(Player* player) {
         glDisable(GL_DEPTH_TEST);
         glDisable(GL_CULL_FACE);
         RenderImmediate();
-    }    
+    }
 
     // Draw collision world
     /*if (_toggles.drawCollisionWorld) {
@@ -2027,6 +2027,8 @@ void DebugPass(Player* player) {
 
 void Renderer_OLD::RecreateFrameBuffers(int currentPlayer) {
 
+    return;
+
     float width = (float)PRESENT_WIDTH;
     float height = (float)PRESENT_HEIGHT;
     int playerCount = EngineState::GetPlayerCount();
@@ -2051,7 +2053,7 @@ void Renderer_OLD::RecreateFrameBuffers(int currentPlayer) {
         PlayerRenderTarget& playerRenderTarget = _playerRenderTargets.emplace_back(PlayerRenderTarget());
         playerRenderTarget.gBuffer.Configure(width * 2, height * 2);
         playerRenderTarget.presentFrameBuffer.Configure(width, height);
-        
+
     }
 
 	//std::cout << "Player count: " << playerCount << "\n";
@@ -2062,7 +2064,7 @@ void Renderer_OLD::RecreateFrameBuffers(int currentPlayer) {
 
 void DrawScene(Shader& shader) {
 
-    
+
 
 
 
@@ -2101,7 +2103,7 @@ void DrawScene(Shader& shader) {
 			shader.SetMat4("model", transform.to_mat4());
             DrawModel(ceilingTrimModel);
         }
-    } 
+    }
     // Floor trims
     //AssetManager::BindMaterialByIndex(trimFloorMaterialIndex);
     for (Wall& wall : Scene::_walls) {
@@ -2120,9 +2122,9 @@ void DrawScene(Shader& shader) {
     for (Toilet& toilet: Scene::_toilets) {
         toilet.Draw(shader);
     }
-  
+
     // Render game objects
-    for (GameObject& gameObject : Scene::_gameObjects) {
+    for (GameObject& gameObject : Scene::GetGamesObjects()) {
 
         if (gameObject.IsCollectable() && gameObject.IsCollected()) {
             continue;
@@ -2131,58 +2133,6 @@ void DrawScene(Shader& shader) {
         shader.SetMat4("model", gameObject.GetModelMatrix());
 
 
-        // Test render green mag REMOVEEEEEEEEEEEEEEEEEEEEEEEEEE
-        if (gameObject.GetName() == "TEST_MAG") {
-
-           // std::cout << "fuck\n";
-
-            //AnimatedGameObject& ak2 = player->GetFirstPersonWeapon();
-            AnimatedGameObject* ak2 = Scene::GetAnimatedGameObjectByName("AKS74U_TEST");
-            glm::mat4 matrix = ak2->GetBoneWorldMatrixFromBoneName("Magazine");
-            glm::mat4 magWorldMatrix = ak2->GetModelMatrix() * matrix;
-
-            Transform t;
-            t.position.z = 0.5;
-            magWorldMatrix = t.to_mat4() * magWorldMatrix;
-
-            /*
-            if (Input::RightMousePressed()) {
-                PhysicsFilterData magFilterData;
-                magFilterData.raycastGroup = RAYCAST_DISABLED;
-                magFilterData.collisionGroup = CollisionGroup::GENERIC_BOUNCEABLE;
-                magFilterData.collidesWith = CollisionGroup(ENVIROMENT_OBSTACLE | GENERIC_BOUNCEABLE);
-                float magDensity = 750.0f;
-                GameObject& mag = Scene::_gameObjects.emplace_back();
-                mag.SetModel("AKS74UMag");
-                mag.SetName("AKS74UMag");
-                mag.SetMeshMaterial("AKS74U_3");
-                mag.CreateRigidBody(magWorldMatrix, false);
-                mag.SetRaycastShapeFromModel(OpenGLAssetManager::GetModel("AKS74UMag"));
-                mag.AddCollisionShapeFromConvexMesh(&OpenGLAssetManager::GetModel("AKS74UMag_ConvexMesh")->_meshes[0], magFilterData, glm::vec3(1));
-                mag.SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
-                mag.UpdateRigidBodyMassAndInertia(magDensity);
-                mag.CreateEditorPhysicsObject();
-
-                PxMat44 mat = Util::GlmMat4ToPxMat44(matrix);
-                PxTransform transform(mat);
-               // mag._collisionBody->setGlobalPose(transform);
-
-            }*/
-
-            shader.SetMat4("model", magWorldMatrix);
-            shader.SetMat4("model", t.to_mat4());
-
-
-          //  std::cout << "\n" << Util::Mat4ToString(magWorldMatrix) << "\n";
-
-            /*   Player* player = &Scene::_players[0];
-               if (player->GetCurrentWeaponIndex() == AKS74U) {
-                   AnimatedGameObject& ak2 = player->GetFirstPersonWeapon();
-                   glm::mat4 matrix = ak2.GetBoneWorldMatrixFromBoneName("Magazine");
-                   glm::mat4 magWorldMatrix = ak2.GetModelMatrix() * player->GetWeaponSwayMatrix() * matrix;
-                   shader.SetMat4("model", magWorldMatrix);
-               }*/
-        }
 
 
         gameObject.UpdateRenderItems();
@@ -2195,7 +2145,7 @@ void DrawScene(Shader& shader) {
 
 
         // Add globe back to lamp
-        if (gameObject.GetName() == "Lamp") {        
+        if (gameObject.GetName() == "Lamp") {
 
             glm::mat4 lampMatrix = gameObject.GetModelMatrix();
 
@@ -2333,7 +2283,7 @@ void DrawAnimatedObject(Shader& shader, AnimatedGameObject* animatedGameObject) 
         shader.SetMat4("skinningMats[" + std::to_string(i) + "]", matrix);
     }
 
-    // Model matrix 
+    // Model matrix
     if (animatedGameObject->_hasRagdoll && animatedGameObject->_animationMode == AnimatedGameObject::AnimationMode::RAGDOLL) {
         shader.SetMat4("model", glm::mat4(1));
     }
@@ -2341,7 +2291,7 @@ void DrawAnimatedObject(Shader& shader, AnimatedGameObject* animatedGameObject) 
         shader.SetMat4("model", animatedGameObject->GetModelMatrix());
     }
 
-    
+
 
     // Draw
     //glBindVertexArray(animatedGameObject->_skinnedModel->m_VAO);
@@ -2359,7 +2309,7 @@ void DrawAnimatedObject(Shader& shader, AnimatedGameObject* animatedGameObject) 
         if (emissiveColorTexutreIndex != -1) {
             shader.SetBool("hasEmissiveColor", true);
             AssetManager::GetTextureByIndex(emissiveColorTexutreIndex)->GetGLTexture().Bind(3);
-        } 
+        }
         else {
             shader.SetBool("hasEmissiveColor", false);
         }
@@ -2421,7 +2371,7 @@ void DrawAnimatedScene(Shader& shader, Player* player) {
     shader.SetMat4("model", glm::mat4(1));
 
     // Render other players
-    for (unsigned int i = 0; i < Game::GetPlayerCount(); i++) {
+    /*for (unsigned int i = 0; i < Game::GetPlayerCount(); i++) {
         Player* otherPlayer = Game::GetPlayerByIndex(i);
         if (otherPlayer != player) {
             DrawAnimatedObject(shader, &otherPlayer->_characterModel);
@@ -2451,8 +2401,8 @@ void DrawAnimatedScene(Shader& shader, Player* player) {
 
         }
 
-    }
-
+    }*/
+    /*
     shader.SetMat4("model", glm::mat4(1));
     shader.SetFloat("projectionMatrixIndex", 0.0f);
     for (auto& animatedObject : Scene::GetAnimatedGameObjects()) {
@@ -2467,7 +2417,7 @@ void DrawAnimatedScene(Shader& shader, Player* player) {
         DrawAnimatedObject(shader, &player->GetFirstPersonWeapon());
         shader.SetFloat("projectionMatrixIndex", 0.0f);
         glEnable(GL_CULL_FACE);
-    }
+    }*/
 
 
     // Debug: draw first person weapon for other players
@@ -2492,7 +2442,7 @@ void DrawAnimatedScene(Shader& shader, Player* player) {
     auto* skinnedModel = animatedGameObject._skinnedModel;
     int vertexCount = ptr->_vertices.size();
     int indexCount = ptr->_indices.size();
-   
+
 
     static GLuint _skinnedVao = 0;
     static GLuint _skinnedVbo = 0;
@@ -2546,15 +2496,15 @@ void DrawAnimatedScene(Shader& shader, Player* player) {
     _shaders.test.SetMat4("projection", Renderer::GetProjectionMatrix(_depthOfFieldScene));
     _shaders.test.SetMat4("view", player->GetViewMatrix());
 
-    
+
 
     for (int x = -2;  x < 2; x++) {
 
         for (int z = -2; z < 2; z++) {
-            
+
             transform.position = glm::vec3(2 + x, 0.1f, 3.5f + z);
             _shaders.test.SetMat4("model", transform.to_mat4());
-            
+
             if (_skinnedVao != 0) {
                 glBindVertexArray(_skinnedVao);
                 glBindBuffer(GL_ARRAY_BUFFER, _skinnedVbo);
@@ -2567,7 +2517,7 @@ void DrawAnimatedScene(Shader& shader, Player* player) {
     }
     */
 
-  
+
 
 
     // handle this better
@@ -2599,7 +2549,7 @@ void DrawShadowMapScene(Shader& shader) {
         DrawModel(AssetManager::GetModelByIndex(AssetManager::GetModelIndexByName("Door")));
     }
 
-    for (GameObject& gameObject : Scene::_gameObjects) {
+    for (GameObject& gameObject : Scene::GetGamesObjects()) {
 
         if (gameObject.IsCollected()) {
             continue;
@@ -2830,7 +2780,7 @@ void Renderer_OLD::RenderFloorplanFrame() {
         AssetManager::BindMaterialByIndex(floor.materialIndex);
         floor.Draw();
     }
-    for (GameObject& gameObject : Scene::_gameObjects) {
+    for (GameObject& gameObject : Scene::GetGamesObjects()) {
         if (gameObject.IsCollectable() && gameObject.IsCollected()) {
             continue;
         }
@@ -2935,7 +2885,7 @@ void Renderer_OLD::RenderFloorplanFrame() {
 	glDisable(GL_DEPTH_TEST);
 	glDisable(GL_CULL_FACE);
     Renderer_OLD::RenderUI(presentFrameBuffer.GetWidth(), presentFrameBuffer.GetHeight());
-    
+
 	_shaders.editorSolidColor.Use();
 	_shaders.editorSolidColor.SetMat4("projection", Floorplan::GetProjectionMatrix());
 	_shaders.editorSolidColor.SetMat4("view", Floorplan::GetViewMatrix());
@@ -2954,7 +2904,7 @@ void Renderer_OLD::RenderFloorplanFrame() {
 	}
 	glEnable(GL_DEPTH_TEST);
 	RenderImmediate();
-   
+
 	// Blit image back to frame buffer
     glReadBuffer(GL_COLOR_ATTACHMENT0);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -3227,7 +3177,7 @@ void Renderer_OLD::NextDebugLineRenderMode() {
 
     if (_debugLineRenderMode_OLD == DEBUG_LINE_MODE_COUNT) {
         _debugLineRenderMode_OLD = (DebugLineRenderMode)0;
-    }     
+    }
 }
 
 void Renderer_OLD::QueueLineForDrawing(Line line) {
@@ -3312,7 +3262,7 @@ void DrawMuzzleFlashes(Player* player) {
 
     static MuzzleFlash muzzleFlash; // has init on the first use. DISGUSTING. Fix if you ever see this when you aren't on another mission.
 
-    // Bail if no flash    
+    // Bail if no flash
     if (player->GetMuzzleFlashTime() < 0)
         return;
     if (player->GetMuzzleFlashTime() > 1)
@@ -3323,19 +3273,7 @@ void DrawMuzzleFlashes(Player* player) {
     glViewport(0, 0, gBuffer.GetWidth(), gBuffer.GetHeight());
 
     muzzleFlash.m_CurrentTime = player->GetMuzzleFlashTime();
-    glm::vec3 worldPosition = glm::vec3(0);
-    if (player->GetCurrentWeaponIndex() == GLOCK) {
-        worldPosition = player->GetGlockBarrelPosition();
-    }
-    else if (player->GetCurrentWeaponIndex() == AKS74U) {
-        worldPosition = player->GetFirstPersonWeapon().GetAKS74UBarrelPostion();
-    }
-    else if (player->GetCurrentWeaponIndex() == SHOTGUN) {
-        worldPosition = player->GetFirstPersonWeapon().GetShotgunBarrelPosition();
-    }
-    else {
-        return;
-    }
+    glm::vec3 worldPosition = player->GetBarrelPosition();
 
     Transform t;
     t.position = worldPosition;
@@ -3398,37 +3336,7 @@ void DrawInstancedVAO(GLuint vao, GLsizei indexCount, std::vector<glm::mat4>& ma
 
 void DrawBulletDecals(Player* player) {
 
-    static Model* quadModel = AssetManager::GetModelByIndex(AssetManager::GetModelIndexByName("Quad"));
 
-    unsigned int attachments[3] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2 };
-    glDrawBuffers(3, attachments);
-    glEnable(GL_CULL_FACE);        
-
-    _shaders.bulletDecals.Use();
-    _shaders.bulletDecals.SetMat4("projection", player->GetProjectionMatrix());
-    _shaders.bulletDecals.SetMat4("view", player->GetViewMatrix());
-
-    std::vector<glm::mat4> matrices;
-    matrices.reserve(Scene::_decals.size());
-
-    // Bullet holes
-    for (Decal& decal : Scene::_decals) {
-        if (decal.type == Decal::Type::REGULAR) {
-            matrices.push_back(decal.GetModelMatrix());
-        }
-    }
-    AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("BulletHole_Plaster"));
-    DrawInstanced(AssetManager::GetMeshByIndex(quadModel->GetMeshIndices()[0]), matrices);
-
-	// Glass bullet holes
-    matrices.clear();
-    for (Decal& decal : Scene::_decals) {
-        if (decal.type == Decal::Type::GLASS) {
-            matrices.push_back(decal.GetModelMatrix());
-        }
-    }
-    AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("BulletHole_Glass"));
-    DrawInstanced(AssetManager::GetMeshByIndex(quadModel->GetMeshIndices()[0]), matrices);
 }
 
 
@@ -3450,7 +3358,7 @@ void DrawCasingProjectiles(Player* player) {
     AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("BulletCasing"));
     static Model* glockCasingModel = AssetManager::GetModelByIndex(AssetManager::GetModelIndexByName("BulletCasing"));
     DrawInstanced(AssetManager::GetMeshByIndex(glockCasingModel->GetMeshIndices()[0]), matrices);
-    
+
     // AKS74U
     matrices.clear();
     for (BulletCasing& casing : Scene::_bulletCasings) {
@@ -3580,11 +3488,11 @@ void InitCompute() {
     _shaders.compute.LoadOLD("res/shaders/OpenGL_OLD/compute.comp");
     _shaders.pointCloud.LoadOLD("res/shaders/OpenGL_OLD/point_cloud.comp");
     _shaders.propogateLight.LoadOLD("res/shaders/OpenGL_OLD/propogate_light.comp");
-    
+
     Scene::CreatePointCloud();
     Renderer_OLD::CreatePointCloudBuffer();
     Renderer_OLD::CreateTriangleWorldVertexBuffer();
-    
+
    // std::cout << "Point cloud has " << Scene::_cloudPoints.size() << " points\n";
    // std::cout << "Propagation grid has " << (_mapWidth * _mapHeight * _mapDepth / _propogationGridSpacing) << " cells\n";
 
@@ -3670,7 +3578,7 @@ void UpdatePointCloudLighting() {
         _shaders.pointCloud.SetFloat("lights[" + std::to_string(i) + "].radius", lights[i].radius);
         _shaders.pointCloud.SetFloat("lights[" + std::to_string(i) + "].strength", lights[i].strength);
     }
- 
+
     if (!_dirtyPointCloudIndices.empty()) {
         // Cloud point indices buffer
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, _ssbos.dirtyPointCloudIndices);
@@ -3710,7 +3618,7 @@ void FindProbeCoordsWithinMapBounds() {
         for (int y = 0; y < _gridTextureHeight; y++) {
             for (int x = 0; x < _gridTextureDepth; x++) {
 
-             
+
                 bool foundOne = false;
 
                 glm::vec3 probePosition = glm::vec3(x, y, z) * _propogationGridSpacing;
@@ -3741,7 +3649,7 @@ void FindProbeCoordsWithinMapBounds() {
                             glm::vec2 v2c = glm::vec2(ceilingVertices[j + 1].x, ceilingVertices[j + 1].z);
                             glm::vec2 v3c = glm::vec2(ceilingVertices[j + 2].x, ceilingVertices[j + 2].z);
                             if (Util::PointIn2DTriangle(probePos, v1c, v2c, v3c)) {
-                                
+
                                 if (!foundOne) {
                                     _probeCoordsWithinMapBounds.emplace_back(x, y, z, 0);
                                     foundOne = true;
@@ -3756,11 +3664,11 @@ void FindProbeCoordsWithinMapBounds() {
         }
     }
 
-    //std::cout << "There are " << _probeCoordsWithinMapBounds.size() << " probes within rooms\n";    
+    //std::cout << "There are " << _probeCoordsWithinMapBounds.size() << " probes within rooms\n";
 }
 
 void UpdatePropogationgGrid() {
-    
+
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, _ssbos.dirtyPointCloudIndices);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, _ssbos.rtVertices);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, _pointCloud.VBO);
@@ -3852,7 +3760,7 @@ void CalculateDirtyProbeCoords() {
 
             if (Util::DistanceSquared(cloudPointPosition, probePosition) < _maxDistanceSquared) {
 
-                // skip probe if cloud point faces away from probe 
+                // skip probe if cloud point faces away from probe
                 glm::vec3 cloudPointNormal = Scene::_cloudPoints[index].normal;
                 if (dot(cloudPointPosition - probePosition, cloudPointNormal) > 0.0) {
                     continue;

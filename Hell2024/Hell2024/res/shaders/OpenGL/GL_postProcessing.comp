@@ -1,28 +1,56 @@
 #version 430 core
 
 layout (local_size_x = 16, local_size_y = 4, local_size_z = 1) in;
-layout(rgba8, binding = 0) uniform image2D tex;
 
-uniform float finalImageColorContrast;
-uniform vec3 finalImageColorTint;
-uniform int viewportOffsetX;
-uniform int viewportOffsetY;
+layout(rgba8, binding = 0) uniform image2D tex;
+layout(rgba16f, binding = 1) uniform image2D normalTexture;
 
 void contrastAdjust( inout vec3 color, in float c) {
-    float t = 0.5 - c * 0.5; 
+    float t = 0.5 - c * 0.5;
     color.rgb = color.rgb * c + t;
 }
+
+
+struct CameraData {
+    mat4 projection;
+    mat4 projectionInverse;
+    mat4 view;
+    mat4 viewInverse;
+	float viewportWidth;
+	float viewportHeight;
+    float viewportOffsetX;
+    float viewportOffsetY;
+	float clipSpaceXMin;
+    float clipSpaceXMax;
+    float clipSpaceYMin;
+    float clipSpaceYMax;
+	float finalImageColorContrast;
+    float finalImageColorR;
+    float finalImageColorG;
+    float finalImageColorB;
+};
+
+layout(std430, binding = 16) readonly buffer CameraDataArray {
+    CameraData cameraDataArray[];
+};
+
 
 void main() {
 
 	ivec2 texCoord = ivec2(gl_GlobalInvocationID.xy);
-	texCoord.x += viewportOffsetX;
-	texCoord.y += viewportOffsetY;
+
+	int playerIndex = int(imageLoad(normalTexture, texCoord).a * 4 + 0.5);
+
+	float r = cameraDataArray[playerIndex].finalImageColorR;
+	float g = cameraDataArray[playerIndex].finalImageColorG;
+	float b = cameraDataArray[playerIndex].finalImageColorB;
+	vec3 finalImageColorTint = vec3(r, g, b);
+	float finalImageColorContrast = cameraDataArray[playerIndex].finalImageColorContrast;
 
     vec3 color = imageLoad(tex, texCoord).rgb;
 	color *= finalImageColorTint;
-    contrastAdjust(color, finalImageColorContrast);	
+    contrastAdjust(color, finalImageColorContrast);
 
-//	imageStore(tex, texCoord, vec4(color, 1));
+	imageStore(tex, texCoord, vec4(color, 1));
 }
 
