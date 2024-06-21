@@ -106,6 +106,8 @@ public:
     void PrintMeshNames();
     void EnableBlendingByMeshIndex(int index);
 
+    glm::mat4 GetJointWorldTransformByName(const char* jointName);
+
     std::vector<glm::mat4> _debugTransformsA;
     std::vector<glm::mat4> _debugTransformsB;
     bool _hasRagdoll = false;

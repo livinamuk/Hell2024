@@ -1,0 +1,174 @@
+#version 430 core
+
+layout (local_size_x = 16, local_size_y = 4, local_size_z = 1) in;
+layout(rgba8, binding = 0) uniform image2D tex;
+layout (binding = 0) uniform sampler2D bloomPrePassTexture;
+
+void contrastAdjust( inout vec3 color, in float c) {
+    float t = 0.5 - c * 0.5;
+    color.rgb = color.rgb * c + t;
+}
+
+struct CameraData {
+    mat4 projection;
+    mat4 projectionInverse;
+    mat4 view;
+    mat4 viewInverse;
+	float viewportWidth;
+	float viewportHeight;
+    float viewportOffsetX;
+    float viewportOffsetY;
+	float clipSpaceXMin;
+    float clipSpaceXMax;
+    float clipSpaceYMin;
+    float clipSpaceYMax;
+	float finalImageColorContrast;
+    float finalImageColorR;
+    float finalImageColorG;
+    float finalImageColorB;
+};
+
+layout(std430, binding = 16) readonly buffer CameraDataArray {
+    CameraData cameraDataArray[];
+};
+
+uniform int playerIndex;
+
+vec4 SampleLod(sampler2D tex, vec2 uv, vec2 res, const int lod) {
+    vec2 hres = floor(res / 2.0);
+    vec2 nres = hres;
+    float xpos = 0.0;
+    int i = 0;
+    for (; i < lod; i++) {
+        xpos += nres.x;
+        nres = floor(nres / 2.0);
+    }
+    vec2 nuv = uv * vec2(nres);
+    nuv = clamp(nuv, vec2(0.5), vec2(nres)-0.5);
+    nuv += vec2(xpos, 0);
+    return texture(tex, nuv / res);
+}
+
+
+vec3 GetAll() {
+
+	float clipSpaceXMin = cameraDataArray[playerIndex].clipSpaceXMin;
+	float clipSpaceYMin = cameraDataArray[playerIndex].clipSpaceYMin;
+
+	ivec2 texCoord = ivec2(gl_GlobalInvocationID.xy);
+	vec2 resolution = textureSize(bloomPrePassTexture, 0);
+
+	vec2 sampleCoords = texCoord / resolution;
+	sampleCoords.x += clipSpaceXMin;
+	sampleCoords.y += clipSpaceYMin;
+
+	return texture(bloomPrePassTexture, sampleCoords).rgb;
+}
+
+vec3 GetLOD0() {
+
+	float clipSpaceXMin = cameraDataArray[playerIndex].clipSpaceXMin;
+	float clipSpaceYMin = cameraDataArray[playerIndex].clipSpaceYMin;
+
+	ivec2 texCoord = ivec2(gl_GlobalInvocationID.xy);
+	vec2 resolution = textureSize(bloomPrePassTexture, 0);
+
+
+	vec2 texCoordF = vec2(gl_GlobalInvocationID.xy) + vec2(0.5);
+
+	vec2 sampleCoords = texCoordF / resolution;
+
+	sampleCoords.x *= 0.5;
+	sampleCoords.y *= 0.5;
+
+	sampleCoords.x += clipSpaceXMin;
+	sampleCoords.y += clipSpaceYMin;
+
+
+	return texture(bloomPrePassTexture, sampleCoords).rgb;
+}
+
+void main() {
+
+	ivec2 texCoord = ivec2(gl_GlobalInvocationID.xy);
+
+
+	vec2 resolution = textureSize(bloomPrePassTexture, 0);
+	vec2 uvFullScreen = texCoord / resolution;
+
+	vec3 lightingColor = imageLoad(tex, texCoord).rgb;
+	vec3 bloomPrePassColor = texture(bloomPrePassTexture, uvFullScreen).rgb;
+
+
+	vec2 uv = uvFullScreen;
+//	vec2 resolution = textureSize(bloomPrePassTexture, 0);
+	//vec2 uvFullScreen = texCoordFullScreen / resolution;
+	/*
+	vec3 color = vec3(playerIndex * 0.25);
+
+
+	float viewportWidth = cameraDataArray[playerIndex].viewportWidth;
+	float viewportHeight = cameraDataArray[playerIndex].viewportHeight;
+	int viewportOffsetX = int(cameraDataArray[playerIndex].viewportOffsetX);
+	int viewportOffsetY = int(cameraDataArray[playerIndex].viewportOffsetY);
+
+	texCoord.x += viewportOffsetX;
+	texCoord.y += viewportOffsetY;*/
+
+	vec3 finalColor = lightingColor + bloomPrePassColor;
+
+	uv.y *= 0.5;
+	uv.y += 0.5;
+
+	float viewportWidth = cameraDataArray[playerIndex].viewportWidth;
+	float viewportHeight = cameraDataArray[playerIndex].viewportHeight;
+	float clipSpaceXMin = cameraDataArray[playerIndex].clipSpaceXMin;
+	float clipSpaceYMin = cameraDataArray[playerIndex].clipSpaceYMin;
+	vec2 screenResolution = textureSize(bloomPrePassTexture, 0);
+	vec2 viewportResolution = vec2(viewportWidth, viewportHeight);
+	vec2 viewPortRatio = viewportResolution / screenResolution;
+
+	vec3 col = vec3(0);
+    col += SampleLod(bloomPrePassTexture, uv, screenResolution, 0).rgb;
+    col += SampleLod(bloomPrePassTexture, uv, screenResolution, 1).rgb;
+    col += SampleLod(bloomPrePassTexture, uv, screenResolution, 2).rgb;
+	col = clamp(col, 0, 1);
+
+	finalColor = lightingColor + col;
+	finalColor = col;
+
+	finalColor = SampleLod(bloomPrePassTexture, uv, screenResolution, 0).rgb;
+
+
+	finalColor = bloomPrePassColor;
+
+
+
+	vec2 sampleCoords = uvFullScreen;
+	//sampleCoords.y += 0.5;
+
+	//sampleCoords.x *= viewPortRatio.x;
+	//sampleCoords.y *= viewPortRatio.y;
+	sampleCoords.x += clipSpaceXMin;
+	sampleCoords.y += clipSpaceYMin;
+
+	//sampleCoords *= 0.5;
+	//sampleCoords += 0.5;
+
+	//sampleCoords.y /= 2;
+
+	vec3 lod0 = texture(bloomPrePassTexture, sampleCoords).rgb;
+	finalColor = lod0;
+
+	finalColor = GetLOD0();
+
+	//finalColor = SampleLod(bloomPrePassTexture, sampleCoords, viewportResolution, 0).rgb;
+
+	//float viewportWidth = cameraDataArray[playerIndex].viewportWidth;
+	//float viewportHeight = cameraDataArray[playerIndex].viewportHeight;
+	int viewportOffsetX = int(cameraDataArray[playerIndex].viewportOffsetX);
+	int viewportOffsetY = int(cameraDataArray[playerIndex].viewportOffsetY);
+	texCoord.x += viewportOffsetX;
+	texCoord.y += viewportOffsetY;
+	imageStore(tex, texCoord, vec4(finalColor, 1));
+}

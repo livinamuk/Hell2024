@@ -307,13 +307,14 @@ std::vector<RenderItem3D> Scene::GetAllRenderItems() {
         renderItems.insert(std::end(renderItems), std::begin(window.GetRenderItems()), std::end(window.GetRenderItems()));
     }
 
+
     // Casings
-    static Material* glockCasingMaterial = AssetManager::GetMaterialByIndex(AssetManager::GetMaterialIndex("BulletCasing"));
+    static Material* glockCasingMaterial = AssetManager::GetMaterialByIndex(AssetManager::GetMaterialIndex("Casing9mm"));
     static Material* shotgunShellMaterial = AssetManager::GetMaterialByIndex(AssetManager::GetMaterialIndex("Shell"));
     static Material* aks74uCasingMaterial = AssetManager::GetMaterialByIndex(AssetManager::GetMaterialIndex("Casing_AkS74U"));
-    static int glockCasingMeshIndex = AssetManager::GetModelByIndex(AssetManager::GetModelIndexByName("BulletCasing"))->GetMeshIndices()[0];
+    static int glockCasingMeshIndex = AssetManager::GetModelByIndex(AssetManager::GetModelIndexByName("Casing9mm"))->GetMeshIndices()[0];
     static int shotgunShellMeshIndex = AssetManager::GetModelByIndex(AssetManager::GetModelIndexByName("Shell"))->GetMeshIndices()[0];
-    static int aks74uCasingMeshIndex = AssetManager::GetModelByIndex(AssetManager::GetModelIndexByName("BulletCasing_AK"))->GetMeshIndices()[0];
+    static int aks74uCasingMeshIndex = AssetManager::GetModelByIndex(AssetManager::GetModelIndexByName("CasingAKS74U"))->GetMeshIndices()[0];
     for (BulletCasing& casing : Scene::_bulletCasings) {
         RenderItem3D& renderItem = renderItems.emplace_back();
         renderItem.modelMatrix = casing.modelMatrix;
@@ -999,9 +1000,18 @@ void Scene::LoadHardCodedObjects() {
 
         for (int x = 0; x < 10; x++) {
             for (int z = 0; z < 10; z++) {
+
                 glm::vec3 position = glm::vec3(1 + x * 0.4f, 0.5f, 1 + z * 0.4f);
                 glm::vec3 rotation = glm::vec3(0, Util::RandomFloat(0, HELL_PI * 2), 0);
-                //Game::SpawnPickup(PickUpType::GLOCK_AMMO, position, rotation, true);
+
+
+                int random_number = std::rand() % 2;
+                if (random_number == 0) {
+                    Game::SpawnAmmo("Glock", position, rotation, true);
+                }
+                else {
+                    Game::SpawnAmmo("Tokarev", position, rotation, true);
+                }
             }
         }
 
@@ -1320,25 +1330,43 @@ void Scene::LoadHardCodedObjects() {
     }
 
 
-    /*
-    // ACTUALLY WORKS !!!!!!
+    // GO HERE
 
-    testIndex = CreateAnimatedGameObject();
-    AnimatedGameObject& glock = g_animatedGameObjects[testIndex];
-    glock.SetFlag(AnimatedGameObject::Flag::NONE);
-    glock.SetPlayerIndex(1);
-    //glock.SetSkinnedModel("Glock");
-    glock.SetSkinnedModel("Tokarev");
-    glock.SetName("Tokarev");
-    glock.SetAllMeshMaterials("Tokarev");
-    glock.SetAnimationModeToBindPose();
-    //glock.PlayAndLoopAnimation("Glock_Walk", 1.0f);
-    glock.PlayAndLoopAnimation("Tokarev_Idle", 1.0f);
-    glock.SetPosition(glm::vec3(2.5f, 1.5f, 3));
-    glock.SetScale(0.01);
+    if (false) {
+        testIndex = CreateAnimatedGameObject();
+        AnimatedGameObject& glock = g_animatedGameObjects[testIndex];
+        glock.SetFlag(AnimatedGameObject::Flag::NONE);
+        glock.SetPlayerIndex(1);
+        //glock.SetSkinnedModel("Glock");
+        glock.SetSkinnedModel("Tokarev");
+        glock.SetName("Tokarev");
+        // glock.SetAllMeshMaterials("Tokarev");
+        glock.SetAnimationModeToBindPose();
+        glock.SetMeshMaterialByMeshName("ArmsMale", "Hands");
+        glock.SetMeshMaterialByMeshName("ArmsFemale", "FemaleArms");
+        glock.SetMeshMaterialByMeshName("TokarevBody", "Tokarev");
+        glock.SetMeshMaterialByMeshName("TokarevMag", "TokarevMag");
+        glock.SetMeshMaterialByMeshName("TokarevGripPolymer", "TokarevGrip");
+        glock.SetMeshMaterialByMeshName("TokarevGripPolyWood", "TokarevGrip");
+        //glock.PlayAndLoopAnimation("Glock_Walk", 1.0f);
+        glock.PlayAndLoopAnimation("Tokarev_Reload", 1.0f);
+        glock.SetPosition(glm::vec3(2.5f, 1.5f, 3));
+        glock.SetScale(0.01);
+    }
+    if (false) {
+        testIndex = CreateAnimatedGameObject();
+        AnimatedGameObject& glock = g_animatedGameObjects[testIndex];
+        glock.SetFlag(AnimatedGameObject::Flag::NONE);
+        glock.SetPlayerIndex(1);
+        glock.SetSkinnedModel("Glock");
+        glock.SetName("Glock");
+        glock.SetAllMeshMaterials("Glock");
+        glock.SetAnimationModeToBindPose();
+        glock.PlayAndLoopAnimation("Glock_Reload", 1.0f);
+        glock.SetPosition(glm::vec3(2.5f, 1.5f, 3));
+        glock.SetScale(0.01);
+    }
 
-
-    */
 
 
 
@@ -2090,15 +2118,15 @@ void Scene::RecreateDataStructures() {
 void Scene::CalculateLightBoundingVolumes() {
 
     return;
-
+    /*
     std::vector<Triangle> triangles;
 
     RTMesh& mesh = Scene::_rtMesh[0]; // This is the main world
     for (unsigned int i = mesh.baseVertex; i < mesh.baseVertex + mesh.vertexCount; i += 3) {
         Triangle triangle;
-        triangle.p1 = Scene::_rtVertices[i + 0];
-        triangle.p2 = Scene::_rtVertices[i + 1];
-        triangle.p3 = Scene::_rtVertices[i + 2];
+        triangle.v0 = Scene::_rtVertices[i + 0];
+        triangle.v1 = Scene::_rtVertices[i + 1];
+        triangle.v2 = Scene::_rtVertices[i + 2];
         triangles.push_back(triangle);
     }
 
@@ -2169,7 +2197,7 @@ void Scene::CalculateLightBoundingVolumes() {
                 }
             }
         }
-    }
+    }*/
 }
 
 void Scene::CreateMeshData() {

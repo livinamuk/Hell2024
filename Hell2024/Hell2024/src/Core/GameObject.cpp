@@ -166,7 +166,7 @@ void GameObject::Interact() {
 	}
 	// Close
 	else if (_openState == OpenState::OPEN) {
-		Audio::PlayAudio("DrawerClose.wav", 1.0f); 
+		Audio::PlayAudio("DrawerClose.wav", 1.0f);
 		_openState = OpenState::CLOSING;
 		//Audio::PlayAudio(_audio.onClose.filename, _audio.onClose.volume);
 	}
@@ -185,11 +185,11 @@ void GameObject::Update(float deltaTime) {
     // DEAL WITH THIS A BETTER WAY
 
     if (_name == "GlockAmmo_PickUp") {
-           
+
         GameObject* topDraw = Scene::GetGameObjectByName("TopDraw");
         if (topDraw) {
 
-            glm::mat4 globalPose = m_collisionRigidBody.GetGlobalPoseAsMatrix();        
+            glm::mat4 globalPose = m_collisionRigidBody.GetGlobalPoseAsMatrix();
             float width = 0.4f;
             float height = 0.4f;
             float depth = 0.4f;
@@ -213,11 +213,11 @@ void GameObject::Update(float deltaTime) {
                         }
                         m_collisionRigidBody.SetGlobalPose(globalPose* displacement.to_mat4());
                     }
-                }                
+                }
             }
         }
     }
-	
+
 
 
 	if (_pickupType != PickUpType::NONE) {
@@ -247,7 +247,7 @@ void GameObject::Update(float deltaTime) {
 			if (_openTransform.position.z < maxOpenDistance) {
 				_openTransform.position.z += deltaTime * speed;
 			}
-			
+
 			if (_openTransform.position.z >= maxOpenDistance) {
 				_openState = OpenState::OPEN;
 				_openTransform.position.z = std::min(_openTransform.position.z, maxOpenDistance);
@@ -380,7 +380,7 @@ void GameObject::UpdateEditorPhysicsObject() {
 		else if (_model_OLDMatrixMode == ModelMatrixMode::PHYSX_TRANSFORM && _collisionBody) {
 			_editorRaycastBody->setGlobalPose(_collisionBody->getGlobalPose());
 		}
-		// Repair broken pointer 
+		// Repair broken pointer
 		// (this happens when a mag pushes a new GameObject into the _gameObjects std::vector)
 		if (_editorRaycastBody->userData) {
 			delete _editorRaycastBody->userData;
@@ -436,7 +436,7 @@ void GameObject::AddForceToCollisionObject(glm::vec3 direction, float strength) 
 	if (flags & PxRigidBodyFlag::eKINEMATIC) {
 		return;
 	}
-	PxVec3 force = PxVec3(direction.x, direction.y, direction.z) * strength; 
+	PxVec3 force = PxVec3(direction.x, direction.y, direction.z) * strength;
     m_collisionRigidBody.pxRigidBody->addForce(force);
 }
 
@@ -670,7 +670,7 @@ void GameObject::UpdateRigidStatic() {
     if (!m_raycastRigidStatic.model->_triangleMesh) {
         m_raycastRigidStatic.model->CreateTriangleMesh();
     }
-    
+
     PhysicsFilterData filterData;
     filterData.raycastGroup = RAYCAST_ENABLED;
     filterData.collisionGroup = CollisionGroup::NO_COLLISION;
@@ -773,30 +773,30 @@ std::vector<Triangle> GameObject::GetTris() {
 	pos1 = (GetModelMatrix() * glm::vec4(pos1, 1.0));
 	pos2 = (GetModelMatrix() * glm::vec4(pos2, 1.0));
 	pos3 = (GetModelMatrix() * glm::vec4(pos3, 1.0));*/
-	
+
 	// FRONT
 	Triangle triA;
-	triA.p1 = pos0;
-	triA.p2 = pos1;
-	triA.p3 = pos1 + glm::vec3(0, doorHeight, 0);
-	triA.color = YELLOW;
+	triA.v0 = pos0;
+	triA.v1 = pos1;
+	triA.v2 = pos1 + glm::vec3(0, doorHeight, 0);
+	//triA.color = YELLOW;
 	Triangle triB;
-	triB.p1 = pos1 + glm::vec3(0, doorHeight, 0);
-	triB.p2 = pos0 + glm::vec3(0, doorHeight, 0);
-	triB.p3 = pos0;
-	triB.color = YELLOW;
+	triB.v0 = pos1 + glm::vec3(0, doorHeight, 0);
+	triB.v1 = pos0 + glm::vec3(0, doorHeight, 0);
+	triB.v2 = pos0;
+	//triB.color = YELLOW;
 
 	// BACK
 	Triangle triC;
-	triC.p3 = pos2;
-	triC.p2 = pos3;
-	triC.p1 = pos3 + glm::vec3(0, doorHeight, 0);
-	triC.color = YELLOW;
+	triC.v2 = pos2;
+	triC.v1 = pos3;
+	triC.v0 = pos3 + glm::vec3(0, doorHeight, 0);
+	//triC.color = YELLOW;
 	Triangle triD;
-	triD.p3 = pos3 + glm::vec3(0, doorHeight, 0);
-	triD.p2 = pos2 + glm::vec3(0, doorHeight, 0);
-	triD.p1 = pos2;
-	triD.color = YELLOW;
+	triD.v2 = pos3 + glm::vec3(0, doorHeight, 0);
+	triD.v1 = pos2 + glm::vec3(0, doorHeight, 0);
+	triD.v0 = pos2;
+	//triD.color = YELLOW;
 
 	std::vector<Triangle> result;
 	result.push_back(triA);
@@ -820,7 +820,7 @@ void GameObject::PickUp() {
         _wasPickedUpLastFrame = true;
     }
     else {
-        
+
         for (int i = 0; i < Scene::GetGameObjectCount(); i++) {
             if (this == &Scene::GetGamesObjects()[i]) {
 
@@ -944,7 +944,7 @@ void GameObject::SetCollidesWithGroup(PxU32 collisionGroup) {
 }*/
 
 
-void GameObject::UpdateRenderItems() {    
+void GameObject::UpdateRenderItems() {
     renderItems.clear();
     for (int i = 0; i < model->GetMeshIndices().size(); i++) {
         uint32_t& meshIndex = model->GetMeshIndices()[i];

@@ -15,6 +15,8 @@ layout (location = 6) out vec3 attrTangent;
 layout (location = 7) out vec3 attrBiTangent;
 layout (location = 8) out vec3 WorldPos;
 layout (location = 9) out flat int playerIndex;
+layout (location = 10) out flat int useEmissiveMask;
+layout (location = 11) out flat vec3 emissiveColor;
 
 struct CameraData {
     mat4 projection;
@@ -22,9 +24,9 @@ struct CameraData {
     mat4 view;
     mat4 viewInverse;
 	float viewportWidth;
-	float viewportHeight;   
+	float viewportHeight;
     float viewportOffsetX;
-    float viewportOffsetY; 
+    float viewportOffsetY;
 	float clipSpaceXMin;
     float clipSpaceXMax;
     float clipSpaceYMin;
@@ -41,14 +43,14 @@ layout(set = 0, binding = 0) readonly buffer CAMERA_DATA_BUFFER {
 
 struct RenderItem3D {
     mat4 modelMatrix;
-    mat4 inverseModelMatrix; 
+    mat4 inverseModelMatrix;
     int meshIndex;
     int baseColorTextureIndex;
     int normalTextureIndex;
     int rmaTextureIndex;
     int vertexOffset;
     int indexOffset;
-    int animatedTransformsOffset; 
+    int animatedTransformsOffset;
     int castShadow;
     int useEmissiveMask;
     float emissiveColorR;
@@ -65,7 +67,7 @@ layout( push_constant ) uniform constants {
 	int emptp2;
 } PushConstants;
 
-void main() {	
+void main() {
 
 	mat4 proj = cameraData.data[PushConstants.playerIndex].projection;
 	mat4 view = cameraData.data[PushConstants.playerIndex].view;
@@ -76,7 +78,12 @@ void main() {
 	BaseColorTextureIndex =  renderItems.data[index].baseColorTextureIndex;
 	NormalTextureIndex =  renderItems.data[index].normalTextureIndex;
 	RMATextureIndex =  renderItems.data[index].rmaTextureIndex;
-	
+
+	useEmissiveMask = renderItems.data[index].useEmissiveMask;
+	emissiveColor.r = renderItems.data[index].emissiveColorR;
+	emissiveColor.g = renderItems.data[index].emissiveColorG;
+	emissiveColor.b = renderItems.data[index].emissiveColorB;
+
 	//model = instanceData.data[gl_InstanceIndex].modelMatrix;
 	//BaseColorTextureIndex =  instanceData.data[gl_InstanceIndex].baseColorTextureIndex;
 	//NormalTextureIndex =  instanceData.data[gl_InstanceIndex].normalTextureIndex;

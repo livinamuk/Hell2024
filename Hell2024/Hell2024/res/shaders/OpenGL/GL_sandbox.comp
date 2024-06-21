@@ -1,0 +1,198 @@
+#version 430 core
+
+layout (local_size_x = 16, local_size_y = 4, local_size_z = 1) in;
+layout(rgba8, binding = 0) uniform image2D tex;
+layout(rgba8, binding = 1) uniform image2D bloomPrePass;
+layout (binding = 0) uniform sampler2D emissiveTexture;
+
+void contrastAdjust( inout vec3 color, in float c) {
+    float t = 0.5 - c * 0.5;
+    color.rgb = color.rgb * c + t;
+}
+
+struct CameraData {
+    mat4 projection;
+    mat4 projectionInverse;
+    mat4 view;
+    mat4 viewInverse;
+	float viewportWidth;
+	float viewportHeight;
+    float viewportOffsetX;
+    float viewportOffsetY;
+	float clipSpaceXMin;
+    float clipSpaceXMax;
+    float clipSpaceYMin;
+    float clipSpaceYMax;
+	float finalImageColorContrast;
+    float finalImageColorR;
+    float finalImageColorG;
+    float finalImageColorB;
+};
+
+layout(std430, binding = 16) readonly buffer CameraDataArray {
+    CameraData cameraDataArray[];
+};
+
+#define MAX_LOD 6
+#define DOWNSAMPLE_BLUR_RADIUS 10
+
+float gaussian(vec2 i, float sigma) {
+    return exp(-dot(i,i) / (2.0 * sigma*sigma));
+}
+
+uniform int playerIndex;
+
+void main2() {
+
+	ivec2 texCoord = ivec2(gl_GlobalInvocationID.xy);
+
+
+	ivec2 texCoordFullScreen = ivec2(gl_GlobalInvocationID.xy);
+	vec2 resolution = textureSize(emissiveTexture, 0);
+	vec2 uvFullScreen = texCoordFullScreen / resolution;
+
+	vec3 color = vec3(playerIndex * 0.25);
+
+
+	float viewportWidth = cameraDataArray[playerIndex].viewportWidth;
+	float viewportHeight = cameraDataArray[playerIndex].viewportHeight;
+	int viewportOffsetX = int(cameraDataArray[playerIndex].viewportOffsetX);
+	int viewportOffsetY = int(cameraDataArray[playerIndex].viewportOffsetY);
+
+	texCoord.x += viewportOffsetX;
+	texCoord.y += viewportOffsetY;
+
+	imageStore(tex, texCoord, vec4(color, 1));
+}
+
+void main() {
+
+	ivec2 texCoord = ivec2(gl_GlobalInvocationID.xy);
+	vec2 resolution = textureSize(emissiveTexture, 0);
+	vec2 uvFullScreen = texCoord / resolution;
+
+	vec3 emissiveColor = texture(emissiveTexture, uvFullScreen).rgb;
+
+    vec3 color = imageLoad(tex, texCoord).rgb;
+	color = vec3(uvFullScreen, 0);
+
+	float viewportWidth = cameraDataArray[playerIndex].viewportWidth;
+	float viewportHeight = cameraDataArray[playerIndex].viewportHeight;
+	float clipSpaceXMin = cameraDataArray[playerIndex].clipSpaceXMin;
+	float clipSpaceYMin = cameraDataArray[playerIndex].clipSpaceYMin;
+	vec2 screenResolution = textureSize(emissiveTexture, 0);
+	vec2 viewportResolution = vec2(viewportWidth, viewportHeight);
+	vec2 viewPortRatio = viewportResolution / screenResolution;
+
+	vec2 fragCoord = gl_GlobalInvocationID.xy;//gl_FragCoord.xy;
+
+	vec2 hres = floor(viewportResolution / 2.0);
+
+	vec2 res = hres;
+    float xpos = 0.0;
+    int lod = 0;
+
+    for (; lod < MAX_LOD; lod++) {
+        xpos += res.x;
+        if (xpos > fragCoord.x || res.x <= 1.0) {
+            break;
+		}
+        res = floor(res / 2.0);
+    }
+
+	vec2 px = 1.0 / resolution;
+    vec2 p = (fragCoord - vec2(xpos - res.x, 0)) / resolution;
+
+
+	float pixelWidth = 1.0 / viewportResolution.x;
+
+//	const vec2 pixelCenter = vec2(gl_GlobalInvocationID.xy) + vec2(0.5);
+//	const vec2 inUV = pixelCenter / screenResolution;
+
+
+	ivec2 finalTexCoord = ivec2(gl_GlobalInvocationID.xy);
+	int viewportOffsetX = int(cameraDataArray[playerIndex].viewportOffsetX);
+	int viewportOffsetY = int(cameraDataArray[playerIndex].viewportOffsetY);
+	finalTexCoord.x += viewportOffsetX;
+	finalTexCoord.y += viewportOffsetY;
+
+
+    vec2 uv = (fragCoord - vec2(xpos - res.x, 0)) / vec2(res);
+	uv.x *= viewPortRatio.x;
+	uv.y *= viewPortRatio.y;
+	uv.x += clipSpaceXMin;
+	uv.y += clipSpaceYMin;
+
+    if (fragCoord.y >= res.y) {
+        color = vec3(0.5);
+		imageStore(bloomPrePass, finalTexCoord, vec4(color, 1));
+        return;
+    }
+
+
+	vec4 FragColor = vec4(0);
+
+    // Skip blurring LOD 0 for performance
+    #if 1
+    if (lod == 0) {
+        FragColor = textureLod(emissiveTexture, uv, 1.0);
+      //  return;
+    }
+    #endif
+
+	//res.x *= 0.5;
+	//uv.x *= 0.5;
+
+
+	const int rad = DOWNSAMPLE_BLUR_RADIUS;
+    const float sigma = float(rad) * 0.4;
+
+    // TODO: Optimized blur kernel using bilinear
+    float sc = exp2(float(lod));
+    float w = 0.0;
+    for (int x = -rad; x <= rad; x++) {
+        for (int y = -rad; y <= rad; y++) {
+            vec2 o = vec2(x, y);
+            float wg = gaussian(o, sigma);
+            //float wg = exp(-dot(o, o) * 0.125);
+
+            //vec2 p = uv + o / vec2(res);
+            vec2 p = uv + o / vec2(viewportResolution);
+
+            // Clamp to border
+            if (p == clamp(p, vec2(0.5) / res, (res - 0.5) / res)) {
+                FragColor += wg * textureLod(emissiveTexture, p, float(lod));
+			} else {
+				//FragColor = vec4(0,0,0,0);
+			}
+            w += wg;
+        }
+    }
+    FragColor /= w;
+
+
+
+	//texCoord *= 0.5;
+
+	if (lod == 0) {
+		uv.x *= viewPortRatio.x;
+		uv.y *= viewPortRatio.y;
+		uv.x += clipSpaceXMin;
+		uv.y += clipSpaceYMin;
+		//FragColor = textureLod(emissiveTexture, uv, 1.0);
+	}
+
+
+	color.rgb = FragColor.rgb;
+
+
+
+
+	//color = vec3(10,0,0);
+
+
+
+//	imageStore(tex, finalTexCoord, vec4(color, 1));
+	imageStore(bloomPrePass, finalTexCoord, vec4(color, 1));
+}
+

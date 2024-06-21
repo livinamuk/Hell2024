@@ -1,0 +1,92 @@
+#version 460
+#extension GL_KHR_vulkan_glsl : enable
+
+layout (local_size_x = 16, local_size_y = 4, local_size_z = 1) in;
+
+layout(set = 0, binding = 6, rgba8) uniform image2D outputImage;
+
+layout(set = 2, binding = 0, rgba8) uniform image2D blurBuffer0A;
+layout(set = 2, binding = 1, rgba8) uniform image2D blurBuffer1A;
+layout(set = 2, binding = 2, rgba8) uniform image2D blurBuffer2A;
+layout(set = 2, binding = 3, rgba8) uniform image2D blurBuffer3A;
+
+layout(set = 2, binding = 4, rgba8) uniform image2D blurBuffer0B;
+layout(set = 2, binding = 5, rgba8) uniform image2D blurBuffer1B;
+layout(set = 2, binding = 6, rgba8) uniform image2D blurBuffer2B;
+layout(set = 2, binding = 7, rgba8) uniform image2D blurBuffer3B;
+
+void main() {
+
+	ivec2 texCoord = ivec2(gl_GlobalInvocationID.x, gl_GlobalInvocationID.y);
+
+
+	vec3 color = imageLoad(outputImage, texCoord).rgb;
+	//color.r = 0;
+	color.g = 0;
+
+
+	vec3 blurColor0 = imageLoad(blurBuffer0B, texCoord).rgb;
+
+
+	//color = vec3(texCoord,0);
+
+	//imageStore(outputImage, texCoord, vec4(blurColor0, 1));
+}
+
+
+/*
+struct CameraData {
+    mat4 projection;
+    mat4 projectionInverse;
+    mat4 view;
+    mat4 viewInverse;
+	float viewportWidth;
+	float viewportHeight;
+    float viewportOffsetX;
+    float viewportOffsetY;
+	float clipSpaceXMin;
+    float clipSpaceXMax;
+    float clipSpaceYMin;
+    float clipSpaceYMax;
+	float finalImageColorContrast;
+    float finalImageColorR;
+    float finalImageColorG;
+    float finalImageColorB;
+};
+
+layout(set = 1, binding = 0) readonly buffer CAMERA_DATA_BUFFER {
+    CameraData[4] data;
+} cameraData;
+
+layout(set = 0, binding = 1) uniform sampler2D normalTexture;
+
+void contrastAdjust( inout vec3 color, in float c) {
+    float t = 0.5 - c * 0.5;
+    color.rgb = color.rgb * c + t;
+}
+*/
+
+/*
+void main() {
+
+	ivec2 texCoord = ivec2(gl_GlobalInvocationID.x, gl_GlobalInvocationID.y);
+
+	vec2 resolution = textureSize(normalTexture, 0);
+	vec2 uv = vec2(texCoord) / resolution;
+
+	int playerIndex = int(texture(normalTexture, uv).a * 4 + 0.5);
+
+	float r = cameraData.data[playerIndex].finalImageColorR;
+	float g = cameraData.data[playerIndex].finalImageColorG;
+	float b = cameraData.data[playerIndex].finalImageColorB;
+	vec3 finalImageColorTint = vec3(r, g, b);
+	float finalImageColorContrast = cameraData.data[playerIndex].finalImageColorContrast;
+
+	vec3 color = imageLoad(outputImage, texCoord).rgb;
+	color *= finalImageColorTint;
+    contrastAdjust(color, finalImageColorContrast);
+
+	//color = vec3(texture(normalTexture, uv).a);
+
+	imageStore(outputImage, texCoord, vec4(color, 1));
+}*/

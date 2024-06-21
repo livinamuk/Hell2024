@@ -88,8 +88,41 @@ std::vector<RenderItem2D> CreateRenderItems2D(ivec2 presentSize, int playerCount
             std::string text = "";
             text += "Splitscreen mode: " + Util::SplitscreenModeToString(Game::GetSplitscreenMode()) + "\n";
             text += "Render mode: " + Util::RenderModeToString(_renderMode) + "\n";
-            text += "Line mode: " + Util::DebugLineRenderModeToString(_debugLineRenderMode) + "\n";
-            text += "Cam pos: " + Util::Vec3ToString(Game::GetPlayerByIndex(i)->GetViewPos()) + "\n";
+            //text += "Line mode: " + Util::DebugLineRenderModeToString(_debugLineRenderMode) + "\n";
+            //text += "Cam pos: " + Util::Vec3ToString(Game::GetPlayerByIndex(i)->GetViewPos()) + "\n";
+            text += "Weapon Action: " + Util::WeaponActionToString(Game::GetPlayerByIndex(i)->GetWeaponAction()) + "\n";
+
+            Player* player = Game::GetPlayerByIndex(i);
+
+            text += "\n";
+            text += "Current weapon index: " + std::to_string(player->m_currentWeaponIndex) + "\n\n";
+            for (int i = 0; i < player->m_weaponStates.size(); i++) {
+
+                if (player->m_weaponStates[i].has) {
+                    std::string str;
+                    str += player->m_weaponStates[i].name;
+                    str += " ";
+                    str += "\n";
+                    if (i == player->m_currentWeaponIndex) {
+                        str = ">" + str;
+                    }
+                    else {
+                        str = " " + str;
+                    }
+                    text += str;
+                }
+            }
+
+            text += "\nAMMO\n";
+            for (int i = 0; i < player->m_ammoStates.size(); i++) {
+                text += "-";
+                text += player->m_ammoStates[i].name;
+                text += " ";
+                text += std::to_string(player->m_ammoStates[i].ammoOnHand);
+                text += "\n";
+            }
+
+
             int x = RendererUtil::GetViewportLeftX(i, Game::GetSplitscreenMode(), presentSize.x, presentSize.y);
             int y = RendererUtil::GetViewportTopY(i, Game::GetSplitscreenMode(), presentSize.x, presentSize.y);
             RendererUtil::AddRenderItems(renderItems, TextBlitter::CreateText(text, { x, y }, presentSize, Alignment::TOP_LEFT, BitmapFontType::STANDARD));
@@ -324,6 +357,41 @@ void UpdateDebugPointsMesh() {
     std::vector<Vertex> vertices;
     std::vector<uint32_t> indices;
 
+
+    Player* player = Game::GetPlayerByIndex(0);
+    Vertex v;
+    v.position = player->GetPistolCasingSpawnPostion();
+    v.normal = RED;
+//    vertices.push_back(v);
+
+
+    for (auto& object : Scene::GetAnimatedGamesObjects()) {
+
+        if (object._skinnedModel->_filename == "Glock") {
+
+
+
+            glm::mat4 muzzleMatrix = object.GetJointWorldTransformByName("Barrel");
+           // glm::mat4 ejectionPortMatrix = object.GetJointWorldTransformByName("Ejection");
+
+
+
+            glm::vec3 offest = glm::vec3(0, 0, 0.1);
+            offest /= object.GetScale();
+
+            Vertex v;
+            v.position = muzzleMatrix * glm::vec4(offest, 1);
+            v.normal = RED;
+          //  vertices.push_back(v);
+            /*
+            Vertex v2;
+            v2.position = ejectionPortMatrix * glm::vec4(0, 0, 0, 1);
+            v2.normal = GREEN;
+            vertices.push_back(v2);*/
+        }
+
+    }
+
     int index = Game::GetPlayerByIndex(0)->GetFirstPersonWeaponAnimatedGameObjectIndex();
    // index = Game::GetPlayerByIndex(1)->GetCharacterModelAnimatedGameObjectIndex();
     AnimatedGameObject* object = Scene::GetAnimatedGameObjectByIndex(index);
@@ -479,7 +547,7 @@ MuzzleFlashData GetMuzzleFlashData(unsigned int playerIndex) {
 
     glm::vec3 viewRotation = player->GetViewRotation();
 
-    glm::vec3 worldPos = player->GetBarrelPosition();
+    glm::vec3 worldPos = player->GetMuzzleFlashPosition();
 
     Transform worldTransform;
     worldTransform.position = worldPos;
@@ -1162,6 +1230,7 @@ inline std::vector<DebugLineRenderMode> _allowedDebugLineRenderModes = {
     //PHYSX_EDITOR,
     BOUNDING_BOXES,
     RTX_LAND_AABBS,
+    PHYSX_COLLISION,
     //RTX_LAND_TRIS,
     //RTX_LAND_TOP_LEVEL_ACCELERATION_STRUCTURE,
     //RTX_LAND_BOTTOM_LEVEL_ACCELERATION_STRUCTURES,
@@ -1251,6 +1320,6 @@ void Renderer::RecreateBlurBuffers() {
         OpenGLRenderer::RecreateBlurBuffers();
     }
     else if (BackEnd::GetAPI() == API::VULKAN) {
-        // TO DO!!! VulkanRenderer::RecreateBlurBuffers();
+        VulkanRenderer::RecreateBlurBuffers();
     }
 }

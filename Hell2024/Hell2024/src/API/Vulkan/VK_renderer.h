@@ -25,10 +25,11 @@ namespace VulkanRenderer {
     DescriptorSet& GetDynamicDescriptorSet();
     DescriptorSet& GetAllTexturesDescriptorSet();
     DescriptorSet& GetRenderTargetsDescriptorSet();
-    DescriptorSet& GetRaytracingDescriptorSet(); 
+    DescriptorSet& GetRaytracingDescriptorSet();
 
     // Render Targets
     void CreatePlayerRenderTargets(int presentWidth, int presentHeight);
+    void RecreateBlurBuffers();
 
     void HotloadShaders();
 

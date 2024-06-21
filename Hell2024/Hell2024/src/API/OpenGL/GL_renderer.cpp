@@ -1271,13 +1271,6 @@ void MuzzleFlashPass(RenderData& renderData) {
         ViewportInfo viewportInfo = RendererUtil::CreateViewportInfo(i, Game::GetSplitscreenMode(), gBuffer.GetWidth(), gBuffer.GetHeight());
         SetViewport(viewportInfo);
 
-
-        animatedQuadShader.SetMat4("u_MatrixWorld", renderData.muzzleFlashData[i].modelMatrix);
-        animatedQuadShader.SetInt("u_FrameIndex", renderData.muzzleFlashData[i].frameIndex);
-        animatedQuadShader.SetInt("u_CountRaw", renderData.muzzleFlashData[i].RowCount);
-        animatedQuadShader.SetInt("u_CountColumn", renderData.muzzleFlashData[i].ColumnCont);
-        animatedQuadShader.SetFloat("u_TimeLerp", renderData.muzzleFlashData[i].timeLerp);
-
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
         glActiveTexture(GL_TEXTURE0);

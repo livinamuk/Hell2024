@@ -1,0 +1,93 @@
+#version 430 core
+
+layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
+
+struct CloudPoint {
+    float posX;
+    float posY;
+    float posZ;
+    float normX;
+    float normY;
+    float normZ;
+    float colorX;
+    float colorY;
+    float colorZ;
+	float padding0;
+	float padding1;
+	float padding2;
+};
+
+
+struct Light {
+	float posX;
+	float posY;
+	float posZ;
+	float colorR;
+	float colorG;
+	float colorB;
+	float strength;
+	float radius;
+};
+
+layout(std430, binding = 0) readonly buffer lights {
+    Light Lights[];
+};
+
+layout(std430, binding = 1) buffer pointCloudvertices {
+    CloudPoint PointCloud[];
+};
+
+void main() {
+
+	const uint index = gl_GlobalInvocationID.x;
+	
+	
+	vec3 WorldPos = vec3(PointCloud[index].posX, PointCloud[index].posY, PointCloud[index].posZ);
+	vec3 Normal = vec3(PointCloud[index].normX, PointCloud[index].normY, PointCloud[index].normZ);
+
+	vec3 color = vec3(0);
+
+	for (int i = 0; i < 8; i++) {
+
+		Light light = Lights[i];	
+		vec3 lightPosition = vec3(light.posX, light.posY, light.posZ);
+		vec3 lightColor = vec3(light.colorR, light.colorG, light.colorB);
+		float lightRadius = light.radius;
+		float lightStrength = light.strength;
+		const vec3 l = normalize(lightPosition - WorldPos); 
+
+		float att = smoothstep(lightRadius, 0.0, length(lightPosition - WorldPos));
+		vec3 n = Normal;
+		float ndotl = clamp(dot(n, l), 0.0, 1.0);  
+		
+		if (ndotl >= 0) {		
+			vec3 radiance = vec3(lightColor) * att * lightStrength * ndotl * 1.0;
+			radiance *= 2.5;
+			color += radiance;
+		}
+
+	}
+		//Light light = Lights[0];	
+		//color = vec3(light.colorR, light.colorG, light.colorB);
+		
+	PointCloud[index].colorX = color.x;
+	PointCloud[index].colorY = color.y;
+	PointCloud[index].colorZ = color.z;
+}
+
+/*
+		vec3 lightPos = lights[j].position;
+		vec3 lightColor = lights[j].color;
+		float lightRadius = lights[j].radius;
+		float lightStrength = lights[j].strength;
+		float distToLight = distance(lightPos, origin);
+		vec3 l = normalize(lightPos - origin);
+
+		if (!AnyHit(origin, l, 0.000001, distToLight)) {
+			float att = smoothstep(lightRadius, 0.0, length(lightPos - origin));
+			vec3 n = normal;
+			float ndotl = clamp(dot(n, l), 0.0, 1.0);  
+			vec3 radiance = vec3(lightColor) * att * lightStrength * ndotl * 1.0;
+			radiance *= 2.5;
+			PointCloud[i].color.rgb += radiance;
+			*/

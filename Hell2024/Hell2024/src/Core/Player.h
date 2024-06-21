@@ -1,6 +1,7 @@
 #pragma once
 #include "../Common.h"
-//#include "AnimatedGameObject.h"
+#include "WeaponManager.h"
+#include "AnimatedGameObject.h"
 #include "../Physics/Physics.h"
 #include "keycodes.h"
 
@@ -36,6 +37,7 @@ enum CrosshairType {
 struct PickUpText {
     std::string text;
     float lifetime;
+    int count = 1;
 };
 
 
@@ -61,6 +63,17 @@ struct PlayerControls {
 
 };
 
+struct WeaponState {
+    bool has = false;
+    int ammoInMag = 0;
+    std::string name = UNDEFINED_STRING;
+};
+
+struct AmmoState {
+    std::string name = UNDEFINED_STRING;
+    int ammoOnHand = 0;
+};
+
 class Player {
 
 private:
@@ -68,14 +81,62 @@ private:
     int32_t m_characterModelAnimatedGameObjectIndex = -1;
     int32_t m_playerIndex = -1;
     std::vector<PickUpText> m_pickUpTexts;
+    bool m_crouching = false;
+    bool m_moving = false;
+    bool m_headBobTimer = 0;
+    bool m_breatheBobTimer = 0;
+    Transform m_headBobTransform;
+    Transform m_breatheBobTransform;
 
 public:
+
     Player() = default;
     Player(int playerIndex);
+
     int32_t GetFirstPersonWeaponAnimatedGameObjectIndex();
     int32_t GetCharacterModelAnimatedGameObjectIndex();
     int32_t GetPlayerIndex();
-    glm::vec3 GetBarrelPosition();
+    glm::vec3 GetMuzzleFlashPosition();
+    glm::vec3 GetPistolCasingSpawnPostion();
+
+    void UpdateMouseLook(float deltaTime);
+    void UpdateCamera(float deltaTime);
+    void UpdateMovement(float deltaTime);
+    void UpdatePickupText(float deltaTime);
+    void UpdateCharacterModelAnimation(float deltaTime);
+    void UpdateTimers(float deltaTime);
+    void UpdateHeadBob(float deltaTime);
+    void UpdateAudio(float deltaTime);
+
+    void CheckForAndEvaluateInteract();
+    void CheckForAndEvaluateRespawnPress();
+    void CheckForAndEvaluateNextWeaponPress();
+    void CheckForEnviromentalDamage(float deltaTime);
+    void CheckForDeath();
+
+    bool IsMoving();
+    bool IsCrouching();
+    bool IsDead();
+    bool IsAlive();
+
+    WeaponState* GetCurrentWeaponState();
+    AnimatedGameObject* GetCharacterModel();
+    AnimatedGameObject* GetViewWeaponModel();
+
+    WeaponState* GetWeaponStateByName(std::string name);
+    AmmoState* GetAmmoStateByName(std::string name);
+    void GiveWeapon(std::string name);
+    void GiveAmmo(std::string name, int amount);
+
+    WeaponInfo* GetCurrentWeaponInfo();
+    std::vector<WeaponState> m_weaponStates;
+    std::vector<AmmoState> m_ammoStates;
+    int m_currentWeaponIndex = 0;
+    void SwitchWeapon(std::string name, WeaponAction weaponAction);
+    void CheckForDebugKeyPresses();
+    bool HasControl();
+    void CreateCharacterModel();
+    void CreateViewModel();
 
 
     /*AnimatedGameObject _characterModel;
@@ -106,7 +167,7 @@ public:
 	Inventory _inventory;
 
 
-	int GetCurrentWeaponClipAmmo();
+	int GetCurrentWeaponMagAmmo();
 	int GetCurrentWeaponTotalAmmo();
     void SetPosition(glm::vec3 position);
     void RespawnAtCurrentPosition();
@@ -129,7 +190,7 @@ public:
     void UpdateRagdoll();
 
 	void SetRotation(glm::vec3 rotation);
-	void SetWeapon(Weapon weapon);
+	//void SetWeapon(Weapon weapon);
 	void Respawn();
 	glm::mat4 GetViewMatrix();
 	glm::mat4 GetInverseViewMatrix();
@@ -139,13 +200,12 @@ public:
 	glm::vec3 GetCameraRight();
 	glm::vec3 GetCameraForward();
 	glm::vec3 GetCameraUp();
-	bool IsMoving();
-    int GetCurrentWeaponIndex();
+    //int GetCurrentWeaponIndex();
     void UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime);
     void UpdateFirstPersonWeaponLogicAndAnimations2(float deltaTime);
     void UpdateFirstPersonWeaponLogicAndAnimations3(float deltaTime);
 	void SpawnMuzzleFlash();
-    void SpawnGlockCasing();
+    void SpawnCasing(AmmoInfo* ammoInfo);
     void SpawnAKS74UCasing();
     void SpawnShotgunShell();
 	float GetMuzzleFlashTime();
@@ -159,13 +219,13 @@ public:
 	PxShape* GetItemPickupOverlapShape();
 
 	void AddPickUpText(std::string text);
-    void PickUpAKS74U();
-    void PickUpAKS74UAmmo();
-    void PickUpShotgunAmmo();
-    void PickUpGlockAmmo();
+    //void PickUpAKS74U();
+    //void PickUpAKS74UAmmo();
+    //void PickUpShotgunAmmo();
+    //void PickUpGlockAmmo();
 	//void CastMouseRay();
-	void DropAKS7UMag();
-    void CheckForKnifeHit();
+	//void DropAKS7UMag();
+    void CheckForMeleeHit();
 
     void SetGlockAnimatedModelSettings();
 
@@ -193,10 +253,7 @@ public:
     float _zoom = 1.0f;
 
 
-
-    std::string m_currentWeaponInfo = "Glock";
-
-    void LoadWeaponInfo(std::string name, WeaponAction weaponAction);
+    //void LoadWeaponInfo(std::string name, WeaponAction weaponAction);
 
     float finalImageContrast = 1.0f;
     glm::vec3 finalImageColorTint = glm::vec3(0);
@@ -255,15 +312,13 @@ public:
     std::vector<RenderItem2D> GetHudRenderItemsHiRes(ivec2 gBufferSize);
     CrosshairType GetCrosshairType();
 
-    bool IsDead();
-    bool IsAlive();
+
     bool RespawnAllowed();
 
 private:
 
     glm::vec3 _displacement;
 
-	void Interact();
 	void SpawnBullet(float variance, Weapon type);
 	bool CanFire();
 	bool CanReload();
@@ -291,10 +346,9 @@ private:
 	glm::vec3 _up = glm::vec3(0);
 	glm::vec3 _right = glm::vec3(0);
 
-	bool _isMoving = false;
 	float _muzzleFlashTimer = -1;
 	float _muzzleFlashRotation = 0;
-	int _currentWeaponIndex = 0;
+	//int _currentWeaponIndex = 0;
 	WeaponAction _weaponAction = DRAW_BEGIN;
 	std::vector<bool> _weaponInventory;
 	bool _needsRespawning = true;

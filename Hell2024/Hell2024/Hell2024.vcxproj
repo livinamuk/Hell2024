@@ -141,6 +141,7 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <ClCompile Include="src\Core\AssetManager.cpp" />
     <ClCompile Include="src\Core\DebugMenu.cpp" />
     <ClCompile Include="src\Core\WeaponManager.cpp" />
+    <ClCompile Include="src\Renderer\Raytracing\Raytracing.cpp" />
     <ClCompile Include="src\Renderer\RendererStorage.cpp" />
     <ClCompile Include="src\Renderer\Types\VertexBuffer.cpp" />
     <ClCompile Include="src\Renderer\GlobalIllumination.cpp" />
@@ -226,6 +227,9 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <ClInclude Include="src\Core\JSON.hpp" />
     <ClInclude Include="src\Core\WeaponManager.h" />
     <ClInclude Include="src\Effects\BloodDecal.hpp" />
+    <ClInclude Include="src\Renderer\Raytracing\BLAS.hpp" />
+    <ClInclude Include="src\Renderer\Raytracing\Raytracing.h" />
+    <ClInclude Include="src\Renderer\Raytracing\TLAS.hpp" />
     <ClInclude Include="src\Renderer\RendererStorage.h" />
     <ClInclude Include="src\Renderer\Types\VertexBuffer.h" />
     <ClInclude Include="src\Core\WeaponManager.hpp" />
@@ -409,9 +413,13 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <None Include="res\shaders\OpenGL\GL_ui.vert" />
     <None Include="res\shaders\OpenGL_OLD\voxelize.frag" />
     <None Include="res\shaders\OpenGL_OLD\voxelize.vert" />
+    <None Include="res\shaders\Vulkan\VK_blur.frag" />
+    <None Include="res\shaders\Vulkan\VK_blurHorizontal.vert" />
+    <None Include="res\shaders\Vulkan\VK_blurVertical.vert" />
     <None Include="res\shaders\Vulkan\VK_compute_skin.comp" />
     <None Include="res\shaders\Vulkan\VK_debug.frag" />
     <None Include="res\shaders\Vulkan\VK_debug.vert" />
+    <None Include="res\shaders\Vulkan\VK_emissive_composite.comp" />
     <None Include="res\shaders\Vulkan\VK_flipbook.frag" />
     <None Include="res\shaders\Vulkan\VK_flipbook.vert" />
     <None Include="res\shaders\Vulkan\VK_gbufferSkinned.frag" />

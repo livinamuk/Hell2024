@@ -140,7 +140,7 @@ void Floorplan::Update(float /*deltaTime*/) {
     }
     else if (_mode == CEILING) {
         CeilingModeUpdate();
-    }    
+    }
 }
 
 void Floorplan::WallsModeUpdate() {
@@ -206,7 +206,7 @@ void Floorplan::WallsModeUpdate() {
         }
     }
 
-    // Dragging a door  
+    // Dragging a door
     if (_action == DRAGGING_DOOR) {
         _draggedDoor->position.x = _gridXHalfSize + 0.05f;
         _draggedDoor->position.z = _gridZHalfSize + 0.05f;
@@ -417,7 +417,7 @@ void Floorplan::PrepareRenderFrame() {
     for (float z = 0; z <= _mapDepth + _gridSpacing / 2; z += _gridSpacing) {
         Renderer_OLD::QueueLineForDrawing(Line(glm::vec3(0, gridY, z), glm::vec3(_mapDepth, gridY, z), GRID_COLOR));
     }*/
-    
+
     if (_mode == FloorplanMode::WALLS) {
 
         // Walls
@@ -486,7 +486,7 @@ void Floorplan::PrepareRenderFrame() {
             Renderer_OLD::QueuePointForDrawing(Point(*_hoveredVertex.position + glm::vec3(0, 2, 0), WHITE));
         }
     }
-    
+
 
 
     // Doors
@@ -501,7 +501,7 @@ void Floorplan::PrepareRenderFrame() {
             Renderer_OLD::QueuePointForDrawing(Point(door.GetFloorplanVertBackLeft(0.0f), LIGHT_BLUE));
             Renderer_OLD::QueuePointForDrawing(Point(door.GetFloorplanVertBackRight(0.0f), LIGHT_BLUE));
         }
-        Triangle triA;
+        /*Triangle triA;
         triA.color = color;
         triA.p3 = door.GetFloorplanVertFrontLeft(0);
         triA.p2 = door.GetFloorplanVertFrontRight(0);
@@ -512,7 +512,7 @@ void Floorplan::PrepareRenderFrame() {
         triB.p2 = door.GetFloorplanVertFrontRight(0);
         triB.p3 = door.GetFloorplanVertBackRight(0);
         Renderer_OLD::QueueTriangleForSolidRendering(triA);
-        Renderer_OLD::QueueTriangleForSolidRendering(triB);
+        Renderer_OLD::QueueTriangleForSolidRendering(triB);*/
     }
 }
 

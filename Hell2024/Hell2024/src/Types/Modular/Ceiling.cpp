@@ -9,7 +9,7 @@ Ceiling::Ceiling(float x1, float z1, float x2, float z2, float height, int mater
     this->x2 = x2;
     this->z2 = z2;
     this->height = height;
-    
+
 
     if (VAO != 0) {
         glDeleteVertexArrays(1, &VAO);
@@ -74,7 +74,7 @@ void Ceiling::CreateVertexData() {
     vertices.push_back(v1);
     vertices.push_back(v4);
     vertices.push_back(v3);
-    
+
     indices.clear();
     indices = { 0, 1, 2, 3, 4, 5 };
 
@@ -83,8 +83,8 @@ void Ceiling::CreateVertexData() {
     glm::vec3 boundsMax = glm::vec3(-1e30f);
     for (int i = 0; i < indices.size(); i++) {
         Vertex* vertex = &vertices[indices[i]];
-        boundsMin = fminf(boundsMin, vertex->position);
-        boundsMax = fmaxf(boundsMax, vertex->position);
+        boundsMin = Util::Vec3Min(boundsMin, vertex->position);
+        boundsMax = Util::Vec3Max(boundsMax, vertex->position);
     }
     aabb = AABB(boundsMin, boundsMax);
 }

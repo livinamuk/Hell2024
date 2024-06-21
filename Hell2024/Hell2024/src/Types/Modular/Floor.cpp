@@ -3,7 +3,7 @@
 #include "../../Util.hpp"
 
 ///////////////
-//           // 
+//           //
 //   Floor   //
 
 Floor::Floor(float x1, float z1, float x2, float z2, float height, int materialIndex, float textureScale) {
@@ -15,7 +15,7 @@ Floor::Floor(float x1, float z1, float x2, float z2, float height, int materialI
     v3.position = glm::vec3(x2, height, z2);
     v4.position = glm::vec3(x2, height, z1);
 
-    // remove these. you are only using them to create the bathroom ceiling. 
+    // remove these. you are only using them to create the bathroom ceiling.
     this->x1 = x1;
     this->z1 = z1;
     this->x2 = x2;
@@ -98,8 +98,8 @@ void Floor::CreateVertexData() {
     glm::vec3 boundsMax = glm::vec3(-1e30f);
     for (int i = 0; i < indices.size(); i++) {
         Vertex* vertex = &vertices[indices[i]];
-        boundsMin = fminf(boundsMin, vertex->position);
-        boundsMax = fmaxf(boundsMax, vertex->position);
+        boundsMin = Util::Vec3Min(boundsMin, vertex->position);
+        boundsMax = Util::Vec3Max(boundsMax, vertex->position);
     }
     aabb = AABB(boundsMin, boundsMax);
 }

@@ -13,12 +13,14 @@ namespace Game {
     MultiplayerMode _multiplayerMode = {};
     SplitscreenMode _splitscreenMode = {};
     bool _isLoaded = false;
-    double _lastFrame = 0;
-    double _thisFrame = 0;
     double _deltaTimeAccumulator = 0.0;
     double _fixedDeltaTime = 1.0 / 60.0;
     std::vector<Player> _players;
-    bool _showDebugText = false;
+    bool _showDebugText = true;
+
+    bool g_firstFrame = true;
+    double g_lastFrame = 0;
+    double g_thisFrame = 0;
 
     void EvaluateDebugKeyPresses();
 
@@ -27,9 +29,8 @@ namespace Game {
         _gameMode = GameMode::GAME;
         _multiplayerMode = MultiplayerMode::LOCAL;
         _splitscreenMode = SplitscreenMode::NONE;
-        _lastFrame = glfwGetTime();
-        _thisFrame = _lastFrame;
         _isLoaded = true;
+        g_firstFrame = true;
 
         Scene::LoadMapNEW("map.txt");
 
@@ -45,10 +46,15 @@ namespace Game {
 
     void Update() {
 
+        if (g_firstFrame) {
+            g_thisFrame = glfwGetTime();
+            g_firstFrame = false;
+        }
+
         // Delta time
-        _lastFrame = _thisFrame;
-        _thisFrame = glfwGetTime();
-        double deltaTime = _thisFrame - _lastFrame;
+        g_lastFrame = g_thisFrame;
+        g_thisFrame = glfwGetTime();
+        double deltaTime = g_thisFrame - g_lastFrame;
         _deltaTimeAccumulator += deltaTime;
 
         // Physics
@@ -283,6 +289,31 @@ namespace Game {
     █▀▀  █  █   █▀▄   █ █ █▀▀ ▀▀█
     ▀   ▀▀▀ ▀▀▀ ▀ ▀   ▀▀▀ ▀   ▀▀▀  */
 
+
+    void SpawnAmmo(std::string type, glm::vec3 position, glm::vec3 rotation, bool wakeOnStart) {
+
+        AmmoInfo* ammoInfo = WeaponManager::GetAmmoInfoByName(type);
+
+        if (ammoInfo) {
+            Scene::CreateGameObject();
+            GameObject* pickup = Scene::GetGameObjectByIndex(Scene::GetGameObjectCount() - 1);
+            pickup->SetPosition(position);
+            pickup->SetRotation(rotation);
+            pickup->SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
+            pickup->PutRigidBodyToSleep();
+            pickup->SetCollisionType(CollisionType::PICKUP);
+            pickup->SetKinematic(false);
+            pickup->SetWakeOnStart(wakeOnStart);
+            pickup->SetModel(ammoInfo->modelName);
+            pickup->SetName(type);
+            pickup->SetMeshMaterial(ammoInfo->materialName);
+            pickup->SetPickUpType(PickUpType::AMMO);
+            pickup->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName(ammoInfo->convexMeshModelName));
+            pickup->SetRaycastShapeFromModelIndex(AssetManager::GetModelIndexByName(ammoInfo->convexMeshModelName));
+            pickup->UpdateRigidBodyMassAndInertia(150.0f);
+        }
+    }
+
     void SpawnPickup(PickUpType pickupType, glm::vec3 position, glm::vec3 rotation, bool wakeOnStart) {
 
         if (pickupType == PickUpType::NONE) {
@@ -306,6 +337,16 @@ namespace Game {
             pickup->SetPickUpType(PickUpType::GLOCK_AMMO);
             pickup->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("GlockAmmoBox_ConvexMesh"));
             pickup->SetRaycastShapeFromModelIndex(AssetManager::GetModelIndexByName("GlockAmmoBox_ConvexMesh"));
+            pickup->UpdateRigidBodyMassAndInertia(150.0f);
+        }
+
+        if (pickupType == PickUpType::TOKAREV_AMMO) {
+            pickup->SetModel("TokarevAmmoBox");
+            pickup->SetName("GlockAmmo_PickUp");
+            pickup->SetMeshMaterial("TokarevAmmoBox");
+            pickup->SetPickUpType(PickUpType::GLOCK_AMMO);
+            pickup->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("TokarevAmmoBox_ConvexMesh"));
+            pickup->SetRaycastShapeFromModelIndex(AssetManager::GetModelIndexByName("TokarevAmmoBox_ConvexMesh"));
             pickup->UpdateRigidBodyMassAndInertia(150.0f);
         }
     }

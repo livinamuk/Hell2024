@@ -1,7 +1,7 @@
 #include "Player.h"
 
 namespace Game {
-    
+
     enum class GameMode { GAME, EDITOR_TOP_DOWN, EDITOR_3D };
     enum class MultiplayerMode { NONE, LOCAL, ONLINE };
 
@@ -11,10 +11,10 @@ namespace Game {
     void Update();
     void NextSplitScreenMode();
     void SetSplitscreenMode(SplitscreenMode mode);
-    void SetPlayerKeyboardAndMouseIndex(int playerIndex, int keyboardIndex, int mouseIndex); 
+    void SetPlayerKeyboardAndMouseIndex(int playerIndex, int keyboardIndex, int mouseIndex);
     void SetPlayerGroundedStates();
 
-    const int GetPlayerCount(); 
+    const int GetPlayerCount();
     const int GetPlayerIndexFromPlayerPointer(Player* player);
     Player* GetPlayerByIndex(unsigned int index);
     const GameMode& GetGameMode();
@@ -24,5 +24,6 @@ namespace Game {
 
     // Pickups
     void SpawnPickup(PickUpType pickupType, glm::vec3 position, glm::vec3 rotation, bool wakeOnStart);
+    void SpawnAmmo(std::string type, glm::vec3 position, glm::vec3 rotation, bool wakeOnStart);
 
 }

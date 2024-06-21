@@ -182,6 +182,16 @@ void AnimatedGameObject::EnableBlendingByMeshIndex(int meshIndex) {
     }
 }
 
+glm::mat4 AnimatedGameObject::GetJointWorldTransformByName(const char* jointName) {
+    for (int i = 0; i < m_jointWorldMatrices.size(); i++) {
+        if (jointName != "undefined" && Util::StrCmp(m_jointWorldMatrices[i].name, jointName)) {
+            return GetModelMatrix() * m_jointWorldMatrices[i].worldMatrix;
+        }
+    }
+    std::cout << "AnimatedGameObject::GetJointWorldTransformByName() failed, could not find bone name " << jointName << "\n";
+    return glm::mat4();
+}
+
 
 
 void AnimatedGameObject::SetAllMeshMaterials(std::string materialName) {
@@ -474,6 +484,8 @@ void AnimatedGameObject::SetSkinnedModel(std::string name) {
             MeshRenderingEntry& meshRenderingEntry = _meshRenderingEntries.emplace_back();
             meshRenderingEntry.meshName = skinnedMesh->name;
             meshRenderingEntry.meshIndex = _skinnedModel->GetMeshIndices()[i];
+
+            std::cout << i << ": " << skinnedMesh->name << "\n";
         }
     }
     else {

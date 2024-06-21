@@ -29,7 +29,7 @@ namespace AssetManager {
     Mesh* GetMeshByIndex(int index);
     Mesh* GetQuadMesh();
     int GetMeshIndexByName(const std::string& name);
-    int CreateMesh(std::string name, std::vector<Vertex>& vertices, std::vector<uint32_t>& indices);
+    int CreateMesh(std::string name, std::vector<Vertex>& vertices, std::vector<uint32_t>& indices, glm::vec3 aabbMin = glm::vec3(0), glm::vec3 aabbMax = glm::vec3(0));
 
     unsigned int GetUpFacingPlaneMeshIndex();
     unsigned int GetQuadMeshIndex();

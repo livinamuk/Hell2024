@@ -23,7 +23,8 @@ struct FrameData {
         Buffer animatedRenderItems3D;
         Buffer animatedTransforms;
         Buffer lights;
-        Buffer glassRendeItems;
+        Buffer glassRenderItems;
+        Buffer muzzleFlashData;
 
         DrawCommandBuffers drawCommandBuffers[4]; // one struct for each player
 

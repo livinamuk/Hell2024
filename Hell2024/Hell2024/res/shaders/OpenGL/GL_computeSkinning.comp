@@ -1,0 +1,100 @@
+#version 430 core
+
+layout (local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+
+struct Vertex {
+    float position[3];
+    float normal[3];
+    float uv[2];
+    float tangent[3];
+};
+
+struct WeightedVertex {
+    float position[3];
+    float normal[3];
+    float uv[2];
+    float tangent[3];
+    int boneID[4];
+    float weight[4];
+};
+
+layout(std430, binding = 6) buffer outputVertexBuffer{
+    Vertex OutputVertexBuffer[];
+};
+layout(std430, binding = 7) buffer inputVertexBuffer{
+    WeightedVertex InputVertexBuffer[];
+};
+
+layout(std140,set = 0, binding = 8) readonly buffer B {mat4 data[];} animatedTransforms;
+layout(std430,set = 0, binding = 9) readonly buffer C {int data[];} baseAnimatedTransformIndices;
+
+uniform int animatedGameObjectIndex;
+uniform int baseInputVertex;
+uniform int baseOutputVertex;
+
+void main() {
+
+	uint index = gl_GlobalInvocationID.x;
+	float pos_x = InputVertexBuffer[index + baseInputVertex].position[0];
+	float pos_y = InputVertexBuffer[index + baseInputVertex].position[1];
+	float pos_z = InputVertexBuffer[index + baseInputVertex].position[2];
+	float norm_x = InputVertexBuffer[index + baseInputVertex].normal[0];
+	float norm_y = InputVertexBuffer[index + baseInputVertex].normal[1];
+	float norm_z = InputVertexBuffer[index + baseInputVertex].normal[2];
+	float tangent_x = InputVertexBuffer[index + baseInputVertex].tangent[0];
+	float tangent_y = InputVertexBuffer[index + baseInputVertex].tangent[1];
+	float tangent_z = InputVertexBuffer[index + baseInputVertex].tangent[2];
+	float u = InputVertexBuffer[index + baseInputVertex].uv[0];
+	float v = InputVertexBuffer[index + baseInputVertex].uv[1];
+	int animatedTransformsOffset = baseAnimatedTransformIndices.data[animatedGameObjectIndex];
+
+	vec4 vertexPosition = vec4(pos_x, pos_y, pos_z, 1.0);
+	vec4 vertexNormal = vec4(norm_x, norm_y, norm_z, 0.0);
+	vec4 vertexTangent = vec4(tangent_x, tangent_y, tangent_z, 0.0);
+
+	int boneID[4];
+	boneID[0] = InputVertexBuffer[index + baseInputVertex].boneID[0];
+	boneID[1] = InputVertexBuffer[index + baseInputVertex].boneID[1];
+	boneID[2] = InputVertexBuffer[index + baseInputVertex].boneID[2];
+	boneID[3] = InputVertexBuffer[index + baseInputVertex].boneID[3];
+
+	float weight[4];
+	weight[0] = InputVertexBuffer[index + baseInputVertex].weight[0];
+	weight[1] = InputVertexBuffer[index + baseInputVertex].weight[1];
+	weight[2] = InputVertexBuffer[index + baseInputVertex].weight[2];
+	weight[3] = InputVertexBuffer[index + baseInputVertex].weight[3];
+
+	vec4 totalLocalPos = vec4(0.0);
+	vec4 totalNormal = vec4(0.0);
+	vec4 totalTangent = vec4(0.0);
+
+	for(int i=0;i<4;i++)  {
+
+		mat4 jointTransform = animatedTransforms.data[int(boneID[i]) + animatedTransformsOffset];
+		vec4 posePosition =  jointTransform * vertexPosition * weight[i];
+		vec4 worldNormal = jointTransform * vertexNormal * weight[i];
+		vec4 worldTangent = jointTransform * vertexTangent * weight[i];
+
+		totalLocalPos += posePosition;
+		totalNormal += worldNormal;
+		totalTangent += worldTangent;
+	}
+
+	totalNormal.xyz =  normalize(totalNormal.xyz);
+
+	OutputVertexBuffer[index + baseOutputVertex].position[0] = totalLocalPos.x;
+	OutputVertexBuffer[index + baseOutputVertex].position[1] = totalLocalPos.y;
+	OutputVertexBuffer[index + baseOutputVertex].position[2] = totalLocalPos.z;
+
+	OutputVertexBuffer[index + baseOutputVertex].normal[0] = totalNormal.x;
+	OutputVertexBuffer[index + baseOutputVertex].normal[1] = totalNormal.y;
+	OutputVertexBuffer[index + baseOutputVertex].normal[2] = totalNormal.z;
+
+	OutputVertexBuffer[index + baseOutputVertex].tangent[0] = totalTangent.x;
+	OutputVertexBuffer[index + baseOutputVertex].tangent[1] = totalTangent.y;
+	OutputVertexBuffer[index + baseOutputVertex].tangent[2] = totalTangent.z;
+
+	OutputVertexBuffer[index + baseOutputVertex].uv[0] = u;
+	OutputVertexBuffer[index + baseOutputVertex].uv[1] = v;
+}
+

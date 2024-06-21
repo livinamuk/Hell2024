@@ -1553,19 +1553,6 @@ void DrawHudAmmo(Player* player) {
     }
     glm::vec3 ammoColor = glm::vec3(0.16f, 0.78f, 0.23f);
 
-
-    if (player->GetCurrentWeaponIndex() != Weapon::KNIFE) {
-        std::string clipAmmo = std::to_string(player->GetCurrentWeaponClipAmmo());
-        std::string totalAmmo = std::to_string(player->GetCurrentWeaponTotalAmmo());
-        if (player->GetCurrentWeaponClipAmmo() == 0) {
-            ammoColor = glm::vec3(0.8f, 0.05f, 0.05f);
-        }
-        _shaders.UI.SetVec3("color", ammoColor);
-        NumberBlitter::Draw(clipAmmo.c_str(), slashXPos - 4, slashYPos, viewportWidth, viewportHeight, scale, NumberBlitter::Justification::RIGHT);
-        _shaders.UI.SetVec3("color", WHITE);
-        NumberBlitter::Draw("/", slashXPos, slashYPos, viewportWidth, viewportHeight, scale, NumberBlitter::Justification::LEFT);
-        NumberBlitter::Draw(totalAmmo.c_str(), slashXPos + 17, slashYPos, viewportWidth, viewportHeight, scale * 0.8f, NumberBlitter::Justification::LEFT);
-    }
 }
 
 void GeometryPass(Player* player) {
@@ -1983,12 +1970,12 @@ void DebugPass(Player* player) {
             RTMesh& mesh = Scene::_rtMesh[instance.meshIndex];
 
             for (unsigned int i = mesh.baseVertex; i < mesh.baseVertex + mesh.vertexCount; i+=3) {
-                Triangle t;
-                t.p1 = instance.modelMatrix * glm::vec4(Scene::_rtVertices[i+0], 1.0);
-                t.p2 = instance.modelMatrix * glm::vec4(Scene::_rtVertices[i+1], 1.0);
-                t.p3 = instance.modelMatrix * glm::vec4(Scene::_rtVertices[i+2], 1.0);
-                t.color = YELLOW;
-                Renderer_OLD::QueueTriangleForLineRendering(t);
+               // Triangle t;
+              //  t.p1 = instance.modelMatrix * glm::vec4(Scene::_rtVertices[i+0], 1.0);
+              //  t.p2 = instance.modelMatrix * glm::vec4(Scene::_rtVertices[i+1], 1.0);
+             //   t.p3 = instance.modelMatrix * glm::vec4(Scene::_rtVertices[i+2], 1.0);
+           //     t.color = YELLOW;
+           //     Renderer_OLD::QueueTriangleForLineRendering(t);
             }
         }
         glDisable(GL_DEPTH_TEST);
@@ -3189,15 +3176,15 @@ void Renderer_OLD::QueuePointForDrawing(Point point) {
 }
 
 void Renderer_OLD::QueueTriangleForLineRendering(Triangle& triangle) {
-    _lines.push_back(Line(triangle.p1, triangle.p2, triangle.color));
-    _lines.push_back(Line(triangle.p2, triangle.p3, triangle.color));
-    _lines.push_back(Line(triangle.p3, triangle.p1, triangle.color));
+  //  _lines.push_back(Line(triangle.p1, triangle.p2, triangle.color));
+  //  _lines.push_back(Line(triangle.p2, triangle.p3, triangle.color));
+  //  _lines.push_back(Line(triangle.p3, triangle.p1, triangle.color));
 }
 
 void Renderer_OLD::QueueTriangleForSolidRendering(Triangle& triangle) {
-    _solidTrianglePoints.push_back(Point(triangle.p1, triangle.color));
-    _solidTrianglePoints.push_back(Point(triangle.p2, triangle.color));
-    _solidTrianglePoints.push_back(Point(triangle.p3, triangle.color));
+ //   _solidTrianglePoints.push_back(Point(triangle.p1, triangle.color));
+  //  _solidTrianglePoints.push_back(Point(triangle.p2, triangle.color));
+ //   _solidTrianglePoints.push_back(Point(triangle.p3, triangle.color));
 }
 
 void DrawFullscreenQuad() {
@@ -3273,7 +3260,7 @@ void DrawMuzzleFlashes(Player* player) {
     glViewport(0, 0, gBuffer.GetWidth(), gBuffer.GetHeight());
 
     muzzleFlash.m_CurrentTime = player->GetMuzzleFlashTime();
-    glm::vec3 worldPosition = player->GetBarrelPosition();
+    glm::vec3 worldPosition = glm::vec3(0);// ->GetBarrelPosition();
 
     Transform t;
     t.position = worldPosition;

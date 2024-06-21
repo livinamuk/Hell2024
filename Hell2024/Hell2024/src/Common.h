@@ -17,8 +17,8 @@
 enum class API { OPENGL, VULKAN, UNDEFINED };
 enum class WindowedMode { WINDOWED, FULLSCREEN };
 enum class SplitscreenMode { NONE, TWO_PLAYER, FOUR_PLAYER, SPLITSCREEN_MODE_COUNT };
-enum class BulletHoleDecalType { REGULAR, GLASS }; 
-enum class PickUpType { NONE, GLOCK, GLOCK_AMMO, SHOTGUN, SHOTGUN_AMMO, AKS74U, AKS74U_AMMO, AKS74U_SCOPE };
+enum class BulletHoleDecalType { REGULAR, GLASS };
+enum class PickUpType { NONE, AMMO, GLOCK, GLOCK_AMMO, TOKAREV_AMMO, SHOTGUN, SHOTGUN_AMMO, AKS74U, AKS74U_AMMO, AKS74U_SCOPE };
 
 enum EngineMode { GAME = 0, FLOORPLAN, EDITOR };
 enum Weapon { KNIFE = 0, GLOCK, SHOTGUN, AKS74U, MP7, WEAPON_COUNT };
@@ -41,6 +41,7 @@ enum WeaponAction {
 };
 
 #define PLAYER_COUNT 4
+#define UNDEFINED_STRING "UNDEFINED_STRING"
 
 #define AUDIO_SELECT "SELECT.wav"
 #define ENV_MAP_SIZE 2048
@@ -74,7 +75,7 @@ enum WeaponAction {
 #define ARRAY_SIZE_IN_ELEMENTS(a) (sizeof(a)/sizeof(a[0]))
 #define SAFE_DELETE(p) if (p) { delete p; p = NULL; }
 #define ToRadian(x) (float)(((x) * HELL_PI / 180.0f))
-#define ToDegree(x) (float)(((x) * 180.0f / HELL_PI)) 
+#define ToDegree(x) (float)(((x) * 180.0f / HELL_PI))
 
 #define BLACK   glm::vec3(0,0,0)
 #define WHITE   glm::vec3(1,1,1)
@@ -176,13 +177,13 @@ struct Line {
     }
 };
 
-struct Triangle {
+/*struct Triangle {
     glm::vec3 p1 = glm::vec3(0);
     glm::vec3 p2 = glm::vec3(0);
     glm::vec3 p3 = glm::vec3(0);
     glm::vec3 normal = glm::vec3(0);
     glm::vec3 color = glm::vec3(0);
-};
+};*/
 
 struct IntersectionResult {
     bool found = false;
@@ -235,7 +236,7 @@ struct FileInfo {
 
 struct Material {
     Material() {}
-    std::string _name = "undefined";
+    std::string _name = UNDEFINED_STRING;
     int _basecolor = 0;
     int _normal = 0;
     int _rma = 0;
@@ -282,36 +283,76 @@ enum CollisionGroup {
     RAGDOLL = 32,
 };
 
-struct AABB2 {
+/*struct AABB2 {
     glm::vec3 position = glm::vec3(0);
     glm::vec3 extents = glm::vec3(0);
-};
+};*/
 
-inline glm::vec3 fminf(const glm::vec3& a, const glm::vec3& b) { return glm::vec3(std::min(a.x, b.x), std::min(a.y, b.y), std::min(a.z, b.z)); }
-inline glm::vec3 fmaxf(const glm::vec3& a, const glm::vec3& b) { return glm::vec3(std::max(a.x, b.x), std::max(a.y, b.y), std::max(a.z, b.z)); }
+
+// RAY TRACING SHIT
 
 struct AABB {
     AABB() {}
     AABB(glm::vec3 min, glm::vec3 max) {
         boundsMin = min;
         boundsMax = max;
+        CalculateCenter();
     }
     void Grow(AABB& b) {
         if (b.boundsMin.x != 1e30f && b.boundsMin.x != -1e30f) {
             Grow(b.boundsMin); Grow(b.boundsMax);
         }
+        CalculateCenter();
     }
     void Grow(glm::vec3 p) {
-        boundsMin = fminf(boundsMin, p);
-        boundsMax = fmaxf(boundsMax, p);
+        boundsMin = glm::vec3(std::min(boundsMin.x, p.x), std::min(boundsMin.y, p.y), std::min(boundsMin.z, p.z));
+        boundsMax = glm::vec3(std::max(boundsMax.x, p.x), std::max(boundsMax.y, p.y), std::max(boundsMax.z, p.z));
+        CalculateCenter();
     }
     float Area() {
         glm::vec3 e = boundsMax - boundsMin; // box extent
         return e.x * e.y + e.y * e.z + e.z * e.x;
     }
-    glm::vec3 GetCenter() {
-        return { (boundsMin.x + boundsMax.x) / 2, (boundsMin.y + boundsMax.y) / 2, (boundsMin.z + boundsMax.z) / 2 };
+    const glm::vec3 GetCenter() {
+        return center;
     }
+    const glm::vec3 GetBoundsMin() {
+        return boundsMin;
+    }
+    const glm::vec3 GetBoundsMax() {
+        return boundsMax;
+    }
+
+public: // make private later
+    glm::vec3 center = glm::vec3(0);
     glm::vec3 boundsMin = glm::vec3(1e30f);
     glm::vec3 boundsMax = glm::vec3(-1e30f);
+
+    void CalculateCenter() {
+        center = { (boundsMin.x + boundsMax.x) / 2, (boundsMin.y + boundsMax.y) / 2, (boundsMin.z + boundsMax.z) / 2 };
+    }
+};
+
+struct BLASInstance {
+    glm::mat4 worldTransform = glm::mat4(1);
+    int blsaRootNodeIndex = 0;
+    int baseTriangleIndex = 0;
+    int baseVertex = 0;
+    int baseIndex = 0;
+};
+
+struct Triangle {
+    glm::vec3 v0 = glm::vec3(0);
+    glm::vec3 v1 = glm::vec3(0);
+    glm::vec3 v2 = glm::vec3(0);
+    glm::vec3 centoid = glm::vec3(0);
+    glm::vec3 aabbMin = glm::vec3(0);
+    glm::vec3 aabbMax = glm::vec3(0);
+};
+
+
+struct BVHNode {
+    glm::vec3 aabbMin; int leftFirst = -1;
+    glm::vec3 aabbMax; int instanceCount = -1;
+    bool IsLeaf() { return instanceCount > 0; }
 };

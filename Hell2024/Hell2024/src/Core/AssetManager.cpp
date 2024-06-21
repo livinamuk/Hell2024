@@ -603,8 +603,11 @@ void AssetManager::LoadModel(const std::string filepath) {
         model.SetName(Util::GetFilename(filepath));
     }
 
-    glm::vec3 minPos = glm::vec3(9999, 9999, 9999);
-    glm::vec3 maxPos = glm::vec3(0, 0, 0);
+    glm::vec3 modelAabbMin = glm::vec3(std::numeric_limits<float>::max());
+    glm::vec3 modelAabbMax = glm::vec3(-std::numeric_limits<float>::max());
+
+    //glm::vec3 minPos = glm::vec3(9999, 9999, 9999);
+    //glm::vec3 maxPos = glm::vec3(0, 0, 0);
 
     tinyobj::attrib_t attrib;
     std::vector<tinyobj::shape_t> shapes;
@@ -623,6 +626,8 @@ void AssetManager::LoadModel(const std::string filepath) {
 
         std::vector<Vertex> vertices;
         std::vector<uint32_t> indices;
+        glm::vec3 aabbMin = glm::vec3(std::numeric_limits<float>::max());
+        glm::vec3 aabbMax = glm::vec3(-std::numeric_limits<float>::max());
 
         for (int i = 0; i < shape.mesh.indices.size(); i++) {
             Vertex vertex = {};
@@ -648,12 +653,25 @@ void AssetManager::LoadModel(const std::string filepath) {
             }
 
             // store bounding box shit
-            minPos.x = std::min(minPos.x, vertex.position.x);
+            /*minPos.x = std::min(minPos.x, vertex.position.x);
             minPos.y = std::min(minPos.y, vertex.position.y);
             minPos.z = std::min(minPos.z, vertex.position.z);
             maxPos.x = std::max(maxPos.x, vertex.position.x);
             maxPos.y = std::max(maxPos.y, vertex.position.y);
-            maxPos.z = std::max(maxPos.z, vertex.position.z);
+            maxPos.z = std::max(maxPos.z, vertex.position.z);*/
+
+            // store bounding box shit
+            aabbMin.x = std::min(aabbMin.x, vertex.position.x);
+            aabbMin.y = std::min(aabbMin.y, vertex.position.y);
+            aabbMin.z = std::min(aabbMin.z, vertex.position.z);
+            aabbMax.x = std::max(aabbMax.x, vertex.position.x);
+            aabbMax.y = std::max(aabbMax.y, vertex.position.y);
+            aabbMax.z = std::max(aabbMax.z, vertex.position.z);
+
+
+            if (_models[modelIndex].GetName() == "Casing9mm") {
+                //std::cout << "vertex.position: " << Util::Vec3ToString10(vertex.position) << "\n";
+            }
 
             indices.push_back(uniqueVertices[vertex]);
         }
@@ -675,19 +693,26 @@ void AssetManager::LoadModel(const std::string filepath) {
             vert2->tangent = tangent;
         }
 
+        modelAabbMin = Util::Vec3Min(modelAabbMin, aabbMin);
+        modelAabbMax = Util::Vec3Max(modelAabbMax, aabbMax);
+
+        if (_models[modelIndex].GetName() == "Casing9mm") {
+            //std::cout << "modelAabbMin: " << Util::Vec3ToString10(modelAabbMin) << "\n";
+            //std::cout << "modelAabbMax: " << Util::Vec3ToString10(modelAabbMax) << "\n";
+        }
+
+
         std::lock_guard<std::mutex> lock(_modelsMutex);
-        _models[modelIndex].AddMeshIndex(AssetManager::CreateMesh(shape.name, vertices, indices));
+        _models[modelIndex].AddMeshIndex(AssetManager::CreateMesh(shape.name, vertices, indices, aabbMin, aabbMax));
     }
 
-
-
     // Build the bounding box
-    float width = std::abs(maxPos.x - minPos.x);
-    float height = std::abs(maxPos.y - minPos.y);
-    float depth = std::abs(maxPos.z - minPos.z);
+    float width = std::abs(modelAabbMax.x - modelAabbMin.x);
+    float height = std::abs(modelAabbMax.y - modelAabbMin.y);
+    float depth = std::abs(modelAabbMax.z - modelAabbMin.z);
     BoundingBox boundingBox;
     boundingBox.size = glm::vec3(width, height, depth);
-    boundingBox.offsetFromModelOrigin = minPos;
+    boundingBox.offsetFromModelOrigin = modelAabbMin;
     std::lock_guard<std::mutex> lock(_modelsMutex);
     _models[modelIndex].SetBoundingBox(boundingBox);
 }
@@ -723,7 +748,7 @@ bool AssetManager::ModelExists(const std::string& filename) {
 //                 //
 //      Mesh       //
 
-int AssetManager::CreateMesh(std::string name, std::vector<Vertex>& vertices, std::vector<uint32_t>& indices) {
+int AssetManager::CreateMesh(std::string name, std::vector<Vertex>& vertices, std::vector<uint32_t>& indices, glm::vec3 aabbMin, glm::vec3 aabbMax) {
 
     Mesh& mesh = _meshes.emplace_back();
     mesh.baseVertex = _nextVertexInsert;
@@ -731,6 +756,8 @@ int AssetManager::CreateMesh(std::string name, std::vector<Vertex>& vertices, st
     mesh.vertexCount = (uint32_t)vertices.size();
     mesh.indexCount = (uint32_t)indices.size();
     mesh.name = name;
+    mesh.aabbMin = aabbMin;
+    mesh.aabbMax = aabbMax;
 
     _vertices.reserve(_vertices.size() + vertices.size());
     _vertices.insert(std::end(_vertices), std::begin(vertices), std::end(vertices));
@@ -894,6 +921,25 @@ void AssetManager::BuildMaterials() {
             }
         }
     }
+
+    // Extra hardcoded materials
+    Material* glockMaterial = GetMaterialByIndex(GetMaterialIndex("Glock"));
+    if (glockMaterial) {
+        Material& material = _materials.emplace_back(Material());
+        material._name = "GoldenGlock";
+        material._basecolor = AssetManager::GetTextureIndexByName("Gold_ALB");
+        material._normal = AssetManager::GetTextureIndexByName("Glock_NRM");
+        material._rma = AssetManager::GetTextureIndexByName("Gold_RMA");
+    }
+    Material* knifeMaterial = GetMaterialByIndex(GetMaterialIndex("Knife"));
+    if (knifeMaterial) {
+        Material& material = _materials.emplace_back(Material());
+        material._name = "GoldenKnife";
+        material._basecolor = AssetManager::GetTextureIndexByName("Gold_ALB");
+        material._normal = AssetManager::GetTextureIndexByName("Knife_NRM");
+        material._rma = AssetManager::GetTextureIndexByName("Gold_RMA");
+    }
+
 }
 
 Material* AssetManager::GetMaterialByIndex(int index) {

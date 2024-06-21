@@ -24,6 +24,14 @@
 
 namespace Util {
 
+    inline glm::vec3 Vec3Min(const glm::vec3& a, const glm::vec3& b) {
+        return glm::vec3(std::min(a.x, b.x), std::min(a.y, b.y), std::min(a.z, b.z));
+    }
+
+    inline glm::vec3 Vec3Max(const glm::vec3& a, const glm::vec3& b) {
+        return glm::vec3(std::max(a.x, b.x), std::max(a.y, b.y), std::max(a.z, b.z));
+    }
+
     inline std::string Lowercase(std::string& str) {
         std::string result = "";
         for (auto& c : str) {
@@ -283,7 +291,7 @@ namespace Util {
         PxRaycastBuffer hit;
         // [in] Define what parts of PxRaycastHit we're interested in
      //   const PxHitFlags outputFlags = PxHitFlag::ePOSITION | PxHitFlag::eNORMAL | ~PxHitFlag::eMESH_BOTH_SIDES;
-       
+
         PxHitFlags outputFlags = PxHitFlag::ePOSITION | PxHitFlag::eNORMAL | PxHitFlag::eMESH_BOTH_SIDES;
         if (cullBackFacing) {
             outputFlags = PxHitFlag::ePOSITION | PxHitFlag::eNORMAL;
@@ -483,7 +491,7 @@ namespace Util {
         result += std::format("{:.2f}", m[0][1]) + ", " + std::format("{:.2f}", m[1][1]) + ", " + std::format("{:.2f}", m[2][1]) + ", " + std::format("{:.2f}", m[3][1]) + "\n";
         result += std::format("{:.2f}", m[0][2]) + ", " + std::format("{:.2f}", m[1][2]) + ", " + std::format("{:.2f}", m[2][2]) + ", " + std::format("{:.2f}", m[3][2]) + "\n";
         result += std::format("{:.2f}", m[0][3]) + ", " + std::format("{:.2f}", m[1][3]) + ", " + std::format("{:.2f}", m[2][3]) + ", " + std::format("{:.2f}", m[3][3]);
-       */ 
+       */
         result += std::format("{:.2f}", m[0][0]) + ", " + std::format("{:.2f}", m[1][0]) + ", " + std::format("{:.2f}", m[2][0]) + ", " + std::format("{:.2f}", m[3][0]) + "\n";
         result += std::format("{:.2f}", m[0][1]) + ", " + std::format("{:.2f}", m[1][1]) + ", " + std::format("{:.2f}", m[2][1]) + ", " + std::format("{:.2f}", m[3][1]) + "\n";
         result += std::format("{:.2f}", m[0][2]) + ", " + std::format("{:.2f}", m[1][2]) + ", " + std::format("{:.2f}", m[2][2]) + ", " + std::format("{:.2f}", m[3][2]) + "\n";
@@ -523,9 +531,9 @@ namespace Util {
     }
 
     inline glm::vec3 NormalFromTriangle(Triangle triangle) {
-        glm::vec3 pos0 = triangle.p1;
-        glm::vec3 pos1 = triangle.p2;
-        glm::vec3 pos2 = triangle.p3;
+        glm::vec3 pos0 = triangle.v0;
+        glm::vec3 pos1 = triangle.v1;
+        glm::vec3 pos2 = triangle.v2;
         return glm::normalize(glm::cross(pos1 - pos0, pos2 - pos0));
     }
 
@@ -553,30 +561,30 @@ namespace Util {
         vert1->tangent = tangent;
         vert2->tangent = tangent;
     }
-
+    /*
     inline float GetMaxXPointOfTri(Triangle& tri) {
-        return std::max(std::max(tri.p1.x, tri.p2.x), tri.p3.x);
+        return std::max(std::max(tri.v0.x, tri.p2.x), tri.p3.x);
     }
     inline float GetMaxYPointOfTri(Triangle& tri) {
-        return std::max(std::max(tri.p1.y, tri.p2.y), tri.p3.y);
+        return std::max(std::max(tri.v0.y, tri.p2.y), tri.p3.y);
     }
     inline float GetMaxZPointOfTri(Triangle& tri) {
-        return std::max(std::max(tri.p1.z, tri.p2.z), tri.p3.z);
+        return std::max(std::max(tri.v0.z, tri.p2.z), tri.p3.z);
     }
     inline float GetMinXPointOfTri(Triangle& tri) {
-        return std::min(std::min(tri.p1.x, tri.p2.x), tri.p3.x);
+        return std::min(std::min(tri.v0.x, tri.p2.x), tri.p3.x);
     }
     inline float GetMinYPointOfTri(Triangle& tri) {
-        return std::min(std::min(tri.p1.y, tri.p2.y), tri.p3.y);
+        return std::min(std::min(tri.v0.y, tri.p2.y), tri.p3.y);
     }
     inline float GetMinZPointOfTri(Triangle& tri) {
-        return std::min(std::min(tri.p1.z, tri.p2.z), tri.p3.z);
-    }
+        return std::min(std::min(tri.v0.z, tri.p2.z), tri.p3.z);
+    }*/
 
-    namespace RayTracing {
+   /* namespace RayTracing {
 
         inline bool AnyHit(std::vector<Triangle>& triangles, glm::vec3 rayOrign, glm::vec3 rayDir, float minDist, float maxDist) {
-            
+
             for (Triangle& tri : triangles) {
 
                 // Skip back facing
@@ -592,7 +600,7 @@ namespace Util {
             // No hit found
             return false;
         }
-    }
+    }*/
 
     inline float MapRange(float inValue, float minInRange, float maxInRange, float minOutRange, float maxOutRange) {
         float x = (inValue - minInRange) / (maxInRange - minInRange);
@@ -603,7 +611,7 @@ namespace Util {
         float x = (inValue - minInRange) / (float)(maxInRange - minInRange);
         return minOutRange + (maxOutRange - minOutRange) * x;
     }*/
-    
+
     /*
     inline void AnyHit(glm::vec3 rayOrigin, glm::vec3 rayDirection, float maxDistance, std::vector<Triangle>& triangles, RayCastResult& out, bool ignoreBackFacing = true) {
 

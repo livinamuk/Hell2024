@@ -14,6 +14,9 @@ layout(set = 2, binding = 3) uniform sampler2D depthTexture;
 layout(set = 2, binding = 4) uniform sampler2D raytracingOutput;
 layout(set = 2, binding = 5) uniform sampler2D positionTexture;
 layout(set = 2, binding = 7) uniform sampler2D glassTexture;
+layout(set = 2, binding = 8) uniform sampler2D emissiveTexture;
+
+
 
 struct CameraData {
     mat4 projection;
@@ -308,8 +311,13 @@ void main() {
 	vec3 glassColor = texture(glassTexture, texCoord).rgb;
 
 
+
+	vec3 emissiveColor = texture(emissiveTexture, texCoord).rgb;
+	outFragColor.rgb += emissiveColor.rgb;
+
 	//outFragColor.rgb = baseColor.rgb;
 	outFragColor.rgb += glassColor.rgb;
+
 
 
 

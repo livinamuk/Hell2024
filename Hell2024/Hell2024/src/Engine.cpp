@@ -24,13 +24,12 @@
 void Engine::Run() {
 
     BackEnd::Init(API::OPENGL);
+    WeaponManager::Init();
 
     while (BackEnd::WindowIsOpen()) {
 
         BackEnd::BeginFrame();
         BackEnd::UpdateSubSystems();
-
-        WeaponManager::Init();
 
         // Load files from disk
         if (!AssetManager::LoadingComplete()) {
@@ -42,22 +41,6 @@ void Engine::Run() {
             Game::Create();
             AssetManager::UploadVertexData();
             AssetManager::UploadWeightedVertexData();
-
-
-           // SkinnedModel* ptr = AssetManager::GetSkinnedModelByName("UniSexGuyScaled");
-            SkinnedModel* ptr = AssetManager::GetSkinnedModelByName("Glock");
-            for (int i = 0; i < ptr->GetMeshCount(); i++) {
-
-                SkinnedMesh* mesh = AssetManager::GetSkinnedMeshByIndex(ptr->GetMeshIndices()[i]);
-
-                std::cout << i << ": " << mesh->name << "\n";
-                std::cout << "vertexCount: " << mesh->vertexCount << "\n";
-                std::cout << "indexCount: " << mesh->indexCount << "\n";
-                std::cout << "baseVertexGlobal: " << mesh->baseVertexGlobal << "\n";
-                std::cout << "baseVertexLocal: " << mesh->baseVertexLocal << "\n";
-                std::cout << "baseIndex: " << mesh->baseIndex << "\n\n";
-
-            }
         }
         // The game
         else {

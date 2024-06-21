@@ -61,6 +61,13 @@ struct PushConstants {
     int emptp2;
 };
 
+struct BlurPushConstants {
+    int screenWidth;
+    int screenHeight;
+    int empty0;
+    int empty1;
+};
+
 struct SkinningPushConstants {
     int vertexCount;
     int baseInputVertex;

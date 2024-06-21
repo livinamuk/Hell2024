@@ -121,7 +121,7 @@ void Wall::CreateVertexData() {
         // Did ya find a door?
         if (closestDoor != nullptr) {
 
-            // The wall piece from cursor to door            
+            // The wall piece from cursor to door
             Vertex v1, v2, v3, v4;
             v1.position = cursor;
             v2.position = cursor + glm::vec3(0, height, 0);
@@ -195,7 +195,7 @@ void Wall::CreateVertexData() {
         }
         else if (closestWindow != nullptr) {
 
-            // The wall piece from cursor to window            
+            // The wall piece from cursor to window
             Vertex v1, v2, v3, v4;
             v1.position = cursor;
             v2.position = cursor + glm::vec3(0, height, 0);
@@ -294,7 +294,7 @@ void Wall::CreateVertexData() {
         // You're on the final bit of wall then aren't ya
         else {
 
-            // The wall piece from cursor to door            
+            // The wall piece from cursor to door
             Vertex v1, v2, v3, v4;
             v1.position = cursor;
             v2.position = cursor + glm::vec3(0, height, 0);
@@ -346,8 +346,8 @@ void Wall::CreateVertexData() {
     glm::vec3 boundsMax = glm::vec3(-1e30f);
     for (int i = 0; i < indices.size(); i++) {
         Vertex* vertex = &vertices[indices[i]];
-        boundsMin = fminf(boundsMin, vertex->position);
-        boundsMax = fmaxf(boundsMax, vertex->position);
+        boundsMin = Util::Vec3Min(boundsMin, vertex->position);
+        boundsMax = Util::Vec3Max(boundsMax, vertex->position);
     }
     aabb = AABB(boundsMin, boundsMax);
 }
@@ -429,7 +429,7 @@ void Wall::UpdateRenderItems() {
         renderItem.normalTextureIndex = AssetManager::GetMaterialByIndex(materialIndex)->_normal;
         renderItem.rmaTextureIndex = AssetManager::GetMaterialByIndex(materialIndex)->_rma;
         renderItems.push_back(renderItem);
-    }    
+    }
 }
 
 std::vector<RenderItem3D>& Wall::GetRenderItems() {
