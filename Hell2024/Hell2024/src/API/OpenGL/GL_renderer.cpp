@@ -671,6 +671,7 @@ void SkyBoxPass(RenderData& renderData) {
         shader.SetMat4("view", renderData.cameraData[0].view);
         shader.SetMat4("model", skyBoxTransform.to_mat4());
         shader.SetInt("playerIndex", i);
+        shader.SetVec3("skyboxTint", Game::GameSettings().skyBoxTint);
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTexture->GetGLTexture().GetID());
         glBindVertexArray(OpenGLBackEnd::GetVertexDataVAO());

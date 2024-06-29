@@ -12,6 +12,7 @@ namespace Game {
     GameMode _gameMode = {};
     MultiplayerMode _multiplayerMode = {};
     SplitscreenMode _splitscreenMode = {};
+    GameSettings g_gameSettings;
     bool _isLoaded = false;
     double _deltaTimeAccumulator = 0.0;
     double _fixedDeltaTime = 1.0 / 60.0;
@@ -21,6 +22,7 @@ namespace Game {
     bool g_firstFrame = true;
     double g_lastFrame = 0;
     double g_thisFrame = 0;
+    bool g_takeDamageOutside = false;
 
     void EvaluateDebugKeyPresses();
 
@@ -38,6 +40,12 @@ namespace Game {
         GlobalIllumination::CreateLightVolume(7.0f, 2.7f, 11.0f, 0.0f, 0.0f, 0.0f);
 
         CreatePlayers(4);
+
+        g_gameSettings.takeDamageOutside = true;
+        g_gameSettings.skyBoxTint = glm::vec3(0.3, 0.15, 0.03);
+
+        g_gameSettings.takeDamageOutside = false;
+        g_gameSettings.skyBoxTint = glm::vec3(1);
     }
 
     bool IsLoaded() {
@@ -349,5 +357,11 @@ namespace Game {
             pickup->SetRaycastShapeFromModelIndex(AssetManager::GetModelIndexByName("TokarevAmmoBox_ConvexMesh"));
             pickup->UpdateRigidBodyMassAndInertia(150.0f);
         }
+    }
+
+    // sETTINGS
+
+    const GameSettings& GetSettings() {
+        return g_gameSettings;
     }
 }

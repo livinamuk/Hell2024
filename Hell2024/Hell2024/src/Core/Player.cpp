@@ -29,7 +29,7 @@ Player::Player(int playerIndex) {
 void Player::Update(float deltaTime) {
 
     AnimatedGameObject* characterModel = Scene::GetAnimatedGameObjectByIndex(m_characterModelAnimatedGameObjectIndex);
-    AnimatedGameObject* firstPersonWeapon = Scene::GetAnimatedGameObjectByIndex(m_firstPersonWeaponAnimatedGameObjectIndex);
+    AnimatedGameObject* viewWeaponGameObject = Scene::GetAnimatedGameObjectByIndex(m_viewWeaponAnimatedGameObjectIndex);
 
     UpdateRagdoll(); // updates pointers to rigids
 
@@ -49,7 +49,7 @@ void Player::Update(float deltaTime) {
     UpdateTimers(deltaTime);
     UpdateAudio(deltaTime);
 
-    UpdateFirstPersonWeaponLogicAndAnimations(deltaTime);
+    UpdateWeaponLogicAndAnimations(deltaTime);
     UpdateCharacterModelAnimation(deltaTime);
 
 
@@ -173,7 +173,6 @@ void Player::CheckForAndEvaluateNextWeaponPress() {
 
 void Player::CheckForEnviromentalDamage(float deltaTime) {
 
-    // Take damage outside
     _isOutside = true;
     for (Floor& floor : Scene::_floors) {
         if (floor.PointIsAboveThisFloor(_position)) {
@@ -182,20 +181,24 @@ void Player::CheckForEnviromentalDamage(float deltaTime) {
         }
     }
 
-    if (_isOutside) {
-        _outsideDamageTimer += deltaTime;
-        _outsideDamageAudioTimer += deltaTime;
-    }
-    else {
-        _outsideDamageAudioTimer = 0.84f;
-    }
-    if (_outsideDamageAudioTimer > 0.85f && !_isDead) {
-        _outsideDamageAudioTimer = 0.0f;
-        Audio::PlayAudio("Pain.wav", 1.0f);
-    }
-    if (_outsideDamageTimer > 0.15f) {
-        _outsideDamageTimer = 0.0f;
-        _health -= 1;
+    if (Game::GameSettings().takeDamageOutside) {
+
+        // Take damage outside
+        if (_isOutside) {
+            _outsideDamageTimer += deltaTime;
+            _outsideDamageAudioTimer += deltaTime;
+        }
+        else {
+            _outsideDamageAudioTimer = 0.84f;
+        }
+        if (_outsideDamageAudioTimer > 0.85f && !_isDead) {
+            _outsideDamageAudioTimer = 0.0f;
+            Audio::PlayAudio("Pain.wav", 1.0f);
+        }
+        if (_outsideDamageTimer > 0.15f) {
+            _outsideDamageTimer = 0.0f;
+            _health -= 1;
+        }
     }
 }
 
@@ -256,7 +259,7 @@ void Player::UpdateTimers(float deltaTime) {
         }
 
         // Outside damage color
-        if (_isOutside) {
+        if (Game::GameSettings().takeDamageOutside && _isOutside) {
             finalImageColorTint = RED;
             finalImageColorTint.g = _outsideDamageAudioTimer;
             finalImageColorTint.b = _outsideDamageAudioTimer;
@@ -474,7 +477,7 @@ void Player::CreateCharacterModel() {
 }
 
 void Player::CreateViewModel() {
-    m_firstPersonWeaponAnimatedGameObjectIndex = Scene::CreateAnimatedGameObject();
+    m_viewWeaponAnimatedGameObjectIndex = Scene::CreateAnimatedGameObject();
     AnimatedGameObject* viewWeaponModel = GetViewWeaponModel();
     viewWeaponModel->SetFlag(AnimatedGameObject::Flag::FIRST_PERSON_WEAPON);
     viewWeaponModel->SetPlayerIndex(m_playerIndex);
@@ -487,7 +490,7 @@ void Player::CheckForDebugKeyPresses() {
     }
 
     AnimatedGameObject* characterModel = Scene::GetAnimatedGameObjectByIndex(m_characterModelAnimatedGameObjectIndex);
-    AnimatedGameObject* viewWeaponModel = Scene::GetAnimatedGameObjectByIndex(m_firstPersonWeaponAnimatedGameObjectIndex);
+    AnimatedGameObject* viewWeaponModel = Scene::GetAnimatedGameObjectByIndex(m_viewWeaponAnimatedGameObjectIndex);
 
     if (Input::KeyPressed(HELL_KEY_7)) {
         std::cout << "\nCURRENT WEAPON JOINTS\n";
@@ -524,11 +527,11 @@ AnimatedGameObject* Player::GetCharacterModel() {
 }
 
 AnimatedGameObject* Player::GetViewWeaponModel() {
-    return Scene::GetAnimatedGameObjectByIndex(m_firstPersonWeaponAnimatedGameObjectIndex);
+    return Scene::GetAnimatedGameObjectByIndex(m_viewWeaponAnimatedGameObjectIndex);
 }
 
-int32_t Player::GetFirstPersonWeaponAnimatedGameObjectIndex() {
-    return m_firstPersonWeaponAnimatedGameObjectIndex;
+int32_t Player::GetViewWeaponAnimatedGameObjectIndex() {
+    return m_viewWeaponAnimatedGameObjectIndex;
 }
 int32_t Player::GetCharacterModelAnimatedGameObjectIndex() {
     return m_characterModelAnimatedGameObjectIndex;
@@ -567,8 +570,8 @@ glm::vec3 Player::GetPistolCasingSpawnPostion() {
    //     return glm::vec3(0);
    // }
     // Otherwise find it
-    AnimatedGameObject* firstPersonWeapon = Scene::GetAnimatedGameObjectByIndex(m_firstPersonWeaponAnimatedGameObjectIndex);
-    glm::mat4 matrix = firstPersonWeapon->GetJointWorldTransformByName(GetCurrentWeaponInfo()->casingEjectionBoneName);
+    AnimatedGameObject* viewWeaponGameObject = Scene::GetAnimatedGameObjectByIndex(m_viewWeaponAnimatedGameObjectIndex);
+    glm::mat4 matrix = viewWeaponGameObject->GetJointWorldTransformByName(GetCurrentWeaponInfo()->casingEjectionBoneName);
     glm::vec3 adjustedOffset = GetCurrentWeaponInfo()->casingEjectionOffset;
 
     /*static float x2 = -0.063;// -44.0f;
@@ -598,7 +601,7 @@ glm::vec3 Player::GetPistolCasingSpawnPostion() {
 
    // adjustedOffset = glm::vec3(x2, y2, z2);
 
-    adjustedOffset /= firstPersonWeapon->GetScale();
+    adjustedOffset /= viewWeaponGameObject->GetScale();
     return  matrix * glm::vec4(adjustedOffset, 1);
 
 }
@@ -963,8 +966,8 @@ void Player::ForceSetViewMatrix(glm::mat4 viewMatrix) {
 }
 
 glm::mat4 Player::GetViewMatrix() {
-    AnimatedGameObject* firstPersonWeapon = Scene::GetAnimatedGameObjectByIndex(m_firstPersonWeaponAnimatedGameObjectIndex);
-	return  glm::mat4(glm::mat3(firstPersonWeapon->_cameraMatrix)) * _viewMatrix;;
+    AnimatedGameObject* viewWeaponGameObject = Scene::GetAnimatedGameObjectByIndex(m_viewWeaponAnimatedGameObjectIndex);
+	return  glm::mat4(glm::mat3(viewWeaponGameObject->_cameraMatrix)) * _viewMatrix;;
 }
 
 glm::mat4 Player::GetInverseViewMatrix() {
@@ -1032,7 +1035,7 @@ void Player::SetPosition(glm::vec3 position) {
 void Player::Respawn() {
 
     AnimatedGameObject* characterModel = Scene::GetAnimatedGameObjectByIndex(m_characterModelAnimatedGameObjectIndex);
-    AnimatedGameObject* firstPersonWeapon = Scene::GetAnimatedGameObjectByIndex(m_firstPersonWeaponAnimatedGameObjectIndex);
+    AnimatedGameObject* viewWeaponGameObject = Scene::GetAnimatedGameObjectByIndex(m_viewWeaponAnimatedGameObjectIndex);
 
     _isDead = false;
     _ignoreControl = false;
@@ -1158,7 +1161,7 @@ void Player::SwitchWeapon(std::string name, WeaponAction weaponAction) {
 
     WeaponState* state = GetWeaponStateByName(name);
     WeaponInfo* weaponInfo = WeaponManager::GetWeaponInfoByName(name);
-    AnimatedGameObject* firstPersonWeapon = Scene::GetAnimatedGameObjectByIndex(m_firstPersonWeaponAnimatedGameObjectIndex);
+    AnimatedGameObject* viewWeaponGameObject = Scene::GetAnimatedGameObjectByIndex(m_viewWeaponAnimatedGameObjectIndex);
 
     if (weaponInfo && state) {
 
@@ -1168,27 +1171,27 @@ void Player::SwitchWeapon(std::string name, WeaponAction weaponAction) {
             }
         }
 
-        firstPersonWeapon->SetName(weaponInfo->name);
-        firstPersonWeapon->SetSkinnedModel(weaponInfo->modelName);
-        firstPersonWeapon->EnableDrawingForAllMesh();
+        viewWeaponGameObject->SetName(weaponInfo->name);
+        viewWeaponGameObject->SetSkinnedModel(weaponInfo->modelName);
+        viewWeaponGameObject->EnableDrawingForAllMesh();
 
         if (weaponAction == SPAWNING) {
-            firstPersonWeapon->PlayAnimation(weaponInfo->animationNames.spawn, 1.0f);
+            viewWeaponGameObject->PlayAnimation(weaponInfo->animationNames.spawn, 1.0f);
         }
         if (weaponAction == DRAW_BEGIN) {
-            firstPersonWeapon->PlayAnimation(weaponInfo->animationNames.draw, 1.0f);
+            viewWeaponGameObject->PlayAnimation(weaponInfo->animationNames.draw, 1.0f);
         }
         // Set materials
         for (auto& it : weaponInfo->meshMaterials) {
-            firstPersonWeapon->SetMeshMaterialByMeshName(it.first, it.second);
+            viewWeaponGameObject->SetMeshMaterialByMeshName(it.first, it.second);
         }
         // Set materials by index
         for (auto& it : weaponInfo->meshMaterialsByIndex) {
-            firstPersonWeapon->SetMeshMaterialByMeshIndex(it.first, it.second);
+            viewWeaponGameObject->SetMeshMaterialByMeshIndex(it.first, it.second);
         }
         // Hide mesh
         for (auto& meshName : weaponInfo->hiddenMeshAtStart) {
-            firstPersonWeapon->DisableDrawingForMeshByMeshName(meshName);
+            viewWeaponGameObject->DisableDrawingForMeshByMeshName(meshName);
         }
         _weaponAction = weaponAction;
     }
@@ -1198,27 +1201,27 @@ void Player::SwitchWeapon(std::string name, WeaponAction weaponAction) {
 
 void Player::SetGlockAnimatedModelSettings() {
 
-    AnimatedGameObject* firstPersonWeapon = Scene::GetAnimatedGameObjectByIndex(m_firstPersonWeaponAnimatedGameObjectIndex);
-    firstPersonWeapon->SetName("Glock");
-    firstPersonWeapon->SetSkinnedModel("Glock");
-    if (!firstPersonWeapon->_skinnedModel) {
+    AnimatedGameObject* viewWeaponGameObject = Scene::GetAnimatedGameObjectByIndex(m_viewWeaponAnimatedGameObjectIndex);
+    viewWeaponGameObject->SetName("Glock");
+    viewWeaponGameObject->SetSkinnedModel("Glock");
+    if (!viewWeaponGameObject->_skinnedModel) {
         return; // remove this once you have Vulkan loading shit correctly
     }
-    firstPersonWeapon->PlayAnimation("Glock_Spawn", 1.0f);
-    firstPersonWeapon->SetAllMeshMaterials("Glock");
-    firstPersonWeapon->SetMeshMaterialByMeshName("manniquen1_2.001", "Hands");
-    firstPersonWeapon->SetMeshMaterialByMeshName("manniquen1_2", "Hands");
-    firstPersonWeapon->SetMeshMaterialByMeshName("SK_FPSArms_Female.001", "FemaleArms");
-    firstPersonWeapon->SetMeshMaterialByMeshName("SK_FPSArms_Female", "FemaleArms");
-    firstPersonWeapon->SetMeshMaterialByMeshName("Glock_silencer", "Silencer");
-    firstPersonWeapon->SetMeshMaterialByMeshName("RedDotSight", "RedDotSight");
-    firstPersonWeapon->SetMeshMaterialByMeshName("RedDotSightGlass", "RedDotSight");
-    firstPersonWeapon->SetMeshToRenderAsGlassByMeshIndex("RedDotSightGlass");
-    firstPersonWeapon->SetMeshEmissiveColorTextureByMeshName("RedDotSight", "RedDotSight_EmissiveColor");
+    viewWeaponGameObject->PlayAnimation("Glock_Spawn", 1.0f);
+    viewWeaponGameObject->SetAllMeshMaterials("Glock");
+    viewWeaponGameObject->SetMeshMaterialByMeshName("manniquen1_2.001", "Hands");
+    viewWeaponGameObject->SetMeshMaterialByMeshName("manniquen1_2", "Hands");
+    viewWeaponGameObject->SetMeshMaterialByMeshName("SK_FPSArms_Female.001", "FemaleArms");
+    viewWeaponGameObject->SetMeshMaterialByMeshName("SK_FPSArms_Female", "FemaleArms");
+    viewWeaponGameObject->SetMeshMaterialByMeshName("Glock_silencer", "Silencer");
+    viewWeaponGameObject->SetMeshMaterialByMeshName("RedDotSight", "RedDotSight");
+    viewWeaponGameObject->SetMeshMaterialByMeshName("RedDotSightGlass", "RedDotSight");
+    viewWeaponGameObject->SetMeshToRenderAsGlassByMeshIndex("RedDotSightGlass");
+    viewWeaponGameObject->SetMeshEmissiveColorTextureByMeshName("RedDotSight", "RedDotSight_EmissiveColor");
 
-    firstPersonWeapon->EnableDrawingForAllMesh();
+    viewWeaponGameObject->EnableDrawingForAllMesh();
     if (!_hasGlockSilencer) {
-        firstPersonWeapon->DisableDrawingForMeshByMeshName("Glock_silencer");
+        viewWeaponGameObject->DisableDrawingForMeshByMeshName("Glock_silencer");
     }
 }
 
@@ -1253,7 +1256,7 @@ void Player::RespawnAtCurrentPosition() {
 
 bool Player::CanFire() {
 
-    AnimatedGameObject* firstPersonWeapon = Scene::GetAnimatedGameObjectByIndex(m_firstPersonWeaponAnimatedGameObjectIndex);
+    AnimatedGameObject* viewWeaponGameObject = Scene::GetAnimatedGameObjectByIndex(m_viewWeaponAnimatedGameObjectIndex);
     WeaponInfo* weaponInfo = GetCurrentWeaponInfo();
 
     if (_ignoreControl || _isDead) {
@@ -1263,12 +1266,12 @@ bool Player::CanFire() {
     if (weaponInfo->type == WeaponType::PISTOL || weaponInfo->type == WeaponType::AUTOMATIC) {
         return (
             _weaponAction == IDLE ||
-            _weaponAction == DRAWING && firstPersonWeapon->AnimationIsPastPercentage(weaponInfo->animationCancelPercentages.draw) ||
-            _weaponAction == FIRE && firstPersonWeapon->AnimationIsPastPercentage(weaponInfo->animationCancelPercentages.fire) ||
-            _weaponAction == RELOAD && firstPersonWeapon->AnimationIsPastPercentage(weaponInfo->animationCancelPercentages.reload) ||
-            _weaponAction == RELOAD_FROM_EMPTY && firstPersonWeapon->AnimationIsPastPercentage(weaponInfo->animationCancelPercentages.reloadFromEmpty) ||
+            _weaponAction == DRAWING && viewWeaponGameObject->AnimationIsPastPercentage(weaponInfo->animationCancelPercentages.draw) ||
+            _weaponAction == FIRE && viewWeaponGameObject->AnimationIsPastPercentage(weaponInfo->animationCancelPercentages.fire) ||
+            _weaponAction == RELOAD && viewWeaponGameObject->AnimationIsPastPercentage(weaponInfo->animationCancelPercentages.reload) ||
+            _weaponAction == RELOAD_FROM_EMPTY && viewWeaponGameObject->AnimationIsPastPercentage(weaponInfo->animationCancelPercentages.reloadFromEmpty) ||
             _weaponAction == ADS_IDLE ||
-            _weaponAction == ADS_FIRE && firstPersonWeapon->AnimationIsPastPercentage(weaponInfo->animationCancelPercentages.adsFire)
+            _weaponAction == ADS_FIRE && viewWeaponGameObject->AnimationIsPastPercentage(weaponInfo->animationCancelPercentages.adsFire)
             );
     }
 
@@ -1281,35 +1284,35 @@ bool Player::CanFire() {
 	if (_currentWeaponIndex == Weapon::GLOCK) {
 		return (
 			_weaponAction == IDLE ||
-			_weaponAction == DRAWING && firstPersonWeapon->AnimationIsPastPercentage(50.0f) ||
-			_weaponAction == FIRE && firstPersonWeapon->AnimationIsPastPercentage(25.0f) ||
-			_weaponAction == RELOAD && firstPersonWeapon->AnimationIsPastPercentage(80.0f) ||
-			_weaponAction == RELOAD_FROM_EMPTY && firstPersonWeapon->AnimationIsPastPercentage(80.0f) ||
-			_weaponAction == SPAWNING && firstPersonWeapon->AnimationIsPastPercentage(5.0f)
+			_weaponAction == DRAWING && viewWeaponGameObject->AnimationIsPastPercentage(50.0f) ||
+			_weaponAction == FIRE && viewWeaponGameObject->AnimationIsPastPercentage(25.0f) ||
+			_weaponAction == RELOAD && viewWeaponGameObject->AnimationIsPastPercentage(80.0f) ||
+			_weaponAction == RELOAD_FROM_EMPTY && viewWeaponGameObject->AnimationIsPastPercentage(80.0f) ||
+			_weaponAction == SPAWNING && viewWeaponGameObject->AnimationIsPastPercentage(5.0f)
 		);
 	}
 	if (_currentWeaponIndex == Weapon::SHOTGUN) {
     return (
         _weaponAction == IDLE ||
-        _weaponAction == DRAWING && firstPersonWeapon->AnimationIsPastPercentage(50.0f) ||
-        _weaponAction == FIRE && firstPersonWeapon->AnimationIsPastPercentage(50.0f) ||
+        _weaponAction == DRAWING && viewWeaponGameObject->AnimationIsPastPercentage(50.0f) ||
+        _weaponAction == FIRE && viewWeaponGameObject->AnimationIsPastPercentage(50.0f) ||
         _weaponAction == RELOAD_SHOTGUN_BEGIN ||
         _weaponAction == RELOAD_SHOTGUN_END ||
         _weaponAction == RELOAD_SHOTGUN_SINGLE_SHELL ||
         _weaponAction == RELOAD_SHOTGUN_DOUBLE_SHELL ||
-        _weaponAction == SPAWNING && firstPersonWeapon->AnimationIsPastPercentage(5.0f)
+        _weaponAction == SPAWNING && viewWeaponGameObject->AnimationIsPastPercentage(5.0f)
         );
 	}
 	if (_currentWeaponIndex == Weapon::AKS74U) {
 		return (
 			_weaponAction == IDLE ||
-			_weaponAction == DRAWING && firstPersonWeapon->AnimationIsPastPercentage(75.0f) ||
-			_weaponAction == FIRE && firstPersonWeapon->AnimationIsPastPercentage(22.5f) ||
-			_weaponAction == RELOAD && firstPersonWeapon->AnimationIsPastPercentage(80.0f) ||
-			_weaponAction == RELOAD_FROM_EMPTY && firstPersonWeapon->AnimationIsPastPercentage(95.0f) ||
+			_weaponAction == DRAWING && viewWeaponGameObject->AnimationIsPastPercentage(75.0f) ||
+			_weaponAction == FIRE && viewWeaponGameObject->AnimationIsPastPercentage(22.5f) ||
+			_weaponAction == RELOAD && viewWeaponGameObject->AnimationIsPastPercentage(80.0f) ||
+			_weaponAction == RELOAD_FROM_EMPTY && viewWeaponGameObject->AnimationIsPastPercentage(95.0f) ||
 
             _weaponAction == ADS_IDLE ||
-            _weaponAction == ADS_FIRE && firstPersonWeapon->AnimationIsPastPercentage(22.0f)
+            _weaponAction == ADS_FIRE && viewWeaponGameObject->AnimationIsPastPercentage(22.0f)
 		);
 	}
 	if (_currentWeaponIndex == Weapon::MP7) {
@@ -1350,7 +1353,7 @@ bool Player::CanReload() {
 		return (_inventory.glockAmmo.total > 0 && _inventory.glockAmmo.clip < GLOCK_CLIP_SIZE && _weaponAction != RELOAD && _weaponAction != RELOAD_FROM_EMPTY);
 	}
 	if (_currentWeaponIndex == Weapon::SHOTGUN) {
-        if (_weaponAction == FIRE && !firstPersonWeapon->AnimationIsPastPercentage(50.0f)) {
+        if (_weaponAction == FIRE && !viewWeaponGameObject->AnimationIsPastPercentage(50.0f)) {
             return false;
         }
         return (_inventory.shotgunAmmo.total > 0 && _inventory.shotgunAmmo.clip < SHOTGUN_AMMO_SIZE && _weaponAction != RELOAD_SHOTGUN_BEGIN && _weaponAction != RELOAD_SHOTGUN_END && _weaponAction != RELOAD_SHOTGUN_SINGLE_SHELL && _weaponAction != RELOAD_SHOTGUN_DOUBLE_SHELL);
@@ -1374,7 +1377,7 @@ void Player::UpdateWeaponSway(float deltaTime) {
 
     if (!_ignoreControl) {
 
-        AnimatedGameObject* firstPersonWeapon = Scene::GetAnimatedGameObjectByIndex(m_firstPersonWeaponAnimatedGameObjectIndex);
+        AnimatedGameObject* viewWeaponGameObject = Scene::GetAnimatedGameObjectByIndex(m_viewWeaponAnimatedGameObjectIndex);
 
         float xMax = 4.0;
 
@@ -1411,7 +1414,7 @@ void Player::UpdateWeaponSway(float deltaTime) {
         _weaponSwayTransform.position.y = Util::FInterpTo(_weaponSwayTransform.position.y, movementY, deltaTime, SMOOTH_AMOUNT);
         _weaponSwayMatrix = _weaponSwayTransform.to_mat4();
 
-        for (auto& transform : firstPersonWeapon->_animatedTransforms.local) {
+        for (auto& transform : viewWeaponGameObject->_animatedTransforms.local) {
             transform = _weaponSwayMatrix * transform;
         }
     }
@@ -1420,7 +1423,7 @@ void Player::UpdateWeaponSway(float deltaTime) {
 
 // FIND ME
 
-void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
+void Player::UpdateWeaponLogicAndAnimations(float deltaTime) {
 
     WeaponInfo* weaponInfo = GetCurrentWeaponInfo();
     WeaponState* weaponState = GetWeaponStateByName(weaponInfo->name);
@@ -1428,12 +1431,12 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
     AmmoState* ammoState = GetAmmoStateByName(weaponInfo->ammoType);
 
     AnimatedGameObject* characterModel = Scene::GetAnimatedGameObjectByIndex(m_characterModelAnimatedGameObjectIndex);
-    AnimatedGameObject* firstPersonWeapon = Scene::GetAnimatedGameObjectByIndex(m_firstPersonWeaponAnimatedGameObjectIndex);
+    AnimatedGameObject* viewWeaponGameObject = Scene::GetAnimatedGameObjectByIndex(m_viewWeaponAnimatedGameObjectIndex);
 
-    firstPersonWeapon->SetScale(0.001f);
-    firstPersonWeapon->SetRotationX(Player::GetViewRotation().x);
-    firstPersonWeapon->SetRotationY(Player::GetViewRotation().y);
-    firstPersonWeapon->SetPosition(Player::GetViewPos());
+    viewWeaponGameObject->SetScale(0.001f);
+    viewWeaponGameObject->SetRotationX(Player::GetViewRotation().x);
+    viewWeaponGameObject->SetRotationY(Player::GetViewRotation().y);
+    viewWeaponGameObject->SetPosition(Player::GetViewPos());
 
     if (_isDead) {
         characterModel->EnableDrawingForAllMesh();
@@ -1453,27 +1456,27 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
         // Idle
         if (_weaponAction == IDLE) {
             if (Player::IsMoving()) {
-                firstPersonWeapon->PlayAndLoopAnimation(weaponInfo->animationNames.walk, 1.0f);
+                viewWeaponGameObject->PlayAndLoopAnimation(weaponInfo->animationNames.walk, 1.0f);
             }
             else {
-                firstPersonWeapon->PlayAndLoopAnimation(weaponInfo->animationNames.idle, 1.0f);
+                viewWeaponGameObject->PlayAndLoopAnimation(weaponInfo->animationNames.idle, 1.0f);
             }
         }
         // Draw
         if (_weaponAction == DRAW_BEGIN) {
-            firstPersonWeapon->PlayAnimation(weaponInfo->animationNames.draw, 1.0f);
+            viewWeaponGameObject->PlayAnimation(weaponInfo->animationNames.draw, 1.0f);
             _weaponAction = DRAWING;
         }
         // Drawing
-        if (_weaponAction == DRAWING && firstPersonWeapon->IsAnimationComplete()) {
+        if (_weaponAction == DRAWING && viewWeaponGameObject->IsAnimationComplete()) {
             _weaponAction = IDLE;
         }
         // Fire
         if (PressedFire() && CanFire()) {
             if (_weaponAction == DRAWING ||
                 _weaponAction == IDLE ||
-                _weaponAction == FIRE && firstPersonWeapon->AnimationIsPastPercentage(25.0f) ||
-                _weaponAction == RELOAD && firstPersonWeapon->AnimationIsPastPercentage(80.0f)) {
+                _weaponAction == FIRE && viewWeaponGameObject->AnimationIsPastPercentage(25.0f) ||
+                _weaponAction == RELOAD && viewWeaponGameObject->AnimationIsPastPercentage(80.0f)) {
                 _weaponAction = FIRE;
 
                 if (weaponInfo->audioFiles.fire.size()) {
@@ -1482,13 +1485,13 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
                 }
                 if (weaponInfo->animationNames.fire.size()) {
                     int rand = std::rand() % weaponInfo->animationNames.fire.size();
-                    firstPersonWeapon->PlayAnimation(weaponInfo->animationNames.fire[rand], weaponInfo->animationSpeeds.fire);
+                    viewWeaponGameObject->PlayAnimation(weaponInfo->animationNames.fire[rand], weaponInfo->animationSpeeds.fire);
                 }
 
                 CheckForMeleeHit();
             }
         }
-        if (_weaponAction == FIRE && firstPersonWeapon->IsAnimationComplete()) {
+        if (_weaponAction == FIRE && viewWeaponGameObject->IsAnimationComplete()) {
             _weaponAction = IDLE;
         }
     }
@@ -1505,7 +1508,7 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
 
         // Give reload ammo
         if (_weaponAction == RELOAD || _weaponAction == RELOAD_FROM_EMPTY) {
-            if (_needsAmmoReloaded && firstPersonWeapon->AnimationIsPastPercentage(50.0f)) {
+            if (_needsAmmoReloaded && viewWeaponGameObject->AnimationIsPastPercentage(50.0f)) {
                 int ammoToGive = std::min(weaponInfo->magSize - weaponState->ammoInMag, ammoState->ammoOnHand);
                 weaponState->ammoInMag += ammoToGive;
                 ammoState->ammoOnHand -= ammoToGive;
@@ -1516,19 +1519,19 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
         // Idle
         if (_weaponAction == IDLE) {
             if (Player::IsMoving()) {
-                firstPersonWeapon->PlayAndLoopAnimation(weaponInfo->animationNames.walk, weaponInfo->animationSpeeds.walk);
+                viewWeaponGameObject->PlayAndLoopAnimation(weaponInfo->animationNames.walk, weaponInfo->animationSpeeds.walk);
             }
             else {
-                firstPersonWeapon->PlayAndLoopAnimation(weaponInfo->animationNames.idle, weaponInfo->animationSpeeds.idle);
+                viewWeaponGameObject->PlayAndLoopAnimation(weaponInfo->animationNames.idle, weaponInfo->animationSpeeds.idle);
             }
         }
         // Draw
         if (_weaponAction == DRAW_BEGIN) {
-            firstPersonWeapon->PlayAnimation(weaponInfo->animationNames.draw, weaponInfo->animationSpeeds.draw);
+            viewWeaponGameObject->PlayAnimation(weaponInfo->animationNames.draw, weaponInfo->animationSpeeds.draw);
             _weaponAction = DRAWING;
         }
         // Drawing
-        if (_weaponAction == DRAWING && firstPersonWeapon->IsAnimationComplete()) {
+        if (_weaponAction == DRAWING && viewWeaponGameObject->IsAnimationComplete()) {
             _weaponAction = IDLE;
         }
         // Fire
@@ -1543,7 +1546,7 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
                 }
                 if (weaponInfo->animationNames.fire.size()) {
                     int rand = std::rand() % weaponInfo->animationNames.fire.size();
-                    firstPersonWeapon->PlayAnimation(weaponInfo->animationNames.fire[rand], weaponInfo->animationSpeeds.fire);
+                    viewWeaponGameObject->PlayAnimation(weaponInfo->animationNames.fire[rand], weaponInfo->animationSpeeds.fire);
                 }
                 SpawnMuzzleFlash();
                 SpawnBullet(0, Weapon::GLOCK);
@@ -1555,26 +1558,26 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
                 Audio::PlayAudio("Dry_Fire.wav", 0.75f);
             }
         }
-        if (_weaponAction == FIRE && firstPersonWeapon->AnimationIsPastPercentage(60.0f)) {
+        if (_weaponAction == FIRE && viewWeaponGameObject->AnimationIsPastPercentage(60.0f)) {
             _weaponAction = IDLE;
         }
         // Reload
         if (PressedReload() && CanReload() && GetCurrentWeaponMagAmmo() != weaponInfo->magSize) {
             if (GetCurrentWeaponMagAmmo() == 0) {
                 _weaponAction = RELOAD_FROM_EMPTY;
-                firstPersonWeapon->PlayAnimation(weaponInfo->animationNames.reloadempty, weaponInfo->animationSpeeds.reloadempty);
+                viewWeaponGameObject->PlayAnimation(weaponInfo->animationNames.reloadempty, weaponInfo->animationSpeeds.reloadempty);
                 Audio::PlayAudio("Glock_ReloadFromEmpty.wav", 1.0f);
             }
             else {
-                firstPersonWeapon->PlayAnimation(weaponInfo->animationNames.reload, weaponInfo->animationSpeeds.reload);
+                viewWeaponGameObject->PlayAnimation(weaponInfo->animationNames.reload, weaponInfo->animationSpeeds.reload);
                 _weaponAction = RELOAD;
                 Audio::PlayAudio("Glock_Reload.wav", 1.0f);
             }
             _needsAmmoReloaded = true;
         }
-        if (_weaponAction == RELOAD && firstPersonWeapon->IsAnimationComplete() ||
-            _weaponAction == RELOAD_FROM_EMPTY && firstPersonWeapon->IsAnimationComplete() ||
-            _weaponAction == SPAWNING && firstPersonWeapon->IsAnimationComplete()) {
+        if (_weaponAction == RELOAD && viewWeaponGameObject->IsAnimationComplete() ||
+            _weaponAction == RELOAD_FROM_EMPTY && viewWeaponGameObject->IsAnimationComplete() ||
+            _weaponAction == SPAWNING && viewWeaponGameObject->IsAnimationComplete()) {
             _weaponAction = IDLE;
         }
         // Set flag to move glock slide out
@@ -1582,7 +1585,7 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
             if (_weaponAction != RELOAD_FROM_EMPTY) {
                 _glockSlideNeedsToBeOut = true;
             }
-            if (_weaponAction == RELOAD_FROM_EMPTY && !firstPersonWeapon->AnimationIsPastPercentage(50.0f)) {
+            if (_weaponAction == RELOAD_FROM_EMPTY && !viewWeaponGameObject->AnimationIsPastPercentage(50.0f)) {
                 _glockSlideNeedsToBeOut = false;
             }
         }
@@ -1627,7 +1630,7 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
                 glm::vec3 offset = GetCameraUp() * current;
                 glm::vec3 offset2 = GetCameraForward() * current;
                 glm::vec3 position = Player::GetViewPos() - offset + offset2;
-                firstPersonWeapon->SetPosition(position);
+                viewWeaponGameObject->SetPosition(position);
             }
         }
 
@@ -1639,11 +1642,11 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
         // ADS in
         if (PressingADS() && CanEnterADS() && _hasAKS74UScope) {
             _weaponAction = ADS_IN;
-            firstPersonWeapon->PlayAnimation("AKS74U_ADS_In", adsInOutSpeed);
+            viewWeaponGameObject->PlayAnimation("AKS74U_ADS_In", adsInOutSpeed);
         }
         // ADS in complete
-        if (_weaponAction == ADS_IN && firstPersonWeapon->IsAnimationComplete()) {
-            firstPersonWeapon->PlayAnimation("AKS74U_ADS_Idle", 1.0f);
+        if (_weaponAction == ADS_IN && viewWeaponGameObject->IsAnimationComplete()) {
+            viewWeaponGameObject->PlayAnimation("AKS74U_ADS_Idle", 1.0f);
             _weaponAction = ADS_IDLE;
         }
         // ADS out
@@ -1652,21 +1655,21 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
             if (_weaponAction == ADS_IN ||
                 _weaponAction == ADS_IDLE) {
                 _weaponAction = ADS_OUT;
-                firstPersonWeapon->PlayAnimation("AKS74U_ADS_Out", adsInOutSpeed);
+                viewWeaponGameObject->PlayAnimation("AKS74U_ADS_Out", adsInOutSpeed);
             }
         }
         // ADS out complete
-        if (_weaponAction == ADS_OUT && firstPersonWeapon->IsAnimationComplete()) {
-            firstPersonWeapon->PlayAnimation("AKS74U_Idle", 1.0f);
+        if (_weaponAction == ADS_OUT && viewWeaponGameObject->IsAnimationComplete()) {
+            viewWeaponGameObject->PlayAnimation("AKS74U_Idle", 1.0f);
             _weaponAction = IDLE;
         }
         // ADS walk
         if (_weaponAction == ADS_IDLE) {
             if (Player::IsMoving()) {
-                firstPersonWeapon->PlayAndLoopAnimation(weaponInfo->animationNames.walk, 1.0f);
+                viewWeaponGameObject->PlayAndLoopAnimation(weaponInfo->animationNames.walk, 1.0f);
             }
             else {
-                firstPersonWeapon->PlayAndLoopAnimation(weaponInfo->animationNames.idle, 1.0f);
+                viewWeaponGameObject->PlayAndLoopAnimation(weaponInfo->animationNames.idle, 1.0f);
             }
         }
 
@@ -1684,35 +1687,35 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
             int random_number = std::rand() % 4;
             Audio::PlayAudio(footstepFilenames[random_number], 1.0f);
 
-            firstPersonWeapon->PlayAnimation(aninName, 1.625f);
+            viewWeaponGameObject->PlayAnimation(aninName, 1.625f);
             SpawnMuzzleFlash();
             SpawnBullet(0.02, Weapon::AKS74U);
             SpawnAKS74UCasing();
             _inventory.aks74uAmmo.clip--;
         }
         // Finished ADS Fire
-        if (_weaponAction == ADS_FIRE && firstPersonWeapon->IsAnimationComplete()) {
-            firstPersonWeapon->PlayAnimation("AKS74U_ADS_Idle", 1.0f);
+        if (_weaponAction == ADS_FIRE && viewWeaponGameObject->IsAnimationComplete()) {
+            viewWeaponGameObject->PlayAnimation("AKS74U_ADS_Idle", 1.0f);
             _weaponAction = ADS_IDLE;
         }
         // Not finished ADS Fire but player HAS LET GO OF RIGHT MOUSE
         if (_weaponAction == ADS_FIRE && !PressingADS()) {
             _weaponAction = ADS_OUT;
-            firstPersonWeapon->PlayAnimation("AKS74U_ADS_Out", adsInOutSpeed);
+            viewWeaponGameObject->PlayAnimation("AKS74U_ADS_Out", adsInOutSpeed);
         }
 
 
 
 
         // Drop the mag
-        if (_needsToDropAKMag && _weaponAction == RELOAD_FROM_EMPTY && firstPersonWeapon->AnimationIsPastPercentage(16.9f)) {
+        if (_needsToDropAKMag && _weaponAction == RELOAD_FROM_EMPTY && viewWeaponGameObject->AnimationIsPastPercentage(16.9f)) {
             _needsToDropAKMag = false;
             //DropAKS7UMag();
         }
 
         // Give reload ammo
         if (_weaponAction == RELOAD || _weaponAction == RELOAD_FROM_EMPTY) {
-            if (_needsAmmoReloaded && firstPersonWeapon->AnimationIsPastPercentage(10.0f)) {
+            if (_needsAmmoReloaded && viewWeaponGameObject->AnimationIsPastPercentage(10.0f)) {
                 int ammoToGive = std::min(weaponInfo->magSize - weaponState->ammoInMag, ammoState->ammoOnHand);
                 weaponState->ammoInMag += ammoToGive;
                 ammoState->ammoOnHand -= ammoToGive;
@@ -1741,7 +1744,7 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
             }
             if (weaponInfo->animationNames.fire.size()) {
                 int rand = std::rand() % weaponInfo->animationNames.fire.size();
-                firstPersonWeapon->PlayAnimation(weaponInfo->animationNames.fire[rand], weaponInfo->animationSpeeds.fire);
+                viewWeaponGameObject->PlayAnimation(weaponInfo->animationNames.fire[rand], weaponInfo->animationSpeeds.fire);
             }
         }
         // Fire (no ammo)
@@ -1751,43 +1754,43 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
         // Reload
         if (PressedReload() && CanReload()) {
             if (GetCurrentWeaponMagAmmo() == 0) {
-                firstPersonWeapon->PlayAnimation(weaponInfo->animationNames.reloadempty, 1.0f);
+                viewWeaponGameObject->PlayAnimation(weaponInfo->animationNames.reloadempty, 1.0f);
                 Audio::PlayAudio(weaponInfo->audioFiles.reloadEmpty, 0.7f);
                 _weaponAction = RELOAD_FROM_EMPTY;
                 _needsToDropAKMag = true;
             }
             else {
-                firstPersonWeapon->PlayAnimation(weaponInfo->animationNames.reload, 1.0f);
+                viewWeaponGameObject->PlayAnimation(weaponInfo->animationNames.reload, 1.0f);
                 Audio::PlayAudio(weaponInfo->audioFiles.reload, 0.8f);
                 _weaponAction = RELOAD;
             }
             _needsAmmoReloaded = true;
         }
         // Return to idle
-        if (_weaponAction == RELOAD && firstPersonWeapon->IsAnimationComplete() ||
-            _weaponAction == RELOAD_FROM_EMPTY && firstPersonWeapon->IsAnimationComplete() ||
-            _weaponAction == SPAWNING && firstPersonWeapon->IsAnimationComplete()) {
+        if (_weaponAction == RELOAD && viewWeaponGameObject->IsAnimationComplete() ||
+            _weaponAction == RELOAD_FROM_EMPTY && viewWeaponGameObject->IsAnimationComplete() ||
+            _weaponAction == SPAWNING && viewWeaponGameObject->IsAnimationComplete()) {
             _weaponAction = IDLE;
         }
-        if (_weaponAction == FIRE && firstPersonWeapon->AnimationIsPastPercentage(50.0f)) {
+        if (_weaponAction == FIRE && viewWeaponGameObject->AnimationIsPastPercentage(50.0f)) {
             _weaponAction = IDLE;
         }
         //Idle
         if (_weaponAction == IDLE) {
             if (Player::IsMoving()) {
-                firstPersonWeapon->PlayAndLoopAnimation(weaponInfo->animationNames.walk, 1.0f);
+                viewWeaponGameObject->PlayAndLoopAnimation(weaponInfo->animationNames.walk, 1.0f);
             }
             else {
-                firstPersonWeapon->PlayAndLoopAnimation(weaponInfo->animationNames.idle, 1.0f);
+                viewWeaponGameObject->PlayAndLoopAnimation(weaponInfo->animationNames.idle, 1.0f);
             }
         }
         // Draw
         if (_weaponAction == DRAW_BEGIN) {
-            firstPersonWeapon->PlayAnimation(weaponInfo->animationNames.draw, 1.125f);
+            viewWeaponGameObject->PlayAnimation(weaponInfo->animationNames.draw, 1.125f);
             _weaponAction = DRAWING;
         }
         // Drawing
-        if (_weaponAction == DRAWING && firstPersonWeapon->IsAnimationComplete()) {
+        if (_weaponAction == DRAWING && viewWeaponGameObject->IsAnimationComplete()) {
             _weaponAction = IDLE;
         }
     }
@@ -1795,7 +1798,7 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
 
 
     // Update animated bone transforms for the first person weapon model
-    firstPersonWeapon->Update(deltaTime);
+    viewWeaponGameObject->Update(deltaTime);
 
 
     UpdateWeaponSway(deltaTime);
@@ -1815,11 +1818,11 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime) {
 
 
 
-void Player::UpdateFirstPersonWeaponLogicAndAnimations2(float deltaTime) {
+void Player::UpdateWeaponLogicAndAnimations2(float deltaTime) {
 
     WeaponInfo* weaponInfo = GetCurrentWeaponInfo();
     WeaponState* weaponState = GetCurrentWeaponState();
-    AnimatedGameObject* firstPersonWeapon = GetViewWeaponModel();
+    AnimatedGameObject* viewWeaponGameObject = GetViewWeaponModel();
     AnimatedGameObject* characterModel = GetCharacterModel();
 
     if (_weaponAction == SPAWNING) {
@@ -1851,9 +1854,9 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations2(float deltaTime) {
 	// Switching weapon? Well change all the shit you need to then
 	if (_weaponAction == DRAW_BEGIN) {
 		//if (_currentWeaponIndex == Weapon::KNIFE) {
-			firstPersonWeapon->SetName("Knife");
-			firstPersonWeapon->SetSkinnedModel("Knife");
-			firstPersonWeapon->SetMeshMaterialByMeshName("SM_Knife_01", "Knife");
+			viewWeaponGameObject->SetName("Knife");
+			viewWeaponGameObject->SetSkinnedModel("Knife");
+			viewWeaponGameObject->SetMeshMaterialByMeshName("SM_Knife_01", "Knife");
             characterModel->EnableDrawingForAllMesh();
             HideGlockMesh();
             HideShotgunMesh();
@@ -1866,16 +1869,16 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations2(float deltaTime) {
             HideAKS74UMesh();
 		//}
 		//else if (_currentWeaponIndex == Weapon::AKS74U) {
-			firstPersonWeapon->SetName("AKS74U");
-			firstPersonWeapon->SetSkinnedModel("AKS74U");
-			firstPersonWeapon->SetMeshMaterialByMeshIndex(2, "AKS74U_3");
-			firstPersonWeapon->SetMeshMaterialByMeshIndex(3, "AKS74U_3"); // possibly incorrect. this is the follower
-			firstPersonWeapon->SetMeshMaterialByMeshIndex(4, "AKS74U_1");
-			firstPersonWeapon->SetMeshMaterialByMeshIndex(5, "AKS74U_4");
-			firstPersonWeapon->SetMeshMaterialByMeshIndex(6, "AKS74U_0");
-			firstPersonWeapon->SetMeshMaterialByMeshIndex(7, "AKS74U_2");
-			firstPersonWeapon->SetMeshMaterialByMeshIndex(8, "AKS74U_1");  // Bolt_low. Possibly wrong
-            firstPersonWeapon->SetMeshMaterialByMeshIndex(9, "AKS74U_3"); // possibly incorrect.
+			viewWeaponGameObject->SetName("AKS74U");
+			viewWeaponGameObject->SetSkinnedModel("AKS74U");
+			viewWeaponGameObject->SetMeshMaterialByMeshIndex(2, "AKS74U_3");
+			viewWeaponGameObject->SetMeshMaterialByMeshIndex(3, "AKS74U_3"); // possibly incorrect. this is the follower
+			viewWeaponGameObject->SetMeshMaterialByMeshIndex(4, "AKS74U_1");
+			viewWeaponGameObject->SetMeshMaterialByMeshIndex(5, "AKS74U_4");
+			viewWeaponGameObject->SetMeshMaterialByMeshIndex(6, "AKS74U_0");
+			viewWeaponGameObject->SetMeshMaterialByMeshIndex(7, "AKS74U_2");
+			viewWeaponGameObject->SetMeshMaterialByMeshIndex(8, "AKS74U_1");  // Bolt_low. Possibly wrong
+            viewWeaponGameObject->SetMeshMaterialByMeshIndex(9, "AKS74U_3"); // possibly incorrect.
             characterModel->EnableDrawingForAllMesh();
             HideKnifeMesh();
             HideGlockMesh();
@@ -1883,33 +1886,33 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations2(float deltaTime) {
 
        // }
        // else if (_currentWeaponIndex == Weapon::SHOTGUN) {
-            firstPersonWeapon->SetName("Shotgun");
-            firstPersonWeapon->SetSkinnedModel("Shotgun");
-            firstPersonWeapon->SetAllMeshMaterials("Shotgun");
-            firstPersonWeapon->SetMeshMaterialByMeshIndex(2, "Shell");
+            viewWeaponGameObject->SetName("Shotgun");
+            viewWeaponGameObject->SetSkinnedModel("Shotgun");
+            viewWeaponGameObject->SetAllMeshMaterials("Shotgun");
+            viewWeaponGameObject->SetMeshMaterialByMeshIndex(2, "Shell");
             characterModel->EnableDrawingForAllMesh();
             HideKnifeMesh();
             HideGlockMesh();
             HideAKS74UMesh();
        // }
       //  else if (_currentWeaponIndex == Weapon::MP7) {
-           // firstPersonWeapon->SetName("MP7");
-           // firstPersonWeapon->SetSkinnedModel("MP7_test");
-           // firstPersonWeapon->SetMaterial("Glock"); // fix meeeee. remove meeee
-           // firstPersonWeapon->PlayAndLoopAnimation("MP7_ReloadTest", 1.0f);
+           // viewWeaponGameObject->SetName("MP7");
+           // viewWeaponGameObject->SetSkinnedModel("MP7_test");
+           // viewWeaponGameObject->SetMaterial("Glock"); // fix meeeee. remove meeee
+           // viewWeaponGameObject->PlayAndLoopAnimation("MP7_ReloadTest", 1.0f);
      //   }
-        firstPersonWeapon->SetMeshMaterialByMeshName("manniquen1_2.001", "Hands");
-        firstPersonWeapon->SetMeshMaterialByMeshName("manniquen1_2", "Hands");
-        firstPersonWeapon->SetMeshMaterialByMeshName("SK_FPSArms_Female.001", "FemaleArms");
-        firstPersonWeapon->SetMeshMaterialByMeshName("SK_FPSArms_Female", "FemaleArms");
-        firstPersonWeapon->SetMeshMaterialByMeshName("Arms", "Hands");
-        firstPersonWeapon->DisableDrawingForMeshByMeshName("SK_FPSArms_Female");
-        firstPersonWeapon->DisableDrawingForMeshByMeshName("SK_FPSArms_Female.001");
+        viewWeaponGameObject->SetMeshMaterialByMeshName("manniquen1_2.001", "Hands");
+        viewWeaponGameObject->SetMeshMaterialByMeshName("manniquen1_2", "Hands");
+        viewWeaponGameObject->SetMeshMaterialByMeshName("SK_FPSArms_Female.001", "FemaleArms");
+        viewWeaponGameObject->SetMeshMaterialByMeshName("SK_FPSArms_Female", "FemaleArms");
+        viewWeaponGameObject->SetMeshMaterialByMeshName("Arms", "Hands");
+        viewWeaponGameObject->DisableDrawingForMeshByMeshName("SK_FPSArms_Female");
+        viewWeaponGameObject->DisableDrawingForMeshByMeshName("SK_FPSArms_Female.001");
 	}
-	firstPersonWeapon->SetScale(0.001f);
-	firstPersonWeapon->SetRotationX(Player::GetViewRotation().x);
-	firstPersonWeapon->SetRotationY(Player::GetViewRotation().y);
-	firstPersonWeapon->SetPosition(Player::GetViewPos());
+	viewWeaponGameObject->SetScale(0.001f);
+	viewWeaponGameObject->SetRotationX(Player::GetViewRotation().x);
+	viewWeaponGameObject->SetRotationY(Player::GetViewRotation().y);
+	viewWeaponGameObject->SetPosition(Player::GetViewPos());
 
     if (_isDead) {
         characterModel->EnableDrawingForAllMesh();
@@ -1926,37 +1929,37 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations2(float deltaTime) {
 		// Idle
 		if (_weaponAction == IDLE) {
 			if (Player::IsMoving()) {
-				firstPersonWeapon->PlayAndLoopAnimation("Knife_Walk", 1.0f);
+				viewWeaponGameObject->PlayAndLoopAnimation("Knife_Walk", 1.0f);
 			}
 			else {
-				firstPersonWeapon->PlayAndLoopAnimation("Knife_Idle", 1.0f);
+				viewWeaponGameObject->PlayAndLoopAnimation("Knife_Idle", 1.0f);
 			}
 		}
 		// Draw
 		if (_weaponAction == DRAW_BEGIN) {
-			firstPersonWeapon->PlayAnimation("Knife_Draw", 1.0f);
+			viewWeaponGameObject->PlayAnimation("Knife_Draw", 1.0f);
 			_weaponAction = DRAWING;
 		}
 		// Drawing
-		if (_weaponAction == DRAWING && firstPersonWeapon->IsAnimationComplete()) {
+		if (_weaponAction == DRAWING && viewWeaponGameObject->IsAnimationComplete()) {
 			_weaponAction = IDLE;
 		}
 		// Fire
 		if (PressedFire() && CanFire()) {
 			if (_weaponAction == DRAWING ||
 				_weaponAction == IDLE ||
-				_weaponAction == FIRE && firstPersonWeapon->AnimationIsPastPercentage(25.0f) ||
-				_weaponAction == RELOAD && firstPersonWeapon->AnimationIsPastPercentage(80.0f)) {
+				_weaponAction == FIRE && viewWeaponGameObject->AnimationIsPastPercentage(25.0f) ||
+				_weaponAction == RELOAD && viewWeaponGameObject->AnimationIsPastPercentage(80.0f)) {
 				_weaponAction = FIRE;
 				int random_number = std::rand() % 3 + 1;
 				std::string aninName = "Knife_Swing" + std::to_string(random_number);
-				firstPersonWeapon->PlayAnimation(aninName, 1.5f);
+				viewWeaponGameObject->PlayAnimation(aninName, 1.5f);
 				Audio::PlayAudio("Knife.wav", 1.0f);
 				//SpawnBullet(0, Weapon::KNIFE);
                 CheckForMeleeHit();
 			}
 		}
-		if (_weaponAction == FIRE && firstPersonWeapon->IsAnimationComplete()) {
+		if (_weaponAction == FIRE && viewWeaponGameObject->IsAnimationComplete()) {
 			_weaponAction = IDLE;
 		}
 	}
@@ -1969,7 +1972,7 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations2(float deltaTime) {
 
 		// Give reload ammo
 		if (_weaponAction == RELOAD || _weaponAction == RELOAD_FROM_EMPTY) {
-            if (_needsAmmoReloaded && firstPersonWeapon->AnimationIsPastPercentage(50.0f)) {
+            if (_needsAmmoReloaded && viewWeaponGameObject->AnimationIsPastPercentage(50.0f)) {
                 int ammoToGive = std::min(GLOCK_CLIP_SIZE - _inventory.glockAmmo.clip, _inventory.glockAmmo.total);
 				_inventory.glockAmmo.clip += ammoToGive;
 				_inventory.glockAmmo.total -= ammoToGive;
@@ -1980,19 +1983,19 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations2(float deltaTime) {
 		// Idle
 		if (_weaponAction == IDLE) {
 			if (Player::IsMoving()) {
-				firstPersonWeapon->PlayAndLoopAnimation("Glock_Walk", 1.0f);
+				viewWeaponGameObject->PlayAndLoopAnimation("Glock_Walk", 1.0f);
 			}
 			else {
-				firstPersonWeapon->PlayAndLoopAnimation("Glock_Idle", 1.0f);
+				viewWeaponGameObject->PlayAndLoopAnimation("Glock_Idle", 1.0f);
 			}
 		}
 		// Draw
 		if (_weaponAction == DRAW_BEGIN) {
-			firstPersonWeapon->PlayAnimation("Glock_Draw", 1.0f);
+			viewWeaponGameObject->PlayAnimation("Glock_Draw", 1.0f);
 			_weaponAction = DRAWING;
 		}
 		// Drawing
-		if (_weaponAction == DRAWING && firstPersonWeapon->IsAnimationComplete()) {
+		if (_weaponAction == DRAWING && viewWeaponGameObject->IsAnimationComplete()) {
 			_weaponAction = IDLE;
 		}
 		// Fire
@@ -2013,7 +2016,7 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations2(float deltaTime) {
                     Audio::PlayAudio(footstepFilenames[random_number], 1.0f);
                 }
                 std::string aninName = "Glock_Fire" + std::to_string(random_number);
-                firstPersonWeapon->PlayAnimation(aninName, 1.5f);
+                viewWeaponGameObject->PlayAnimation(aninName, 1.5f);
 				SpawnMuzzleFlash();
 				SpawnBullet(0, Weapon::GLOCK);
                // SpawnCasing();
@@ -2025,26 +2028,26 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations2(float deltaTime) {
 				Audio::PlayAudio("Dry_Fire.wav", 0.75f);
 			}
 		}
-		if (_weaponAction == FIRE && firstPersonWeapon->AnimationIsPastPercentage(60.0f)) {
+		if (_weaponAction == FIRE && viewWeaponGameObject->AnimationIsPastPercentage(60.0f)) {
 			_weaponAction = IDLE;
 		}
 		// Reload
 		if (PressedReload() && CanReload()) {
 			if (GetCurrentWeaponMagAmmo() == 0) {
 				_weaponAction = RELOAD_FROM_EMPTY;
-				firstPersonWeapon->PlayAnimation("Glock_ReloadEmpty", 1.0f);
+				viewWeaponGameObject->PlayAnimation("Glock_ReloadEmpty", 1.0f);
 				Audio::PlayAudio("Glock_ReloadFromEmpty.wav", 1.0f);
 			}
 			else {
-				firstPersonWeapon->PlayAnimation("Glock_Reload", 1.0f);
+				viewWeaponGameObject->PlayAnimation("Glock_Reload", 1.0f);
 				_weaponAction = RELOAD;
 				Audio::PlayAudio("Glock_Reload.wav", 1.0f);
 			}
 			_needsAmmoReloaded = true;
 		}
-		if (_weaponAction == RELOAD && firstPersonWeapon->IsAnimationComplete() ||
-			_weaponAction == RELOAD_FROM_EMPTY && firstPersonWeapon->IsAnimationComplete() ||
-			_weaponAction == SPAWNING && firstPersonWeapon->IsAnimationComplete()) {
+		if (_weaponAction == RELOAD && viewWeaponGameObject->IsAnimationComplete() ||
+			_weaponAction == RELOAD_FROM_EMPTY && viewWeaponGameObject->IsAnimationComplete() ||
+			_weaponAction == SPAWNING && viewWeaponGameObject->IsAnimationComplete()) {
 			_weaponAction = IDLE;
 		}
 		// Set flag to move glock slide out
@@ -2052,7 +2055,7 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations2(float deltaTime) {
 			if (_weaponAction != RELOAD_FROM_EMPTY) {
 				_glockSlideNeedsToBeOut = true;
 			}
-			if (_weaponAction == RELOAD_FROM_EMPTY && !firstPersonWeapon->AnimationIsPastPercentage(50.0f)) {
+			if (_weaponAction == RELOAD_FROM_EMPTY && !viewWeaponGameObject->AnimationIsPastPercentage(50.0f)) {
 				_glockSlideNeedsToBeOut = false;
 			}
 		}
@@ -2100,7 +2103,7 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations2(float deltaTime) {
 
                 glm::vec3 position = Player::GetViewPos() - offset + offset2;
 
-                firstPersonWeapon->SetPosition(position);
+                viewWeaponGameObject->SetPosition(position);
 
             }
         }
@@ -2116,11 +2119,11 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations2(float deltaTime) {
         // ADS in
         if (PressingADS() && CanEnterADS() && _hasAKS74UScope) {
             _weaponAction = ADS_IN;
-            firstPersonWeapon->PlayAnimation("AKS74U_ADS_In", adsInOutSpeed);
+            viewWeaponGameObject->PlayAnimation("AKS74U_ADS_In", adsInOutSpeed);
         }
         // ADS in complete
-        if (_weaponAction == ADS_IN && firstPersonWeapon->IsAnimationComplete()) {
-            firstPersonWeapon->PlayAnimation("AKS74U_ADS_Idle", 1.0f);
+        if (_weaponAction == ADS_IN && viewWeaponGameObject->IsAnimationComplete()) {
+            viewWeaponGameObject->PlayAnimation("AKS74U_ADS_Idle", 1.0f);
             _weaponAction = ADS_IDLE;
         }
         // ADS out
@@ -2129,21 +2132,21 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations2(float deltaTime) {
             if (_weaponAction == ADS_IN ||
                 _weaponAction == ADS_IDLE) {
                 _weaponAction = ADS_OUT;
-                firstPersonWeapon->PlayAnimation("AKS74U_ADS_Out", adsInOutSpeed);
+                viewWeaponGameObject->PlayAnimation("AKS74U_ADS_Out", adsInOutSpeed);
             }
         }
         // ADS out complete
-        if (_weaponAction == ADS_OUT && firstPersonWeapon->IsAnimationComplete()) {
-            firstPersonWeapon->PlayAnimation("AKS74U_Idle", 1.0f);
+        if (_weaponAction == ADS_OUT && viewWeaponGameObject->IsAnimationComplete()) {
+            viewWeaponGameObject->PlayAnimation("AKS74U_Idle", 1.0f);
             _weaponAction = IDLE;
         }
         // ADS walk
         if (_weaponAction == ADS_IDLE) {
             if (Player::IsMoving()) {
-                firstPersonWeapon->PlayAndLoopAnimation("AKS74U_ADS_Walk", 1.0f);
+                viewWeaponGameObject->PlayAndLoopAnimation("AKS74U_ADS_Walk", 1.0f);
             }
             else {
-                firstPersonWeapon->PlayAndLoopAnimation("AKS74U_ADS_Idle", 1.0f);
+                viewWeaponGameObject->PlayAndLoopAnimation("AKS74U_ADS_Idle", 1.0f);
             }
         }
 
@@ -2161,36 +2164,36 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations2(float deltaTime) {
             int random_number = std::rand() % 4;
             Audio::PlayAudio(footstepFilenames[random_number], 1.0f);
 
-            firstPersonWeapon->PlayAnimation(aninName, 1.625f);
+            viewWeaponGameObject->PlayAnimation(aninName, 1.625f);
             SpawnMuzzleFlash();
             SpawnBullet(0.02, Weapon::AKS74U);
             SpawnAKS74UCasing();
             _inventory.aks74uAmmo.clip--;
         }
         // Finished ADS Fire
-        if (_weaponAction == ADS_FIRE && firstPersonWeapon->IsAnimationComplete()) {
-            firstPersonWeapon->PlayAnimation("AKS74U_ADS_Idle", 1.0f);
+        if (_weaponAction == ADS_FIRE && viewWeaponGameObject->IsAnimationComplete()) {
+            viewWeaponGameObject->PlayAnimation("AKS74U_ADS_Idle", 1.0f);
             _weaponAction = ADS_IDLE;
         }
         // Not finished ADS Fire but player HAS LET GO OF RIGHT MOUSE
         if (_weaponAction == ADS_FIRE && !PressingADS()) {
             _weaponAction = ADS_OUT;
-            firstPersonWeapon->PlayAnimation("AKS74U_ADS_Out", adsInOutSpeed);
+            viewWeaponGameObject->PlayAnimation("AKS74U_ADS_Out", adsInOutSpeed);
         }
 
 
 
 
 		// Drop the mag
-		if (_needsToDropAKMag && _weaponAction == RELOAD_FROM_EMPTY && firstPersonWeapon->AnimationIsPastPercentage(16.9f)) {
+		if (_needsToDropAKMag && _weaponAction == RELOAD_FROM_EMPTY && viewWeaponGameObject->AnimationIsPastPercentage(16.9f)) {
 			_needsToDropAKMag = false;
 			//DropAKS7UMag();
 		}
 
 		// Give reload ammo
 		if (_weaponAction == RELOAD || _weaponAction == RELOAD_FROM_EMPTY) {
-		//	if (_needsAmmoReloaded && firstPersonWeapon->AnimationIsPastPercentage(38.0f)) {
-			if (_needsAmmoReloaded && firstPersonWeapon->AnimationIsPastPercentage(10.0f)) {
+		//	if (_needsAmmoReloaded && viewWeaponGameObject->AnimationIsPastPercentage(38.0f)) {
+			if (_needsAmmoReloaded && viewWeaponGameObject->AnimationIsPastPercentage(10.0f)) {
 				int ammoToGive = std::min(AKS74U_MAG_SIZE - _inventory.aks74uAmmo.clip, _inventory.aks74uAmmo.total);
 				_inventory.aks74uAmmo.clip += ammoToGive;
 				_inventory.aks74uAmmo.total -= ammoToGive;
@@ -2204,7 +2207,7 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations2(float deltaTime) {
             int random_number_audio = std::rand() % 4;
 			std::string aninName = "AKS74U_Fire" + std::to_string(random_number);
 			std::string audioName = "AKS74U_Fire" + std::to_string(random_number_audio) + ".wav";
-			firstPersonWeapon->PlayAnimation(aninName, 1.625f);
+			viewWeaponGameObject->PlayAnimation(aninName, 1.625f);
 			Audio::PlayAudio(audioName, 1.4f);
 			SpawnMuzzleFlash();
             SpawnBullet(0.05f, Weapon::AKS74U);
@@ -2218,42 +2221,42 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations2(float deltaTime) {
 		// Reload
 		if (PressedReload() && CanReload()) {
 			if (GetCurrentWeaponMagAmmo() == 0) {
-				firstPersonWeapon->PlayAnimation("AKS74U_ReloadEmpty", 1.0f);
+				viewWeaponGameObject->PlayAnimation("AKS74U_ReloadEmpty", 1.0f);
 				Audio::PlayAudio("AKS74U_ReloadEmpty.wav", 0.7f);
 				_weaponAction = RELOAD_FROM_EMPTY;
 				_needsToDropAKMag = true;
 			}
 			else {
-				firstPersonWeapon->PlayAnimation("AKS74U_Reload", 1.0f);
+				viewWeaponGameObject->PlayAnimation("AKS74U_Reload", 1.0f);
 				Audio::PlayAudio("AKS74U_Reload.wav", 0.8f);
 				_weaponAction = RELOAD;
 			}
 			_needsAmmoReloaded = true;
 		}
 		// Return to idle
-		if (_weaponAction == RELOAD && firstPersonWeapon->IsAnimationComplete() ||
-            _weaponAction == RELOAD_FROM_EMPTY && firstPersonWeapon->IsAnimationComplete()) {
+		if (_weaponAction == RELOAD && viewWeaponGameObject->IsAnimationComplete() ||
+            _weaponAction == RELOAD_FROM_EMPTY && viewWeaponGameObject->IsAnimationComplete()) {
 			_weaponAction = IDLE;
 		}
-		if (_weaponAction == FIRE && firstPersonWeapon->AnimationIsPastPercentage(50.0f)) {
+		if (_weaponAction == FIRE && viewWeaponGameObject->AnimationIsPastPercentage(50.0f)) {
 			_weaponAction = IDLE;
 		}
 		//Idle
 		if (_weaponAction == IDLE) {
 			if (Player::IsMoving()) {
-				firstPersonWeapon->PlayAndLoopAnimation("AKS74U_Walk", 1.0f);
+				viewWeaponGameObject->PlayAndLoopAnimation("AKS74U_Walk", 1.0f);
 			}
             else {
-                firstPersonWeapon->PlayAndLoopAnimation("AKS74U_Idle", 1.0f);
+                viewWeaponGameObject->PlayAndLoopAnimation("AKS74U_Idle", 1.0f);
 			}
 		}
 		// Draw
 		if (_weaponAction == DRAW_BEGIN) {
-			firstPersonWeapon->PlayAnimation("AKS74U_Draw", 1.125f);
+			viewWeaponGameObject->PlayAnimation("AKS74U_Draw", 1.125f);
 			_weaponAction = DRAWING;
 		}
 		// Drawing
-		if (_weaponAction == DRAWING && firstPersonWeapon->IsAnimationComplete()) {
+		if (_weaponAction == DRAWING && viewWeaponGameObject->IsAnimationComplete()) {
 			_weaponAction = IDLE;
 		}
 	}
@@ -2267,19 +2270,19 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations2(float deltaTime) {
         // Idle
         if (_weaponAction == IDLE) {
             if (Player::IsMoving()) {
-                firstPersonWeapon->PlayAndLoopAnimation("Shotgun_Walk", 1.0f);
+                viewWeaponGameObject->PlayAndLoopAnimation("Shotgun_Walk", 1.0f);
             }
             else {
-                firstPersonWeapon->PlayAndLoopAnimation("Shotgun_Idle", 1.0f);
+                viewWeaponGameObject->PlayAndLoopAnimation("Shotgun_Idle", 1.0f);
             }
         }
         // Draw
         if (_weaponAction == DRAW_BEGIN) {
-            firstPersonWeapon->PlayAnimation("Shotgun_Equip", 1.0f);
+            viewWeaponGameObject->PlayAnimation("Shotgun_Equip", 1.0f);
             _weaponAction = DRAWING;
         }
         // Drawing
-        if (_weaponAction == DRAWING && firstPersonWeapon->IsAnimationComplete()) {
+        if (_weaponAction == DRAWING && viewWeaponGameObject->IsAnimationComplete()) {
             _weaponAction = IDLE;
         }
         // Fire
@@ -2289,7 +2292,7 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations2(float deltaTime) {
                 _weaponAction = FIRE;
                 std::string aninName = "Shotgun_Fire";
                 std::string audioName = "Shotgun_Fire.wav";
-                firstPersonWeapon->PlayAnimation(aninName, 1.0f);
+                viewWeaponGameObject->PlayAnimation(aninName, 1.0f);
                 Audio::PlayAudio(audioName, 1.0f);
                 SpawnMuzzleFlash();
                 for (int i = 0; i < 12; i++) {
@@ -2304,17 +2307,17 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations2(float deltaTime) {
                 Audio::PlayAudio("Dry_Fire.wav", 0.8f);
             }
         }
-        if (_weaponAction == FIRE && firstPersonWeapon->AnimationIsPastPercentage(100.0f)) {
+        if (_weaponAction == FIRE && viewWeaponGameObject->AnimationIsPastPercentage(100.0f)) {
             _weaponAction = IDLE;
         }
         // Reload
        if (PressedReload() && CanReload()) {
-           firstPersonWeapon->PlayAnimation("Shotgun_ReloadWetstart", 1.0f);
+           viewWeaponGameObject->PlayAnimation("Shotgun_ReloadWetstart", 1.0f);
            _weaponAction = RELOAD_SHOTGUN_BEGIN;
         }
 
        // BEGIN RELOAD THING
-       if (_weaponAction == RELOAD_SHOTGUN_BEGIN && firstPersonWeapon->IsAnimationComplete()) {
+       if (_weaponAction == RELOAD_SHOTGUN_BEGIN && viewWeaponGameObject->IsAnimationComplete()) {
            bool singleShell = false;
            if (_inventory.shotgunAmmo.clip == 7 ||
                _inventory.shotgunAmmo.total == 1 ) {
@@ -2323,12 +2326,12 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations2(float deltaTime) {
 
            // Single shell
            if (singleShell) {
-               firstPersonWeapon->PlayAnimation("Shotgun_Reload1Shell", 1.5f);
+               viewWeaponGameObject->PlayAnimation("Shotgun_Reload1Shell", 1.5f);
                _weaponAction = RELOAD_SHOTGUN_SINGLE_SHELL;
            }
            // Double shell
            else {
-               firstPersonWeapon->PlayAnimation("Shotgun_Reload2Shells", 1.5f);
+               viewWeaponGameObject->PlayAnimation("Shotgun_Reload2Shells", 1.5f);
                _weaponAction = RELOAD_SHOTGUN_DOUBLE_SHELL;
            }
 
@@ -2336,28 +2339,28 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations2(float deltaTime) {
            _needsShotgunSecondShellAdded = true;
        }
        // END RELOAD THING
-       if (_weaponAction == RELOAD_SHOTGUN_SINGLE_SHELL && firstPersonWeapon->IsAnimationComplete() && GetCurrentWeaponMagAmmo() == SHOTGUN_AMMO_SIZE) {
-           firstPersonWeapon->PlayAnimation("Shotgun_ReloadEnd", 1.25f);
+       if (_weaponAction == RELOAD_SHOTGUN_SINGLE_SHELL && viewWeaponGameObject->IsAnimationComplete() && GetCurrentWeaponMagAmmo() == SHOTGUN_AMMO_SIZE) {
+           viewWeaponGameObject->PlayAnimation("Shotgun_ReloadEnd", 1.25f);
            _weaponAction = RELOAD_SHOTGUN_END;
        }
-       if (_weaponAction == RELOAD_SHOTGUN_DOUBLE_SHELL && firstPersonWeapon->IsAnimationComplete() && GetCurrentWeaponMagAmmo() == SHOTGUN_AMMO_SIZE) {
-           firstPersonWeapon->PlayAnimation("Shotgun_ReloadEnd", 1.25f);
+       if (_weaponAction == RELOAD_SHOTGUN_DOUBLE_SHELL && viewWeaponGameObject->IsAnimationComplete() && GetCurrentWeaponMagAmmo() == SHOTGUN_AMMO_SIZE) {
+           viewWeaponGameObject->PlayAnimation("Shotgun_ReloadEnd", 1.25f);
            _weaponAction = RELOAD_SHOTGUN_END;
        }
        // CONTINUE THE RELOAD THING
-       if (_weaponAction == RELOAD_SHOTGUN_SINGLE_SHELL && firstPersonWeapon->IsAnimationComplete()) {
+       if (_weaponAction == RELOAD_SHOTGUN_SINGLE_SHELL && viewWeaponGameObject->IsAnimationComplete()) {
            if (_inventory.shotgunAmmo.total > 0) {
-               firstPersonWeapon->PlayAnimation("Shotgun_Reload1Shell", 1.5f);
+               viewWeaponGameObject->PlayAnimation("Shotgun_Reload1Shell", 1.5f);
                _weaponAction = RELOAD_SHOTGUN_SINGLE_SHELL;
                _needsShotgunFirstShellAdded = true;
                _needsShotgunSecondShellAdded = true;
            }
            else {
-               firstPersonWeapon->PlayAnimation("Shotgun_ReloadEnd", 1.25f);
+               viewWeaponGameObject->PlayAnimation("Shotgun_ReloadEnd", 1.25f);
                _weaponAction = RELOAD_SHOTGUN_END;
            }
        }
-       if (_weaponAction == RELOAD_SHOTGUN_DOUBLE_SHELL && firstPersonWeapon->IsAnimationComplete()) {
+       if (_weaponAction == RELOAD_SHOTGUN_DOUBLE_SHELL && viewWeaponGameObject->IsAnimationComplete()) {
            bool singleShell = false;
            if (_inventory.shotgunAmmo.clip == 7 ||
                _inventory.shotgunAmmo.total == 1) {
@@ -2365,12 +2368,12 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations2(float deltaTime) {
            }
            // Single shell
            if (singleShell) {
-               firstPersonWeapon->PlayAnimation("Shotgun_Reload1Shell", 1.5f);
+               viewWeaponGameObject->PlayAnimation("Shotgun_Reload1Shell", 1.5f);
                _weaponAction = RELOAD_SHOTGUN_SINGLE_SHELL;
            }
            // Double shell
            else {
-               firstPersonWeapon->PlayAnimation("Shotgun_Reload2Shells", 1.5f);
+               viewWeaponGameObject->PlayAnimation("Shotgun_Reload2Shells", 1.5f);
                _weaponAction = RELOAD_SHOTGUN_DOUBLE_SHELL;
            }
            _needsShotgunFirstShellAdded = true;
@@ -2378,28 +2381,28 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations2(float deltaTime) {
        }
 
        // Give ammo on reload
-       if (_needsShotgunFirstShellAdded && _weaponAction == RELOAD_SHOTGUN_SINGLE_SHELL && firstPersonWeapon->AnimationIsPastPercentage(35.0f)) {
+       if (_needsShotgunFirstShellAdded && _weaponAction == RELOAD_SHOTGUN_SINGLE_SHELL && viewWeaponGameObject->AnimationIsPastPercentage(35.0f)) {
            _inventory.shotgunAmmo.clip++;
            _inventory.shotgunAmmo.total--;
            _needsShotgunFirstShellAdded = false;
            Audio::PlayAudio("Shotgun_Reload.wav", 1.0f);
        }
-       if (_needsShotgunFirstShellAdded && _weaponAction == RELOAD_SHOTGUN_DOUBLE_SHELL && firstPersonWeapon->AnimationIsPastPercentage(28.0f)) {
+       if (_needsShotgunFirstShellAdded && _weaponAction == RELOAD_SHOTGUN_DOUBLE_SHELL && viewWeaponGameObject->AnimationIsPastPercentage(28.0f)) {
            _inventory.shotgunAmmo.clip++;
            _inventory.shotgunAmmo.total--;
            _needsShotgunFirstShellAdded = false;
            Audio::PlayAudio("Shotgun_Reload.wav", 1.0f);
        }
-       if (_needsShotgunSecondShellAdded && _weaponAction == RELOAD_SHOTGUN_DOUBLE_SHELL && firstPersonWeapon->AnimationIsPastPercentage(62.0f)) {
+       if (_needsShotgunSecondShellAdded && _weaponAction == RELOAD_SHOTGUN_DOUBLE_SHELL && viewWeaponGameObject->AnimationIsPastPercentage(62.0f)) {
            _inventory.shotgunAmmo.clip++;
            _inventory.shotgunAmmo.total--;
            _needsShotgunSecondShellAdded = false;
            Audio::PlayAudio("Shotgun_Reload.wav", 1.0f);
        }
 
-       if (_weaponAction == FIRE && firstPersonWeapon->IsAnimationComplete() ||
-           _weaponAction == RELOAD_SHOTGUN_END && firstPersonWeapon->IsAnimationComplete() ||
-            _weaponAction == SPAWNING && firstPersonWeapon->IsAnimationComplete()) {
+       if (_weaponAction == FIRE && viewWeaponGameObject->IsAnimationComplete() ||
+           _weaponAction == RELOAD_SHOTGUN_END && viewWeaponGameObject->IsAnimationComplete() ||
+            _weaponAction == SPAWNING && viewWeaponGameObject->IsAnimationComplete()) {
             _weaponAction = IDLE;
         }
     }
@@ -2407,13 +2410,13 @@ void Player::UpdateFirstPersonWeaponLogicAndAnimations2(float deltaTime) {
 
 
 	// Update animated bone transforms for the first person weapon model
-	firstPersonWeapon->Update(deltaTime);
+	viewWeaponGameObject->Update(deltaTime);
 
 	// Move glock slide bone if necessary
 	if (GLOCK && _glockSlideNeedsToBeOut) {
 		Transform transform;
 		transform.position.y = 0.055f;
-		firstPersonWeapon->_animatedTransforms.local[3] *= transform.to_mat4();	// 3 is slide bone
+		viewWeaponGameObject->_animatedTransforms.local[3] *= transform.to_mat4();	// 3 is slide bone
 	}
 
 
@@ -2428,17 +2431,17 @@ void Player::SpawnMuzzleFlash() {
 
 glm::vec3 Player::GetGlockBarrelPosition() {
 
-    AnimatedGameObject* firstPersonWeapon = Scene::GetAnimatedGameObjectByIndex(m_firstPersonWeaponAnimatedGameObjectIndex);
+    AnimatedGameObject* viewWeaponGameObject = Scene::GetAnimatedGameObjectByIndex(m_viewWeaponAnimatedGameObjectIndex);
 
-    if (firstPersonWeapon->GetName() == "Glock") {
-        int boneIndex = firstPersonWeapon->_skinnedModel->m_BoneMapping["Barrel"];
-        glm::mat4 boneMatrix = firstPersonWeapon->_animatedTransforms.worldspace[boneIndex];
+    if (viewWeaponGameObject->GetName() == "Glock") {
+        int boneIndex = viewWeaponGameObject->_skinnedModel->m_BoneMapping["Barrel"];
+        glm::mat4 boneMatrix = viewWeaponGameObject->_animatedTransforms.worldspace[boneIndex];
         Transform offset;
         offset.position = glm::vec3(0, 2 + 2, 11);
         if (_hasGlockSilencer) {
             offset.position = glm::vec3(0, 2 + 2, 28);
         }
-        glm::mat4 m = firstPersonWeapon->GetModelMatrix() * boneMatrix * offset.to_mat4() * _weaponSwayMatrix;
+        glm::mat4 m = viewWeaponGameObject->GetModelMatrix() * boneMatrix * offset.to_mat4() * _weaponSwayMatrix;
         float x = m[3][0];
         float y = m[3][1];
         float z = m[3][2];
@@ -2452,9 +2455,8 @@ glm::vec3 Player::GetGlockBarrelPosition() {
 
 void Player::SpawnCasing(AmmoInfo* ammoInfo) {
 
-    AnimatedGameObject* firstPersonWeapon = Scene::GetAnimatedGameObjectByIndex(m_firstPersonWeaponAnimatedGameObjectIndex);
+    AnimatedGameObject* viewWeaponGameObject = Scene::GetAnimatedGameObjectByIndex(m_viewWeaponAnimatedGameObjectIndex);
 
-    glm::vec3 size = glm::vec3(0.01f, 0.004f, 0.004f);
     if (!Util::StrCmp(ammoInfo->casingModelName, UNDEFINED_STRING)) {
 
         int modelIndex = AssetManager::GetModelIndexByName(ammoInfo->casingModelName);
@@ -2468,71 +2470,42 @@ void Player::SpawnCasing(AmmoInfo* ammoInfo) {
         float height = std::abs(casingMesh->aabbMax.y - casingMesh->aabbMin.y);
         float depth = std::abs(casingMesh->aabbMax.z - casingMesh->aabbMin.z);
 
-        size.x = width;
-        size.y = height;
-        size.z = depth;
+        glm::vec3 size = glm::vec3(width, height, depth);
 
-        std::cout << "\n";
-        std::cout << "casingMesh->aabbMin: " << Util::Vec3ToString(casingMesh->aabbMin) << "\n";
-        std::cout << "casingMesh->aabbMax: " << Util::Vec3ToString(casingMesh->aabbMax) << "\n";
-        std::cout << "casingModel->GetBoundingBox().size: " << Util::Vec3ToString(casingModel->GetBoundingBox().size) << "\n";
-        std::cout << "size: " << Util::Vec3ToString(size) << "\n";
-        std::cout << "\n";
+        Transform transform;
+        transform.position = GetPistolCasingSpawnPostion();
+        transform.rotation.x = HELL_PI * 0.5f;
+        transform.rotation.y = _rotation.y + (HELL_PI * 0.5f);
 
+        PhysicsFilterData filterData;
+        filterData.raycastGroup = RaycastGroup::RAYCAST_DISABLED;
+        filterData.collisionGroup = CollisionGroup::BULLET_CASING;
+        filterData.collidesWith = CollisionGroup::ENVIROMENT_OBSTACLE;
+
+        PxShape* shape = Physics::CreateBoxShape(size.x, size.y, size.z);
+        PxRigidDynamic* body = Physics::CreateRigidDynamic(transform, filterData, shape);
+
+        PxVec3 force = Util::GlmVec3toPxVec3(glm::normalize(GetCameraRight() + glm::vec3(0.0f, Util::RandomFloat(0.7f, 0.9f), 0.0f)) * glm::vec3(0.00215f));
+        body->addForce(force);
+        body->setAngularVelocity(PxVec3(Util::RandomFloat(0.0f, 100.0f), Util::RandomFloat(0.0f, 100.0f), Util::RandomFloat(0.0f, 100.0f)));
+        body->userData = (void*)&EngineState::weaponNamePointers[GLOCK];
+        body->setName("BulletCasing");
+
+
+        BulletCasing bulletCasing;
+        bulletCasing.type = GLOCK;
+        bulletCasing.rigidBody = body;
+        Scene::_bulletCasings.push_back(bulletCasing);
     }
-    else {
-        return;
-    }
-
-    /*
-    static Material*
-    static Material* shotgunShellMaterial = AssetManager::GetMaterialByIndex(AssetManager::GetMaterialIndex("Shell"));
-    static Material* aks74uCasingMaterial = AssetManager::GetMaterialByIndex(AssetManager::GetMaterialIndex("Casing_AkS74U"));
-    static int glockCasingMeshIndex = AssetManager::GetModelByIndex(AssetManager::GetModelIndexByName("BulletCasing"))->GetMeshIndices()[0];
-    static int shotgunShellMeshIndex = AssetManager::GetModelByIndex(AssetManager::GetModelIndexByName("Shell"))->GetMeshIndices()[0];
-    static int aks74uCasingMeshIndex = AssetManager::GetModelByIndex(AssetManager::GetModelIndexByName("BulletCasing_AK"))->GetMeshIndices()[0];
-    */
-
-	Transform transform;
-	transform.position = GetPistolCasingSpawnPostion();
-	transform.rotation.x = HELL_PI * 0.5f;
-	transform.rotation.y = _rotation.y + (HELL_PI * 0.5f);
-
-    std::cout << Util::Vec3ToString(GetPistolCasingSpawnPostion()) << "\n";
-
-	PhysicsFilterData filterData;
-	filterData.raycastGroup = RaycastGroup::RAYCAST_DISABLED;
-	filterData.collisionGroup = CollisionGroup::BULLET_CASING;
-    filterData.collidesWith = CollisionGroup::ENVIROMENT_OBSTACLE;
-    //filterData.collidesWith = CollisionGroup::NO_COLLISION;
-
-	PxShape* shape = Physics::CreateBoxShape(size.x, size.y, size.z);
-	PxRigidDynamic* body = Physics::CreateRigidDynamic(transform, filterData, shape);
-
-	PxVec3 force = Util::GlmVec3toPxVec3(glm::normalize(GetCameraRight() + glm::vec3(0.0f, Util::RandomFloat(0.7f, 0.9f), 0.0f)) * glm::vec3(0.00215f));
-	body->addForce(force);
-	body->setAngularVelocity(PxVec3(Util::RandomFloat(0.0f, 100.0f), Util::RandomFloat(0.0f, 100.0f), Util::RandomFloat(0.0f, 100.0f)));
-    //body->userData = (void*)&CasingType::BULLET_CASING;
-    body->userData = (void*)&EngineState::weaponNamePointers[GLOCK];
-    body->setName("BulletCasing");
-
- // std::cout <<
-
-	BulletCasing bulletCasing;
-	bulletCasing.type = GLOCK;
-	bulletCasing.rigidBody = body;
-	Scene::_bulletCasings.push_back(bulletCasing);
-
-    std::cout << "Spawned " << ammoInfo->name << " casing\n";
 }
 
 
 
 void Player::SpawnShotgunShell() {
 
-    AnimatedGameObject* firstPersonWeapon = Scene::GetAnimatedGameObjectByIndex(m_firstPersonWeaponAnimatedGameObjectIndex);
+    AnimatedGameObject* viewWeaponGameObject = Scene::GetAnimatedGameObjectByIndex(m_viewWeaponAnimatedGameObjectIndex);
     Transform transform;
-    transform.position = firstPersonWeapon->GetShotgunBarrelPosition();
+    transform.position = viewWeaponGameObject->GetShotgunBarrelPosition();
     transform.rotation.x = HELL_PI * 0.5f;
     transform.rotation.y = _rotation.y + (HELL_PI * 0.5f);
     //transform.rotation.x = HELL_PI * 0.5f;
@@ -2570,9 +2543,9 @@ void Player::SpawnShotgunShell() {
 
 void Player::SpawnAKS74UCasing() {
 
-    AnimatedGameObject* firstPersonWeapon = Scene::GetAnimatedGameObjectByIndex(m_firstPersonWeaponAnimatedGameObjectIndex);
+    AnimatedGameObject* viewWeaponGameObject = Scene::GetAnimatedGameObjectByIndex(m_viewWeaponAnimatedGameObjectIndex);
 	Transform transform;
-	transform.position = firstPersonWeapon->GetAK74USCasingSpawnPostion();
+	transform.position = viewWeaponGameObject->GetAK74USCasingSpawnPostion();
 	transform.rotation.x = HELL_PI * 0.5f;
 	transform.rotation.y = _rotation.y + (HELL_PI * 0.5f);
 
@@ -2631,7 +2604,7 @@ void DropAKS7UMag() {
         return;
     }
     /*
-    AnimatedGameObject* firstPersonWeapon = Scene::GetAnimatedGameObjectByIndex(m_firstPersonWeaponAnimatedGameObjectIndex);
+    AnimatedGameObject* viewWeaponGameObject = Scene::GetAnimatedGameObjectByIndex(m_viewWeaponAnimatedGameObjectIndex);
 
 	PhysicsFilterData magFilterData;
 	magFilterData.raycastGroup = RAYCAST_DISABLED;
@@ -2650,7 +2623,7 @@ void DropAKS7UMag() {
 	mag.SetName("AKS74UMag");
 	mag.SetMeshMaterial("AKS74U_3");
 
-	AnimatedGameObject& ak2 = GetFirstPersonWeapon();
+	AnimatedGameObject& ak2 = GetviewWeaponGameObject();
 	glm::mat4 matrix = ak2.GetBoneWorldMatrixFromBoneName("Magazine");
 	glm::mat4 magWorldMatrix = ak2.GetModelMatrix() * GetWeaponSwayMatrix() * matrix;
     */
@@ -2761,10 +2734,10 @@ glm::mat4 Player::GetProjectionMatrix() {
 
 bool Player::CanEnterADS() {
 
-    AnimatedGameObject* firstPersonWeapon = Scene::GetAnimatedGameObjectByIndex(m_firstPersonWeaponAnimatedGameObjectIndex);
+    AnimatedGameObject* viewWeaponGameObject = Scene::GetAnimatedGameObjectByIndex(m_viewWeaponAnimatedGameObjectIndex);
     if (!InADS() && _weaponAction != RELOAD && _weaponAction != RELOAD_FROM_EMPTY ||
-        _weaponAction == RELOAD && firstPersonWeapon->AnimationIsPastPercentage(65.0f) ||
-        _weaponAction == RELOAD_FROM_EMPTY && firstPersonWeapon->AnimationIsPastPercentage(65.0f)) {
+        _weaponAction == RELOAD && viewWeaponGameObject->AnimationIsPastPercentage(65.0f) ||
+        _weaponAction == RELOAD_FROM_EMPTY && viewWeaponGameObject->AnimationIsPastPercentage(65.0f)) {
         return true;
     }
     else {

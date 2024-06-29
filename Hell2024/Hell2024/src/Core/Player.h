@@ -77,7 +77,7 @@ struct AmmoState {
 class Player {
 
 private:
-    int32_t m_firstPersonWeaponAnimatedGameObjectIndex = -1;
+    int32_t m_viewWeaponAnimatedGameObjectIndex = -1;
     int32_t m_characterModelAnimatedGameObjectIndex = -1;
     int32_t m_playerIndex = -1;
     std::vector<PickUpText> m_pickUpTexts;
@@ -93,7 +93,7 @@ public:
     Player() = default;
     Player(int playerIndex);
 
-    int32_t GetFirstPersonWeaponAnimatedGameObjectIndex();
+    int32_t GetViewWeaponAnimatedGameObjectIndex();
     int32_t GetCharacterModelAnimatedGameObjectIndex();
     int32_t GetPlayerIndex();
     glm::vec3 GetMuzzleFlashPosition();
@@ -201,9 +201,9 @@ public:
 	glm::vec3 GetCameraForward();
 	glm::vec3 GetCameraUp();
     //int GetCurrentWeaponIndex();
-    void UpdateFirstPersonWeaponLogicAndAnimations(float deltaTime);
-    void UpdateFirstPersonWeaponLogicAndAnimations2(float deltaTime);
-    void UpdateFirstPersonWeaponLogicAndAnimations3(float deltaTime);
+    void UpdateWeaponLogicAndAnimations(float deltaTime);
+    void UpdateWeaponLogicAndAnimations2(float deltaTime);
+    void UpdateWeaponLogicAndAnimations3(float deltaTime);
 	void SpawnMuzzleFlash();
     void SpawnCasing(AmmoInfo* ammoInfo);
     void SpawnAKS74UCasing();

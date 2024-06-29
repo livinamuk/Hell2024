@@ -89,7 +89,7 @@ namespace WeaponManager {
         aks74u.magSize = 30;
         aks74u.muzzleFlashBoneName = "Weapon";
         aks74u.muzzleFlashOffset = glm::vec3(0, 0.002, 0.02f);
-        aks74u.casingEjectionBoneName = "SlideCatch";
+        //aks74u.casingEjectionBoneName = "SlideCatch";
         aks74u.casingEjectionOffset = glm::vec3(0, 0, 0);
         aks74u.animationCancelPercentages.fire = 20.0f;
         aks74u.animationCancelPercentages.reload = 80.0f;

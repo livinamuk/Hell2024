@@ -5,6 +5,11 @@ namespace Game {
     enum class GameMode { GAME, EDITOR_TOP_DOWN, EDITOR_3D };
     enum class MultiplayerMode { NONE, LOCAL, ONLINE };
 
+    struct GameSettings {
+        bool takeDamageOutside = false;
+        glm::vec3 skyBoxTint = glm::vec3(1);
+    };
+
     void Create();
     void CreatePlayers(unsigned int playerCount);
     bool IsLoaded();
@@ -25,5 +30,7 @@ namespace Game {
     // Pickups
     void SpawnPickup(PickUpType pickupType, glm::vec3 position, glm::vec3 rotation, bool wakeOnStart);
     void SpawnAmmo(std::string type, glm::vec3 position, glm::vec3 rotation, bool wakeOnStart);
+
+    const GameSettings& GetSettings();
 
 }

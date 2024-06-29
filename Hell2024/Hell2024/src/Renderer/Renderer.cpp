@@ -392,10 +392,10 @@ void UpdateDebugPointsMesh() {
 
     }
 
-    int index = Game::GetPlayerByIndex(0)->GetFirstPersonWeaponAnimatedGameObjectIndex();
+   // int index = Game::GetPlayerByIndex(0)->GetFirstPersonWeaponAnimatedGameObjectIndex();
    // index = Game::GetPlayerByIndex(1)->GetCharacterModelAnimatedGameObjectIndex();
-    AnimatedGameObject* object = Scene::GetAnimatedGameObjectByIndex(index);
-    SkinnedModel* skinnedModel = object->_skinnedModel;
+   // AnimatedGameObject* object = Scene::GetAnimatedGameObjectByIndex(index);
+  //  SkinnedModel* skinnedModel = object->_skinnedModel;
 
     for (int i = 0; i < vertices.size(); i++) {
         indices.push_back(i);
@@ -776,7 +776,7 @@ std::vector<SkinnedRenderItem> GetSkinnedRenderItemsForPlayer (int playerIndex) 
         AnimatedGameObject* animatedGameObject = Scene::GetAnimatedGameObjectByIndex(i);
 
         if (animatedGameObject->GetFlag() == AnimatedGameObject::Flag::CHARACTER_MODEL && i == player->GetCharacterModelAnimatedGameObjectIndex() ||
-            animatedGameObject->GetFlag() == AnimatedGameObject::Flag::FIRST_PERSON_WEAPON && i != player->GetFirstPersonWeaponAnimatedGameObjectIndex()) {
+            animatedGameObject->GetFlag() == AnimatedGameObject::Flag::FIRST_PERSON_WEAPON && i != player->GetViewWeaponAnimatedGameObjectIndex()) {
             continue;
         }
         std::vector<SkinnedRenderItem>& items = animatedGameObject->GetSkinnedMeshRenderItems();

@@ -7,17 +7,18 @@ layout (binding = 0) uniform samplerCube cubeMap;
 in vec3 TexCoords;
 
 uniform int playerIndex;
+uniform vec3 skyboxTint;
 
 void contrastAdjust( inout vec4 color, in float c) {
-    float t = 0.5 - c * 0.5; 
+    float t = 0.5 - c * 0.5;
     color.rgb = color.rgb * c + t;
 }
 
-void main() {		
+void main() {
+
     FinalLighting.rgb = texture(cubeMap, TexCoords).rgb;
-    FinalLighting.rgb *= 0.3;
-    FinalLighting.g *= 0.5;
-    FinalLighting.b *= 0.1;
+
+	FinalLighting.rgb *= skyboxTint;
     FinalLighting.a = 1.0;
 
 	Normal.rgb = vec3(0,0,0);
