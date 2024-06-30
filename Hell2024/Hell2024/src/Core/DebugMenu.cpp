@@ -523,9 +523,9 @@ const int DebugMenu::GetSubMenuItemCount() {
 	return _currentMenuItem->subMenu.size();
 }
 
-const bool DebugMenu::SubMenuHasValues() {	
-	for (int i = 0; i << _currentMenuItem->subMenu.size(); i++) {
-		if (_currentMenuItem->subMenu[i].flag !=MenuItemFlag::UNDEFINED) {
+const bool DebugMenu::SubMenuHasValues() {
+	for (const auto& subMenuItem : _currentMenuItem->subMenu) {
+		if (subMenuItem.flag != MenuItemFlag::UNDEFINED) {
 			return true;
 		}
 	}
