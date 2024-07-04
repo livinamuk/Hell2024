@@ -4,10 +4,10 @@
 #include "../API/OpenGL/GL_renderer.h"
 #include "../API/Vulkan/VK_renderer.h"
 #include "../BackEnd/BackEnd.h"
-#include "../Core/Game.h"
-#include "../Core/Input.h"
-#include "../Core/Player.h"
-#include "../Core/Scene.h"
+#include "../Game/Game.h"
+#include "../Game/Player.h"
+#include "../Game/Scene.h"
+#include "../Input/Input.h"
 #include "../Renderer/GlobalIllumination.h"
 #include "../Renderer/RenderData.h"
 #include "../Renderer/TextBlitter.h"
@@ -149,6 +149,7 @@ std::vector<RenderItem2D> CreateRenderItems2DHiRes(ivec2 gbufferSize, int player
 std::vector<RenderItem3D> CreateRenderItems3D() {
 
     std::vector<RenderItem3D> renderItems = Scene::GetAllRenderItems();
+
     return renderItems;
 }
 
@@ -359,37 +360,55 @@ void UpdateDebugPointsMesh() {
 
 
     Player* player = Game::GetPlayerByIndex(0);
-    Vertex v;
-    v.position = player->GetPistolCasingSpawnPostion();
-    v.normal = RED;
-//    vertices.push_back(v);
 
 
-    for (auto& object : Scene::GetAnimatedGamesObjects()) {
+    if (true) {
 
-        if (object._skinnedModel->_filename == "Glock") {
-
-
-
-            glm::mat4 muzzleMatrix = object.GetJointWorldTransformByName("Barrel");
-           // glm::mat4 ejectionPortMatrix = object.GetJointWorldTransformByName("Ejection");
+            for (auto& object : Scene::GetAnimatedGamesObjects()) {
 
 
+                if (object.GetName() == "TestGlock") {
 
-            glm::vec3 offest = glm::vec3(0, 0, 0.1);
-            offest /= object.GetScale();
+                    Vertex v;
+                    v.normal = RED;
+                    v.position = object.GetModelMatrix() * object.GetAnimatedTransformByBoneName("Slide") * glm::vec4(0, 0, 0, 1);
+                    vertices.push_back(v);
 
-            Vertex v;
-            v.position = muzzleMatrix * glm::vec4(offest, 1);
-            v.normal = RED;
-          //  vertices.push_back(v);
-            /*
-            Vertex v2;
-            v2.position = ejectionPortMatrix * glm::vec4(0, 0, 0, 1);
-            v2.normal = GREEN;
-            vertices.push_back(v2);*/
-        }
+                }
 
+                /*
+                if (object._skinnedModel->_filename == "Glock") {
+                    WeaponInfo* weaponInfo = WeaponManager::GetWeaponInfoByName("Glock");
+                    Vertex v;
+                    v.normal = GREEN;
+                    v.position = object.GetModelMatrix() * object.GetAnimatedTransformByBoneName(weaponInfo->muzzleFlashBoneName) * glm::vec4(0, 0, 0, 1);
+                    //   vertices.push_back(v);
+                    v.normal = RED;
+                    v.position = object.GetModelMatrix() * object.GetAnimatedTransformByBoneName(weaponInfo->casingEjectionBoneName) * glm::vec4(0, 0, 0, 1);
+                    vertices.push_back(v);
+                }
+                if (object._skinnedModel->_filename == "AKS74U") {
+                    WeaponInfo* weaponInfo = WeaponManager::GetWeaponInfoByName("AKS74U");
+                    Vertex v;
+                    v.normal = GREEN;
+                    v.position = object.GetModelMatrix() * object.GetAnimatedTransformByBoneName(weaponInfo->muzzleFlashBoneName) * glm::vec4(0, 0, 0, 1);
+                    //  vertices.push_back(v);
+                    v.normal = RED;
+                    v.position = object.GetModelMatrix() * object.GetAnimatedTransformByBoneName(weaponInfo->casingEjectionBoneName) * glm::vec4(0, 0, 0, 1);
+                    vertices.push_back(v);
+                }
+                if (object._skinnedModel->_filename == "Tokarev") {
+                    WeaponInfo* weaponInfo = WeaponManager::GetWeaponInfoByName("Tokarev");
+                    Vertex v;
+                    v.normal = GREEN;
+                    v.position = object.GetModelMatrix() * object.GetAnimatedTransformByBoneName(weaponInfo->muzzleFlashBoneName) * glm::vec4(0, 0, 0, 1);
+                    //   vertices.push_back(v);
+                    v.normal = RED;
+                    v.position = object.GetModelMatrix() * object.GetAnimatedTransformByBoneName(weaponInfo->casingEjectionBoneName) * glm::vec4(0, 0, 0, 1);
+                    vertices.push_back(v);
+                }*/
+
+            }
     }
 
    // int index = Game::GetPlayerByIndex(0)->GetFirstPersonWeaponAnimatedGameObjectIndex();
@@ -535,6 +554,7 @@ BlitDstCoords GetBlitDstCoords(unsigned int playerIndex) {
 MuzzleFlashData GetMuzzleFlashData(unsigned int playerIndex) {
 
     Player* player = Game::GetPlayerByIndex(playerIndex);
+    WeaponInfo* weaponInfo = player->GetCurrentWeaponInfo();
 
     int rows = 5;
     int columns = 4;
@@ -555,9 +575,8 @@ MuzzleFlashData GetMuzzleFlashData(unsigned int playerIndex) {
 
     Transform localTransform;
     localTransform.rotation.z = player->GetMuzzleFlashRotation();;
-    localTransform.scale = glm::vec3(0.25f, 0.125f, 1);
-    localTransform.scale.x *= 0.375;
-    localTransform.scale.y *= 0.375;
+    localTransform.scale = glm::vec3(1.0f, 0.5f, 1);
+    localTransform.scale *= glm::vec3(weaponInfo->muzzleFlashScale);
 
     if (time > duration * 0.125f) {
         localTransform.scale = glm::vec3(0);
@@ -776,7 +795,7 @@ std::vector<SkinnedRenderItem> GetSkinnedRenderItemsForPlayer (int playerIndex) 
         AnimatedGameObject* animatedGameObject = Scene::GetAnimatedGameObjectByIndex(i);
 
         if (animatedGameObject->GetFlag() == AnimatedGameObject::Flag::CHARACTER_MODEL && i == player->GetCharacterModelAnimatedGameObjectIndex() ||
-            animatedGameObject->GetFlag() == AnimatedGameObject::Flag::FIRST_PERSON_WEAPON && i != player->GetViewWeaponAnimatedGameObjectIndex()) {
+            animatedGameObject->GetFlag() == AnimatedGameObject::Flag::VIEW_WEAPON && i != player->GetViewWeaponAnimatedGameObjectIndex()) {
             continue;
         }
         std::vector<SkinnedRenderItem>& items = animatedGameObject->GetSkinnedMeshRenderItems();
@@ -1028,6 +1047,42 @@ std::vector<RenderItem3D> CreateGlassRenderItems() {
             renderItem.inverseModelMatrix = glm::inverse(renderItem.modelMatrix);
         }
     }
+
+
+
+    for (int i = 0; i < Game::GetPlayerCount(); i++) {
+        Player* player = Game::GetPlayerByIndex(i);
+        renderItems.reserve(renderItems.size() + player->GetAttachmentGlassRenderItems().size());
+        renderItems.insert(std::end(renderItems), std::begin(player->GetAttachmentGlassRenderItems()), std::end(player->GetAttachmentGlassRenderItems()));
+    }
+
+    /*
+    for (AnimatedGameObject& animatedGameObject : Scene::GetAnimatedGamesObjects()) {
+
+        // Glock Sight
+        if (animatedGameObject._skinnedModel->_filename == "Glock") {
+            glm::mat4 modelMatrix = animatedGameObject.GetModelMatrix() * animatedGameObject.GetAnimatedTransformByBoneName("Weapon");// *scale.to_mat4();
+            static int materialIndex = AssetManager::GetMaterialIndex("RedDotSight");
+            uint32_t modelIndex = AssetManager::GetModelIndexByName("Glock_RedDotSight");
+            Model* model = AssetManager::GetModelByIndex(modelIndex);
+            uint32_t& meshIndex = model->GetMeshIndices()[1];
+            Mesh* mesh = AssetManager::GetMeshByIndex(meshIndex);
+            RenderItem3D& renderItem = renderItems.emplace_back();
+            renderItem.vertexOffset = mesh->baseVertex;
+            renderItem.indexOffset = mesh->baseIndex;
+            renderItem.modelMatrix = modelMatrix;
+            renderItem.inverseModelMatrix = inverse(renderItem.modelMatrix);
+            renderItem.meshIndex = meshIndex;
+            renderItem.normalTextureIndex = AssetManager::GetMaterialByIndex(materialIndex)->_normal;
+            renderItem.baseColorTextureIndex = AssetManager::GetMaterialByIndex(materialIndex)->_basecolor;
+            renderItem.rmaTextureIndex = AssetManager::GetMaterialByIndex(materialIndex)->_rma;
+            renderItems.push_back(renderItem);
+        }
+    }
+    */
+
+
+
     return renderItems;
 }
 

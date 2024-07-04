@@ -1,14 +1,13 @@
 #include "BackEnd.h"
 #include <iostream>
 #include <string>
-#include "../Renderer/Renderer_OLD.h"
 #include "../API/OpenGL/GL_backEnd.h"
 #include "../API/OpenGL/GL_renderer.h"
 #include "../API/Vulkan/VK_backEnd.h"
 #include "../Core/AssetManager.h"
 #include "../Core/Audio.hpp"
-#include "../Core/Input.h"
-#include "../Core/InputMulti.h"
+#include "../Input/Input.h"
+#include "../Input/InputMulti.h"
 #include "../Physics/Physics.h"
 
 // GET ME OUT OF HERE
@@ -96,17 +95,16 @@ namespace BackEnd {
         glfwSetWindowFocusCallback(_window, window_focus_callback);
 
         AssetManager::FindAssetPaths();
-        
+
         if (GetAPI() == API::OPENGL) {
             glfwMakeContextCurrent(_window);
             OpenGLBackEnd::InitMinimum();
             OpenGLRenderer::InitMinimum();
-            Renderer_OLD::InitMinimumGL(); 
             glClipControl(GL_LOWER_LEFT, GL_ZERO_TO_ONE);
         }
         else if (GetAPI() == API::VULKAN) {
-            VulkanBackEnd::InitMinimum(); 
-            // VulkanRenderer minimum init is tangled in the above function 
+            VulkanBackEnd::InitMinimum();
+            // VulkanRenderer minimum init is tangled in the above function
         }
         AssetManager::LoadFont();
 
@@ -168,7 +166,7 @@ namespace BackEnd {
     void CreateGLFWWindow(const WindowedMode& windowedMode) {
         if (windowedMode == WindowedMode::WINDOWED) {
             _currentWindowWidth = _windowedWidth;
-            _currentWindowHeight = _windowedHeight; 
+            _currentWindowHeight = _windowedHeight;
             _window = glfwCreateWindow(_windowedWidth, _windowedHeight, "Unloved", NULL, NULL);
             glfwSetWindowPos(_window, 0, 0);
         }
@@ -204,7 +202,6 @@ namespace BackEnd {
         }
         if (GetAPI() == API::OPENGL) {
             //OpenGLBackEnd::HandleFrameBufferResized();
-            Renderer_OLD::RecreateFrameBuffers(EngineState::GetCurrentPlayer());
         }
         else {
             VulkanBackEnd::HandleFrameBufferResized();
@@ -289,10 +286,10 @@ namespace BackEnd {
     /////////////////////////
     //                     //
     //      Callbacks      //
- 
+
     void framebuffer_size_callback(GLFWwindow* /*window*/, int width, int height) {
         if (GetAPI() == API::OPENGL) {
-            
+
         }
         else {
             VulkanBackEnd::MarkFrameBufferAsResized();

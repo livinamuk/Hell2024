@@ -1,4 +1,4 @@
-#include "Floorplan.h"
+/*#include "Floorplan.h"
 #include "Input.h"
 #include "../API/OpenGL/GL_backEnd.h"
 #include "../BackEnd/BackEnd.h"
@@ -6,7 +6,6 @@
 #include "../Core/Scene.h"
 #include "../EngineState.hpp"
 #include "../Renderer/TextBlitter.h"
-#include "../Renderer/Renderer_OLD.h"
 #include "../Types/Modular/ModularCommon.h"
 #include "../Util.hpp"
 
@@ -76,7 +75,7 @@ void Floorplan::Init() {
 
 }
 
-void Floorplan::Update(float /*deltaTime*/) {
+void Floorplan::Update(float deltaTime) {
 
     if (Input::KeyPressed(HELL_KEY_N)) {
         Scene::CleanUp();
@@ -379,143 +378,6 @@ void Floorplan::CeilingModeUpdate() {
     //break_out: {}
 }
 
-void Floorplan::PrepareRenderFrame() {
-
-    /*TextBlitter::Update(1.0f / 60.0f);
-    TextBlitter::ClearAllText();
-
-    if (_mode == Floorplan::WALLS) {
-        TextBlitter::_debugTextToBilt = "Mode: WALLS\n";
-    }
-    if (_mode == Floorplan::FLOOR) {
-        TextBlitter::_debugTextToBilt = "Mode: FLOOR\n";
-    }
-    if (_mode == Floorplan::CEILING) {
-        TextBlitter::_debugTextToBilt = "Mode: CEILING\n";
-    }
-
-    TextBlitter::_debugTextToBilt += "Mouse: " + std::to_string(_mouseX) + ", " + std::to_string(_mouseZ) + "\n";
-    TextBlitter::_debugTextToBilt += "Grid: " + std::to_string(_gridX) + ", " + std::to_string(_gridZ) + "\n";
-
-    TextBlitter::_debugTextToBilt += "Zoom: " + std::to_string(_zoom) + "\n";
-    TextBlitter::_debugTextToBilt += "GameObjects: " + std::to_string(Scene::_gameObjects.size()) + "\n";
-    TextBlitter::_debugTextToBilt += "AnimatedGameObjects: " + std::to_string(Scene::_animatedGameObjects.size()) + "\n";
-    TextBlitter::_debugTextToBilt += "Walls: " + std::to_string(Scene::_walls.size()) + "\n";
-    TextBlitter::_debugTextToBilt += "Lights: " + std::to_string(Scene::_lights.size()) + "\n";
-    TextBlitter::_debugTextToBilt += "Floors: " + std::to_string(Scene::_floors.size()) + "\n";
-    TextBlitter::_debugTextToBilt += "Ceilings: " + std::to_string(Scene::_ceilings.size()) + "\n";
-    TextBlitter::_debugTextToBilt += "Doors: " + std::to_string(Scene::_doors.size()) + "\n";
-    TextBlitter::_debugTextToBilt += "CloudPoints: " + std::to_string(Scene::_cloudPoints.size()) + "\n";
-    */
-
-    /*
-    // Draw grid
-    float gridY = -0.1f;
-    for (float x = 0; x <= _mapWidth + _gridSpacing / 2; x += _gridSpacing) {
-        Renderer_OLD::QueueLineForDrawing(Line(glm::vec3(x, gridY, 0), glm::vec3(x, gridY, _mapWidth), GRID_COLOR));
-    }
-    for (float z = 0; z <= _mapDepth + _gridSpacing / 2; z += _gridSpacing) {
-        Renderer_OLD::QueueLineForDrawing(Line(glm::vec3(0, gridY, z), glm::vec3(_mapDepth, gridY, z), GRID_COLOR));
-    }*/
-
-    if (_mode == FloorplanMode::WALLS) {
-
-        // Walls
-        for (Wall& wall : Scene::_walls) {
-            Renderer_OLD::QueueLineForDrawing(Line(wall.begin, wall.end, WHITE));
-            Renderer_OLD::QueuePointForDrawing(Point(wall.begin, YELLOW));
-            Renderer_OLD::QueuePointForDrawing(Point(wall.end, YELLOW));
-
-            // Normal
-            glm::vec3 normalBegin = wall.GetMidPoint();
-            glm::vec3 normalEnd = wall.GetMidPoint() + (wall.GetNormal() * glm::vec3(0.1f));
-            Renderer_OLD::QueueLineForDrawing(Line(normalBegin, normalEnd, WHITE));
-        }
-
-        if (_action == CREATING_WALL) {
-            Renderer_OLD::QueueLineForDrawing(_createLine);
-            Renderer_OLD::QueuePointForDrawing(Point(_createLine.p1.pos, YELLOW));
-            Renderer_OLD::QueuePointForDrawing(Point(_createLine.p2.pos, YELLOW));
-
-            // Normal
-            glm::vec3 lineNormal = GetLineNormal(_createLine);
-            glm::vec3 normalBegin = GetLineMidPoint(_createLine);
-            if (_flipCreatingWallNormals) {
-                lineNormal *= glm::vec3(-1);
-            }
-            glm::vec3 normalEnd = GetLineMidPoint(_createLine) + (lineNormal * glm::vec3(0.1f));
-            Renderer_OLD::QueueLineForDrawing(Line(normalBegin, normalEnd, WHITE));
-        }
-
-        if (_hoveredVertex.hoverFound) {
-            Renderer_OLD::QueuePointForDrawing(Point(*_hoveredVertex.position + glm::vec3(0, 2, 0), RED));
-        }
-    }
-
-    if (_mode == FloorplanMode::FLOOR) {
-
-        if (_action == CREATING_FLOOR) {
-            float x1 = std::min(_creatingFloorBegin.x, _creatingFloorEnd.x);
-            float z1 = std::min(_creatingFloorBegin.z, _creatingFloorEnd.z);
-            float x2 = std::max(_creatingFloorBegin.x, _creatingFloorEnd.x);
-            float z2 = std::max(_creatingFloorBegin.z, _creatingFloorEnd.z);
-            Renderer_OLD::QueuePointForDrawing(Point(glm::vec3(x1, 1, z1), YELLOW));
-            Renderer_OLD::QueuePointForDrawing(Point(glm::vec3(x1, 1, z2), YELLOW));
-            Renderer_OLD::QueuePointForDrawing(Point(glm::vec3(x2, 1, z1), YELLOW));
-            Renderer_OLD::QueuePointForDrawing(Point(glm::vec3(x2, 1, z2), YELLOW));
-            Renderer_OLD::QueueLineForDrawing(Line(glm::vec3(x1, 1, z1), glm::vec3(x1, 1, z2), WHITE));
-            Renderer_OLD::QueueLineForDrawing(Line(glm::vec3(x2, 1, z1), glm::vec3(x2, 1, z2), WHITE));
-            Renderer_OLD::QueueLineForDrawing(Line(glm::vec3(x1, 1, z1), glm::vec3(x2, 1, z1), WHITE));
-            Renderer_OLD::QueueLineForDrawing(Line(glm::vec3(x1, 1, z2), glm::vec3(x2, 1, z2), WHITE));
-        }
-
-        for (Floor& floor : Scene::_floors) {
-             Renderer_OLD::QueuePointForDrawing(Point(floor.v1.position, YELLOW));
-             Renderer_OLD::QueuePointForDrawing(Point(floor.v2.position, YELLOW));
-             Renderer_OLD::QueuePointForDrawing(Point(floor.v3.position, YELLOW));
-             Renderer_OLD::QueuePointForDrawing(Point(floor.v4.position, YELLOW));
-
-             Renderer_OLD::QueueLineForDrawing(Line(floor.v1.position, floor.v2.position, RED));
-             Renderer_OLD::QueueLineForDrawing(Line(floor.v1.position, floor.v4.position, RED));
-             Renderer_OLD::QueueLineForDrawing(Line(floor.v3.position, floor.v4.position, RED));
-             Renderer_OLD::QueueLineForDrawing(Line(floor.v3.position, floor.v2.position, RED));
-        }
-
-
-        if (_hoveredVertex.hoverFound) {
-            Renderer_OLD::QueuePointForDrawing(Point(*_hoveredVertex.position + glm::vec3(0, 2, 0), WHITE));
-        }
-    }
-
-
-
-    // Doors
-    for (Door& door : Scene::_doors) {
-        glm::vec3 color = LIGHT_BLUE;
-        if (_mode == FloorplanMode::WALLS) {
-            if (MouseOverDoor(door)) {
-                color = WHITE;
-            }
-            Renderer_OLD::QueuePointForDrawing(Point(door.GetFloorplanVertFrontLeft(0.0f), LIGHT_BLUE));
-            Renderer_OLD::QueuePointForDrawing(Point(door.GetFloorplanVertFrontRight(0.0f), LIGHT_BLUE));
-            Renderer_OLD::QueuePointForDrawing(Point(door.GetFloorplanVertBackLeft(0.0f), LIGHT_BLUE));
-            Renderer_OLD::QueuePointForDrawing(Point(door.GetFloorplanVertBackRight(0.0f), LIGHT_BLUE));
-        }
-        /*Triangle triA;
-        triA.color = color;
-        triA.p3 = door.GetFloorplanVertFrontLeft(0);
-        triA.p2 = door.GetFloorplanVertFrontRight(0);
-        triA.p1 = door.GetFloorplanVertBackRight(0);
-        Triangle triB;
-        triB.color = color;
-        triB.p1 = door.GetFloorplanVertBackLeft(0);
-        triB.p2 = door.GetFloorplanVertFrontRight(0);
-        triB.p3 = door.GetFloorplanVertBackRight(0);
-        Renderer_OLD::QueueTriangleForSolidRendering(triA);
-        Renderer_OLD::QueueTriangleForSolidRendering(triB);*/
-    }
-}
-
 glm::mat4 Floorplan::GetProjectionMatrix() {
     return _projection;
 }
@@ -537,3 +399,4 @@ void Floorplan::PreviousMode() {
         _mode = (FloorplanMode)(int(_mode) - 1);
     _action = IDLE;
 }
+*/

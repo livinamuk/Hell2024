@@ -20,8 +20,6 @@ extern "C" {
 
 #include "Engine.h"
 #include <iostream>
-#include "Core/JSON.hpp"
-#include "Core/WeaponManager.h"
 
 int main() {
 

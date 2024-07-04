@@ -5,9 +5,9 @@
 #include "Types/GL_shadowMap.h"
 #include "Types/GL_frameBuffer.hpp"
 #include "../../BackEnd/BackEnd.h"
-#include "../../Core/Scene.h"
 #include "../../Core/AssetManager.h"
-#include "../../Core/Game.h"
+#include "../../Game/Scene.h"
+#include "../../Game/Game.h"
 #include "../../Renderer/GlobalIllumination.h"
 #include "../../Renderer/RendererCommon.h"
 #include "../../Renderer/TextBlitter.h"
@@ -62,6 +62,7 @@ namespace OpenGLRenderer {
     } _shaders;
 
     struct SSBOs {
+
         GLuint samplers = 0;
         GLuint renderItems2D = 0;
         GLuint animatedRenderItems3D = 0;
@@ -552,8 +553,8 @@ void UploadSSBOsGPU(RenderData& renderData) {
     glNamedBufferSubData(OpenGLRenderer::_ssbos.geometryRenderItems, 0, renderData.geometryDrawInfo.renderItems.size() * sizeof(RenderItem3D), &renderData.geometryDrawInfo.renderItems[0]);
     glNamedBufferSubData(OpenGLRenderer::_ssbos.lights, 0, renderData.lights.size() * sizeof(GPULight), &renderData.lights[0]);
     //glNamedBufferSubData(OpenGLRenderer::_ssbos.cameraData, 0, sizeof(CameraData), &renderData.cameraData);
-    glNamedBufferSubData(OpenGLRenderer::_ssbos.animatedTransforms, 0, (*renderData.animatedTransforms).size() * sizeof(glm::mat4), &(*renderData.animatedTransforms)[0]);
-    glNamedBufferSubData(OpenGLRenderer::_ssbos.animatedRenderItems3D, 0, renderData.animatedRenderItems3D.size() * sizeof(RenderItem3D), &renderData.animatedRenderItems3D[0]);
+  //  glNamedBufferSubData(OpenGLRenderer::_ssbos.animatedTransforms, 0, (*renderData.animatedTransforms).size() * sizeof(glm::mat4), &(*renderData.animatedTransforms)[0]);
+  //  glNamedBufferSubData(OpenGLRenderer::_ssbos.animatedRenderItems3D, 0, renderData.animatedRenderItems3D.size() * sizeof(RenderItem3D), &renderData.animatedRenderItems3D[0]);
     glNamedBufferSubData(OpenGLRenderer::_ssbos.glassRenderItems, 0, renderData.glassDrawInfo.renderItems.size() * sizeof(RenderItem3D), &renderData.glassDrawInfo.renderItems[0]);
     glNamedBufferSubData(OpenGLRenderer::_ssbos.shadowMapGeometryRenderItems, 0, renderData.shadowMapGeometryDrawInfo.renderItems.size() * sizeof(RenderItem3D), &renderData.shadowMapGeometryDrawInfo.renderItems[0]);
     glNamedBufferSubData(OpenGLRenderer::_ssbos.bulletHoleDecalRenderItems, 0, renderData.bulletHoleDecalDrawInfo.renderItems.size() * sizeof(RenderItem3D), &renderData.bulletHoleDecalDrawInfo.renderItems[0]);
@@ -883,13 +884,16 @@ void DebugPass(RenderData& renderData) {
     glDisable(GL_DEPTH_TEST);
 
     // Draw lines
-    glBindVertexArray(linesMesh.GetVAO());
-    glDrawElements(GL_LINES, linesMesh.GetIndexCount(), GL_UNSIGNED_INT, 0);
-
+    if (linesMesh.GetIndexCount() > 0) {
+        glBindVertexArray(linesMesh.GetVAO());
+        glDrawElements(GL_LINES, linesMesh.GetIndexCount(), GL_UNSIGNED_INT, 0);
+    }
     // Draw points
-    glPointSize(4);
-    glBindVertexArray(pointsMesh.GetVAO());
-    glDrawElements(GL_POINTS, pointsMesh.GetIndexCount(), GL_UNSIGNED_INT, 0);
+    if (pointsMesh.GetIndexCount() > 0) {
+        glPointSize(4);
+        glBindVertexArray(pointsMesh.GetVAO());
+        glDrawElements(GL_POINTS, pointsMesh.GetIndexCount(), GL_UNSIGNED_INT, 0);
+    }
 
     // Point cloud
     if (renderData.renderMode == RenderMode::POINT_CLOUD_PROPAGATION_GRID ||
@@ -1165,6 +1169,8 @@ void LightingPass(RenderData& renderData) {
     glBindTexture(GL_TEXTURE_2D, gBuffer.GetColorAttachmentHandleByName("Normal"));
     glActiveTexture(GL_TEXTURE2);
     glBindTexture(GL_TEXTURE_2D, gBuffer.GetColorAttachmentHandleByName("RMA"));
+    glActiveTexture(GL_TEXTURE4);
+    glBindTexture(GL_TEXTURE_2D, gBuffer.GetColorAttachmentHandleByName("EmissiveMask"));
     glActiveTexture(GL_TEXTURE3);
     glBindTexture(GL_TEXTURE_2D, gBuffer.GetDepthAttachmentHandle());
 

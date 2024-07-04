@@ -24,14 +24,14 @@ out vec3 emissiveColor;
 
 struct RenderItem3D {
     mat4 modelMatrix;
-    mat4 inverseModelMatrix; 
+    mat4 inverseModelMatrix;
     int meshIndex;
     int baseColorTextureIndex;
     int normalTextureIndex;
     int rmaTextureIndex;
     int vertexOffset;
     int indexOffset;
-    int animatedTransformsOffset; 
+    int animatedTransformsOffset;
     int castShadow;
     int useEmissiveMask;
     float emissiveColorR;
@@ -45,13 +45,13 @@ layout(std430, binding = 1) readonly buffer renderItems {
 
 void main() {
 
-	TexCoord = aTexCoord;	
+	TexCoord = aTexCoord;
 	mat4 model = RenderItems[gl_InstanceID + gl_BaseInstance].modelMatrix;
 	mat4 invereseModel = RenderItems[gl_InstanceID + gl_BaseInstance].inverseModelMatrix;
 	BaseColorTextureIndex =  RenderItems[gl_InstanceID+ gl_BaseInstance].baseColorTextureIndex;
 	NormalTextureIndex =  RenderItems[gl_InstanceID+ gl_BaseInstance].normalTextureIndex;
 	RMATextureIndex =  RenderItems[gl_InstanceID+ gl_BaseInstance].rmaTextureIndex;
-	
+
 	useEmissiveMask = RenderItems[gl_InstanceID+ gl_BaseInstance].useEmissiveMask;
 	emissiveColor.r = RenderItems[gl_InstanceID+ gl_BaseInstance].emissiveColorR;
 	emissiveColor.g = RenderItems[gl_InstanceID+ gl_BaseInstance].emissiveColorG;

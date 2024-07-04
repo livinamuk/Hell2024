@@ -1,0 +1,55 @@
+# Blender 4.0.2 MTL File: 'Glock Final.blend'
+# www.blender.org
+
+newmtl Material
+Ns 0.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.800000 0.800000 0.800000
+Ks 0.000000 0.000000 0.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 1
+
+newmtl default
+Ns 20.000006
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 3
+map_Kd C:/Users/livinamuk/Desktop/Unloved/Artists/Fnuxray/final maybe/textures/Glock_ALB.png
+map_Bump -bm 1.000000 C:/Users/livinamuk/Desktop/Unloved/Artists/Fnuxray/final maybe/textures/Glock_NRM.png
+
+newmtl default.001
+Ns 20.000006
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ni 1.450000
+d 1.000000
+illum 3
+map_Kd C:/Users/livinamuk/Desktop/Unloved/Artists/Fnuxray/final maybe/textures/RedDotSight_ALB.png
+map_Ke C:/Users/livinamuk/Desktop/Unloved/Artists/Fnuxray/final maybe/textures/RedDotSight_EmissiveColor.png
+map_Bump -bm 1.000000 C:/Users/livinamuk/Desktop/Unloved/Artists/Fnuxray/final maybe/textures/RedDotSight_NRM.png
+
+newmtl default_laser
+Ns 0.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.800000 0.800000 0.800000
+Ks 0.000000 0.000000 0.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 1
+
+newmtl manniquen1_2.002
+Ns 250.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd C:/Users/livinamuk/Desktop/Unloved/Artists/Fnuxray/final maybe/textures/Hands_ALB.png
+map_Bump -bm 1.000000 C:/Users/livinamuk/Desktop/Unloved/Artists/Fnuxray/final maybe/textures/Hands_NRM.png

@@ -2,7 +2,7 @@
 Open Asset Import Library (assimp)
 ----------------------------------------------------------------------
 
-Copyright (c) 2006-2022, assimp team
+Copyright (c) 2006-2024, assimp team
 
 All rights reserved.
 
@@ -53,6 +53,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <assimp/types.h>
 #include <assimp/ProgressHandler.hpp>
+#include <exception>
 #include <set>
 #include <vector>
 #include <memory>
@@ -62,6 +63,7 @@ struct aiImporterDesc;
 
 namespace Assimp {
 
+// Forward declarations
 class Importer;
 class IOSystem;
 class BaseProcess;
@@ -71,6 +73,9 @@ class IOStream;
 // utility to do char4 to uint32 in a portable manner
 #define AI_MAKE_MAGIC(string) ((uint32_t)((string[0] << 24) + \
                                           (string[1] << 16) + (string[2] << 8) + string[3]))
+
+using UByteBuffer = std::vector<uint8_t>;
+using ByteBuffer = std::vector<int8_t>;
 
 // ---------------------------------------------------------------------------
 /** FOR IMPORTER PLUGINS ONLY: The BaseImporter defines a common interface
@@ -90,25 +95,20 @@ public:
     BaseImporter() AI_NO_EXCEPT;
 
     /** Destructor, private as well */
-    virtual ~BaseImporter();
+    virtual ~BaseImporter() = default;
 
     // -------------------------------------------------------------------
     /** Returns whether the class can handle the format of the given file.
      *
-     * The implementation should be as quick as possible. A check for
-     * the file extension is enough. If no suitable loader is found with
-     * this strategy, CanRead() is called again, the 'checkSig' parameter
-     * set to true this time. Now the implementation is expected to
-     * perform a full check of the file structure, possibly searching the
-     * first bytes of the file for magic identifiers or keywords.
+     * The implementation is expected to perform a full check of the file
+     * structure, possibly searching the first bytes of the file for magic
+     * identifiers or keywords.
      *
      * @param pFile Path and file name of the file to be examined.
      * @param pIOHandler The IO handler to use for accessing any file.
-     * @param checkSig Set to true if this method is called a second time.
-     *   This time, the implementation may take more time to examine the
-     *   contents of the file to be loaded for magic bytes, keywords, etc
-     *   to be able to load files with unknown/not existent file extensions.
-     * @return true if the class can read this file, false if not.
+     * @param checkSig Legacy; do not use.
+     * @return true if the class can read this file, false if not or if
+     * unsure.
      */
     virtual bool CanRead(
             const std::string &pFile,
@@ -259,11 +259,11 @@ public: // static utilities
     static bool SearchFileHeaderForToken(
             IOSystem *pIOSystem,
             const std::string &file,
-            const char * const *tokens,
-            unsigned int numTokens,
+            const char **tokens,
+            std::size_t numTokens,
             unsigned int searchBytes = 200,
             bool tokensSol = false,
-            bool noAlphaBeforeTokens = false);
+            bool noGraphBeforeTokens = false);
 
     // -------------------------------------------------------------------
     /** @brief Check whether a file has a specific file extension
@@ -278,6 +278,16 @@ public: // static utilities
             const char *ext0,
             const char *ext1 = nullptr,
             const char *ext2 = nullptr);
+
+    // -------------------------------------------------------------------
+    /** @brief Check whether a file has one of the passed file extensions
+     *  @param pFile Input file
+     *  @param extensions Extensions to check for. Lowercase characters only, no dot!
+     *  @note Case-insensitive
+     */
+    static bool HasExtension(
+            const std::string &pFile,
+            const std::set<std::string> &extensions);
 
     // -------------------------------------------------------------------
     /** @brief Extract file extension from a string
@@ -305,7 +315,7 @@ public: // static utilities
             IOSystem *pIOHandler,
             const std::string &pFile,
             const void *magic,
-            unsigned int num,
+            std::size_t num,
             unsigned int offset = 0,
             unsigned int size = 4);
 

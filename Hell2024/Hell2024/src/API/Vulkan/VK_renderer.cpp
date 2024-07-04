@@ -15,8 +15,8 @@
 #include "Types/VK_detachedMesh.hpp"
 #include "../../BackEnd/BackEnd.h"
 #include "../../Core/AssetManager.h"
-#include "../../Core/Game.h"
-#include "../../Core/Scene.h"
+#include "../../Game/Game.h"
+#include "../../Game/Scene.h"
 #include "../../Renderer/GlobalIllumination.h"
 #include "../../Renderer/TextBlitter.h"
 

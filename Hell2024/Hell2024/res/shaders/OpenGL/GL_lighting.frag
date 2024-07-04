@@ -5,6 +5,7 @@ layout (binding = 0) uniform sampler2D baseColorTexture;
 layout (binding = 1) uniform sampler2D normalTexture;
 layout (binding = 2) uniform sampler2D rmaTexture;
 layout (binding = 3) uniform sampler2D depthTexture;
+layout (binding = 4) uniform sampler2D emissiveTexture;
 layout (binding = 5) uniform samplerCube shadowMap[16];
 
 in vec2 TexCoords;
@@ -327,6 +328,8 @@ void main() {
 //	FragColor.rgb = vec3( TexCoords, 0); ]
 	//FragColor.rgb = vec3( texture(normalTexture, TexCoords).a);
 
+	vec3 emissiveColor = texture(emissiveTexture, TexCoords).rgb;
+//	FragColor.rgb =emissiveColor;
 
 	FragColor.a = 1;
 

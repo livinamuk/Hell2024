@@ -1,6 +1,6 @@
 #include "Door.h"
 #include "../../Core/AssetManager.h"
-#include "../../Core/Player.h"
+#include "../../Game/Player.h"
 #include "../../Core/Audio.hpp"
 #include "../../Util.hpp"
 
@@ -95,7 +95,7 @@ glm::mat4 Door::GetFrameModelMatrix() {
 glm::mat4 Door::GetDoorModelMatrix() {
     Transform doorTransform;
     doorTransform.position = glm::vec3(0.058520, 0, 0.39550f);
-    doorTransform.rotation.y = openRotation; 
+    doorTransform.rotation.y = openRotation;
     return GetFrameModelMatrix() * doorTransform.to_mat4();
 }
 

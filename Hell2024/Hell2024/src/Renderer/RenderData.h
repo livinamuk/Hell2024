@@ -1,7 +1,7 @@
 #pragma once
 #include "RendererCommon.h"
 #include "Types/DetachedMesh.hpp"
-#include "../Core/AnimatedGameObject.h"
+#include "../Game/AnimatedGameObject.h"
 
 struct AnimatedRenderItem3D {
     std::vector<RenderItem3D> renderItems;

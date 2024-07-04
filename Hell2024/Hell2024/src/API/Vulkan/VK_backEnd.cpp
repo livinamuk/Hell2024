@@ -11,7 +11,7 @@
 #include "VK_Renderer.h"
 #include "../../BackEnd/BackEnd.h"
 #include "../../Core/AssetManager.h"
-#include "../../Core/Scene.h"
+#include "../../Game/Scene.h"
 #include "../../ErrorChecking.h"
 
 namespace VulkanBackEnd {

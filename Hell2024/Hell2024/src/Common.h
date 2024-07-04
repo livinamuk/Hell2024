@@ -40,6 +40,11 @@ enum WeaponAction {
     ADS_FIRE
 };
 
+#define _propogationGridSpacing 0.375f
+#define _pointCloudSpacing 0.4f
+#define _maxPropogationDistance 2.6f
+
+
 #define PLAYER_COUNT 4
 #define UNDEFINED_STRING "UNDEFINED_STRING"
 

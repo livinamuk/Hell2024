@@ -8,12 +8,12 @@
 #include <rapidjson/ostreamwrapper.h>
 #include <rapidjson/prettywriter.h>
 #include <filesystem>
-#include <sstream> 
+#include <sstream>
 #include <fstream>
 #include <string>
 #include <iostream>
 #include "../Core/AssetManager.h"
-#include "../Core/Scene.h"
+#include "../Game/Scene.h"
 
 namespace File {
 	void SaveVec2(rapidjson::Value* object, std::string elementName, glm::vec2 vector, rapidjson::Document::AllocatorType& allocator);
@@ -215,7 +215,7 @@ void File::SaveMap(std::string mapName) {
 		SaveIntArray(&object, "meshMaterialIndices", gameObject._meshMaterialIndices, allocator);
 		SaveString(&object, "modelName", gameObject.model->GetName(), allocator);
 
-		
+
 
 		gameObjects.PushBack(object, allocator);
 	}*/
@@ -330,7 +330,7 @@ void File::SaveInt(rapidjson::Value* object, std::string elementName, int number
 
 void File::SaveIntArray(rapidjson::Value* object, std::string elementName, std::vector<int> integers, rapidjson::Document::AllocatorType& allocator) {
 	rapidjson::Value array(rapidjson::kArrayType);
-	rapidjson::Value name(elementName.c_str(), allocator);	
+	rapidjson::Value name(elementName.c_str(), allocator);
 	for (int i = 0; i < integers.size(); i++) {
 		array.PushBack(rapidjson::Value().Set(integers[i]), allocator);
 	}
@@ -400,7 +400,7 @@ std::string File::ReadString(const rapidjson::Value& value, std::string name) {
 
 	strcpy(cstr, s.c_str());
 	// do stuff
-	//delete[] cstr;		
+	//delete[] cstr;
 	return cstr;
 }*/
 

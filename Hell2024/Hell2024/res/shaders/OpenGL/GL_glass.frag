@@ -23,8 +23,8 @@ in vec3 attrTangent;
 in vec3 attrBiTangent;
 
 
-readonly restrict layout(std430, binding = 0) buffer textureSamplerers { 
-	uvec2 textureSamplers[]; 
+readonly restrict layout(std430, binding = 0) buffer textureSamplerers {
+	uvec2 textureSamplers[];
 };
 
 struct Light {
@@ -52,12 +52,12 @@ float gaussian(vec2 i) {
 }
 
 vec4 blur(sampler2D sp, vec2 U, vec2 scale) {
-    vec4 O = vec4(0);  
-    int s = samples/sLOD;    
+    vec4 O = vec4(0);
+    int s = samples/sLOD;
     for ( int i = 0; i < s*s; i++ ) {
         vec2 d = vec2(i%s, i/s)*float(sLOD) - float(samples)/2.;
         O += gaussian(d) * textureLod( sp, U + scale * d , float(LOD) );
-    }    
+    }
     return O / O.a;
 }
 
@@ -103,10 +103,10 @@ vec3 microfacetBRDF(in vec3 L, in vec3 V, in vec3 N, in vec3 baseColor, in float
   float NoV = clamp(dot(N, V), 0.0, 1.0);
   float NoL = clamp(dot(N, L), 0.0, 1.0);
   float NoH = clamp(dot(N, H), 0.0, 1.0);
-  float VoH = clamp(dot(V, H), 0.0, 1.0);       
-  // F0 for dielectics in range [0.0, 0.16] 
+  float VoH = clamp(dot(V, H), 0.0, 1.0);
+  // F0 for dielectics in range [0.0, 0.16]
   // default FO is (0.16 * 0.5^2) = 0.04
-  vec3 f0 = vec3(0.16 * (fresnelReflect * fresnelReflect)); 
+  vec3 f0 = vec3(0.16 * (fresnelReflect * fresnelReflect));
   // f0 = vec3(0.125);
   // in case of metals, baseColor contains F0
   f0 = mix(f0, baseColor, metallicness);
@@ -114,11 +114,11 @@ vec3 microfacetBRDF(in vec3 L, in vec3 V, in vec3 N, in vec3 baseColor, in float
   vec3 F = fresnelSchlick(VoH, f0);
   float D = D_GGX(NoH, roughness);
   float G = G_Smith(NoV, NoL, roughness);
-  vec3 spec = (D * G * F) / max(4.0 * NoV * NoL, 0.001);  
+  vec3 spec = (D * G * F) / max(4.0 * NoV * NoL, 0.001);
   // diffuse
   vec3 notSpec = vec3(1.0) - F; // if not specular, use as diffuse
   notSpec *= 1.0 - metallicness; // no diffuse for metals
-  vec3 diff = notSpec * baseColor / PI;   
+  vec3 diff = notSpec * baseColor / PI;
   spec *= 1.05;
   vec3 result = diff + spec;
   return result;
@@ -127,11 +127,11 @@ vec3 microfacetBRDF(in vec3 L, in vec3 V, in vec3 N, in vec3 baseColor, in float
 
 vec3 GetDirectLighting(vec3 lightPos, vec3 lightColor, float radius, float strength, vec3 Normal, vec3 WorldPos, vec3 baseColor, float roughness, float metallic) {
 	float fresnelReflect = 1.0; // 0.5 is what they used for box, 1.0 for demon
-	vec3 viewDir = normalize(viewPos - WorldPos);    
+	vec3 viewDir = normalize(viewPos - WorldPos);
 	float lightRadiance = strength * 1;// * 1.25;
-    vec3 lightDir = normalize(lightPos - WorldPos); 
+    vec3 lightDir = normalize(lightPos - WorldPos);
     float lightAttenuation = smoothstep(radius, 0, length(lightPos - WorldPos));	float irradiance = max(dot(lightDir, Normal), 0.0) ;
-	irradiance *= lightAttenuation * lightRadiance;		
+	irradiance *= lightAttenuation * lightRadiance;
 	vec3 brdf = microfacetBRDF(lightDir, viewDir, Normal, baseColor, metallic, fresnelReflect, roughness);
     return brdf * irradiance * clamp(lightColor, 0, 1);
 }
@@ -139,26 +139,27 @@ vec3 GetDirectLighting(vec3 lightPos, vec3 lightColor, float radius, float stren
 
 void main() {
 
-    vec4 baseColor = texture(sampler2D(textureSamplers[BaseColorTextureIndex]), TexCoords);  
+    vec4 baseColor = texture(sampler2D(textureSamplers[BaseColorTextureIndex]), TexCoords);
 	baseColor.rgb = pow(baseColor.rgb, vec3(2.2));
-    vec4 normalMap = texture(sampler2D(textureSamplers[NormalTextureIndex]), TexCoords);  
-    vec4 rma = texture(sampler2D(textureSamplers[RMATextureIndex]), TexCoords);  
+    vec4 normalMap = texture(sampler2D(textureSamplers[NormalTextureIndex]), TexCoords);
+    vec4 rma = texture(sampler2D(textureSamplers[RMATextureIndex]), TexCoords);
 	float roughness = rma.r;
     float metallic = 0;
-	mat3 tbn = mat3(normalize(attrTangent), normalize(attrBiTangent), normalize(attrNormal));	
+	mat3 tbn = mat3(normalize(attrTangent), normalize(attrBiTangent), normalize(attrNormal));
 	vec3 Normal = normalize(tbn * (normalMap.rgb * 2.0 - 1.0));
-		
+
     vec3 color = vec3(0);
 	for (int i = 0; i < 8; i++) {
        vec3 lightPos = vec3(lights[i].posX, lights[i].posY, lights[i].posZ);
        vec3 lightColor = vec3(lights[i].colorR, lights[i].colorG, lights[i].colorB);
        float radius = lights[i].radius;
-       float strength = lights[i].strength;   
+       float strength = lights[i].strength;
 	          vec3 directLight = GetDirectLighting(lightPos, lightColor, radius, strength, Normal, WorldPos, baseColor.rgb, roughness, metallic);
-	   directLight.rgb = pow(directLight.rgb, vec3(1.0/2.2)); 
+	   directLight.rgb = pow(directLight.rgb, vec3(1.0/2.2));
        color += directLight;
-	} 
-	
+	}
+
+
 	FragColor = vec4(color.rgb, 1);
 	//FragColor = vec4(1, 0, 1, 1);
 }

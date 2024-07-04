@@ -4,7 +4,7 @@
 
 struct BulletCasing {
 
-    Weapon type;
+    //Weapon type;
     PxRigidBody* rigidBody = NULL;
     float audioDelay = 0.0f;
     float lifeTime = 0.0f;
@@ -16,4 +16,6 @@ struct BulletCasing {
     void CollisionResponse();
     bool HasActivePhysics();
     bool collisionsEnabled = false;
+    int modelIndex;
+    int materialIndex;
 };

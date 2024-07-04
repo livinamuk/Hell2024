@@ -28,11 +28,15 @@ public:
         this->indices = indices;
         this->vertices = vertices;
 
+        if (vertices.empty() || indices.empty()) {
+            return;
+        }
+
         if (VAO != 0) {
             glDeleteVertexArrays(1, &VAO);
             glDeleteBuffers(1, &VBO);
             glDeleteBuffers(1, &EBO);
-        }           
+        }
         glGenVertexArrays(1, &VAO);
         glGenBuffers(1, &VBO);
         glGenBuffers(1, &EBO);

@@ -5,7 +5,7 @@
 
 struct DetachedMesh {
 
-private:    
+private:
     OpenGLDetachedMesh openglDetachedMesh;
     VulkanDetachedMesh vulkanDetachedMesh;
 

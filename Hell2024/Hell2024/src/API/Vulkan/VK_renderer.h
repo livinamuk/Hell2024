@@ -1,7 +1,7 @@
 #pragma once
 #include "Types/VK_descriptorSet.hpp"
 #include "Types/VK_raytracing.hpp"
-#include "../../Core/Light.h"
+#include "../../Game/Light.h"
 #include "../../Renderer/RenderData.h"
 #include "../../Renderer/RendererCommon.h"
 #include "../../Util.hpp"

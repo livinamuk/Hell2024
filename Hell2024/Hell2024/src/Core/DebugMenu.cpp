@@ -1,12 +1,11 @@
 
-#include "DebugMenu.h"
-#include "Game.h"
 #include "Audio.hpp"
-#include "Input.h"
-#include "Scene.h"
-#include "Config.hpp"
+#include "DebugMenu.h"
 #include "Floorplan.h"
-#include "../Renderer/Renderer_OLD.h"
+#include "../Config.hpp"
+#include "../Game/Game.h"
+#include "../Game/Scene.h"
+#include "../Input/Input.h"
 #include "../EngineState.hpp"
 #include <format>
 
@@ -86,10 +85,10 @@ void DebugMenu::Init() {
 		}
 		scene.AddItem("", MenuItemFlag::UNDEFINED, nullptr);
 		scene.AddItem("Remove all",MenuItemFlag::UNDEFINED, nullptr);
-		 
+
 		//scene.AddItem("Revert to map file",MenuItemFlag::UNDEFINED, nullptr);
 		//scene.AddItem("Save to map file",MenuItemFlag::UNDEFINED, nullptr);
-	
+
 	}
 	// Editor
 	_menu.AddItem("", MenuItemFlag::UNDEFINED, nullptr);
@@ -228,7 +227,7 @@ void DebugMenu::PressedEnter() {
 		_isOpen = false;
 		EngineState::_engineMode = EngineMode::EDITOR;
 		Game::SetSplitscreenMode(SplitscreenMode::NONE);
-        Renderer_OLD::EnteredEditorMode();
+       // Renderer_OLD::EnteredEditorMode();
 	}
 	// Load map
 	else if (flag == MenuItemFlag::LOAD_MAP) {
@@ -282,7 +281,7 @@ void DebugMenu::PressedEnter() {
 		Audio::PlayAudio(AUDIO_SELECT, 1.00f);
 	}
 	// Remove window
-	else if (flag == MenuItemFlag::REMOVE_GAME_OBJECT) {		
+	else if (flag == MenuItemFlag::REMOVE_GAME_OBJECT) {
 		std::cout << "you need to write this code mate\n";
 		/*
 		GameObject& gameObject = Scene::_gameObjects[_selectedGameObjectIndex];
@@ -451,7 +450,7 @@ void DebugMenu::Toggle() {
 	}
 }
 
-const std::string DebugMenu::GetHeading() {	
+const std::string DebugMenu::GetHeading() {
 	std::string name = _currentMenuItem->name;
 	for (auto& c : name) {
 		c = toupper(c);
@@ -523,7 +522,7 @@ const int DebugMenu::GetSubMenuItemCount() {
 	return _currentMenuItem->subMenu.size();
 }
 
-const bool DebugMenu::SubMenuHasValues() {	
+const bool DebugMenu::SubMenuHasValues() {
 	for (int i = 0; i << _currentMenuItem->subMenu.size(); i++) {
 		if (_currentMenuItem->subMenu[i].flag !=MenuItemFlag::UNDEFINED) {
 			return true;

@@ -3,7 +3,7 @@
 Open Asset Import Library (assimp)
 ---------------------------------------------------------------------------
 
-Copyright (c) 2006-2022, assimp team
+Copyright (c) 2006-2024, assimp team
 
 
 
@@ -53,6 +53,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <assimp/vector3.h>
 #include <assimp/defs.h>
+#include <assimp/config.h>
 
 #ifdef __cplusplus
 
@@ -110,7 +111,7 @@ public:
     bool operator== (const aiMatrix4x4t& m) const;
     bool operator!= (const aiMatrix4x4t& m) const;
 
-    bool Equal(const aiMatrix4x4t& m, TReal epsilon = 1e-6) const;
+    bool Equal(const aiMatrix4x4t &m, TReal epsilon = ai_epsilon) const;
 
     // matrix multiplication.
     aiMatrix4x4t& operator *= (const aiMatrix4x4t& m);
@@ -136,9 +137,13 @@ public:
 
     // -------------------------------------------------------------------
     /** @brief Returns true of the matrix is the identity matrix.
+     *  @param epsilon Value of epsilon. Default value is 10e-3 for backward
+     *  compatibility with legacy code.
+     *  @return Returns true of the matrix is the identity matrix.
      *  The check is performed against a not so small epsilon.
      */
-    inline bool IsIdentity() const;
+    inline bool IsIdentity(const TReal
+            epsilon = AI_CONFIG_CHECK_IDENTITY_MATRIX_EPSILON_DEFAULT) const;
 
     // -------------------------------------------------------------------
     /** @brief Decompose a trafo matrix into its original components

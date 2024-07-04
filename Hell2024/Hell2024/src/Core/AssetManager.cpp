@@ -406,38 +406,41 @@ void AssetManager::LoadSkinnedModel(const std::string filepath) {
             }
 
             // Get vertex weights and bone IDs
-            for (unsigned int i = 0; i < assimpMesh->mNumBones; i++) {
-                for (unsigned int j = 0; j < assimpMesh->mBones[i]->mNumWeights; j++) {
+            {
+                std::lock_guard<std::mutex> lock(_skinnedModelsMutex);
 
-                    std::string boneName = assimpMesh->mBones[i]->mName.data;
-                    unsigned int boneIndex = _skinnedModels[skinnedModelIndex].m_BoneMapping[boneName];
-                    unsigned int vertexIndex = assimpMesh->mBones[i]->mWeights[j].mVertexId;
-                    float weight = assimpMesh->mBones[i]->mWeights[j].mWeight;
+                for (unsigned int i = 0; i < assimpMesh->mNumBones; i++) {
+                    for (unsigned int j = 0; j < assimpMesh->mBones[i]->mNumWeights; j++) {
 
-                    WeightedVertex& vertex = vertices[vertexIndex];
+                        std::string boneName = assimpMesh->mBones[i]->mName.data;
+                        unsigned int boneIndex = _skinnedModels[skinnedModelIndex].m_BoneMapping[boneName];
+                        unsigned int vertexIndex = assimpMesh->mBones[i]->mWeights[j].mVertexId;
+                        float weight = assimpMesh->mBones[i]->mWeights[j].mWeight;
 
-                    if (vertex.weight.x == 0) {
-                        vertex.boneID.x = boneIndex;
-                        vertex.weight.x = weight;
-                    }
-                    else if (vertex.weight.y == 0) {
-                        vertex.boneID.y = boneIndex;
-                        vertex.weight.y = weight;
-                    }
-                    else if (vertex.weight.z == 0) {
-                        vertex.boneID.z = boneIndex;
-                        vertex.weight.z = weight;
-                    }
-                    else if (vertex.weight.w == 0) {
-                        vertex.boneID.w = boneIndex;
-                        vertex.weight.w = weight;
+                        WeightedVertex& vertex = vertices[vertexIndex];
+
+                        if (vertex.weight.x == 0) {
+                            vertex.boneID.x = boneIndex;
+                            vertex.weight.x = weight;
+                        }
+                        else if (vertex.weight.y == 0) {
+                            vertex.boneID.y = boneIndex;
+                            vertex.weight.y = weight;
+                        }
+                        else if (vertex.weight.z == 0) {
+                            vertex.boneID.z = boneIndex;
+                            vertex.weight.z = weight;
+                        }
+                        else if (vertex.weight.w == 0) {
+                            vertex.boneID.w = boneIndex;
+                            vertex.weight.w = weight;
+                        }
                     }
                 }
+                _skinnedModels[skinnedModelIndex].AddMeshIndex(AssetManager::CreateSkinnedMesh(meshName, vertices, indices, baseVertexLocal));
+                totalVertexCount += vertices.size();
+                baseVertexLocal += vertices.size();
             }
-            std::lock_guard<std::mutex> lock(_skinnedModelsMutex);
-            _skinnedModels[skinnedModelIndex].AddMeshIndex(AssetManager::CreateSkinnedMesh(meshName, vertices, indices, baseVertexLocal));
-            totalVertexCount += vertices.size();
-            baseVertexLocal += vertices.size();
         }
 
     }
@@ -921,7 +924,7 @@ void AssetManager::BuildMaterials() {
             }
         }
     }
-
+    /*
     // Extra hardcoded materials
     Material* glockMaterial = GetMaterialByIndex(GetMaterialIndex("Glock"));
     if (glockMaterial) {
@@ -939,7 +942,7 @@ void AssetManager::BuildMaterials() {
         material._normal = AssetManager::GetTextureIndexByName("Knife_NRM");
         material._rma = AssetManager::GetTextureIndexByName("Gold_RMA");
     }
-
+    */
 }
 
 Material* AssetManager::GetMaterialByIndex(int index) {
@@ -979,6 +982,15 @@ std::string& AssetManager::GetMaterialNameByIndex(int index) {
     return _materials[index]._name;
 }
 
+int AssetManager::GetGoldBaseColorTextureIndex() {
+    static int goldBaseColorIndex = AssetManager::GetTextureIndexByName("Gold_ALB");
+    return goldBaseColorIndex;
+}
+
+int AssetManager::GetGoldRMATextureIndex() {
+    static int goldBaseColorIndex = AssetManager::GetTextureIndexByName("Gold_RMA");
+    return goldBaseColorIndex;
+}
 
 /////////////////////////////////
 //                             //

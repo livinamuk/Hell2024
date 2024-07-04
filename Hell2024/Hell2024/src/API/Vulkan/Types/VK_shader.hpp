@@ -124,7 +124,7 @@ bool VulkanShaderUtil::LoadShader(VkDevice device, std::string filePath, VkShade
     nameInfo.objectHandle = (uint64_t)shaderModule;
     nameInfo.pObjectName = filePath.c_str();
     //VulkanBackEnd::vkSetDebugUtilsObjectNameEXT(device, &nameInfo);
-    //PFN_vkSetDebugUtilsObjectNameEXT vkSetDebugUtilsObjectNameEXT; 
+    //PFN_vkSetDebugUtilsObjectNameEXT vkSetDebugUtilsObjectNameEXT;
     // this could be helpful to chase up?
     // this could be helpful to chase up?
     return true;

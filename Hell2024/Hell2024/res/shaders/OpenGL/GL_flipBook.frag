@@ -29,6 +29,8 @@ void main() {
 
 	vec2 sizeTile =  vec2(1.0 / columnCount, 1.0 / rowCount);
 
+	frameIndex = 1;
+
 	int frameIndex0 =  frameIndex;
 	int frameIndex1 = frameIndex0 + 1;
 
@@ -41,4 +43,6 @@ void main() {
 	vec3 tint = vec3(1, 1, 1);
 	vec4 color = mix(color0, color1, timeLerp) * vec4(tint, 1.0);
 	FragColor = color.rgba;
+
+	//FragColor = vec4(1,0,0,1);
 }

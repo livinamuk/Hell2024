@@ -2,7 +2,7 @@
 #include "../../BackEnd/BackEnd.h"
 
 void Texture::Load(const std::string filepath) {
-    if (BackEnd::GetAPI() == API::OPENGL) {        
+    if (BackEnd::GetAPI() == API::OPENGL) {
         glTexture.Load(filepath);
         glTexture.Bake();
     }

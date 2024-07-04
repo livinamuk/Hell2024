@@ -1,7 +1,7 @@
 #include "Wall.h"
 #include "ModularCommon.h"
 #include "../../Core/AssetManager.h"
-#include "../../Core/Scene.h"
+#include "../../Game/Scene.h"
 
 float RoundToTwoDecimalPlaces(float var) {
     float value = (int)(var * 100 + .5);
