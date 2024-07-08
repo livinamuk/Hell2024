@@ -3,6 +3,7 @@
 #include "Types/GL_gBuffer.h"
 #include "Types/GL_shader.h"
 #include "Types/GL_shadowMap.h"
+#include "Types/GL_ssbo.hpp"
 #include "Types/GL_frameBuffer.hpp"
 #include "../../BackEnd/BackEnd.h"
 #include "../../Core/AssetManager.h"
@@ -63,6 +64,10 @@ namespace OpenGLRenderer {
 
     struct SSBOs {
 
+        SSBO bulletHoleDecalRenderItems;
+        SSBO bloodDecalRenderItems;
+        SSBO bloodVATRenderItems;
+
         GLuint samplers = 0;
         GLuint renderItems2D = 0;
         GLuint animatedRenderItems3D = 0;
@@ -71,10 +76,10 @@ namespace OpenGLRenderer {
 
         GLuint geometryRenderItems = 0;
         GLuint glassRenderItems = 0;
-        GLuint bulletHoleDecalRenderItems = 0;
-        GLuint bloodDecalRenderItems = 0;
+        //GLuint bulletHoleDecalRenderItems = 0;
+        //GLuint bloodDecalRenderItems = 0;
         GLuint shadowMapGeometryRenderItems = 0;
-        GLuint bloodVATRenderItems = 0;
+        //GLuint bloodVATRenderItems = 0;
 
         GLuint skinningTransforms = 0;
         GLuint baseAnimatedTransformIndices = 0;
@@ -289,14 +294,19 @@ void OpenGLRenderer::InitMinimum() {
     glCreateBuffers(1, &_ssbos.shadowMapGeometryRenderItems);
     glNamedBufferStorage(_ssbos.shadowMapGeometryRenderItems, MAX_RENDER_OBJECTS_3D * sizeof(RenderItem3D), NULL, GL_DYNAMIC_STORAGE_BIT);
 
-    glCreateBuffers(1, &_ssbos.bulletHoleDecalRenderItems);
-    glNamedBufferStorage(_ssbos.bulletHoleDecalRenderItems, MAX_DECAL_COUNT * sizeof(RenderItem3D), NULL, GL_DYNAMIC_STORAGE_BIT);
+    //glCreateBuffers(1, &_ssbos.bulletHoleDecalRenderItems);
+    //glNamedBufferStorage(_ssbos.bulletHoleDecalRenderItems, MAX_DECAL_COUNT * sizeof(RenderItem3D), NULL, GL_DYNAMIC_STORAGE_BIT);
 
-    glCreateBuffers(1, &_ssbos.bloodDecalRenderItems);
+
+    _ssbos.bulletHoleDecalRenderItems.PreAllocate(MAX_DECAL_COUNT * sizeof(RenderItem3D));
+    _ssbos.bloodDecalRenderItems.PreAllocate(MAX_BLOOD_DECAL_COUNT * sizeof(RenderItem3D));
+    _ssbos.bloodVATRenderItems.PreAllocate(MAX_VAT_INSTANCE_COUNT * sizeof(RenderItem3D));
+
+  /*  glCreateBuffers(1, &_ssbos.bloodDecalRenderItems);
     glNamedBufferStorage(_ssbos.bloodDecalRenderItems, MAX_BLOOD_DECAL_COUNT * sizeof(RenderItem3D), NULL, GL_DYNAMIC_STORAGE_BIT);
 
     glCreateBuffers(1, &_ssbos.bloodVATRenderItems);
-    glNamedBufferStorage(_ssbos.bloodVATRenderItems, MAX_VAT_INSTANCE_COUNT * sizeof(RenderItem3D), NULL, GL_DYNAMIC_STORAGE_BIT);
+    glNamedBufferStorage(_ssbos.bloodVATRenderItems, MAX_VAT_INSTANCE_COUNT * sizeof(RenderItem3D), NULL, GL_DYNAMIC_STORAGE_BIT);*/
 
     glCreateBuffers(1, &_ssbos.skinningTransforms);
     glNamedBufferStorage(_ssbos.skinningTransforms, MAX_ANIMATED_TRANSFORMS * sizeof(glm::mat4), NULL, GL_DYNAMIC_STORAGE_BIT);
@@ -552,27 +562,17 @@ void UploadSSBOsGPU(RenderData& renderData) {
 
     glNamedBufferSubData(OpenGLRenderer::_ssbos.geometryRenderItems, 0, renderData.geometryDrawInfo.renderItems.size() * sizeof(RenderItem3D), &renderData.geometryDrawInfo.renderItems[0]);
     glNamedBufferSubData(OpenGLRenderer::_ssbos.lights, 0, renderData.lights.size() * sizeof(GPULight), &renderData.lights[0]);
-    //glNamedBufferSubData(OpenGLRenderer::_ssbos.cameraData, 0, sizeof(CameraData), &renderData.cameraData);
-  //  glNamedBufferSubData(OpenGLRenderer::_ssbos.animatedTransforms, 0, (*renderData.animatedTransforms).size() * sizeof(glm::mat4), &(*renderData.animatedTransforms)[0]);
-  //  glNamedBufferSubData(OpenGLRenderer::_ssbos.animatedRenderItems3D, 0, renderData.animatedRenderItems3D.size() * sizeof(RenderItem3D), &renderData.animatedRenderItems3D[0]);
     glNamedBufferSubData(OpenGLRenderer::_ssbos.glassRenderItems, 0, renderData.glassDrawInfo.renderItems.size() * sizeof(RenderItem3D), &renderData.glassDrawInfo.renderItems[0]);
     glNamedBufferSubData(OpenGLRenderer::_ssbos.shadowMapGeometryRenderItems, 0, renderData.shadowMapGeometryDrawInfo.renderItems.size() * sizeof(RenderItem3D), &renderData.shadowMapGeometryDrawInfo.renderItems[0]);
-    glNamedBufferSubData(OpenGLRenderer::_ssbos.bulletHoleDecalRenderItems, 0, renderData.bulletHoleDecalDrawInfo.renderItems.size() * sizeof(RenderItem3D), &renderData.bulletHoleDecalDrawInfo.renderItems[0]);
-    glNamedBufferSubData(OpenGLRenderer::_ssbos.bloodDecalRenderItems, 0, renderData.bloodDecalDrawInfo.renderItems.size() * sizeof(RenderItem3D), &renderData.bloodDecalDrawInfo.renderItems[0]);
-    glNamedBufferSubData(OpenGLRenderer::_ssbos.bloodVATRenderItems, 0, renderData.bloodVATDrawInfo.renderItems.size() * sizeof(RenderItem3D), &renderData.bloodVATDrawInfo.renderItems[0]);
-
     glNamedBufferSubData(OpenGLRenderer::_ssbos.skinningTransforms, 0, renderData.skinningTransforms.size() * sizeof(glm::mat4), &renderData.skinningTransforms[0]);
     glNamedBufferSubData(OpenGLRenderer::_ssbos.baseAnimatedTransformIndices, 0, renderData.baseAnimatedTransformIndices.size() * sizeof(uint32_t), &renderData.baseAnimatedTransformIndices[0]);
-
     glNamedBufferSubData(OpenGLRenderer::_ssbos.cameraData, 0, 4 * sizeof(CameraData), &renderData.cameraData[0]);
-
-
     glNamedBufferSubData(OpenGLRenderer::_ssbos.skinnedMeshInstanceData, 0, sizeof(SkinnedRenderItem) * renderData.allSkinnedRenderItems.size(), &renderData.allSkinnedRenderItems[0]);
-
     glNamedBufferSubData(OpenGLRenderer::_ssbos.muzzleFlashData, 0, sizeof(MuzzleFlashData) * 4, &renderData.muzzleFlashData[0]);
 
-
-  //  std::cout << "renderData.skinningTransforms.size(): " << renderData.skinningTransforms.size() << "\n";
+    OpenGLRenderer::_ssbos.bulletHoleDecalRenderItems.Update(renderData.bulletHoleDecalDrawInfo.renderItems.size() * sizeof(RenderItem3D), renderData.bulletHoleDecalDrawInfo.renderItems.data());
+    OpenGLRenderer::_ssbos.bloodDecalRenderItems.Update(renderData.bloodDecalDrawInfo.renderItems.size() * sizeof(RenderItem3D), renderData.bloodDecalDrawInfo.renderItems.data());
+    OpenGLRenderer::_ssbos.bloodVATRenderItems.Update(renderData.bloodVATDrawInfo.renderItems.size() * sizeof(RenderItem3D), renderData.bloodVATDrawInfo.renderItems.data());
 }
 
 void OpenGLRenderer::RenderGame(RenderData& renderData) {
@@ -585,14 +585,15 @@ void OpenGLRenderer::RenderGame(RenderData& renderData) {
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, _ssbos.samplers);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, OpenGLRenderer::_ssbos.geometryRenderItems);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, OpenGLRenderer::_ssbos.lights);
-   // glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, OpenGLRenderer::_ssbos.cameraData);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, OpenGLRenderer::_ssbos.animatedTransforms);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, OpenGLRenderer::_ssbos.animatedRenderItems3D);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 11, OpenGLRenderer::_ssbos.glassRenderItems);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 12, OpenGLRenderer::_ssbos.shadowMapGeometryRenderItems);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 13, OpenGLRenderer::_ssbos.bulletHoleDecalRenderItems);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 14, OpenGLRenderer::_ssbos.bloodDecalRenderItems);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 15, OpenGLRenderer::_ssbos.bloodVATRenderItems);
+
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 13, OpenGLRenderer::_ssbos.bulletHoleDecalRenderItems.GetHandle());
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 14, OpenGLRenderer::_ssbos.bloodDecalRenderItems.GetHandle());
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 15, OpenGLRenderer::_ssbos.bloodVATRenderItems.GetHandle());
+
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 16, OpenGLRenderer::_ssbos.cameraData);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 17, OpenGLRenderer::_ssbos.skinnedMeshInstanceData);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 18, OpenGLRenderer::_ssbos.muzzleFlashData);
@@ -608,6 +609,7 @@ void OpenGLRenderer::RenderGame(RenderData& renderData) {
 
    // DebugPassProbePass(renderData);
     SkyBoxPass(renderData);
+    MuzzleFlashPass(renderData);
     GlassPass(renderData);
     EmissivePass(renderData);
     MuzzleFlashPass(renderData);

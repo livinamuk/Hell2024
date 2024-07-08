@@ -845,13 +845,11 @@ RenderData CreateRenderData() {
         renderData.playerCount = 1;
     }
     else if (Game::GetSplitscreenMode() == SplitscreenMode::TWO_PLAYER) {
-        renderData.playerCount = 2;
+        renderData.playerCount = std::min(2, Game::GetPlayerCount());
     }
     else if (Game::GetSplitscreenMode() == SplitscreenMode::FOUR_PLAYER) {
-        renderData.playerCount = 4;
+        renderData.playerCount = std::min(4, Game::GetPlayerCount());
     }
-
-
 
     // Create render items
     renderData.renderItems.geometry = CreateRenderItems3D();
@@ -1001,10 +999,10 @@ RenderData CreateRenderData() {
     }
 
     // Get per player animated render items
-    renderData.skinnedRenderItems[0] = GetSkinnedRenderItemsForPlayer(0);
-    renderData.skinnedRenderItems[1] = GetSkinnedRenderItemsForPlayer(1);
-    renderData.skinnedRenderItems[2] = GetSkinnedRenderItemsForPlayer(2);
-    renderData.skinnedRenderItems[3] = GetSkinnedRenderItemsForPlayer(3);
+    for (int i = 0; i < Game::GetPlayerCount(); i++) {
+        renderData.skinnedRenderItems[i] = GetSkinnedRenderItemsForPlayer(i);
+    }
+
 
     //std::vector<SkinnedRenderItem> allSkinnedRenderItems;
     for (int i = 0; i < renderData.playerCount; i++) {

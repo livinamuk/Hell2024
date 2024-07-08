@@ -485,6 +485,33 @@ void Player::UpdateViewWeaponLogic(float deltaTime) {
   ██████████  ▀██████▀    ██████████   ███    ███  ▀█████▀     ▄████▀     ███    █▀    █▀    ▀█   █▀    ████████▀           ██████████ █████▄▄██  ▄████████▀    ██████████ */
 
 
+
+bool Player::CanEnterADS() {
+
+    AnimatedGameObject* viewWeapon = Scene::GetAnimatedGameObjectByIndex(m_viewWeaponAnimatedGameObjectIndex);
+    WeaponInfo* weaponInfo = GetCurrentWeaponInfo();
+
+    if (weaponInfo->name == "Tokarev") {
+        return false;
+    }
+    if (weaponInfo->name == "AKS74U") {
+        return false;
+    }
+    if (_weaponAction != RELOAD && _weaponAction != RELOAD_FROM_EMPTY && !InADS() ||
+        _weaponAction == RELOAD && viewWeapon->AnimationIsPastPercentage(65.0f) ||
+        _weaponAction == RELOAD_FROM_EMPTY && viewWeapon->AnimationIsPastPercentage(65.0f)) {
+        return true;
+    }
+    else {
+        return false;
+    }
+}
+
+WeaponAction& Player::GetWeaponAction() {
+    return _weaponAction;
+}
+
+
 bool Player::CanFire() {
 
     AnimatedGameObject* viewWeaponGameObject = Scene::GetAnimatedGameObjectByIndex(m_viewWeaponAnimatedGameObjectIndex);

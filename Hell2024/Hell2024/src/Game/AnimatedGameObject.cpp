@@ -558,139 +558,24 @@ void AnimatedGameObject::SetRotationZ(float rotation) {
     _transform.rotation.z = rotation;
 }
 
-bool AnimatedGameObject::AnimationIsPastPercentage(float percent) {
-    if (!_currentAnimation) {
-        return false; // REMOVE ONCE YOU HAVE VULKAN LOADING SHIT CORRECTLY!
+uint32_t AnimatedGameObject::GetAnimationFrameNumber() {
+    if (_currentAnimation) {
+        return  _currentAnimationTime * _currentAnimation->m_ticksPerSecond;
     }
-    if (_currentAnimationTime * _currentAnimation->GetTicksPerSecond() > _currentAnimation->m_duration * (percent / 100.0))
+    else {
+        return 0;
+    }
+}
+
+bool AnimatedGameObject::AnimationIsPastFrameNumber(int frameNumber) {
+    return frameNumber > GetAnimationFrameNumber();
+}
+
+bool AnimatedGameObject::AnimationIsPastPercentage(float percent) {
+    if (_currentAnimation && _currentAnimationTime * _currentAnimation->GetTicksPerSecond() > _currentAnimation->m_duration * (percent / 100.0))
         return true;
     else
         return false;
-}
-
-glm::vec3 AnimatedGameObject::GetAK74USCasingSpawnPostion() {
-    if (_name == "AKS74U") {
-        int boneIndex = _skinnedModel->m_BoneMapping["Weapon"];
-        if (_animatedTransforms.worldspace.size()) {
-            glm::mat4 boneMatrix = _animatedTransforms.worldspace[boneIndex];
-            Transform offset;
-            offset.position = glm::vec3(-2.0f, 2.0f, -2.0f); // real
-
-            static float x2 = -44.0f;
-            static float y2 = -28.0f;
-            static float z2 = 175.0f;
-            float amount = 0.5f;
-            if (Input::KeyDown(HELL_KEY_LEFT)) {
-                x2 -= amount;
-            }
-            if (Input::KeyDown(HELL_KEY_RIGHT)) {
-                x2 += amount;
-            }
-            if (Input::KeyDown(HELL_KEY_LEFT_BRACKET)) {
-                y2 -= amount;
-            }
-            if (Input::KeyDown(HELL_KEY_RIGHT_BRACKET)) {
-                y2 += amount;
-            }
-            if (Input::KeyDown(HELL_KEY_UP)) {
-                z2 -= amount;
-            }
-            if (Input::KeyDown(HELL_KEY_DOWN)) {
-                z2 += amount;
-            }
-             //std::cout << x2 << ", " << y2 << ", " << z2 << "\n";
-
-             //offset.position = glm::vec3(x2, y2, z2); // hack to look good
-            offset.position = glm::vec3(-95, -54, 236.5); // hack to look good
-
-
-            glm::mat4 m = GetModelMatrix() * boneMatrix * offset.to_mat4();
-            float x = m[3][0];
-            float y = m[3][1];
-            float z = m[3][2];
-            return glm::vec3(x, y, z);
-        }
-    }
-    return glm::vec3(0);
-}
-
-glm::vec3 AnimatedGameObject::GetGlockCasingSpawnPostion() {
-    if (!_skinnedModel) {
-        return glm::vec3(0); // REMOVE ONCE YOU HAVE VULKAN LOADING SHIT CORRECTLY!
-    }
-    if (_name == "Glock") {
-        int boneIndex = _skinnedModel->m_BoneMapping["Barrel"];
-        if (_animatedTransforms.worldspace.size()) {
-            glm::mat4 boneMatrix = _animatedTransforms.worldspace[boneIndex];
-            Transform offset;
-            offset.position = glm::vec3(-2.0f, 2.0f, -2.0f); // real
-
-            static float x2 = -44.0f;
-            static float y2 = -28.0f;
-            static float z2 = 175.0f;
-            float amount = 0.5f;
-            if (Input::KeyDown(HELL_KEY_LEFT)) {
-                x2 -= amount;
-            }
-            if (Input::KeyDown(HELL_KEY_RIGHT)) {
-                x2 += amount;
-            }
-            if (Input::KeyDown(HELL_KEY_LEFT_BRACKET)) {
-                y2 -= amount;
-            }
-            if (Input::KeyDown(HELL_KEY_RIGHT_BRACKET)) {
-                y2 += amount;
-            }
-            if (Input::KeyDown(HELL_KEY_UP)) {
-                z2 -= amount;
-            }
-            if (Input::KeyDown(HELL_KEY_DOWN)) {
-                z2 += amount;
-            }
-          // std::cout << x2 << ", " << y2 << ", " << z2 << "\n";
-
-           // offset.position = glm::vec3(x2, y2, z2); // hack to look good
-            offset.position = glm::vec3(-90.5, -29.5, 267.5); // hack to look good
-
-            glm::mat4 m = GetModelMatrix() * boneMatrix * offset.to_mat4();
-            float x = m[3][0];
-            float y = m[3][1];
-            float z = m[3][2];
-            return glm::vec3(x, y, z);
-        }
-    }
-    return glm::vec3(0);
-}
-
-
-
-glm::vec3 AnimatedGameObject::GetAKS74UBarrelPostion() {
-    if (_name == "AKS74U") {
-        int boneIndex = _skinnedModel->m_BoneMapping["Weapon"];
-        glm::mat4 boneMatrix = _animatedTransforms.worldspace[boneIndex];
-        Transform offset;
-        offset.position = glm::vec3(0, 0 + 1, 36);
-        glm::mat4 m = GetModelMatrix() * boneMatrix * offset.to_mat4();
-        float x = m[3][0];
-        float y = m[3][1];
-        float z = m[3][2];
-        return glm::vec3(x, y, z);
-    }
-    else {
-        return glm::vec3(0);
-    }
-}
-
-glm::vec3 AnimatedGameObject::GetShotgunBarrelPosition() {
-    int boneIndex = _skinnedModel->m_BoneMapping["Weapon"];
-    glm::mat4 boneMatrix = _animatedTransforms.worldspace[boneIndex];
-    Transform offset;
-    offset.position = glm::vec3(82, 2, -10);
-    glm::mat4 m = GetModelMatrix() * boneMatrix * offset.to_mat4();
-    float x = m[3][0];
-    float y = m[3][1];
-    float z = m[3][2];
-    return glm::vec3(x, y, z);
 }
 
 void AnimatedGameObject::UpdateBoneTransformsFromBindPose() {

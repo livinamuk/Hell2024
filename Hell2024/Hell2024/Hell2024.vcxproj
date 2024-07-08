@@ -141,6 +141,7 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <ClCompile Include="src\Core\AssetManager.cpp" />
     <ClCompile Include="src\Core\DebugMenu.cpp" />
     <ClCompile Include="src\Game\Player_CharacterModelLogic.cpp" />
+    <ClCompile Include="src\Game\Player_RenderItems.cpp" />
     <ClCompile Include="src\Game\Player_WeaponLogic.cpp" />
     <ClCompile Include="src\Game\WeaponManager.cpp" />
     <ClCompile Include="src\Renderer\Raytracing\Raytracing.cpp" />
@@ -209,7 +210,7 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <ClInclude Include="src\API\OpenGL\Types\GL_cubemapTexture.h" />
     <ClInclude Include="src\API\OpenGL\Types\GL_detachedMesh.hpp" />
     <ClInclude Include="src\API\OpenGL\Types\GL_ShadowMap2.hpp" />
-    <ClInclude Include="src\API\OpenGL\Types\GL_SSBO.hpp" />
+    <ClInclude Include="src\API\OpenGL\Types\GL_ssbo.hpp" />
     <ClInclude Include="src\API\OpenGL\Types\GL_texture.h" />
     <ClInclude Include="src\API\OpenGL\Types\GL_vertexBuffer.hpp" />
     <ClInclude Include="src\API\Vulkan\Types\vk_allocation.hpp" />

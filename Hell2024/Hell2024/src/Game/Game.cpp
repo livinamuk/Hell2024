@@ -40,6 +40,7 @@ namespace Game {
         GlobalIllumination::CreatePointCloud();
         GlobalIllumination::CreateLightVolume(7.0f, 2.7f, 11.0f, 0.0f, 0.0f, 0.0f);
 
+        //CreatePlayers(2);
         CreatePlayers(4);
 
         g_gameSettings.takeDamageOutside = true;

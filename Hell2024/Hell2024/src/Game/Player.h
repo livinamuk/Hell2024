@@ -151,6 +151,7 @@ public:
     void GiveSilencerToWeapon(std::string name);
     void DropWeapons();
     void UpdateWeaponSway(float deltaTime);
+    RenderItem3D CreateAttachmentRenderItem(WeaponAttachmentInfo* weaponAttachmentInfo, const char* boneName);
 
 private:
     std::vector<RenderItem3D> m_attachmentRenderItems;

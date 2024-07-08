@@ -83,6 +83,13 @@ struct AmmoInfo {
     int pickupAmount = 0;
 };
 
+struct WeaponAttachmentInfo {
+    const char* name = UNDEFINED_STRING;
+    const char* materialName = UNDEFINED_STRING;
+    const char* modelName = UNDEFINED_STRING;
+    bool isGold = false;
+};
+
 namespace WeaponManager {
 
     void Init();

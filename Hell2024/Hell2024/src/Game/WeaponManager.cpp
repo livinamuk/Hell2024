@@ -4,13 +4,22 @@
 
 namespace WeaponManager {
 
-    std::vector<WeaponInfo> g_weapons;
     std::vector<AmmoInfo> g_ammos;
+    std::vector<WeaponInfo> g_weapons;
+    std::vector<WeaponAttachmentInfo> g_attachments;
 
     void Init() {
 
         g_weapons.clear();
         g_ammos.clear();
+
+        // Attachments
+
+        WeaponAttachmentInfo glockSilencer = g_attachments.emplace_back();
+        glockSilencer.name = "Glock Silencer";
+        glockSilencer.materialName = "Glock Silencer";
+        glockSilencer.modelName = "Glock Silencer";
+        glockSilencer.isGold = false;
 
         // Ammo
 

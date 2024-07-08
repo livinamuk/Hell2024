@@ -50,6 +50,7 @@ public:
 
     std::vector<JointWorldMatrix> m_jointWorldMatrices;
 
+    uint32_t GetAnimationFrameNumber();
     const size_t GetAnimatedTransformCount();
     void CreateSkinnedMeshRenderItems();
     std::vector<SkinnedRenderItem>& GetSkinnedMeshRenderItems();
@@ -87,8 +88,9 @@ public:
 
 	std::string GetName();
 	const glm::mat4 GetModelMatrix();
-	bool IsAnimationComplete();
-	bool AnimationIsPastPercentage(float percent);
+    bool IsAnimationComplete();
+    bool AnimationIsPastPercentage(float percent);
+    bool AnimationIsPastFrameNumber(int frameNumber);
     glm::vec3 GetScale();
 
 	SkinnedModel* _skinnedModel = nullptr;
@@ -99,13 +101,6 @@ public:
 	std::vector<MeshRenderingEntry> _meshRenderingEntries;
     AnimationMode _animationMode = BINDPOSE;
     Ragdoll _ragdoll;
-
-	// Hacky shit
-	//glm::vec3 GetGlockBarrelPostion();
-	glm::vec3 GetGlockCasingSpawnPostion();
-	glm::vec3 GetAKS74UBarrelPostion();
-	glm::vec3 GetShotgunBarrelPosition();
-	glm::vec3 GetAK74USCasingSpawnPostion();
 
     void LoadRagdoll(std::string filename, PxU32 ragdollCollisionFlags);
     void SetAnimatedModeToRagdoll();
