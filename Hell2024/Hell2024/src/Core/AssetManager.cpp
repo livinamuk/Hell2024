@@ -57,6 +57,7 @@ namespace AssetManager {
     int _quadMeshIndexQuadscreenTopRight = 0;
     int _quadMeshIndexQuadscreenBottomLeft = 0;
     int _quadMeshIndexQuadscreenBottomRight = 0;
+    int _halfSizeQuadMeshIndex = 0;
 
     // Async
     std::mutex _modelsMutex;
@@ -777,6 +778,9 @@ int AssetManager::CreateMesh(std::string name, std::vector<Vertex>& vertices, st
 unsigned int AssetManager::GetQuadMeshIndex() {
     return _quadMeshIndex;
 }
+unsigned int AssetManager::GetHalfSizeQuadMeshIndex() {
+    return _halfSizeQuadMeshIndex;
+}
 unsigned int AssetManager::GetQuadMeshIndexSplitscreenTop() {
     return _quadMeshIndexSplitscreenTop;
 }
@@ -1395,6 +1399,16 @@ void AssetManager::CreateHardcodedModels() {
         vertices[3].uv = { 1.0f, 0.0f };
         model.AddMeshIndex(AssetManager::CreateMesh("QuadscreenBottomRight", vertices, indices));
 
+        vertices[0].position = { -0.5f, -0.5f, 0.0f };
+        vertices[1].position = { -0.5f, 0.5f, 0.0f };
+        vertices[2].position = { 0.5f,  0.5f, 0.0f };
+        vertices[3].position = { 0.5f,  -.5f, 0.0f };
+        vertices[0].uv = { 0.0f, 0.5f };
+        vertices[1].uv = { 0.0f, 1.0f };
+        vertices[2].uv = { 1.0f, 1.0f };
+        vertices[3].uv = { 1.0f, 0.5f };
+        model.AddMeshIndex(AssetManager::CreateMesh("SplitscreenTop", vertices, indices));
+
         _quadMeshIndex = model.GetMeshIndices()[0];
         _quadMeshIndexSplitscreenTop = model.GetMeshIndices()[1];
         _quadMeshIndexSplitscreenBottom = model.GetMeshIndices()[2];
@@ -1402,6 +1416,7 @@ void AssetManager::CreateHardcodedModels() {
         _quadMeshIndexQuadscreenTopRight = model.GetMeshIndices()[4];
         _quadMeshIndexQuadscreenBottomLeft = model.GetMeshIndices()[5];
         _quadMeshIndexQuadscreenBottomRight = model.GetMeshIndices()[6];
+        _halfSizeQuadMeshIndex = model.GetMeshIndices()[7];
     }
 
     /* Upfacing Plane */ {

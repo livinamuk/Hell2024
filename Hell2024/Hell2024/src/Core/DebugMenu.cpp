@@ -70,7 +70,7 @@ void DebugMenu::Init() {
 			}
 
 			auto& editWindows = editObjects.AddItem("Windows",MenuItemFlag::UNDEFINED, nullptr); {
-				for (int i = 0; i < Scene::_windows.size(); i++) {
+				for (int i = 0; i < Scene::g_windows.size(); i++) {
 					//Window& window = Scene::_windows[i];
 					editWindows.AddItem("Window " + std::to_string(i), MenuItemFlag::EDIT_WINDOW, nullptr);
 				}
@@ -114,12 +114,12 @@ void DebugMenu::Init() {
 }
 
 void DebugMenu::UpdateWindowMenuPointers() {
-	_windowMenu.subMenu.clear();
-	_windowMenu.AddItem("X Position", MenuItemFlag::FLOAT, &Scene::_windows[_selectedWindowIndex].position.x);
-	_windowMenu.AddItem("Z Position", MenuItemFlag::FLOAT, &Scene::_windows[_selectedWindowIndex].position.z);
-	_windowMenu.AddItem("Rotation", MenuItemFlag::FLOAT, &Scene::_windows[_selectedWindowIndex].rotation.y);
+	/*_windowMenu.subMenu.clear();
+	_windowMenu.AddItem("X Position", MenuItemFlag::FLOAT, &Scene::g_windows[_selectedWindowIndex].position.x);
+	_windowMenu.AddItem("Z Position", MenuItemFlag::FLOAT, &Scene::g_windows[_selectedWindowIndex].position.z);
+	_windowMenu.AddItem("Rotation", MenuItemFlag::FLOAT, &Scene::g_windows[_selectedWindowIndex].rotation.y);
 	_windowMenu.AddItem("", MenuItemFlag::UNDEFINED, nullptr);
-	_windowMenu.AddItem("Remove", MenuItemFlag::REMOVE_WINDOW, nullptr);
+	_windowMenu.AddItem("Remove", MenuItemFlag::REMOVE_WINDOW, nullptr);*/
 }
 
 void DebugMenu::UpdateGameObjectMenuPointers() {
@@ -241,14 +241,14 @@ void DebugMenu::PressedEnter() {
 	}
 	// Add a window
 	else if (flag == MenuItemFlag::ADD_WINDOW) {
-		Window& windowA = Scene::_windows.emplace_back();
-		windowA.position = glm::vec3(3.15f, 0.1f, 3.6f);
+		Window& windowA = Scene::g_windows.emplace_back();
+		//windowA.position = glm::vec3(3.15f, 0.1f, 3.6f);
 		windowA.rotation.y = HELL_PI * 0.5f;
 		windowA.CreatePhysicsObjects();
 		_parentMenuItem = _currentMenuItem;
 		_currentMenuItem = &_windowMenu;
 		_selectionIndex = 0;
-		_selectedWindowIndex = Scene::_windows.size() - 1;
+		_selectedWindowIndex = Scene::g_windows.size() - 1;
 		_windowMenu.name = "WINDOW " + std::to_string(_selectedWindowIndex);
 		Audio::PlayAudio(AUDIO_SELECT, 1.00f);
 	}
@@ -264,10 +264,10 @@ void DebugMenu::PressedEnter() {
 	}
 	// Remove window
 	else if(flag == MenuItemFlag::REMOVE_WINDOW) {
-		Window& window = Scene::_windows[_selectedWindowIndex];
+		Window& window = Scene::g_windows[_selectedWindowIndex];
 		Scene::RemoveAllDecalsFromWindow(&window);
 		window.CleanUp();
-		Scene::_windows.erase(Scene::_windows.begin() + _selectedWindowIndex);
+		Scene::g_windows.erase(Scene::g_windows.begin() + _selectedWindowIndex);
 		Scene::RecreateDataStructures();
 	}
 	// Edit a game object
@@ -353,7 +353,7 @@ void DebugMenu::IncreaseValue() {
 	void* ptr = _currentMenuItem->subMenu[_selectionIndex].ptr;
 
 	if (_currentMenuItem == &_windowMenu) {
-		Window& window = Scene::_windows[_selectedWindowIndex];
+		Window& window = Scene::g_windows[_selectedWindowIndex];
 		if (flag == MenuItemFlag::FLOAT) {
 			*(float*)ptr += 0.05f;
 		}
@@ -391,7 +391,7 @@ void DebugMenu::DecreaseValue() {
 	void* ptr = _currentMenuItem->subMenu[_selectionIndex].ptr;
 
 	if (_currentMenuItem == &_windowMenu) {
-		Window& window = Scene::_windows[_selectedWindowIndex];
+		Window& window = Scene::g_windows[_selectedWindowIndex];
 		if (flag == MenuItemFlag::FLOAT) {
 			*(float*)ptr -= 0.05f;
 		}
@@ -428,7 +428,7 @@ void DebugMenu::ResetValue() {
 	void* ptr = _currentMenuItem->subMenu[_selectionIndex].ptr;
 
 	if (_currentMenuItem == &_windowMenu) {
-		Window& window = Scene::_windows[_selectedWindowIndex];
+		Window& window = Scene::g_windows[_selectedWindowIndex];
 		if (flag == MenuItemFlag::FLOAT) {
 			*(float*)ptr = 0.0f;
 		}

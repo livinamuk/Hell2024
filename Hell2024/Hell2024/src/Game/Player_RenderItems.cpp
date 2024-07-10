@@ -38,7 +38,17 @@ std::vector<RenderItem2D> Player::GetHudRenderItems(ivec2 presentSize) {
     if (!Game::DebugTextIsEnabled() && IsAlive() && !Editor::IsOpen()) {
         std::string text;
         text += "Health: " + std::to_string(_health) + "\n";
-        text += "Kills: " + std::to_string(m_killCount) + "\n";
+        text += "" + std::to_string(m_killCount) + "\n";
+        text += "Pos: " + Util::Vec3ToString(GetViewPos()) + "\n";
+
+        AnimatedGameObject* viewWeapon = GetViewWeaponAnimatedGameObject();
+        int frameNumber = viewWeapon->GetAnimationFrameNumber();
+        text += "Anim frame number: " + std::to_string(frameNumber) + "\n";
+
+        if (viewWeapon->AnimationIsPastFrameNumber(10)) {
+            text += "Passed frame 10!\n";
+        }
+
         RendererUtil::AddRenderItems(renderItems, TextBlitter::CreateText(text, debugTextLocation, presentSize, Alignment::TOP_LEFT, BitmapFontType::STANDARD));
     }
 

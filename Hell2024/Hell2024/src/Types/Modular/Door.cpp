@@ -232,3 +232,12 @@ void Door::UpdateRenderItems() {
 std::vector<RenderItem3D>& Door::GetRenderItems() {
     return renderItems;
 }
+
+void Door::Rotate90() {
+    m_rotation += HELL_PI * 0.5f;
+    if (raycastBody) {
+        PxMat44 worldMatrix = Util::GlmMat4ToPxMat44(GetFrameModelMatrix());
+        PxTransform transform2 = PxTransform(worldMatrix);
+        raycastBody->setGlobalPose(transform2);
+    }
+}

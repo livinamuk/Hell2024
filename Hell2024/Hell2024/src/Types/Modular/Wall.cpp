@@ -82,7 +82,7 @@ void Wall::CreateVertexData() {
             }
         }
 
-        for (Window& window : Scene::_windows) {
+        for (Window& window : Scene::g_windows) {
 
             // Left side
             glm::vec3 v3(window.GetFrontLeftCorner());

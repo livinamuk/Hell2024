@@ -37,7 +37,8 @@ enum WeaponAction {
     ADS_IN,
     ADS_OUT,
     ADS_IDLE,
-    ADS_FIRE
+    ADS_FIRE,
+    MELEE
 };
 
 #define _propogationGridSpacing 0.375f
@@ -82,6 +83,7 @@ enum WeaponAction {
 #define ToRadian(x) (float)(((x) * HELL_PI / 180.0f))
 #define ToDegree(x) (float)(((x) * 180.0f / HELL_PI))
 
+#define ORANGE   glm::vec3(1, 0.647f, 0)
 #define BLACK   glm::vec3(0,0,0)
 #define WHITE   glm::vec3(1,1,1)
 #define RED     glm::vec3(1,0,0)
@@ -265,7 +267,7 @@ enum class PhysicsObjectType {
     SCENE_MESH,
     RAGDOLL_RIGID,
     CSG_OBJECT_ADDITIVE,
-    CSG_OBJECT_SUBTRACIVE
+    CSG_OBJECT_SUBTRACTIVE
 };
 
 struct PhysicsObjectData {

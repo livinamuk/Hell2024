@@ -24,6 +24,41 @@
 
 namespace Util {
 
+    inline std::string PhysicsObjectTypeToString(PhysicsObjectType& type) {
+
+        if (type == PhysicsObjectType::GAME_OBJECT) {
+            return "GAME_OBJECT";
+        }
+        else if (type == PhysicsObjectType::GLASS) {
+            return "GLASS";
+        }
+        else if (type == PhysicsObjectType::DOOR) {
+            return "DOOR";
+        }
+        else if (type == PhysicsObjectType::WINDOW) {
+            return "WINDOW";
+        }
+        else if (type == PhysicsObjectType::SCENE_MESH) {
+            return "SCENE_MESH";
+        }
+        else if (type == PhysicsObjectType::RAGDOLL_RIGID) {
+            return "RAGDOLL_RIGID";
+        }
+        else if (type == PhysicsObjectType::CSG_OBJECT_ADDITIVE) {
+            return "CSG_OBJECT_ADDITIVE";
+        }
+        else if (type == PhysicsObjectType::CSG_OBJECT_SUBTRACTIVE) {
+            return "CSG_OBJECT_SUBTRACTIVE";
+        }
+        else if (type == PhysicsObjectType::UNDEFINED) {
+            return "UNDEFINED";
+        }
+
+        else  {
+            return "U N K N O W N";
+        }
+    }
+
     inline glm::vec3 CalculateUniformScaleRelativeToCamera(glm::vec3 viewPos, glm::vec3 objectPos) {
         float magic = 10;
         float distance = glm::length(viewPos - objectPos);

@@ -57,13 +57,13 @@ struct PlayerControls {
     unsigned int JUMP = HELL_KEY_SPACE;
     unsigned int CROUCH = HELL_KEY_WIN_CONTROL; // different mapping to the standard glfw HELL_KEY_LEFT_CONTROL
     unsigned int NEXT_WEAPON = HELL_KEY_Q;
-    unsigned int MELEE = HELL_KEY_J;
     unsigned int ESCAPE = HELL_KEY_WIN_ESCAPE;
-    unsigned int DEBUG_FULLSCREEN = HELL_KEY_F;
+    unsigned int DEBUG_FULLSCREEN = HELL_KEY_G;
     unsigned int DEBUG_ONE = HELL_KEY_1;
     unsigned int DEBUG_TWO = HELL_KEY_2;
     unsigned int DEBUG_THREE = HELL_KEY_3;
     unsigned int DEBUG_FOUR = HELL_KEY_4;
+    unsigned int MELEE = HELL_KEY_F;
 };
 
 struct WeaponState {
@@ -152,6 +152,8 @@ public:
     void DropWeapons();
     void UpdateWeaponSway(float deltaTime);
     RenderItem3D CreateAttachmentRenderItem(WeaponAttachmentInfo* weaponAttachmentInfo, const char* boneName);
+    bool CanMelee();
+    void CheckForMeleeHits();
 
     // Rando
     void Respawn();
@@ -191,6 +193,7 @@ public:
     bool PressingADS();
     bool PressedADS();
     bool PressedEscape();
+    bool PressedMelee();
 
     // Misc gameplay shit
     int32_t GetKillCount();
@@ -224,7 +227,8 @@ public:
 	//RayCastResult _cameraRayData;
 	PxController* _characterController = NULL;
 
-	PxShape* _itemPickupOverlapShape = NULL;
+    PxShape* _itemPickupOverlapShape = NULL;
+    PxShape* _meleeHitCheckOverlapShape = NULL;
 	//PxRigidStatic* _itemPickupOverlapDebugBody = NULL;
     float _yVelocity = 0;
 

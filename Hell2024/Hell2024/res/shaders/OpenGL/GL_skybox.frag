@@ -20,7 +20,6 @@ void main() {
 
 	FinalLighting.rgb *= skyboxTint;
 
-    FinalLighting.a = 1.0;
 
 	Normal.rgb = vec3(0,0,0);
 	Normal.a = float(playerIndex) * 0.25;
@@ -33,5 +32,6 @@ void main() {
 
 	contrastAdjust(FinalLighting, 1.125);
 	FinalLighting.rgb *= vec3(0.5);
-	FinalLighting.rgb *= vec3(0.0);
+    FinalLighting.a = 1.0;
+	FinalLighting.rgb *= vec3(0, 0, 0);
 }

@@ -79,7 +79,7 @@ namespace CSG {
         for (int i = 0; i < Scene::g_cubeVolumesAdditive.size(); i++) {
             CubeVolume& cubeVolume = Scene::g_cubeVolumesAdditive[i];
             CSGObject& csg = g_objects.emplace_back();
-            csg.m_transform = cubeVolume.transform;
+            csg.m_transform = cubeVolume.GetTransform();
             csg.m_type = CSGType::ADDITIVE;
             csg.m_materialIndex = cubeVolume.materialIndex;
             csg.m_textureScale = cubeVolume.textureScale;
@@ -89,7 +89,7 @@ namespace CSG {
         for (int i = 0; i < Scene::g_cubeVolumesSubtractive.size(); i++) {
             CubeVolume& cubeVolume = Scene::g_cubeVolumesSubtractive[i];
             CSGObject& csg = g_objects.emplace_back();
-            csg.m_transform = cubeVolume.transform;
+            csg.m_transform = cubeVolume.GetTransform();
             csg.m_type = CSGType::SUBTRACTIVE;
             csg.m_materialIndex = cubeVolume.materialIndex;
             csg.m_textureScale = cubeVolume.textureScale;
@@ -99,35 +99,24 @@ namespace CSG {
         for (Door& door : Scene::g_doors) {
             CSGObject& csg = g_objects.emplace_back();
             csg.m_transform.position = door.m_position + glm::vec3(0, DOOR_HEIGHT / 2, 0);
-            csg.m_transform.scale = glm::vec3(0.8f, DOOR_HEIGHT, 0.2f);
+            csg.m_transform.rotation = glm::vec3(0, door.m_rotation, 0);
+            csg.m_transform.scale = glm::vec3(0.2f, DOOR_HEIGHT, 0.8f);
             csg.m_type = CSGType::DOOR;
             csg.m_materialIndex = AssetManager::GetMaterialIndex("FloorBoards"); // add this to the door object somehow
             csg.m_textureScale = 0.5f;                                           // add this to the door object somehow
         }
 
-        // Little holes
-        float size = 0.2f;
-        {
-            CSGObject& cube = g_objects.emplace_back();
-            cube.m_transform.position = glm::vec3(-1.2f - 0.2f, 1.0f, -2.90f);
-            cube.m_transform.scale = glm::vec3(size);
-            cube.m_type = CSGType::SUBTRACTIVE;
-            cube.m_materialIndex = AssetManager::GetMaterialIndex("Ceiling2");
+
+        for (Window& window: Scene::g_windows) {
+            CSGObject& csg = g_objects.emplace_back();
+            csg.m_transform.position = window.GetPosition() + glm::vec3(0, 1.5f, 0);
+            csg.m_transform.scale = glm::vec3(0.8f, 1.3f, 0.2f);
+            csg.m_transform.rotation = window.rotation;
+            csg.m_type = CSGType::SUBTRACTIVE;
+            csg.m_materialIndex = AssetManager::GetMaterialIndex("FloorBoards"); // add this to the door object somehow
+            csg.m_textureScale = 0.5f;                                           // add this to the door object somehow
         }
-        {
-            CSGObject& cube = g_objects.emplace_back();
-            cube.m_transform.position = glm::vec3(-1.8f - 0.2f, 1.2f, -2.90f);
-            cube.m_transform.scale = glm::vec3(size);
-            cube.m_type = CSGType::SUBTRACTIVE;
-            cube.m_materialIndex = AssetManager::GetMaterialIndex("Ceiling2");
-        }
-        {
-            CSGObject& cube = g_objects.emplace_back();
-            cube.m_transform.position = glm::vec3(-1.5f - 0.2f, 1.8f, -2.90f);
-            cube.m_transform.scale = glm::vec3(size);
-            cube.m_type = CSGType::SUBTRACTIVE;
-            cube.m_materialIndex = AssetManager::GetMaterialIndex("Ceiling2");
-        }
+
 
         for (int i = 0; i < g_objects.size(); i++) {
             CSGObject& cube = g_objects[i];

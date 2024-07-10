@@ -13,6 +13,7 @@ public:
     void Update(float deltaTime);
     void CleanUp();
     void SetToInitialState();
+    void Rotate90();
 
     glm::vec3 m_position = glm::vec3(0);
     float m_rotation = 0;

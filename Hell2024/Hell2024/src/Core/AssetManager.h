@@ -40,6 +40,7 @@ namespace AssetManager {
     unsigned int GetQuadMeshIndexQuadscreenTopRight();
     unsigned int GetQuadMeshIndexQuadscreenBottomLeft();
     unsigned int GetQuadMeshIndexQuadscreenBottomRight();
+    unsigned int GetHalfSizeQuadMeshIndex();
 
     // Models
     Model* GetModelByIndex(int index);

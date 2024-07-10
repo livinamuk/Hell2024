@@ -5,14 +5,14 @@ layout (location = 6) in vec4 aBoneWeight;
 
 struct RenderItem3D {
     mat4 modelMatrix;
-    mat4 inverseModelMatrix; 
+    mat4 inverseModelMatrix;
     int meshIndex;
     int baseColorTextureIndex;
     int normalTextureIndex;
     int rmaTextureIndex;
     int vertexOffset;
     int indexOffset;
-    int animatedTransformsOffset; 
+    int animatedTransformsOffset;
     int castShadow;
     int useEmissiveMask;
     float emissiveColorR;
@@ -35,18 +35,18 @@ void main()
 
 	vec4 worldPos;
 	vec4 totalLocalPos = vec4(0.0);
-	
+
 	vec4 vertexPosition =  vec4(aPos, 1.0);
 
 	// Animated
 	if (isAnimated)
 	{
-		for(int i=0;i<4;i++) 
+		for(int i=0;i<4;i++)
 		{
 			mat4 jointTransform = skinningMats[int(aBoneID[i])];
 			vec4 posePosition =  jointTransform  * vertexPosition * aBoneWeight[i];
 
-			totalLocalPos += posePosition;	
+			totalLocalPos += posePosition;
 		}
 		worldPos = model * totalLocalPos;
 				gl_Position = worldPos;
@@ -56,6 +56,6 @@ void main()
 		worldPos = model * vec4(aPos, 1.0);
 		gl_Position = worldPos;
 	}
-	
+
 
 }

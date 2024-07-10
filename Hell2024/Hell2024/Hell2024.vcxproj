@@ -134,7 +134,7 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\..\Users\livinamuk\Downloads\Hell2024-main\Hell2024-main\AnimPlayground\AnimPlayground\src\Renderer\CSG\CSG.cpp" />
+   
     <ClCompile Include="src\API\OpenGL\Types\GL_cubemapTexutre.cpp" />
     <ClCompile Include="src\API\OpenGL\Types\GL_texture.cpp" />
     <ClCompile Include="src\API\Vulkan\Types\VK_texture.cpp" />
@@ -216,8 +216,6 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <ClCompile Include="vendor\VkBootstrap\VkBootstrap.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\..\Users\livinamuk\Downloads\Hell2024-main\Hell2024-main\AnimPlayground\AnimPlayground\src\Renderer\CSG\CSG.h" />
-    <ClInclude Include="..\..\..\Users\livinamuk\Downloads\Hell2024-main\Hell2024-main\AnimPlayground\AnimPlayground\src\Renderer\CSG\CubeBrush.hpp" />
     <ClInclude Include="src\API\OpenGL\Types\GL_cubemapTexture.h" />
     <ClInclude Include="src\API\OpenGL\Types\GL_detachedMesh.hpp" />
     <ClInclude Include="src\API\OpenGL\Types\GL_ShadowMap2.hpp" />
@@ -349,6 +347,8 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <None Include="res\shaders\OpenGL\GL_blur.frag" />
     <None Include="res\shaders\OpenGL\GL_blurHorizontal.vert" />
     <None Include="res\shaders\OpenGL\GL_blurVertical.vert" />
+    <None Include="res\shaders\OpenGL\GL_csg_subtractive.frag" />
+    <None Include="res\shaders\OpenGL\GL_csg_subtractive.vert" />
     <None Include="res\shaders\OpenGL\GL_csg_test.frag" />
     <None Include="res\shaders\OpenGL\GL_csg_test.vert" />
     <None Include="res\shaders\OpenGL\GL_decals.frag" />

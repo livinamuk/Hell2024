@@ -43,17 +43,74 @@ void Scene::LoadDefaultScene() {
     }
 
     g_doors.clear();
+    g_doors.reserve(sizeof(Door) * 1000);
     g_doors.emplace_back(Door(glm::vec3(0, 0, -2.95f), HELL_PI * -0.5f));
     g_doors.emplace_back(Door(glm::vec3(0, 0, -2.90f - 4.15f), HELL_PI * 0.5f, true));
 
     g_cubeVolumesAdditive.clear();
     g_cubeVolumesSubtractive.clear();
+    g_cubeVolumesAdditive.reserve(sizeof(CubeVolume) * 1000);
+    g_cubeVolumesSubtractive.reserve(sizeof(CubeVolume) * 1000);
 
 
+    g_windows.clear();
+    g_windows.reserve(sizeof(Window) * 1000);
 
 
 
     // Hardcoded objects
+
+    /*
+
+    if (true) {
+        int testIndex = CreateAnimatedGameObject();
+        AnimatedGameObject& glock = g_animatedGameObjects[testIndex];
+        glock.SetFlag(AnimatedGameObject::Flag::NONE);
+        glock.SetPlayerIndex(1);
+        glock.SetSkinnedModel("Glock");
+        glock.SetName("Glock");
+        glock.SetAnimationModeToBindPose();
+        glock.SetMeshMaterialByMeshName("ArmsMale", "Hands");
+        glock.SetMeshMaterialByMeshName("ArmsFemale", "FemaleArms");
+        glock.SetMeshMaterialByMeshName("Glock", "Glock");
+        glock.SetMeshMaterialByMeshName("RedDotSight", "RedDotSight");
+        glock.SetMeshMaterialByMeshName("RedDotSightGlass", "RedDotSight");
+        glock.SetMeshMaterialByMeshName("Glock_silencer", "Silencer");
+        //glock.DisableDrawingForMeshByMeshName("Silencer");
+       // glock.PlayAndLoopAnimation("Glock_Reload", 1.0f);
+        glock.SetPosition(glm::vec3(0, 1, 0));
+        glock.SetScale(0.01);
+    }
+
+    if (true) {
+        int testIndex = CreateAnimatedGameObject();
+        AnimatedGameObject& glock = g_animatedGameObjects[testIndex];
+        glock.SetFlag(AnimatedGameObject::Flag::NONE);
+        glock.SetPlayerIndex(1);
+        glock.SetSkinnedModel("P90");
+        glock.SetName("P90");
+        glock.SetAnimationModeToBindPose();
+        glock.SetMeshMaterialByMeshName("ArmsMale", "Hands");
+        glock.SetMeshMaterialByMeshName("ArmsFemale", "FemaleArms");
+        glock.SetMeshMaterialByMeshName("Glock", "Glock");
+        glock.SetMeshMaterialByMeshName("RedDotSight", "RedDotSight");
+        glock.SetMeshMaterialByMeshName("RedDotSightGlass", "RedDotSight");
+        glock.SetMeshMaterialByMeshName("Glock_silencer", "Silencer");
+        //glock.DisableDrawingForMeshByMeshName("Silencer");
+      //  glock.PlayAndLoopAnimation("P90_Draw", 1.0f);
+        glock.SetPosition(glm::vec3(2, 1, 0));
+        glock.SetScale(0.01);
+    }
+    */
+
+
+
+
+
+
+
+
+
 
     CreateGameObject();
     GameObject* pictureFrame = GetGameObjectByIndex(GetGameObjectCount() - 1);
@@ -224,91 +281,120 @@ void Scene::LoadDefaultScene() {
 
 
 
-
     // Walls
     {
         CubeVolume& cube = g_cubeVolumesAdditive.emplace_back();
-        cube.transform.position = glm::vec3(0.0f, 1.3f, -2.95f);
-        cube.transform.scale = glm::vec3(6.0f, 2.6f, 0.1f);
+        cube.m_transform.position = glm::vec3(0.0f, 1.3f, -2.95f);
+        cube.m_transform.scale = glm::vec3(6.0f, 2.6f, 0.1f);
         cube.materialIndex = AssetManager::GetMaterialIndex("Ceiling2");
     }
     {
         CubeVolume& cube = g_cubeVolumesAdditive.emplace_back();
-        cube.transform.position = glm::vec3(0.0f, 1.3f, 2.95f);
-        cube.transform.scale = glm::vec3(6.0f, 2.6f, 0.1f);
+        cube.m_transform.position = glm::vec3(0.0f, 1.3f, 2.95f);
+        cube.m_transform.scale = glm::vec3(6.0f, 2.6f, 0.1f);
         cube.materialIndex = AssetManager::GetMaterialIndex("Ceiling2");
     }
     {
         CubeVolume& cube = g_cubeVolumesAdditive.emplace_back();
-        cube.transform.position = glm::vec3(2.95f, 1.3f, 0.0f);
-        cube.transform.scale = glm::vec3(0.1f, 2.6f, 6.0f);
+        cube.m_transform.position = glm::vec3(2.95f, 1.3f, 0.0f);
+        cube.m_transform.scale = glm::vec3(0.1f, 2.6f, 6.0f);
         cube.materialIndex = AssetManager::GetMaterialIndex("Ceiling2");
     }
     {
         CubeVolume& cube = g_cubeVolumesAdditive.emplace_back();
-        cube.transform.position = glm::vec3(-2.95f, 1.3f, 0.0f);
-        cube.transform.scale = glm::vec3(0.1f, 2.6f, 6.0f);
+        cube.m_transform.position = glm::vec3(-2.95f, 1.3f, 0.0f);
+        cube.m_transform.scale = glm::vec3(0.1f, 2.6f, 6.0f);
         cube.materialIndex = AssetManager::GetMaterialIndex("Ceiling2");
     }
     {
         CubeVolume& cube = g_cubeVolumesAdditive.emplace_back();
-        cube.transform.position = glm::vec3(0.0f, 1.3f, -2.95f - 10.0f);
-        cube.transform.scale = glm::vec3(6.0f, 2.6f, 0.1f);
+        cube.m_transform.position = glm::vec3(0.0f, 1.3f, -2.95f - 10.0f);
+        cube.m_transform.scale = glm::vec3(6.0f, 2.6f, 0.1f);
         cube.materialIndex = AssetManager::GetMaterialIndex("Ceiling2");
     }
     {
         CubeVolume& cube = g_cubeVolumesAdditive.emplace_back();
-        cube.transform.position = glm::vec3(0.0f, 1.3f, 2.95f - 10.0f);
-        cube.transform.scale = glm::vec3(6.0f, 2.6f, 0.1f);
+        cube.m_transform.position = glm::vec3(0.0f, 1.3f, 2.95f - 10.0f);
+        cube.m_transform.scale = glm::vec3(6.0f, 2.6f, 0.1f);
         cube.materialIndex = AssetManager::GetMaterialIndex("Ceiling2");
     }
     {
         CubeVolume& cube = g_cubeVolumesAdditive.emplace_back();
-        cube.transform.position = glm::vec3(2.95f, 1.3f, 0.0f - 10.0f);
-        cube.transform.scale = glm::vec3(0.1f, 2.6f, 6.0f);
+        cube.m_transform.position = glm::vec3(2.95f, 1.3f, 0.0f - 10.0f);
+        cube.m_transform.scale = glm::vec3(0.1f, 2.6f, 6.0f);
         cube.materialIndex = AssetManager::GetMaterialIndex("Ceiling2");
     }
     {
         CubeVolume& cube = g_cubeVolumesAdditive.emplace_back();
-        cube.transform.position = glm::vec3(-2.95f, 1.3f, 0.0f - 10.0f);
-        cube.transform.scale = glm::vec3(0.1f, 2.6f, 6.0f);
+        cube.m_transform.position = glm::vec3(-2.95f, 1.3f, 0.0f - 10.0f);
+        cube.m_transform.scale = glm::vec3(0.1f, 2.6f, 6.0f);
         cube.materialIndex = AssetManager::GetMaterialIndex("Ceiling2");
     }
     // Floor
     {
         CubeVolume& cube = g_cubeVolumesAdditive.emplace_back();
-        cube.transform.position = glm::vec3(0.0f, -0.05, 0.0f);
-        cube.transform.scale = glm::vec3(6.0f, 0.1, 6.0f);
+        cube.m_transform.position = glm::vec3(0.0f, -0.05, 0.0f);
+        cube.m_transform.scale = glm::vec3(6.0f, 0.1, 6.0f);
         cube.materialIndex = AssetManager::GetMaterialIndex("FloorBoards");
         cube.textureScale = 0.5f;
     }
     {
         CubeVolume& cube = g_cubeVolumesAdditive.emplace_back();
-        cube.transform.position = glm::vec3(0.0f, -0.05, -10.0f);
-        cube.transform.scale = glm::vec3(6.0f, 0.1, 6.0f);
+        cube.m_transform.position = glm::vec3(0.0f, -0.05, -10.0f);
+        cube.m_transform.scale = glm::vec3(6.0f, 0.1, 6.0f);
         cube.materialIndex = AssetManager::GetMaterialIndex("FloorBoards");
         cube.textureScale = 0.5f;
     }
     {
         CubeVolume& cube = g_cubeVolumesAdditive.emplace_back();
-        cube.transform.position = glm::vec3(0.0f, -0.05, -5.0f);
-        cube.transform.scale = glm::vec3(1.2f, 0.1, 4.0f);
+        cube.m_transform.position = glm::vec3(0.0f, -0.05, -5.0f);
+        cube.m_transform.scale = glm::vec3(1.2f, 0.1, 4.0f);
         cube.materialIndex = AssetManager::GetMaterialIndex("FloorBoards");
         cube.textureScale = 0.5f;
     }
     // Ceiling
     {
         CubeVolume& cube = g_cubeVolumesAdditive.emplace_back();
-        cube.transform.position = glm::vec3(0.0f, 2.55, 0.0f);
-        cube.transform.scale = glm::vec3(6.0f, 0.1, 6.0f);
+        cube.m_transform.position = glm::vec3(0.0f, 2.55, 0.0f);
+        cube.m_transform.scale = glm::vec3(6.0f, 0.1, 6.0f);
         cube.materialIndex = AssetManager::GetMaterialIndex("Ceiling2");
     }
     {
         CubeVolume& cube = g_cubeVolumesAdditive.emplace_back();
-        cube.transform.position = glm::vec3(0.0f, 2.55, -10.0f);
-        cube.transform.scale = glm::vec3(6.0f, 0.1, 6.0f);
+        cube.m_transform.position = glm::vec3(0.0f, 2.55, -10.0f);
+        cube.m_transform.scale = glm::vec3(6.0f, 0.1, 6.0f);
         cube.materialIndex = AssetManager::GetMaterialIndex("Ceiling2");
     }
+
+
+
+
+    // Little holes
+    float size = 0.2f;
+    {
+        CubeVolume& cube = g_cubeVolumesSubtractive.emplace_back();
+        cube.m_transform.position = glm::vec3(-1.2f - 0.2f, 1.0f, -2.90f);
+        cube.m_transform.scale = glm::vec3(size);
+        cube.materialIndex = AssetManager::GetMaterialIndex("Ceiling2");
+        cube.CreateCubePhysicsObject();
+    }
+    {
+        CubeVolume& cube = g_cubeVolumesSubtractive.emplace_back();
+        cube.m_transform.position = glm::vec3(-1.8f - 0.2f, 1.2f, -2.90f);
+        cube.m_transform.scale = glm::vec3(size);
+        cube.materialIndex = AssetManager::GetMaterialIndex("Ceiling2");
+        cube.CreateCubePhysicsObject();
+    }
+    {
+        CubeVolume& cube = g_cubeVolumesSubtractive.emplace_back();
+        cube.m_transform.position = glm::vec3(-1.5f - 0.2f, 1.8f, -2.90f);
+        cube.m_transform.scale = glm::vec3(size);
+        cube.materialIndex = AssetManager::GetMaterialIndex("Ceiling2");
+        cube.CreateCubePhysicsObject();
+    }
+
+
+
 
     CSG::Build();
 
@@ -383,7 +469,7 @@ void Scene::Update(float deltaTime) {
         door.Update(deltaTime);
         door.UpdateRenderItems();
     }
-    for (Window& window : _windows) {
+    for (Window& window : g_windows) {
         window.UpdateRenderItems();
     }
     ProcessBullets();
@@ -443,9 +529,6 @@ void Scene::Update(float deltaTime) {
              it = _volumetricBloodSplatters.erase(it);
          }
     }
-
-    g_animatedGameObjects[testIndex].Update(deltaTime);
-
 }
 
 
@@ -674,7 +757,7 @@ std::vector<RenderItem3D> Scene::GetAllRenderItems() {
         renderItems.reserve(renderItems.size() + door.GetRenderItems().size());
         renderItems.insert(std::end(renderItems), std::begin(door.GetRenderItems()), std::end(door.GetRenderItems()));
     }
-    for (Window& window : Scene::_windows) {
+    for (Window& window : Scene::g_windows) {
         renderItems.reserve(renderItems.size() + window.GetRenderItems().size());
         renderItems.insert(std::end(renderItems), std::begin(window.GetRenderItems()), std::end(window.GetRenderItems()));
     }
@@ -2241,11 +2324,17 @@ void Scene::CleanUp() {
     for (Toilet& toilet: _toilets) {
         toilet.CleanUp();
     }
-    for (Window& window : _windows) {
+    for (Window& window : g_windows) {
         window.CleanUp();
     }
     for (AnimatedGameObject& animatedGameObject : g_animatedGameObjects) {
         //animatedGameObject.DestroyRagdoll();
+    }
+    for (CubeVolume& cubeVolume : g_cubeVolumesAdditive) {
+        cubeVolume.CleanUp();
+    }
+    for (CubeVolume& cubeVolume : g_cubeVolumesSubtractive) {
+        cubeVolume.CleanUp();
     }
 
     _toilets.clear();
@@ -2257,7 +2346,7 @@ void Scene::CleanUp() {
     _floors.clear();
 	_ceilings.clear();
 	g_doors.clear();
-    _windows.clear();
+    g_windows.clear();
 	g_gameObjects.clear();
     //g_animatedGameObjects.clear();
     _pickUps.clear();
@@ -2530,7 +2619,7 @@ void Scene::RecreateAllPhysicsObjects() {
 	for (Door& door : g_doors) {
 		door.CreatePhysicsObject();
 	}
-	for (Window& window : _windows) {
+	for (Window& window : g_windows) {
         window.CreatePhysicsObjects();
 	}
 }

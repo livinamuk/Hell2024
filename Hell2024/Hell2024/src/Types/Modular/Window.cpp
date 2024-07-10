@@ -8,7 +8,7 @@ Window::Window() {
 
 glm::mat4 Window::GetModelMatrix() {
 	Transform transform;
-	transform.position = position;
+	transform.position = m_position;
 	transform.rotation = rotation;
 	return transform.to_mat4();
 }
@@ -115,7 +115,7 @@ glm::vec3 Window::GetBackRightCorner() {
 }
 
 glm::vec3 Window::GetWorldSpaceCenter() {
-    return position + glm::vec3(0, 1.5f, 0);
+    return m_position + glm::vec3(0, 1.5f, 0);
 }
 
 
@@ -149,4 +149,33 @@ void Window::UpdateRenderItems() {
 
 std::vector<RenderItem3D>& Window::GetRenderItems() {
     return renderItems;
+}
+
+glm::mat4 Window::GetGizmoMatrix() {
+    Transform transform;
+    transform.position = m_position + glm::vec3(0, 1.5f, 0);
+    transform.rotation.y = rotation.y;
+    return transform.to_mat4();
+}
+
+void Window::SetPosition(glm::vec3 position) {
+    m_position = position;
+    if (raycastBody) {
+        PxMat44 worldMatrix = Util::GlmMat4ToPxMat44(GetModelMatrix());
+        PxTransform transform2 = PxTransform(worldMatrix);
+        raycastBody->setGlobalPose(transform2);
+    }
+}
+
+void Window::Rotate90() {
+    rotation.y += HELL_PI * 0.5f;
+    if (raycastBody) {
+        PxMat44 worldMatrix = Util::GlmMat4ToPxMat44(GetModelMatrix());
+        PxTransform transform2 = PxTransform(worldMatrix);
+        raycastBody->setGlobalPose(transform2);
+    }
+}
+
+glm::vec3 Window::GetPosition() {
+    return m_position;
 }

@@ -57,11 +57,80 @@ inline void SetNormalsAndTangentsFromVertices(Vertex* vert0, Vertex* vert1, Vert
 #define PROPOGATION_DEPTH (MAP_DEPTH / PROPOGATION_SPACING)
 
 struct CubeVolume {
-    Transform transform;
+
+
+private:
+public:
+    // MAKE PRIVATE, AND ADD CONST FOR THE RETURN TYPE OF GETTER
+    // MAKE PRIVATE, AND ADD CONST FOR THE RETURN TYPE OF GETTER
+    // MAKE PRIVATE, AND ADD CONST FOR THE RETURN TYPE OF GETTER
+    // MAKE PRIVATE, AND ADD CONST FOR THE RETURN TYPE OF GETTER
+    Transform m_transform;
+
+public:
     uint32_t materialIndex = 0;
     float textureScale = 1.0f;
     glm::mat4 GetModelMatrix() {
-        return  transform.to_mat4();
+        return  m_transform.to_mat4();
+    }
+
+    void SetTransform(Transform transform) {
+        m_transform = transform;
+        if (pxRigidStatic) {
+            PxMat44 matrix = Util::GlmMat4ToPxMat44(GetModelMatrix());
+            PxTransform transform2 = PxTransform(matrix);
+            pxRigidStatic->setGlobalPose(transform2);
+        }
+    }
+
+    Transform& GetTransform() {
+        return m_transform;
+    }
+
+    PxRigidStatic* pxRigidStatic = nullptr;
+    PxShape* pxShape = nullptr;
+
+    void CleanUp() {
+        if (pxRigidStatic) {
+            if (pxRigidStatic->userData) {
+                // MEMORY LEAK! FIX!!!
+                // MEMORY LEAK! FIX!!!
+                // MEMORY LEAK! FIX!!!
+                // MEMORY LEAK! FIX!!!
+                // MEMORY LEAK! FIX!!!
+                // MEMORY LEAK! FIX!!!
+                // MEMORY LEAK! FIX!!!
+                // MEMORY LEAK! FIX!!!
+            }
+            pxRigidStatic->release();
+        }
+        if (pxShape) {
+            pxShape->release();
+        }
+    }
+
+    void CreateCubePhysicsObject() {
+
+        PhysicsFilterData filterData2;
+        filterData2.raycastGroup = RaycastGroup::RAYCAST_ENABLED;
+        filterData2.collisionGroup = NO_COLLISION;
+        filterData2.collidesWith = NO_COLLISION;
+        PxShapeFlags shapeFlags(PxShapeFlag::eSCENE_QUERY_SHAPE); // Most importantly NOT eSIMULATION_SHAPE. PhysX does not allow for tri mesh.
+
+        float width = m_transform.scale.x * 0.5f;
+        float height = m_transform.scale.y * 0.5f;
+        float depth = m_transform.scale.z * 0.5f;
+
+        pxShape = Physics::CreateBoxShape(width, height, depth);
+        pxRigidStatic = Physics::CreateRigidStatic(Transform(), filterData2, pxShape);
+
+        PhysicsObjectData* physicsObjectData = new PhysicsObjectData(PhysicsObjectType::CSG_OBJECT_SUBTRACTIVE, this);
+        pxRigidStatic->userData = physicsObjectData;
+
+        PxMat44 m2 = Util::GlmMat4ToPxMat44(GetModelMatrix());
+        PxTransform transform2 = PxTransform(m2);
+        pxRigidStatic->setGlobalPose(transform2);
+
     }
 };
 
@@ -163,6 +232,7 @@ namespace Scene {
     // Containers
     inline std::vector<Light> g_lights;
     inline std::vector<Door> g_doors;
+    inline std::vector<Window> g_windows;
     inline std::vector<SpawnPoint> g_spawnPoints;
     inline std::vector<BulletCasing> g_bulletCasings;
     inline std::vector<CubeVolume> g_cubeVolumesAdditive;
@@ -180,7 +250,6 @@ namespace Scene {
     inline std::vector<Bullet> _bullets;
 
 	inline std::vector<Wall> _walls;
-	inline std::vector<Window> _windows;
     inline std::vector<Floor> _floors;
     inline std::vector<Ceiling> _ceilings;
     inline std::vector<CloudPointOld> _cloudPoints;

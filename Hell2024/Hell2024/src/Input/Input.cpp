@@ -47,7 +47,7 @@ namespace Input {
         if (KeyPressed(HELL_KEY_ESCAPE)) {
             BackEnd::ForceCloseWindow();
         }
-        if (KeyPressed(HELL_KEY_F)) {
+        if (KeyPressed(HELL_KEY_G)) {
             BackEnd::ToggleFullscreen();
         }
         if (KeyPressed(HELL_KEY_H)) {

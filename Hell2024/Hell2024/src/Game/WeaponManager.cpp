@@ -71,10 +71,7 @@ namespace WeaponManager {
         aks74u.animationNames.walk = "AKS74U_Walk";
         aks74u.animationNames.draw = "AKS74U_Draw";
         aks74u.animationNames.reload = "AKS74U_Reload";
-        //  aks74u.animationNames.reloadempty = "AKS74U_ReloadEmpty";
         aks74u.animationNames.reloadempty.push_back("AKS74U_ReloadEmpty");
-       // aks74u.animationNames.reloadempty.push_back("AKS74U_ReloadEmpty2");
-     //   aks74u.animationNames.reloadempty.push_back("AKS74U_ReloadEmpty3");
         aks74u.animationNames.fire.push_back("AKS74U_Fire0");
         aks74u.animationNames.fire.push_back("AKS74U_Fire1");
         aks74u.animationNames.fire.push_back("AKS74U_Fire2");
@@ -114,6 +111,9 @@ namespace WeaponManager {
         aks74u.animationNames.adsOut = "AKS74U_ADS_Out";
         aks74u.animationNames.adsIdle = "AKS74U_ADS_Idle";
         aks74u.animationNames.adsWalk = "AKS74U_ADS_Walk";
+        aks74u.reloadMagInFrameNumber = 23;
+        aks74u.reloadEmptyMagInFrameNumber = 21;
+
 
         WeaponInfo& goldeneGlock = g_weapons.emplace_back();
         goldeneGlock.name = "GoldenGlock";
@@ -167,6 +167,8 @@ namespace WeaponManager {
         goldeneGlock.animationNames.adsFire.push_back("Glock_ADS_Fire0");
         goldeneGlock.animationNames.adsFire.push_back("Glock_ADS_Fire1");
         goldeneGlock.animationNames.adsFire.push_back("Glock_ADS_Fire2");
+        goldeneGlock.reloadMagInFrameNumber = 20;
+        goldeneGlock.reloadEmptyMagInFrameNumber = 20;
 
         WeaponInfo& knife = g_weapons.emplace_back();
         knife.name = "Knife";
@@ -311,6 +313,8 @@ namespace WeaponManager {
         glock.animationNames.adsFire.push_back("Glock_ADS_Fire2");
         glock.pistolSlideBoneName = "Slide";
         glock.pistolSlideOffset = 5;
+        glock.reloadMagInFrameNumber = 20;
+        glock.reloadEmptyMagInFrameNumber= 20;
 
         WeaponInfo& autoShotgun = g_weapons.emplace_back();
         autoShotgun.name = "AutomaticShotgun";
@@ -357,6 +361,7 @@ namespace WeaponManager {
         shotgun.meshMaterials["Shotgun"] = "Shotgun";
         shotgun.animationNames.idle = "Shotgun_Idle";
         shotgun.animationNames.walk = "Shotgun_Walk";
+        shotgun.animationNames.melee = "Shotgun_Melee";
         shotgun.animationNames.reload = "Shotgun_Reload1Shell";
         shotgun.animationNames.reloadempty.push_back("Glock_ReloadEmpty");
         shotgun.animationNames.fire.push_back("Shotgun_Fire");
@@ -379,6 +384,65 @@ namespace WeaponManager {
         shotgun.casingEjectionBoneName = "Shell_bone";
         shotgun.casingEjectionForce = 13;
         shotgun.animationCancelPercentages.fire = 50.0f;
+
+
+
+
+
+
+
+
+
+
+        WeaponInfo& p90 = g_weapons.emplace_back();
+        p90.name = "P90";
+        p90.modelName = "P90";
+        p90.type = WeaponType::AUTOMATIC;
+        p90.damage = 5;
+        p90.animationNames.idle = "P90_Draw";
+        p90.animationNames.walk = "P90_Draw";
+        p90.animationNames.draw = "P90_Draw";
+        p90.animationNames.reload = "AKS74U_Reload";
+        p90.animationNames.reloadempty.push_back("AKS74U_ReloadEmpty");
+        p90.animationNames.fire.push_back("AKS74U_Fire0");
+        p90.animationNames.fire.push_back("AKS74U_Fire1");
+        p90.animationNames.fire.push_back("AKS74U_Fire2");
+        p90.animationNames.draw = "AKS74U_Draw";
+        p90.hiddenMeshAtStart.push_back("ArmsFemale");
+        p90.meshMaterials["ArmsMale"] = "Hands";
+        p90.meshMaterials["ArmsFemale"] = "FemaleArms";
+        p90.meshMaterials["AKS74UBarrel"] = "AKS74U_4";
+        p90.meshMaterials["AKS74UBolt"] = "AKS74U_1";
+        p90.meshMaterials["AKS74UHandGuard"] = "AKS74U_0";
+        p90.meshMaterials["AKS74UMag"] = "AKS74U_3";
+        p90.meshMaterials["AKS74UPistolGrip"] = "AKS74U_2";
+        p90.meshMaterials["AKS74UReceiver"] = "AKS74U_1";
+        p90.ammoType = "AKS74U";
+        p90.magSize = 30;
+        p90.muzzleFlashBoneName = "Weapon";
+        p90.muzzleFlashOffset = glm::vec3(0, 0.002, 0.02f);
+        p90.casingEjectionBoneName = "SlideCatch";
+        p90.casingEjectionOffset = glm::vec3(0, 0, 0);
+        p90.animationCancelPercentages.fire = 20.0f;
+        p90.animationCancelPercentages.reload = 80.0f;
+        p90.animationCancelPercentages.reloadFromEmpty = 95.0f;
+        p90.animationCancelPercentages.draw = 75.0f;
+        p90.animationCancelPercentages.adsFire = 22.0f;
+        p90.audioFiles.fire.push_back("AKS74U_Fire0.wav");
+        p90.audioFiles.fire.push_back("AKS74U_Fire1.wav");
+        p90.audioFiles.fire.push_back("AKS74U_Fire2.wav");
+        p90.audioFiles.fire.push_back("AKS74U_Fire3.wav");
+        p90.audioFiles.reload = "AKS74U_Reload.wav";
+        p90.audioFiles.reloadEmpty = "AKS74U_ReloadEmpty.wav";
+        p90.animationSpeeds.fire = 1.625f;
+        p90.muzzleFlashBoneName = "Muzzle";
+        p90.casingEjectionBoneName = "EjectionPort";
+        p90.muzzleFlashScale = 1.5f;
+        p90.casingEjectionForce = 3.5f;
+        p90.animationNames.adsIn = "AKS74U_ADS_In";
+        p90.animationNames.adsOut = "AKS74U_ADS_Out";
+        p90.animationNames.adsIdle = "AKS74U_ADS_Idle";
+        p90.animationNames.adsWalk = "AKS74U_ADS_Walk";
 
         SortList();
     }

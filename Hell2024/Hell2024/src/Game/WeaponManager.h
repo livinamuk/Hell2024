@@ -18,6 +18,7 @@ struct AnimationNames {
     std::string adsOut;
     std::string adsIdle;
     std::string adsWalk;
+    std::string melee;
     std::vector<std::string> adsFire;
 };
 
@@ -71,6 +72,8 @@ struct WeaponInfo {
     float muzzleFlashScale = 1;
     float casingEjectionForce = 1;
     float pistolSlideOffset = 0;
+    float reloadMagInFrameNumber = 0;
+    float reloadEmptyMagInFrameNumber = 0;
 };
 
 struct AmmoInfo {

@@ -1066,7 +1066,7 @@ std::vector<RenderItem3D> CreateGlassRenderItems() {
 
     std::vector<RenderItem3D> renderItems;
 
-    for (Window& window : Scene::_windows) {
+    for (Window& window : Scene::g_windows) {
 
         static Model* glassModel = AssetManager::GetModelByIndex(AssetManager::GetModelIndexByName("Glass"));
         static Material* glassMaterial = AssetManager::GetMaterialByIndex(AssetManager::GetMaterialIndex("WindowExterior"));

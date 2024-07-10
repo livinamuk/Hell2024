@@ -155,9 +155,28 @@ namespace Editor {
                     }
                 }
             }
+            if (hitResult.physicsObjectType == PhysicsObjectType::CSG_OBJECT_SUBTRACTIVE) {
+                for (int i = 0; i < Scene::g_cubeVolumesSubtractive.size(); i++) {
+                    CubeVolume& cubeVolume = Scene::g_cubeVolumesSubtractive[i];
+                    if (&cubeVolume == hitResult.parent) {
+                        g_hoveredObjectIndex = i;
+                        g_hoverFound = true;
+                        break;
+                    }
+                }
+            }
             if (hitResult.physicsObjectType == PhysicsObjectType::DOOR) {
                 for (int i = 0; i < Scene::g_doors.size(); i++) {
                     if (&Scene::g_doors[i] == hitResult.parent) {
+                        g_hoverFound = true;
+                        g_hoveredObjectIndex = i;
+                        break;
+                    }
+                }
+            }
+            if (hitResult.physicsObjectType == PhysicsObjectType::GLASS) {
+                for (int i = 0; i < Scene::g_windows.size(); i++) {
+                    if (&Scene::g_windows[i] == hitResult.parent) {
                         g_hoverFound = true;
                         g_hoveredObjectIndex = i;
                         break;
@@ -200,8 +219,17 @@ namespace Editor {
                         gizmoMatrix = cubeVolume->GetModelMatrix();
                     }
                 }
+                if (g_selectedObjectType == PhysicsObjectType::CSG_OBJECT_SUBTRACTIVE) {
+                    CubeVolume* cubeVolume = Scene::GetCubeVolumeSubtractiveByIndex(g_selectedObjectIndex);
+                    if (cubeVolume) {
+                        gizmoMatrix = cubeVolume->GetModelMatrix();
+                    }
+                }
                 if (g_selectedObjectType == PhysicsObjectType::DOOR) {
                     gizmoMatrix = Scene::g_doors[g_selectedObjectIndex].GetGizmoMatrix();
+                }
+                if (g_selectedObjectType == PhysicsObjectType::GLASS) {
+                    gizmoMatrix = Scene::g_windows[g_selectedObjectIndex].GetGizmoMatrix();
                 }
             }
 
@@ -220,15 +248,24 @@ namespace Editor {
             Im3d::Vec3 euler = ToEulerXYZ(resultMatrix.getRotation());
             Im3d::Vec3 scale = resultMatrix.getScale();
 
+            Transform gizmoTransform;
+            gizmoTransform.position = glm::vec3(pos.x, pos.y, pos.z);
+            gizmoTransform.rotation = glm::vec3(euler.x, euler.y, euler.z);
+            gizmoTransform.scale = glm::vec3(scale.x, scale.y, scale.z);
 
             if (Input::LeftMouseDown() && Gizmo::HasHover()) {
 
                 if (g_selectedObjectType == PhysicsObjectType::CSG_OBJECT_ADDITIVE) {
                     CubeVolume* cubeVolume = Scene::GetCubeVolumeAdditiveByIndex(g_selectedObjectIndex);
                     if (cubeVolume) {
-                        cubeVolume->transform.position = glm::vec3(pos.x, pos.y, pos.z);
-                        cubeVolume->transform.rotation = glm::vec3(euler.x, euler.y, euler.z);
-                        cubeVolume->transform.scale = glm::vec3(scale.x, scale.y, scale.z);
+                        cubeVolume->SetTransform(gizmoTransform);
+                        gizmoMatrix = cubeVolume->GetModelMatrix();
+                    }
+                }
+                if (g_selectedObjectType == PhysicsObjectType::CSG_OBJECT_SUBTRACTIVE) {
+                    CubeVolume* cubeVolume = Scene::GetCubeVolumeSubtractiveByIndex(g_selectedObjectIndex);
+                    if (cubeVolume) {
+                        cubeVolume->SetTransform(gizmoTransform);
                         gizmoMatrix = cubeVolume->GetModelMatrix();
                     }
                 }
@@ -236,35 +273,88 @@ namespace Editor {
                     Scene::g_doors[g_selectedObjectIndex].m_position = glm::vec3(pos.x, pos.y - DOOR_HEIGHT / 2.0f, pos.z);
                     gizmoMatrix = Scene::g_doors[g_selectedObjectIndex].GetGizmoMatrix();
                 }
+                if (g_selectedObjectType == PhysicsObjectType::GLASS) {
+                   Scene::g_windows[g_selectedObjectIndex].SetPosition(glm::vec3(pos.x, pos.y - 1.5f, pos.z));
+                   gizmoMatrix = Scene::g_windows[g_selectedObjectIndex].GetGizmoMatrix();
+                }
                 CSG::Build();
             }
         }
 
 
-        if (g_hoverFound) {
-            if (g_hoveredObjectType == PhysicsObjectType::DOOR) {
-                g_debugText = "Hovered: DOOR " + std::to_string(g_hoveredObjectIndex) + "\n";
-            }
-            if (g_hoveredObjectType == PhysicsObjectType::CSG_OBJECT_ADDITIVE) {
-                g_debugText = "Hovered: CSG CUBE " + std::to_string(g_hoveredObjectIndex) + "\n";
-            }
+
+        // Create objects
+        glm::vec3 spawnPos = player->GetViewPos() - (player->GetCameraForward() * glm::vec3(2));
+
+        // Additive cubes
+        if (Input::KeyPressed(HELL_KEY_1)) {
+            CubeVolume& cube = Scene::g_cubeVolumesAdditive.emplace_back();
+            Transform transform;
+            transform.position = spawnPos;
+            transform.scale = glm::vec3(1.0f);
+            cube.SetTransform(transform);
+            cube.materialIndex = AssetManager::GetMaterialIndex("Ceiling2");
+            CSG::Build();
         }
-        else {
-            g_debugText = "Hovered: NO HIT\n";
+        if (Input::KeyPressed(HELL_KEY_2)) {
+            CubeVolume& cube = Scene::g_cubeVolumesSubtractive.emplace_back();
+            Transform transform;
+            transform.position = spawnPos;
+            transform.scale = glm::vec3(1.0f);
+            cube.SetTransform(transform);
+            cube.materialIndex = AssetManager::GetMaterialIndex("FloorBoards");
+            cube.CreateCubePhysicsObject();
+            CSG::Build();
         }
-        if (g_objectIsSelected) {
-            if (g_selectedObjectType == PhysicsObjectType::DOOR) {
-                g_debugText += "Selected: DOOR " + std::to_string(g_selectedObjectIndex) + "\n";
-            }
-            if (g_selectedObjectType == PhysicsObjectType::CSG_OBJECT_ADDITIVE) {
-                g_debugText += "Selected: CSG CUBE " + std::to_string(g_selectedObjectIndex) + "\n";
-            }
+        if (Input::KeyPressed(HELL_KEY_3)) {
+            glm::vec3 doorSpawnPos = spawnPos * glm::vec3(1, 0, 1);
+            Door& door = Scene::g_doors.emplace_back(Door(doorSpawnPos, HELL_PI * 0.5f, false));
+            door.CreatePhysicsObject();
+            CSG::Build();
         }
-        else {
-            g_debugText += "Selected: NONE\n";
+        if (Input::KeyPressed(HELL_KEY_4)) {
+            glm::vec3 windowSpawnPos = spawnPos * glm::vec3(1, 0, 1);
+            Window& window = Scene::g_windows.emplace_back();
+            window.SetPosition(windowSpawnPos);
+            window.CreatePhysicsObjects();
+            CSG::Build();
         }
 
-        g_debugText += "Gizmo Has Hover: " + std::to_string(Gizmo::HasHover());
+
+        // Rotate selected door or window
+        if (g_objectIsSelected) {
+            if (Input::KeyPressed(HELL_KEY_Y)) {
+                if (g_selectedObjectType == PhysicsObjectType::DOOR) {
+                    Door& door = Scene::g_doors[g_selectedObjectIndex];
+                    door.Rotate90();
+                    gizmoMatrix = door.GetGizmoMatrix();
+                }
+                if (g_selectedObjectType == PhysicsObjectType::GLASS) {
+                    Window& window = Scene::g_windows[g_selectedObjectIndex];
+                    window.Rotate90();
+                    gizmoMatrix = window.GetGizmoMatrix();
+                }
+            }
+        }
+
+
+
+        g_debugText = "";
+
+        if (g_hoverFound) {
+                g_debugText += "Hovered: " + Util::PhysicsObjectTypeToString(g_hoveredObjectType) + "\n";
+        }
+        else {
+            g_debugText += "Hovered: NONE_FOUND " + std::to_string(g_hoveredObjectIndex) + "\n";
+        }
+        if (g_objectIsSelected) {
+            g_debugText += "Selected: " + Util::PhysicsObjectTypeToString(g_selectedObjectType) + "\n";
+        }
+        else {
+            g_debugText += "Selected: NONE_FOUND " + std::to_string(g_selectedObjectIndex) + "\n";
+        }
+
+       // g_debugText += "Gizmo Has Hover: " + std::to_string(Gizmo::HasHover());
     }
 
     void EnterEditor() {

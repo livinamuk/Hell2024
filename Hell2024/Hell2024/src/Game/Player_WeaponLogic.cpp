@@ -1,4 +1,5 @@
 ﻿#include "Player.h"
+#include "Game.h"
 #include "Scene.h"
 #include "../Core/Audio.hpp"
 #include "../Input/InputMulti.h"
@@ -12,6 +13,7 @@ void Player::GiveDefaultLoadout() {
     GiveWeapon("GoldenGlock");
     GiveWeapon("Tokarev");
     GiveWeapon("AKS74U");
+ //   GiveWeapon("P90");
     GiveWeapon("Shotgun");
 
     GiveAmmo("Glock", 80000);
@@ -213,7 +215,16 @@ void Player::UpdateViewWeaponLogic(float deltaTime) {
 
         // Give reload ammo
         if (_weaponAction == RELOAD || _weaponAction == RELOAD_FROM_EMPTY) {
-            if (_needsAmmoReloaded && viewWeapon->AnimationIsPastPercentage(10.0f)) {
+
+            int frameNumber = 0;
+
+            if (_weaponAction == RELOAD) {
+                frameNumber = weaponInfo->reloadMagInFrameNumber;
+            }
+            if(_weaponAction == RELOAD_FROM_EMPTY) {
+                frameNumber = weaponInfo->reloadEmptyMagInFrameNumber;
+            }
+            if (_needsAmmoReloaded && viewWeapon->AnimationIsPastFrameNumber(frameNumber)) {
                 int ammoToGive = std::min(weaponInfo->magSize - weaponState->ammoInMag, ammoState->ammoOnHand);
                 weaponState->ammoInMag += ammoToGive;
                 ammoState->ammoOnHand -= ammoToGive;
@@ -336,6 +347,26 @@ void Player::UpdateViewWeaponLogic(float deltaTime) {
         bool triggeredFire = (
             PressedFire() && weaponInfo->type == WeaponType::SHOTGUN && !weaponInfo->auomaticOverride ||
             PressingFire() && weaponInfo->type == WeaponType::SHOTGUN && weaponInfo->auomaticOverride);
+
+
+        // Melee
+        if (PressedMelee() && CanMelee()) {
+            viewWeapon->PlayAnimation("Shotgun_Melee", 1.25f);
+            std::string audioName = "Shotgun_Melee_Hit3.wav";
+            Audio::PlayAudio(audioName, 1.0f);
+            _weaponAction = MELEE;
+        }
+        if (_weaponAction == MELEE && viewWeapon->IsAnimationComplete()) {
+            _weaponAction = IDLE;
+        }
+        // hit shit
+
+        int frameNumber = GetViewWeaponAnimatedGameObject()->GetAnimationFrameNumber();
+        int hitFrame = 9;
+        int hitFrameWindow = 6;
+        if (_weaponAction == MELEE && frameNumber > hitFrame && frameNumber < hitFrame + hitFrameWindow) {
+            CheckForMeleeHits();
+        }
 
         // Fire
         if (triggeredFire && CanFire()) {
@@ -485,6 +516,9 @@ void Player::UpdateViewWeaponLogic(float deltaTime) {
   ██████████  ▀██████▀    ██████████   ███    ███  ▀█████▀     ▄████▀     ███    █▀    █▀    ▀█   █▀    ████████▀           ██████████ █████▄▄██  ▄████████▀    ██████████ */
 
 
+bool Player::CanMelee() {
+    return true;
+}
 
 bool Player::CanEnterADS() {
 
@@ -918,4 +952,70 @@ AmmoState* Player::GetAmmoStateByName(std::string name) {
         }
     }
     return nullptr;
+}
+
+
+
+void Player::CheckForMeleeHits() {
+
+    const PxGeometry& overlapShape = _meleeHitCheckOverlapShape->getGeometry();
+    const PxTransform shapePose(_characterController->getActor()->getGlobalPose());
+
+    OverlapReport overlapReport = Physics::OverlapTest(overlapShape, shapePose, CollisionGroup::GENERIC_BOUNCEABLE | RAGDOLL);
+
+
+    for (int i = 0; i < Game::GetPlayerCount(); i++) {
+
+        Player* otherPlayer = Game::GetPlayerByIndex(i);
+
+        if (otherPlayer == this) {
+            continue;
+        }
+
+        float distanceToOtherPlayer = glm::distance(otherPlayer->GetViewPos(), this->GetViewPos());
+        if (distanceToOtherPlayer < 2) {
+            otherPlayer->Kill();
+            IncrementKillCount();
+
+            glm::vec3 direction = glm::normalize(otherPlayer->GetViewPos() - this->GetViewPos());
+
+            // Apply force to their ragdoll
+            AnimatedGameObject* hitCharacterModel = otherPlayer->GetCharacterAnimatedGameObject();
+
+            for (RigidComponent& rigidComponent : hitCharacterModel->_ragdoll._rigidComponents) {
+                float strength = 75;
+                strength *= rigidComponent.mass * 1.5f;
+                PxVec3 force = PxVec3(direction.x, direction.y,direction.z) * strength;
+                rigidComponent.pxRigidBody->addForce(force);
+            }
+        }
+    }
+
+
+    if (overlapReport.hits.size()) {
+        for (auto* hit : overlapReport.hits) {
+            if (hit->userData) {
+
+                PhysicsObjectData* physicsObjectData = (PhysicsObjectData*)hit->userData;
+                PhysicsObjectType physicsObjectType = physicsObjectData->type;
+                GameObject* parent = (GameObject*)physicsObjectData->parent;
+
+                if (physicsObjectType == PhysicsObjectType::GAME_OBJECT) {
+                    // get direction to hit object
+                    glm::vec3 hitCenter = Util::GetTranslationFromMatrix(parent->GetModelMatrix());
+                    glm::vec3 viewPos = GetViewPos();
+                    glm::vec3 directionToHit = glm::normalize(hitCenter - viewPos);
+                    float strength = 100;
+                    PxVec3 force = PxVec3(directionToHit.x, directionToHit.y, directionToHit.z) * strength;
+                    parent->m_collisionRigidBody.pxRigidBody->addForce(force);
+                }
+            }
+            else {
+                // std::cout << "no user data found on ray hit\n";
+            }
+        }
+    }
+    else {
+        // std::cout << "no overlap bro\n";
+    }
 }

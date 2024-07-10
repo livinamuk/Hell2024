@@ -829,6 +829,7 @@ void Player::PickUpGlockAmmo() {
 }*/
 
 
+
 void Player::CheckForItemPickOverlaps() {
 
 	if (!HasControl()) {
@@ -1244,12 +1245,22 @@ PxRigidDynamic* Player::GetCharacterControllerActor() {
 }
 
 void Player::CreateItemPickupOverlapShape() {
+
+    // pickup shape
 	if (_itemPickupOverlapShape) {
 		_itemPickupOverlapShape->release();
 	}
     float radius = PLAYER_CAPSULE_RADIUS + 0.075;
     float halfHeight = PLAYER_CAPSULE_HEIGHT * 0.75f;
     _itemPickupOverlapShape = Physics::GetPhysics()->createShape(PxCapsuleGeometry(radius, halfHeight), *Physics::GetDefaultMaterial(), true);
+
+    // melee overlap shape
+    if (_meleeHitCheckOverlapShape) {
+        _meleeHitCheckOverlapShape->release();
+    }
+    radius = PLAYER_CAPSULE_RADIUS + 1.5;
+    halfHeight = PLAYER_CAPSULE_HEIGHT * 1.5f;
+    _meleeHitCheckOverlapShape = Physics::GetPhysics()->createShape(PxCapsuleGeometry(radius, halfHeight), *Physics::GetDefaultMaterial(), true);
 }
 
 PxShape* Player::GetItemPickupOverlapShape() {
@@ -1472,6 +1483,17 @@ bool Player::PressedADS() {
         return false;
     }
 }
+
+bool Player::PressedMelee() {
+    if (_inputType == InputType::KEYBOARD_AND_MOUSE) {
+        return InputMulti::KeyPressed(m_keyboardIndex, m_mouseIndex, _controls.MELEE);
+    }
+    else {
+        // return InputMulti::ButtonPressed(_controllerIndex, _controls.ADS);
+        return false;
+    }
+}
+
 
 bool Player::PressedEscape() {
     if (_inputType == InputType::KEYBOARD_AND_MOUSE) {

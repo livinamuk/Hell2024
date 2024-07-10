@@ -127,8 +127,8 @@ void File::LoadMap(std::string mapName) {
 		for (rapidjson::SizeType i = 0; i < objects.Size(); i++) {
 			glm::vec3 position = ReadVec3(objects[i], "position");
 			float rotation = ReadFloat(objects[i], "rotation");
-			Window& window = Scene::_windows.emplace_back();
-			window.position = position;
+			Window& window = Scene::g_windows.emplace_back();
+			window.SetPosition(position);
 			window.rotation.y = rotation;
 		}
 	}
@@ -229,9 +229,9 @@ void File::SaveMap(std::string mapName) {
 		walls.PushBack(object, allocator);
 	}
 
-	for (Window& window: Scene::_windows) {
+	for (Window& window: Scene::g_windows) {
 		rapidjson::Value object(rapidjson::kObjectType);
-		SaveVec3(&object, "position", window.position, allocator);
+		SaveVec3(&object, "position", window.GetPosition(), allocator);
 		SaveFloat(&object, "rotation", window.rotation.y, allocator);
 		windows.PushBack(object, allocator);
 	}

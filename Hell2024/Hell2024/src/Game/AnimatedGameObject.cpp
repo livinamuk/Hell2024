@@ -568,7 +568,7 @@ uint32_t AnimatedGameObject::GetAnimationFrameNumber() {
 }
 
 bool AnimatedGameObject::AnimationIsPastFrameNumber(int frameNumber) {
-    return frameNumber > GetAnimationFrameNumber();
+    return frameNumber < GetAnimationFrameNumber();
 }
 
 bool AnimatedGameObject::AnimationIsPastPercentage(float percent) {
