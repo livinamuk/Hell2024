@@ -73,10 +73,10 @@ void GlobalIllumination::CreatePointCloud() {
     // Now remove any points that overlap doors
     for (int i = 0; i < _pointCloud.size(); i++) {
         glm::vec2 p = { _pointCloud[i].position.x, _pointCloud[i].position.z };
-        for (Door& door : Scene::_doors) {
+        for (Door& door : Scene::g_doors) {
             // Ignore if is point is above or below door
-            if (_pointCloud[i].position.y < door.position.y ||
-                _pointCloud[i].position.y > door.position.y + DOOR_HEIGHT) {
+            if (_pointCloud[i].position.y < door.m_position.y ||
+                _pointCloud[i].position.y > door.m_position.y + DOOR_HEIGHT) {
                 continue;
             }
             // Check if it is inside the fucking door

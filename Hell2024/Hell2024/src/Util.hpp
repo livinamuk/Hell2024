@@ -24,6 +24,22 @@
 
 namespace Util {
 
+    inline glm::vec3 CalculateUniformScaleRelativeToCamera(glm::vec3 viewPos, glm::vec3 objectPos) {
+        float magic = 10;
+        float distance = glm::length(viewPos - objectPos);
+        float scale = (distance) / (magic * std::tan(glm::radians(1.0f)));
+        return glm::vec3(scale);
+    }
+
+    inline glm::ivec2 CalculateScreenSpaceCoordinates(const glm::vec3& worldPos, const glm::mat4& mvpMatrix, int screenWidth, int screenHeight) {
+        glm::vec4 clipCoords = mvpMatrix * glm::vec4(worldPos, 1.0f);
+        glm::vec3 ndcCoords = glm::vec3(clipCoords) / clipCoords.w;
+        glm::ivec2 screenCoords;
+        screenCoords.x = (ndcCoords.x + 1.0f) * 0.5f * screenWidth;
+        screenCoords.y = screenHeight - (1.0f - ndcCoords.y) * 0.5f * screenHeight;
+        return screenCoords;
+    }
+
     inline glm::vec3 Vec3Min(const glm::vec3& a, const glm::vec3& b) {
         return glm::vec3(std::min(a.x, b.x), std::min(a.y, b.y), std::min(a.z, b.z));
     }
@@ -332,7 +348,7 @@ namespace Util {
                 result.parent = physicsObjectData->parent;
             }
             else {
-                result.physicsObjectType = UNDEFINED;
+                result.physicsObjectType = PhysicsObjectType::UNDEFINED;
                 result.hitFound = false;
                 std::cout << "no user data found on ray hit\n";
             }

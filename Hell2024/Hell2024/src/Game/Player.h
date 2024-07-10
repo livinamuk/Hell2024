@@ -69,7 +69,7 @@ struct PlayerControls {
 struct WeaponState {
     bool has = false;
     bool useSlideOffset = false;
-    bool hasRedDot = false;
+    bool hasScope = false;
     bool hasSilencer = false;
     int ammoInMag = 0;
     std::string name = UNDEFINED_STRING;
@@ -152,6 +152,11 @@ public:
     void DropWeapons();
     void UpdateWeaponSway(float deltaTime);
     RenderItem3D CreateAttachmentRenderItem(WeaponAttachmentInfo* weaponAttachmentInfo, const char* boneName);
+
+    // Rando
+    void Respawn();
+    void EnableControl();
+    void DisableControl();
 
 private:
     std::vector<RenderItem3D> m_attachmentRenderItems;
@@ -246,7 +251,6 @@ public:
 
 	void SetRotation(glm::vec3 rotation);
 	//void SetWeapon(Weapon weapon);
-	void Respawn();
 	glm::mat4 GetViewMatrix();
 	glm::mat4 GetInverseViewMatrix();
 	glm::vec3 GetViewPos();

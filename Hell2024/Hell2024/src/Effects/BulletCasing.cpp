@@ -1,12 +1,19 @@
 #include "BulletCasing.h"
 #include "../Util.hpp"
 #include "../Core/Audio.hpp"
+#include "../Physics/Physics.h"
 
 #define BULLET_CASING_LIFETIME 2.0f
 
-    
 void BulletCasing::CleanUp() {
-    rigidBody->release();
+    if (rigidBody) {
+        if (rigidBody->userData) {
+            delete rigidBody->userData;
+        }
+        Physics::GetScene()->removeActor(*rigidBody);
+        rigidBody->release();
+        rigidBody = nullptr;
+    }
 }
 
 glm::mat4  BulletCasing::GetModelMatrix() {
@@ -57,7 +64,7 @@ void BulletCasing::Update(float deltaTime) {
         if (rigidBody && lifeTime >= BULLET_CASING_LIFETIME) {
         //    rigidBody->release();
         }
-  //  }   
+  //  }
     audioDelay = std::max(audioDelay - deltaTime, 0.0f);
 }
 

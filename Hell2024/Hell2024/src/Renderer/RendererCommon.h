@@ -28,6 +28,7 @@
 #define MAX_DECAL_COUNT 4096
 #define MAX_BLOOD_DECAL_COUNT 1024
 #define MAX_VAT_INSTANCE_COUNT 16
+#define MAX_CSG_CUBE_COUNT 4096
 #define MAX_SKINNED_MESH 96
 
 enum Alignment {
@@ -96,6 +97,12 @@ struct RenderItem3D {
     }
 };
 
+struct CSGInstance {
+    int baseColorTextureIndex;
+    int normalTextureIndex;
+    int rmaTextureIndex;
+    int padding;
+};
 
 
 struct SkinnedRenderItem {

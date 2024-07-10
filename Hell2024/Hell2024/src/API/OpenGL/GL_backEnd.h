@@ -21,4 +21,9 @@ namespace OpenGLBackEnd {
     void CreatePointCloudVertexBuffer(std::vector<CloudPoint>& pointCloud);
     GLuint GetPointCloudVAO();
     GLuint GetPointCloudVBO();
+
+    // CSG
+    void UploadConstructiveSolidGeometry(std::vector<Vertex>& vertices);
+    GLuint GetCSGVAO();
+    GLuint GetCSGVBO();
 }

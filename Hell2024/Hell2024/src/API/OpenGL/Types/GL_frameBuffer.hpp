@@ -15,10 +15,10 @@ struct DepthAttachment {
 };
 
 struct GLFrameBuffer {
-    
+
 private:
     const char* name = "undefined";
-    GLuint handle = 0;        
+    GLuint handle = 0;
     GLuint width = 0;
     GLuint height = 0;
     std::vector<ColorAttachment> colorAttachments;
@@ -33,7 +33,7 @@ public:
         this->height = height;
     }
 
-    void CleanUp() {    
+    void CleanUp() {
         colorAttachments.clear();
         glDeleteFramebuffers(1, &handle);
     }

@@ -75,7 +75,7 @@ void File::LoadMap(std::string mapName) {
             glm::vec3 position = ReadVec3(objects[i], "position");
             glm::vec3 rotation = ReadVec3(objects[i], "rotation");
             SpawnPoint spawnPoint {position, rotation};
-            Scene::_spawnPoints.push_back(spawnPoint);
+            Scene::g_spawnPoints.push_back(spawnPoint);
         }
     }
 
@@ -179,14 +179,14 @@ void File::SaveMap(std::string mapName) {
     rapidjson::Value spawnPoints(rapidjson::kArrayType);
 	document.SetObject();
 
-    for (SpawnPoint& spawnPoint: Scene::_spawnPoints) {
+    for (SpawnPoint& spawnPoint: Scene::g_spawnPoints) {
         rapidjson::Value object(rapidjson::kObjectType);
         SaveVec3(&object, "position", spawnPoint.position, allocator);
         SaveVec3(&object, "rotation", spawnPoint.rotation, allocator);
         spawnPoints.PushBack(object, allocator);
     }
 
-    for (Light & light : Scene::_lights) {
+    for (Light & light : Scene::g_lights) {
         rapidjson::Value object(rapidjson::kObjectType);
         SaveVec3(&object, "position", light.position, allocator);
         SaveVec3(&object, "color", light.color, allocator);
@@ -236,10 +236,10 @@ void File::SaveMap(std::string mapName) {
 		windows.PushBack(object, allocator);
 	}
 
-	for (Door& door : Scene::_doors) {
+	for (Door& door : Scene::g_doors) {
 		rapidjson::Value object(rapidjson::kObjectType);
-		SaveVec3(&object, "position", door.position, allocator);
-		SaveFloat(&object, "rotation", door.rotation, allocator);
+		SaveVec3(&object, "position", door.m_position, allocator);
+		SaveFloat(&object, "rotation", door.m_rotation, allocator);
 		doors.PushBack(object, allocator);
 	}
 

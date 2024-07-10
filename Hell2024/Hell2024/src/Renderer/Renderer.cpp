@@ -7,6 +7,8 @@
 #include "../Game/Game.h"
 #include "../Game/Player.h"
 #include "../Game/Scene.h"
+#include "../Editor/CSG.h"
+#include "../Editor/Editor.h"
 #include "../Input/Input.h"
 #include "../Renderer/GlobalIllumination.h"
 #include "../Renderer/RenderData.h"
@@ -122,6 +124,7 @@ std::vector<RenderItem2D> CreateRenderItems2D(ivec2 presentSize, int playerCount
                 text += "\n";
             }
 
+            text = Editor::GetDebugText();
 
             int x = RendererUtil::GetViewportLeftX(i, Game::GetSplitscreenMode(), presentSize.x, presentSize.y);
             int y = RendererUtil::GetViewportTopY(i, Game::GetSplitscreenMode(), presentSize.x, presentSize.y);
@@ -147,9 +150,7 @@ std::vector<RenderItem2D> CreateRenderItems2DHiRes(ivec2 gbufferSize, int player
 }
 
 std::vector<RenderItem3D> CreateRenderItems3D() {
-
     std::vector<RenderItem3D> renderItems = Scene::GetAllRenderItems();
-
     return renderItems;
 }
 
@@ -157,7 +158,7 @@ std::vector<GPULight> CreateGPULights() {
 
     std::vector<GPULight> gpuLights;
 
-    for (Light& light : Scene::_lights) {
+    for (Light& light : Scene::g_lights) {
         GPULight& gpuLight = gpuLights.emplace_back();
         gpuLight.posX = light.position.x;
         gpuLight.posY = light.position.y;
@@ -185,42 +186,70 @@ void UpdateDebugLinesMesh() {
         ignoreList.push_back(r.pxRigidBody);
     }
 
-    if (_debugLineRenderMode == DebugLineRenderMode::PHYSX_ALL ||
-        _debugLineRenderMode == DebugLineRenderMode::PHYSX_COLLISION ||
-        _debugLineRenderMode == DebugLineRenderMode::PHYSX_RAYCAST ||
-        _debugLineRenderMode == DebugLineRenderMode::PHYSX_EDITOR) {
-        std::vector<Vertex> physicsDebugLineVertices = Physics::GetDebugLineVertices(_debugLineRenderMode, ignoreList);
-        vertices.reserve(vertices.size() + physicsDebugLineVertices.size());
-        vertices.insert(std::end(vertices), std::begin(physicsDebugLineVertices), std::end(physicsDebugLineVertices));
-    }
-    else if (_debugLineRenderMode == DebugLineRenderMode::BOUNDING_BOXES) {
-        for (GameObject& gameObject : Scene::GetGamesObjects()) {
-            std::vector<Vertex> aabbVertices = gameObject.GetAABBVertices();
-            vertices.reserve(vertices.size() + aabbVertices.size());
-            vertices.insert(std::end(vertices), std::begin(aabbVertices), std::end(aabbVertices));
+    if (Editor::IsOpen() && false) {
+        std::vector<CSGObject> cubes = CSG::GetCSGObjects();
+        for (CSGObject& cube : cubes) {
+            std::span<Vertex> cubeVertices = cube.GetVerticesSpan();
+            for (int i = 0; i < cubeVertices.size(); i += 3) {
+                Vertex v0 = cubeVertices[i+0];
+                Vertex v1 = cubeVertices[i+1];
+                Vertex v2 = cubeVertices[i + 2];
+                v0.normal = GREEN;
+                v1.normal = GREEN;
+                v2.normal = GREEN;
+                if (cube.m_type == CSGType::SUBTRACTIVE) {
+                    v0.normal = RED;
+                    v1.normal = RED;
+                    v2.normal = RED;
+                }
+                vertices.push_back(v0);
+                vertices.push_back(v1);
+                vertices.push_back(v1);
+                vertices.push_back(v2);
+                vertices.push_back(v2);
+                vertices.push_back(v0);
+            }
         }
-    }
 
-    else if (_debugLineRenderMode == DebugLineRenderMode::RTX_LAND_AABBS) {
-        for (Wall& wall : Scene::_walls) {
-            std::vector<Vertex> aabbVertices = Util::GetAABBVertices(wall.aabb, GREEN);
-            vertices.reserve(vertices.size() + aabbVertices.size());
-            vertices.insert(std::end(vertices), std::begin(aabbVertices), std::end(aabbVertices));
+    }
+    else {
+        if (_debugLineRenderMode == DebugLineRenderMode::PHYSX_ALL ||
+            _debugLineRenderMode == DebugLineRenderMode::PHYSX_COLLISION ||
+            _debugLineRenderMode == DebugLineRenderMode::PHYSX_RAYCAST ||
+            _debugLineRenderMode == DebugLineRenderMode::PHYSX_EDITOR) {
+            std::vector<Vertex> physicsDebugLineVertices = Physics::GetDebugLineVertices(_debugLineRenderMode, ignoreList);
+            vertices.reserve(vertices.size() + physicsDebugLineVertices.size());
+            vertices.insert(std::end(vertices), std::begin(physicsDebugLineVertices), std::end(physicsDebugLineVertices));
         }
-        for (Floor& floor : Scene::_floors) {
-            std::vector<Vertex> aabbVertices = Util::GetAABBVertices(floor.aabb, GREEN);
-            vertices.reserve(vertices.size() + aabbVertices.size());
-            vertices.insert(std::end(vertices), std::begin(aabbVertices), std::end(aabbVertices));
+        else if (_debugLineRenderMode == DebugLineRenderMode::BOUNDING_BOXES) {
+            for (GameObject& gameObject : Scene::GetGamesObjects()) {
+                std::vector<Vertex> aabbVertices = gameObject.GetAABBVertices();
+                vertices.reserve(vertices.size() + aabbVertices.size());
+                vertices.insert(std::end(vertices), std::begin(aabbVertices), std::end(aabbVertices));
+            }
         }
-        for (Ceiling& ceiling : Scene::_ceilings) {
-            std::vector<Vertex> aabbVertices = Util::GetAABBVertices(ceiling.aabb, GREEN);
-            vertices.reserve(vertices.size() + aabbVertices.size());
-            vertices.insert(std::end(vertices), std::begin(aabbVertices), std::end(aabbVertices));
-        }
-        for (Door& door : Scene::_doors) {
-            std::vector<Vertex> aabbVertices = Util::GetAABBVertices(door._aabb, GREEN);
-            vertices.reserve(vertices.size() + aabbVertices.size());
-            vertices.insert(std::end(vertices), std::begin(aabbVertices), std::end(aabbVertices));
+
+        else if (_debugLineRenderMode == DebugLineRenderMode::RTX_LAND_AABBS) {
+            for (Wall& wall : Scene::_walls) {
+                std::vector<Vertex> aabbVertices = Util::GetAABBVertices(wall.aabb, GREEN);
+                vertices.reserve(vertices.size() + aabbVertices.size());
+                vertices.insert(std::end(vertices), std::begin(aabbVertices), std::end(aabbVertices));
+            }
+            for (Floor& floor : Scene::_floors) {
+                std::vector<Vertex> aabbVertices = Util::GetAABBVertices(floor.aabb, GREEN);
+                vertices.reserve(vertices.size() + aabbVertices.size());
+                vertices.insert(std::end(vertices), std::begin(aabbVertices), std::end(aabbVertices));
+            }
+            for (Ceiling& ceiling : Scene::_ceilings) {
+                std::vector<Vertex> aabbVertices = Util::GetAABBVertices(ceiling.aabb, GREEN);
+                vertices.reserve(vertices.size() + aabbVertices.size());
+                vertices.insert(std::end(vertices), std::begin(aabbVertices), std::end(aabbVertices));
+            }
+            for (Door& door : Scene::g_doors) {
+                std::vector<Vertex> aabbVertices = Util::GetAABBVertices(door._aabb, GREEN);
+                vertices.reserve(vertices.size() + aabbVertices.size());
+                vertices.insert(std::end(vertices), std::begin(aabbVertices), std::end(aabbVertices));
+            }
         }
     }
     /*
@@ -794,8 +823,15 @@ std::vector<SkinnedRenderItem> GetSkinnedRenderItemsForPlayer (int playerIndex) 
     for (int i = 0; i < Scene::GetAnimatedGameObjectCount(); i++) {
         AnimatedGameObject* animatedGameObject = Scene::GetAnimatedGameObjectByIndex(i);
 
-        if (animatedGameObject->GetFlag() == AnimatedGameObject::Flag::CHARACTER_MODEL && i == player->GetCharacterModelAnimatedGameObjectIndex() ||
-            animatedGameObject->GetFlag() == AnimatedGameObject::Flag::VIEW_WEAPON && i != player->GetViewWeaponAnimatedGameObjectIndex()) {
+        if (animatedGameObject->GetFlag() == AnimatedGameObject::Flag::VIEW_WEAPON) {
+            if (Editor::IsOpen()) {
+                continue;
+            }
+            if (i != player->GetViewWeaponAnimatedGameObjectIndex()) {
+                continue;
+            }
+        }
+        if (animatedGameObject->GetFlag() == AnimatedGameObject::Flag::CHARACTER_MODEL && i == player->GetCharacterModelAnimatedGameObjectIndex()) {
             continue;
         }
         std::vector<SkinnedRenderItem>& items = animatedGameObject->GetSkinnedMeshRenderItems();
@@ -809,6 +845,10 @@ RenderData CreateRenderData() {
     // Viewport size
     ivec2 viewportSize = { PRESENT_WIDTH, PRESENT_HEIGHT };
     ivec2 viewportDoubleSize = { PRESENT_WIDTH * 2, PRESENT_HEIGHT * 2 };
+
+    if (Editor::IsOpen()) {
+        Game::GetPlayerByIndex(0)->ForceSetViewMatrix(Editor::GetViewMatrix());
+    }
 
     if (Game::GetSplitscreenMode() == SplitscreenMode::TWO_PLAYER) {
         viewportSize.y *= 0.5;
@@ -1276,14 +1316,14 @@ void ResizeRenderTargets() {
 }*/
 
 inline std::vector<DebugLineRenderMode> _allowedDebugLineRenderModes = {
-    //PHYSX_ALL,
-    //PHYSX_RAYCAST,
-    //PHYSX_COLLISION,
+    PHYSX_ALL,
+    PHYSX_RAYCAST,
+    PHYSX_COLLISION,
     //RAYTRACE_LAND,
     //PHYSX_EDITOR,
-    BOUNDING_BOXES,
-    RTX_LAND_AABBS,
-    PHYSX_COLLISION,
+    //BOUNDING_BOXES,
+    //RTX_LAND_AABBS,
+    //PHYSX_COLLISION,
     //RTX_LAND_TRIS,
     //RTX_LAND_TOP_LEVEL_ACCELERATION_STRUCTURE,
     //RTX_LAND_BOTTOM_LEVEL_ACCELERATION_STRUCTURES,

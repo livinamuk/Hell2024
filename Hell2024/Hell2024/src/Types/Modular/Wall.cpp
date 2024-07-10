@@ -55,7 +55,7 @@ void Wall::CreateVertexData() {
         Window* closestWindow = nullptr;
         glm::vec3 intersectionPoint;
 
-        for (Door& door : Scene::_doors) {
+        for (Door& door : Scene::g_doors) {
 
             // Left side
             glm::vec3 v1(door.GetFloorplanVertFrontLeft(0.05f));

@@ -77,7 +77,7 @@ void DebugMenu::Init() {
 			}
 
 			auto& editLights = editObjects.AddItem("Lights", MenuItemFlag::UNDEFINED, nullptr); {
-				for (int i = 0; i < Scene::_lights.size(); i++) {
+				for (int i = 0; i < Scene::g_lights.size(); i++) {
 					editLights.AddItem("Light " + std::to_string(i), MenuItemFlag::EDIT_LIGHT, nullptr);
 				}
 			}
@@ -140,14 +140,14 @@ void DebugMenu::UpdateGameObjectMenuPointers() {
 
 void DebugMenu::UpdateLightObjectMenuPointers() {
 	_lightsMenu.subMenu.clear();
-	_lightsMenu.AddItem("X Position", MenuItemFlag::FLOAT, &Scene::_lights[_selectedLightIndex].position.x);
-	_lightsMenu.AddItem("Y Position", MenuItemFlag::FLOAT, &Scene::_lights[_selectedLightIndex].position.y);
-	_lightsMenu.AddItem("Z Position", MenuItemFlag::FLOAT, &Scene::_lights[_selectedLightIndex].position.z);
+	_lightsMenu.AddItem("X Position", MenuItemFlag::FLOAT, &Scene::g_lights[_selectedLightIndex].position.x);
+	_lightsMenu.AddItem("Y Position", MenuItemFlag::FLOAT, &Scene::g_lights[_selectedLightIndex].position.y);
+	_lightsMenu.AddItem("Z Position", MenuItemFlag::FLOAT, &Scene::g_lights[_selectedLightIndex].position.z);
 	_lightsMenu.AddItem("", MenuItemFlag::UNDEFINED, nullptr);
-	_lightsMenu.AddItem("Strength", MenuItemFlag::FLOAT, &Scene::_lights[_selectedLightIndex].strength);
-    _lightsMenu.AddItem("Radius", MenuItemFlag::FLOAT, &Scene::_lights[_selectedLightIndex].radius);
+	_lightsMenu.AddItem("Strength", MenuItemFlag::FLOAT, &Scene::g_lights[_selectedLightIndex].strength);
+    _lightsMenu.AddItem("Radius", MenuItemFlag::FLOAT, &Scene::g_lights[_selectedLightIndex].radius);
     _lightsMenu.AddItem("", MenuItemFlag::UNDEFINED, nullptr);
-    _lightsMenu.AddItem("Type", MenuItemFlag::INT, &Scene::_lights[_selectedLightIndex].type);
+    _lightsMenu.AddItem("Type", MenuItemFlag::INT, &Scene::g_lights[_selectedLightIndex].type);
 	/*
 	Doesn't display the right light index after removing
 	_lightsMenu.AddItem("Remove", MenuItemFlag::REMOVE_LIGHT, nullptr);
@@ -370,14 +370,14 @@ void DebugMenu::IncreaseValue() {
 		Scene::RecreateDataStructures();
 	}
 	if (_currentMenuItem == &_lightsMenu) {
-		Light& light = Scene::_lights[_selectedLightIndex];
+		Light& light = Scene::g_lights[_selectedLightIndex];
 		if (flag == MenuItemFlag::FLOAT) {
 			*(float*)ptr += 0.1f;
 		}
 		Scene::RecreateDataStructures();
     }
     if (_currentMenuItem == &_lightsMenu) {
-        Light& light = Scene::_lights[_selectedLightIndex];
+        Light& light = Scene::g_lights[_selectedLightIndex];
         if (flag == MenuItemFlag::INT) {
             *(int*)ptr += 1;
         }
@@ -407,14 +407,14 @@ void DebugMenu::DecreaseValue() {
 		Scene::RecreateDataStructures();
     }
     if (_currentMenuItem == &_lightsMenu) {
-        Light& light = Scene::_lights[_selectedLightIndex];
+        Light& light = Scene::g_lights[_selectedLightIndex];
         if (flag == MenuItemFlag::FLOAT) {
             *(float*)ptr -= 0.1f;
         }
         Scene::RecreateDataStructures();
     }
     if (_currentMenuItem == &_lightsMenu) {
-        Light& light = Scene::_lights[_selectedLightIndex];
+        Light& light = Scene::g_lights[_selectedLightIndex];
         if (flag == MenuItemFlag::INT) {
             *(int*)ptr -= 1;
         }

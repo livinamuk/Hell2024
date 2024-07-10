@@ -3,21 +3,38 @@
 #include "../../Physics/Physics.h"
 #include "../../Renderer/RendererCommon.h"
 
-
-
 struct Door {
-    glm::vec3 position = glm::vec3(0);
-    float rotation = 0;
-    float openRotation = 0;
-    AABB _aabb;
-    AABB _aabbPreviousFrame;
-    enum State { CLOSED = 0, CLOSING, OPEN, OPENING } state = CLOSED;
-    Door(glm::vec3 position, float rotation);
+
+public:
+
+    Door() = default;
+    Door(glm::vec3 position, float rotation, bool openOnStart = false);
     void Interact();
     void Update(float deltaTime);
     void CleanUp();
+    void SetToInitialState();
+
+    glm::vec3 m_position = glm::vec3(0);
+    float m_rotation = 0;
+    float m_maxOpenRotation = 1.8f;
+    bool m_openOnStart = false;
+
+    enum State {
+        CLOSED = 0,
+        CLOSING,
+        OPEN,
+        OPENING
+    } state = CLOSED;
+
+
+
+
+    AABB _aabb;
+    AABB _aabbPreviousFrame;
+
     glm::mat4 GetFrameModelMatrix();
     glm::mat4 GetDoorModelMatrix();
+    glm::mat4 GetGizmoMatrix();
     glm::vec3 GetFloorplanVertFrontLeft(float padding = 0);
     glm::vec3 GetFloorplanVertFrontRight(float padding = 0);
     glm::vec3 GetFloorplanVertBackLeft(float padding = 0);
@@ -41,9 +58,8 @@ struct Door {
 
     void UpdateRenderItems();
     std::vector<RenderItem3D>& GetRenderItems();
+
 private:
     std::vector<RenderItem3D> renderItems;
-
-   // static void InitPxTriangleMesh();
-  //  static PxTriangleMesh* s_triangleMesh;
+    float m_currentOpenRotation = 0;
 };

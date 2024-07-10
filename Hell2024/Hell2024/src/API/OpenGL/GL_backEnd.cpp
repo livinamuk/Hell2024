@@ -22,6 +22,10 @@ namespace OpenGLBackEnd {
     GLuint _pointCloudVAO = 0;
     GLuint _pointCloudVBO = 0;
 
+    GLuint g_constructiveSolidGeometryVAO = 0;
+    GLuint g_constructiveSolidGeometryVBO = 0;
+    GLuint g_constructiveSolidGeometryEBO = 0;
+
     GLuint GetVertexDataVAO() {
         return _vertexDataVAO;
     }
@@ -60,6 +64,14 @@ namespace OpenGLBackEnd {
 
     GLuint GetPointCloudVBO() {
         return _pointCloudVBO;
+    }
+
+    GLuint GetCSGVAO() {
+        return g_constructiveSolidGeometryVAO;
+    }
+
+    GLuint GetCSGVBO() {
+        return g_constructiveSolidGeometryVBO;
     }
 }
 
@@ -230,6 +242,49 @@ void OpenGLBackEnd::UploadVertexData(std::vector<Vertex>& vertices, std::vector<
     glEnableVertexAttribArray(0);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
+}
+
+void OpenGLBackEnd::UploadConstructiveSolidGeometry(std::vector<Vertex>& vertices) {
+
+    if (vertices.empty()) {
+        return;
+    }
+
+    std::vector<uint32_t> indices;
+    for (int i = 0; i < vertices.size(); i++) {
+        indices.push_back(i);
+    }
+
+    if (g_constructiveSolidGeometryVAO != 0) {
+        glDeleteVertexArrays(1, &g_constructiveSolidGeometryVAO);
+        glDeleteBuffers(1, &g_constructiveSolidGeometryVBO);
+        glDeleteBuffers(1, &g_constructiveSolidGeometryEBO);
+    }
+
+    glGenVertexArrays(1, &g_constructiveSolidGeometryVAO);
+    glGenBuffers(1, &g_constructiveSolidGeometryVBO);
+    glGenBuffers(1, &g_constructiveSolidGeometryEBO);
+
+    glBindVertexArray(g_constructiveSolidGeometryVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, g_constructiveSolidGeometryVBO);
+    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Vertex), &vertices[0], GL_STATIC_DRAW);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, g_constructiveSolidGeometryEBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(uint32_t), &indices[0], GL_STATIC_DRAW);
+
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)0);
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, normal));
+    glEnableVertexAttribArray(2);
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, uv));
+    glEnableVertexAttribArray(3);
+    glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, tangent));
+
+    glEnableVertexAttribArray(0);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
+
+    std::cout << "Uploaded constructive geometry to gpu\n";
 }
 
 void OpenGLBackEnd::UploadWeightedVertexData(std::vector<WeightedVertex>& vertices, std::vector<uint32_t>& indices) {

@@ -126,8 +126,13 @@ void Player::Respawn() {
     characterModel->_ragdoll.DisableCollision();
     _health = 100;
 
-    int index = Util::RandomInt(0, Scene::_spawnPoints.size() - 1);
-    SpawnPoint& spawnPoint = Scene::_spawnPoints[index];
+    int randomSpawnLocationIndex = Util::RandomInt(0, Scene::g_spawnPoints.size() - 1);
+
+    // Debug hack to always spawn player 1 at location 0
+    if (m_playerIndex == 0) {
+        randomSpawnLocationIndex = 0;
+    }
+    SpawnPoint& spawnPoint = Scene::g_spawnPoints[randomSpawnLocationIndex];
 
     // Check you didn't just spawn on another player
     for (int i = 0; i < Game::GetPlayerCount(); i++) {
@@ -502,6 +507,7 @@ void Player::UpdateMovement(float deltaTime) {
     // Gravity
     if (_isGrounded) {
         _yVelocity = -0.1f; // can't be 0, or the _isGrounded check next frame will fail
+        _yVelocity = -3.5f;
     }
     else {
         float gravity = 15.75f; // 9.8 feels like the moon
@@ -842,7 +848,7 @@ void Player::CheckForItemPickOverlaps() {
 				PhysicsObjectType physicsObjectType = physicsObjectData->type;
 				GameObject* parent = (GameObject*)physicsObjectData->parent;
 
-				if (physicsObjectType == GAME_OBJECT) {
+				if (physicsObjectType == PhysicsObjectType::GAME_OBJECT) {
                     // Weapon pickups
                     /*if (!parent->IsCollected() && parent->GetPickUpType() == PickUpType::AKS74U) {
                         PickUpAKS74U();
@@ -1001,7 +1007,7 @@ void Player::CheckForAndEvaluateInteract() {
     _cameraRayResult = Util::CastPhysXRay(GetViewPos(), GetCameraForward() * glm::vec3(-1), 100, _interactFlags);
 
 	if (HasControl() && PressedInteract()) {
-		if (_cameraRayResult.physicsObjectType == DOOR) {
+		if (_cameraRayResult.physicsObjectType == PhysicsObjectType::DOOR) {
 			//std::cout << "you pressed interact on a door \n";
 			Door* door = (Door*)(_cameraRayResult.parent);
 			if (!door->IsInteractable(GetFeetPosition())) {
@@ -1009,7 +1015,7 @@ void Player::CheckForAndEvaluateInteract() {
 			}
 			door->Interact();
 		}
-		if (_cameraRayResult.physicsObjectType == GAME_OBJECT) {
+		if (_cameraRayResult.physicsObjectType == PhysicsObjectType::GAME_OBJECT) {
 			GameObject* gameObject = (GameObject*)(_cameraRayResult.parent);
 			if (gameObject && !gameObject->IsInteractable()) {
 				return;
@@ -1102,7 +1108,7 @@ void Player::SpawnCasing(AmmoInfo* ammoInfo) {
         PxVec3 force = Util::GlmVec3toPxVec3(glm::normalize(GetCameraRight() + glm::vec3(0.0f, Util::RandomFloat(0.7f, 0.9f), 0.0f)) * glm::vec3(0.00215f * weaponInfo->casingEjectionForce));
         body->addForce(force);
         body->setAngularVelocity(PxVec3(Util::RandomFloat(0.0f, 100.0f), Util::RandomFloat(0.0f, 100.0f), Util::RandomFloat(0.0f, 100.0f)));
-        body->userData = (void*)&EngineState::weaponNamePointers[GLOCK];
+        body->userData = nullptr;
         body->setName("BulletCasing");
 
 
@@ -1110,7 +1116,7 @@ void Player::SpawnCasing(AmmoInfo* ammoInfo) {
         bulletCasing.modelIndex = modelIndex;
         bulletCasing.materialIndex = materialIndex;
         bulletCasing.rigidBody = body;
-        Scene::_bulletCasings.push_back(bulletCasing);
+        Scene::g_bulletCasings.push_back(bulletCasing);
     }
     else {
         std::cout << "Player::SpawnCasing() failed to spawn a casing coz invalid casing model name in weapon info\n";
@@ -1643,13 +1649,13 @@ CrosshairType Player::GetCrosshairType() {
     }
 
     // Interact
-    else if (_cameraRayResult.physicsObjectType == DOOR) {
+    else if (_cameraRayResult.physicsObjectType == PhysicsObjectType::DOOR) {
         Door* door = (Door*)(_cameraRayResult.parent);
         if (door && door->IsInteractable(GetFeetPosition())) {
             return CrosshairType::INTERACT;
         }
     }
-    else if (_cameraRayResult.physicsObjectType == GAME_OBJECT && _cameraRayResult.parent) {
+    else if (_cameraRayResult.physicsObjectType == PhysicsObjectType::GAME_OBJECT && _cameraRayResult.parent) {
         GameObject* gameObject = (GameObject*)(_cameraRayResult.parent);
         return CrosshairType::INTERACT;
     }

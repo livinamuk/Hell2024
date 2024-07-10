@@ -333,5 +333,7 @@ void main() {
 
 	FragColor.a = 1;
 
+	//FragColor.rgb = vec3( normal);
+	//FragColor.rgb = vec3( TexCoords, 0);
 
 }

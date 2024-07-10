@@ -5,6 +5,7 @@
 #include "../Core/AssetManager.h"
 #include "../Core/Audio.hpp"
 #include "../Core/File.h"
+#include "../Editor/CSG.h"
 #include "../Game/Game.h"
 #include "../Input/Input.h"
 #include "../Renderer/TextBlitter.h"
@@ -22,10 +23,344 @@ namespace Scene {
     void CreateCeilingsHack();
     void EvaluateDebugKeyPresses();
     void ProcessBullets();
-    void DestroyAllDecals();
+    void CreateDefaultSpawnPoints();
+    void CreateDefaultLight();
     //void UpdateAnimatedGameObjects(float deltaTime);
 
     int testIndex = 0;
+}
+
+void Scene::LoadDefaultScene() {
+
+    std::cout << "Loading default scene\n";
+
+    CleanUp();
+    CreateDefaultSpawnPoints();
+    CreateDefaultLight();
+
+    for (Light& light : g_lights) {
+        light.isDirty = true;
+    }
+
+    g_doors.clear();
+    g_doors.emplace_back(Door(glm::vec3(0, 0, -2.95f), HELL_PI * -0.5f));
+    g_doors.emplace_back(Door(glm::vec3(0, 0, -2.90f - 4.15f), HELL_PI * 0.5f, true));
+
+    g_cubeVolumesAdditive.clear();
+    g_cubeVolumesSubtractive.clear();
+
+
+
+
+
+    // Hardcoded objects
+
+    CreateGameObject();
+    GameObject* pictureFrame = GetGameObjectByIndex(GetGameObjectCount() - 1);
+    pictureFrame->SetPosition(1.1f, 1.5f, -2.9f);
+    pictureFrame->SetScale(0.01f);
+    //pictureFrame->SetRotationY(HELL_PI / 2);
+    pictureFrame->SetModel("PictureFrame_1");
+    pictureFrame->SetMeshMaterial("LongFrame");
+    pictureFrame->SetName("PictureFrame");
+
+    float cushionHeight = 0.555f;
+    Transform shapeOffset;
+    shapeOffset.position.y = cushionHeight * 0.5f;
+    shapeOffset.position.z = 0.5f;
+    PxShape* sofaShapeBigCube = Physics::CreateBoxShape(1, cushionHeight * 0.5f, 0.4f, shapeOffset);
+    PhysicsFilterData sofaFilterData;
+    sofaFilterData.raycastGroup = RAYCAST_DISABLED;
+    sofaFilterData.collisionGroup = CollisionGroup::ENVIROMENT_OBSTACLE;
+    sofaFilterData.collidesWith = (CollisionGroup)(GENERIC_BOUNCEABLE | BULLET_CASING | PLAYER | RAGDOLL);
+
+    float sofaX = 2.6f;
+    CreateGameObject();
+    GameObject* sofa = GetGameObjectByIndex(GetGameObjectCount() - 1);
+    sofa->SetPosition(sofaX, 0.1f, 0.1f);
+    sofa->SetRotationY(HELL_PI * -0.5f);
+    sofa->SetName("Sofa");
+    sofa->SetModel("Sofa_Cushionless");
+    sofa->SetMeshMaterial("Sofa");
+    sofa->SetKinematic(true);
+    sofa->SetRaycastShapeFromModelIndex(AssetManager::GetModelIndexByName("Sofa_Cushionless"));
+    sofa->AddCollisionShape(sofaShapeBigCube, sofaFilterData);
+    sofa->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("SofaBack_ConvexMesh"));
+    sofa->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("SofaLeftArm_ConvexMesh"));
+    sofa->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("SofaRightArm_ConvexMesh"));
+    sofa->SetModelMatrixMode(ModelMatrixMode::GAME_TRANSFORM);
+    sofa->SetCollisionType(CollisionType::STATIC_ENVIROMENT);
+    //sofa->MakeGold();
+
+    PhysicsFilterData cushionFilterData;
+    cushionFilterData.raycastGroup = RAYCAST_DISABLED;
+    cushionFilterData.collisionGroup = CollisionGroup::GENERIC_BOUNCEABLE;
+    cushionFilterData.collidesWith = CollisionGroup(ENVIROMENT_OBSTACLE | GENERIC_BOUNCEABLE);
+    float cushionDensity = 20.0f;
+
+    CreateGameObject();
+    GameObject* cushion0 = GetGameObjectByIndex(GetGameObjectCount() - 1);
+    cushion0->SetPosition(sofaX, 0.1f, 0.1f);
+    cushion0->SetRotationY(HELL_PI * -0.5f);
+    cushion0->SetModel("SofaCushion0");
+    cushion0->SetMeshMaterial("Sofa");
+    cushion0->SetName("SofaCushion0");
+    cushion0->SetKinematic(false);
+    cushion0->SetRaycastShapeFromModelIndex(AssetManager::GetModelIndexByName("SofaCushion0"));
+    cushion0->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("SofaCushion0_ConvexMesh"));
+    cushion0->SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
+    cushion0->UpdateRigidBodyMassAndInertia(cushionDensity);
+    cushion0->SetCollisionType(CollisionType::BOUNCEABLE);
+
+    CreateGameObject();
+    GameObject* cushion1 = GetGameObjectByIndex(GetGameObjectCount() - 1);
+    cushion1->SetPosition(sofaX, 0.1f, 0.1f);
+    cushion1->SetModel("SofaCushion1");
+    cushion1->SetName("SofaCushion1");
+    cushion1->SetMeshMaterial("Sofa");
+    cushion1->SetKinematic(false);
+    cushion1->SetRaycastShapeFromModelIndex(AssetManager::GetModelIndexByName("SofaCushion0"));
+    cushion1->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("SofaCushion1_ConvexMesh"));
+    cushion1->SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
+    cushion1->UpdateRigidBodyMassAndInertia(cushionDensity);
+    cushion1->SetCollisionType(CollisionType::BOUNCEABLE);
+    cushion1->SetRotationY(HELL_PI * -0.5f);
+
+    CreateGameObject();
+    GameObject* cushion2 = GetGameObjectByIndex(GetGameObjectCount() - 1);
+    cushion2->SetPosition(sofaX, 0.1f, 0.1f);
+    cushion2->SetModel("SofaCushion2");
+    cushion2->SetName("SofaCushion2");
+    cushion2->SetMeshMaterial("Sofa");
+    cushion2->SetKinematic(false);
+    cushion2->SetRaycastShapeFromModelIndex(AssetManager::GetModelIndexByName("SofaCushion2"));
+    cushion2->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("SofaCushion2_ConvexMesh"));
+    cushion2->SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
+    cushion2->UpdateRigidBodyMassAndInertia(cushionDensity);
+    cushion2->SetCollisionType(CollisionType::BOUNCEABLE);
+    cushion2->SetRotationY(HELL_PI * -0.5f);
+
+    CreateGameObject();
+    GameObject* cushion3 = GetGameObjectByIndex(GetGameObjectCount() - 1);
+    cushion3->SetPosition(sofaX, 0.1f, 0.1f);
+    cushion3->SetModel("SofaCushion3");
+    cushion3->SetName("SofaCushion3");
+    cushion3->SetMeshMaterial("Sofa");
+    cushion3->SetKinematic(false);
+    cushion3->SetRaycastShapeFromModelIndex(AssetManager::GetModelIndexByName("SofaCushion3"));
+    cushion3->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("SofaCushion3_ConvexMesh"));
+    cushion3->SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
+    cushion3->UpdateRigidBodyMassAndInertia(cushionDensity);
+    cushion3->SetCollisionType(CollisionType::BOUNCEABLE);
+    cushion3->SetRotationY(HELL_PI * -0.5f);
+
+    CreateGameObject();
+    GameObject* cushion4 = GetGameObjectByIndex(GetGameObjectCount() - 1);
+    cushion4->SetPosition(sofaX, 0.1f, 0.1f);
+    cushion4->SetModel("SofaCushion4");
+    cushion4->SetName("SofaCushion4");
+    cushion4->SetMeshMaterial("Sofa");
+    cushion4->SetKinematic(false);
+    cushion4->SetRaycastShapeFromModelIndex(AssetManager::GetModelIndexByName("SofaCushion4"));
+    cushion4->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("SofaCushion4_ConvexMesh"));
+    cushion4->SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
+    cushion4->UpdateRigidBodyMassAndInertia(15.0f);
+    cushion4->SetCollisionType(CollisionType::BOUNCEABLE);
+    cushion4->SetRotationY(HELL_PI * -0.5f);
+
+    CreateGameObject();
+    GameObject* tree = GetGameObjectByIndex(GetGameObjectCount() - 1);
+    tree->SetPosition(2.4f, 0.1f, 2.1f);
+    tree->SetModel("ChristmasTree");
+    tree->SetName("ChristmasTree");
+    tree->SetMeshMaterial("Tree");
+    tree->SetMeshMaterialByMeshName("Balls", "Gold");
+
+    float spacing = 0.3f;
+    for (int x = -3; x < 1; x++) {
+        for (int y = -1; y < 5; y++) {
+            for (int z = -1; z < 2; z++) {
+                CreateGameObject();
+                GameObject* cube = GetGameObjectByIndex(GetGameObjectCount() - 1);
+                float halfExtent = 0.1f;
+                cube->SetPosition(2.6f + x * spacing, 1.5f + y * spacing * 1.25f, 2.1f + z * spacing);
+                cube->SetRotationX(Util::RandomFloat(0, HELL_PI * 2));
+                cube->SetRotationY(Util::RandomFloat(0, HELL_PI * 2));
+                cube->SetRotationZ(Util::RandomFloat(0, HELL_PI * 2));
+                cube->SetWakeOnStart(true);
+                cube->SetModel("ChristmasPresent");
+                cube->SetName("Present");
+                int rand = Util::RandomInt(0, 3);
+                if (rand == 0) {
+                    cube->SetMeshMaterial("PresentA");
+                }
+                else if (rand == 1) {
+                    cube->SetMeshMaterial("PresentB");
+            }
+                else if (rand == 2) {
+                    cube->SetMeshMaterial("PresentC");
+            }
+                else if (rand == 3) {
+                    cube->SetMeshMaterial("PresentD");
+            }
+            cube->SetMeshMaterialByMeshName("Bow", "Gold");
+            Transform transform;
+            transform.position = glm::vec3(2.0f, y * halfExtent * 2 + 0.2f, 3.5f);
+            PxShape* collisionShape = Physics::CreateBoxShape(halfExtent, halfExtent, halfExtent);
+            PxShape* raycastShape = Physics::CreateBoxShape(halfExtent, halfExtent, halfExtent);
+            PhysicsFilterData filterData;
+            filterData.raycastGroup = RAYCAST_DISABLED;
+            filterData.collisionGroup = CollisionGroup::GENERIC_BOUNCEABLE;
+            filterData.collidesWith = (CollisionGroup)(ENVIROMENT_OBSTACLE | GENERIC_BOUNCEABLE | RAGDOLL);
+            cube->SetKinematic(false);
+            cube->AddCollisionShape(collisionShape, filterData);
+            cube->SetRaycastShape(raycastShape);
+            cube->SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
+            cube->UpdateRigidBodyMassAndInertia(20.0f);
+            cube->SetCollisionType(CollisionType::BOUNCEABLE);
+            }
+        }
+    }
+
+
+
+
+    // Walls
+    {
+        CubeVolume& cube = g_cubeVolumesAdditive.emplace_back();
+        cube.transform.position = glm::vec3(0.0f, 1.3f, -2.95f);
+        cube.transform.scale = glm::vec3(6.0f, 2.6f, 0.1f);
+        cube.materialIndex = AssetManager::GetMaterialIndex("Ceiling2");
+    }
+    {
+        CubeVolume& cube = g_cubeVolumesAdditive.emplace_back();
+        cube.transform.position = glm::vec3(0.0f, 1.3f, 2.95f);
+        cube.transform.scale = glm::vec3(6.0f, 2.6f, 0.1f);
+        cube.materialIndex = AssetManager::GetMaterialIndex("Ceiling2");
+    }
+    {
+        CubeVolume& cube = g_cubeVolumesAdditive.emplace_back();
+        cube.transform.position = glm::vec3(2.95f, 1.3f, 0.0f);
+        cube.transform.scale = glm::vec3(0.1f, 2.6f, 6.0f);
+        cube.materialIndex = AssetManager::GetMaterialIndex("Ceiling2");
+    }
+    {
+        CubeVolume& cube = g_cubeVolumesAdditive.emplace_back();
+        cube.transform.position = glm::vec3(-2.95f, 1.3f, 0.0f);
+        cube.transform.scale = glm::vec3(0.1f, 2.6f, 6.0f);
+        cube.materialIndex = AssetManager::GetMaterialIndex("Ceiling2");
+    }
+    {
+        CubeVolume& cube = g_cubeVolumesAdditive.emplace_back();
+        cube.transform.position = glm::vec3(0.0f, 1.3f, -2.95f - 10.0f);
+        cube.transform.scale = glm::vec3(6.0f, 2.6f, 0.1f);
+        cube.materialIndex = AssetManager::GetMaterialIndex("Ceiling2");
+    }
+    {
+        CubeVolume& cube = g_cubeVolumesAdditive.emplace_back();
+        cube.transform.position = glm::vec3(0.0f, 1.3f, 2.95f - 10.0f);
+        cube.transform.scale = glm::vec3(6.0f, 2.6f, 0.1f);
+        cube.materialIndex = AssetManager::GetMaterialIndex("Ceiling2");
+    }
+    {
+        CubeVolume& cube = g_cubeVolumesAdditive.emplace_back();
+        cube.transform.position = glm::vec3(2.95f, 1.3f, 0.0f - 10.0f);
+        cube.transform.scale = glm::vec3(0.1f, 2.6f, 6.0f);
+        cube.materialIndex = AssetManager::GetMaterialIndex("Ceiling2");
+    }
+    {
+        CubeVolume& cube = g_cubeVolumesAdditive.emplace_back();
+        cube.transform.position = glm::vec3(-2.95f, 1.3f, 0.0f - 10.0f);
+        cube.transform.scale = glm::vec3(0.1f, 2.6f, 6.0f);
+        cube.materialIndex = AssetManager::GetMaterialIndex("Ceiling2");
+    }
+    // Floor
+    {
+        CubeVolume& cube = g_cubeVolumesAdditive.emplace_back();
+        cube.transform.position = glm::vec3(0.0f, -0.05, 0.0f);
+        cube.transform.scale = glm::vec3(6.0f, 0.1, 6.0f);
+        cube.materialIndex = AssetManager::GetMaterialIndex("FloorBoards");
+        cube.textureScale = 0.5f;
+    }
+    {
+        CubeVolume& cube = g_cubeVolumesAdditive.emplace_back();
+        cube.transform.position = glm::vec3(0.0f, -0.05, -10.0f);
+        cube.transform.scale = glm::vec3(6.0f, 0.1, 6.0f);
+        cube.materialIndex = AssetManager::GetMaterialIndex("FloorBoards");
+        cube.textureScale = 0.5f;
+    }
+    {
+        CubeVolume& cube = g_cubeVolumesAdditive.emplace_back();
+        cube.transform.position = glm::vec3(0.0f, -0.05, -5.0f);
+        cube.transform.scale = glm::vec3(1.2f, 0.1, 4.0f);
+        cube.materialIndex = AssetManager::GetMaterialIndex("FloorBoards");
+        cube.textureScale = 0.5f;
+    }
+    // Ceiling
+    {
+        CubeVolume& cube = g_cubeVolumesAdditive.emplace_back();
+        cube.transform.position = glm::vec3(0.0f, 2.55, 0.0f);
+        cube.transform.scale = glm::vec3(6.0f, 0.1, 6.0f);
+        cube.materialIndex = AssetManager::GetMaterialIndex("Ceiling2");
+    }
+    {
+        CubeVolume& cube = g_cubeVolumesAdditive.emplace_back();
+        cube.transform.position = glm::vec3(0.0f, 2.55, -10.0f);
+        cube.transform.scale = glm::vec3(6.0f, 0.1, 6.0f);
+        cube.materialIndex = AssetManager::GetMaterialIndex("Ceiling2");
+    }
+
+    CSG::Build();
+
+    RecreateAllPhysicsObjects();
+    ResetGameObjectStates();
+}
+
+void Scene::CreateDefaultSpawnPoints() {
+
+    g_spawnPoints.clear();
+
+    {
+        SpawnPoint& spawnPoint = g_spawnPoints.emplace_back();
+        spawnPoint.position = glm::vec3(0);
+        spawnPoint.rotation = glm::vec3(0);
+    }
+    {
+        SpawnPoint& spawnPoint = g_spawnPoints.emplace_back();
+        spawnPoint.position = glm::vec3(-2.07, 0.00, -11.70);
+        spawnPoint.rotation = glm::vec3(-0.32, -2.38, 0.00);
+    }
+    {
+        SpawnPoint& spawnPoint = g_spawnPoints.emplace_back();
+        spawnPoint.position = glm::vec3(2.22, -0.00, -12.11);
+        spawnPoint.rotation = glm::vec3(-0.35, -3.77, 0.00);
+    }
+    {
+        SpawnPoint& spawnPoint = g_spawnPoints.emplace_back();
+        spawnPoint.position = glm::vec3(1.78, -0.00, -7.80);
+        spawnPoint.rotation = glm::vec3(-0.34, -5.61, 0.00);
+    }
+
+    /*
+    for (int i = 0; i < 4; i++) {
+        SpawnPoint& spawnPoint = g_spawnPoints.emplace_back();
+        spawnPoint.position = glm::vec3(i * 4, 0, 0);
+    }*/
+}
+
+void Scene::CreateDefaultLight() {
+    g_lights.clear();
+
+    Light light;
+    light.position = glm::vec3(0.0f, 2.2f, 0.0f);
+    light.isDirty = true;
+    g_lights.push_back(light);
+
+    light.position = glm::vec3(0.0f, 2.2f, -10.0f);
+    light.color = glm::vec3(1.0f, 0.0f, 0.0f);
+    light.strength = 3.0f;
+    light.isDirty = true;
+    g_lights.push_back(light);
 }
 
 void Scene::Update(float deltaTime) {
@@ -40,10 +375,11 @@ void Scene::Update(float deltaTime) {
         for (GameObject& gameObject : g_gameObjects) {
             gameObject.LoadSavedState();
         }
-        DestroyAllDecals();
+        CleanUpBulletCasings();
+        CleanUpBulletHoleDecals();
         std::cout << "Loaded scene save state\n";
     }
-    for (Door& door : _doors) {
+    for (Door& door : g_doors) {
         door.Update(deltaTime);
         door.UpdateRenderItems();
     }
@@ -55,7 +391,7 @@ void Scene::Update(float deltaTime) {
     UpdateGameObjects(deltaTime);
     //UpdateAnimatedGameObjects(deltaTime);
 
-    for (BulletCasing& bulletCasing : _bulletCasings) {
+    for (BulletCasing& bulletCasing : g_bulletCasings) {
         // TO DO: render item
         bulletCasing.Update(deltaTime);
     }
@@ -134,9 +470,19 @@ BulletHoleDecal* Scene::GetBulletHoleDecalByIndex(int32_t index) {
     }
 }
 
-void Scene::DestroyAllDecals() {
+void Scene::CleanUpBulletHoleDecals() {
     g_bulletHoleDecals.clear();
 }
+
+void Scene::CleanUpBulletCasings() {
+
+    for (BulletCasing& bulletCasing : g_bulletCasings) {
+        bulletCasing.CleanUp();
+    }
+    g_bulletCasings.clear();
+}
+
+
 
 // Game Objects
 
@@ -237,6 +583,15 @@ std::vector<AnimatedGameObject*> Scene::GetAnimatedGamesObjectsToSkin() {
 void Scene::LoadMapNEW(std::string mapPath) {
 
     CleanUp();
+
+    // Load default scene
+    if (true) {
+        LoadDefaultScene();
+        return;
+    }
+
+
+
     File::LoadMap(mapPath);
 
     // Walls
@@ -315,7 +670,7 @@ std::vector<RenderItem3D> Scene::GetAllRenderItems() {
         renderItems.reserve(renderItems.size() + gameObject.GetRenderItems().size());
         renderItems.insert(std::end(renderItems), std::begin(gameObject.GetRenderItems()), std::end(gameObject.GetRenderItems()));
     }
-    for (Door& door : Scene::_doors) {
+    for (Door& door : Scene::g_doors) {
         renderItems.reserve(renderItems.size() + door.GetRenderItems().size());
         renderItems.insert(std::end(renderItems), std::begin(door.GetRenderItems()), std::end(door.GetRenderItems()));
     }
@@ -390,7 +745,7 @@ std::vector<RenderItem3D> Scene::GetAllRenderItems() {
     static int glockCasingMeshIndex = AssetManager::GetModelByIndex(AssetManager::GetModelIndexByName("Casing9mm"))->GetMeshIndices()[0];
     static int shotgunShellMeshIndex = AssetManager::GetModelByIndex(AssetManager::GetModelIndexByName("Shell"))->GetMeshIndices()[0];
     static int aks74uCasingMeshIndex = AssetManager::GetModelByIndex(AssetManager::GetModelIndexByName("CasingAKS74U"))->GetMeshIndices()[0];
-    for (BulletCasing& casing : Scene::_bulletCasings) {
+    for (BulletCasing& casing : Scene::g_bulletCasings) {
         RenderItem3D& renderItem = renderItems.emplace_back();
         renderItem.modelMatrix = casing.modelMatrix;
         renderItem.inverseModelMatrix = inverse(renderItem.modelMatrix);
@@ -410,7 +765,7 @@ std::vector<RenderItem3D> Scene::GetAllRenderItems() {
     // Light bulbs
 
 
-    for (Light& light : Scene::_lights) {
+    for (Light& light : Scene::g_lights) {
 
 
         Transform transform;
@@ -577,15 +932,6 @@ std::vector<RenderItem3D> Scene::CreateDecalRenderItems() {
 void Scene::EvaluateDebugKeyPresses() {
 
 
-    // Set spawn point
-    /*if (Input::KeyPressed(HELL_KEY_K) && false) {
-        SpawnPoint spawnPoint;
-        spawnPoint.position = Scene::Game::_players[0].GetFeetPosition();
-        spawnPoint.rotation = Scene::Game::_players[0].GetCameraRotation();
-        _spawnPoints.push_back(spawnPoint);
-        std::cout << "Position: " << Util::Vec3ToString(spawnPoint.position) << "\n";
-        std::cout << "Rotation: " << Util::Vec3ToString(spawnPoint.rotation) << "\n";
-    }*/
 }
 
 
@@ -649,7 +995,7 @@ void Scene::Update_OLD(float deltaTime) {
         Transform globeTransform;
         globeTransform.position = glm::vec3(0, 0.45f, 0);
         glm::mat4 worldSpaceMatrix = lampMatrix * globeTransform.to_mat4();
-        Scene::_lights[3].position = Util::GetTranslationFromMatrix(worldSpaceMatrix);
+        Scene::g_lights[3].position = Util::GetTranslationFromMatrix(worldSpaceMatrix);
     }
    // Scene::_lights[3].isDirty = true;
 
@@ -669,7 +1015,7 @@ void Scene::Update_OLD(float deltaTime) {
     Game::SetPlayerGroundedStates();
     ProcessBullets();
 
-    for (BulletCasing& bulletCasing : _bulletCasings) {
+    for (BulletCasing& bulletCasing : g_bulletCasings) {
         bulletCasing.Update(deltaTime);
     }
 
@@ -682,7 +1028,7 @@ void Scene::Update_OLD(float deltaTime) {
 	}
 
     if (Input::KeyPressed(HELL_KEY_T)) {
-        for (Light& light : Scene::_lights) {
+        for (Light& light : Scene::g_lights) {
             light.isDirty = true;
         }
     }
@@ -696,7 +1042,7 @@ void Scene::Update_OLD(float deltaTime) {
         gameObject.Update(deltaTime);
     }
 
-    for (Door& door : _doors) {
+    for (Door& door : g_doors) {
         door.Update(deltaTime);
     }
 
@@ -705,7 +1051,7 @@ void Scene::Update_OLD(float deltaTime) {
 }
 
 void Scene::CheckForDirtyLights() {
-    for (Light& light : Scene::_lights) {
+    for (Light& light : Scene::g_lights) {
         light.isDirty = false;
         for (GameObject& gameObject : Scene::g_gameObjects) {
             if (gameObject.HasMovedSinceLastFrame()) {
@@ -718,7 +1064,7 @@ void Scene::CheckForDirtyLights() {
         }
 
         if (!light.isDirty) {
-            for (Door& door : Scene::_doors) {
+            for (Door& door : Scene::g_doors) {
                 if (door.HasMovedSinceLastFrame()) {
                     if (Util::AABBInSphere(door._aabb, light.position, light.radius)) {
                         light.isDirty = true;
@@ -765,7 +1111,7 @@ void Scene::ProcessBullets() {
 				PhysicsObjectData* physicsObjectData = (PhysicsObjectData*)actor->userData;
 
                 // A ragdoll was hit
-                if (physicsObjectData->type == RAGDOLL_RIGID) {
+                if (physicsObjectData->type == PhysicsObjectType::RAGDOLL_RIGID) {
                     if (actor->userData) {
 
 
@@ -866,7 +1212,7 @@ void Scene::ProcessBullets() {
                 }
 
 
-                if (physicsObjectData->type == GAME_OBJECT) {
+                if (physicsObjectData->type == PhysicsObjectType::GAME_OBJECT) {
 					GameObject* gameObject = (GameObject*)physicsObjectData->parent;
                     float force = 75;
                     if (bullet.type == SHOTGUN) {
@@ -879,7 +1225,7 @@ void Scene::ProcessBullets() {
 
 
 
-				if (physicsObjectData->type == GLASS) {
+				if (physicsObjectData->type == PhysicsObjectType::GLASS) {
                     glassWasHit = true;
 					//std::cout << "you shot glass\n";
 					Bullet newBullet;
@@ -910,9 +1256,9 @@ void Scene::ProcessBullets() {
 						}
 					}
 				}
-				else if (physicsObjectData->type != RAGDOLL_RIGID) {
+				else if (physicsObjectData->type != PhysicsObjectType::RAGDOLL_RIGID) {
                     bool doIt = true;
-                    if (physicsObjectData->type == GAME_OBJECT) {
+                    if (physicsObjectData->type == PhysicsObjectType::GAME_OBJECT) {
                         GameObject* gameObject = (GameObject*)physicsObjectData->parent;
                         if (gameObject->GetPickUpType() != PickUpType::NONE) {
                             doIt = false;
@@ -1879,10 +2225,14 @@ void Scene::SaveMap(std::string mapPath) {
 
 
 void Scene::CleanUp() {
-    for (Door& door : _doors) {
+    for (Door& door : g_doors) {
         door.CleanUp();
     }
-    for (BulletCasing& bulletCasing : _bulletCasings) {
+
+    CleanUpBulletHoleDecals();
+    CleanUpBulletCasings();
+
+    for (BulletCasing& bulletCasing : g_bulletCasings) {
         bulletCasing.CleanUp();
     }
     for (GameObject& gameObject : g_gameObjects) {
@@ -1895,23 +2245,23 @@ void Scene::CleanUp() {
         window.CleanUp();
     }
     for (AnimatedGameObject& animatedGameObject : g_animatedGameObjects) {
-        animatedGameObject.DestroyRagdoll();
+        //animatedGameObject.DestroyRagdoll();
     }
 
     _toilets.clear();
     _bloodDecals.clear();
-    _spawnPoints.clear();
-    _bulletCasings.clear();
+    g_spawnPoints.clear();
+    g_bulletCasings.clear();
     g_bulletHoleDecals.clear();
     _walls.clear();
     _floors.clear();
 	_ceilings.clear();
-	_doors.clear();
+	g_doors.clear();
     _windows.clear();
 	g_gameObjects.clear();
-    g_animatedGameObjects.clear();
+    //g_animatedGameObjects.clear();
     _pickUps.clear();
-    _lights.clear();
+    g_lights.clear();
 
 	if (_sceneTriangleMesh) {
 		_sceneTriangleMesh->release();
@@ -1920,11 +2270,11 @@ void Scene::CleanUp() {
 }
 
 void Scene::AddLight(Light& light) {
-    _lights.push_back(light);
+    g_lights.push_back(light);
 }
 
 void Scene::AddDoor(Door& door) {
-    _doors.push_back(door);
+    g_doors.push_back(door);
 }
 
 void Scene::CreatePointCloud() {
@@ -2024,10 +2374,10 @@ void Scene::CreatePointCloud() {
 
     for (int i = 0; i < _cloudPoints.size(); i++) {
         glm::vec2 p = { _cloudPoints[i].position.x, _cloudPoints[i].position.z };
-        for (Door& door : Scene::_doors) {
+        for (Door& door : Scene::g_doors) {
             // Ignore if is point is above or below door
-            if (_cloudPoints[i].position.y < door.position.y ||
-                _cloudPoints[i].position.y > door.position.y + DOOR_HEIGHT) {
+            if (_cloudPoints[i].position.y < door.m_position.y ||
+                _cloudPoints[i].position.y > door.m_position.y + DOOR_HEIGHT) {
                 continue;
             }
             // Check if it is inside the fucking door
@@ -2058,12 +2408,12 @@ void Scene::AddFloor(Floor& floor) {
 void Scene::LoadLightSetup(int index) {
 
     if (index == 2) {
-        _lights.clear();
+        g_lights.clear();
         Light lightD;
         lightD.position = glm::vec3(2.8, 2.2, 3.6);
         lightD.strength = 0.3f;
         lightD.radius = 7;
-        _lights.push_back(lightD);
+        g_lights.push_back(lightD);
 
         Light lightB;
         lightB.position = glm::vec3(2.05, 2, 9.0);
@@ -2071,14 +2421,14 @@ void Scene::LoadLightSetup(int index) {
         lightB.strength = 5.0f * 0.25f;;
         lightB.radius = 4;
         lightB.color = RED;
-        _lights.push_back(lightB);
+        g_lights.push_back(lightB);
 
         Light lightA;
         lightA.position = glm::vec3(11, 2.0, 6.0);
         lightA.strength = 1.0f * 0.25f;
         lightA.radius = 2;
         lightA.color = LIGHT_BLUE;
-        _lights.push_back(lightA);
+        g_lights.push_back(lightA);
 
         Light lightC;
         lightC.position = glm::vec3(8.75, 2.2, 1.55);
@@ -2086,7 +2436,7 @@ void Scene::LoadLightSetup(int index) {
 		lightC.radius = 6;
         //lightC.color = RED;
         //lightC.strength = 5.0f * 0.25f;;
-        _lights.push_back(lightC);
+        g_lights.push_back(lightC);
     }
 }
 
@@ -2119,7 +2469,7 @@ void Scene::UpdateRTInstanceData() {
     houseInstance.modelMatrix = glm::mat4(1);
     houseInstance.inverseModelMatrix = glm::inverse(glm::mat4(1));
 
-    for (Door& door : _doors) {
+    for (Door& door : g_doors) {
         RTInstance& doorInstance = _rtInstances.emplace_back(RTInstance());
         doorInstance.meshIndex = 1;
         doorInstance.modelMatrix = door.GetDoorModelMatrix();
@@ -2177,7 +2527,7 @@ void Scene::RecreateAllPhysicsObjects() {
 		_sceneRigidDynamic->userData = new PhysicsObjectData(PhysicsObjectType::SCENE_MESH, nullptr);
     }
 
-	for (Door& door : _doors) {
+	for (Door& door : g_doors) {
 		door.CreatePhysicsObject();
 	}
 	for (Window& window : _windows) {
@@ -2442,5 +2792,26 @@ void Scene::CreateMeshData() {
         mesh.vertexCount = _rtVertices.size() - baseVertex;
         mesh.baseVertex = baseVertex;
         _rtMesh.push_back(mesh);
+    }
+}
+
+
+CubeVolume* Scene::GetCubeVolumeAdditiveByIndex(int32_t index) {
+    if (index >= 0 && index < g_cubeVolumesAdditive.size()) {
+        return &g_cubeVolumesAdditive[index];
+    }
+    else {
+        std::cout << "Scene::GetCubeVolumeAdditiveByIndex() failed coz " << index << " out of range of size " << g_cubeVolumesAdditive.size() << "\n";
+        return nullptr;
+    }
+}
+
+CubeVolume* Scene::GetCubeVolumeSubtractiveByIndex(int32_t index) {
+    if (index >= 0 && index < g_cubeVolumesSubtractive.size()) {
+        return &g_cubeVolumesSubtractive[index];
+    }
+    else {
+        std::cout << "Scene::GetCubeVolumeSubtractiveByIndex() failed coz " << index << " out of range of size " << g_cubeVolumesSubtractive.size() << "\n";
+        return nullptr;
     }
 }

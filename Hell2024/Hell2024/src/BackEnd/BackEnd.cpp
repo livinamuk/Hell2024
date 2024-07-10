@@ -6,6 +6,8 @@
 #include "../API/Vulkan/VK_backEnd.h"
 #include "../Core/AssetManager.h"
 #include "../Core/Audio.hpp"
+#include "../Editor/CSG.h"
+#include "../Editor/Gizmo.hpp"
 #include "../Input/Input.h"
 #include "../Input/InputMulti.h"
 #include "../Physics/Physics.h"
@@ -100,6 +102,7 @@ namespace BackEnd {
             glfwMakeContextCurrent(_window);
             OpenGLBackEnd::InitMinimum();
             OpenGLRenderer::InitMinimum();
+            Gizmo::Init();
             glClipControl(GL_LOWER_LEFT, GL_ZERO_TO_ONE);
         }
         else if (GetAPI() == API::VULKAN) {
@@ -113,6 +116,7 @@ namespace BackEnd {
         Audio::Init();
         Physics::Init();
         InputMulti::Init();
+        CSG::Init();
         glfwShowWindow(BackEnd::GetWindowPointer());
     }
 

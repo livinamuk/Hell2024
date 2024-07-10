@@ -11,14 +11,14 @@ uniform int playerIndex;
 
 struct RenderItem3D {
     mat4 modelMatrix;
-    mat4 inverseModelMatrix; 
+    mat4 inverseModelMatrix;
     int meshIndex;
     int baseColorTextureIndex;
     int normalTextureIndex;
     int rmaTextureIndex;
     int vertexOffset;
     int indexOffset;
-    int animatedTransformsOffset; 
+    int animatedTransformsOffset;
     int castShadow;
     int useEmissiveMask;
     float emissiveColorR;
@@ -37,9 +37,9 @@ struct CameraData {
     mat4 view;
     mat4 viewInverse;
 	float viewportWidth;
-	float viewportHeight;   
+	float viewportHeight;
     float viewportOffsetX;
-    float viewportOffsetY; 
+    float viewportOffsetY;
 	float clipSpaceXMin;
     float clipSpaceXMax;
     float clipSpaceYMin;
@@ -62,6 +62,6 @@ void main() {
 	TexCoord = aTexCoord;
 	mat4 model = RenderItems[gl_InstanceID + gl_BaseInstance].modelMatrix;
 	BaseColorTextureIndex =  RenderItems[gl_InstanceID+ gl_BaseInstance].baseColorTextureIndex;
-	gl_Position = projection * view * model *vec4(aPos, 1.0);
+	gl_Position = projection * view * model *vec4(aPos - vec3(0,0.065,0), 1.0);
 }
 

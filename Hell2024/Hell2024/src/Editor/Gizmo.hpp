@@ -1,27 +1,39 @@
 #pragma once
 #include "../../vendor/im3d/im3d.h"
 #include "../API/OpenGL/Types/GL_shader.h"
-#include "../Core/Input.h"
+#include "../Input/Input.h"
 
 namespace Gizmo {
 
-    GLuint g_Im3dVertexArray;
-    GLuint g_Im3dVertexBuffer;
-    GLuint g_Im3dShaderPoints;
-    GLuint g_Im3dShaderLines;
-    GLuint g_Im3dShaderTriangles;
+    inline GLuint g_Im3dVertexArray;
+    inline GLuint g_Im3dVertexBuffer;
+    inline GLuint g_Im3dShaderPoints;
+    inline GLuint g_Im3dShaderLines;
+    inline GLuint g_Im3dShaderTriangles;
 
-    Shader g_TriangleShader;
-    Shader g_LineShader;
-    Shader g_PointShader;
+    inline Shader g_TriangleShader;
+    inline Shader g_LineShader;
+    inline Shader g_PointShader;
 
-    Im3d::Mat4 g_transform = (1.0f);
+    inline Im3d::Mat4 g_transform = (1.0f);
 
-    bool _inUse = false;
+    inline bool _inUse = false;
+
+    inline void CleanUp() {
+
+        Im3d::GetContext();
+    }
 
 
     inline bool HasHover() {
+
+
         Im3d::Context& ctx = Im3d::GetContext();
+
+        return (Im3d::GetHotId() != 0);
+        return (Im3d::GetActiveId() != 0);
+        //return (ctx.GetActiveId() != Id_Invalid);
+
         return (ctx.m_hotId != 0);
     }
 
@@ -51,7 +63,7 @@ namespace Gizmo {
         return matrix;
     }
 
-    void Init() {
+    inline void Init() {
         g_TriangleShader.LoadOLD("im3d_triangles.vert", "im3d_triangles.frag");
         g_LineShader.LoadOLD("im3d_lines.vert", "im3d_lines.frag", "im3d_lines.geom");
         g_PointShader.LoadOLD("im3d_points.vert", "im3d_points.frag");
@@ -79,16 +91,21 @@ namespace Gizmo {
         ray_wor = normalize(ray_wor);
         return ray_wor;
     }
-    
+
     inline glm::vec3 GetTranslationFromMatrix666(glm::mat4 matrix) {
         return glm::vec3(matrix[3][0], matrix[3][1], matrix[3][2]);
     }
 
-    inline float Radians(float _degrees) { 
-        return _degrees * (HELL_PI / 180.0f); 
+    inline float Radians(float _degrees) {
+        return _degrees * (HELL_PI / 180.0f);
     }
 
-    Im3d::Mat4 Update(glm::vec3 viewPos, glm::vec3 viewDir, float mouseX, float mouseY, glm::mat4 projection, glm::mat4 view, bool leftMouseDown, float viewportWidth, float viewportHeight, glm::mat4 matrix) {
+    inline Im3d::Mat4 Update(glm::vec3 viewPos, glm::vec3 viewDir, float mouseX, float mouseY, glm::mat4 projection, glm::mat4 view, bool leftMouseDown, float viewportWidth, float viewportHeight, glm::mat4 matrix) {
+
+
+        Im3d::Context& ctx = Im3d::GetContext();
+        ctx.m_gizmoHeightPixels = 50;
+        ctx.m_gizmoSizePixels = 6;
 
         if (Input::KeyPressed(HELL_KEY_W)) {
             Im3d::GetContext().m_gizmoMode = Im3d::GizmoMode::GizmoMode_Translation;
@@ -108,7 +125,7 @@ namespace Gizmo {
         ad.m_viewportSize = Im3d::Vec2((float)viewportWidth, (float)viewportHeight);
         ad.m_viewOrigin = { viewPos.x, viewPos.y, viewPos.z };
         ad.m_viewDirection = { viewDir.x, viewDir.y, viewDir.z };
-        ad.m_worldUp = Im3d::Vec3(0.0f, 1.0f, 0.0f); 
+        ad.m_worldUp = Im3d::Vec3(0.0f, 1.0f, 0.0f);
         ad.m_projOrtho = false;
         ad.m_projScaleY = tanf(1.0f * 0.5f) * 2.0f; // controls how gizmos are scaled in world space to maintain a constant screen height or vertical fov for a perspective projection
 
@@ -128,6 +145,8 @@ namespace Gizmo {
         ad.m_snapRotation = !shiftDown ? Radians(45.0f * 0.5f) : 0.0f;
         ad.m_snapScale = !shiftDown ? 0.05f : 0.0f;
 
+
+
         Im3d::NewFrame();
         g_transform = GlmMat4ToIm3dMat4(matrix);
         _inUse = Im3d::Gizmo("GizmoUnified", g_transform);
@@ -135,31 +154,25 @@ namespace Gizmo {
         return g_transform;
     }
 
-    void Draw(glm::mat4 projection, glm::mat4 view, float viewportWidth, float viewportHeight) {
-
-      
-       // float viewportWidth = 1920 * 1.5f;
-      //  float viewportHeight = 1080 * 1.5f;
+    inline void Draw(glm::mat4 projection, glm::mat4 view, float viewportWidth, float viewportHeight) {
 
         // Primitive rendering.
         // Typical pipeline state: enable alpha blending, disable depth test and backface culling.
-        (glEnable(GL_BLEND));
-        (glBlendEquation(GL_FUNC_ADD));
-        (glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
-        (glEnable(GL_PROGRAM_POINT_SIZE));
-        (glDisable(GL_DEPTH_TEST));
-        (glDisable(GL_CULL_FACE));
+        glEnable(GL_BLEND);
+        glBlendEquation(GL_FUNC_ADD);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        glEnable(GL_PROGRAM_POINT_SIZE);
+        glDisable(GL_DEPTH_TEST);
+        glDisable(GL_CULL_FACE);
 
-        (glViewport(0, 0, (GLsizei)viewportWidth, (GLsizei)viewportHeight));
+        glViewport(0, 0, (GLsizei)viewportWidth, (GLsizei)viewportHeight);
 
-        for (Im3d::U32 i = 0, n = Im3d::GetDrawListCount(); i < n; ++i)
-        {
+        for (Im3d::U32 i = 0, n = Im3d::GetDrawListCount(); i < n; ++i) {
+
             const Im3d::DrawList& drawList = Im3d::GetDrawLists()[i];
-
-            if (drawList.m_layerId == Im3d::MakeId("NamedLayer"))
-            {
+            //if (drawList.m_layerId == Im3d::MakeId("NamedLayer")) {
                 // The application may group primitives into layers, which can be used to change the draw state (e.g. enable depth testing, use a different shader)
-            }
+          //  }
 
             Shader* shader = nullptr;
             GLenum prim;
@@ -181,7 +194,7 @@ namespace Gizmo {
                 break;
             case Im3d::DrawPrimitive_Triangles:
                 prim = GL_TRIANGLES;
-                //sh = g_Im3dShaderTriangles; 
+                //sh = g_Im3dShaderTriangles;
                 shader = &g_TriangleShader;
                 //glAssert(glEnable(GL_CULL_FACE)); // culling valid for triangles, but optional
                 break;
@@ -194,22 +207,24 @@ namespace Gizmo {
                 continue;
             }
 
-            (glBindVertexArray(g_Im3dVertexArray));
-            (glBindBuffer(GL_ARRAY_BUFFER, g_Im3dVertexBuffer));
-            (glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)drawList.m_vertexCount * sizeof(Im3d::VertexData), (GLvoid*)drawList.m_vertexData, GL_STREAM_DRAW));
+            glBindVertexArray(g_Im3dVertexArray);
+            glBindBuffer(GL_ARRAY_BUFFER, g_Im3dVertexBuffer);
+            glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)drawList.m_vertexCount * sizeof(Im3d::VertexData), (GLvoid*)drawList.m_vertexData, GL_STREAM_DRAW);
 
             Im3d::AppData& ad = Im3d::GetAppData();
-
-            //(glUseProgram(sh));
-            //(glUniform2f(glGetUniformLocation(sh, "uViewport"), ad.m_viewportSize.x, ad.m_viewportSize.y));
-            //(glUniformMatrix4fv(glGetUniformLocation(sh, "uViewProjMatrix"), 1, false, (const GLfloat*)g_Example->m_camViewProj));
 
             shader->Use();
             shader->SetVec2("uViewport", glm::vec2(viewportWidth, viewportHeight));
             shader->SetMat4("uViewProjMatrix", projection * view);
 
-            (glDrawArrays(prim, 0, (GLsizei)drawList.m_vertexCount));
+            glDrawArrays(prim, 0, (GLsizei)drawList.m_vertexCount);
         }
+    }
+
+    inline void ResetHover() {
+        Im3d::Context& ctx = Im3d::GetContext();
+        ctx.reset();
+        ctx.resetId();
     }
 
 }

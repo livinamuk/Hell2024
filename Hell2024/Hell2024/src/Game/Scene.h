@@ -8,6 +8,7 @@
 #include "../Effects/BulletCasing.h"
 #include "../Effects/BulletHoleDecal.hpp"
 #include "../Core/VolumetricBloodSplatter.h"
+#include "../Editor/CSG.h"
 #include "../Game/Player.h"
 #include "../Types/Modular/Door.h"
 #include "../Types/Modular/Ceiling.h"
@@ -55,18 +56,19 @@ inline void SetNormalsAndTangentsFromVertices(Vertex* vert0, Vertex* vert1, Vert
 #define PROPOGATION_HEIGHT (MAP_HEIGHT / PROPOGATION_SPACING)
 #define PROPOGATION_DEPTH (MAP_DEPTH / PROPOGATION_SPACING)
 
-
+struct CubeVolume {
+    Transform transform;
+    uint32_t materialIndex = 0;
+    float textureScale = 1.0f;
+    glm::mat4 GetModelMatrix() {
+        return  transform.to_mat4();
+    }
+};
 
 struct SpawnPoint {
     glm::vec3 position = glm::vec3(0);
     glm::vec3 rotation = glm::vec3(0);
 };
-
-
-
-
-
-
 
 struct RTMesh {
     GLuint baseVertex = 0;
@@ -91,7 +93,6 @@ struct Bullet {
     PxU32 raycastFlags;
     glm::vec3 parentPlayersViewRotation;
 };
-
 
 struct PickUp {
 
@@ -126,14 +127,18 @@ struct PickUp {
 
 namespace Scene {
 
-
-
     void Update(float deltaTime);
 
-    // Decals
+    void LoadDefaultScene();
+
+    // Bullet Hole Decals
     void CreateBulletDecal(glm::vec3 localPosition, glm::vec3 localNormal, PxRigidBody* parent, BulletHoleDecalType type);
     BulletHoleDecal* GetBulletHoleDecalByIndex(int32_t index);
     const size_t GetBulletHoleDecalCount();
+    void CleanUpBulletHoleDecals();
+
+    // Bullet Casings
+    void CleanUpBulletCasings();
 
     // Game Objects
     int32_t CreateGameObject();
@@ -151,6 +156,18 @@ namespace Scene {
     //void UpdateAnimatedGameObjects(float deltaTime);
     const size_t GetAnimatedGameObjectCount();
 
+    // Map stuff
+    CubeVolume* GetCubeVolumeAdditiveByIndex(int32_t index);
+    CubeVolume* GetCubeVolumeSubtractiveByIndex(int32_t index);
+
+    // Containers
+    inline std::vector<Light> g_lights;
+    inline std::vector<Door> g_doors;
+    inline std::vector<SpawnPoint> g_spawnPoints;
+    inline std::vector<BulletCasing> g_bulletCasings;
+    inline std::vector<CubeVolume> g_cubeVolumesAdditive;
+    inline std::vector<CubeVolume> g_cubeVolumesSubtractive;
+
     // OLD SHIT BELOW
     inline PxTriangleMesh* _sceneTriangleMesh = NULL;
     inline PxRigidStatic* _sceneRigidDynamic = NULL;
@@ -160,18 +177,14 @@ namespace Scene {
     inline std::vector<BloodDecal> _bloodDecals;
     inline std::vector<VolumetricBloodSplatter> _volumetricBloodSplatters;
     inline std::vector<PickUp> _pickUps;
-    inline std::vector<SpawnPoint> _spawnPoints;
     inline std::vector<Bullet> _bullets;
-    inline std::vector<BulletCasing> _bulletCasings;
 
 	inline std::vector<Wall> _walls;
 	inline std::vector<Window> _windows;
-	inline std::vector<Door> _doors;
     inline std::vector<Floor> _floors;
     inline std::vector<Ceiling> _ceilings;
     inline std::vector<CloudPointOld> _cloudPoints;
     //inline std::vector<GameObject> _gameObjects;
-    inline std::vector<Light> _lights;
     inline std::vector<glm::vec3> _rtVertices;
     inline std::vector<RTMesh> _rtMesh;
     inline std::vector<RTInstance> _rtInstances;

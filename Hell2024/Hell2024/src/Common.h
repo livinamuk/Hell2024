@@ -48,7 +48,7 @@ enum WeaponAction {
 #define PLAYER_COUNT 4
 #define UNDEFINED_STRING "UNDEFINED_STRING"
 
-#define AUDIO_SELECT "SELECT.wav"
+#define AUDIO_SELECT "SELECT_2.wav"
 #define ENV_MAP_SIZE 2048
 
 #define DOOR_VOLUME 1.0f
@@ -256,7 +256,17 @@ enum RaycastGroup {
     PLAYER_4_RAGDOLL = 16
 };
 
-enum PhysicsObjectType { UNDEFINED = 0, GAME_OBJECT, GLASS, DOOR, SCENE_MESH, RAGDOLL_RIGID };
+enum class PhysicsObjectType {
+    UNDEFINED,
+    GAME_OBJECT,
+    GLASS,
+    DOOR,
+    WINDOW,
+    SCENE_MESH,
+    RAGDOLL_RIGID,
+    CSG_OBJECT_ADDITIVE,
+    CSG_OBJECT_SUBTRACIVE
+};
 
 struct PhysicsObjectData {
     PhysicsObjectData(PhysicsObjectType type, void* parent) {

@@ -3,6 +3,8 @@
 #include "Scene.h"
 #include "../BackEnd/BackEnd.h"
 #include "../Core/Audio.hpp"
+#include "../Editor/CSG.h"
+#include "../Editor/Editor.h"
 #include "../Input/Input.h"
 #include "../Input/InputMulti.h"
 #include "../Renderer/GlobalIllumination.h"
@@ -66,6 +68,37 @@ namespace Game {
         g_thisFrame = glfwGetTime();
         double deltaTime = g_thisFrame - g_lastFrame;
         _deltaTimeAccumulator += deltaTime;
+
+        // CSG
+        if (Input::KeyPressed(GLFW_KEY_O)) {
+            Physics::ClearCollisionLists();
+            Scene::LoadDefaultScene();
+            Audio::PlayAudio(AUDIO_SELECT, 1.00f);
+        }
+        CSG::Update();
+
+        // Editor
+        if (Input::KeyPressed(HELL_KEY_TAB)) {
+            Audio::PlayAudio(AUDIO_SELECT, 1.00f);
+            if (Editor::IsOpen()) {
+                Editor::LeaveEditor();
+                Game::GetPlayerByIndex(0)->EnableControl();
+                Input::DisableCursor();
+                std::cout << "Left editor\n";
+            }
+            else {
+                Editor::EnterEditor();
+                Input::ShowCursor();
+                Game::SetSplitscreenMode(SplitscreenMode::NONE);
+                for (int i = 0; i < Game::GetPlayerCount(); i++) {
+                    Game::GetPlayerByIndex(i)->DisableControl();
+                }
+                std::cout << "Entered editor\n";
+            }
+        }
+        if (Editor::IsOpen()) {
+            Editor::Update(deltaTime);
+        }
 
         // Physics
         while (_deltaTimeAccumulator >= _fixedDeltaTime) {
@@ -181,6 +214,17 @@ namespace Game {
         }
     }
 
+    void GiveControlToPlayer1() {
+        SetPlayerKeyboardAndMouseIndex(0, 0, 0);
+        SetPlayerKeyboardAndMouseIndex(1, 1, 1);
+        SetPlayerKeyboardAndMouseIndex(2, 1, 1);
+        SetPlayerKeyboardAndMouseIndex(3, 1, 1);
+        for (Player& player : _players) {
+            _players[0].DisableControl();
+        }
+        _players[0].EnableControl();
+    }
+
     const int GetPlayerIndexFromPlayerPointer(Player* player) {
         for (int i = 0; i < _players.size(); i++) {
             if (&_players[i] == player) {
@@ -227,6 +271,14 @@ namespace Game {
         }
     }
 
+    void RespawnAllDeadPlayers() {
+        for (Player& player : _players) {
+            if (player.IsDead()) {
+                player.Respawn();
+            }
+        }
+    }
+
     void EvaluateDebugKeyPresses() {
 
         if (Input::KeyPressed(HELL_KEY_B)) {
@@ -242,45 +294,47 @@ namespace Game {
             Audio::PlayAudio(AUDIO_SELECT, 1.00f);
         }
 
-        if (Input::KeyPressed(HELL_KEY_1)) {
-            SetPlayerKeyboardAndMouseIndex(0, 0, 0);
-            SetPlayerKeyboardAndMouseIndex(1, 1, 1);
-            SetPlayerKeyboardAndMouseIndex(2, 1, 1);
-            SetPlayerKeyboardAndMouseIndex(3, 1, 1);
-            PrintPlayerControlIndices();
+        if (!Editor::IsOpen()) {
+            if (Input::KeyPressed(HELL_KEY_1)) {
+                SetPlayerKeyboardAndMouseIndex(0, 0, 0);
+                SetPlayerKeyboardAndMouseIndex(1, 1, 1);
+                SetPlayerKeyboardAndMouseIndex(2, 1, 1);
+                SetPlayerKeyboardAndMouseIndex(3, 1, 1);
+                //PrintPlayerControlIndices();
+            }
+            if (Input::KeyPressed(HELL_KEY_2)) {
+                SetPlayerKeyboardAndMouseIndex(0, 1, 1);
+                SetPlayerKeyboardAndMouseIndex(1, 0, 0);
+                SetPlayerKeyboardAndMouseIndex(2, 1, 1);
+                SetPlayerKeyboardAndMouseIndex(3, 1, 1);
+                //PrintPlayerControlIndices();
+            }
+            if (Input::KeyPressed(HELL_KEY_3)) {
+                SetPlayerKeyboardAndMouseIndex(0, 1, 1);
+                SetPlayerKeyboardAndMouseIndex(1, 1, 1);
+                SetPlayerKeyboardAndMouseIndex(2, 0, 0);
+                SetPlayerKeyboardAndMouseIndex(3, 1, 1);
+                //PrintPlayerControlIndices();
+            }
+            if (Input::KeyPressed(HELL_KEY_4)) {
+                SetPlayerKeyboardAndMouseIndex(0, 1, 1);
+                SetPlayerKeyboardAndMouseIndex(1, 1, 1);
+                SetPlayerKeyboardAndMouseIndex(2, 1, 1);
+                SetPlayerKeyboardAndMouseIndex(3, 0, 0);
+                //PrintPlayerControlIndices();
+            }
         }
-        if (Input::KeyPressed(HELL_KEY_2)) {
-            SetPlayerKeyboardAndMouseIndex(0, 1, 1);
-            SetPlayerKeyboardAndMouseIndex(1, 0, 0);
-            SetPlayerKeyboardAndMouseIndex(2, 1, 1);
-            SetPlayerKeyboardAndMouseIndex(3, 1, 1);
-            PrintPlayerControlIndices();
-        }
-        if (Input::KeyPressed(HELL_KEY_3)) {
-            SetPlayerKeyboardAndMouseIndex(0, 1, 1);
-            SetPlayerKeyboardAndMouseIndex(1, 1, 1);
-            SetPlayerKeyboardAndMouseIndex(2, 0, 0);
-            SetPlayerKeyboardAndMouseIndex(3, 1, 1);
-            PrintPlayerControlIndices();
-        }
-        if (Input::KeyPressed(HELL_KEY_4)) {
-            SetPlayerKeyboardAndMouseIndex(0, 1, 1);
-            SetPlayerKeyboardAndMouseIndex(1, 1, 1);
-            SetPlayerKeyboardAndMouseIndex(2, 1, 1);
-            SetPlayerKeyboardAndMouseIndex(3, 0, 0);
-            PrintPlayerControlIndices();
-        }
-        if (Input::KeyPressed(HELL_KEY_J) && false) {
-            Game::_players[0].Respawn();
-            Game::_players[1].Respawn();
-        }
-        if (Input::KeyPressed(HELL_KEY_K)) {
-            RespawnAllPlayers();
+        if (Input::KeyPressed(HELL_KEY_J)) {
+            RespawnAllDeadPlayers();
         }
         if (Input::KeyPressed(HELL_KEY_K)) {
-            _players[1].Respawn();
-            _players[1].SetPosition(glm::vec3(3.0f, 0.1f, 3.5f));
-            Audio::PlayAudio("RE_Beep.wav", 0.75);
+            if (Editor::IsOpen()) {
+                std::cout << "Pos:" << Util::Vec3ToString(Game::GetPlayerByIndex(0)->GetFeetPosition()) << "\n";
+                std::cout << "Rot:" << Util::Vec3ToString(Game::GetPlayerByIndex(0)->GetViewRotation()) << "\n";
+            }
+            else {
+                RespawnAllPlayers();
+            }
         }
         if (Input::KeyPressed(HELL_KEY_GRAVE_ACCENT)) {
             _showDebugText = !_showDebugText;

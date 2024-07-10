@@ -1809,7 +1809,7 @@ void Context::merge(const Context& _src)
 {
 	IM3D_ASSERT(!m_endFrameCalled && !_src.m_endFrameCalled); // call MergeContexts() before calling EndFrame()
 
- // layer IDs
+ // layer IDs   
 	for (Id id : _src.m_layerIdMap)
 	{
 		pushLayerId(id); // add a new layer if id doesn't alrady exist

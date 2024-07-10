@@ -18,6 +18,7 @@ namespace Game {
     void SetSplitscreenMode(SplitscreenMode mode);
     void SetPlayerKeyboardAndMouseIndex(int playerIndex, int keyboardIndex, int mouseIndex);
     void SetPlayerGroundedStates();
+    void GiveControlToPlayer1();
 
     const int GetPlayerCount();
     const int GetPlayerIndexFromPlayerPointer(Player* player);

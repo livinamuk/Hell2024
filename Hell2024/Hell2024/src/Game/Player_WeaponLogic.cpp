@@ -490,6 +490,7 @@ bool Player::CanEnterADS() {
 
     AnimatedGameObject* viewWeapon = Scene::GetAnimatedGameObjectByIndex(m_viewWeaponAnimatedGameObjectIndex);
     WeaponInfo* weaponInfo = GetCurrentWeaponInfo();
+    WeaponState* weaponState = GetCurrentWeaponState();
 
     if (weaponInfo->name == "Tokarev") {
         return false;
@@ -497,6 +498,11 @@ bool Player::CanEnterADS() {
     if (weaponInfo->name == "AKS74U") {
         return false;
     }
+
+    if (weaponState && !weaponState->hasScope) {
+        return false;
+    }
+
     if (_weaponAction != RELOAD && _weaponAction != RELOAD_FROM_EMPTY && !InADS() ||
         _weaponAction == RELOAD && viewWeapon->AnimationIsPastPercentage(65.0f) ||
         _weaponAction == RELOAD_FROM_EMPTY && viewWeapon->AnimationIsPastPercentage(65.0f)) {
@@ -884,7 +890,7 @@ void Player::GiveRedDotToWeapon(std::string name) {
     WeaponInfo* weaponInfo = WeaponManager::GetWeaponInfoByName(name);
     WeaponState* state = GetWeaponStateByName(name);
     if (state && weaponInfo && weaponInfo->type == WeaponType::PISTOL) {
-        state->hasRedDot = true;
+        state->hasScope = true;
     }
 }
 

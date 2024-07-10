@@ -19,13 +19,19 @@ void main() {
     FinalLighting.rgb = texture(cubeMap, TexCoords).rgb;
 
 	FinalLighting.rgb *= skyboxTint;
+
     FinalLighting.a = 1.0;
 
 	Normal.rgb = vec3(0,0,0);
 	Normal.a = float(playerIndex) * 0.25;
 
+
 //	FragColor.rgb = vec3(0,0,0);
 
-//	contrastAdjust(FragColor, 2.0);
-    //   FragColor.rgb = texture(cubeMap, TexCoords).rgb;
+	vec3 desaturdatedColor = vec3(dot(vec3(0.200, 0.500, 0.100), FinalLighting.rgb));
+	FinalLighting.rgb = mix(desaturdatedColor, FinalLighting.rgb, 0.25);
+
+	contrastAdjust(FinalLighting, 1.125);
+	FinalLighting.rgb *= vec3(0.5);
+	FinalLighting.rgb *= vec3(0.0);
 }
