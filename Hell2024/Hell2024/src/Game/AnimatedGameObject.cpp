@@ -273,6 +273,10 @@ void AnimatedGameObject::PlayAnimation(std::string animationName, float speed) {
     std::cout << animationName << " not found!\n";
 }
 
+const char* AnimatedGameObject::GetCurrentAnimationName() {
+    return _currentAnimation->_filename.c_str();
+}
+
 void AnimatedGameObject::UpdateAnimation(float deltaTime) {
 
     float duration = _currentAnimation->m_duration / _currentAnimation->m_ticksPerSecond;

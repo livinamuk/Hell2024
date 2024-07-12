@@ -1352,31 +1352,11 @@ void OutlinePass(RenderData& renderData) {
     // HOVER
     // HOVER
 
+
+    std::vector<RenderItem3D> hoveredRenderItems = Editor::GetHoveredRenderItems();
+    std::vector<RenderItem3D> selectionRenderItems = Editor::GetSelectedRenderItems();
+
     if (Editor::GetHoveredObjectIndex() != -1) {
-
-        // Hack a list together of what to draw, if you are not a CSG object
-        std::vector<RenderItem3D> renderItems;
-
-        if (Editor::GetHoveredObjectType() == PhysicsObjectType::DOOR) {
-            Door& door = Scene::g_doors[Editor::GetHoveredObjectIndex()];
-            renderItems.insert(std::end(renderItems), std::begin(door.GetRenderItems()), std::end(door.GetRenderItems()));
-        }
-
-        if (Editor::GetHoveredObjectType() == PhysicsObjectType::GLASS) {
-            Window& window = Scene::g_windows[Editor::GetHoveredObjectIndex()];
-            renderItems.insert(std::end(renderItems), std::begin(window.GetRenderItems()), std::end(window.GetRenderItems()));
-        }
-
-        if (Editor::GetHoveredObjectType() == PhysicsObjectType::CSG_OBJECT_SUBTRACTIVE) {
-            CubeVolume& cubeVolume = Scene::g_cubeVolumesSubtractive[Editor::GetHoveredObjectIndex()];
-            static int meshIndex = AssetManager::GetModelByIndex(AssetManager::GetModelIndexByName("Cube"))->GetMeshIndices()[0];
-            RenderItem3D renderItem;
-            renderItem.meshIndex = meshIndex;
-            renderItem.modelMatrix = cubeVolume.GetModelMatrix();
-            Window& window = Scene::g_windows[Editor::GetHoveredObjectIndex()];
-            renderItems.push_back(renderItem);
-        }
-
         // Render mask
         glDisable(GL_DEPTH_TEST);
         glEnable(GL_STENCIL_TEST);
@@ -1393,14 +1373,13 @@ void OutlinePass(RenderData& renderData) {
             glDrawElementsInstancedBaseVertex(GL_TRIANGLES, cube.m_vertexCount, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int) * cube.m_baseVertex), 1, 0);
         }
         else {
-            for (RenderItem3D& renderItem : renderItems) {
+            for (RenderItem3D& renderItem : hoveredRenderItems) {
                 Mesh* mesh = AssetManager::GetMeshByIndex(renderItem.meshIndex);
                 shader.SetMat4("model", renderItem.modelMatrix);
                 glBindVertexArray(OpenGLBackEnd::GetVertexDataVAO());
                 glDrawElementsInstancedBaseVertex(GL_TRIANGLES, mesh->indexCount, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int) * mesh->baseIndex), 1, mesh->baseVertex);
             }
         }
-
         // Render outline
         glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
         glStencilMask(0x00);
@@ -1415,29 +1394,14 @@ void OutlinePass(RenderData& renderData) {
             glDrawElementsInstancedBaseVertex(GL_TRIANGLES, cube.m_vertexCount, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int) * cube.m_baseVertex), 5, 0);
         }
         else {
-            for (RenderItem3D& renderItem : renderItems) {
+            for (RenderItem3D& renderItem : hoveredRenderItems) {
                 Mesh* mesh = AssetManager::GetMeshByIndex(renderItem.meshIndex);
                 shader.SetMat4("model", renderItem.modelMatrix);
                 glDrawElementsInstancedBaseVertex(GL_TRIANGLES, mesh->indexCount, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int) * mesh->baseIndex), 5, mesh->baseVertex);
             }
         }
 
-
-
-        // SELECTION
-        // SELECTION
-        // SELECTION
-
         if (Editor::GetSelectedObjectIndex() != -1) {
-
-            // Hack a list together of what to draw, if you are not a CSG object
-            std::vector<RenderItem3D> renderItems;
-
-            if (Editor::GetSelectedObjectType() == PhysicsObjectType::DOOR) {
-                Door& door = Scene::g_doors[Editor::GetSelectedObjectIndex()];
-                renderItems.insert(std::end(renderItems), std::begin(door.GetRenderItems()), std::end(door.GetRenderItems()));
-            }
-
             // Render mask
             glDisable(GL_DEPTH_TEST);
             glEnable(GL_STENCIL_TEST);
@@ -1454,14 +1418,13 @@ void OutlinePass(RenderData& renderData) {
                 glDrawElementsInstancedBaseVertex(GL_TRIANGLES, cube.m_vertexCount, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int) * cube.m_baseVertex), 1, 0);
             }
             else {
-                for (RenderItem3D& renderItem : renderItems) {
+                for (RenderItem3D& renderItem : selectionRenderItems) {
                     Mesh* mesh = AssetManager::GetMeshByIndex(renderItem.meshIndex);
                     shader.SetMat4("model", renderItem.modelMatrix);
                     glBindVertexArray(OpenGLBackEnd::GetVertexDataVAO());
                     glDrawElementsInstancedBaseVertex(GL_TRIANGLES, mesh->indexCount, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int) * mesh->baseIndex), 1, mesh->baseVertex);
                 }
             }
-
             // Render outline
             glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
             glStencilMask(0x00);
@@ -1476,14 +1439,13 @@ void OutlinePass(RenderData& renderData) {
                 glDrawElementsInstancedBaseVertex(GL_TRIANGLES, cube.m_vertexCount, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int) * cube.m_baseVertex), 5, 0);
             }
             else {
-                for (RenderItem3D& renderItem : renderItems) {
+                for (RenderItem3D& renderItem : selectionRenderItems) {
                     Mesh* mesh = AssetManager::GetMeshByIndex(renderItem.meshIndex);
                     shader.SetMat4("model", renderItem.modelMatrix);
                     glDrawElementsInstancedBaseVertex(GL_TRIANGLES, mesh->indexCount, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int) * mesh->baseIndex), 5, mesh->baseVertex);
                 }
             }
         }
-
 
         // Cleanup
         glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
@@ -1528,33 +1490,32 @@ void CSGSubtractivePass() {
         Transform translation;
         Transform rotaton;
 
-        // z front
         translation.position = glm::vec3(0, 0, 0.5f);
         rotaton.rotation = glm::vec3(0, 0, 0);
         planeTransforms.push_back(cubeVolume.GetModelMatrix() * translation.to_mat4() * rotaton.to_mat4());
 
         // z back
-        translation.position = glm::vec3(0, 0, cubeVolume.m_transform.scale.z * -0.5f);
+        translation.position = glm::vec3(0, 0, -0.5f);
         rotaton.rotation = glm::vec3(0, HELL_PI, 0);
         planeTransforms.push_back(cubeVolume.GetModelMatrix() * translation.to_mat4() * rotaton.to_mat4());
 
         // x front
-        translation.position = glm::vec3(cubeVolume.m_transform.scale.x * 0.5f, 0, 0);
+        translation.position = glm::vec3(0.5f, 0, 0);
         rotaton.rotation = glm::vec3(0, HELL_PI * 0.5f, 0);
         planeTransforms.push_back(cubeVolume.GetModelMatrix() * translation.to_mat4() * rotaton.to_mat4());
 
         // x back
-        translation.position = glm::vec3(cubeVolume.m_transform.scale.x * -0.5f, 0, 0);
+        translation.position = glm::vec3(-0.5f, 0, 0);
         rotaton.rotation = glm::vec3(0, HELL_PI * 1.5f, 0);
         planeTransforms.push_back(cubeVolume.GetModelMatrix() * translation.to_mat4() * rotaton.to_mat4());
 
         // y top
-        translation.position = glm::vec3(0, cubeVolume.m_transform.scale.x * 0.5f, 0);
+        translation.position = glm::vec3(0, 0.5f, 0);
         rotaton.rotation = glm::vec3(HELL_PI * 1.5f, 0, 0);
         planeTransforms.push_back(cubeVolume.GetModelMatrix() * translation.to_mat4() * rotaton.to_mat4());
 
         // y bottom
-        translation.position = glm::vec3(0, cubeVolume.m_transform.scale.x * -0.5f, 0);
+        translation.position = glm::vec3(0, -0.5f, 0);
         rotaton.rotation = glm::vec3(HELL_PI * 0.5f, 0, 0);
         planeTransforms.push_back(cubeVolume.GetModelMatrix() * translation.to_mat4() * rotaton.to_mat4());
     }

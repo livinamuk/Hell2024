@@ -23,21 +23,11 @@ namespace Editor {
     double g_yawAngle = 0.0;
     double g_pitchAngle = 0.0;
     bool g_editorOpen = false;
-    bool g_hoverFound = false;
-    bool g_objectIsSelected = false;
+    //bool g_objectIsSelected = false;
     PhysicsObjectType g_hoveredObjectType = PhysicsObjectType::UNDEFINED;
     PhysicsObjectType g_selectedObjectType = PhysicsObjectType::UNDEFINED;
     int g_hoveredObjectIndex = 0;
     int g_selectedObjectIndex = 0;
-
-    struct EditorObject {
-        void* ptr;
-        void* rigidBody;
-        PhysicsObjectType type;
-    };
-
-    EditorObject g_selectedEditorObject;
-    EditorObject g_hoveredEditorObject;
 
     std::string g_debugText = "";
 
@@ -48,7 +38,7 @@ namespace Editor {
         return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
     }
 
-    #define if_likely(e)   if(!!(e))
+#define if_likely(e)   if(!!(e))
     constexpr float Pi = 3.14159265359f;
     constexpr float TwoPi = 2.0f * Pi;
     constexpr float HalfPi = 0.5f * Pi;
@@ -63,7 +53,7 @@ namespace Editor {
             ret.x = atan2f(_m(2, 1) * c, _m(2, 2) * c);
             ret.z = atan2f(_m(1, 0) * c, _m(0, 0) * c);
         }
-    else
+else
     {
         ret.z = 0.0f;
         if (!(_m(2, 0) > -1.0f))
@@ -127,57 +117,54 @@ namespace Editor {
         static glm::mat4 gizmoMatrix = gizmoTransform.to_mat4();
 
         // Check for hover
+        g_hoveredObjectType == PhysicsObjectType::UNDEFINED;
+        g_hoveredObjectIndex = -1;
         glm::mat4 projection = player->GetProjectionMatrix();
-        g_hoveredEditorObject.ptr = nullptr;
-        g_hoveredEditorObject.rigidBody = nullptr;
-        g_hoveredEditorObject.type = PhysicsObjectType::UNDEFINED;
         PxU32 hitFlags = RaycastGroup::RAYCAST_ENABLED;
         glm::vec3 rayOrigin = glm::inverse(g_editorViewMatrix)[3];
         glm::vec3 rayDirection = Util::GetMouseRay(projection, g_editorViewMatrix, BackEnd::GetCurrentWindowWidth(), BackEnd::GetCurrentWindowHeight(), Input::GetMouseX(), Input::GetMouseY());
         auto hitResult = Util::CastPhysXRay(rayOrigin, rayDirection, 100, hitFlags, true);
 
-        g_hoverFound = false;
-        g_hoveredObjectType = PhysicsObjectType::UNDEFINED;
-        g_hoveredObjectIndex = -1;
-
+        // Hover found?
         if (hitResult.hitFound) {
             g_hoveredObjectType = hitResult.physicsObjectType;
 
             if (hitResult.physicsObjectType == PhysicsObjectType::GAME_OBJECT) {
                 // To do
             }
+
+            // CSG additive
             if (hitResult.physicsObjectType == PhysicsObjectType::CSG_OBJECT_ADDITIVE) {
                 for (CSGObject& csgObject : CSG::GetCSGObjects()) {
                     if (&csgObject == hitResult.parent) {
                         g_hoveredObjectIndex = csgObject.m_parentIndex;
-                        g_hoverFound = true;
                         break;
                     }
                 }
             }
+            // CSG subtractive
             if (hitResult.physicsObjectType == PhysicsObjectType::CSG_OBJECT_SUBTRACTIVE) {
                 for (int i = 0; i < Scene::g_cubeVolumesSubtractive.size(); i++) {
                     CubeVolume& cubeVolume = Scene::g_cubeVolumesSubtractive[i];
                     if (&cubeVolume == hitResult.parent) {
                         g_hoveredObjectIndex = i;
-                        g_hoverFound = true;
                         break;
                     }
                 }
             }
+            // Doors
             if (hitResult.physicsObjectType == PhysicsObjectType::DOOR) {
                 for (int i = 0; i < Scene::g_doors.size(); i++) {
                     if (&Scene::g_doors[i] == hitResult.parent) {
-                        g_hoverFound = true;
                         g_hoveredObjectIndex = i;
                         break;
                     }
                 }
             }
+            // Windows
             if (hitResult.physicsObjectType == PhysicsObjectType::GLASS) {
                 for (int i = 0; i < Scene::g_windows.size(); i++) {
                     if (&Scene::g_windows[i] == hitResult.parent) {
-                        g_hoverFound = true;
                         g_hoveredObjectIndex = i;
                         break;
                     }
@@ -185,21 +172,18 @@ namespace Editor {
             }
         }
 
-
         if (!Input::KeyDown(HELL_KEY_LEFT_CONTROL_GLFW) && !Input::KeyDown(HELL_KEY_LEFT_ALT)) {
 
-            // Select clicked hovered object
-            if (Input::LeftMousePressed() && g_hoverFound && !Gizmo::HasHover()) {
-                g_objectIsSelected = true;
+            // Clicked to select hovered object
+            if (Input::LeftMousePressed() && ObjectIsHoverered() && !Gizmo::HasHover()) {
                 g_selectedObjectIndex = g_hoveredObjectIndex;
                 g_selectedObjectType = g_hoveredObjectType;
                 std::cout << "Selected an editor object\n";
             }
 
             // Clicked on nothing, so unselect any selected object
-            if (Input::LeftMousePressed() && !g_hoverFound && !Gizmo::HasHover()) {
+            if (Input::LeftMousePressed() && !ObjectIsHoverered() && !Gizmo::HasHover()) {
                 g_selectedObjectIndex = -1;
-                g_objectIsSelected = false;
                 Transform gizmoTransform;
                 gizmoTransform.position.y = -1000.0f;
                 gizmoMatrix = gizmoTransform.to_mat4();
@@ -210,9 +194,11 @@ namespace Editor {
 
 
         // Update gizmo with correct matrix if required
-        if (g_objectIsSelected) {
+        if (ObjectIsSelected()) {
 
+            // Moved gizmo
             if (Input::LeftMousePressed()) {
+
                 if (g_selectedObjectType == PhysicsObjectType::CSG_OBJECT_ADDITIVE) {
                     CubeVolume* cubeVolume = Scene::GetCubeVolumeAdditiveByIndex(g_selectedObjectIndex);
                     if (cubeVolume) {
@@ -253,6 +239,7 @@ namespace Editor {
             gizmoTransform.rotation = glm::vec3(euler.x, euler.y, euler.z);
             gizmoTransform.scale = glm::vec3(scale.x, scale.y, scale.z);
 
+            // Update moved object
             if (Input::LeftMouseDown() && Gizmo::HasHover()) {
 
                 if (g_selectedObjectType == PhysicsObjectType::CSG_OBJECT_ADDITIVE) {
@@ -274,8 +261,8 @@ namespace Editor {
                     gizmoMatrix = Scene::g_doors[g_selectedObjectIndex].GetGizmoMatrix();
                 }
                 if (g_selectedObjectType == PhysicsObjectType::GLASS) {
-                   Scene::g_windows[g_selectedObjectIndex].SetPosition(glm::vec3(pos.x, pos.y - 1.5f, pos.z));
-                   gizmoMatrix = Scene::g_windows[g_selectedObjectIndex].GetGizmoMatrix();
+                    Scene::g_windows[g_selectedObjectIndex].SetPosition(glm::vec3(pos.x, pos.y - 1.5f, pos.z));
+                    gizmoMatrix = Scene::g_windows[g_selectedObjectIndex].GetGizmoMatrix();
                 }
                 CSG::Build();
             }
@@ -322,7 +309,7 @@ namespace Editor {
 
 
         // Rotate selected door or window
-        if (g_objectIsSelected) {
+        if (ObjectIsSelected()) {
             if (Input::KeyPressed(HELL_KEY_Y)) {
                 if (g_selectedObjectType == PhysicsObjectType::DOOR) {
                     Door& door = Scene::g_doors[g_selectedObjectIndex];
@@ -337,29 +324,37 @@ namespace Editor {
             }
         }
 
+        // Delete selected object
+        if (Input::KeyPressed(HELL_KEY_BACKSPACE) && g_hoveredObjectIndex != -1) {
+            // To do
+        }
 
 
         g_debugText = "";
 
-        if (g_hoverFound) {
-                g_debugText += "Hovered: " + Util::PhysicsObjectTypeToString(g_hoveredObjectType) + "\n";
+        if (ObjectIsHoverered()) {
+            g_debugText += "Hovered: " + Util::PhysicsObjectTypeToString(g_hoveredObjectType) + "\n";
         }
         else {
             g_debugText += "Hovered: NONE_FOUND " + std::to_string(g_hoveredObjectIndex) + "\n";
         }
-        if (g_objectIsSelected) {
+        if (ObjectIsSelected()) {
             g_debugText += "Selected: " + Util::PhysicsObjectTypeToString(g_selectedObjectType) + "\n";
         }
         else {
             g_debugText += "Selected: NONE_FOUND " + std::to_string(g_selectedObjectIndex) + "\n";
         }
 
-       // g_debugText += "Gizmo Has Hover: " + std::to_string(Gizmo::HasHover());
+        // g_debugText += "Gizmo Has Hover: " + std::to_string(Gizmo::HasHover());
     }
 
     void EnterEditor() {
 
         g_editorOpen = true;
+        g_selectedObjectIndex = -1;
+        g_hoveredObjectIndex = -1;
+        g_selectedObjectType = PhysicsObjectType::UNDEFINED;
+        g_hoveredObjectType = PhysicsObjectType::UNDEFINED;
 
         Scene::CleanUpBulletHoleDecals();
         Scene::CleanUpBulletCasings();
@@ -388,8 +383,10 @@ namespace Editor {
 
     void LeaveEditor() {
         g_editorOpen = false;
-        g_objectIsSelected = false;
+        g_selectedObjectType = PhysicsObjectType::UNDEFINED;
+        g_hoveredObjectType = PhysicsObjectType::UNDEFINED;
         g_selectedObjectIndex = -1;
+        g_hoveredObjectIndex = -1;
         Game::GiveControlToPlayer1();
         Gizmo::ResetHover();
     }
@@ -399,7 +396,11 @@ namespace Editor {
     }
 
     bool ObjectIsSelected() {
-        return g_objectIsSelected;
+        return g_selectedObjectType != PhysicsObjectType::UNDEFINED && g_selectedObjectIndex != -1;
+    }
+
+    bool ObjectIsHoverered() {
+        return g_hoveredObjectType != PhysicsObjectType::UNDEFINED && g_hoveredObjectIndex != -1;
     }
 
     glm::mat4& GetViewMatrix() {
@@ -424,5 +425,53 @@ namespace Editor {
 
     uint32_t GetHoveredObjectIndex() {
         return g_hoveredObjectIndex;
+    }
+
+    std::vector<RenderItem3D> GetRenderItems(int mode, int index) {
+
+        std::vector<RenderItem3D> renderItems;
+        PhysicsObjectType objectType = PhysicsObjectType::UNDEFINED;
+        int objectIndex = -1;
+
+        if (mode == 0) {
+            objectType = g_hoveredObjectType;
+            objectIndex = g_hoveredObjectIndex;
+        }
+        if (mode == 1) {
+            objectType = g_selectedObjectType;
+            objectIndex = g_selectedObjectIndex;
+        }
+
+        // Doors
+        if (objectType == PhysicsObjectType::DOOR) {
+            Door& door = Scene::g_doors[objectIndex];
+            renderItems.insert(std::end(renderItems), std::begin(door.GetRenderItems()), std::end(door.GetRenderItems()));
+        }
+
+        // Windows
+        if (objectType == PhysicsObjectType::GLASS) {
+            Window& window = Scene::g_windows[objectIndex];
+            renderItems.insert(std::end(renderItems), std::begin(window.GetRenderItems()), std::end(window.GetRenderItems()));
+        }
+
+        // CSG Subtractive
+        if (objectType == PhysicsObjectType::CSG_OBJECT_SUBTRACTIVE) {
+            CubeVolume& cubeVolume = Scene::g_cubeVolumesSubtractive[objectIndex];
+            static int meshIndex = AssetManager::GetModelByIndex(AssetManager::GetModelIndexByName("Cube"))->GetMeshIndices()[0];
+            RenderItem3D renderItem;
+            renderItem.meshIndex = meshIndex;
+            renderItem.modelMatrix = cubeVolume.GetModelMatrix();
+            Window& window = Scene::g_windows[objectIndex];
+            renderItems.push_back(renderItem);
+        }
+        return renderItems;
+    }
+
+    std::vector<RenderItem3D> GetHoveredRenderItems() {
+        return GetRenderItems(0, g_hoveredObjectIndex);
+    }
+
+    std::vector<RenderItem3D> GetSelectedRenderItems() {
+        return GetRenderItems(1, g_selectedObjectIndex);
     }
 }

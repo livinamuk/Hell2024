@@ -140,6 +140,8 @@ public:
         return baseTransformIndex;
     }
 
+    const char* GetCurrentAnimationName();
+
 private:
 
 	void UpdateAnimation(float deltaTime);

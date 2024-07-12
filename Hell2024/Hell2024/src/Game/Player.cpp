@@ -135,13 +135,15 @@ void Player::Respawn() {
     SpawnPoint& spawnPoint = Scene::g_spawnPoints[randomSpawnLocationIndex];
 
     // Check you didn't just spawn on another player
-    for (int i = 0; i < Game::GetPlayerCount(); i++) {
-        Player* otherPlayer = Game::GetPlayerByIndex(i);
-        if (this != otherPlayer) {
-            float distanceToOtherPlayer = glm::distance(spawnPoint.position, otherPlayer->_position);
-            if (distanceToOtherPlayer < 1.0f) {
-                Respawn();
-                return;
+    if (m_playerIndex != 0) {
+        for (int i = 0; i < Game::GetPlayerCount(); i++) {
+            Player* otherPlayer = Game::GetPlayerByIndex(i);
+            if (this != otherPlayer) {
+                float distanceToOtherPlayer = glm::distance(spawnPoint.position, otherPlayer->_position);
+                if (distanceToOtherPlayer < 1.0f) {
+                    Respawn();
+                    return;
+                }
             }
         }
     }

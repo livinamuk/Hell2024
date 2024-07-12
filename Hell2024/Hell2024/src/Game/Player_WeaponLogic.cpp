@@ -307,15 +307,10 @@ void Player::UpdateViewWeaponLogic(float deltaTime) {
             _weaponAction = IDLE;
         }
     }
-
-
-    // Pistol slide need sloding?
+    // Pistol slide need sliding?
     weaponState->useSlideOffset = false;
-    if (weaponInfo->type == WeaponType::PISTOL) {
-
-        if (weaponState->ammoInMag == 0) {
-            weaponState->useSlideOffset = true;
-        }
+    if (weaponInfo->type == WeaponType::PISTOL && _weaponAction != RELOAD_FROM_EMPTY && weaponState->ammoInMag == 0) {
+        weaponState->useSlideOffset = true;
     }
 
     /*

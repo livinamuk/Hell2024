@@ -329,6 +329,10 @@ void OpenGLBackEnd::UploadWeightedVertexData(std::vector<WeightedVertex>& vertic
 
 void OpenGLBackEnd::CreatePointCloudVertexBuffer(std::vector<CloudPoint>& pointCloud) {
 
+    if (!pointCloud.size()) {
+        return;
+    }
+
     if (_pointCloudVAO != 0) {
         glDeleteVertexArrays(1, &_pointCloudVAO);
         glDeleteBuffers(1, &_pointCloudVBO);

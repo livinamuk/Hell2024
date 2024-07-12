@@ -237,12 +237,9 @@ namespace WeaponManager {
         tokarev.meshMaterials["TokarevMag"] = "TokarevMag";
         tokarev.meshMaterials["TokarevGripPolymer"] = "TokarevGrip";
         tokarev.meshMaterials["TokarevGripWood"] = "TokarevGrip";
-        tokarev.meshMaterials["SM_Tokarev_01_Main"] = "Tokarev";
-        tokarev.meshMaterials["SM_Tokarev_01_Mag"] = "TokarevMag";
-        tokarev.meshMaterials["SM_Tokarev_01_Grip_Polymer"] = "TokarevGrip";
-        tokarev.meshMaterials["SM_Tokarev_01_Grip_Wood"] = "TokarevGrip";
         tokarev.hiddenMeshAtStart.push_back("ArmsFemale");
-        tokarev.hiddenMeshAtStart.push_back("TokarevGripWood");
+        //tokarev.hiddenMeshAtStart.push_back("TokarevGripWood");
+        tokarev.hiddenMeshAtStart.push_back("TokarevGripPolymer");
         tokarev.audioFiles.fire.push_back("Tokarev_Fire0.wav");
         tokarev.audioFiles.fire.push_back("Tokarev_Fire1.wav");
         tokarev.audioFiles.fire.push_back("Tokarev_Fire2.wav");
