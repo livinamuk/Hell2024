@@ -996,6 +996,10 @@ int AssetManager::GetGoldRMATextureIndex() {
     return goldBaseColorIndex;
 }
 
+int AssetManager::GetMaterialCount() {
+    return _materials.size();
+}
+
 /////////////////////////////////
 //                             //
 //      CubemapTextures        //

@@ -3,6 +3,7 @@
 #include "GameObject.h"
 #include "AnimatedGameObject.h"
 #include "Light.h"
+#include "../Core/CreateInfo.hpp"
 #include "../Physics/Physics.h"
 #include "../Effects/BloodDecal.hpp"
 #include "../Effects/BulletCasing.h"
@@ -14,7 +15,6 @@
 #include "../Types/Modular/Ceiling.h"
 #include "../Types/Modular/Floor.h"
 #include "../Types/Modular/Toilet.h"
-#include "../Types/Modular/Wall.h"
 #include "../Types/Modular/Window.h"
 #include "../Util.hpp"
 
@@ -70,6 +70,8 @@ public:
 public:
     uint32_t materialIndex = 0;
     float textureScale = 1.0f;
+    float textureOffsetX = 0.0f;
+    float textureOffsetY = 0.0f;
     glm::mat4 GetModelMatrix() {
         return  m_transform.to_mat4();
     }
@@ -196,9 +198,15 @@ struct PickUp {
 
 namespace Scene {
 
-    void Update(float deltaTime);
 
+    void Update(float deltaTime);
+    void SaveMapData(const std::string& fileName);
+    void RemoveGameObjectByIndex(int index);
+
+    void LoadEmptyScene();
     void LoadDefaultScene();
+    void CreateBottomLevelAccelerationStructures();
+    void CreateTopLevelAccelerationStructures();
 
     // Bullet Hole Decals
     void CreateBulletDecal(glm::vec3 localPosition, glm::vec3 localNormal, PxRigidBody* parent, BulletHoleDecalType type);
@@ -231,12 +239,27 @@ namespace Scene {
 
     // Containers
     inline std::vector<Light> g_lights;
-    inline std::vector<Door> g_doors;
-    inline std::vector<Window> g_windows;
     inline std::vector<SpawnPoint> g_spawnPoints;
     inline std::vector<BulletCasing> g_bulletCasings;
     inline std::vector<CubeVolume> g_cubeVolumesAdditive;
     inline std::vector<CubeVolume> g_cubeVolumesSubtractive;
+
+    // Windows
+    uint32_t GetWindowCount();
+    Window* GetWindowByIndex(int index);
+    std::vector<Window>& GetWindows();
+    //void SetWindowPosition(uint32_t windowIndex, glm::vec3 position);
+    void CreateWindow(WindowCreateInfo createInfo);
+
+    // Doors
+    uint32_t GetDoorCount();
+    Door* GetDoorByIndex(int index);
+    std::vector<Door>& GetDoors();
+    //void SetDoorPosition(uint32_t doorIndex, glm::vec3 position);
+    void CreateDoor(DoorCreateInfo createInfo);
+
+    // Lights
+    void CreateLight(LightCreateInfo createInfo);
 
     // OLD SHIT BELOW
     inline PxTriangleMesh* _sceneTriangleMesh = NULL;
@@ -249,7 +272,6 @@ namespace Scene {
     inline std::vector<PickUp> _pickUps;
     inline std::vector<Bullet> _bullets;
 
-	inline std::vector<Wall> _walls;
     inline std::vector<Floor> _floors;
     inline std::vector<Ceiling> _ceilings;
     inline std::vector<CloudPointOld> _cloudPoints;
@@ -259,7 +281,7 @@ namespace Scene {
     inline std::vector<RTInstance> _rtInstances;
 
     // New shit
-    void LoadMapNEW(std::string mapPath);
+    void Init();
     std::vector<RenderItem3D> GetAllRenderItems();
     std::vector<RenderItem3D> CreateDecalRenderItems();
 
@@ -276,7 +298,6 @@ namespace Scene {
     void CreateMeshData();
     void AddLight(Light& light);
     void AddDoor(Door& door);
-    void AddWall(Wall& wall);
     void AddFloor(Floor& floor);
     void UpdateRTInstanceData();
     void RecreateDataStructures();
@@ -287,6 +308,7 @@ namespace Scene {
     void CalculateLightBoundingVolumes();
     void CheckForDirtyLights();
     void ResetGameObjectStates();
+    void DirtyAllLights();
 
     void CreateVolumetricBlood(glm::vec3 position, glm::vec3 rotation, glm::vec3 front);
 

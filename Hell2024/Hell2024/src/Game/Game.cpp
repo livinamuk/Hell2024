@@ -26,6 +26,7 @@ namespace Game {
     double g_lastFrame = 0;
     double g_thisFrame = 0;
     bool g_takeDamageOutside = false;
+    float g_time = 0;
 
     void EvaluateDebugKeyPresses();
 
@@ -37,13 +38,14 @@ namespace Game {
         _isLoaded = true;
         g_firstFrame = true;
 
-        Scene::LoadMapNEW("map.txt");
-
+        GlobalIllumination::DestroyAllLightVolumes();
         GlobalIllumination::CreatePointCloud();
-        GlobalIllumination::CreateLightVolume(7.0f, 2.7f, 11.0f, 0.0f, 0.0f, 0.0f);
+        GlobalIllumination::CreateLightVolume(7.0f, 3.0f, 11.0f, -3.5f, 0.0f, -8.0f);
 
         //CreatePlayers(2);
         CreatePlayers(4);
+
+        Scene::Init();
 
         g_gameSettings.takeDamageOutside = true;
         g_gameSettings.skyBoxTint = glm::vec3(0.3, 0.15, 0.03);
@@ -68,6 +70,7 @@ namespace Game {
         g_thisFrame = glfwGetTime();
         double deltaTime = g_thisFrame - g_lastFrame;
         _deltaTimeAccumulator += deltaTime;
+        g_time += deltaTime;
 
         // CSG
         if (Input::KeyPressed(GLFW_KEY_O)) {
@@ -78,22 +81,17 @@ namespace Game {
         CSG::Update();
 
         // Editor
+        if (Input::KeyPressed(HELL_KEY_F1) || Input::KeyPressed(HELL_KEY_F2)) {
+            Audio::PlayAudio(AUDIO_SELECT, 1.00f);
+            Editor::EnterEditor();
+        }
         if (Input::KeyPressed(HELL_KEY_TAB)) {
             Audio::PlayAudio(AUDIO_SELECT, 1.00f);
             if (Editor::IsOpen()) {
                 Editor::LeaveEditor();
-                Game::GetPlayerByIndex(0)->EnableControl();
-                Input::DisableCursor();
-                std::cout << "Left editor\n";
             }
             else {
                 Editor::EnterEditor();
-                Input::ShowCursor();
-                Game::SetSplitscreenMode(SplitscreenMode::NONE);
-                for (int i = 0; i < Game::GetPlayerCount(); i++) {
-                    Game::GetPlayerByIndex(i)->DisableControl();
-                }
-                std::cout << "Entered editor\n";
             }
         }
         if (Editor::IsOpen()) {
@@ -116,11 +114,6 @@ namespace Game {
         }
         InputMulti::ResetMouseOffsets();
         Scene::Update(deltaTime);
-
-        // Player weapon transforms
-        //for (Player& player: _players) {
-        //    player.GetFirstPersonWeapon().UpdateRenderItems();    // refactoring to elsewwhere
-        //}
     }
 
     void CreatePlayers(unsigned int playerCount) {
@@ -282,18 +275,21 @@ namespace Game {
     void EvaluateDebugKeyPresses() {
 
         if (Input::KeyPressed(HELL_KEY_B)) {
+            Audio::PlayAudio(AUDIO_SELECT, 1.00f);
             Renderer::NextDebugLineRenderMode();
-            Audio::PlayAudio(AUDIO_SELECT, 1.00f);
-        }
-        if (Input::KeyPressed(HELL_KEY_Z)) {
-            Renderer::PreviousRenderMode();
-            Audio::PlayAudio(AUDIO_SELECT, 1.00f);
         }
         if (Input::KeyPressed(HELL_KEY_X)) {
-            Renderer::NextRenderMode();
             Audio::PlayAudio(AUDIO_SELECT, 1.00f);
+            Renderer::PreviousRenderMode();
         }
-
+        if (Input::KeyPressed(HELL_KEY_Z)) {
+            Audio::PlayAudio(AUDIO_SELECT, 1.00f);
+            Renderer::NextRenderMode();
+        }
+        if (Input::KeyPressed(GLFW_KEY_Y)) {
+            Audio::PlayAudio(AUDIO_SELECT, 1.00f);
+            Renderer::ToggleProbes();
+        }
         if (!Editor::IsOpen()) {
             if (Input::KeyPressed(HELL_KEY_1)) {
                 SetPlayerKeyboardAndMouseIndex(0, 0, 0);
@@ -413,6 +409,10 @@ namespace Game {
             pickup->SetRaycastShapeFromModelIndex(AssetManager::GetModelIndexByName("TokarevAmmoBox_ConvexMesh"));
             pickup->UpdateRigidBodyMassAndInertia(150.0f);
         }
+    }
+
+    float GetTime() {
+        return g_time;
     }
 
     // sETTINGS

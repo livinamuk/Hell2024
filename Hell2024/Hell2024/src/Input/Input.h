@@ -30,4 +30,6 @@ namespace Input {
     void ShowCursor();
     int GetCursorScreenX();
     int GetCursorScreenY();
+    int GetViewportMappedMouseX(int viewportWidth);
+    int GetViewportMappedMouseY(int viewportHeight);
 }

@@ -39,7 +39,7 @@ const float PI = 3.14159265359;
 //   Shadow mapping   //
 
 vec3 gridSamplingDisk[20] = vec3[](
-   vec3(1, 1,  1), vec3( 1, -1,  1), vec3(-1, -1,  1), vec3(-1, 1,  1), 
+   vec3(1, 1,  1), vec3( 1, -1,  1), vec3(-1, -1,  1), vec3(-1, 1,  1),
    vec3(1, 1, -1), vec3( 1, -1, -1), vec3(-1, -1, -1), vec3(-1, 1, -1),
    vec3(1, 1,  0), vec3( 1, -1,  0), vec3(-1, -1,  0), vec3(-1, 1,  0),
    vec3(1, 0,  1), vec3(-1,  0,  1), vec3( 1,  0, -1), vec3(-1, 0, -1),
@@ -156,10 +156,10 @@ vec3 microfacetBRDF(in vec3 L, in vec3 V, in vec3 N, in vec3 baseColor, in float
   float NoV = clamp(dot(N, V), 0.0, 1.0);
   float NoL = clamp(dot(N, L), 0.0, 1.0);
   float NoH = clamp(dot(N, H), 0.0, 1.0);
-  float VoH = clamp(dot(V, H), 0.0, 1.0);       
-  // F0 for dielectics in range [0.0, 0.16] 
+  float VoH = clamp(dot(V, H), 0.0, 1.0);
+  // F0 for dielectics in range [0.0, 0.16]
   // default FO is (0.16 * 0.5^2) = 0.04
-  vec3 f0 = vec3(0.16 * (fresnelReflect * fresnelReflect)); 
+  vec3 f0 = vec3(0.16 * (fresnelReflect * fresnelReflect));
   // f0 = vec3(0.125);
   // in case of metals, baseColor contains F0
   f0 = mix(f0, baseColor, metallicness);
@@ -167,12 +167,12 @@ vec3 microfacetBRDF(in vec3 L, in vec3 V, in vec3 N, in vec3 baseColor, in float
   vec3 F = fresnelSchlick(VoH, f0);
   float D = D_GGX(NoH, roughness);
   float G = G_Smith(NoV, NoL, roughness);
-  vec3 spec = (D * G * F) / max(4.0 * NoV * NoL, 0.001);  
+  vec3 spec = (D * G * F) / max(4.0 * NoV * NoL, 0.001);
 
   // diffuse
   vec3 notSpec = vec3(1.0) - F; // if not specular, use as diffuse
   notSpec *= 1.0 - metallicness; // no diffuse for metals
-  vec3 diff = notSpec * baseColor / PI;   
+  vec3 diff = notSpec * baseColor / PI;
   spec *= 1.05;
   vec3 result = diff + spec;
 
@@ -181,13 +181,13 @@ vec3 microfacetBRDF(in vec3 L, in vec3 V, in vec3 N, in vec3 baseColor, in float
 
 vec3 GetDirectLighting(vec3 lightPos, vec3 lightColor, float radius, float strength, vec3 Normal, vec3 WorldPos, vec3 baseColor, float roughness, float metallic) {
 	float fresnelReflect = 1.0; // 0.5 is what they used for box, 1.0 for demon
-	vec3 viewDir = normalize(viewPos - WorldPos);    
+	vec3 viewDir = normalize(viewPos - WorldPos);
 	float lightRadiance = strength * 1;// * 1.25;
-	vec3 lightDir = normalize(lightPos - WorldPos); 
+	vec3 lightDir = normalize(lightPos - WorldPos);
 	float lightAttenuation = smoothstep(radius, 0, length(lightPos - WorldPos));
 	// lightAttenuation = clamp(lightAttenuation, 0.0, 0.9); // THIS IS WRONG, but does stop super bright region around light source and doesn't seem to affect anything else...
 	float irradiance = max(dot(lightDir, Normal), 0.0) ;
-	irradiance *= lightAttenuation * lightRadiance;		
+	irradiance *= lightAttenuation * lightRadiance;
 	vec3 brdf = microfacetBRDF(lightDir, viewDir, Normal, baseColor, metallic, fresnelReflect, roughness, WorldPos);
 	return brdf * irradiance * clamp(lightColor, 0, 1);
 }
@@ -205,7 +205,7 @@ vec3 GetProbe(vec3 fragWorldPos, ivec3 offset, out float weight, vec3 Normal) {
     //vec3 v = normalize(probe_worldPos - fragWorldPos); // TODO: no need to normalize if only checking sign
     vec3 v = (probe_worldPos - fragWorldPos);
     float vdotn = dot(v, Normal);
-    vec3 weights = mix(1. - a, a, offset);    
+    vec3 weights = mix(1. - a, a, offset);
     if(vdotn > 0 && probe_color != vec3(0))
         weight = weights.x * weights.y * weights.z;
     else
@@ -213,11 +213,11 @@ vec3 GetProbe(vec3 fragWorldPos, ivec3 offset, out float weight, vec3 Normal) {
     return probe_color;
 }
 
-vec3 GetIndirectLighting(vec3 WorldPos, vec3 Normal) { // Interpolate visible probes      
+vec3 GetIndirectLighting(vec3 WorldPos, vec3 Normal) { // Interpolate visible probes
     float w;
     vec3 light;
     float sumW = 0.;
-    vec3 indirectLighting = vec3(0.);    
+    vec3 indirectLighting = vec3(0.);
     light = GetProbe(WorldPos, ivec3(0, 0, 0), w, Normal);
     indirectLighting += w * light;
     sumW += w;
@@ -229,7 +229,7 @@ vec3 GetIndirectLighting(vec3 WorldPos, vec3 Normal) { // Interpolate visible pr
     sumW += w;
     light = GetProbe(WorldPos, ivec3(0, 1, 1), w, Normal);
     indirectLighting += w * light;
-    sumW += w;     
+    sumW += w;
     light = GetProbe(WorldPos, ivec3(1, 0, 0), w, Normal);
     indirectLighting += w * light;
     sumW += w;
@@ -269,7 +269,7 @@ void main() {
 	vec4 clipSpacePosition = vec4(TexCoords * 2.0 - 1.0, z, 1.0);
     vec4 viewSpacePosition = inverseProjection * clipSpacePosition;
     viewSpacePosition /= viewSpacePosition.w;
-    vec4 worldSpacePosition = inverseView * viewSpacePosition;    
+    vec4 worldSpacePosition = inverseView * viewSpacePosition;
     vec3 WorldPos = worldSpacePosition.xyz;
 
     // Direct lighting
@@ -287,7 +287,7 @@ void main() {
 
     vec3 adjustedIndirectLighting = indirectLighting;
     float factor = min(1, roughness * 1.5);
-    adjustedIndirectLighting *= (0.4) * vec3(factor); 
+    adjustedIndirectLighting *= (0.4) * vec3(factor);
     adjustedIndirectLighting = max(adjustedIndirectLighting, vec3(0));
     adjustedIndirectLighting *= baseColor.rgb * 1.5;
 
@@ -312,16 +312,16 @@ void main() {
         FragColor.rgb = adjustedIndirectLighting;
         FragColor.a = 1;
     }
-    
-	// FragColor.rgb = indirectLighting;    
+
+	// FragColor.rgb = indirectLighting;
 	float d = distance(viewPos, WorldPos);
 	float alpha = getFogFactor(d);
 	vec3 FogColor = vec3(0.0);
 	FragColor.rgb = mix(FragColor.rgb, FogColor, alpha);
 	FragColor.rgb = mix(FragColor.rgb, Tonemap_ACES(FragColor.rgb), 1.0);
-	FragColor.rgb = mix(FragColor.rgb, Tonemap_ACES(FragColor.rgb), 0.35);	
-	FragColor.rgb = pow(FragColor.rgb, vec3(1.0/2.2)); 
-		
+	FragColor.rgb = mix(FragColor.rgb, Tonemap_ACES(FragColor.rgb), 0.35);
+	FragColor.rgb = pow(FragColor.rgb, vec3(1.0/2.2));
+
 	// Noise
 	vec2 uv = gl_FragCoord.xy / vec2(screenWidth, screenHeight);
 	vec2 filmRes = vec2(screenWidth, screenHeight);
@@ -335,17 +335,17 @@ void main() {
 	float noiseSpeed = 30.0;
 	float x = rand(uv + rand(vec2(int(time * noiseSpeed), int(-time * noiseSpeed))));
 	float noiseFactor = 0.04;
-        
-	// Vignette         
+
+	// Vignette
 	uv = gl_FragCoord.xy / vec2(screenWidth * 1, screenHeight * 1);
-	uv *=  1.0 - uv.yx;           
-	float vig = uv.x*uv.y * 15.0;	// multiply with sth for intensity    
-	vig = pow(vig, 0.05);			// change pow for modifying the extend of the  vignette    
+	uv *=  1.0 - uv.yx;
+	float vig = uv.x*uv.y * 15.0;	// multiply with sth for intensity
+	vig = pow(vig, 0.05);			// change pow for modifying the extend of the  vignette
 	FragColor.rgb *= vec3(vig);
 
 	// Some more YOLO tone mapping
-	FragColor.rgb = mix(FragColor.rgb, Tonemap_ACES(FragColor.rgb), 0.995);	
-	
+	FragColor.rgb = mix(FragColor.rgb, Tonemap_ACES(FragColor.rgb), 0.995);
+
 	// Add the noise
 	FragColor.rgb = FragColor.rgb + (x * -noiseFactor) + (noiseFactor / 2);
 
@@ -356,7 +356,7 @@ void main() {
 
 	// Brightness
 	FragColor.rgb -= vec3(0.010);
-		
+
 	FragColor.a = baseColor.a;
 	//FragColor.a = 0.1;
 	//FragColor.rgb = vec3(baseColor.a);

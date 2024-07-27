@@ -70,6 +70,7 @@ namespace AssetManager {
     std::string& GetMaterialNameByIndex(int index);
     int GetGoldBaseColorTextureIndex();
     int GetGoldRMATextureIndex();
+    int GetMaterialCount();
 
     // Textures
     void LoadTexture(const std::string filepath);

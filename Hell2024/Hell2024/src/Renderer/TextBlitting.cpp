@@ -67,6 +67,9 @@ std::vector<RenderItem2D> TextBlitter::CreateText(std::string text, ivec2 locati
     if (alignment == Alignment::TOP_RIGHT || alignment == Alignment::BOTTOM_RIGHT) {
         location.x -= GetTextSizeInPixels(text, viewportSize, fontType, scale).x;
     }
+    if (alignment == Alignment::CENTERED) {
+        location.x -= GetTextSizeInPixels(text, viewportSize, fontType, scale).x / 2;
+    }
 
     glm::vec3 color = WHITE;
     int xcursor = location.x;
@@ -191,11 +194,12 @@ ivec2 TextBlitter::GetTextSizeInPixels(std::string text, ivec2 viewportSize, Bit
         }
         else if (character == ' ') {
             xcursor += _spaceWidth;
+            maxWidth = std::max(maxWidth, xcursor);
             continue;
         }
         else if (character == '\n') {
             xcursor = 0;
-            ycursor -= GetLineHeight(fontType) * scale.y;
+            ycursor += GetLineHeight(fontType) * scale.y;
             continue;
         }
 
@@ -222,13 +226,10 @@ ivec2 TextBlitter::GetTextSizeInPixels(std::string text, ivec2 viewportSize, Bit
         float texHeight = texture->GetHeight() * scale.y;
         float width = (1.0f / viewportSize.x) * texWidth;
         float height = (1.0f / viewportSize.y) * texHeight;
-        float cursor_X = ((xcursor + (texWidth / 2.0f)) / viewportSize.x) * 2 - 1;
-        float cursor_Y = ((ycursor + (texHeight / 2.0f)) / viewportSize.y) * 2 - 1;
 
         xcursor += texWidth + _charSpacing;
         maxWidth = std::max(maxWidth, xcursor);
-        maxHeight = std::max(maxWidth, ycursor);
     }
-
-    return ivec2(maxWidth, maxHeight);
+    maxWidth = std::max(maxWidth, xcursor);
+    return ivec2(maxWidth, ycursor);
 }

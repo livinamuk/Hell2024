@@ -3,6 +3,7 @@
 #include <fstream>
 #include <string>
 #include <iostream>
+#include <glm/glm.hpp>
 
 struct JSONObject {
 
@@ -43,6 +44,24 @@ struct JSONObject {
         data["array"] = arr;
         data["bool"] = true;
 
+        // Custom objects
+        struct Object {
+            glm::vec3 a;
+            glm::vec3 b;
+        };
+        std::vector<Object> objects = {
+            { {1.0f, 2.0f, 3.0f}, {0.0f, 0.0f, 0.0f} },
+            { {4.0f, 5.0f, 6.0f}, {0.1f, 0.1f, 0.1f} }
+        };
+        nlohmann::json jsonObjects = nlohmann::json::array();
+        for (const auto& object : objects) {
+            nlohmann::json jsonObject;
+            jsonObject["a"] = { {"x", object.a.x}, {"y", object.a.y}, {"z", object.a.z} };
+            jsonObject["b"] = { {"x", object.b.x}, {"y", object.b.y}, {"z", object.b.z} };
+            jsonObjects.push_back(jsonObject);
+        }
+        data["objects"] = jsonObjects;
+
         // Print it
         int indent = 4;
         std::string text = data.dump(indent);
@@ -76,6 +95,19 @@ struct JSONObject {
         std::cout << "int: " << i << "\n";
         std::cout << "float: " << f << "\n";
         std::cout << "string: " << s << "\n";
+
+        // Read custom objects
+        std::vector<Object> loadedObjects;
+        for (const auto& jsonObject : data["objects"]) {
+            Object object;
+            object.a = { jsonObject["a"]["x"], jsonObject["a"]["y"], jsonObject["a"]["z"] };
+            object.b = { jsonObject["b"]["x"], jsonObject["b"]["y"], jsonObject["b"]["z"] };
+            loadedObjects.push_back(object);
+        }
+        for (const Object& object : loadedObjects) {
+            std::cout << "a: (" << object.a.x << ", " << object.a.y << ", " << object.a.z << ") ";
+            std::cout << "b: (" << object.b.x << ", " << object.b.y << ", " << object.b.z << ")\n";
+        }
 
         // Error handling
         std::cout << "\n";

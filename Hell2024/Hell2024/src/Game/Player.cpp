@@ -21,12 +21,17 @@ Player::Player(int playerIndex) {
 
     CreateCharacterModel();
     CreateViewModel();
-    Respawn();
     CreateCharacterController(_position);
     CreateItemPickupOverlapShape();
+
+    g_awaitingRespawn = true;
 }
 
 void Player::Update(float deltaTime) {
+
+    if (g_awaitingRespawn) {
+        Respawn();
+    }
 
     AnimatedGameObject* characterModel = Scene::GetAnimatedGameObjectByIndex(m_characterModelAnimatedGameObjectIndex);
     AnimatedGameObject* viewWeaponGameObject = Scene::GetAnimatedGameObjectByIndex(m_viewWeaponAnimatedGameObjectIndex);
@@ -175,15 +180,9 @@ void Player::Respawn() {
     _rotation = spawnPoint.rotation;
     Audio::PlayAudio("Glock_Equip.wav", 0.5f);
     std::cout << "Respawn " << m_playerIndex << "\n";
+    g_awaitingRespawn = false;
 }
 
-/*
-struct PlayerCamera {
-
-    glm::vec3 position;
-    glm::vec3 rotation;
-
-};*/
 
 void Player::UpdateViewMatrix(float deltaTime) {
 
@@ -1670,6 +1669,10 @@ CrosshairType Player::GetCrosshairType() {
     // None
     if (IsDead()) {
         return CrosshairType::NONE;
+    }
+
+    if (m_pickUpInteractable) {
+        return CrosshairType::INTERACT;
     }
 
     // Interact

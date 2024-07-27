@@ -113,7 +113,17 @@ namespace WeaponManager {
         aks74u.animationNames.adsWalk = "AKS74U_ADS_Walk";
         aks74u.reloadMagInFrameNumber = 23;
         aks74u.reloadEmptyMagInFrameNumber = 21;
-
+        aks74u.pickupModelName = "AKS74U_Carlos";
+        aks74u.pickupConvexMeshModelName = "AKS74U_Carlos_ConvexMesh";
+        aks74u.pickUpMeshMaterials["FrontSight_low"] = "AKS74U_0";
+        aks74u.pickUpMeshMaterials["Receiver_low"] = "AKS74U_1";
+        aks74u.pickUpMeshMaterials["BoltCarrier_low"] = "AKS74U_1";
+        aks74u.pickUpMeshMaterials["SafetySwitch_low"] = "AKS74U_1";
+        aks74u.pickUpMeshMaterials["Pistol_low"] = "AKS74U_2";
+        aks74u.pickUpMeshMaterials["Trigger_low"] = "AKS74U_2";
+        aks74u.pickUpMeshMaterials["MagRelease_low"] = "AKS74U_2";
+        aks74u.pickUpMeshMaterials["Magazine_Housing_low"] = "AKS74U_3";
+        aks74u.pickUpMeshMaterials["BarrelTip_low"] = "AKS74U_4";
 
         WeaponInfo& goldeneGlock = g_weapons.emplace_back();
         goldeneGlock.name = "GoldenGlock";
@@ -169,6 +179,9 @@ namespace WeaponManager {
         goldeneGlock.animationNames.adsFire.push_back("Glock_ADS_Fire2");
         goldeneGlock.reloadMagInFrameNumber = 20;
         goldeneGlock.reloadEmptyMagInFrameNumber = 20;
+        goldeneGlock.pickupModelName = "Glock_Isolated";
+        goldeneGlock.pickupConvexMeshModelName = "Glock_Isolated_ConvexMesh";
+        goldeneGlock.pickUpMeshMaterials["Glock"] = "Gold";
 
         WeaponInfo& knife = g_weapons.emplace_back();
         knife.name = "Knife";
@@ -238,8 +251,8 @@ namespace WeaponManager {
         tokarev.meshMaterials["TokarevGripPolymer"] = "TokarevGrip";
         tokarev.meshMaterials["TokarevGripWood"] = "TokarevGrip";
         tokarev.hiddenMeshAtStart.push_back("ArmsFemale");
-        //tokarev.hiddenMeshAtStart.push_back("TokarevGripWood");
-        tokarev.hiddenMeshAtStart.push_back("TokarevGripPolymer");
+        tokarev.hiddenMeshAtStart.push_back("TokarevGripWood");
+        //tokarev.hiddenMeshAtStart.push_back("TokarevGripPolymer");
         tokarev.audioFiles.fire.push_back("Tokarev_Fire0.wav");
         tokarev.audioFiles.fire.push_back("Tokarev_Fire1.wav");
         tokarev.audioFiles.fire.push_back("Tokarev_Fire2.wav");
@@ -254,11 +267,18 @@ namespace WeaponManager {
         tokarev.casingEjectionOffset = glm::vec3(-0.066, -0.007, 0.249);
         tokarev.ammoType = "Tokarev";
         tokarev.animationCancelPercentages.draw = 50.0f;
-        tokarev.animationCancelPercentages.fire = 20.0f;
+        tokarev.animationCancelPercentages.fire = 5.0f;
         tokarev.animationCancelPercentages.reload = 80.0f;
         tokarev.animationCancelPercentages.reloadFromEmpty = 80.0f;
+
         tokarev.pistolSlideBoneName = "Slide";
         tokarev.pistolSlideOffset = -5;
+        tokarev.pickupModelName = "Tokarev_Isolated";
+        tokarev.pickupConvexMeshModelName = "Tokarev_ConvexMesh";
+        tokarev.pickUpMeshMaterials["TokarevBody"] = "Tokarev";
+        tokarev.pickUpMeshMaterials["TokarevGripPolymer"] = "TokarevGrip";
+
+
 
         WeaponInfo& glock = g_weapons.emplace_back();
         glock.name = "Glock";
@@ -311,7 +331,10 @@ namespace WeaponManager {
         glock.pistolSlideBoneName = "Slide";
         glock.pistolSlideOffset = 5;
         glock.reloadMagInFrameNumber = 20;
-        glock.reloadEmptyMagInFrameNumber= 20;
+        glock.reloadEmptyMagInFrameNumber = 20;
+        glock.pickupModelName = "Glock_Isolated";
+        glock.pickupConvexMeshModelName = "Glock_Isolated_ConvexMesh";
+        glock.pickUpMeshMaterials["Glock"] = "Glock";
 
         WeaponInfo& autoShotgun = g_weapons.emplace_back();
         autoShotgun.name = "AutomaticShotgun";
@@ -381,6 +404,9 @@ namespace WeaponManager {
         shotgun.casingEjectionBoneName = "Shell_bone";
         shotgun.casingEjectionForce = 13;
         shotgun.animationCancelPercentages.fire = 50.0f;
+        shotgun.pickupModelName = "Shotgun_Isolated";
+        shotgun.pickupConvexMeshModelName = "Shotgun_Isolated_ConvexMesh";
+        shotgun.pickUpMeshMaterials["Shotgun_Mesh"] = "Shotgun";
 
 
 

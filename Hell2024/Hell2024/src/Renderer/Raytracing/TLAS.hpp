@@ -25,6 +25,11 @@ public:
 
     void BuildBVH() {
 
+        if (!instanceAABBs.size()) {
+            return;
+        }
+
+
         unsigned int tlasCount = (unsigned int)instanceAABBs.size();
         nodes.clear();
         nodes.resize(tlasCount * 2);

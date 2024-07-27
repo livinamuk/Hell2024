@@ -10,14 +10,19 @@ namespace Editor {
     bool IsOpen();
     bool ObjectIsSelected();
     bool ObjectIsHoverered();
-    glm::mat4& GetViewMatrix();
     std::string& GetDebugText();
     PhysicsObjectType& GetHoveredObjectType();
     PhysicsObjectType& GetSelectedObjectType();
     uint32_t GetSelectedObjectIndex();
     uint32_t GetHoveredObjectIndex();
+    glm::mat4& GetViewMatrix();
+    glm::vec3 GetViewPos();
 
-    std::vector<RenderItem3D> GetHoveredRenderItems();
-    std::vector<RenderItem3D> GetSelectedRenderItems();
+    // Rendering
+    void UpdateRenderItems();
+    std::vector<RenderItem3D>& GetHoveredRenderItems();
+    std::vector<RenderItem3D>& GetSelectedRenderItems();
+    std::vector<RenderItem2D>& GetMenuRenderItems();
+    std::vector<RenderItem2D>& GetEditorUIRenderItems();
 
 }

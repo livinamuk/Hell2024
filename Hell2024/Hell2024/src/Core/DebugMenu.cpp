@@ -1,4 +1,4 @@
-
+/*
 #include "Audio.hpp"
 #include "DebugMenu.h"
 #include "Floorplan.h"
@@ -114,12 +114,6 @@ void DebugMenu::Init() {
 }
 
 void DebugMenu::UpdateWindowMenuPointers() {
-	/*_windowMenu.subMenu.clear();
-	_windowMenu.AddItem("X Position", MenuItemFlag::FLOAT, &Scene::g_windows[_selectedWindowIndex].position.x);
-	_windowMenu.AddItem("Z Position", MenuItemFlag::FLOAT, &Scene::g_windows[_selectedWindowIndex].position.z);
-	_windowMenu.AddItem("Rotation", MenuItemFlag::FLOAT, &Scene::g_windows[_selectedWindowIndex].rotation.y);
-	_windowMenu.AddItem("", MenuItemFlag::UNDEFINED, nullptr);
-	_windowMenu.AddItem("Remove", MenuItemFlag::REMOVE_WINDOW, nullptr);*/
 }
 
 void DebugMenu::UpdateGameObjectMenuPointers() {
@@ -139,19 +133,6 @@ void DebugMenu::UpdateGameObjectMenuPointers() {
 }
 
 void DebugMenu::UpdateLightObjectMenuPointers() {
-	_lightsMenu.subMenu.clear();
-	_lightsMenu.AddItem("X Position", MenuItemFlag::FLOAT, &Scene::g_lights[_selectedLightIndex].position.x);
-	_lightsMenu.AddItem("Y Position", MenuItemFlag::FLOAT, &Scene::g_lights[_selectedLightIndex].position.y);
-	_lightsMenu.AddItem("Z Position", MenuItemFlag::FLOAT, &Scene::g_lights[_selectedLightIndex].position.z);
-	_lightsMenu.AddItem("", MenuItemFlag::UNDEFINED, nullptr);
-	_lightsMenu.AddItem("Strength", MenuItemFlag::FLOAT, &Scene::g_lights[_selectedLightIndex].strength);
-    _lightsMenu.AddItem("Radius", MenuItemFlag::FLOAT, &Scene::g_lights[_selectedLightIndex].radius);
-    _lightsMenu.AddItem("", MenuItemFlag::UNDEFINED, nullptr);
-    _lightsMenu.AddItem("Type", MenuItemFlag::INT, &Scene::g_lights[_selectedLightIndex].type);
-	/*
-	Doesn't display the right light index after removing
-	_lightsMenu.AddItem("Remove", MenuItemFlag::REMOVE_LIGHT, nullptr);
-	*/
 }
 
 int DebugMenu::GetSelectedLightIndex() {
@@ -283,13 +264,6 @@ void DebugMenu::PressedEnter() {
 	// Remove window
 	else if (flag == MenuItemFlag::REMOVE_GAME_OBJECT) {
 		std::cout << "you need to write this code mate\n";
-		/*
-		GameObject& gameObject = Scene::_gameObjects[_selectedGameObjectIndex];
-		//Scene::RemoveAllDecalsFromWindow(&gameObject);
-		gameObject.CleanUp();
-		Scene::_windows.erase(Scene::_windows.begin() + _selectedGameObjectIndex);
-		Scene::RecreateDataStructures();
-		*/
 	}
 	else if (flag == MenuItemFlag::ADD_LIGHT) {
 		std::cout << "you need to write this code mate\n";
@@ -305,11 +279,6 @@ void DebugMenu::PressedEnter() {
 	}
 
 	else if (flag == MenuItemFlag::REMOVE_LIGHT) {
-		/*
-		Light& light = Scene::_lights[_selectedLightIndex];
-		Scene::_lights.erase(Scene::_lights.begin() + _selectedLightIndex);
-		Scene::UnloadLightSetup(_selectedLightIndex);
-		*/
 	}
 
 }
@@ -530,3 +499,4 @@ const bool DebugMenu::SubMenuHasValues() {
 	}
 	return false;
 }
+*/

@@ -19,12 +19,15 @@ namespace OpenGLBackEnd {
     GLuint g_skinnedVertexDataVBO = 0;
     GLuint g_allocatedSkinnedVertexBufferSize = 0;
 
-    GLuint _pointCloudVAO = 0;
-    GLuint _pointCloudVBO = 0;
+    GLuint g_pointCloudVAO = 0;
+    GLuint g_pointCloudVBO = 0;
 
     GLuint g_constructiveSolidGeometryVAO = 0;
     GLuint g_constructiveSolidGeometryVBO = 0;
     GLuint g_constructiveSolidGeometryEBO = 0;
+
+    GLuint g_triangle2DVAO = 0;
+    GLuint g_triangle2DVBO = 0;
 
     GLuint GetVertexDataVAO() {
         return _vertexDataVAO;
@@ -59,11 +62,11 @@ namespace OpenGLBackEnd {
     }
 
     GLuint GetPointCloudVAO() {
-        return _pointCloudVAO;
+        return g_pointCloudVAO;
     }
 
     GLuint GetPointCloudVBO() {
-        return _pointCloudVBO;
+        return g_pointCloudVBO;
     }
 
     GLuint GetCSGVAO() {
@@ -72,6 +75,10 @@ namespace OpenGLBackEnd {
 
     GLuint GetCSGVBO() {
         return g_constructiveSolidGeometryVBO;
+    }
+
+    GLuint GetCSGEBO() {
+        return g_constructiveSolidGeometryEBO;
     }
 }
 
@@ -244,15 +251,10 @@ void OpenGLBackEnd::UploadVertexData(std::vector<Vertex>& vertices, std::vector<
     glBindVertexArray(0);
 }
 
-void OpenGLBackEnd::UploadConstructiveSolidGeometry(std::vector<Vertex>& vertices) {
+void OpenGLBackEnd::UploadConstructiveSolidGeometry(std::vector<Vertex>& vertices, std::vector<uint32_t>& indices) {
 
     if (vertices.empty()) {
         return;
-    }
-
-    std::vector<uint32_t> indices;
-    for (int i = 0; i < vertices.size(); i++) {
-        indices.push_back(i);
     }
 
     if (g_constructiveSolidGeometryVAO != 0) {
@@ -281,10 +283,16 @@ void OpenGLBackEnd::UploadConstructiveSolidGeometry(std::vector<Vertex>& vertice
     glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, tangent));
 
     glEnableVertexAttribArray(0);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
+   // glBindBuffer(GL_ARRAY_BUFFER, 0);
+   // glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
 
     std::cout << "Uploaded constructive geometry to gpu\n";
+    std::cout << "-vertices: " << vertices.size() << "\n";
+    std::cout << "-indices: " << indices.size() << "\n";
+    std::cout << "-vao: " << g_constructiveSolidGeometryVAO << "\n";
+    std::cout << "-vbo: " << g_constructiveSolidGeometryVBO << "\n";
+    std::cout << "-ebo: " << g_constructiveSolidGeometryEBO << "\n";
 }
 
 void OpenGLBackEnd::UploadWeightedVertexData(std::vector<WeightedVertex>& vertices, std::vector<uint32_t>& indices) {
@@ -329,20 +337,26 @@ void OpenGLBackEnd::UploadWeightedVertexData(std::vector<WeightedVertex>& vertic
 
 void OpenGLBackEnd::CreatePointCloudVertexBuffer(std::vector<CloudPoint>& pointCloud) {
 
+    if (g_pointCloudVAO != 0) {
+        glDeleteVertexArrays(1, &g_pointCloudVAO);
+        glDeleteBuffers(1, &g_pointCloudVBO);
+    }
+
+    glGenVertexArrays(1, &g_pointCloudVAO);
+    glGenBuffers(1, &g_pointCloudVBO);
+
     if (!pointCloud.size()) {
         return;
     }
 
-    if (_pointCloudVAO != 0) {
-        glDeleteVertexArrays(1, &_pointCloudVAO);
-        glDeleteBuffers(1, &_pointCloudVBO);
-    }
+    // TODO
+    // write code to only recreate the point cloud if you need more space in the vertex buffer
+    // write code to only recreate the point cloud if you need more space in the vertex buffer
+    // write code to only recreate the point cloud if you need more space in the vertex buffer
+    // write code to only recreate the point cloud if you need more space in the vertex buffer
 
-    glGenVertexArrays(1, &_pointCloudVAO);
-    glGenBuffers(1, &_pointCloudVBO);
-
-    glBindVertexArray(_pointCloudVAO);
-    glBindBuffer(GL_ARRAY_BUFFER, _pointCloudVBO);
+    glBindVertexArray(g_pointCloudVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, g_pointCloudVBO);
     glBufferData(GL_ARRAY_BUFFER, pointCloud.size() * sizeof(CloudPoint), &pointCloud[0], GL_STATIC_DRAW);
 
     glEnableVertexAttribArray(0);
@@ -355,4 +369,38 @@ void OpenGLBackEnd::CreatePointCloudVertexBuffer(std::vector<CloudPoint>& pointC
     glEnableVertexAttribArray(0);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
+}
+
+void OpenGLBackEnd::UploadTriangle2DData(std::vector<glm::vec2>& vertices) {
+
+    if (g_triangle2DVAO != 0) {
+        glDeleteVertexArrays(1, &g_triangle2DVAO);
+        glDeleteBuffers(1, &g_triangle2DVBO);
+    }
+    glGenVertexArrays(1, &g_triangle2DVAO);
+    glGenBuffers(1, &g_triangle2DVBO);
+
+    if (!vertices.size()) {
+        return;
+    }
+
+    glBindVertexArray(g_triangle2DVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, g_triangle2DVBO);
+    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(glm::vec2), &vertices[0], GL_STATIC_DRAW);
+
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(glm::vec2), (void*)0);
+
+    glEnableVertexAttribArray(0);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
+}
+
+GLuint OpenGLBackEnd::GetTriangles2DVAO() {
+    return g_triangle2DVAO;
+}
+
+GLuint OpenGLBackEnd::GetTriangles2DVBO() {
+    return g_triangle2DVBO;
+
 }

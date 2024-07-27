@@ -186,7 +186,7 @@ namespace RendererUtil {
         dst.insert(std::end(dst), std::begin(src), std::end(src));
     }
 
-    inline RenderItem2D CreateRenderItem2D(const char* textureName, ivec2 location, ivec2 viewportSize, Alignment alignment, glm::vec3 colorTint = WHITE) {
+    inline RenderItem2D CreateRenderItem2D(const char* textureName, ivec2 location, ivec2 viewportSize, Alignment alignment, glm::vec3 colorTint = WHITE, ivec2 size = ivec2(-1, -1)) {
 
         static std::unordered_map<const char*, int> textureIndices;
         if (textureIndices.find(textureName) == textureIndices.end()) {
@@ -202,6 +202,12 @@ namespace RendererUtil {
         }
         float texWidth = texture->GetWidth();
         float texHeight = texture->GetHeight();
+
+        if (size.x != -1 && size.y != -1) {
+            texWidth = size.x;
+            texHeight = size.y;
+        }
+
         float width = (1.0f / viewportSize.x) * texWidth;
         float height = (1.0f / viewportSize.y) * texHeight;
 
@@ -218,7 +224,10 @@ namespace RendererUtil {
         else if (alignment == Alignment::BOTTOM_LEFT) {
             location.x -= texWidth;
         }
-        else if (alignment == Alignment::TOP_LEFT) {
+        else if (alignment == Alignment::BOTTOM_RIGHT) {
+            location.x -= texWidth;
+        }
+        else if (alignment == Alignment::TOP_RIGHT) {
             location.x -= texWidth;
             location.y -= texHeight;
         }
@@ -233,9 +242,9 @@ namespace RendererUtil {
 
         renderItem.modelMatrix = transform.to_mat4();
         renderItem.textureIndex = textureIndices[textureName];
-        renderItem.colorTintR = 1.0f;
-        renderItem.colorTintG = 1.0f;
-        renderItem.colorTintB = 1.0f;
+        renderItem.colorTintR = colorTint.r;
+        renderItem.colorTintG = colorTint.g;
+        renderItem.colorTintB = colorTint.b;
         return renderItem;
 
     }

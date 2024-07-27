@@ -1,36 +1,67 @@
 # HELL ENGINE: rewrite one billion++
 
+<!-- December 27 2023 -->
+This codebase began as a CPU raycaster to explore the viability of a voxel based idea I had for global illumination. The voxel idea didn't work out in the end, the voxel grid caused lighting artefacts, but rewriting it to use a pointcloud did and here we are. This is now the new Hell Engine, the engine I'm writing to house a splitscreen roguelike/deathmatch survival horror game.
+
+![Image](https://www.principiaprogrammatica.com/dump/githubthumb.jpg)
+
+
+### Controls
+WSAD: movement<br>
+Left Mouse: fire<br>
+Space bar:  jump<br>
+Q: cycle weapons<br>
+E: interact<br>
+R: reload<br>
+Left ctrl: crouch<br>
+F: Shotgun melee
+G: fullscreen<br>
+J: Respawn dead players
+K: Respawn all players
+Z: previous render mode<br>
+X: next render mode<br>
+B: cycle debug lines<br>
+O: reload map<br>
+V: Toggle splitscreen mode<br>
+Y: show probes<br>
+1/2/3/4: switch player<br>
+-: Lower camera<br>
++: Raise camera<br>
+~: Toggle debug text<br>
+TAB: Toggle editor<br>
+
+### Editor controls
+F1: File menu<br>
+F2: Insert menu<br>
+Alt + click: rotate camera<br>
+Ctrl + click: pan camera<br>
+Mousewheel: zoom camera<br>
+<br>
+**WARNING: editor menus very buggy still**
+
+### Download
+
+The .lib files are managed by LFS. Download via terminal:
+
+```
+git clone https://github.com/livinamuk/Hell2024.git
+```
+
+### Usage
+
+Run in Release. PhysX runs like shit in Debug.
+
+<br>
+
+---
+
+
 #### December 27 2023
-This codebase began as a CPU raycaster to explore the viability of a voxel based idea I had for global illumination. The voxel idea didn't work out in the end, the voxel grid caused lighting artefacts, but rewriting it to use a pointcloud did and here we are. This is now the new Hell Engine, the engine I'm writing to house a splitscreen roguelike/deathmatch survival horror game.       
 
 ![Image](https://www.principiaprogrammatica.com/dump/ChristmasShot.png)
 
-```
-CONTROLS:
-WSAD: movement
-Left Mouse: fire
-Space bar:  jump
-Q: cycle weapons
-E: interact
-R: reload
-Left ctrl: crouch
-F: fullscreen
-Z: previous render mode
-X: next render mode
-B: cycle debug lines
-N: reload map
-L: show lights
-P: force realtime indirect lighting updates
-V: splitscreen
-C: switch player
-Y: show probes
-
-
-Build in release. Debug doesn't have libs/dlls setup correctly.
-```
-
 #### November 14 2023
-Huge improvements since the entries below. I scrapped the voxel thing entirely because it was causing lighting artefacts for geometry that didn't fit nicely into the voxel grid, most importantly swinging doors. It now calculates direct lighting for an approximated point cloud of the scene which is in turn used to propogate light through a 3D grid to simulate bounced light, both these passes are performed with raytracing in custom compute shaders. I've got skeletal animation too now and we're running realtime baby.     
+Huge improvements since the entries below. I scrapped the voxel thing entirely because it was causing lighting artefacts for geometry that didn't fit nicely into the voxel grid, most importantly swinging doors. It now calculates direct lighting for an approximated point cloud of the scene which is in turn used to propogate light through a 3D grid to simulate bounced light, both these passes are performed with raytracing in custom compute shaders. I've got skeletal animation too now and we're running realtime baby.
 
 ![Image](https://www.principiaprogrammatica.com/dump/SHITT2.jpg)
 

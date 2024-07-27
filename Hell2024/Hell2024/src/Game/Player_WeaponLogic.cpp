@@ -742,83 +742,42 @@ void Player::UpdateWeaponSway(float deltaTime) {
 }
 
 void Player::DropWeapons() {
-    /*
+
     glm::vec3 spawnPos = GetFeetPosition() + glm::vec3(0, 1.5f, 0);
 
-    if (_weaponInventory[Weapon::AKS74U]) {
-        Scene::CreateGameObject();
-        GameObject* weapon = Scene::GetGameObjectByIndex(Scene::GetGameObjectCount() - 1);
-        weapon->SetPosition(spawnPos);
-        weapon->SetRotationX(-1.7f);
-        weapon->SetRotationY(0.0f);
-        weapon->SetRotationZ(-1.6f);
-        weapon->SetModel("AKS74U_Carlos");
-        weapon->SetName("AKS74U_Carlos");
-        weapon->SetMeshMaterial("Ceiling");
-        weapon->SetMeshMaterialByMeshName("FrontSight_low", "AKS74U_0");
-        weapon->SetMeshMaterialByMeshName("Receiver_low", "AKS74U_1");
-        weapon->SetMeshMaterialByMeshName("BoltCarrier_low", "AKS74U_1");
-        weapon->SetMeshMaterialByMeshName("SafetySwitch_low", "AKS74U_1");
-        weapon->SetMeshMaterialByMeshName("Pistol_low", "AKS74U_2");
-        weapon->SetMeshMaterialByMeshName("Trigger_low", "AKS74U_2");
-        weapon->SetMeshMaterialByMeshName("MagRelease_low", "AKS74U_2");
-        weapon->SetMeshMaterialByMeshName("Magazine_Housing_low", "AKS74U_3");
-        weapon->SetMeshMaterialByMeshName("BarrelTip_low", "AKS74U_4");
-        weapon->SetPickUpType(PickUpType::AKS74U);
-        weapon->SetWakeOnStart(true);
-        weapon->SetKinematic(false);
-        weapon->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("AKS74U_Carlos_ConvexMesh"));
-        weapon->SetRaycastShapeFromModelIndex(AssetManager::GetModelIndexByName("AKS74U_Carlos"));
-        weapon->SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
-        weapon->UpdateRigidBodyMassAndInertia(50.0f);
-        weapon->DisableRespawnOnPickup();
-        weapon->SetCollisionType(CollisionType::PICKUP);
-        weapon->m_collisionRigidBody.SetGlobalPose(weapon->_transform.to_mat4());
-    }
+    for (int i = 0; i < WeaponManager::GetWeaponCount(); i++) {
 
-    if (_weaponInventory[Weapon::SHOTGUN]) {
-        Scene::CreateGameObject();
-        GameObject* weapon = Scene::GetGameObjectByIndex(Scene::GetGameObjectCount() - 1);
-        weapon->SetPosition(spawnPos);
-        weapon->SetRotationX(-1.7f);
-        weapon->SetRotationY(0.0f);
-        weapon->SetRotationZ(-1.6f);
-        weapon->SetModel("Shotgun_Isolated");
-        weapon->SetName("Shotgun_Pickup");
-        weapon->SetMeshMaterial("Shotgun");
-        weapon->SetPickUpType(PickUpType::SHOTGUN);
-        weapon->SetWakeOnStart(true);
-        weapon->SetKinematic(false);
-        weapon->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("Shotgun_Isolated_ConvexMesh"));
-        weapon->SetRaycastShapeFromModelIndex(AssetManager::GetModelIndexByName("Shotgun_Isolated"));
-        weapon->SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
-        weapon->UpdateRigidBodyMassAndInertia(50.0f);
-        weapon->DisableRespawnOnPickup();
-        weapon->SetCollisionType(CollisionType::PICKUP);
-        weapon->m_collisionRigidBody.SetGlobalPose(weapon->_transform.to_mat4());
-    }
+        WeaponState& weaponState = m_weaponStates[i];
+        WeaponInfo* weaponInfo = WeaponManager::GetWeaponInfoByIndex(i);
 
-    if (_weaponInventory[Weapon::GLOCK]) {
-        Scene::CreateGameObject();
-        GameObject* weapon = Scene::GetGameObjectByIndex(Scene::GetGameObjectCount() - 1);
-        weapon->SetPosition(spawnPos);
-        weapon->SetRotationX(-1.7f);
-        weapon->SetRotationY(0.0f);
-        weapon->SetRotationZ(-1.6f);
-        weapon->SetModel("Glock_Isolated");
-        weapon->SetName("GLOCKGLOCK");
-        weapon->SetMeshMaterial("Glock");
-        weapon->SetPickUpType(PickUpType::GLOCK);
-        weapon->SetWakeOnStart(true);
-        weapon->SetKinematic(false);
-        weapon->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("Glock_Isolated_ConvexMesh"));
-        weapon->SetRaycastShapeFromModelIndex(AssetManager::GetModelIndexByName("Glock_Isolated"));
-        weapon->SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
-        weapon->UpdateRigidBodyMassAndInertia(200.0f);
-        weapon->DisableRespawnOnPickup();
-        weapon->SetCollisionType(CollisionType::PICKUP);
-        weapon->m_collisionRigidBody.SetGlobalPose(weapon->_transform.to_mat4());
-    }*/
+        if (weaponState.has) {
+            if (weaponInfo->pickupConvexMeshModelName == UNDEFINED_STRING ||
+                weaponInfo->modelName == UNDEFINED_STRING) {
+                continue;
+            }
+            Scene::CreateGameObject();
+            GameObject* weapon = Scene::GetGameObjectByIndex(Scene::GetGameObjectCount() - 1);
+            weapon->SetPosition(spawnPos);
+            weapon->SetRotationX(-1.7f);
+            weapon->SetRotationY(0.0f);
+            weapon->SetRotationZ(-1.6f);
+            weapon->SetModel(weaponInfo->pickupModelName);
+            weapon->SetName("PickUp");
+            for (auto& it : weaponInfo->pickUpMeshMaterials) {
+                weapon->SetMeshMaterialByMeshName(it.first, it.second);
+            }
+            //weapon->SetPickUpType(PickUpType::AKS74U);
+            weapon->SetWakeOnStart(true);
+            weapon->SetKinematic(false);
+            weapon->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName(weaponInfo->pickupConvexMeshModelName));
+            weapon->SetRaycastShapeFromModelIndex(AssetManager::GetModelIndexByName(weaponInfo->pickupModelName));
+            weapon->SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
+            weapon->UpdateRigidBodyMassAndInertia(50.0f);
+            weapon->DisableRespawnOnPickup();
+            weapon->SetCollisionType(CollisionType::PICKUP);
+            weapon->m_collisionRigidBody.SetGlobalPose(weapon->_transform.to_mat4());
+        }
+    }
 }
 
 void Player::SwitchWeapon(std::string name, WeaponAction weaponAction) {
@@ -978,7 +937,7 @@ void Player::CheckForMeleeHits() {
             AnimatedGameObject* hitCharacterModel = otherPlayer->GetCharacterAnimatedGameObject();
 
             for (RigidComponent& rigidComponent : hitCharacterModel->_ragdoll._rigidComponents) {
-                float strength = 75;
+                float strength = 35;
                 strength *= rigidComponent.mass * 1.5f;
                 PxVec3 force = PxVec3(direction.x, direction.y,direction.z) * strength;
                 rigidComponent.pxRigidBody->addForce(force);

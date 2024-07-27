@@ -45,15 +45,23 @@ struct CSGObject {
     Transform m_transform;;
     CSGType m_type;
     uint32_t m_baseVertex = 0;
+    uint32_t m_indexCount = 0;
     uint32_t m_vertexCount = 0;
+    uint32_t m_baseIndex = 0;
     uint32_t m_materialIndex = 0;
     uint32_t m_parentIndex = 0;
+    uint32_t m_blasIndex = 0;
     float m_textureScale = 1.0f;
+    float m_textureOffsetX = 0.0f;
+    float m_textureOffsetY = 0.0f;
     PxTriangleMesh* m_triangleMesh = nullptr;
     PxRigidStatic* m_pxRigidStatic = nullptr;
     PxShape* m_pxShape = nullptr;
+    AABB m_aabb;
+    csg::brush_t* m_brush;
 
     std::span<Vertex> GetVerticesSpan();
+    std::span<uint32_t> GetIndicesSpan();
     void CreatePhysicsObjectFromVertices();
     void CleanUpPhysicsObjects();
 };
@@ -65,5 +73,9 @@ namespace CSG {
     void Build();
     bool GeometryExists();
     std::vector<Vertex>& GetVertices();
+    std::vector<uint32_t>& GetIndices();
     std::vector<CSGObject>& GetCSGObjects();
+    std::span<Vertex> GetRangedVerticesSpan(uint32_t baseVertex, uint32_t vertexCount);
+    std::span<uint32_t> GetRangedIndicesSpan(uint32_t baseIndex, uint32_t indexCount);
+    uint32_t GetBaseCSGVertex();
 }

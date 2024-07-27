@@ -601,6 +601,7 @@ void GameObject::AddCollisionShape(PxShape* shape, PhysicsFilterData physicsFilt
 }
 
 void GameObject::AddCollisionShapeFromModelIndex(unsigned int modelIndex, glm::vec3 scale) {
+    m_convexModelIndex = modelIndex;
     if (EngineState::_skipPhysics) {
         return;
     }
@@ -988,4 +989,16 @@ RenderItem3D* GameObject::GetRenderItemByIndex(int index) {
         return nullptr;
     }
 
+}
+
+void GameObject::PrintMeshNames() {
+    if (model) {
+        std::cout << model->GetName() << "\n";
+        for (uint32_t meshIndex : model->GetMeshIndices()) {
+            Mesh* mesh = AssetManager::GetMeshByIndex(meshIndex);
+            if (mesh) {
+                std::cout << "-" << meshIndex << ": " << mesh->name << "\n";
+            }
+        }
+    }
 }

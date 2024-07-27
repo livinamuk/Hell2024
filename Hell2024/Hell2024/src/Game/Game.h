@@ -27,7 +27,7 @@ namespace Game {
     const MultiplayerMode& GetMultiplayerMode();
     const SplitscreenMode& GetSplitscreenMode();
     const bool DebugTextIsEnabled();
-
+    float GetTime();
     // Pickups
     void SpawnPickup(PickUpType pickupType, glm::vec3 position, glm::vec3 rotation, bool wakeOnStart);
     void SpawnAmmo(std::string type, glm::vec3 position, glm::vec3 rotation, bool wakeOnStart);

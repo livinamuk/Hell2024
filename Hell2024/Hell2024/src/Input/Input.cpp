@@ -1,6 +1,7 @@
 #include "Input.h"
 #include "../BackEnd/BackEnd.h"
 #include "../Renderer/Renderer.h"
+#include "../Util.hpp"
 
 namespace Input {
 
@@ -163,6 +164,16 @@ namespace Input {
     int GetMouseY() {
         return (int)_mouseY;
     }
+
+
+    int GetViewportMappedMouseX(int viewportWidth) {
+        return Util::MapRange(Input::GetMouseX(), 0, BackEnd::GetCurrentWindowWidth(), 0, viewportWidth);
+    }
+
+    int GetViewportMappedMouseY(int viewportHeight) {
+        return Util::MapRange(Input::GetMouseY(), 0, BackEnd::GetCurrentWindowHeight(), 0, viewportHeight);
+    }
+
 
     int GetScrollWheelYOffset() {
         return _scrollWheelYOffset;

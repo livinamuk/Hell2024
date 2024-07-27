@@ -29,6 +29,11 @@ struct BLAS {
 
         int triCount = (int)indices.size() / 3;
 
+        if (indices.size() == 0) {
+            std::cout << "ERROR: attempted to create BLAS from mesh with no vertices!\n";
+            return;
+        }
+
         // Clear previous data
         bvhNodes.clear();
         triangles.clear();

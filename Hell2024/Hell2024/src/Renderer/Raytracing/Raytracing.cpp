@@ -107,7 +107,7 @@ namespace Raytracing {
                 BLAS* blas = GetBLASByIndex(tlas->GetInstanceBLASIndexByInstanceIndex(index));
                 if (blas) {
                     BLASInstance& blasInstance = blasInstnaces.emplace_back();
-                    blasInstance.worldTransform = tlas->GetInstanceWorldTransformByInstanceIndex(index);
+                    blasInstance.inverseModelMatrix = glm::inverse(tlas->GetInstanceWorldTransformByInstanceIndex(index));
                     blasInstance.blsaRootNodeIndex = blas->rootIndex;
                     blasInstance.baseTriangleIndex = blas->baseTriangleIndex;
                     blasInstance.baseVertex = blas->meshbaseVertex;
@@ -121,44 +121,6 @@ namespace Raytracing {
         return blasInstnaces;
     }
 
-    /*AABB CalculateMeshWorldSpaceAABB(Mesh& mesh, glm::mat4 worldMatrix) {
-
-        glm::vec3 boundsMin = glm::vec3(1e30f);
-        glm::vec3 boundsMax = glm::vec3(-1e30f);
-
-        for (uint32_t i = mesh.baseIndex; i < mesh.baseIndex + mesh.indexCount; i += 3) {
-
-            Vertex* v0 = &BackEnd::getVertices()[BackEnd::getIndices()[i + 0] + mesh.baseVertex];
-            Vertex* v1 = &BackEnd::getVertices()[BackEnd::getIndices()[i + 1] + mesh.baseVertex];
-            Vertex* v2 = &BackEnd::getVertices()[BackEnd::getIndices()[i + 2] + mesh.baseVertex];
-
-            RdVector4F pos0 = worldMatrix * RdVector4F(v0->GetPosition(), 1.0);
-            RdVector4F pos1 = worldMatrix * RdVector4F(v1->GetPosition(), 1.0);
-            RdVector4F pos2 = worldMatrix * RdVector4F(v2->GetPosition(), 1.0);
-
-            boundsMin.x() = std::min(pos0.x(), boundsMin.x());
-            boundsMin.x() = std::min(pos1.x(), boundsMin.x());
-            boundsMin.x() = std::min(pos2.x(), boundsMin.x());
-            boundsMin.y() = std::min(pos0.y(), boundsMin.y());
-            boundsMin.y() = std::min(pos1.y(), boundsMin.y());
-            boundsMin.y() = std::min(pos2.y(), boundsMin.y());
-            boundsMin.z() = std::min(pos0.z(), boundsMin.z());
-            boundsMin.z() = std::min(pos1.z(), boundsMin.z());
-            boundsMin.z() = std::min(pos2.z(), boundsMin.z());
-
-            boundsMax.x() = std::max(pos0.x(), boundsMax.x());
-            boundsMax.x() = std::max(pos1.x(), boundsMax.x());
-            boundsMax.x() = std::max(pos2.x(), boundsMax.x());
-            boundsMax.y() = std::max(pos0.y(), boundsMax.y());
-            boundsMax.y() = std::max(pos1.y(), boundsMax.y());
-            boundsMax.y() = std::max(pos2.y(), boundsMax.y());
-            boundsMax.z() = std::max(pos0.z(), boundsMax.z());
-            boundsMax.z() = std::max(pos1.z(), boundsMax.z());
-            boundsMax.z() = std::max(pos2.z(), boundsMax.z());
-        }
-        return AABB(boundsMin, boundsMax);
-    }*/
-
     void CleanUp() {
         _bottomLevelAccelerationStructures.clear();
         _topLevelAccelerationStructures.clear();
@@ -167,4 +129,9 @@ namespace Raytracing {
         _nextBlasRootIndex = 0;
         _nextBlasBaseTriangleIndex = 0;
     }
+
+    int GetBottomLevelAccelerationStructureCount() {
+        return _bottomLevelAccelerationStructures.size();
+    }
+
 }

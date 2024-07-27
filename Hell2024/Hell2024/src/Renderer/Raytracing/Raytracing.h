@@ -15,5 +15,6 @@ namespace Raytracing {
     TLAS* GetTLASByIndex(int index);
     //AABB CalculateMeshWorldSpaceAABB(Mesh& mesh, glm::mat4 worldMatrix);
     void CleanUp();
+    int GetBottomLevelAccelerationStructureCount();
 
 }

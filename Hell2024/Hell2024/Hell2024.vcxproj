@@ -134,7 +134,6 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-   
     <ClCompile Include="src\API\OpenGL\Types\GL_cubemapTexutre.cpp" />
     <ClCompile Include="src\API\OpenGL\Types\GL_texture.cpp" />
     <ClCompile Include="src\API\Vulkan\Types\VK_texture.cpp" />
@@ -169,7 +168,6 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <ClCompile Include="src\Game\GameObject.cpp" />
     <ClCompile Include="src\Game\Game.h" />
     <ClCompile Include="src\Types\Modular\Toilet.cpp" />
-    <ClCompile Include="src\Types\Modular\Wall.cpp" />
     <ClCompile Include="src\BackEnd\BackEnd.cpp" />
     <ClCompile Include="src\API\OpenGL\GL_backEnd.cpp" />
     <ClCompile Include="src\Input\Input.cpp" />
@@ -237,9 +235,11 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <ClInclude Include="src\API\Vulkan\VK_common.h" />
     <ClInclude Include="src\API\Vulkan\Vk_util.hpp" />
     <ClInclude Include="src\Core\JSON.hpp" />
+    <ClInclude Include="src\Core\CreateInfo.hpp" />
     <ClInclude Include="src\Editor\Editor.h" />
     <ClInclude Include="src\Game\WeaponManager.h" />
     <ClInclude Include="src\Effects\BloodDecal.hpp" />
+    <ClInclude Include="src\Math\Raycasting.hpp" />
     <ClInclude Include="src\Renderer\Raytracing\BLAS.hpp" />
     <ClInclude Include="src\Renderer\Raytracing\Raytracing.h" />
     <ClInclude Include="src\Renderer\Raytracing\TLAS.hpp" />
@@ -285,7 +285,6 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <ClInclude Include="src\Game\Light.h" />
     <ClInclude Include="src\Types\Modular\ModularCommon.h" />
     <ClInclude Include="src\Types\Modular\Toilet.h" />
-    <ClInclude Include="src\Types\Modular\Wall.h" />
     <ClInclude Include="src\Physics\Ragdoll.h" />
     <ClInclude Include="src\Core\VolumetricBloodSplatter.h" />
     <ClInclude Include="src\EngineState.hpp" />
@@ -351,6 +350,7 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <None Include="res\shaders\OpenGL\GL_csg_subtractive.vert" />
     <None Include="res\shaders\OpenGL\GL_csg_test.frag" />
     <None Include="res\shaders\OpenGL\GL_csg_test.vert" />
+    <None Include="res\shaders\OpenGL\GL_debug_circle.comp" />
     <None Include="res\shaders\OpenGL\GL_decals.frag" />
     <None Include="res\shaders\OpenGL\GL_decals.vert" />
     <None Include="res\shaders\OpenGL\GL_emissiveComposite.comp" />
@@ -368,10 +368,17 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <None Include="res\shaders\OpenGL\GL_outline.frag" />
     <None Include="res\shaders\OpenGL\GL_outline.vert" />
     <None Include="res\shaders\OpenGL\GL_postProcessing.comp" />
+    <None Include="res\shaders\OpenGL\GL_probe_lighting.comp" />
+    <None Include="res\shaders\OpenGL\GL_raytracing_test.comp" />
     <None Include="res\shaders\OpenGL\GL_sandbox.comp" />
     <None Include="res\shaders\OpenGL\GL_shadowMap.frag" />
     <None Include="res\shaders\OpenGL\GL_shadowMap.geom" />
     <None Include="res\shaders\OpenGL\GL_shadowMap.vert" />
+    <None Include="res\shaders\OpenGL\GL_shadowMap_csg.frag" />
+    <None Include="res\shaders\OpenGL\GL_shadowMap_csg.geom" />
+    <None Include="res\shaders\OpenGL\GL_shadowMap_csg.vert" />
+    <None Include="res\shaders\OpenGL\GL_triangles_2D.frag" />
+    <None Include="res\shaders\OpenGL\GL_triangles_2D.vert" />
     <None Include="res\shaders\OpenGL_OLD\animated_quad.frag" />
     <None Include="res\shaders\OpenGL_OLD\animated_quad.vert" />
     <None Include="res\shaders\OpenGL_OLD\blood_decals.frag" />
@@ -455,6 +462,9 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <None Include="res\shaders\Vulkan\path_shadow.rmiss" />
     <None Include="res\vulkan_shaders\raygen.rgen" />
     <None Include="res\vulkan_shaders\shadow.rmiss" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="res\maps\mappp.txt" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

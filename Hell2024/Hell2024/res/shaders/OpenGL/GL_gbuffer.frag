@@ -16,21 +16,21 @@ in vec3 attrTangent;
 in vec3 attrBiTangent;
 in vec3 emissiveColor;
 
-readonly restrict layout(std430, binding = 0) buffer textureSamplerers { 
-	uvec2 textureSamplers[]; 
+readonly restrict layout(std430, binding = 0) buffer textureSamplerers {
+	uvec2 textureSamplers[];
 };
 
 in vec2 TexCoord;
 
 void main() {
 
-    vec4 baseColor = texture(sampler2D(textureSamplers[BaseColorTextureIndex]), TexCoord);    
-    vec4 normalMap = texture(sampler2D(textureSamplers[NormalTextureIndex]), TexCoord);    
-    vec4 rma = texture(sampler2D(textureSamplers[RMATextureIndex]), TexCoord);  
+    vec4 baseColor = texture(sampler2D(textureSamplers[BaseColorTextureIndex]), TexCoord);
+    vec4 normalMap = texture(sampler2D(textureSamplers[NormalTextureIndex]), TexCoord);
+    vec4 rma = texture(sampler2D(textureSamplers[RMATextureIndex]), TexCoord);
 
-	mat3 tbn = mat3(normalize(attrTangent), normalize(attrBiTangent), normalize(attrNormal));	
+	mat3 tbn = mat3(normalize(attrTangent), normalize(attrBiTangent), normalize(attrNormal));
 	vec3 normal = normalize(tbn * (normalMap.rgb * 2.0 - 1.0));
-	
+
 	if (baseColor.a < 0.05) {
 		discard;
 	}

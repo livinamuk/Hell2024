@@ -1,4 +1,5 @@
 #pragma once
+#include "RendererCommon.h"
 
 namespace Renderer {
 
@@ -10,4 +11,7 @@ namespace Renderer {
     void NextDebugLineRenderMode();
     void UpdatePointCloud();
     void RecreateBlurBuffers();
+    RenderMode GetRenderMode();
+    void ToggleProbes();
+    bool ProbesVisible();
 }

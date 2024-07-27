@@ -2,7 +2,9 @@
 #include "Game.h"
 #include "../Editor/Editor.h"
 #include "../Renderer/RendererUtil.hpp"
+#include "../Game/Scene.h"
 #include "../Renderer/TextBlitter.h"
+#include "../Renderer/Renderer.h"
 
 std::vector<RenderItem2D> Player::GetHudRenderItems(ivec2 presentSize) {
 
@@ -41,13 +43,14 @@ std::vector<RenderItem2D> Player::GetHudRenderItems(ivec2 presentSize) {
         text += "" + std::to_string(m_killCount) + "\n";
         text += "Pos: " + Util::Vec3ToString(GetViewPos()) + "\n";
 
+        /*
         AnimatedGameObject* viewWeapon = GetViewWeaponAnimatedGameObject();
         int frameNumber = viewWeapon->GetAnimationFrameNumber();
         text += "Anim frame number: " + std::to_string(frameNumber) + "\n";
 
         if (viewWeapon->AnimationIsPastFrameNumber(10)) {
             text += "Passed frame 10!\n";
-        }
+        }*/
 
         RendererUtil::AddRenderItems(renderItems, TextBlitter::CreateText(text, debugTextLocation, presentSize, Alignment::TOP_LEFT, BitmapFontType::STANDARD));
     }
@@ -63,6 +66,16 @@ std::vector<RenderItem2D> Player::GetHudRenderItems(ivec2 presentSize) {
     //auto res = Util::CalculateScreenSpaceCoordinates(cubePos, mvp, PRESENT_WIDTH, PRESENT_HEIGHT);
     //renderItems.push_back(RendererUtil::CreateRenderItem2D("PressStart", {res.x, res.y}, presentSize, Alignment::CENTERED));
 
+
+    /*
+    for (Light& light : Scene::g_lights) {
+        glm::vec3 position = light.position;
+       Player* player = Game::GetPlayerByIndex(0);
+       glm::mat4 mvp = player->GetProjectionMatrix() * player->GetViewMatrix();
+       auto res = Util::CalculateScreenSpaceCoordinates(position, mvp, PRESENT_WIDTH, PRESENT_HEIGHT, true);
+       renderItems.push_back(RendererUtil::CreateRenderItem2D("Icon_Light", {res.x, res.y}, presentSize, Alignment::CENTERED));
+    }*/
+
     if (IsAlive()) {
 
         // Crosshair
@@ -76,6 +89,11 @@ std::vector<RenderItem2D> Player::GetHudRenderItems(ivec2 presentSize) {
         default:
             break;
         }
+
+        static int texHeight = AssetManager::GetTextureByName("inventory_mockup")->GetHeight();
+        static int height = (presentSize.y - texHeight) / 2;
+
+        //renderItems.push_back(RendererUtil::CreateRenderItem2D("inventory_mockup", {40, height}, presentSize, Alignment::BOTTOM_LEFT));
 
         // Pickup text
         pickupTextLocation.y += m_pickUpTexts.size() * TextBlitter::GetLineHeight(BitmapFontType::STANDARD);
@@ -91,6 +109,14 @@ std::vector<RenderItem2D> Player::GetHudRenderItems(ivec2 presentSize) {
         }
 
         RendererUtil::AddRenderItems(renderItems, TextBlitter::CreateText(pickUpTextToBlit, pickupTextLocation, presentSize, Alignment::BOTTOM_LEFT, BitmapFontType::STANDARD));
+
+
+        /*
+        std::string question = "Will you take the [g]GLOCK[w]?\n";
+        question += ">YES  NO";
+        float scale = 1.5f;
+        RendererUtil::AddRenderItems(renderItems, TextBlitter::CreateText(question, ivec2(80, 80), presentSize, Alignment::BOTTOM_LEFT, BitmapFontType::STANDARD, glm::vec2(scale)));
+        */
     }
 
     return renderItems;
@@ -104,7 +130,7 @@ std::vector<RenderItem2D> Player::GetHudRenderItemsHiRes(ivec2 gBufferSize) {
     int rightX = RendererUtil::GetViewportRightX(m_playerIndex, Game::GetSplitscreenMode(), gBufferSize.x, gBufferSize.y);
     int bottomY = RendererUtil::GetViewportBottomY(m_playerIndex, Game::GetSplitscreenMode(), gBufferSize.x, gBufferSize.y);
 
-    float ammoTextScale = 0.6f;
+    float ammoTextScale = 0.7f;
     ivec2 ammoSlashTextLocation = { 0,0 };
     if (Game::GetSplitscreenMode() == SplitscreenMode::NONE) {
         ammoSlashTextLocation.x = rightX - (gBufferSize.x * 0.125f);

@@ -35,7 +35,7 @@ namespace VulkanRenderer {
 
     // Drawing
     void RenderLoadingScreen(std::vector<RenderItem2D>& renderItems);
-    void RenderGame(RenderData& renderData);
+    void RenderFrame(RenderData& renderData);
     //void RenderUI(std::vector<RenderItem2D>& renderItems, RenderDestination renderDestination);
 
     // Raytracing

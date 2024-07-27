@@ -5,108 +5,145 @@
 #include "../API/Vulkan/VK_renderer.h"
 #include "../BackEnd/BackEnd.h"
 #include "../Game/Scene.h"
+#include "../Editor/CSG.h"
 
 namespace GlobalIllumination {
 
     std::vector<LightVolume> _lightVolumes;
-    std::vector<CloudPoint> _pointCloud;
+    std::vector<CloudPoint> g_pointCloud;
 }
 
-void GlobalIllumination::CreateLightVolume(float width, float height, float depth, float offsetX, float offsetY, float offsetZ) {
+void GlobalIllumination::DestroyAllLightVolumes() {
+    _lightVolumes.clear();
+}
 
-    LightVolume& lightVolume = _lightVolumes.emplace_back(LightVolume(width, height, depth, offsetX, offsetY, offsetZ));
+void GlobalIllumination::CreateLightVolume(float width, float height, float depth, float posX, float posY, float posZ) {
+
+    LightVolume& lightVolume = _lightVolumes.emplace_back(LightVolume(width, height, depth, posX, posY, posZ));
     lightVolume.CreateTexure3D();
+}
+
+
+
+
+
+// Function to generate points on a list of triangles
+std::vector<glm::vec3> GeneratePointsOnTriangles(const std::vector<glm::vec3>& triangles, float spacing) {
+    std::vector<glm::vec3> points;
+
+
+
+    return points;
+}
+
+float roundUp(float value, float spacing) {
+    return std::ceil(value / spacing) * spacing;
+}
+
+float roundDown(float value, float spacing) {
+    return std::floor(value / spacing) * spacing;
+}
+
+bool isPointInTriangle2D(const glm::vec2& pt, const glm::vec2& v0, const glm::vec2& v1, const glm::vec2& v2) {
+    // Compute vectors
+    glm::vec2 v0v1 = v1 - v0;
+    glm::vec2 v0v2 = v2 - v0;
+    glm::vec2 v1v2 = v2 - v1;
+
+    // Compute dot products
+    float dot00 = glm::dot(v0v1, v0v1);
+    float dot01 = glm::dot(v0v1, v0v2);
+    float dot11 = glm::dot(v0v2, v0v2);
+    float dot20 = glm::dot(pt - v0, v0v1);
+    float dot21 = glm::dot(pt - v1, v1v2);
+
+    // Compute barycentric coordinates
+    float denom = dot00 * dot11 - dot01 * dot01;
+    if (denom == 0) return false; // Degenerate triangle
+    float u = (dot11 * dot20 - dot01 * dot21) / denom;
+    float v = (dot00 * dot21 - dot01 * dot20) / denom;
+
+    // Check if point is in triangle
+    return (u >= -1e-5f) && (v >= -1e-5f) && (u + v <= 1.0f + 1e-5f); // Tolerance check for edge cases
 }
 
 void GlobalIllumination::CreatePointCloud() {
 
-    _pointCloud.clear();
+    g_pointCloud.clear();
 
-    // Walls
-    for (auto& wall : Scene::_walls) {
-        glm::vec3 dir = glm::normalize(wall.end - wall.begin);
-        float wallLength = distance(wall.begin, wall.end);
-        for (float x = POINT_CLOUD_SPACING * 0.5f; x < wallLength; x += POINT_CLOUD_SPACING) {
-            glm::vec3 pos = wall.begin + (dir * x);
-            for (float y = POINT_CLOUD_SPACING * 0.5f; y < wall.height; y += POINT_CLOUD_SPACING) {
-                CloudPoint cloudPoint;
-                cloudPoint.position = glm::vec4(pos, 0);
-                cloudPoint.position.y = wall.begin.y + y;
-                glm::vec3 wallVector = glm::normalize(wall.end - wall.begin);
-                cloudPoint.normal = glm::vec4(-wallVector.z, 0, wallVector.x, 0);
-                _pointCloud.push_back(cloudPoint);
+    std::vector<Vertex> vertices = CSG::GetVertices();
+    std::vector<glm::vec3> triangles;
+    float spacing = 0.275f;
+
+    for (int i = CSG::GetBaseCSGVertex(); i < vertices.size(); i++) {
+        triangles.push_back(vertices[i].position);
+    }
+
+    for (size_t i = 0; i < triangles.size(); i += 3) {
+        glm::vec3 v0 = triangles[i];
+        glm::vec3 v1 = triangles[i + 1];
+        glm::vec3 v2 = triangles[i + 2];
+
+        // Calculate the normal of the triangle
+        glm::vec3 normal = glm::normalize(glm::cross(v1 - v0, v2 - v0));
+
+        // Create a transformation matrix to project the triangle onto the XY plane
+        glm::vec3 up(0.0f, 0.0f, 1.0f); // Default to Z-axis as up direction
+        if (std::abs(normal.z) > 0.999f) {
+            up = glm::vec3(1.0f, 0.0f, 0.0f); // Use X-axis if normal is aligned with Z axis
+        }
+        glm::vec3 right = glm::normalize(glm::cross(up, normal));
+        up = glm::normalize(glm::cross(normal, right));
+
+        glm::mat3 transform(right.x, right.y, right.z,
+            up.x, up.y, up.z,
+            normal.x, normal.y, normal.z);
+
+        glm::vec2 v0_2d(glm::dot(right, v0), glm::dot(up, v0));
+        glm::vec2 v1_2d(glm::dot(right, v1), glm::dot(up, v1));
+        glm::vec2 v2_2d(glm::dot(right, v2), glm::dot(up, v2));
+
+        // Determine the bounding box of the 2D triangle
+        glm::vec2 min = glm::min(glm::min(v0_2d, v1_2d), v2_2d);
+        glm::vec2 max = glm::max(glm::max(v0_2d, v1_2d), v2_2d);
+
+        // Round min and max values
+        min.x = roundDown(min.x, spacing) - spacing * 0.5f;
+        min.y = roundDown(min.y, spacing) - spacing * 0.5f;
+        max.x = roundUp(max.x, spacing) + spacing * 0.5f;
+        max.y = roundUp(max.y, spacing) + spacing * 0.5f;
+
+        // Generate points within the bounding box
+        for (float x = min.x; x <= max.x; x += spacing) {
+            for (float y = min.y; y <= max.y; y += spacing) {
+                glm::vec2 pt(x, y);
+                if (Util::IsPointInTriangle2D(pt, v0_2d, v1_2d, v2_2d)) {
+                //if (isPointInTriangle2D(pt, v0_2d, v1_2d, v2_2d)) {
+                    // Transform the 2D point back to 3D space
+                    glm::vec3 pt3d = v0 + right * (pt.x - v0_2d.x) + up * (pt.y - v0_2d.y);
+
+
+                    CloudPoint cloudPoint;
+                    cloudPoint.position = pt3d;
+                    cloudPoint.normal = glm::vec4(normal, 0);
+                    g_pointCloud.push_back(cloudPoint);
+                }
             }
         }
     }
 
-    // Floors
-    for (auto& floor : Scene::_floors) {
-        float minX = std::min(std::min(std::min(floor.v1.position.x, floor.v2.position.x), floor.v3.position.x), floor.v4.position.x);
-        float minZ = std::min(std::min(std::min(floor.v1.position.z, floor.v2.position.z), floor.v3.position.z), floor.v4.position.z);
-        float maxX = std::max(std::max(std::max(floor.v1.position.x, floor.v2.position.x), floor.v3.position.x), floor.v4.position.x);
-        float maxZ = std::max(std::max(std::max(floor.v1.position.z, floor.v2.position.z), floor.v3.position.z), floor.v4.position.z);
-        float floorHeight = floor.v1.position.y;
-        for (float x = minX + (POINT_CLOUD_SPACING * 0.5f); x < maxX; x += POINT_CLOUD_SPACING) {
-            for (float z = minZ + (POINT_CLOUD_SPACING * 0.5f); z < maxZ; z += POINT_CLOUD_SPACING) {
-                CloudPoint cloudPoint;
-                cloudPoint.position = glm::vec4(x, floorHeight, z, 0);
-                cloudPoint.normal = glm::vec4(NRM_Y_UP, 0);
-                _pointCloud.push_back(cloudPoint);
-            }
-        }
-    }
-
-    // Ceilings
-    for (auto& ceiling : Scene::_ceilings) {
-        float ceilingWidth = ceiling.x2 - ceiling.x1;
-        float ceilingDepth = ceiling.z2 - ceiling.z1;
-        for (float x = POINT_CLOUD_SPACING * 0.5f; x < ceilingWidth; x += POINT_CLOUD_SPACING) {
-            for (float z = POINT_CLOUD_SPACING * 0.5f; z < ceilingDepth; z += POINT_CLOUD_SPACING) {
-                CloudPoint cloudPoint;
-                cloudPoint.position = glm::vec4(ceiling.x1 + x, ceiling.height, ceiling.z1 + z, 0);
-                cloudPoint.normal = glm::vec4(NRM_Y_DOWN, 0);
-                _pointCloud.push_back(cloudPoint);
-            }
-        }
-    }
-
-    // Now remove any points that overlap doors
-    for (int i = 0; i < _pointCloud.size(); i++) {
-        glm::vec2 p = { _pointCloud[i].position.x, _pointCloud[i].position.z };
-        for (Door& door : Scene::g_doors) {
-            // Ignore if is point is above or below door
-            if (_pointCloud[i].position.y < door.m_position.y ||
-                _pointCloud[i].position.y > door.m_position.y + DOOR_HEIGHT) {
-                continue;
-            }
-            // Check if it is inside the fucking door
-            glm::vec2 p3 = { door.GetFloorplanVertFrontLeft().x, door.GetFloorplanVertFrontLeft().z };
-            glm::vec2 p2 = { door.GetFloorplanVertFrontRight().x, door.GetFloorplanVertFrontRight().z };
-            glm::vec2 p1 = { door.GetFloorplanVertBackRight().x, door.GetFloorplanVertBackRight().z };
-            glm::vec2 p4 = { door.GetFloorplanVertBackLeft().x, door.GetFloorplanVertBackLeft().z };
-            glm::vec2 p5 = { door.GetFloorplanVertFrontRight().x, door.GetFloorplanVertFrontRight().z };
-            glm::vec2 p6 = { door.GetFloorplanVertBackRight().x, door.GetFloorplanVertBackRight().z };
-            if (Util::PointIn2DTriangle(p, p1, p2, p3) || Util::PointIn2DTriangle(p, p4, p5, p6)) {
-                _pointCloud.erase(_pointCloud.begin() + i);
-                i--;
-                break;
-            }
-        }
-    }
-
-    // TODO: remove the nonsense above and build the wall points off the actual triangle data
 
     if (BackEnd::GetAPI() == API::OPENGL) {
-        OpenGLBackEnd::CreatePointCloudVertexBuffer(_pointCloud);
+        OpenGLBackEnd::CreatePointCloudVertexBuffer(g_pointCloud);
     }
     else if (BackEnd::GetAPI() == API::VULKAN) {
-        VulkanBackEnd::CreatePointCloudVertexBuffer(_pointCloud);
+        VulkanBackEnd::CreatePointCloudVertexBuffer(g_pointCloud);
         VulkanRenderer::UpdateGlobalIlluminationDescriptorSet();
     }
 }
 
 std::vector<CloudPoint>& GlobalIllumination::GetPointCloud() {
-    return _pointCloud;
+    return g_pointCloud;
 }
 
 LightVolume* GlobalIllumination::GetLightVolumeByIndex(int index) {
@@ -117,4 +154,8 @@ LightVolume* GlobalIllumination::GetLightVolumeByIndex(int index) {
         std::cout << "GlobalIllumination::GetLightVolumeByIndex() failed, index " << index << "out of range of container size " << _lightVolumes.size() << "\n";
         return nullptr;
     }
+}
+
+void GlobalIllumination::RecalculateAll() {
+    CreatePointCloud();
 }

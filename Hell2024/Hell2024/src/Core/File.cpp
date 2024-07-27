@@ -78,7 +78,7 @@ void File::LoadMap(std::string mapName) {
             Scene::g_spawnPoints.push_back(spawnPoint);
         }
     }
-
+/*
 	if (document.HasMember("Walls")) {
 		const rapidjson::Value& objects = document["Walls"];
 		for (rapidjson::SizeType i = 0; i < objects.Size(); i++) {
@@ -89,7 +89,7 @@ void File::LoadMap(std::string mapName) {
 			Wall wall(begin, end, height, AssetManager::GetMaterialIndex(materialName));
 			Scene::AddWall(wall);
 		}
-	}
+	}*/
 
 	if (false) {
 		/*if (document.HasMember("GameObjects")) {
@@ -126,10 +126,10 @@ void File::LoadMap(std::string mapName) {
 		const rapidjson::Value& objects = document["Windows"];
 		for (rapidjson::SizeType i = 0; i < objects.Size(); i++) {
 			glm::vec3 position = ReadVec3(objects[i], "position");
-			float rotation = ReadFloat(objects[i], "rotation");
-			Window& window = Scene::g_windows.emplace_back();
-			window.SetPosition(position);
-			window.rotation.y = rotation;
+			//float rotation = ReadFloat(objects[i], "rotation");
+			//Window& window = Scene::g_windows.emplace_back();
+			//window.SetPosition(position);
+			//window.rotation.y = rotation;
 		}
 	}
 
@@ -219,7 +219,7 @@ void File::SaveMap(std::string mapName) {
 
 		gameObjects.PushBack(object, allocator);
 	}*/
-
+/*
 	for (Wall& wall : Scene::_walls) {
 		rapidjson::Value object(rapidjson::kObjectType);
 		SaveVec3(&object, "begin", wall.begin, allocator);
@@ -229,14 +229,14 @@ void File::SaveMap(std::string mapName) {
 		walls.PushBack(object, allocator);
 	}
 
-	for (Window& window: Scene::g_windows) {
+	for (Window& window: Scene::GetWindows()) {
 		rapidjson::Value object(rapidjson::kObjectType);
 		SaveVec3(&object, "position", window.GetPosition(), allocator);
 		SaveFloat(&object, "rotation", window.rotation.y, allocator);
 		windows.PushBack(object, allocator);
 	}
-
-	for (Door& door : Scene::g_doors) {
+    */
+	for (Door& door : Scene::GetDoors()) {
 		rapidjson::Value object(rapidjson::kObjectType);
 		SaveVec3(&object, "position", door.m_position, allocator);
 		SaveFloat(&object, "rotation", door.m_rotation, allocator);

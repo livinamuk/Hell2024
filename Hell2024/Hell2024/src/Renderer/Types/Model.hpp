@@ -22,7 +22,7 @@ public:
     std::vector<uint32_t>& GetMeshIndices() {
         return meshIndices;
     }
-    
+
     void SetName(std::string modelName) {
         this->name = modelName;
     }

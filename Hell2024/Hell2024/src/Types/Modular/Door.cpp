@@ -168,7 +168,7 @@ void Door::CreatePhysicsObject() {
     PhysicsFilterData filterData;
     filterData.raycastGroup = RAYCAST_DISABLED;
     filterData.collisionGroup = CollisionGroup::ENVIROMENT_OBSTACLE;
-    filterData.collidesWith = (CollisionGroup)(GENERIC_BOUNCEABLE | BULLET_CASING);
+    filterData.collidesWith = (CollisionGroup)(GENERIC_BOUNCEABLE | BULLET_CASING | RAGDOLL);
     collisionShape = Physics::CreateBoxShape(DOOR_EDITOR_DEPTH * 0.5f, DOOR_HEIGHT * 0.5f, DOOR_WIDTH * 0.5f);
     collisionBody = Physics::CreateRigidStatic(Transform(), filterData, collisionShape);
 
@@ -214,6 +214,7 @@ void Door::UpdateRenderItems() {
         renderItem.rmaTextureIndex = AssetManager::GetMaterialByIndex(materialIndex)->_rma;
     }
 
+
     Model* frameModel = AssetManager::GetModelByIndex(AssetManager::GetModelIndexByName("DoorFrame"));
     for (uint32_t& meshIndex : frameModel->GetMeshIndices()) {
         Mesh* mesh = AssetManager::GetMeshByIndex(meshIndex);
@@ -240,4 +241,12 @@ void Door::Rotate90() {
         PxTransform transform2 = PxTransform(worldMatrix);
         raycastBody->setGlobalPose(transform2);
     }
+}
+
+void Door::SetPosition(glm::vec3 position) {
+    m_position = position;
+}
+
+void Door::SetRotation(float rotation) {
+    m_rotation = rotation;
 }

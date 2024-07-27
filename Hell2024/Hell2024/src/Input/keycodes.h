@@ -196,3 +196,21 @@
 #define HELL_XBOX_CONTROLLER_DPAD_LEFT		13
 #define HELL_XBOX_CONTROLLER_TRIGGER_L		14			// you manually chose this button code so u can store it in the same buttons vector
 #define HELL_XBOX_CONTROLLER_TRIGGER_R		15			// you manually chose this button code so u can store it in the same buttons vector
+
+#define HELL_KEY_NUMPAD_0               320
+#define HELL_KEY_NUMPAD_1               321
+#define HELL_KEY_NUMPAD_2               322
+#define HELL_KEY_NUMPAD_3               323
+#define HELL_KEY_NUMPAD_4               324
+#define HELL_KEY_NUMPAD_5               325
+#define HELL_KEY_NUMPAD_6               326
+#define HELL_KEY_NUMPAD_7               327
+#define HELL_KEY_NUMPAD_8               328
+#define HELL_KEY_NUMPAD_9               329
+#define HELL_KEY_NUMPAD_DECIMAL         330
+#define HELL_KEY_NUMPAD_DIVIDE          331
+#define HELL_KEY_NUMPAD_MULTIPLY        332
+#define HELL_KEY_NUMPAD_SUBTRACT        333
+#define HELL_KEY_NUMPAD_ADD             334
+#define HELL_KEY_NUMPAD_ENTER           335
+#define HELL_KEY_NUMPAD_EQUAL           336

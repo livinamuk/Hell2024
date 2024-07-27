@@ -52,28 +52,3 @@ void Engine::Run() {
     BackEnd::CleanUp();
 }
 
-
-
-void Engine::LazyKeyPresses() {
-
-    if (Input::KeyPressed(GLFW_KEY_C)) {
-        EngineState::NextPlayer();
-		Audio::PlayAudio(AUDIO_SELECT, 1.00f);
-    }
-    if (Input::KeyPressed(GLFW_KEY_V)) {
-		Game::NextSplitScreenMode();
-		Audio::PlayAudio(AUDIO_SELECT, 1.00f);
-    }
-    if (Input::KeyPressed(GLFW_KEY_N)) {
-        Physics::ClearCollisionLists();
-        Scene::LoadMap("map.txt");
-        Audio::PlayAudio(AUDIO_SELECT, 1.00f);
-
-        // Hack to fix a bug on reload of the map
-        // seems like it tries to look up some shit from the last frames camera raycast, and those physx objects are removed by this point
-        //for (auto& player : Scene::_players) {
-        //    player._cameraRayResult.hitFound = false;
-        //}
-    }
-}
-

@@ -9,13 +9,16 @@
 #include "../BackEnd/Backend.h"
 #include "../Core/AssetManager.h"
 #include "../Game/Scene.h"
+#include "../Renderer/GlobalIllumination.h"
 
 namespace CSG {
 
     std::vector<CSGObject> g_objects;
     csg::world_t g_world;
     std::vector<Vertex> g_vertices;
+    std::vector<uint32_t> g_indices;
     bool g_sceneDirty = true;
+    uint32_t g_baseCSGVertex = 0;
 
     void Init() {
         csg::volume_t void_volume = g_world.get_void_volume();
@@ -76,6 +79,14 @@ namespace CSG {
 
         CleanUp();
 
+        // Remove all brushes
+        csg::brush_t* brush = g_world.first();
+        while (brush) {
+            g_world.remove(brush);
+            brush = g_world.first();
+        }
+
+
         for (int i = 0; i < Scene::g_cubeVolumesAdditive.size(); i++) {
             CubeVolume& cubeVolume = Scene::g_cubeVolumesAdditive[i];
             CSGObject& csg = g_objects.emplace_back();
@@ -84,7 +95,10 @@ namespace CSG {
             csg.m_materialIndex = cubeVolume.materialIndex;
             csg.m_textureScale = cubeVolume.textureScale;
             csg.m_parentIndex = i;
+            csg.m_textureOffsetX = cubeVolume.textureOffsetX;
+            csg.m_textureOffsetY = cubeVolume.textureOffsetY;
         }
+
 
         for (int i = 0; i < Scene::g_cubeVolumesSubtractive.size(); i++) {
             CubeVolume& cubeVolume = Scene::g_cubeVolumesSubtractive[i];
@@ -94,9 +108,11 @@ namespace CSG {
             csg.m_materialIndex = cubeVolume.materialIndex;
             csg.m_textureScale = cubeVolume.textureScale;
             csg.m_parentIndex = i;
+            csg.m_textureOffsetX = cubeVolume.textureOffsetX;
+            csg.m_textureOffsetY = cubeVolume.textureOffsetY;
         }
 
-        for (Door& door : Scene::g_doors) {
+        for (Door& door : Scene::GetDoors()) {
             CSGObject& csg = g_objects.emplace_back();
             csg.m_transform.position = door.m_position + glm::vec3(0, DOOR_HEIGHT / 2, 0);
             csg.m_transform.rotation = glm::vec3(0, door.m_rotation, 0);
@@ -106,12 +122,11 @@ namespace CSG {
             csg.m_textureScale = 0.5f;                                           // add this to the door object somehow
         }
 
-
-        for (Window& window: Scene::g_windows) {
+        for (Window& window: Scene::GetWindows()) {
             CSGObject& csg = g_objects.emplace_back();
             csg.m_transform.position = window.GetPosition() + glm::vec3(0, 1.5f, 0);
             csg.m_transform.scale = glm::vec3(0.8f, 1.3f, 0.2f);
-            csg.m_transform.rotation = window.rotation;
+            csg.m_transform.rotation.y = window.GetRotationY();
             csg.m_type = CSGType::SUBTRACTIVE;
             csg.m_materialIndex = AssetManager::GetMaterialIndex("FloorBoards"); // add this to the door object somehow
             csg.m_textureScale = 0.5f;                                           // add this to the door object somehow
@@ -119,12 +134,17 @@ namespace CSG {
 
 
         for (int i = 0; i < g_objects.size(); i++) {
+
             CSGObject& cube = g_objects[i];
+
             Transform transform = cube.m_transform;
             transform.scale *= glm::vec3(0.5f);
-            csg::brush_t* brush = g_world.add();
-            brush->userdata = cube_brush_userdata_t(brush);
-            cube_brush_userdata_t* userdata = any_cast<cube_brush_userdata_t>(&brush->userdata);
+
+            cube.m_brush = g_world.add();
+
+            cube.m_brush->userdata = cube_brush_userdata_t(cube.m_brush);
+            cube_brush_userdata_t* userdata = any_cast<cube_brush_userdata_t>(&cube.m_brush->userdata);
+
             if (cube.m_type == CSGType::ADDITIVE) {
                 userdata->set_brush_type(SOLID_BRUSH);
             }
@@ -142,44 +162,131 @@ namespace CSG {
         }
 
         // Calculate vertices
-        g_vertices.clear();
-        int cubeIndex = 0;
-        int baseVertex = 0;
         auto rebuilt = g_world.rebuild();
 
-        for (csg::brush_t* b : rebuilt) {
+        g_vertices.clear();
+        g_indices.clear();
 
+        // Hack in the door vertices. They need to be in this vector for raytracing.
+
+        uint32_t modelIndex = AssetManager::GetModelIndexByName("Door");
+        Model* model = AssetManager::GetModelByIndex(modelIndex);
+        for (auto& meshIndex : model->GetMeshIndices()) {
+            Mesh* mesh = AssetManager::GetMeshByIndex(meshIndex);
+            if (mesh->name == "SM_Door") {
+                std::cout << Util::Vec3ToString10(mesh->aabbMin) << "\n";
+                std::cout << Util::Vec3ToString10(mesh->aabbMax) << "\n";
+
+                //(-0.00, 0.00, 0.00)
+                //(-0.00, 2.00, 0.79)
+
+                Vertex v0, v1, v2, v3, v4, v5, v6, v7;
+                v0.position = glm::vec3(mesh->aabbMin.x, mesh->aabbMin.y, mesh->aabbMin.z);
+                v1.position = glm::vec3(mesh->aabbMin.x, mesh->aabbMax.y, mesh->aabbMin.z);
+                v2.position = glm::vec3(mesh->aabbMin.x, mesh->aabbMax.y, mesh->aabbMax.z);
+                v3.position = glm::vec3(mesh->aabbMin.x, mesh->aabbMin.y, mesh->aabbMax.z);
+                v4.position = glm::vec3(mesh->aabbMax.x, mesh->aabbMin.y, mesh->aabbMax.z);
+                v5.position = glm::vec3(mesh->aabbMax.x, mesh->aabbMax.y, mesh->aabbMax.z);
+                v6.position = glm::vec3(mesh->aabbMax.x, mesh->aabbMax.y, mesh->aabbMin.z);
+                v7.position = glm::vec3(mesh->aabbMax.x, mesh->aabbMin.y, mesh->aabbMin.z);
+                g_vertices.push_back(v0);
+                g_vertices.push_back(v1);
+                g_vertices.push_back(v2);
+                g_vertices.push_back(v3);
+                g_vertices.push_back(v4);
+                g_vertices.push_back(v5);
+                g_vertices.push_back(v6);
+                g_vertices.push_back(v7);
+                g_indices.push_back(2);
+                g_indices.push_back(1);
+                g_indices.push_back(0);
+                g_indices.push_back(0);
+                g_indices.push_back(3);
+                g_indices.push_back(2);
+                g_indices.push_back(2 + 4);
+                g_indices.push_back(1 + 4);
+                g_indices.push_back(0 + 4);
+                g_indices.push_back(0 + 4);
+                g_indices.push_back(3 + 4);
+                g_indices.push_back(2 + 4);
+            }
+        }
+        g_baseCSGVertex = g_vertices.size();
+        int baseIndex = g_indices.size();
+        int baseVertex = g_vertices.size();
+
+        for (CSGObject& csgObject : g_objects) {
+
+            csg::brush_t* b = csgObject.m_brush;
             cube_brush_userdata_t* brush = any_cast<cube_brush_userdata_t>(&b->userdata);
             brush->update_display_list();
 
-            CSGObject& cube = g_objects[brush->m_index];
+            //CSGObject & cube = g_objects[brush->m_index];
+            glm::vec3 boundsMin = glm::vec3(1e30f);
+            glm::vec3 boundsMax = glm::vec3(-1e30f);
 
             int vertexCount = 0;
+            int indexCount = 0;
+            int index = 0;
             for (Vertex& vertex : brush->m_vertices) {
                 glm::vec3 origin = brush->m_origin;
                 origin = glm::vec3(0);
                 vertex.uv = CalculateUV(vertex.position, vertex.normal, origin);
-                vertex.uv *= cube.m_textureScale;
+                vertex.uv *= csgObject.m_textureScale;
+                vertex.uv.x += csgObject.m_textureOffsetX;
+                vertex.uv.y += csgObject.m_textureOffsetY;
+
                 g_vertices.push_back(vertex);
-                vertexCount++;
+                vertexCount++; // remove duplicate vertices somehow ya fool
+                indexCount++;
+
+                boundsMin = Util::Vec3Min(boundsMin, vertex.position);
+                boundsMax = Util::Vec3Max(boundsMax, vertex.position);
+
+                g_indices.push_back(index);
+                index++;
             }
-            cube.m_baseVertex = baseVertex;
-            cube.m_vertexCount = vertexCount;
-            cubeIndex++;
+            csgObject.m_baseIndex = baseIndex;
+            csgObject.m_baseVertex = baseVertex;
+            csgObject.m_vertexCount = vertexCount;
+            csgObject.m_indexCount = indexCount;
+            csgObject.m_aabb = AABB(boundsMin, boundsMax);
+
             baseVertex += vertexCount;
+            baseIndex += vertexCount;
         }
 
         // Calculate tangents
-        for (int i = 0; i < g_vertices.size(); i += 3) {
+        for (int i = g_baseCSGVertex; i < g_vertices.size(); i += 3) {
             Util::SetNormalsAndTangentsFromVertices(&g_vertices[i], &g_vertices[i+1], &g_vertices[i+2]);
         }
 
-        // Remove all brushes
-        csg::brush_t* brush = g_world.first();
-        while (brush) {
-            g_world.remove(brush);
-            brush = g_world.first();
+
+
+        /*
+        std::cout << "\nVERTICES\n";
+        for (int i = 0; i < g_vertices.size(); i++) {
+            std::cout << i << ": " << Util::Vec3ToString(g_vertices[i].position) << "\n";
         }
+
+        std::cout << "\nINDICES\n";
+        for (int i = 0; i < g_indices.size(); i++) {
+            std::cout << i << ": " << g_indices[i] << "\n";
+        }
+
+        std::cout << "\ng_objects\n";
+
+
+        std::cout << "\ng_objects.size() : " <<  g_objects.size() << "\n\n";
+
+        for (CSGObject& csgObject : g_objects) {
+            std::cout << "csgObject.m_baseIndex: " << csgObject.m_baseIndex << "\n";
+            std::cout << "csgObject.m_baseVertex: " << csgObject.m_baseVertex << "\n";
+            std::cout << "csgObject.m_vertexCount: " << csgObject.m_vertexCount << "\n";
+
+        }
+        */
+
 
         for (CSGObject& cube : g_objects) {
             cube.CreatePhysicsObjectFromVertices();
@@ -188,9 +295,17 @@ namespace CSG {
         g_sceneDirty = true;
         std::cout << "Built constructive solid geometry\n";
 
+        // create indices
+        // TODO: remove duplicates or this is redundant
+       /* g_indices.clear();
+        g_indices.resize(g_vertices.size());
+        for (int i = 0; i < g_indices.size(); i++) {
+            g_indices[i] = i;
+        }*/
+
         if (g_sceneDirty && g_vertices.size()) {
             if (BackEnd::GetAPI() == API::OPENGL) {
-                OpenGLBackEnd::UploadConstructiveSolidGeometry(g_vertices);
+                OpenGLBackEnd::UploadConstructiveSolidGeometry(g_vertices, g_indices);
             }
             else if (BackEnd::GetAPI() == API::VULKAN) {
 
@@ -201,14 +316,31 @@ namespace CSG {
         for (Light& light : Scene::g_lights) {
             light.isDirty = true;
         }
+        GlobalIllumination::RecalculateAll();
+    }
+
+    std::span<Vertex> CSG::GetRangedVerticesSpan(uint32_t baseVertex, uint32_t vertexCount) {
+        return std::span<Vertex>(CSG::g_vertices.data() + baseVertex, vertexCount);
+    }
+
+    std::span<uint32_t> CSG::GetRangedIndicesSpan(uint32_t baseIndex, uint32_t indexCount) {
+        return std::span<uint32_t>(CSG::g_indices.data() + baseIndex, indexCount);
     }
 
     std::vector<Vertex>& GetVertices() {
         return g_vertices;
     }
 
+    std::vector<uint32_t>& GetIndices() {
+        return g_indices;
+    }
+
     std::vector<CSGObject>& GetCSGObjects() {
         return g_objects;
+    }
+
+    uint32_t GetBaseCSGVertex() {
+        return g_baseCSGVertex;
     }
 
     void SetDirtyFlag(bool value) {
@@ -328,6 +460,11 @@ cube_brush_userdata_t::cube_brush_userdata_t(csg::brush_t* _brush) : brush(brush
 std::span<Vertex> CSGObject::GetVerticesSpan() {
     return std::span<Vertex>(CSG::g_vertices.data() + m_baseVertex, m_vertexCount);
 }
+
+std::span<uint32_t> CSGObject::GetIndicesSpan() {
+    return std::span<uint32_t>(CSG::g_indices.data() + m_baseIndex, m_indexCount);
+}
+
 
 void CSGObject::CleanUpPhysicsObjects() {
 

@@ -7,8 +7,6 @@ class Window {
 
 public:
 
-	glm::vec3 rotation = glm::vec3(0);
-
 	PxRigidStatic* raycastBody = NULL;
 	PxShape* raycastShape = NULL;
 
@@ -24,15 +22,22 @@ public:
 
     glm::vec3 GetWorldSpaceCenter();
     glm::mat4 GetGizmoMatrix();
+    glm::vec3 GetPosition();
+    float GetRotationY();
+    const float GetPostionX();
+    const float GetPostionY();
+    const float GetPostionZ();
 
     void SetPosition(glm::vec3 position);
-    glm::vec3 GetPosition();
+    void SetRotationY(float rotationY);
+    void Rotate90();
 
     void UpdateRenderItems();
     std::vector<RenderItem3D>& GetRenderItems();
-    void Rotate90();
+
+    glm::vec3 m_position = glm::vec3(0);
+    float m_rotationY = 0;
 
 private:
     std::vector<RenderItem3D> renderItems;
-    glm::vec3 m_position = glm::vec3(0);
 };

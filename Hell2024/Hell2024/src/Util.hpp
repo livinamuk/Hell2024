@@ -24,6 +24,10 @@
 
 namespace Util {
 
+  //  long MapRange(long x, long in_min, long in_max, long out_min, long out_max) {
+   //     return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+   // }
+
     inline std::string PhysicsObjectTypeToString(PhysicsObjectType& type) {
 
         if (type == PhysicsObjectType::GAME_OBJECT) {
@@ -66,12 +70,17 @@ namespace Util {
         return glm::vec3(scale);
     }
 
-    inline glm::ivec2 CalculateScreenSpaceCoordinates(const glm::vec3& worldPos, const glm::mat4& mvpMatrix, int screenWidth, int screenHeight) {
+    inline glm::ivec2 CalculateScreenSpaceCoordinates(const glm::vec3& worldPos, const glm::mat4& mvpMatrix, int screenWidth, int screenHeight, bool flipY = false) {
         glm::vec4 clipCoords = mvpMatrix * glm::vec4(worldPos, 1.0f);
         glm::vec3 ndcCoords = glm::vec3(clipCoords) / clipCoords.w;
         glm::ivec2 screenCoords;
         screenCoords.x = (ndcCoords.x + 1.0f) * 0.5f * screenWidth;
-        screenCoords.y = screenHeight - (1.0f - ndcCoords.y) * 0.5f * screenHeight;
+        if (flipY) {
+            screenCoords.y = screenHeight - (1.0f - ndcCoords.y) * 0.5f * screenHeight;
+        }
+        else {
+            screenCoords.y = (1.0f - ndcCoords.y) * 0.5f * screenHeight;
+        }
         return screenCoords;
     }
 
@@ -111,7 +120,7 @@ namespace Util {
             return "PHYSX_RAYCAST";
         }
         else if (mode == DebugLineRenderMode::PHYSX_COLLISION) {
-            return "PHYSX_COLLISION";
+            return "Collision";
         }
         else if (mode == DebugLineRenderMode::RAYTRACE_LAND) {
             return "RAYTRACE_LAND";
@@ -129,13 +138,16 @@ namespace Util {
             return "RTX_LAND_TRIS";
         }
         else if (mode == DebugLineRenderMode::RTX_LAND_TOP_LEVEL_ACCELERATION_STRUCTURE) {
-            return "RTX_LAND_TOP_LEVEL_ACCELERATION_STRUCTURE";
+            return "Top Level Acceleration Structure";
         }
         else if (mode == DebugLineRenderMode::RTX_LAND_BOTTOM_LEVEL_ACCELERATION_STRUCTURES) {
-            return "RTX_LAND_BOTTOM_LEVEL_ACCELERATION_STRUCTURES";
+            return "Bottom Level Acceleration Structures";
         }
         else if (mode == DebugLineRenderMode::RTX_LAND_TOP_AND_BOTTOM_LEVEL_ACCELERATION_STRUCTURES) {
             return "RTX_LAND_TOP_AND_BOTTOM_LEVEL_ACCELERATION_STRUCTURES";
+        }
+        else if (mode == DebugLineRenderMode::PATHFINDING) {
+            return "Pathfinding";
         }
         else {
             return "UNDEFINED";
@@ -167,14 +179,8 @@ namespace Util {
         else if (mode == RenderMode::DIRECT_LIGHT) {
             return "DIRECT_LIGHT";
         }
-        else if (mode == RenderMode::INDIRECT_LIGHT) {
-            return "INDIRECT_LIGHT";
-        }
-        else if (mode == RenderMode::PROPAGATION_GRID) {
-            return "PROPAGATION_GRID";
-        }
-        else if (mode == RenderMode::POINT_CLOUD_PROPAGATION_GRID) {
-            return "POINT_CLOUD_PROPAGATION_GRID";
+        else if (mode == RenderMode::COMPOSITE_PLUS_POINT_CLOUD) {
+            return "COMPOSITE_PLUS_POINT_CLOUD";
         }
         else {
             return "UNDEFINED";
@@ -317,6 +323,10 @@ namespace Util {
 	inline PxQuat GlmQuatToPxQuat(glm::quat quat) {
 		return { quat.x, quat.y, quat.z, quat.w };
 	}
+
+    //inline long MapRange(long x, long in_min, long in_max, long out_min, long out_max) {
+    //    return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+    //}
 
     inline glm::vec3 GetMouseRay(glm::mat4 projection, glm::mat4 view, int windowWidth, int windowHeight, int mouseX, int mouseY) {
 		float x = (2.0f * mouseX) / (float)windowWidth - 1.0f;
@@ -524,6 +534,14 @@ namespace Util {
         return str;
     }
 
+    inline std::string FloatToString(float value, int precision = 2) {
+        return std::format("{:.{}f}", value, precision);
+    }
+
+    inline std::string BoolToString(bool value) {
+        return value ? "True" : "False";
+    }
+
     inline std::string Vec3ToString(glm::vec3 v) {
         return std::string("(" + std::format("{:.2f}", v.x) + ", " + std::format("{:.2f}", v.y) + ", " + std::format("{:.2f}", v.z) + ")");
     }
@@ -567,14 +585,6 @@ namespace Util {
         // Delta Move, Clamp so we do not over shoot.
         const float DeltaMove = Dist * glm::clamp(deltaTime * interpSpeed, 0.0f, 1.0f);
         return current + DeltaMove;
-    }
-
-    inline IntersectionResult RayTriangleIntersectTest(glm::vec3 p1, glm::vec3 p2, glm::vec3 p3, glm::vec3 o, glm::vec3 n) {
-
-        IntersectionResult result;
-        result.found = glm::intersectRayTriangle(o, n, p1, p2, p3, result.baryPosition, result.distance);
-        //result.distance *= -1;
-        return result;
     }
 
     inline glm::vec3 NormalFromTriangle(glm::vec3 pos0, glm::vec3 pos1, glm::vec3 pos2) {
@@ -1046,4 +1056,94 @@ namespace Util {
         return PxQuat(arr[0].GetFloat(), arr[1].GetFloat(), arr[2].GetFloat(), arr[3].GetFloat());
     }
 
+    inline float Cross(const glm::vec2& v1, const glm::vec2& v2) {
+        return v1.x * v2.y - v1.y * v2.x;
+    }
+
+    inline bool IsPointInTriangle2D(const glm::vec2& pt, const glm::vec2& v0, const glm::vec2& v1, const glm::vec2& v2) {
+        glm::vec2 v0v1 = v1 - v0;
+        glm::vec2 v0v2 = v2 - v0;
+        // Compute vectors
+        glm::vec2 v0pt = pt - v0;
+        glm::vec2 v1pt = pt - v1;
+        glm::vec2 v2pt = pt - v2;
+        // Compute dot products
+        float d00 = glm::dot(v0v1, v0v1);
+        float d01 = glm::dot(v0v1, v0v2);
+        float d11 = glm::dot(v0v2, v0v2);
+        float d20 = glm::dot(v0pt, v0v1);
+        float d21 = glm::dot(v0pt, v0v2);
+        // Compute barycentric coordinates
+        float denom = d00 * d11 - d01 * d01;
+        float v = (d11 * d20 - d01 * d21) / denom;
+        float w = (d00 * d21 - d01 * d20) / denom;
+        float u = 1.0f - v - w;
+        // Check if point is in triangle
+        return (u >= 0) && (v >= 0) && (w >= 0);
+    }
+
+    inline bool IsPointInCircle(const glm::vec2& point, const glm::vec2& circleCenter, float radius) {
+        return glm::distance(point, circleCenter) <= radius;
+    }
+
+    inline bool IsPointInTriangle(const glm::vec2& pt, const glm::vec2& v1, const glm::vec2& v2, const glm::vec2& v3) {
+        float d1 = Cross(v2 - v1, pt - v1);
+        float d2 = Cross(v3 - v2, pt - v2);
+        float d3 = Cross(v1 - v3, pt - v3);
+        bool has_neg = (d1 < 0) || (d2 < 0) || (d3 < 0);
+        bool has_pos = (d1 > 0) || (d2 > 0) || (d3 > 0);
+        return !(has_neg && has_pos);
+    }
+
+    inline bool DoesLineIntersectCircle(const glm::vec2& p1, const glm::vec2& p2, const glm::vec2& circleCenter, float radius) {
+        glm::vec2 d = p2 - p1;
+        glm::vec2 f = p1 - circleCenter;
+
+        float a = glm::dot(d, d);
+        float b = 2.0f * glm::dot(f, d);
+        float c = glm::dot(f, f) - radius * radius;
+
+        float discriminant = b * b - 4 * a * c;
+        if (discriminant < 0) {
+            return false; // No intersection
+        }
+
+        discriminant = sqrt(discriminant);
+        float t1 = (-b - discriminant) / (2.0f * a);
+        float t2 = (-b + discriminant) / (2.0f * a);
+
+        if (t1 >= 0 && t1 <= 1) return true;
+        if (t2 >= 0 && t2 <= 1) return true;
+
+        return false;
+    }
+
+    inline bool IsTriangleOverlappingCircle(const glm::vec2& v1, const glm::vec2& v2, const glm::vec2& v3, const glm::vec2& circleCenter, float radius) {
+        // Check if any of the triangle's vertices are inside the circle
+        if (IsPointInCircle(v1, circleCenter, radius)) return true;
+        if (IsPointInCircle(v2, circleCenter, radius)) return true;
+        if (IsPointInCircle(v3, circleCenter, radius)) return true;
+        // Check if the circle's center is inside the triangle
+        if (IsPointInTriangle(circleCenter, v1, v2, v3)) return true;
+        // Check if any of the triangle's edges intersect with the circle
+        if (DoesLineIntersectCircle(v1, v2, circleCenter, radius)) return true;
+        if (DoesLineIntersectCircle(v2, v3, circleCenter, radius)) return true;
+        if (DoesLineIntersectCircle(v3, v1, circleCenter, radius)) return true;
+        // No overlap
+        return false;
+    }
+
+    inline glm::vec2 PixelToNDC(const glm::vec2& pixelPos, float viewportWidth, float viewportHeight) {
+        float x = (2.0f * pixelPos.x) / viewportWidth - 1.0f;
+        float y = 1.0f - (2.0f * pixelPos.y) / viewportHeight;
+        return glm::vec2(x, y);
+    }
+
+    inline std::vector<glm::vec2> Generate2DVerticesFromPixelCoords(const std::vector<glm::vec2>& pixelCoords, float viewportWidth, float viewportHeight) {
+        std::vector<glm::vec2> vertices;
+        for (const auto& pixelPos : pixelCoords) {
+            vertices.push_back(PixelToNDC(pixelPos, viewportWidth, viewportHeight));
+        }
+        return vertices;
+    }
 }

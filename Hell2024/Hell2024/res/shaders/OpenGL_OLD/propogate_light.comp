@@ -83,14 +83,14 @@ bool TriIntersect(vec3 origin, vec3 direction, float rayMin, float rayMax, vec3 
 	vec3 b = v2 - v0;
 	vec3 p = v0 - origin;
 	vec3 n = cross(b, a);
-	float r = dot(direction, n); 
+	float r = dot(direction, n);
 
     //ignore back face
-    if (r > 0) 
-		return false;    
+    if (r > 0)
+		return false;
 
 	// some other early out
-	if (abs(r) < 0.00001) 
+	if (abs(r) < 0.00001)
 		return false;
 
 	vec3 q = cross( p, direction );
@@ -99,7 +99,7 @@ bool TriIntersect(vec3 origin, vec3 direction, float rayMin, float rayMax, vec3 
 	float v = dot( q, a )*r;
 	float t = dot( n, p )*r;
 
-	if( u<0.0 || v<0.0 || (u+v)>1.0 ) 
+	if( u<0.0 || v<0.0 || (u+v)>1.0 )
 		t = -1.0;
 
 	// Ray max is squared to save on square root
@@ -113,19 +113,19 @@ bool AnyHit(vec3 origin, vec3 direction, float rayMin, float rayMax) {
 
 	for (int i = 0; i < instanceCount; i++) {
 		RTInstance instance = Instances[i];
-		RTMesh mesh = Meshes[instance.meshIndex];		
+		RTMesh mesh = Meshes[instance.meshIndex];
 		int baseVertex = mesh.baseVertex;
 		int vertexCount = mesh.vertexCount;
 
 		vec3 adjustedDirection = normalize(instance.inverseModelMatrix * vec4(direction, 0.0)).xyz;
 		vec3 adjustedOrigin = (instance.inverseModelMatrix * vec4(origin, 1.0)).xyz;
 
-		for (int j = baseVertex; j < vertexCount + baseVertex; j+=3) {	
+		for (int j = baseVertex; j < vertexCount + baseVertex; j+=3) {
 			vec3 v0 = Vertices[j + 0].xyz;
 			vec3 v1 = Vertices[j + 1].xyz;
-			vec3 v2 = Vertices[j + 2].xyz;		
+			vec3 v2 = Vertices[j + 2].xyz;
 			bool hit = TriIntersect(adjustedOrigin, adjustedDirection, rayMin, rayMax, v0, v1, v2);
-			if (hit) { 
+			if (hit) {
 				return true;
 			}
 		}
@@ -140,7 +140,7 @@ float distanceSquared( vec3 A, vec3 B ) {
 
 void main() {
 
-	
+
     const uint index = (gl_WorkGroupID.x * 64) + gl_LocalInvocationID.x;
     const uint x = PropogationListNew[index].x;
     const uint y = PropogationListNew[index].y;
@@ -153,18 +153,18 @@ void main() {
 
 	//const float probeSpacing = 0.2;
 	vec3 probePosition = vec3(x,y,z) * propogationGridSpacing;
-	
+
 	vec3 color = vec3(0);
 
 	for (int i = 0; i < dirtyPointCloudIndexCount; i++) {
-	
+
 		const int index = DirtyPointCloudIndices[i];
 		CloudPoint point = PointCloud[index];
 
 		// If the probe is within the max distance...
 		float distanceToProbeSquared = distanceSquared(point.position.xyz, probePosition);
 
-		if (distanceToProbeSquared < maxDistance * maxDistance) {	
+		if (distanceToProbeSquared < maxDistance * maxDistance) {
 
 			// If the point is not facing away from the probe...
 			vec3 v = normalize(probePosition - point.position.xyz);
@@ -184,9 +184,9 @@ void main() {
 				//color += vdotn * point.color.rgb * (maxDistance - distanceFromPointToProbe) * (maxDistance - distanceFromPointToProbe) / maxDistance;
 				color += point.color.rgb / distanceFromPointToProbe;
 				//color += vdotn * point.color.rgb;
-			} 				 
+			}
 		}
-		
+
 	}
 	float scale = 900.0;
 
@@ -196,7 +196,7 @@ void main() {
 	float colorLength = length(color);
 	if (colorLength < 0.001) {
 		color = vec3(-1);
-	} 
+	}
 	// Otherwise, if they reieved at least some color, then write that to the 3d texture
 	else if (colorLength > 0) {
 		imageStore(imgOutput, ivec3(x, y, z), vec4(color, 1));

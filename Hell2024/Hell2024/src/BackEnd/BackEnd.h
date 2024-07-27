@@ -12,7 +12,7 @@ namespace BackEnd {
 
     // API
     void SetAPI(API api);
-    const API& GetAPI();
+    const API GetAPI();
 
     // Window
     GLFWwindow* GetWindowPointer();
@@ -32,7 +32,7 @@ namespace BackEnd {
     int GetCurrentWindowHeight();
     int GetFullScreenWidth();
     int GetFullScreenHeight();
-    
+
     // Render Targets
     void SetPresentTargetSize(int width, int height);
     int GetPresentTargetWidth();

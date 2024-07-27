@@ -341,8 +341,6 @@ bool OpenGLTexture::Bake() {
 
     glGenTextures(1, &ID);
     glBindTexture(GL_TEXTURE_2D, ID);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
     GLint format = GL_RGB;
     if (_NumOfChannels == 4)
@@ -362,6 +360,16 @@ bool OpenGLTexture::Bake() {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, _width, _height, 0, format, GL_UNSIGNED_BYTE, _data);
         stbi_image_free(_data);
+        // find out why the line above crashes sometimes. most likely an async mutex thing.
+    }
+
+    // Hack to make Resident Evil font look okay when scaled
+    std::string filename = this->GetFilename();
+    if (filename.substr(0, 4) == "char") {
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     }
 
     bindlessID = glGetTextureHandleARB(ID);

@@ -18,6 +18,7 @@
 #include "../../Game/Game.h"
 #include "../../Game/Scene.h"
 #include "../../Renderer/GlobalIllumination.h"
+#include "../../Renderer/Renderer.h"
 #include "../../Renderer/TextBlitter.h"
 
 namespace VulkanRenderer {
@@ -1335,7 +1336,7 @@ namespace VulkanRenderer {
         vkCmdDispatch(commandBuffer, _renderTargets.lighting.GetWidth() / 16, _renderTargets.lighting.GetHeight() / 4, 1);
     }
 
-    void VulkanRenderer::RenderGame(RenderData& renderData) {
+    void VulkanRenderer::RenderFrame(RenderData& renderData) {
 
         if (BackEnd::WindowIsMinimized()) {
             return;
@@ -1592,8 +1593,7 @@ namespace VulkanRenderer {
 
         Mesh* mesh = AssetManager::GetMeshByIndex(cubeMeshIndex);
 
-        if (renderData.renderMode == RenderMode::POINT_CLOUD_PROPAGATION_GRID ||
-            renderData.renderMode == RenderMode::PROPAGATION_GRID) {
+        if (Renderer::ProbesVisible()) {
             LightVolume* lightVolume = GlobalIllumination::GetLightVolumeByIndex(0);
             if (lightVolume) {
                 vkCmdDrawIndexed(commandBuffer, mesh->indexCount, GlobalIllumination::GetPointCloud().size(), mesh->baseIndex, mesh->baseVertex, 0);

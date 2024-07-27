@@ -31,7 +31,12 @@ void main() {
 
     BaseColorOut = baseColor;
     NormalsOut.rgb = normal;
+    NormalsOut.rgb = mix(normal, attrNormal, 0.5);
+
 	NormalsOut.a = float(PlayerIndex) * 0.25;
     RMAOut = rma;
 	EmssiveMask = vec4(0,0,0,0);
+
+	//BaseColorOut = vec4(1,0,0,0);
+	//NormalsOut.rgb = vec3(-1,0,0);
 }

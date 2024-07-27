@@ -6,7 +6,16 @@ layout (binding = 1) uniform sampler2D normalTexture;
 layout (binding = 2) uniform sampler2D rmaTexture;
 layout (binding = 3) uniform sampler2D depthTexture;
 layout (binding = 4) uniform sampler2D emissiveTexture;
-layout (binding = 5) uniform samplerCube shadowMap[16];
+layout (binding = 5) uniform sampler3D probeGridTexture;
+layout (binding = 6) uniform samplerCube shadowMap[16];
+
+uniform int probeSpaceWidth;
+uniform int probeSpaceHeight;
+uniform int probeSpaceDepth;
+uniform float probeSpacing;
+uniform vec3 lightVolumePosition;
+uniform float time;
+uniform int renderMode;
 
 in vec2 TexCoords;
 
@@ -211,6 +220,80 @@ float map(float value, float min1, float max1, float min2, float max2) {
 }
 
 
+///////////////////////////
+//                       //
+//   Indirect Lighting   //
+
+vec3 GetProbe(vec3 fragWorldPos, ivec3 offset, out float weight, vec3 Normal) {
+
+	/*
+	float probeWorldX = (x * probeSpacing) + lightVolumePosition.x;
+	float probeWorldY = (y * probeSpacing) + lightVolumePosition.y;
+	float probeWorldZ = (z * probeSpacing) + lightVolumePosition.z;
+	vec3 probePosition = vec3(probeWorldX, probeWorldY, probeWorldZ);
+	*/
+
+	fragWorldPos.x -= lightVolumePosition.x;
+	fragWorldPos.y -= lightVolumePosition.y;
+	fragWorldPos.z -= lightVolumePosition.z;
+
+    vec3 gridCoords = fragWorldPos / probeSpacing;
+    ivec3 base = ivec3(floor(gridCoords));
+    vec3 a = gridCoords - base;
+    vec3 probe_color = texelFetch(probeGridTexture, base + offset, 0).rgb;
+    vec3 probe_worldPos = (base + offset) * probeSpacing;
+    //vec3 v = normalize(probe_worldPos - fragWorldPos); // TODO: no need to normalize if only checking sign
+    vec3 v = (probe_worldPos - fragWorldPos);
+    float vdotn = dot(v, Normal);
+    vec3 weights = mix(1. - a, a, offset);
+    if(vdotn > 0 && probe_color != vec3(0))
+        weight = weights.x * weights.y * weights.z;
+    else
+        weight = 0.;
+    return probe_color;
+}
+
+vec3 GetIndirectLighting(vec3 WorldPos, vec3 Normal) { // Interpolate visible probes
+    float w;
+    vec3 light;
+    float sumW = 0.;
+    vec3 indirectLighting = vec3(0.);
+    light = GetProbe(WorldPos, ivec3(0, 0, 0), w, Normal);
+    indirectLighting += w * light;
+    sumW += w;
+    light = GetProbe(WorldPos, ivec3(0, 0, 1), w, Normal);
+    indirectLighting += w * light;
+    sumW += w;
+    light = GetProbe(WorldPos, ivec3(0, 1, 0), w, Normal);
+    indirectLighting += w * light;
+    sumW += w;
+    light = GetProbe(WorldPos, ivec3(0, 1, 1), w, Normal);
+    indirectLighting += w * light;
+    sumW += w;
+    light = GetProbe(WorldPos, ivec3(1, 0, 0), w, Normal);
+    indirectLighting += w * light;
+    sumW += w;
+    light = GetProbe(WorldPos, ivec3(1, 0, 1), w, Normal);
+    indirectLighting += w * light;
+    sumW += w;
+    light = GetProbe(WorldPos, ivec3(1, 1, 0), w, Normal);
+    indirectLighting += w * light;
+    sumW += w;
+    light = GetProbe(WorldPos, ivec3(1, 1, 1), w, Normal);
+    indirectLighting += w * light;
+    sumW += w;
+    indirectLighting /= sumW;
+    return indirectLighting;
+}
+
+//////////////
+//          //
+//   Noise  //
+
+vec3 filmPixel(vec2 uv) {
+    mat2x3 uvs = mat2x3(uv.xxx, uv.yyy) + mat2x3(vec3(0, 0.1, 0.2), vec3(0, 0.3, 0.4));
+    return fract(sin(uvs * vec2(12.9898, 78.233) * time) * 43758.5453);
+}
 void main() {
 
 	//int playerIndex = 1;
@@ -281,6 +364,29 @@ void main() {
 
 
 
+	//	vec3 indirectLighting = GetIndirectLighting(WorldPos, normal);
+	vec3 baseColor2 = texture(baseColorTexture, TexCoords).rgb;
+
+    vec3 WorldPos2 = WorldPos + (normal * 0.01);
+    vec3 indirectLighting = GetIndirectLighting(WorldPos2, normal);
+
+    vec3 adjustedIndirectLighting = indirectLighting;
+    float factor = min(1, roughness * 1.0);
+    float factor2 = min(1, 1 - metallic * 1.0);
+	float factor3 = min (factor, factor2);
+    adjustedIndirectLighting *= (0.4) * vec3(factor2);
+    adjustedIndirectLighting = max(adjustedIndirectLighting, vec3(0));
+    adjustedIndirectLighting *= baseColor2.rgb * 1.0;
+
+	//FragColor.rgb += vec3(0,0,1);
+
+	if (renderMode == 0) {
+		FragColor.rgb += adjustedIndirectLighting * 0.1;
+	}
+	if (renderMode == 2) {
+		FragColor.rgb = vec3(0);
+	}
+
 
 	// FragColor.rgb = indirectLighting;
 	//float d = distance(viewPos, WorldPos);
@@ -288,9 +394,9 @@ void main() {
 	//vec3 FogColor = vec3(0.0);
 	//FragColor.rgb = mix(FragColor.rgb, FogColor, alpha);
 	FragColor.rgb = mix(FragColor.rgb, Tonemap_ACES(FragColor.rgb), 1.0);
-	FragColor.rgb = mix(FragColor.rgb, Tonemap_ACES(FragColor.rgb), 0.35);
 	FragColor.rgb = pow(FragColor.rgb, vec3(1.0/2.2));
 
+	FragColor.rgb = mix(FragColor.rgb, Tonemap_ACES(FragColor.rgb), 0.1235);
 	// Vignette
 	vec2 uv = TexCoords;
 	uv *=  1.0 - uv.yx;
@@ -298,11 +404,28 @@ void main() {
 	vig = pow(vig, 0.05);			// change pow for modifying the extend of the  vignette
 	FragColor.rgb *= vec3(vig);
 
+	// Noise
+	vec2 viewportSize = textureSize(baseColorTexture, 0) * 1.0;
+	//vec2 uv = gl_FragCoord.xy / viewportSize;
+	vec2 filmRes = viewportSize;
+	vec2 coord = gl_FragCoord.xy;
+	vec2 rest = modf(uv * filmRes, coord);
+	vec3 noise00 = filmPixel(coord / filmRes);
+	vec3 noise01 = filmPixel((coord + vec2(0, 1)) / filmRes);
+	vec3 noise10 = filmPixel((coord + vec2(1, 0)) / filmRes);
+	vec3 noise11 = filmPixel((coord + vec2(1, 1)) / filmRes);
+	vec3 noise = mix(mix(noise00, noise01, rest.y), mix(noise10, noise11, rest.y), rest.x) * vec3(0.7, 0.6, 0.8);
+	float noiseSpeed = 15.0;
+	float x = rand(uv + rand(vec2(int(time * noiseSpeed), int(-time * noiseSpeed))));
+	float noiseFactor = 0.05;
+
+
+
 	// Some more YOLO tone mapping
-	FragColor.rgb = mix(FragColor.rgb, Tonemap_ACES(FragColor.rgb), 0.995);
+	FragColor.rgb = mix(FragColor.rgb, Tonemap_ACES(FragColor.rgb), 0.95);
 
 	// Add the noise
-	// TO DO: FragColor.rgb = FragColor.rgb + (x * -noiseFactor) + (noiseFactor / 2);
+	FragColor.rgb = FragColor.rgb + (x * -noiseFactor) + (noiseFactor / 2);
 
 	// Contrast
 	float contrast = 1.15;
@@ -310,7 +433,7 @@ void main() {
 	FragColor.rgb = FragColor.rgb * contrast;
 
 	// Brightness
-	FragColor.rgb -= vec3(0.010);
+	FragColor.rgb -= vec3(0.020);
 
 
 	//FragColor.rgb = vec3(TexCoords, 0);
@@ -334,6 +457,10 @@ void main() {
 	FragColor.a = 1;
 
 	//FragColor.rgb = vec3( normal);
-	//FragColor.rgb = vec3( TexCoords, 0);
+	float NOISE =  (x * -noiseFactor) + (noiseFactor / 2);
+	//FragColor.rgb = vec3( NOISE);
+
+
+
 
 }

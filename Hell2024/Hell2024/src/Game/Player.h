@@ -104,7 +104,10 @@ private:
     glm::mat4 m_casingSpawnMatrix = glm::mat4(1);
     glm::mat4 m_muzzleFlashMatrix = glm::mat4(1);
 
+
 public:
+    bool m_pickUpInteractable = false;
+    bool g_awaitingRespawn = true;
 
     Player() = default;
     Player(int playerIndex);

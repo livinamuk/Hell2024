@@ -150,8 +150,14 @@ void main() {
 
     vec3 color = vec3(0);
 	for (int i = 0; i < 8; i++) {
+
        vec3 lightPos = vec3(lights[i].posX, lights[i].posY, lights[i].posZ);
        vec3 lightColor = vec3(lights[i].colorR, lights[i].colorG, lights[i].colorB);
+
+	   if (lightColor.b == 0) {
+			continue;
+	   }
+
        float radius = lights[i].radius;
        float strength = lights[i].strength;
 	          vec3 directLight = GetDirectLighting(lightPos, lightColor, radius, strength, Normal, WorldPos, baseColor.rgb, roughness, metallic);

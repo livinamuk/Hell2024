@@ -154,7 +154,7 @@ namespace BackEnd {
         _api = api;
     }
 
-    const API& GetAPI() {
+    const API GetAPI() {
         return _api;
     }
 

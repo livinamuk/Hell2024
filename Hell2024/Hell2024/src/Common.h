@@ -116,21 +116,25 @@ enum WeaponAction {
 #define BONE_WEIGHT_LOCATION 5
 
 struct ivec2 {
-
     int x;
     int y;
-
     ivec2() = default;
-
-    //cpp file
     template <typename T>
-    ivec2(T x_, T y_) {
-        x = (int)x_;
-        y = (int)y_;
+    ivec2(T x_, T y_) : x(static_cast<int>(x_)), y(static_cast<int>(y_)) {}
+    ivec2(const ivec2& other_) : x(other_.x), y(other_.y) {}
+    ivec2(int x_, int y_) : x(x_), y(y_) {}
+    ivec2 operator+(const ivec2& other) const {
+        return ivec2(x + other.x, y + other.y);
     }
-    ivec2(ivec2& other_) {
-        x = other_.x;
-        y = other_.y;
+    ivec2 operator-(const ivec2& other) const {
+        return ivec2(x - other.x, y - other.y);
+    }
+    ivec2& operator=(const ivec2& other) {
+        if (this != &other) {
+            x = other.x;
+            y = other.y;
+        }
+        return *this;
     }
 };
 
@@ -182,6 +186,9 @@ struct Line {
         p1.color = color;
         p2.color = color;
     }
+    glm::vec3 GetCenter() {
+        return (p1.pos + p2.pos) * 0.5f;
+    }
 };
 
 /*struct Triangle {
@@ -192,12 +199,7 @@ struct Line {
     glm::vec3 color = glm::vec3(0);
 };*/
 
-struct IntersectionResult {
-    bool found = false;
-    float distance = 0;
-    float dot = 0;
-    glm::vec2 baryPosition = glm::vec2(0);
-};
+
 
 struct GridProbe {
     glm::vec3 color = BLACK;
@@ -267,7 +269,8 @@ enum class PhysicsObjectType {
     SCENE_MESH,
     RAGDOLL_RIGID,
     CSG_OBJECT_ADDITIVE,
-    CSG_OBJECT_SUBTRACTIVE
+    CSG_OBJECT_SUBTRACTIVE,
+    LIGHT,
 };
 
 struct PhysicsObjectData {
@@ -351,7 +354,7 @@ public: // make private later
 };
 
 struct BLASInstance {
-    glm::mat4 worldTransform = glm::mat4(1);
+    glm::mat4 inverseModelMatrix = glm::mat4(1);
     int blsaRootNodeIndex = 0;
     int baseTriangleIndex = 0;
     int baseVertex = 0;

@@ -5,10 +5,12 @@
 #include "../Core/AssetManager.h"
 #include "../Core/Audio.hpp"
 #include "../Core/File.h"
+#include "../Core/JSON.hpp"
 #include "../Editor/CSG.h"
 #include "../Game/Game.h"
 #include "../Input/Input.h"
 #include "../Renderer/TextBlitter.h"
+#include "../Renderer/Raytracing/Raytracing.h"
 #include "../Util.hpp"
 #include "../EngineState.hpp"
 
@@ -19,15 +21,198 @@ namespace Scene {
     std::vector<GameObject> g_gameObjects;
     std::vector<AnimatedGameObject> g_animatedGameObjects;
     std::vector<BulletHoleDecal> g_bulletHoleDecals;
+    std::vector<Door> g_doors;
+    std::vector<Window> g_windows;
 
     void CreateCeilingsHack();
     void EvaluateDebugKeyPresses();
     void ProcessBullets();
     void CreateDefaultSpawnPoints();
     void CreateDefaultLight();
-    //void UpdateAnimatedGameObjects(float deltaTime);
+    void LoadMapData(const std::string& fileName);
+    void AllocateStorageSpace();
+}
 
-    int testIndex = 0;
+void Scene::AllocateStorageSpace() {
+
+    g_doors.reserve(sizeof(Door) * 1000);
+    g_cubeVolumesAdditive.reserve(sizeof(CubeVolume) * 1000);
+    g_cubeVolumesSubtractive.reserve(sizeof(CubeVolume) * 1000);
+    g_windows.reserve(sizeof(Window) * 1000);
+    g_animatedGameObjects.reserve(sizeof(Window) * 50);
+}
+
+
+void Scene::RemoveGameObjectByIndex(int index) {
+
+    if (index < 0 || index >= g_gameObjects.size()) {
+        return;
+    }
+    g_gameObjects[index].CleanUp();
+    g_gameObjects.erase(g_gameObjects.begin() + index);
+}
+
+void Scene::SaveMapData(const std::string& fileName) {
+
+    JSONObject saveFile;
+    nlohmann::json data;
+
+    // save doors
+    nlohmann::json jsonDoors = nlohmann::json::array();
+    for (const Door& door : Scene::GetDoors()) {
+        nlohmann::json jsonObject;
+        jsonObject["position"] = { {"x", door.m_position.x}, {"y", door.m_position.y}, {"z", door.m_position.z} };
+        jsonObject["rotation"] = door.m_rotation;
+        jsonObject["openOnStart"] = door.m_openOnStart;
+        jsonDoors.push_back(jsonObject);
+    }
+    data["doors"] = jsonDoors;
+
+    // save windows
+    nlohmann::json jsonWindows = nlohmann::json::array();
+    for (Window& window : Scene::GetWindows()) {
+        nlohmann::json jsonObject;
+        jsonObject["position"] = { {"x", window.GetPostionX()}, {"y", window.GetPostionY()}, {"z", window.GetPostionZ()}};
+        jsonObject["rotation"] = window.GetRotationY();
+        jsonWindows.push_back(jsonObject);
+    }
+    data["windows"] = jsonWindows;
+
+    // save additive cube volumes
+    nlohmann::json jsonCubeVolumesAdditive = nlohmann::json::array();
+    for (CubeVolume& cubeVolume : g_cubeVolumesAdditive) {
+        nlohmann::json jsonObject;
+        jsonObject["position"] = { {"x", cubeVolume.m_transform.position.x}, {"y", cubeVolume.m_transform.position.y}, {"z", cubeVolume.m_transform.position.z} };
+        jsonObject["rotation"] = { {"x", cubeVolume.m_transform.rotation.x}, {"y", cubeVolume.m_transform.rotation.y}, {"z", cubeVolume.m_transform.rotation.z} };
+        jsonObject["scale"] = { {"x", cubeVolume.m_transform.scale.x}, {"y", cubeVolume.m_transform.scale.y}, {"z", cubeVolume.m_transform.scale.z} };
+        jsonObject["materialName"] = AssetManager::GetMaterialByIndex(cubeVolume.materialIndex)->_name;
+        jsonObject["texOffsetX"] = cubeVolume.textureOffsetX;
+        jsonObject["texOffsetY"] = cubeVolume.textureOffsetY;
+        jsonObject["texScale"] = cubeVolume.textureScale;
+        jsonCubeVolumesAdditive.push_back(jsonObject);
+    }
+    data["VolumesAdditive"] = jsonCubeVolumesAdditive;
+
+    // save subtractive cube volumes
+    nlohmann::json jsonCubeVolumesSubtractive = nlohmann::json::array();
+    for (CubeVolume& cubeVolume : g_cubeVolumesSubtractive) {
+        nlohmann::json jsonObject;
+        jsonObject["position"] = { {"x", cubeVolume.m_transform.position.x}, {"y", cubeVolume.m_transform.position.y}, {"z", cubeVolume.m_transform.position.z} };
+        jsonObject["rotation"] = { {"x", cubeVolume.m_transform.rotation.x}, {"y", cubeVolume.m_transform.rotation.y}, {"z", cubeVolume.m_transform.rotation.z} };
+        jsonObject["scale"] = { {"x", cubeVolume.m_transform.scale.x}, {"y", cubeVolume.m_transform.scale.y}, {"z", cubeVolume.m_transform.scale.z} };
+        jsonObject["materialName"] = AssetManager::GetMaterialByIndex(cubeVolume.materialIndex)->_name;
+        jsonObject["texOffsetX"] = cubeVolume.textureOffsetX;
+        jsonObject["texOffsetY"] = cubeVolume.textureOffsetY;
+        jsonObject["texScale"] = cubeVolume.textureScale;
+        jsonCubeVolumesSubtractive.push_back(jsonObject);
+    }
+    data["VolumesSubtractive"] = jsonCubeVolumesSubtractive;
+
+    // save lights
+    nlohmann::json jsonLights = nlohmann::json::array();
+    for (Light& light: Scene::g_lights) {
+        nlohmann::json jsonObject;
+        jsonObject["position"] = { {"x", light.position.x}, {"y", light.position.y}, {"z", light.position.z} };
+        jsonObject["color"] = { {"x", light.color.x}, {"y", light.color.y}, {"z", light.color.z} };
+        jsonObject["radius"] = light.radius;
+        jsonObject["type"] = light.type;
+        jsonObject["strength"] = light.strength;
+        jsonLights.push_back(jsonObject);
+    }
+    data["Lights"] = jsonLights;
+
+    // Print it
+    int indent = 4;
+    std::string text = data.dump(indent);
+    std::cout << text << "\n\n";
+
+    // Save to file
+    std::ofstream out("res/maps/mappp.txt");
+    out << text;
+    out.close();
+
+}
+
+void Scene::LoadMapData(const std::string& fileName) {
+
+    // Load file
+    std::string fullPath = "res/maps/" + fileName;
+    std::cout << "Loading map '" << fullPath << "'\n";
+
+    std::ifstream file(fullPath);
+    std::stringstream buffer;
+    buffer << file.rdbuf();
+
+    // Parse file
+    nlohmann::json data = nlohmann::json::parse(buffer.str());
+
+    // Load doors
+    for (const auto& jsonObject : data["doors"]) {
+        DoorCreateInfo createInfo;
+        createInfo.position = { jsonObject["position"]["x"], jsonObject["position"]["y"], jsonObject["position"]["z"] };
+        createInfo.openAtStart = jsonObject["openOnStart"];
+        createInfo.rotation = jsonObject["rotation"];
+        Scene::CreateDoor(createInfo);
+    }
+    // Load windows
+    for (const auto& jsonObject : data["windows"]) {
+        WindowCreateInfo createInfo;
+        createInfo.position = { jsonObject["position"]["x"], jsonObject["position"]["y"], jsonObject["position"]["z"] };
+        createInfo.rotation = jsonObject["rotation"];
+        Scene::CreateWindow(createInfo);
+    }
+    // Load Volumes Additive
+    for (const auto& jsonObject : data["VolumesAdditive"]) {
+        CubeVolume& cube = g_cubeVolumesAdditive.emplace_back();
+        cube.m_transform.position = { jsonObject["position"]["x"], jsonObject["position"]["y"], jsonObject["position"]["z"] };
+        cube.m_transform.rotation = { jsonObject["rotation"]["x"], jsonObject["rotation"]["y"], jsonObject["rotation"]["z"] };
+        cube.m_transform.scale = { jsonObject["scale"]["x"], jsonObject["scale"]["y"], jsonObject["scale"]["z"] };
+        cube.materialIndex = AssetManager::GetMaterialIndex(jsonObject["materialName"]);
+        cube.textureOffsetX = jsonObject["texOffsetX"];
+        cube.textureOffsetY = jsonObject["texOffsetY"];
+        cube.textureScale = jsonObject["texScale"];
+    }
+    // Load Volumes Subtractive
+    for (const auto& jsonObject : data["VolumesSubtractive"]) {
+        CubeVolume& cube = g_cubeVolumesSubtractive.emplace_back();
+        cube.m_transform.position = { jsonObject["position"]["x"], jsonObject["position"]["y"], jsonObject["position"]["z"] };
+        cube.m_transform.rotation = { jsonObject["rotation"]["x"], jsonObject["rotation"]["y"], jsonObject["rotation"]["z"] };
+        cube.m_transform.scale = { jsonObject["scale"]["x"], jsonObject["scale"]["y"], jsonObject["scale"]["z"] };
+        cube.materialIndex = AssetManager::GetMaterialIndex(jsonObject["materialName"]);
+        cube.textureOffsetX = jsonObject["texOffsetX"];
+        cube.textureOffsetY = jsonObject["texOffsetY"];
+        cube.textureScale = jsonObject["texScale"];
+        cube.CreateCubePhysicsObject();
+    }
+    // Load Lights
+    for (const auto& jsonObject : data["Lights"]) {
+        LightCreateInfo createInfo;
+        createInfo.position = { jsonObject["position"]["x"], jsonObject["position"]["y"], jsonObject["position"]["z"] };
+        createInfo.color = { jsonObject["color"]["x"], jsonObject["color"]["y"], jsonObject["color"]["z"] };
+        createInfo.strength = jsonObject["strength"];
+        createInfo.type = jsonObject["type"];
+        createInfo.radius = jsonObject["radius"];
+        Scene::CreateLight(createInfo);
+    }
+}
+
+void Scene::LoadEmptyScene() {
+
+    std::cout << "New map\n";
+    CleanUp();
+    CreateDefaultSpawnPoints();
+    CreateDefaultLight();
+    for (Light& light : g_lights) {
+        light.isDirty = true;
+    }
+    g_doors.clear();
+    g_cubeVolumesAdditive.clear();
+    g_cubeVolumesSubtractive.clear();
+    g_windows.clear();
+    CSG::Build();
+    RecreateAllPhysicsObjects();
+    ResetGameObjectStates();
+    CreateBottomLevelAccelerationStructures();
 }
 
 void Scene::LoadDefaultScene() {
@@ -36,7 +221,7 @@ void Scene::LoadDefaultScene() {
 
     CleanUp();
     CreateDefaultSpawnPoints();
-    CreateDefaultLight();
+    //CreateDefaultLight();
 
     for (Light& light : g_lights) {
         light.isDirty = true;
@@ -44,21 +229,34 @@ void Scene::LoadDefaultScene() {
 
     g_doors.clear();
     g_doors.reserve(sizeof(Door) * 1000);
-    g_doors.emplace_back(Door(glm::vec3(0, 0, -2.95f), HELL_PI * -0.5f));
-    g_doors.emplace_back(Door(glm::vec3(0, 0, -2.90f - 4.15f), HELL_PI * 0.5f, true));
-
     g_cubeVolumesAdditive.clear();
     g_cubeVolumesSubtractive.clear();
     g_cubeVolumesAdditive.reserve(sizeof(CubeVolume) * 1000);
     g_cubeVolumesSubtractive.reserve(sizeof(CubeVolume) * 1000);
 
-
     g_windows.clear();
     g_windows.reserve(sizeof(Window) * 1000);
 
 
+    LoadMapData("mappp.txt");
 
     // Hardcoded objects
+
+
+    if (true) {
+        int index = CreateAnimatedGameObject();
+        AnimatedGameObject& doberman = g_animatedGameObjects[index];
+        doberman.SetFlag(AnimatedGameObject::Flag::NONE);
+        doberman.SetPlayerIndex(1);
+        doberman.SetSkinnedModel("Doberman");
+        doberman.SetName("Glock");
+        doberman.SetAnimationModeToBindPose();
+        doberman.SetAllMeshMaterials("Doberman");
+        doberman.SetPosition(glm::vec3(-1.7f, 0, -1.2f));
+        doberman.SetRotationY(0.7f);
+        doberman.SetScale(1.25);
+        doberman.PlayAndLoopAnimation("Doberman_Lay", 1.0f);
+    }
 
     /*
 
@@ -110,11 +308,25 @@ void Scene::LoadDefaultScene() {
 
 
 
+    /*
+    CreateGameObject();
+    GameObject* lilMan = GetGameObjectByIndex(GetGameObjectCount() - 1);
+    lilMan->SetPosition(0.0f, 0.0f, -2.0f);
+    lilMan->SetScale(0.01f);
+    lilMan->SetModel("LilMan");
+    lilMan->SetName("LilMan");
+    lilMan->SetMeshMaterialByMeshName("Torso", "LilManTorso");
+    lilMan->SetMeshMaterialByMeshName("Brows", "PresentB");
+    lilMan->SetMeshMaterialByMeshName("Lashes", "PresentC");
+    lilMan->SetMeshMaterialByMeshName("Arms", "LilManArms");
+    lilMan->SetMeshMaterialByMeshName("Face", "LilManFace");
+    lilMan->SetMeshMaterialByMeshName("Pants", "PresentA");
+    lilMan->PrintMeshNames();*/
 
 
     CreateGameObject();
     GameObject* pictureFrame = GetGameObjectByIndex(GetGameObjectCount() - 1);
-    pictureFrame->SetPosition(1.1f, 1.5f, -2.9f);
+    pictureFrame->SetPosition(1.1f, 1.5f, -2.35f);
     pictureFrame->SetScale(0.01f);
     //pictureFrame->SetRotationY(HELL_PI / 2);
     pictureFrame->SetModel("PictureFrame_1");
@@ -279,8 +491,7 @@ void Scene::LoadDefaultScene() {
         }
     }
 
-
-
+    /*
     // Walls
     {
         CubeVolume& cube = g_cubeVolumesAdditive.emplace_back();
@@ -393,14 +604,83 @@ void Scene::LoadDefaultScene() {
         cube.CreateCubePhysicsObject();
     }
 
-
+    {
+        CubeVolume& cube = g_cubeVolumesAdditive.emplace_back();
+        cube.m_transform.position = glm::vec3(-2.2, 1.10, 1.55);
+        cube.m_transform.scale = glm::vec3(1.6, 3.08, 0.135);
+        cube.materialIndex = AssetManager::GetMaterialIndex("Ceiling2");
+    }
+    */
 
 
     CSG::Build();
 
     RecreateAllPhysicsObjects();
     ResetGameObjectStates();
+    CreateBottomLevelAccelerationStructures();
 }
+
+AABB AABBFromVertices(std::span<Vertex> vertices, std::span<uint32_t> indices, glm::mat4 worldTransform) {
+    AABB aabb;
+    aabb.boundsMin = glm::vec3(1e30f);
+    aabb.boundsMax = glm::vec3(-1e30f);
+    for (auto& index : indices) {
+        Vertex& vertex = vertices[index];
+        aabb.boundsMin = Util::Vec3Min(aabb.boundsMin, vertex.position);
+        aabb.boundsMax = Util::Vec3Max(aabb.boundsMax, vertex.position);
+    }
+    return aabb;
+}
+
+uint32_t g_doorBLASIndex = 0;
+
+void Scene::CreateBottomLevelAccelerationStructures() {
+
+    if (BackEnd::GetAPI() == API::VULKAN) {
+        return;
+    }
+
+    Raytracing::CleanUp();
+
+    // Create Bottom Level Acceleration Structures
+    for (CSGObject& csgObject : CSG::GetCSGObjects()) {
+        std::span<Vertex> spanVertices = csgObject.GetVerticesSpan();
+        std::span<uint32_t> spanIndices = csgObject.GetIndicesSpan();
+        std::vector<Vertex> vertices(spanVertices.begin(), spanVertices.end());
+        std::vector<uint32_t> indices(spanIndices.begin(), spanIndices.end());
+        csgObject.m_blasIndex = Raytracing::CreateBLAS(vertices, indices, csgObject.m_baseVertex, csgObject.m_baseIndex);
+    }
+
+}
+
+
+void Scene::CreateTopLevelAccelerationStructures() {
+
+    Raytracing::DestroyTopLevelAccelerationStructure(0);
+
+    // Hack in door BLAS
+    std::span<Vertex> spanVertices = CSG::GetRangedVerticesSpan(0, 8);
+    std::span<uint32_t> spanIndices = CSG::GetRangedIndicesSpan(0, 12);
+    std::vector<Vertex> vertices(spanVertices.begin(), spanVertices.end());
+    std::vector<uint32_t> indices(spanIndices.begin(), spanIndices.end());
+    g_doorBLASIndex = Raytracing::CreateBLAS(vertices, indices, 0, 0);
+
+    // Create Top Level Acceleration Structure
+    TLAS* tlas = Raytracing::CreateTopLevelAccelerationStruture();
+    for (CSGObject& csgObject : CSG::GetCSGObjects()) {
+        glm::mat4 worldTransform = glm::mat4(1);
+        tlas->AddInstance(worldTransform, csgObject.m_blasIndex, csgObject.m_aabb);
+    }
+    for (Door& door : g_doors) {
+        glm::mat4 modelMatrix = door.GetDoorModelMatrix();
+        AABB aabb;
+        aabb.boundsMin = door._aabb.boundsMin;
+        aabb.boundsMax = door._aabb.boundsMax;
+        tlas->AddInstance(modelMatrix, g_doorBLASIndex, aabb);
+    }
+    tlas->BuildBVH();
+}
+
 
 void Scene::CreateDefaultSpawnPoints() {
 
@@ -415,6 +695,10 @@ void Scene::CreateDefaultSpawnPoints() {
         SpawnPoint& spawnPoint = g_spawnPoints.emplace_back();
         spawnPoint.position = glm::vec3(-2.07, 0.00, -11.70);
         spawnPoint.rotation = glm::vec3(-0.32, -2.38, 0.00);
+
+        /// remove me later
+        spawnPoint.position = glm::vec3(0, 0.00, -1);
+        spawnPoint.rotation = glm::vec3(-0.0, HELL_PI, 0);
     }
     {
         SpawnPoint& spawnPoint = g_spawnPoints.emplace_back();
@@ -450,6 +734,8 @@ void Scene::CreateDefaultLight() {
 }
 
 void Scene::Update(float deltaTime) {
+
+    CreateTopLevelAccelerationStructures();
 
     Game::SetPlayerGroundedStates();
     ProcessPhysicsCollisions(); // have you ever had a physics crash after you moved this before everything else???
@@ -663,55 +949,11 @@ std::vector<AnimatedGameObject*> Scene::GetAnimatedGamesObjectsToSkin() {
     return objects;
 }
 
-void Scene::LoadMapNEW(std::string mapPath) {
+void Scene::Init() {
 
+    AllocateStorageSpace();
     CleanUp();
-
-    // Load default scene
-    if (true) {
-        LoadDefaultScene();
-        return;
-    }
-
-
-
-    File::LoadMap(mapPath);
-
-    // Walls
-    for (int i = 0; i < Scene::_walls.size(); i++) {
-        Wall& wall = Scene::_walls[i];
-        std::string name = "Wall" + std::to_string(i);
-        wall.CreateVertexData();
-        wall.meshIndex = AssetManager::CreateMesh(name, wall.vertices, wall.indices);
-        wall.UpdateRenderItems();
-        Mesh* mesh = AssetManager::GetMeshByIndex(wall.meshIndex);
-    }
-
-    // Floors
-    for (int i = 0; i < Scene::_floors.size(); i++) {
-        Floor& floor = Scene::_floors[i];
-        std::string name = "Floor" + std::to_string(i);
-        floor.CreateVertexData();
-        floor.meshIndex = AssetManager::CreateMesh(name, floor.vertices, floor.indices);
-        floor.UpdateRenderItem();
-        Mesh* mesh = AssetManager::GetMeshByIndex(floor.meshIndex);
-    }
-
-    CreateCeilingsHack();
-
-    // Floors
-    for (int i = 0; i < Scene::_ceilings.size(); i++) {
-        Ceiling& ceiling = Scene::_ceilings[i];
-        std::string name = "Floor" + std::to_string(i);
-        ceiling.CreateVertexData();
-        ceiling.meshIndex = AssetManager::CreateMesh(name, ceiling.vertices, ceiling.indices);
-        ceiling.UpdateRenderItem();
-        Mesh* mesh = AssetManager::GetMeshByIndex(ceiling.meshIndex);
-    }
-
-    LoadHardCodedObjects();
-    RecreateAllPhysicsObjects();
-    ResetGameObjectStates();
+    LoadDefaultScene();
 }
 
 // Hack To Create Ceilings From Floors
@@ -744,10 +986,6 @@ std::vector<RenderItem3D> Scene::GetAllRenderItems() {
     }
     for (Ceiling& ceiling : Scene::_ceilings) {
         renderItems.push_back(ceiling.GetRenderItem());
-    }
-    for (Wall& wall : Scene::_walls) {
-        renderItems.reserve(renderItems.size() + wall.GetRenderItems().size());
-        renderItems.insert(std::end(renderItems), std::begin(wall.GetRenderItems()), std::end(wall.GetRenderItems()));
     }
     for (GameObject& gameObject : Scene::g_gameObjects) {
         renderItems.reserve(renderItems.size() + gameObject.GetRenderItems().size());
@@ -1133,9 +1371,19 @@ void Scene::Update_OLD(float deltaTime) {
     ProcessPhysicsCollisions();
 }
 
+
+void Scene::DirtyAllLights() {
+    for (Light& light : Scene::g_lights) {
+        light.extraDirty = true;
+    }
+}
+
+
 void Scene::CheckForDirtyLights() {
     for (Light& light : Scene::g_lights) {
-        light.isDirty = false;
+        if (!light.extraDirty) {
+            light.isDirty = false;
+        }
         for (GameObject& gameObject : Scene::g_gameObjects) {
             if (gameObject.HasMovedSinceLastFrame()) {
                 if (Util::AABBInSphere(gameObject._aabb, light.position, light.radius)) {
@@ -1172,6 +1420,7 @@ void Scene::CheckForDirtyLights() {
                 }
             }
         }*/
+        light.extraDirty = false;
     }
 }
 
@@ -1346,6 +1595,16 @@ void Scene::ProcessBullets() {
                         if (gameObject->GetPickUpType() != PickUpType::NONE) {
                             doIt = false;
                         }
+
+                        // look at this properly later
+                        // look at this properly later
+                        // look at this properly later
+                        // look at this properly later
+                        if (gameObject->_name == "PickUp") {
+                            doIt = false;
+                        }
+
+
                     }
                     if (doIt) {
                         // Bullet decal
@@ -1928,7 +2187,7 @@ void Scene::LoadHardCodedObjects() {
     // GO HERE
 
     if (false) {
-        testIndex = CreateAnimatedGameObject();
+        int testIndex = CreateAnimatedGameObject();
         AnimatedGameObject& glock = g_animatedGameObjects[testIndex];
         glock.SetFlag(AnimatedGameObject::Flag::NONE);
         glock.SetPlayerIndex(1);
@@ -1949,7 +2208,7 @@ void Scene::LoadHardCodedObjects() {
         glock.SetScale(0.01);
     }
     if (false) {
-        testIndex = CreateAnimatedGameObject();
+        int testIndex = CreateAnimatedGameObject();
         AnimatedGameObject& glock = g_animatedGameObjects[testIndex];
         glock.SetFlag(AnimatedGameObject::Flag::NONE);
         glock.SetPlayerIndex(1);
@@ -2272,40 +2531,6 @@ void Scene::ResetGameObjectStates() {
     }
 }
 
-void Scene::LoadMap(std::string mapPath) {
-
-    CleanUp();
-    File::LoadMap(mapPath);
-
-    for (Wall& wall : _walls) {
-        wall.CreateVertexData();
-        wall.CreateMeshGL();
-    }
-
-    for (Floor& floor : _floors) {
-        floor.CreateVertexData();
-        floor.CreateMeshGL();
-    }
-
-    CreateCeilingsHack();
-
-    for (Ceiling& ceiling : _ceilings) {
-        ceiling.CreateVertexData();
-        ceiling.CreateMeshGL();
-    }
-
-    LoadHardCodedObjects();
-
-    RecreateDataStructures();
-    ResetGameObjectStates();
-}
-
-
-
-void Scene::SaveMap(std::string mapPath) {
-	File::SaveMap(mapPath);
-}
-
 
 void Scene::CleanUp() {
     for (Door& door : g_doors) {
@@ -2342,13 +2567,9 @@ void Scene::CleanUp() {
     g_spawnPoints.clear();
     g_bulletCasings.clear();
     g_bulletHoleDecals.clear();
-    _walls.clear();
-    _floors.clear();
-	_ceilings.clear();
 	g_doors.clear();
     g_windows.clear();
 	g_gameObjects.clear();
-    //g_animatedGameObjects.clear();
     _pickUps.clear();
     g_lights.clear();
 
@@ -2356,6 +2577,27 @@ void Scene::CleanUp() {
 		_sceneTriangleMesh->release();
 		_sceneShape->release();
     }
+
+    for (int i = 0; i < g_animatedGameObjects.size(); ) {
+        if (g_animatedGameObjects[i].GetFlag() != AnimatedGameObject::Flag::VIEW_WEAPON &&
+            g_animatedGameObjects[i].GetFlag() != AnimatedGameObject::Flag::CHARACTER_MODEL) {
+            g_animatedGameObjects.erase(g_animatedGameObjects.begin() + i);
+        }
+        else {
+            ++i;
+        }
+    }
+}
+
+void Scene::CreateLight(LightCreateInfo createInfo) {
+    Light& light = g_lights.emplace_back();
+    light.position = createInfo.position;
+    light.color = createInfo.color;
+    light.radius = createInfo.radius;
+    light.strength = createInfo.strength;
+    light.type = createInfo.type;
+    light.isDirty = true;
+    light.extraDirty = true;
 }
 
 void Scene::AddLight(Light& light) {
@@ -2367,127 +2609,8 @@ void Scene::AddDoor(Door& door) {
 }
 
 void Scene::CreatePointCloud() {
-
     float pointSpacing = _pointCloudSpacing;
-
     _cloudPoints.clear();
-
-    //int rayCount = 0;
-
-    for (auto& wall : _walls) {
-        Line line;
-        line.p1 = Point(wall.begin, YELLOW);
-        line.p2 = Point(wall.end, YELLOW);
-        Line line2;
-        line2.p1 = Point(wall.begin + glm::vec3(0, wall.height, 0), YELLOW);
-        line2.p2 = Point(wall.end + glm::vec3(0, wall.height, 0), YELLOW);
-        Line line3;
-        line3.p1 = Point(wall.begin + glm::vec3(0, 0, 0), YELLOW);
-        line3.p2 = Point(wall.begin + glm::vec3(0, wall.height, 0), YELLOW);
-        Line line4;
-        line4.p1 = Point(wall.end + glm::vec3(0, 0, 0), YELLOW);
-        line4.p2 = Point(wall.end + glm::vec3(0, wall.height, 0), YELLOW);
-        glm::vec3 dir = glm::normalize(wall.end - wall.begin);
-        float wallLength = distance(wall.begin, wall.end);
-        for (float x = pointSpacing * 0.5f; x < wallLength; x += pointSpacing) {
-            glm::vec3 pos = wall.begin + (dir * x);
-            for (float y = pointSpacing * 0.5f; y < wall.height; y += pointSpacing) {
-                CloudPointOld cloudPoint;
-                cloudPoint.position = glm::vec4(pos, 0);
-                cloudPoint.position.y = wall.begin.y + y;
-                glm::vec3 wallVector = glm::normalize(wall.end - wall.begin);
-                cloudPoint.normal = glm::vec4(-wallVector.z, 0, wallVector.x, 0);
-                _cloudPoints.push_back(cloudPoint);
-            }
-        }
-    }
-
-    for (auto& floor : _floors) {
-
-        //inline bool PointIn2DTriangle(glm::vec2 pt, glm::vec2 v1, glm::vec2 v2, glm::vec2 v3) {
-
-        float minX = std::min(std::min(std::min(floor.v1.position.x, floor.v2.position.x), floor.v3.position.x), floor.v4.position.x);
-        float minZ = std::min(std::min(std::min(floor.v1.position.z, floor.v2.position.z), floor.v3.position.z), floor.v4.position.z);
-        float maxX = std::max(std::max(std::max(floor.v1.position.x, floor.v2.position.x), floor.v3.position.x), floor.v4.position.x);
-        float maxZ = std::max(std::max(std::max(floor.v1.position.z, floor.v2.position.z), floor.v3.position.z), floor.v4.position.z);
-        float floorHeight = floor.v1.position.y;
-
-        //float floorWidth = floor.x2 - floor.x1;
-        //float floorDepth = floor.z2 - floor.z1;
-        for (float x = minX + (pointSpacing * 0.5f); x < maxX; x += pointSpacing) {
-            for (float z = minZ + (pointSpacing * 0.5f); z < maxZ; z += pointSpacing) {
-                CloudPointOld cloudPoint;
-                cloudPoint.position = glm::vec4(x, floorHeight, z, 0);
-                cloudPoint.normal = glm::vec4(NRM_Y_UP, 0);
-                _cloudPoints.push_back(cloudPoint);
-            }
-        }
-
-        /*
-        for (float x = pointSpacing * 0.5f; x < floorWidth; x += pointSpacing) {
-            for (float z = pointSpacing * 0.5f; z < floorDepth; z += pointSpacing) {
-                CloudPoint cloudPoint;
-                cloudPoint.position = glm::vec4(floor.x1 + x, floor.height, floor.z1 + z, 0);
-                cloudPoint.normal = glm::vec4(NRM_Y_UP, 0);
-                _cloudPoints.push_back(cloudPoint);
-            }
-        }*/
-    }
-
-    for (auto& ceiling : _ceilings) {
-        Line line;
-        line.p1 = Point(glm::vec3(ceiling.x1, ceiling.height, ceiling.z1), YELLOW);
-        line.p2 = Point(glm::vec3(ceiling.x1, ceiling.height, ceiling.z2), YELLOW);
-        Line line2;
-        line2.p1 = Point(glm::vec3(ceiling.x1, ceiling.height, ceiling.z1), YELLOW);
-        line2.p2 = Point(glm::vec3(ceiling.x2, ceiling.height, ceiling.z1), YELLOW);
-        Line line3;
-        line3.p1 = Point(glm::vec3(ceiling.x2, ceiling.height, ceiling.z2), YELLOW);
-        line3.p2 = Point(glm::vec3(ceiling.x2, ceiling.height, ceiling.z1), YELLOW);
-        Line line4;
-        line4.p1 = Point(glm::vec3(ceiling.x2, ceiling.height, ceiling.z2), YELLOW);
-        line4.p2 = Point(glm::vec3(ceiling.x1, ceiling.height, ceiling.z2), YELLOW);
-        float ceilingWidth = ceiling.x2 - ceiling.x1;
-        float ceilingDepth = ceiling.z2 - ceiling.z1;
-        for (float x = pointSpacing * 0.5f; x < ceilingWidth; x += pointSpacing) {
-            for (float z = pointSpacing * 0.5f; z < ceilingDepth; z += pointSpacing) {
-                CloudPointOld cloudPoint;
-                cloudPoint.position = glm::vec4(ceiling.x1 + x, ceiling.height, ceiling.z1 + z, 0);
-                cloudPoint.normal = glm::vec4(NRM_Y_DOWN, 0);
-                _cloudPoints.push_back(cloudPoint);
-            }
-        }
-    }
-
-    // Now remove any points that overlap doors
-
-    for (int i = 0; i < _cloudPoints.size(); i++) {
-        glm::vec2 p = { _cloudPoints[i].position.x, _cloudPoints[i].position.z };
-        for (Door& door : Scene::g_doors) {
-            // Ignore if is point is above or below door
-            if (_cloudPoints[i].position.y < door.m_position.y ||
-                _cloudPoints[i].position.y > door.m_position.y + DOOR_HEIGHT) {
-                continue;
-            }
-            // Check if it is inside the fucking door
-            glm::vec2 p3 = { door.GetFloorplanVertFrontLeft().x, door.GetFloorplanVertFrontLeft().z };
-            glm::vec2 p2 = { door.GetFloorplanVertFrontRight().x, door.GetFloorplanVertFrontRight().z };
-            glm::vec2 p1 = { door.GetFloorplanVertBackRight().x, door.GetFloorplanVertBackRight().z };
-            glm::vec2 p4 = { door.GetFloorplanVertBackLeft().x, door.GetFloorplanVertBackLeft().z };
-            glm::vec2 p5 = { door.GetFloorplanVertFrontRight().x, door.GetFloorplanVertFrontRight().z };
-            glm::vec2 p6 = { door.GetFloorplanVertBackRight().x, door.GetFloorplanVertBackRight().z };
-            if (Util::PointIn2DTriangle(p, p1, p2, p3) || Util::PointIn2DTriangle(p, p4, p5, p6)) {
-                _cloudPoints.erase(_cloudPoints.begin() + i);
-                i--;
-                break;
-            }
-        }
-
-    }
-}
-
-void Scene::AddWall(Wall& wall) {
-    _walls.push_back(wall);
 }
 
 void Scene::AddFloor(Floor& floor) {
@@ -2567,54 +2690,6 @@ void Scene::UpdateRTInstanceData() {
 }
 
 void Scene::RecreateAllPhysicsObjects() {
-
-    std::vector<PxVec3> vertices;
-    std::vector<unsigned int> indices;
-    for (Wall& wall : _walls) {
-
-        if (wall.begin.y > 2.0f) {
-            continue;
-        }
-
-        for (Vertex& vertex : wall.vertices) {
-            vertices.push_back(PxVec3(vertex.position.x, vertex.position.y, vertex.position.z));
-            indices.push_back(indices.size());
-        }
-    }
-    for (Floor& floor : _floors) {
-        for (Vertex& vertex : floor.vertices) {
-            vertices.push_back(PxVec3(vertex.position.x, vertex.position.y, vertex.position.z));
-            indices.push_back(indices.size());
-        }
-    }
-    for (Ceiling& ceiling : _ceilings) {
-        for (Vertex& vertex : ceiling.vertices) {
-            vertices.push_back(PxVec3(vertex.position.x, vertex.position.y, vertex.position.z));
-            indices.push_back(indices.size());
-        }
-    }
-
-    // commenting the shit below out prevented the crash it mentions, but who knows if that is gonna break something elsewhere
-
-	/*if (_sceneTriangleMesh) {
-		_sceneTriangleMesh->release();
-	}
-	if (_sceneShape) {
-        _sceneShape->release(); // crashed here once? // again again./ figure out
-	}*/
-
-    if (vertices.size()) {;
-        Transform transform;
-        PhysicsFilterData filterData;
-        filterData.raycastGroup = RAYCAST_ENABLED;
-        filterData.collisionGroup = ENVIROMENT_OBSTACLE;
-        filterData.collidesWith = (CollisionGroup)(GENERIC_BOUNCEABLE | BULLET_CASING | PLAYER | RAGDOLL);
-		_sceneTriangleMesh = Physics::CreateTriangleMesh(vertices.size(), vertices.data(), vertices.size() / 3, indices.data());
-		PxShapeFlags shapeFlags(PxShapeFlag::eSIMULATION_SHAPE);
-        _sceneShape = Physics::CreateShapeFromTriangleMesh(_sceneTriangleMesh, shapeFlags);
-        _sceneRigidDynamic = Physics::CreateRigidStatic(transform, filterData, _sceneShape);
-		_sceneRigidDynamic->userData = new PhysicsObjectData(PhysicsObjectType::SCENE_MESH, nullptr);
-    }
 
 	for (Door& door : g_doors) {
 		door.CreatePhysicsObject();
@@ -2822,12 +2897,7 @@ void Scene::CreateMeshData() {
 
     // House
     {
-        for (Wall& wall : _walls) {
-            //wall.CreateMesh();
-            for (Vertex& vert : wall.vertices) {
-                _rtVertices.push_back(vert.position);
-            }
-        }
+
         for (Floor& floor : _floors) {
             //wall.CreateMesh();
             for (Vertex& vert : floor.vertices) {
@@ -2903,4 +2973,70 @@ CubeVolume* Scene::GetCubeVolumeSubtractiveByIndex(int32_t index) {
         std::cout << "Scene::GetCubeVolumeSubtractiveByIndex() failed coz " << index << " out of range of size " << g_cubeVolumesSubtractive.size() << "\n";
         return nullptr;
     }
+}
+
+Window* Scene::GetWindowByIndex(int32_t index) {
+    if (index >= 0 && index < g_windows.size()) {
+        return &g_windows[index];
+    }
+    else {
+        std::cout << "Scene::GetWindowByIndex() failed coz " << index << " out of range of size " << g_windows.size() << "\n";
+        return nullptr;
+    }
+}
+
+Door* Scene::GetDoorByIndex(int32_t index) {
+    if (index >= 0 && index < g_doors.size()) {
+        return &g_doors[index];
+    }
+    else {
+        std::cout << "Scene::GetDoorByIndex() failed coz " << index << " out of range of size " << g_doors.size() << "\n";
+        return nullptr;
+    }
+}
+
+uint32_t Scene::GetWindowCount() {
+    return g_windows.size();
+}
+
+uint32_t Scene::GetDoorCount() {
+    return g_doors.size();
+}
+
+std::vector<Window>& Scene::GetWindows() {
+    return g_windows;
+}
+
+std::vector<Door>& Scene::GetDoors() {
+    return g_doors;
+}
+
+/*
+void Scene::SetDoorPosition(uint32_t doorIndex, glm::vec3 position) {
+    Door* door = GetDoorByIndex(doorIndex);
+    if (door) {
+        door->SetPosition(position);
+    }
+}
+
+void Scene::SetWindowPosition(uint32_t windowIndex, glm::vec3 position) {
+    Window* window = GetWindowByIndex(windowIndex);
+    if (window) {
+        window->SetPosition(position);
+    }
+}*/
+
+void Scene::CreateDoor(DoorCreateInfo createInfo) {
+    Door& door = g_doors.emplace_back();
+    door.SetPosition(createInfo.position);
+    door.SetRotation(createInfo.rotation);
+    door.m_openOnStart = createInfo.openAtStart;
+    door.CreatePhysicsObject();
+}
+
+void Scene::CreateWindow(WindowCreateInfo createInfo) {
+    Window& window = g_windows.emplace_back();
+    window.SetPosition(createInfo.position);
+    window.SetRotationY(createInfo.rotation);
+    window.CreatePhysicsObjects();
 }

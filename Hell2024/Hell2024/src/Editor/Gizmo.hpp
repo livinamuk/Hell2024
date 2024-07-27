@@ -107,13 +107,13 @@ namespace Gizmo {
         ctx.m_gizmoHeightPixels = 50;
         ctx.m_gizmoSizePixels = 6;
 
-        if (Input::KeyPressed(HELL_KEY_W)) {
+        if (Input::KeyPressed(HELL_KEY_NUMPAD_1)) {
             Im3d::GetContext().m_gizmoMode = Im3d::GizmoMode::GizmoMode_Translation;
         }
-        if (Input::KeyPressed(HELL_KEY_E)) {
+        if (Input::KeyPressed(HELL_KEY_NUMPAD_2)) {
             Im3d::GetContext().m_gizmoMode = Im3d::GizmoMode::GizmoMode_Rotation;
         }
-        if (Input::KeyPressed(HELL_KEY_R)) {
+        if (Input::KeyPressed(HELL_KEY_NUMPAD_3)) {
             Im3d::GetContext().m_gizmoMode = Im3d::GizmoMode::GizmoMode_Scale;
         }
 

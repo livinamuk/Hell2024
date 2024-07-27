@@ -16,7 +16,7 @@ enum class CollisionType { NONE, STATIC_ENVIROMENT, BOUNCEABLE, PICKUP, BULLET_C
 
 struct GameObject {
 
-private:
+public:
     CollisionType m_collisionType = CollisionType::NONE;
 
 public:
@@ -135,6 +135,8 @@ public:
 	PickUpType GetPickUpType();
 	//void CreateEditorPhysicsObject();
 
+    int m_convexModelIndex = -1;
+
 	//void CreateRigidBody(glm::mat4 matrix, bool kinematic);
 	void AddCollisionShape(PxShape* shape, PhysicsFilterData physicsFilterData);
 	void AddCollisionShapeFromModelIndex(unsigned int modelIndex, glm::vec3 scale = glm::vec3(1));
@@ -165,6 +167,8 @@ public:
 
     std::vector<Triangle> GetTris();
     std::vector<Vertex> GetAABBVertices();
+
+    void PrintMeshNames();
 
 private:
     std::vector<RenderItem3D> renderItems;

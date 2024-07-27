@@ -14,6 +14,8 @@ public:
     void CleanUp();
     void SetToInitialState();
     void Rotate90();
+    void SetPosition(glm::vec3 position);
+    void SetRotation(float rotation);
 
     glm::vec3 m_position = glm::vec3(0);
     float m_rotation = 0;
