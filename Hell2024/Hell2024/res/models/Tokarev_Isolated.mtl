@@ -1,0 +1,35 @@
+# Blender 4.0.2 MTL File: 'Tokarev.blend'
+# www.blender.org
+
+newmtl tx_tok_grip
+Ns 840.062683
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 3
+map_Kd C:/Users/livinamuk/Desktop/Unloved/Artists/Fnuxray/final maybe/tx_tok_grip_D.tga
+map_Bump -bm 1.000000 C:/Users/livinamuk/Desktop/Unloved/Artists/Fnuxray/final maybe/hellenginetemp/tx_tok_grip_N.tga
+
+newmtl tx_tok_mag
+Ns 624.979797
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 3
+map_Kd C:/Users/livinamuk/Desktop/Unloved/Artists/Fnuxray/final maybe/hellenginetemp/tx_tok_mag_D.tga
+map_Bump -bm 1.000000 C:/Users/livinamuk/Desktop/Unloved/Artists/Fnuxray/final maybe/hellenginetemp/tx_tok_mag_N.tga
+
+newmtl tx_tok_main
+Ns 769.484863
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd C:/Users/livinamuk/Desktop/Unloved/Artists/Fnuxray/final maybe/hellenginetemp/TokarevMain_ALB.png
+map_Bump -bm 1.000000 C:/Users/livinamuk/Desktop/Unloved/Artists/Fnuxray/final maybe/hellenginetemp/TokarevMain_NRM.png

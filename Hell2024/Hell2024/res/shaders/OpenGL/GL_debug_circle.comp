@@ -1,0 +1,24 @@
+#version 430 core
+
+layout (local_size_x = 16, local_size_y = 4, local_size_z = 1) in;
+
+layout(rgba8, binding = 0) uniform image2D inputTexture;
+
+uniform int screenCenterX;
+uniform int screenCenterY;
+
+void main() {
+
+	ivec2 pixelCoords = ivec2(gl_GlobalInvocationID.xy);
+    vec3 color = imageLoad(inputTexture, pixelCoords).rgb;
+	color *= vec3(1,0,0);
+
+	ivec2 targetPixel = ivec2(screenCenterX, screenCenterY);
+	int radius = 40;
+
+	float distance = length(vec2(pixelCoords - targetPixel));
+    if (distance < radius) {
+//		imageStore(inputTexture, pixelCoords, vec4(10, 0, 1, 1));
+	}
+}
+
