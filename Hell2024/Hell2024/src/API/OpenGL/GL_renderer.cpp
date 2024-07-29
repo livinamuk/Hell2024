@@ -652,7 +652,7 @@ void OpenGLRenderer::RenderFrame(RenderData& renderData) {
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 18, OpenGLRenderer::_ssbos.muzzleFlashData);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 19, OpenGLRenderer::_ssbos.csgMaterials.GetHandle());
 
-    RaytracingTestPass(renderData);
+    //RaytracingTestPass(renderData);
 
     ClearRenderTargets();
     RenderShadowMapss(renderData);
@@ -1810,6 +1810,10 @@ void PostProcessingPass(RenderData& renderData) {
 
 void OpenGLRenderer::UpdatePointCloud() {
 
+    if (Renderer::GetRenderMode() == RenderMode::DIRECT_LIGHT) {
+        return;
+    }
+
     int pointCount = GlobalIllumination::GetPointCloud().size();
     int invocationCount = std::ceil(pointCount / 64.0f);
 
@@ -1999,36 +2003,40 @@ void OpenGLRenderer::ProbeGridDebugPass() {
     OpenGLTexture3D& texture3D = lightVolume->texutre3D.GetGLTexture3D();
 
     // Calculate probe lightings
-    GLFrameBuffer& gBuffer = OpenGLRenderer::g_frameBuffers.gBuffer;
-    ComputeShader& computeShader = OpenGLRenderer::g_shaders.probeLighting;
-    computeShader.Use();
-    computeShader.SetInt("probeSpaceWidth", lightVolume->GetProbeSpaceWidth());
-    computeShader.SetInt("probeSpaceHeight", lightVolume->GetProbeSpaceHeight());
-    computeShader.SetInt("probeSpaceDepth", lightVolume->GetProbeSpaceDepth());
-    computeShader.SetVec3("lightVolumePosition", lightVolume->GetPosition());
-    computeShader.SetFloat("probeSpacing", PROBE_SPACING);
-    computeShader.SetInt("cloudPointCount", GlobalIllumination::GetPointCloud().size());
-    computeShader.SetInt("frameNumber", frameNumber);
+    if (Renderer::GetRenderMode() == RenderMode::COMPOSITE ||
+        Renderer::GetRenderMode() == RenderMode::COMPOSITE_PLUS_POINT_CLOUD) {
 
-    glBindImageTexture(0, gBuffer.GetColorAttachmentHandleByName("FinalLighting"), 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA8);
-    glBindImageTexture(1, texture3D.GetID(), 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, OpenGLBackEnd::GetPointCloudVBO());
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 20, OpenGLBackEnd::GetCSGVBO());
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 21, OpenGLBackEnd::GetCSGEBO());
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 22, _ssbos.blasNodes.GetHandle());
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 23, _ssbos.tlasNodes.GetHandle());
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 24, _ssbos.blasInstances.GetHandle());
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 25, _ssbos.triangleIndices.GetHandle());
-    glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
+        GLFrameBuffer& gBuffer = OpenGLRenderer::g_frameBuffers.gBuffer;
+        ComputeShader& computeShader = OpenGLRenderer::g_shaders.probeLighting;
+        computeShader.Use();
+        computeShader.SetInt("probeSpaceWidth", lightVolume->GetProbeSpaceWidth());
+        computeShader.SetInt("probeSpaceHeight", lightVolume->GetProbeSpaceHeight());
+        computeShader.SetInt("probeSpaceDepth", lightVolume->GetProbeSpaceDepth());
+        computeShader.SetVec3("lightVolumePosition", lightVolume->GetPosition());
+        computeShader.SetFloat("probeSpacing", PROBE_SPACING);
+        computeShader.SetInt("cloudPointCount", GlobalIllumination::GetPointCloud().size());
+        computeShader.SetInt("frameNumber", frameNumber);
 
-    int workGroupSize = 4;
-    int workGroupX = (lightVolume->GetProbeSpaceWidth() + workGroupSize - 1) / workGroupSize;
-    int workGroupY = (lightVolume->GetProbeSpaceHeight() + workGroupSize - 1) / workGroupSize;
-    int workGroupZ = (lightVolume->GetProbeSpaceDepth() + workGroupSize - 1) / workGroupSize;
-    glDispatchCompute(workGroupX, workGroupY, workGroupZ);
+        glBindImageTexture(0, gBuffer.GetColorAttachmentHandleByName("FinalLighting"), 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA8);
+        glBindImageTexture(1, texture3D.GetID(), 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, OpenGLBackEnd::GetPointCloudVBO());
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 20, OpenGLBackEnd::GetCSGVBO());
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 21, OpenGLBackEnd::GetCSGEBO());
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 22, _ssbos.blasNodes.GetHandle());
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 23, _ssbos.tlasNodes.GetHandle());
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 24, _ssbos.blasInstances.GetHandle());
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 25, _ssbos.triangleIndices.GetHandle());
+        glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
 
+        int workGroupSize = 4;
+        int workGroupX = (lightVolume->GetProbeSpaceWidth() + workGroupSize - 1) / workGroupSize;
+        int workGroupY = (lightVolume->GetProbeSpaceHeight() + workGroupSize - 1) / workGroupSize;
+        int workGroupZ = (lightVolume->GetProbeSpaceDepth() + workGroupSize - 1) / workGroupSize;
+        glDispatchCompute(workGroupX, workGroupY, workGroupZ);
+    }
+
+    // Draw debug probes
     if (Renderer::ProbesVisible()) {
-
         static Model* model = AssetManager::GetModelByIndex(AssetManager::GetModelIndexByName("Cube"));
         Mesh* cubeMesh = AssetManager::GetMeshByIndex(model->GetMeshIndices()[0]);
         Player* player = Game::GetPlayerByIndex(0);
@@ -2049,7 +2057,6 @@ void OpenGLRenderer::ProbeGridDebugPass() {
         g_shaders.debugProbes.SetVec3("lightVolumePosition", lightVolume->GetPosition());
         g_shaders.debugProbes.SetFloat("probeSpacing", PROBE_SPACING);
 
-        // Draw debug probes
         int instanceCount = lightVolume->GetProbeCount();
         glDrawElementsInstancedBaseVertex(GL_TRIANGLES, cubeMesh->indexCount, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int) * cubeMesh->baseIndex), instanceCount, cubeMesh->baseVertex);
     }

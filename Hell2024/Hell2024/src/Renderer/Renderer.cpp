@@ -1617,9 +1617,9 @@ void ResizeRenderTargets() {
 inline std::vector<DebugLineRenderMode> _allowedDebugLineRenderModes = {
     SHOW_NO_LINES,
     PATHFINDING,
-    //PHYSX_COLLISION,
-    //RTX_LAND_TOP_LEVEL_ACCELERATION_STRUCTURE,
-    //RTX_LAND_BOTTOM_LEVEL_ACCELERATION_STRUCTURES,
+    PHYSX_COLLISION,
+    RTX_LAND_TOP_LEVEL_ACCELERATION_STRUCTURE,
+    RTX_LAND_BOTTOM_LEVEL_ACCELERATION_STRUCTURES,
 };
 
 void Renderer::NextDebugLineRenderMode() {

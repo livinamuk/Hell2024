@@ -362,27 +362,22 @@ void main() {
 
 	FragColor.rgb = directLighting;
 
-
-
-	//	vec3 indirectLighting = GetIndirectLighting(WorldPos, normal);
-	vec3 baseColor2 = texture(baseColorTexture, TexCoords).rgb;
-
-    vec3 WorldPos2 = WorldPos + (normal * 0.01);
-    vec3 indirectLighting = GetIndirectLighting(WorldPos2, normal);
-
-    vec3 adjustedIndirectLighting = indirectLighting;
-    float factor = min(1, roughness * 1.0);
-    float factor2 = min(1, 1 - metallic * 1.0);
-	float factor3 = min (factor, factor2);
-    adjustedIndirectLighting *= (0.4) * vec3(factor2);
-    adjustedIndirectLighting = max(adjustedIndirectLighting, vec3(0));
-    adjustedIndirectLighting *= baseColor2.rgb * 1.0;
-
-	//FragColor.rgb += vec3(0,0,1);
-
+	// Indirect light
 	if (renderMode == 0) {
+		vec3 baseColor2 = texture(baseColorTexture, TexCoords).rgb;
+		vec3 WorldPos2 = WorldPos + (normal * 0.01);
+		vec3 indirectLighting = GetIndirectLighting(WorldPos2, normal);
+		vec3 adjustedIndirectLighting = indirectLighting;
+		float factor = min(1, roughness * 1.0);
+		float factor2 = min(1, 1 - metallic * 1.0);
+		float factor3 = min (factor, factor2);
+		adjustedIndirectLighting *= (0.4) * vec3(factor2);
+		adjustedIndirectLighting = max(adjustedIndirectLighting, vec3(0));
+		adjustedIndirectLighting *= baseColor2.rgb * 1.0;
 		FragColor.rgb += adjustedIndirectLighting * 0.1;
 	}
+
+	// Point cloud only
 	if (renderMode == 2) {
 		FragColor.rgb = vec3(0);
 	}
