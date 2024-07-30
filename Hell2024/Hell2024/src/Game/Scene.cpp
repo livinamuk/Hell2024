@@ -1385,7 +1385,7 @@ void Scene::CheckForDirtyLights() {
             light.isDirty = false;
         }
         for (GameObject& gameObject : Scene::g_gameObjects) {
-            if (gameObject.HasMovedSinceLastFrame()) {
+            if (gameObject.HasMovedSinceLastFrame() && gameObject.m_castShadows) {
                 if (Util::AABBInSphere(gameObject._aabb, light.position, light.radius)) {
                     light.isDirty = true;
                     break;

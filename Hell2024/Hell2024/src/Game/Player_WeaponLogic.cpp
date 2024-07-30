@@ -775,6 +775,7 @@ void Player::DropWeapons() {
             weapon->UpdateRigidBodyMassAndInertia(50.0f);
             weapon->DisableRespawnOnPickup();
             weapon->SetCollisionType(CollisionType::PICKUP);
+            weapon->DisableShadows();
             weapon->m_collisionRigidBody.SetGlobalPose(weapon->_transform.to_mat4());
         }
     }

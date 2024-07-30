@@ -40,6 +40,10 @@ PxFilterData GetPxFilterDataFromCollisionType(CollisionType collisionType) {
     return filterData;
 }
 
+void GameObject::DisableShadows() {
+    m_castShadows = false;
+}
+
 void GameObject::SetCollisionType(CollisionType collisionType) {
     PxFilterData filterData = GetPxFilterDataFromCollisionType(collisionType);
     for (PxShape*& collisionShape : m_collisionRigidBody.GetCollisionShapes()) {
@@ -963,6 +967,7 @@ void GameObject::UpdateRenderItems() {
         renderItem.inverseModelMatrix = inverse(renderItem.modelMatrix);
         renderItem.meshIndex = meshIndex;
         renderItem.normalTextureIndex = AssetManager::GetMaterialByIndex(materialIndex)->_normal;
+        renderItem.castShadow = m_castShadows;
 
         if (m_isGold) {
             renderItem.baseColorTextureIndex = AssetManager::GetGoldBaseColorTextureIndex();

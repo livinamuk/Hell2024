@@ -44,6 +44,7 @@ Mousewheel: zoom camera<br>
 The .lib files are managed by LFS. Download via terminal:
 
 ```
+git lfs install
 git clone https://github.com/livinamuk/Hell2024.git
 ```
 

@@ -23,7 +23,7 @@ public:
     GameObject() = default;
     void SetCollisionType(CollisionType collisionType);
 
-
+    void DisableShadows();
 
     RigidBody m_collisionRigidBody;
     RigidStatic m_raycastRigidStatic;
@@ -50,6 +50,7 @@ public:
 	float _minOpenAmount = 0;
 	float _openSpeed = 0;
     bool _respawns = true;
+    bool m_castShadows = true;
 
     void MakeGold();
 

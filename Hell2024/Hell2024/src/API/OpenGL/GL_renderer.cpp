@@ -146,8 +146,8 @@ void OpenGLRenderer::HotloadShaders() {
     g_shaders.geometry.Load("GL_gbuffer.vert", "GL_gbuffer.frag");
     g_shaders.geometrySkinned.Load("GL_gbufferSkinned.vert", "GL_gbufferSkinned.frag");
     g_shaders.lighting.Load("GL_lighting.vert", "GL_lighting.frag");
-    g_shaders.shadowMap.Load("GL_shadowMap.vert", "GL_shadowMap.frag", "GL_shadowMap.geom");
-    g_shaders.shadowMapCSG.Load("GL_shadowMap_csg.vert", "GL_shadowMap_csg.frag", "GL_shadowMap_csg.geom");
+    g_shaders.shadowMap.Load("GL_shadowMap.vert", "GL_shadowMap.frag");
+    g_shaders.shadowMapCSG.Load("GL_shadowMap_csg.vert", "GL_shadowMap_csg.frag");
     g_shaders.flipBook.Load("GL_flipBook.vert", "GL_flipBook.frag");
     g_shaders.glass.Load("GL_glass.vert", "GL_glass.frag");
     g_shaders.decals.Load("GL_decals.vert", "GL_decals.frag");
@@ -853,20 +853,19 @@ void RenderShadowMapss(RenderData& renderData) {
     glDisable(GL_CULL_FACE);
     glEnable(GL_DEPTH_TEST);
     glViewport(0, 0, SHADOW_MAP_SIZE, SHADOW_MAP_SIZE);
+    glBindVertexArray(OpenGLBackEnd::GetVertexDataVAO());
 
     for (int i = 0; i < Scene::g_lights.size(); i++) {
 
         bool skip = false;
-
         if (!Scene::g_lights[i].isDirty) {
             skip = true;
         }
-
         if (skip) {
             continue;
         }
+
         glBindFramebuffer(GL_FRAMEBUFFER, OpenGLRenderer::_shadowMaps[i]._ID);
-        glClear(GL_DEPTH_BUFFER_BIT);
 
         std::vector<glm::mat4> projectionTransforms;
         glm::vec3 position = Scene::g_lights[i].position;
@@ -878,6 +877,7 @@ void RenderShadowMapss(RenderData& renderData) {
         projectionTransforms.push_back(shadowProj * glm::lookAt(position, position + glm::vec3(0.0f, -1.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f)));
         projectionTransforms.push_back(shadowProj * glm::lookAt(position, position + glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
         projectionTransforms.push_back(shadowProj * glm::lookAt(position, position + glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
+
         shader.SetMat4("shadowMatrices[0]", projectionTransforms[0]);
         shader.SetMat4("shadowMatrices[1]", projectionTransforms[1]);
         shader.SetMat4("shadowMatrices[2]", projectionTransforms[2]);
@@ -886,35 +886,34 @@ void RenderShadowMapss(RenderData& renderData) {
         shader.SetMat4("shadowMatrices[5]", projectionTransforms[5]);
         shader.SetVec3("lightPosition", position);
         shader.SetMat4("model", glm::mat4(1));
-        //DrawShadowMapScene(_shaders.shadowMap);
-        MultiDrawIndirect(renderData.shadowMapGeometryDrawInfo.commands, OpenGLBackEnd::GetVertexDataVAO());
+
+        for (int face = 0; face < 6; ++face) {
+            shader.SetInt("faceIndex", face);
+            GLuint depthCubemap = OpenGLRenderer::_shadowMaps[i]._depthTexture;
+            glFramebufferTextureLayer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, depthCubemap, 0, face);
+            glClear(GL_DEPTH_BUFFER_BIT);
+            MultiDrawIndirect(renderData.shadowMapGeometryDrawInfo.commands, OpenGLBackEnd::GetVertexDataVAO());
+        }
     }
 
-
-    // Redesign this better later
-    // Redesign this better later
-    // Redesign this better later
-    // Redesign this better later
-    // Redesign this better later
-    // Redesign this better later
-
-
     // CSG Geometry
+    if (CSG::GeometryExists()) {
 
-    Shader& csgShadowMapShader = OpenGLRenderer::g_shaders.shadowMapCSG;
-    csgShadowMapShader.Use();
-    csgShadowMapShader.SetFloat("far_plane", SHADOW_FAR_PLANE);
-    for (int i = 0; i < Scene::g_lights.size(); i++) {
-        bool skip = false;
-        if (!Scene::g_lights[i].isDirty) {
-            skip = true;
-        }
-        if (skip) {
-            continue;
-        }
-        if (CSG::GeometryExists()) {
+        Shader& csgShadowMapShader = OpenGLRenderer::g_shaders.shadowMapCSG;
+        csgShadowMapShader.Use();
+        csgShadowMapShader.SetFloat("far_plane", SHADOW_FAR_PLANE);
 
-            glBindFramebuffer(GL_FRAMEBUFFER, OpenGLRenderer::_shadowMaps[i]._ID);
+        glBindVertexArray(OpenGLBackEnd::GetCSGVAO());
+
+        for (int i = 0; i < Scene::g_lights.size(); i++) {
+
+            bool skip = false;
+            if (!Scene::g_lights[i].isDirty) {
+                skip = true;
+            }
+            if (skip) {
+                continue;
+            }
 
             std::vector<glm::mat4> projectionTransforms;
             glm::vec3 position = Scene::g_lights[i].position;
@@ -926,6 +925,7 @@ void RenderShadowMapss(RenderData& renderData) {
             projectionTransforms.push_back(shadowProj * glm::lookAt(position, position + glm::vec3(0.0f, -1.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f)));
             projectionTransforms.push_back(shadowProj * glm::lookAt(position, position + glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
             projectionTransforms.push_back(shadowProj * glm::lookAt(position, position + glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
+
             csgShadowMapShader.SetMat4("shadowMatrices[0]", projectionTransforms[0]);
             csgShadowMapShader.SetMat4("shadowMatrices[1]", projectionTransforms[1]);
             csgShadowMapShader.SetMat4("shadowMatrices[2]", projectionTransforms[2]);
@@ -935,10 +935,17 @@ void RenderShadowMapss(RenderData& renderData) {
             csgShadowMapShader.SetVec3("lightPosition", position);
             csgShadowMapShader.SetMat4("model", glm::mat4(1));
 
-            glBindVertexArray(OpenGLBackEnd::GetCSGVAO());
-            std::vector<CSGObject>& cubes = CSG::GetCSGObjects();
-            for (int j = 0; j < cubes.size(); j++) {
-                glDrawElementsInstancedBaseVertexBaseInstance(GL_TRIANGLES, cubes[j].m_vertexCount, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int) * cubes[j].m_baseIndex), 1, cubes[j].m_baseVertex, j);
+            glBindFramebuffer(GL_FRAMEBUFFER, OpenGLRenderer::_shadowMaps[i]._ID);
+
+            // Render the scene six times, once for each face
+            for (int face = 0; face < 6; ++face) {
+                csgShadowMapShader.SetInt("faceIndex", face);
+                GLuint depthCubemap = OpenGLRenderer::_shadowMaps[i]._depthTexture;
+                glFramebufferTextureLayer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, depthCubemap, 0, face);
+                std::vector<CSGObject>& cubes = CSG::GetCSGObjects();
+                for (int j = 0; j < cubes.size(); j++) {
+                    glDrawElementsInstancedBaseVertexBaseInstance(GL_TRIANGLES, cubes[j].m_vertexCount, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int) * cubes[j].m_baseIndex), 1, cubes[j].m_baseVertex, j);
+                }
             }
         }
     }
