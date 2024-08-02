@@ -68,8 +68,8 @@ namespace Editor {
     int g_menuSelectionIndex = 0;
     bool g_insertMenuOpen = false;
     bool g_fileMenuOpen = false;
-    bool g_isDraggingMenu = true;
-    ivec2 g_menuLocation = ivec2(360, PRESENT_HEIGHT - 60);
+    bool g_isDraggingMenu = false;
+    ivec2 g_menuLocation = ivec2(76, 460);
     ivec2 g_backgroundLocation = ivec2(0, 0);
     ivec2 g_backgroundSize = ivec2(0, 0);
     ivec2 g_dragOffset = ivec2(0, 0);
@@ -79,6 +79,7 @@ namespace Editor {
     void UpdateRenderItems(std::vector<RenderItem3D>& renderItems, InteractionType interactionType, int index);
     void RebuildEverything();
     void UpdateMenu();
+    void UpdateDebugText();
     bool MenuHasHover();
 
     long MapRange(long x, long in_min, long in_max, long out_min, long out_max) {
@@ -112,7 +113,6 @@ namespace Editor {
         }
         return ret;
     }
-
 
     void Update(float deltaTime) {
 
@@ -216,28 +216,23 @@ namespace Editor {
         }
 
 
-
-
+        // Menu dragging
         if (Input::LeftMousePressed() && MenuHasHover()) {
             int offsetX = Input::GetViewportMappedMouseX(PRESENT_WIDTH) - g_menuLocation.x;
             int offsetY = PRESENT_HEIGHT - Input::GetViewportMappedMouseY(PRESENT_HEIGHT) - g_menuLocation.y;
             g_dragOffset = ivec2(offsetX, offsetY);
             g_isDraggingMenu = true;
         }
-        if (g_isDraggingMenu) {
+        else if (g_isDraggingMenu) {
             g_menuLocation.x = Input::GetViewportMappedMouseX(PRESENT_WIDTH) - g_dragOffset.x;
-           // g_menuLocation.y = Input::GetViewportMappedMouseY(PRESENT_HEIGHT);// -g_dragOffset.y;
-            // move it
             g_menuLocation.y = PRESENT_HEIGHT - Input::GetViewportMappedMouseY(PRESENT_HEIGHT) - g_dragOffset.y;
         }
         if (!Input::LeftMouseDown() && g_isDraggingMenu) {
             g_isDraggingMenu = false;
         }
-
         if (Input::KeyPressed(HELL_KEY_SPACE)) {
             g_menuLocation = ivec2(360, PRESENT_HEIGHT - 60);
         }
-
         if (Input::KeyPressed(HELL_KEY_I)) {
             g_menuLocation.y = 490;
         }
@@ -245,8 +240,7 @@ namespace Editor {
 
 
 
-
-        if (!Input::KeyDown(HELL_KEY_LEFT_CONTROL_GLFW) && !Input::KeyDown(HELL_KEY_LEFT_ALT)) {
+        if (!Input::KeyDown(HELL_KEY_LEFT_CONTROL_GLFW) && !Input::KeyDown(HELL_KEY_LEFT_ALT) && !MenuHasHover() && !Gizmo::HasHover()) {
 
 
             // Check for UI select
@@ -282,7 +276,7 @@ namespace Editor {
             if (!uiWasSelectedThisFrame) {
 
                 // Clicked to select hovered object
-                if (Input::LeftMousePressed() && ObjectIsHoverered() && !Gizmo::HasHover() && !MenuHasHover()) {
+                if (Input::LeftMousePressed() && ObjectIsHoverered()) {
                     g_selectedObjectIndex = g_hoveredObjectIndex;
                     g_selectedObjectType = g_hoveredObjectType;
                     g_menuSelectionIndex = 0;
@@ -293,7 +287,7 @@ namespace Editor {
                 }
 
                 // Clicked on nothing, so unselect any selected object
-                else if (Input::LeftMousePressed() && !ObjectIsHoverered() && !Gizmo::HasHover() && !MenuHasHover()) {
+                else if (Input::LeftMousePressed() && !ObjectIsHoverered()) {
                     g_selectedObjectIndex = -1;
                     Transform gizmoTransform;
                     gizmoTransform.position.y = -1000.0f;
@@ -418,42 +412,6 @@ namespace Editor {
         }
 
 
-       g_debugText = "";
-       g_debugText += "MouseX: " + std::to_string(Input::GetMouseX()) + "\n";
-       g_debugText += "MouseY: " + std::to_string(Input::GetMouseY()) + "\n";
-       g_debugText += "Mapped MouseX: " + std::to_string(Input::GetViewportMappedMouseX(PRESENT_WIDTH)) + "\n";
-       g_debugText += "Mapped MouseY: " + std::to_string(Input::GetViewportMappedMouseY(PRESENT_HEIGHT)) + "\n";
-       g_debugText += "Menu location: " + std::to_string(g_menuLocation.x) + ", " + std::to_string(g_menuLocation.y) + "\n";
-       g_debugText += "Background location: " + std::to_string(g_backgroundLocation.x) + ", " + std::to_string(g_backgroundLocation.y) + "\n";
-       g_debugText += "Background size: " + std::to_string(g_backgroundSize.x) + ", " + std::to_string(g_backgroundSize.y) + "\n";
-       g_debugText += "Offset X: " + std::to_string(g_dragOffset.x) + "\n";
-       g_debugText += "Offset Y: " + std::to_string(g_dragOffset.y) + "\n";
-
-
-
-       if (MenuHasHover()) {
-           g_debugText += "Menu HAS HOVER!!!!!!!!!\n";
-       }
-
-
-     /*  if (ObjectIsHoverered()) {
-            g_debugText += "Hovered: " + Util::PhysicsObjectTypeToString(g_hoveredObjectType) + "\n";
-        }
-        else {
-            g_debugText += "Hovered: NONE_FOUND " + std::to_string(g_hoveredObjectIndex) + "\n";
-        }
-        if (ObjectIsSelected()) {
-            g_debugText += "Selected: " + Util::PhysicsObjectTypeToString(g_selectedObjectType) + "\n";
-        }
-        else {
-            g_debugText += "Selected: NONE_FOUND " + std::to_string(g_selectedObjectIndex) + "\n";
-        }
-        g_debugText = "";
-
-        // g_debugText += "Gizmo Has Hover: " + std::to_string(Gizmo::HasHover());
-
-        */
-
 
         // Open file menu
         if (Input::KeyPressed(HELL_KEY_F1)) {
@@ -472,21 +430,14 @@ namespace Editor {
         }
 
 
-
-
-
-
-
-
-
-
         UpdateMenu();
+        UpdateDebugText();
     }
 
 
     bool MenuHasHover() {
-        if (!g_insertMenuOpen && !g_fileMenuOpen && g_selectedObjectType != PhysicsObjectType::UNDEFINED) {
-       //    return false;
+        if (!g_insertMenuOpen && !g_fileMenuOpen && g_selectedObjectType == PhysicsObjectType::UNDEFINED) {
+           return false;
         }
         int mouseX = Input::GetViewportMappedMouseX(PRESENT_WIDTH);
         int mouseY = Input::GetViewportMappedMouseY(PRESENT_HEIGHT);
@@ -896,6 +847,15 @@ namespace Editor {
 
     void UpdateRenderItems() {
 
+        gHoveredRenderItems.clear();
+        gSelectedRenderItems.clear();
+        gEditorUIRenderItems.clear();
+        gMenuRenderItems.clear();
+
+        if (Input::KeyPressed(HELL_KEY_M)) {
+            return;
+        }
+
         UpdateRenderItems(gHoveredRenderItems, InteractionType::HOVERED, g_hoveredObjectIndex);
         UpdateRenderItems(gSelectedRenderItems, InteractionType::SELECTED, g_selectedObjectIndex);
 
@@ -1006,7 +966,6 @@ namespace Editor {
         }
 
         // UI
-        gEditorUIRenderItems.clear();
 
         if (Editor::IsOpen()) {
             // Add light icons
@@ -1035,15 +994,60 @@ namespace Editor {
 
                 glm::vec3 color = WHITE;
 
-                int mouseX = Input::GetViewportMappedMouseX(PRESENT_WIDTH);
-                int mouseY = PRESENT_HEIGHT - Input::GetViewportMappedMouseY(PRESENT_HEIGHT);
-                float adjustedBackgroundY = PRESENT_HEIGHT - g_backgroundLocation.y;
-                if (mouseX > leftX && mouseX < rightX && mouseY > topY && mouseY < bottomY) {
-                    color = RED;
+
+                if (!Input::KeyDown(HELL_KEY_LEFT_CONTROL_GLFW) && !Input::KeyDown(HELL_KEY_LEFT_ALT) && !MenuHasHover() && !Gizmo::HasHover()) {
+                    int mouseX = Input::GetViewportMappedMouseX(PRESENT_WIDTH);
+                    int mouseY = PRESENT_HEIGHT - Input::GetViewportMappedMouseY(PRESENT_HEIGHT);
+                    float adjustedBackgroundY = PRESENT_HEIGHT - g_backgroundLocation.y;
+                    if (mouseX > leftX && mouseX < rightX && mouseY > topY && mouseY < bottomY) {
+                        color = RED;
+                    }
                 }
 
                 gEditorUIRenderItems.push_back(RendererUtil::CreateRenderItem2D("Icon_Light", { res.x, res.y }, presentSize, Alignment::CENTERED, color));
             }
         }
+    }
+
+    void UpdateDebugText() {
+
+        g_debugText = "";
+        /*
+        g_debugText += "MouseX: " + std::to_string(Input::GetMouseX()) + "\n";
+        g_debugText += "MouseY: " + std::to_string(Input::GetMouseY()) + "\n";
+        g_debugText += "Mapped MouseX: " + std::to_string(Input::GetViewportMappedMouseX(PRESENT_WIDTH)) + "\n";
+        g_debugText += "Mapped MouseY: " + std::to_string(Input::GetViewportMappedMouseY(PRESENT_HEIGHT)) + "\n";
+        g_debugText += "Menu location: " + std::to_string(g_menuLocation.x) + ", " + std::to_string(g_menuLocation.y) + "\n";
+        g_debugText += "Background location: " + std::to_string(g_backgroundLocation.x) + ", " + std::to_string(g_backgroundLocation.y) + "\n";
+        g_debugText += "Background size: " + std::to_string(g_backgroundSize.x) + ", " + std::to_string(g_backgroundSize.y) + "\n";
+        g_debugText += "Offset X: " + std::to_string(g_dragOffset.x) + "\n";
+        g_debugText += "Offset Y: " + std::to_string(g_dragOffset.y) + "\n";
+        */
+        /* g_debugText = "g_fileMenuOpen: " + std::to_string(g_fileMenuOpen) + "\n";
+         g_debugText += "g_insertMenuOpen: " + std::to_string(g_insertMenuOpen) + "\n";
+         g_debugText += "g_selectedObjectType: " + Util::PhysicsObjectTypeToString(g_selectedObjectType) + "\n";
+         */
+
+        if (MenuHasHover()) {
+            g_debugText += "Menu HAS HOVER!!!!!!!!!\n";
+        }
+
+        /*  if (ObjectIsHoverered()) {
+               g_debugText += "Hovered: " + Util::PhysicsObjectTypeToString(g_hoveredObjectType) + "\n";
+           }
+           else {
+               g_debugText += "Hovered: NONE_FOUND " + std::to_string(g_hoveredObjectIndex) + "\n";
+           }
+           if (ObjectIsSelected()) {
+               g_debugText += "Selected: " + Util::PhysicsObjectTypeToString(g_selectedObjectType) + "\n";
+           }
+           else {
+               g_debugText += "Selected: NONE_FOUND " + std::to_string(g_selectedObjectIndex) + "\n";
+           }
+           g_debugText = "";
+
+           // g_debugText += "Gizmo Has Hover: " + std::to_string(Gizmo::HasHover());
+
+           */
     }
 }

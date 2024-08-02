@@ -251,7 +251,7 @@ void OpenGLBackEnd::UploadVertexData(std::vector<Vertex>& vertices, std::vector<
     glBindVertexArray(0);
 }
 
-void OpenGLBackEnd::UploadConstructiveSolidGeometry(std::vector<Vertex>& vertices, std::vector<uint32_t>& indices) {
+void OpenGLBackEnd::UploadConstructiveSolidGeometry(std::vector<CSGVertex>& vertices, std::vector<uint32_t>& indices) {
 
     if (vertices.empty()) {
         return;
@@ -269,22 +269,21 @@ void OpenGLBackEnd::UploadConstructiveSolidGeometry(std::vector<Vertex>& vertice
 
     glBindVertexArray(g_constructiveSolidGeometryVAO);
     glBindBuffer(GL_ARRAY_BUFFER, g_constructiveSolidGeometryVBO);
-    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Vertex), &vertices[0], GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(CSGVertex), &vertices[0], GL_STATIC_DRAW);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, g_constructiveSolidGeometryEBO);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(uint32_t), &indices[0], GL_STATIC_DRAW);
 
     glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(CSGVertex), (void*)0);
     glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, normal));
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(CSGVertex), (void*)offsetof(CSGVertex, normal));
     glEnableVertexAttribArray(2);
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, uv));
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(CSGVertex), (void*)offsetof(CSGVertex, uv));
     glEnableVertexAttribArray(3);
-    glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, tangent));
+    glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(CSGVertex), (void*)offsetof(CSGVertex, tangent));
+    glEnableVertexAttribArray(4);
+    glVertexAttribIPointer(4, 1, GL_INT, sizeof(CSGVertex), (void*)offsetof(CSGVertex, materialIndex));
 
-    glEnableVertexAttribArray(0);
-   // glBindBuffer(GL_ARRAY_BUFFER, 0);
-   // glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
 
     std::cout << "Uploaded constructive geometry to gpu\n";

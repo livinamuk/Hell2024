@@ -10,6 +10,8 @@ layout (location = 5) in vec4 aBoneWeight;
 uniform mat4 projection;
 uniform mat4 view;
 uniform int playerIndex;
+uniform int goldBaseColorTextureIndex;
+uniform int goldRMATextureIndex;
 
 out vec2 TexCoord;
 out flat int BaseColorTextureIndex;
@@ -26,31 +28,50 @@ struct RenderItem3D {
     mat4 modelMatrix;
     mat4 inverseModelMatrix;
     int meshIndex;
-    int baseColorTextureIndex;
-    int normalTextureIndex;
-    int rmaTextureIndex;
+    int materialIndex;
     int vertexOffset;
     int indexOffset;
-    int animatedTransformsOffset;
     int castShadow;
     int useEmissiveMask;
+    int isGold;
     float emissiveColorR;
     float emissiveColorG;
     float emissiveColorB;
+    float aabbMinX;
+    float aabbMinY;
+    float aabbMinZ;
+    float aabbMaxX;
+    float aabbMaxY;
+    float aabbMaxZ;
+};
+
+struct Material {
+	int baseColorTextureIndex;
+	int normalTextureIndex;
+	int rmaTextureIndex;
+	int emissiveTextureIndex;
 };
 
 layout(std430, binding = 1) readonly buffer renderItems {
     RenderItem3D RenderItems[];
 };
 
+layout(std430, binding = 3) readonly buffer materials {
+    Material Materials[];
+};
+
+
 void main() {
 
 	TexCoord = aTexCoord;
 	mat4 model = RenderItems[gl_InstanceID + gl_BaseInstance].modelMatrix;
 	mat4 invereseModel = RenderItems[gl_InstanceID + gl_BaseInstance].inverseModelMatrix;
-	BaseColorTextureIndex =  RenderItems[gl_InstanceID+ gl_BaseInstance].baseColorTextureIndex;
-	NormalTextureIndex =  RenderItems[gl_InstanceID+ gl_BaseInstance].normalTextureIndex;
-	RMATextureIndex =  RenderItems[gl_InstanceID+ gl_BaseInstance].rmaTextureIndex;
+
+	Material material = Materials[RenderItems[gl_InstanceID + gl_BaseInstance].materialIndex];
+	//Material material = Materials[5];
+	BaseColorTextureIndex =  material.baseColorTextureIndex;
+	NormalTextureIndex =  material.normalTextureIndex;
+	RMATextureIndex =  material.rmaTextureIndex;
 
 	useEmissiveMask = RenderItems[gl_InstanceID+ gl_BaseInstance].useEmissiveMask;
 	emissiveColor.r = RenderItems[gl_InstanceID+ gl_BaseInstance].emissiveColorR;
@@ -64,5 +85,11 @@ void main() {
 
 	gl_Position = projection * view * model * vec4(aPos, 1.0);
 	PlayerIndex = playerIndex;
+
+	// Gold?
+	if (RenderItems[gl_InstanceID + gl_BaseInstance].isGold == 1) {
+		BaseColorTextureIndex = goldBaseColorTextureIndex;
+		RMATextureIndex = goldRMATextureIndex;
+	}
 
 }

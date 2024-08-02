@@ -4,8 +4,8 @@
 
 namespace Raytracing {
 
-    const int CreateBLAS(std::vector<Vertex>& vertices, std::vector<unsigned int>& indices, unsigned int meshBaseVertex, unsigned int meshBaseIndex);
-    const void RecreateBLAS(unsigned int blasIndex, std::vector<Vertex>& vertices, std::vector<unsigned int>& indices, unsigned int meshBaseVertex, unsigned int meshBaseIndex);
+    const int CreateBLAS(std::vector<CSGVertex>& vertices, std::vector<unsigned int>& indices, unsigned int meshBaseVertex, unsigned int meshBaseIndex);
+    const void RecreateBLAS(unsigned int blasIndex, std::vector<CSGVertex>& vertices, std::vector<unsigned int>& indices, unsigned int meshBaseVertex, unsigned int meshBaseIndex);
     TLAS* CreateTopLevelAccelerationStruture();
     const void DestroyTopLevelAccelerationStructure(int index);
     const std::vector<BVHNode>& GetBLSANodes();

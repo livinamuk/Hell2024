@@ -1,4 +1,4 @@
-#include <iostream>
+﻿#include <iostream>
 #include "GL_texture.h"
 #include "../../../Util.hpp"
 #include "../../vendor/DDS/DDS_Helpers.h"
@@ -359,8 +359,12 @@ bool OpenGLTexture::Bake() {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, _width, _height, 0, format, GL_UNSIGNED_BYTE, _data);
-        stbi_image_free(_data);
+        //stbi_image_free(_data);
+        std::cout << "WARNING: u didn't call stbi_image_free(_data) on: '" + GetFilename() << "'\n";
         // find out why the line above crashes sometimes. most likely an async mutex thing.
+        // ..
+        // well actually no it cant be
+        // coz its on the EXR textures and they aint loaded async
     }
 
     // Hack to make Resident Evil font look okay when scaled

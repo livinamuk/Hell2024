@@ -13,9 +13,10 @@ struct BloodDecal {
         if (type != 2) {
             localOffset.position.z = 0.55f;
             transform.scale = glm::vec3(2.0f);
+            transform.rotation.y += Util::RandomFloat(-0.5f, 0.5f);
         }
         else {
-            localOffset.rotation.y = Util::RandomFloat(0, HELL_PI * 2);;
+            localOffset.rotation.y = Util::RandomFloat(0, HELL_PI * 2);
             transform.scale = glm::vec3(1.5f);
         }
         modelMatrix = transform.to_mat4() * localOffset.to_mat4();

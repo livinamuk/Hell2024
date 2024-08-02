@@ -9,6 +9,9 @@ private:
     std::string name = "undefined";
     std::vector<uint32_t> meshIndices;
     BoundingBox boundingBox;
+public:
+    glm::vec3 aabbMin;
+    glm::vec3 aabbMax;
 
 public:
     void AddMeshIndex(uint32_t index) {

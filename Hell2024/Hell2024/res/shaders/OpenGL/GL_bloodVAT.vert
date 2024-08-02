@@ -12,30 +12,34 @@ layout (location = 2) in vec2 a_Texcoord;
 layout (binding = 0) uniform sampler2D u_PosTex;
 layout (binding = 1) uniform sampler2D u_NormTex;
 
-readonly restrict layout(std430, binding = 0) buffer textureSamplerers { 
-	uvec2 textureSamplers[]; 
+readonly restrict layout(std430, binding = 0) buffer textureSamplerers {
+	uvec2 textureSamplers[];
 };
 
 //uniform int positionTextureIndex;
 //uniform int normalTextureIndex;
 
-
 struct RenderItem3D {
     mat4 modelMatrix;
-    mat4 inverseModelMatrix; 
+    mat4 inverseModelMatrix;
     int meshIndex;
-    int baseColorTextureIndex;
-    int normalTextureIndex;
-    int rmaTextureIndex;
+    int materialIndex;
     int vertexOffset;
     int indexOffset;
-    int animatedTransformsOffset; 
     int castShadow;
     int useEmissiveMask;
+    int isGold;
     float emissiveColorR;
     float emissiveColorG;
     float emissiveColorB;
+    float aabbMinX;
+    float aabbMinY;
+    float aabbMinZ;
+    float aabbMaxX;
+    float aabbMaxY;
+    float aabbMaxZ;
 };
+
 
 layout(std430, binding = 15) readonly buffer renderItems {
     RenderItem3D RenderItems[];
@@ -47,9 +51,9 @@ struct CameraData {
     mat4 view;
     mat4 viewInverse;
 	float viewportWidth;
-	float viewportHeight;   
+	float viewportHeight;
     float viewportOffsetX;
-    float viewportOffsetY; 
+    float viewportOffsetY;
 	float clipSpaceXMin;
     float clipSpaceXMax;
     float clipSpaceYMin;
@@ -86,14 +90,14 @@ vec3 LinearToGammaSpace (vec3 linRGB) {
 }
 
 void main() {
-	
+
 	mat4 projection = cameraDataArray[playerIndex].projection;
 	mat4 view = cameraDataArray[playerIndex].view;
 
 	mat4 model = RenderItems[gl_InstanceID + gl_BaseInstance].modelMatrix;
 	mat4 invereseModel = RenderItems[gl_InstanceID + gl_BaseInstance].inverseModelMatrix;
-	int positionTextureIndex =  RenderItems[gl_InstanceID+ gl_BaseInstance].baseColorTextureIndex;
-	int normalTextureIndex =  RenderItems[gl_InstanceID+ gl_BaseInstance].normalTextureIndex;
+	int positionTextureIndex =  RenderItems[gl_InstanceID+ gl_BaseInstance].materialIndex;  // sketchy
+	int normalTextureIndex =  RenderItems[gl_InstanceID+ gl_BaseInstance].isGold;			// sketchy
 	float u_Time = RenderItems[gl_InstanceID+ gl_BaseInstance].emissiveColorR;
 
     int u_NumOfFrames = 81;
@@ -111,15 +115,15 @@ void main() {
 
     vec3 v = a_Position;
     vec2 uv = a_Texcoord;
-    
+
     timeInFrames = 0.0;
 	timeInFrames = u_Time;
 
-	vec2 TexCoord = vec2(uv.x, (timeInFrames + uv.y));	
-	vec4 texturePos = textureLod(sampler2D(textureSamplers[positionTextureIndex]), TexCoord, 0);   
-	vec4 textureNorm = textureLod(sampler2D(textureSamplers[normalTextureIndex]), TexCoord, 0);   
-	
-    Normal = textureNorm.xzy * 2.0 - 1.0;  	
+	vec2 TexCoord = vec2(uv.x, (timeInFrames + uv.y));
+	vec4 texturePos = textureLod(sampler2D(textureSamplers[positionTextureIndex]), TexCoord, 0);
+	vec4 textureNorm = textureLod(sampler2D(textureSamplers[normalTextureIndex]), TexCoord, 0);
+
+    Normal = textureNorm.xzy * 2.0 - 1.0;
 	mat4 normalMatrix = transpose(invereseModel);
 	Normal = normalize((normalMatrix * vec4(Normal, 0)).xyz);
 

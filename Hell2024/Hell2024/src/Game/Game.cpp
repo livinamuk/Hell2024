@@ -145,8 +145,8 @@ namespace Game {
         Game::_players[0]._interactFlags &= ~RaycastGroup::PLAYER_1_RAGDOLL;
         Game::_players[1]._interactFlags = RaycastGroup::RAYCAST_ENABLED;
         Game::_players[1]._interactFlags &= ~RaycastGroup::PLAYER_2_RAGDOLL;
-        Game::_players[0]._bulletFlags = RaycastGroup::RAYCAST_ENABLED | RaycastGroup::PLAYER_2_RAGDOLL | RaycastGroup::PLAYER_3_RAGDOLL | RaycastGroup::PLAYER_4_RAGDOLL;
-        Game::_players[1]._bulletFlags = RaycastGroup::RAYCAST_ENABLED | RaycastGroup::PLAYER_1_RAGDOLL | RaycastGroup::PLAYER_3_RAGDOLL | RaycastGroup::PLAYER_4_RAGDOLL;
+        Game::_players[0]._bulletFlags = RaycastGroup::RAYCAST_ENABLED | RaycastGroup::PLAYER_2_RAGDOLL | RaycastGroup::PLAYER_3_RAGDOLL | RaycastGroup::PLAYER_4_RAGDOLL | RaycastGroup::DOBERMAN;
+        Game::_players[1]._bulletFlags = RaycastGroup::RAYCAST_ENABLED | RaycastGroup::PLAYER_1_RAGDOLL | RaycastGroup::PLAYER_3_RAGDOLL | RaycastGroup::PLAYER_4_RAGDOLL | RaycastGroup::DOBERMAN;
         Game::_players[0]._playerName = "Orion";
         Game::_players[1]._playerName = "CrustyAssCracker";
 
@@ -157,8 +157,8 @@ namespace Game {
             Game::_players[2]._interactFlags &= ~RaycastGroup::PLAYER_3_RAGDOLL;
             Game::_players[3]._interactFlags = RaycastGroup::RAYCAST_ENABLED;
             Game::_players[3]._interactFlags &= ~RaycastGroup::PLAYER_4_RAGDOLL;
-            Game::_players[2]._bulletFlags = RaycastGroup::RAYCAST_ENABLED | RaycastGroup::PLAYER_1_RAGDOLL | RaycastGroup::PLAYER_2_RAGDOLL | RaycastGroup::PLAYER_4_RAGDOLL;
-            Game::_players[3]._bulletFlags = RaycastGroup::RAYCAST_ENABLED | RaycastGroup::PLAYER_1_RAGDOLL | RaycastGroup::PLAYER_2_RAGDOLL | RaycastGroup::PLAYER_3_RAGDOLL;
+            Game::_players[2]._bulletFlags = RaycastGroup::RAYCAST_ENABLED | RaycastGroup::PLAYER_1_RAGDOLL | RaycastGroup::PLAYER_2_RAGDOLL | RaycastGroup::PLAYER_4_RAGDOLL | RaycastGroup::DOBERMAN;
+            Game::_players[3]._bulletFlags = RaycastGroup::RAYCAST_ENABLED | RaycastGroup::PLAYER_1_RAGDOLL | RaycastGroup::PLAYER_2_RAGDOLL | RaycastGroup::PLAYER_3_RAGDOLL | RaycastGroup::DOBERMAN;
             Game::_players[2]._playerName = "P3";
             Game::_players[3]._playerName = "P4";
         }

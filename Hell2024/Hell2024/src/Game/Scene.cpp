@@ -4,7 +4,6 @@
 #include "../BackEnd/BackEnd.h"
 #include "../Core/AssetManager.h"
 #include "../Core/Audio.hpp"
-#include "../Core/File.h"
 #include "../Core/JSON.hpp"
 #include "../Editor/CSG.h"
 #include "../Game/Game.h"
@@ -244,18 +243,44 @@ void Scene::LoadDefaultScene() {
 
 
     if (true) {
+
+        PxU32 collisionGroupFlags = RaycastGroup::DOBERMAN;
+
         int index = CreateAnimatedGameObject();
         AnimatedGameObject& doberman = g_animatedGameObjects[index];
         doberman.SetFlag(AnimatedGameObject::Flag::NONE);
         doberman.SetPlayerIndex(1);
         doberman.SetSkinnedModel("Doberman");
-        doberman.SetName("Glock");
+        doberman.SetName("Doberman");
         doberman.SetAnimationModeToBindPose();
         doberman.SetAllMeshMaterials("Doberman");
         doberman.SetPosition(glm::vec3(-1.7f, 0, -1.2f));
         doberman.SetRotationY(0.7f);
-        doberman.SetScale(1.25);
+        doberman.SetScale(1.35);
         doberman.PlayAndLoopAnimation("Doberman_Lay", 1.0f);
+        //doberman.SetAnimationModeToBindPose();
+        doberman.LoadRagdoll("doberman.rag", collisionGroupFlags);
+    }
+
+
+    if (true) {
+
+        PxU32 collisionGroupFlags = RaycastGroup::DOBERMAN;
+
+        int index = CreateAnimatedGameObject();
+        AnimatedGameObject& doberman = g_animatedGameObjects[index];
+        doberman.SetFlag(AnimatedGameObject::Flag::NONE);
+        doberman.SetPlayerIndex(1);
+        doberman.SetSkinnedModel("Doberman");
+        doberman.SetName("Doberman");
+        doberman.SetAnimationModeToBindPose();
+        doberman.SetAllMeshMaterials("Doberman");
+        doberman.SetPosition(glm::vec3(-1.77f, 0, -5.66f));
+        doberman.SetRotationY(1.3f);
+        doberman.SetScale(1.35);
+        doberman.PlayAndLoopAnimation("Doberman_Lay", 1.0f);
+        //doberman.SetAnimationModeToBindPose();
+        doberman.LoadRagdoll("doberman.rag", collisionGroupFlags);
     }
 
     /*
@@ -644,9 +669,9 @@ void Scene::CreateBottomLevelAccelerationStructures() {
 
     // Create Bottom Level Acceleration Structures
     for (CSGObject& csgObject : CSG::GetCSGObjects()) {
-        std::span<Vertex> spanVertices = csgObject.GetVerticesSpan();
+        std::span<CSGVertex> spanVertices = csgObject.GetVerticesSpan();
         std::span<uint32_t> spanIndices = csgObject.GetIndicesSpan();
-        std::vector<Vertex> vertices(spanVertices.begin(), spanVertices.end());
+        std::vector<CSGVertex> vertices(spanVertices.begin(), spanVertices.end());
         std::vector<uint32_t> indices(spanIndices.begin(), spanIndices.end());
         csgObject.m_blasIndex = Raytracing::CreateBLAS(vertices, indices, csgObject.m_baseVertex, csgObject.m_baseIndex);
     }
@@ -659,9 +684,9 @@ void Scene::CreateTopLevelAccelerationStructures() {
     Raytracing::DestroyTopLevelAccelerationStructure(0);
 
     // Hack in door BLAS
-    std::span<Vertex> spanVertices = CSG::GetRangedVerticesSpan(0, 8);
+    std::span<CSGVertex> spanVertices = CSG::GetRangedVerticesSpan(0, 8);
     std::span<uint32_t> spanIndices = CSG::GetRangedIndicesSpan(0, 12);
-    std::vector<Vertex> vertices(spanVertices.begin(), spanVertices.end());
+    std::vector<CSGVertex> vertices(spanVertices.begin(), spanVertices.end());
     std::vector<uint32_t> indices(spanIndices.begin(), spanIndices.end());
     g_doorBLASIndex = Raytracing::CreateBLAS(vertices, indices, 0, 0);
 
@@ -685,7 +710,6 @@ void Scene::CreateTopLevelAccelerationStructures() {
 void Scene::CreateDefaultSpawnPoints() {
 
     g_spawnPoints.clear();
-
     {
         SpawnPoint& spawnPoint = g_spawnPoints.emplace_back();
         spawnPoint.position = glm::vec3(0);
@@ -693,16 +717,12 @@ void Scene::CreateDefaultSpawnPoints() {
     }
     {
         SpawnPoint& spawnPoint = g_spawnPoints.emplace_back();
-        spawnPoint.position = glm::vec3(-2.07, 0.00, -11.70);
-        spawnPoint.rotation = glm::vec3(-0.32, -2.38, 0.00);
-
-        /// remove me later
         spawnPoint.position = glm::vec3(0, 0.00, -1);
         spawnPoint.rotation = glm::vec3(-0.0, HELL_PI, 0);
     }
     {
         SpawnPoint& spawnPoint = g_spawnPoints.emplace_back();
-        spawnPoint.position = glm::vec3(2.22, -0.00, -12.11);
+        spawnPoint.position = glm::vec3(1.40, -0.00, -6.68);
         spawnPoint.rotation = glm::vec3(-0.35, -3.77, 0.00);
     }
     {
@@ -710,12 +730,6 @@ void Scene::CreateDefaultSpawnPoints() {
         spawnPoint.position = glm::vec3(1.78, -0.00, -7.80);
         spawnPoint.rotation = glm::vec3(-0.34, -5.61, 0.00);
     }
-
-    /*
-    for (int i = 0; i < 4; i++) {
-        SpawnPoint& spawnPoint = g_spawnPoints.emplace_back();
-        spawnPoint.position = glm::vec3(i * 4, 0, 0);
-    }*/
 }
 
 void Scene::CreateDefaultLight() {
@@ -733,7 +747,62 @@ void Scene::CreateDefaultLight() {
     g_lights.push_back(light);
 }
 
+
+
 void Scene::Update(float deltaTime) {
+
+
+    for (int i = 0; i < g_animatedGameObjects.size(); i++) {
+
+        if (g_animatedGameObjects[i].GetName() == "Doberman") {
+
+            auto& doberman = g_animatedGameObjects[i];
+
+            /*
+            if (Input::KeyPressed(HELL_KEY_H)) {
+                doberman.SetAnimatedModeToRagdoll();
+            }
+
+            if (Input::KeyDown(HELL_KEY_L)) {
+                glm::vec3 object = doberman._transform.position;
+                glm::vec3 target = Game::GetPlayerByIndex(0)->GetFeetPosition();
+                Util::RotateYTowardsTarget(object, doberman._transform.rotation.y, target, 0.05f);
+            }*/
+
+            /*
+            if (Input::KeyPressed(HELL_KEY_U)) {
+                static std::vector<string> anims2 = {
+                    "Doberman_Attack_F",
+                    "Doberman_Attack_J",
+                    "Doberman_Attack_Jump_Cut",
+                    "Doberman_Attack_R",
+                    "Doberman_Death_L",
+                    "Doberman_Death_R",
+                    "Doberman_Jump",
+                    "Doberman_Lay_Start",
+                    "Doberman_Lay",
+                    "Doberman_Lay_End",
+                    "Doberman_Run"
+                };
+                static std::vector<string> anims = {
+                    "Doberman_Run",
+                    "Doberman_Attack_Jump_Cut",
+                    "Doberman_Attack_Jump_Cut2",
+                };
+                static int index = 0;
+                g_animatedGameObjects[i].PlayAndLoopAnimation(anims[index], 1.0f);
+                index++;
+                if (index == anims.size()) {
+                    index = 0;
+                }
+            }*/
+
+        }
+    }
+
+    for (GameObject& gameObject : g_gameObjects) {
+        gameObject.Update(deltaTime);
+    }
 
     CreateTopLevelAccelerationStructures();
 
@@ -956,37 +1025,10 @@ void Scene::Init() {
     LoadDefaultScene();
 }
 
-// Hack To Create Ceilings From Floors
-void Scene::CreateCeilingsHack() {
-    Scene::_ceilings.emplace_back(0.1f, 0.1f, 5.2f, 3.1f, 2.5f, AssetManager::GetMaterialIndex("Ceiling2"));
-    Scene::_ceilings.emplace_back(0.1f, 4.1f, 6.1f, 6.9f, 2.5f, AssetManager::GetMaterialIndex("Ceiling2"));
-    Scene::_ceilings.emplace_back(0.1f, 3.1f, 3.7f, 4.1f, 2.5f, AssetManager::GetMaterialIndex("Ceiling2"));
-    Scene::_ceilings.emplace_back(4.7f, 3.1f, 6.1f, 4.1f, 2.5f, AssetManager::GetMaterialIndex("Ceiling2"));
-    int count = 0;
-    for (Floor& floor : Scene::_floors) {
-        count++;
-        if (count == 2) {
-            continue;
-        }
-        float minX = std::min(std::min(std::min(floor.v1.position.x, floor.v2.position.x), floor.v3.position.x), floor.v4.position.x);
-        float maxX = std::max(std::max(std::max(floor.v1.position.x, floor.v2.position.x), floor.v3.position.x), floor.v4.position.x);
-        float minZ = std::min(std::min(std::min(floor.v1.position.z, floor.v2.position.z), floor.v3.position.z), floor.v4.position.z);
-        float maxZ = std::max(std::max(std::max(floor.v1.position.z, floor.v2.position.z), floor.v3.position.z), floor.v4.position.z);
-        Scene::_ceilings.emplace_back(minX, minZ, maxX, maxZ, 2.5f, AssetManager::GetMaterialIndex("Ceiling2"));
-    }
-}
-
-
 std::vector<RenderItem3D> Scene::GetAllRenderItems() {
 
     std::vector<RenderItem3D> renderItems;
 
-    for (Floor& floor : Scene::_floors) {
-        renderItems.push_back(floor.GetRenderItem());
-    }
-    for (Ceiling& ceiling : Scene::_ceilings) {
-        renderItems.push_back(ceiling.GetRenderItem());
-    }
     for (GameObject& gameObject : Scene::g_gameObjects) {
         renderItems.reserve(renderItems.size() + gameObject.GetRenderItems().size());
         renderItems.insert(std::end(renderItems), std::begin(gameObject.GetRenderItems()), std::end(gameObject.GetRenderItems()));
@@ -1006,59 +1048,6 @@ std::vector<RenderItem3D> Scene::GetAllRenderItems() {
         renderItems.insert(std::end(renderItems), std::begin(player->GetAttachmentRenderItems()), std::end(player->GetAttachmentRenderItems()));
     }
 
-    /*
-    // Add weapon attachments
-
-    for (AnimatedGameObject& animatedGameObject : Scene::GetAnimatedGamesObjects()) {
-
-        // Glock Sight
-        if (animatedGameObject._skinnedModel->_filename == "Glock") {
-            glm::mat4 modelMatrix = animatedGameObject.GetModelMatrix() * animatedGameObject.GetAnimatedTransformByBoneName("Weapon");// *scale.to_mat4();
-            static int redDotSightMaterialIndex = AssetManager::GetMaterialIndex("RedDotSight");
-            static int goldMaterialIndex = AssetManager::GetMaterialIndex("Gold");
-            int materialIndex = 0;
-            if (animatedGameObject.IsGold()) {
-                 materialIndex = goldMaterialIndex;
-            }
-            else {
-                materialIndex = redDotSightMaterialIndex;
-            }
-            uint32_t modelIndex = AssetManager::GetModelIndexByName("Glock_RedDotSight");
-            Model* model = AssetManager::GetModelByIndex(modelIndex);
-            uint32_t& meshIndex = model->GetMeshIndices()[0];
-            Mesh* mesh = AssetManager::GetMeshByIndex(meshIndex);
-            RenderItem3D& renderItem = renderItems.emplace_back();
-            renderItem.vertexOffset = mesh->baseVertex;
-            renderItem.indexOffset = mesh->baseIndex;
-            renderItem.modelMatrix = modelMatrix;
-            renderItem.inverseModelMatrix = inverse(renderItem.modelMatrix);
-            renderItem.meshIndex = meshIndex;
-            renderItem.normalTextureIndex = AssetManager::GetMaterialByIndex(materialIndex)->_normal;
-            renderItem.baseColorTextureIndex = AssetManager::GetMaterialByIndex(materialIndex)->_basecolor;
-            renderItem.rmaTextureIndex = AssetManager::GetMaterialByIndex(materialIndex)->_rma;
-            renderItems.push_back(renderItem);
-
-            if (Input::KeyPressed(HELL_KEY_SPACE)) {
-
-            }
-        }
-    }*/
-
-
-    /*   for (auto& object : Scene::GetAnimatedGamesObjects()) {
-
-
-            if (object.GetName() == "TestGlock") {
-
-                Vertex v;
-                v.normal = RED;
-                v.position = object.GetModelMatrix() * object.GetAnimatedTransformByBoneName("Weapon") * glm::vec4(0, 0, 0, 1);
-                vertices.push_back(v);
-
-            }*/
-
-
-
     // Casings
     static Material* glockCasingMaterial = AssetManager::GetMaterialByIndex(AssetManager::GetMaterialIndex("Casing9mm"));
     static Material* shotgunShellMaterial = AssetManager::GetMaterialByIndex(AssetManager::GetMaterialIndex("Shell"));
@@ -1071,50 +1060,37 @@ std::vector<RenderItem3D> Scene::GetAllRenderItems() {
         renderItem.modelMatrix = casing.modelMatrix;
         renderItem.inverseModelMatrix = inverse(renderItem.modelMatrix);
         renderItem.castShadow = false;
-
-        Material* material = AssetManager::GetMaterialByIndex(casing.materialIndex);
         int meshIndex = AssetManager::GetModelByIndex(casing.modelIndex)->GetMeshIndices()[0];
-
-        if (material && meshIndex != -1) {
-            renderItem.baseColorTextureIndex = material->_basecolor;
-            renderItem.rmaTextureIndex = material->_rma;
-            renderItem.normalTextureIndex = material->_normal;
-            renderItem.meshIndex = meshIndex;
+        if (meshIndex != -1) {
+            renderItem.materialIndex = casing.materialIndex;
         }
+        renderItem.meshIndex = meshIndex;
     }
 
     // Light bulbs
-
-
     for (Light& light : Scene::g_lights) {
-
 
         Transform transform;
         transform.position = light.position;
         glm::mat4 lightBulbWorldMatrix = transform.to_mat4();
 
-        static Material* light0Material = AssetManager::GetMaterialByIndex(AssetManager::GetMaterialIndex("Light"));
-        static Material* wallMountedLightMaterial = AssetManager::GetMaterialByIndex(AssetManager::GetMaterialIndex("LightWall"));
+        static int light0MaterialIndex = AssetManager::GetMaterialIndex("Light");
+        static int wallMountedLightMaterialIndex = AssetManager::GetMaterialIndex("LightWall");
 
         static int lightBulb0MeshIndex = AssetManager::GetModelByIndex(AssetManager::GetModelIndexByName("Light0_Bulb"))->GetMeshIndices()[0];
         static int lightMount0MeshIndex = AssetManager::GetModelByIndex(AssetManager::GetModelIndexByName("Light0_Mount"))->GetMeshIndices()[0];
         static int lightCord0MeshIndex = AssetManager::GetModelByIndex(AssetManager::GetModelIndexByName("Light0_Cord"))->GetMeshIndices()[0];
         static Model* wallMountedLightmodel = AssetManager::GetModelByIndex(AssetManager::GetModelIndexByName("LightWallMounted"));
 
-     //   std::cout << "MESH COUNT: " << AssetManager::GetModelByIndex(AssetManager::GetModelIndexByName("LightWallMounted"))->GetMeshIndices().size() << "\n";
-
         if (light.type == 0) {
             RenderItem3D& renderItem = renderItems.emplace_back();
             renderItem.meshIndex = lightBulb0MeshIndex;
             renderItem.modelMatrix = lightBulbWorldMatrix;
             renderItem.inverseModelMatrix = inverse(renderItem.modelMatrix);
-            renderItem.baseColorTextureIndex = light0Material->_basecolor;
-            renderItem.rmaTextureIndex = light0Material->_rma;
-            renderItem.normalTextureIndex = light0Material->_normal;
+            renderItem.materialIndex = light0MaterialIndex;
             renderItem.castShadow = false;
             renderItem.useEmissiveMask = 1.0f;
             renderItem.emissiveColor = light.color;
-
 
             // Find mount position and draw it if the ray hits the ceiling
             PxU32 raycastFlags = RaycastGroup::RAYCAST_ENABLED;
@@ -1129,9 +1105,7 @@ std::vector<RenderItem3D> Scene::GetAllRenderItems() {
                 renderItemMount.meshIndex = lightMount0MeshIndex;
                 renderItemMount.modelMatrix = mountTransform.to_mat4();
                 renderItemMount.inverseModelMatrix = inverse(renderItem.modelMatrix);
-                renderItemMount.baseColorTextureIndex = light0Material->_basecolor;
-                renderItemMount.rmaTextureIndex = light0Material->_rma;
-                renderItemMount.normalTextureIndex = light0Material->_normal;
+                renderItemMount.materialIndex = light0MaterialIndex;
                 renderItemMount.castShadow = false;
 
                 Transform cordTransform;
@@ -1142,11 +1116,8 @@ std::vector<RenderItem3D> Scene::GetAllRenderItems() {
                 renderItemCord.meshIndex = lightCord0MeshIndex;
                 renderItemCord.modelMatrix = cordTransform.to_mat4();
                 renderItemCord.inverseModelMatrix = inverse(renderItem.modelMatrix);
-                renderItemCord.baseColorTextureIndex = light0Material->_basecolor;
-                renderItemCord.rmaTextureIndex = light0Material->_rma;
-                renderItemCord.normalTextureIndex = light0Material->_normal;
+                renderItemCord.materialIndex = light0MaterialIndex;
                 renderItemCord.castShadow = false;
-
             }
 
         }
@@ -1157,9 +1128,7 @@ std::vector<RenderItem3D> Scene::GetAllRenderItems() {
                 renderItem.meshIndex = wallMountedLightmodel->GetMeshIndices()[j];
                 renderItem.modelMatrix = lightBulbWorldMatrix;
                 renderItem.inverseModelMatrix = inverse(renderItem.modelMatrix);
-                renderItem.baseColorTextureIndex = wallMountedLightMaterial->_basecolor;
-                renderItem.rmaTextureIndex = wallMountedLightMaterial->_rma;
-                renderItem.normalTextureIndex = wallMountedLightMaterial->_normal;
+                renderItem.materialIndex = wallMountedLightMaterialIndex;
                 renderItem.castShadow = false;
                 renderItem.useEmissiveMask = 1.0f;
                 renderItem.emissiveColor = light.color;
@@ -1209,44 +1178,30 @@ std::vector<RenderItem3D> Scene::GetAllRenderItems() {
 
 
 std::vector<RenderItem3D> Scene::CreateDecalRenderItems() {
-
-    static Material* bulletHolePlasterMaterial = AssetManager::GetMaterialByIndex(AssetManager::GetMaterialIndex("BulletHole_Plaster"));
-    static Material* bulletHoleGlassMaterial = AssetManager::GetMaterialByIndex(AssetManager::GetMaterialIndex("BulletHole_Glass"));
-
+    static int bulletHolePlasterMaterialIndex = AssetManager::GetMaterialIndex("BulletHole_Plaster");
+    static int bulletHoleGlassMaterialIndex = AssetManager::GetMaterialIndex("BulletHole_Glass");
     std::vector<RenderItem3D> renderItems;
     renderItems.reserve(g_bulletHoleDecals.size());
-
     // Wall bullet decals
     for (BulletHoleDecal& decal : g_bulletHoleDecals) {
         if (decal.GetType() == BulletHoleDecalType::REGULAR) {
             RenderItem3D& renderItem = renderItems.emplace_back();
             renderItem.modelMatrix = decal.GetModelMatrix();
             renderItem.inverseModelMatrix = inverse(renderItem.modelMatrix);
-            renderItem.baseColorTextureIndex = bulletHolePlasterMaterial->_basecolor;
-            renderItem.rmaTextureIndex = bulletHolePlasterMaterial->_rma;
-            renderItem.normalTextureIndex = bulletHolePlasterMaterial->_normal;
+            renderItem.materialIndex = bulletHolePlasterMaterialIndex;
             renderItem.meshIndex = AssetManager::GetQuadMeshIndex();
         }
     }
-
     // Glass bullet decals
     for (BulletHoleDecal& decal : g_bulletHoleDecals) {
         if (decal.GetType() == BulletHoleDecalType::GLASS) {
             RenderItem3D& renderItem = renderItems.emplace_back();
             renderItem.modelMatrix = decal.GetModelMatrix();
             renderItem.inverseModelMatrix = inverse(renderItem.modelMatrix);
-            renderItem.baseColorTextureIndex = bulletHoleGlassMaterial->_basecolor;
-            renderItem.rmaTextureIndex = bulletHoleGlassMaterial->_rma;
-            renderItem.normalTextureIndex = bulletHoleGlassMaterial->_normal;
+            renderItem.materialIndex = bulletHoleGlassMaterialIndex;
             renderItem.meshIndex = AssetManager::GetQuadMeshIndex();
         }
     }
-
-    //int baseVertex = AssetManager::GetMeshByIndex(AssetManager::GetQuadMeshIndex())->baseVertex;
-    //int vertexCount = AssetManager::GetMeshByIndex(AssetManager::GetQuadMeshIndex())->indexCount;
-    //std::cout << "base vertex in real life:" << baseVertex << "\n";
-    //std::cout << "index count in real life:" << vertexCount << "\n";
-
     return renderItems;
 }
 
@@ -1458,7 +1413,7 @@ void Scene::ProcessBullets() {
                         int type = counter;
                         Transform transform;
                         transform.position.x = rayResult.hitPosition.x;
-                        transform.position.y = 0.101f;
+                        transform.position.y = 0.005f;
                         transform.position.z = rayResult.hitPosition.z;
                         transform.rotation.y = bullet.parentPlayersViewRotation.y + HELL_PI;
 
@@ -1477,17 +1432,37 @@ void Scene::ProcessBullets() {
                             counter = 0;
                             */
 
+                        for (int i = 0; i < g_animatedGameObjects.size(); i++) {
+                            if (g_animatedGameObjects[i].GetName() == "Doberman") {
+                                auto& doberman = g_animatedGameObjects[i];
+                                for (auto& rigidComponent : doberman._ragdoll._rigidComponents) {
+                                    if (rigidComponent.pxRigidBody == actor) {
+                                        if (doberman._animationMode == AnimatedGameObject::ANIMATION) {
+                                            doberman.SetAnimatedModeToRagdoll();
+                                            Audio::PlayAudio("Doberman_Death.wav", 1.5f);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
 
 
 
 
                         Player* parentPlayerHit = (Player*)physicsObjectData->parent;
-                        if (!parentPlayerHit->_isDead) {
 
 
+                        // check if valid player. could be a god
+                        bool found = false;
+                        for (int i = 0; i < Game::GetPlayerCount(); i++) {
+                            if (parentPlayerHit == Game::GetPlayerByIndex(i)) {
+                                found = true;
+                            }
+                        }
 
 
-
+                        if (found && !parentPlayerHit->_isDead) {
 
                             parentPlayerHit->GiveDamageColor();
                             parentPlayerHit->_health -= 15;
@@ -2581,6 +2556,7 @@ void Scene::CleanUp() {
     for (int i = 0; i < g_animatedGameObjects.size(); ) {
         if (g_animatedGameObjects[i].GetFlag() != AnimatedGameObject::Flag::VIEW_WEAPON &&
             g_animatedGameObjects[i].GetFlag() != AnimatedGameObject::Flag::CHARACTER_MODEL) {
+            g_animatedGameObjects[i].DestroyRagdoll();
             g_animatedGameObjects.erase(g_animatedGameObjects.begin() + i);
         }
         else {
@@ -2611,10 +2587,6 @@ void Scene::AddDoor(Door& door) {
 void Scene::CreatePointCloud() {
     float pointSpacing = _pointCloudSpacing;
     _cloudPoints.clear();
-}
-
-void Scene::AddFloor(Floor& floor) {
-    _floors.push_back(floor);
 }
 
 void Scene::LoadLightSetup(int index) {
@@ -2898,18 +2870,6 @@ void Scene::CreateMeshData() {
     // House
     {
 
-        for (Floor& floor : _floors) {
-            //wall.CreateMesh();
-            for (Vertex& vert : floor.vertices) {
-                _rtVertices.push_back(vert.position);
-            }
-        }
-        for (Ceiling& ceiling : _ceilings) {
-            //wall.CreateMesh();
-            for (Vertex& vert : ceiling.vertices) {
-                _rtVertices.push_back(vert.position);
-            }
-        }
         RTMesh mesh;
         mesh.vertexCount = _rtVertices.size() - baseVertex;
         mesh.baseVertex = baseVertex;

@@ -402,11 +402,12 @@ void UpdateDebugLinesMesh() {
     if (Editor::IsOpen() && false) {
         std::vector<CSGObject> cubes = CSG::GetCSGObjects();
         for (CSGObject& cube : cubes) {
-            std::span<Vertex> cubeVertices = cube.GetVerticesSpan();
+            std::span<CSGVertex> cubeVertices = cube.GetVerticesSpan();
             for (int i = 0; i < cubeVertices.size(); i += 3) {
-                Vertex v0 = cubeVertices[i + 0];
-                Vertex v1 = cubeVertices[i + 1];
-                Vertex v2 = cubeVertices[i + 2];
+                Vertex v0, v1, v2;
+                v0.position = cubeVertices[i + 0].position;
+                v1.position = cubeVertices[i + 1].position;
+                v2.position = cubeVertices[i + 2].position;
                 v0.normal = GREEN;
                 v1.normal = GREEN;
                 v2.normal = GREEN;
@@ -442,16 +443,6 @@ void UpdateDebugLinesMesh() {
         }
 
         else if (_debugLineRenderMode == DebugLineRenderMode::RTX_LAND_AABBS) {
-            for (Floor& floor : Scene::_floors) {
-                std::vector<Vertex> aabbVertices = Util::GetAABBVertices(floor.aabb, GREEN);
-                vertices.reserve(vertices.size() + aabbVertices.size());
-                vertices.insert(std::end(vertices), std::begin(aabbVertices), std::end(aabbVertices));
-            }
-            for (Ceiling& ceiling : Scene::_ceilings) {
-                std::vector<Vertex> aabbVertices = Util::GetAABBVertices(ceiling.aabb, GREEN);
-                vertices.reserve(vertices.size() + aabbVertices.size());
-                vertices.insert(std::end(vertices), std::begin(aabbVertices), std::end(aabbVertices));
-            }
             for (Door& door : Scene::GetDoors()) {
                 std::vector<Vertex> aabbVertices = Util::GetAABBVertices(door._aabb, GREEN);
                 vertices.reserve(vertices.size() + aabbVertices.size());
@@ -1209,8 +1200,8 @@ MuzzleFlashData GetMuzzleFlashData(unsigned int playerIndex) {
 
 std::vector<RenderItem3D> CreateDecalRenderItems() {
 
-    static Material* bulletHolePlasterMaterial = AssetManager::GetMaterialByIndex(AssetManager::GetMaterialIndex("BulletHole_Plaster"));
-    static Material* bulletHoleGlassMaterial = AssetManager::GetMaterialByIndex(AssetManager::GetMaterialIndex("BulletHole_Glass"));
+    static int bulletHolePlasterMaterialIndex = AssetManager::GetMaterialIndex("BulletHole_Plaster");
+    static int bulletHoleGlassMaterialIndex = AssetManager::GetMaterialIndex("BulletHole_Glass");
     std::vector<RenderItem3D> renderItems;
     renderItems.reserve(Scene::GetBulletHoleDecalCount());
 
@@ -1220,14 +1211,10 @@ std::vector<RenderItem3D> CreateDecalRenderItems() {
         renderItem.modelMatrix = decal->GetModelMatrix();
         renderItem.meshIndex = AssetManager::GetQuadMeshIndex();
         if (decal->GetType() == BulletHoleDecalType::REGULAR) {
-            renderItem.baseColorTextureIndex = bulletHolePlasterMaterial->_basecolor;
-            renderItem.rmaTextureIndex = bulletHolePlasterMaterial->_rma;
-            renderItem.normalTextureIndex = bulletHolePlasterMaterial->_normal;
+            renderItem.materialIndex = bulletHolePlasterMaterialIndex;
         }
         else if (decal->GetType() == BulletHoleDecalType::GLASS) {
-            renderItem.baseColorTextureIndex = bulletHoleGlassMaterial->_basecolor;
-            renderItem.rmaTextureIndex = bulletHoleGlassMaterial->_rma;
-            renderItem.normalTextureIndex = bulletHoleGlassMaterial->_normal;
+            renderItem.materialIndex = bulletHoleGlassMaterialIndex;
         }
     }
     return renderItems;
@@ -1251,16 +1238,16 @@ std::vector<RenderItem3D> CreateBloodDecalRenderItems() {
         renderItem.inverseModelMatrix = glm::inverse(renderItem.modelMatrix);
 
         if (decal.type == 0) {
-            renderItem.baseColorTextureIndex = textureIndexType0;
+            renderItem.materialIndex = textureIndexType0;
         }
         else if (decal.type == 1) {
-            renderItem.baseColorTextureIndex = textureIndexType1;
+            renderItem.materialIndex = textureIndexType1;
         }
         else if (decal.type == 2) {
-            renderItem.baseColorTextureIndex = textureIndexType2;
+            renderItem.materialIndex = textureIndexType2;
         }
         else if (decal.type == 3) {
-            renderItem.baseColorTextureIndex = textureIndexType3;
+            renderItem.materialIndex = textureIndexType3;
         }
     }
 
@@ -1294,6 +1281,27 @@ std::vector<RenderItem3D> CreateBloodVATRenderItems() {
         renderItem.emissiveColor.r = bloodVAT.m_CurrentTime;
 
         if (bloodVAT.m_type == 4) {
+            renderItem.materialIndex = textureIndexBloodPos4;
+            renderItem.isGold = textureIndexBloodNorm4; // sketchy
+            renderItem.meshIndex = meshIndex4;
+        }
+        else if (bloodVAT.m_type == 6) {
+            renderItem.materialIndex = textureIndexBloodPos6;
+            renderItem.isGold = textureIndexBloodNorm6; // sketchy
+            renderItem.meshIndex = meshIndex6;
+        }
+        else if (bloodVAT.m_type == 7) {
+            renderItem.materialIndex = textureIndexBloodPos7;
+            renderItem.isGold = textureIndexBloodNorm7; // sketchy
+            renderItem.meshIndex = meshIndex7;
+        }
+        else if (bloodVAT.m_type == 9) {
+            renderItem.materialIndex = textureIndexBloodPos9;
+            renderItem.isGold = textureIndexBloodNorm9; // sketchy
+            renderItem.meshIndex = meshIndex9;
+        }
+        /*
+        if (bloodVAT.m_type == 4) {
             renderItem.baseColorTextureIndex = textureIndexBloodPos4;
             renderItem.normalTextureIndex = textureIndexBloodNorm4;
             renderItem.meshIndex = meshIndex4;
@@ -1312,7 +1320,7 @@ std::vector<RenderItem3D> CreateBloodVATRenderItems() {
             renderItem.baseColorTextureIndex = textureIndexBloodPos9;
             renderItem.normalTextureIndex = textureIndexBloodNorm9;
             renderItem.meshIndex = meshIndex9;
-        }
+        }*/
         else {
             continue;
         }
@@ -1433,16 +1441,14 @@ std::vector<RenderItem3D> CreateGlassRenderItems() {
     for (Window& window : Scene::GetWindows()) {
 
         static Model* glassModel = AssetManager::GetModelByIndex(AssetManager::GetModelIndexByName("Glass"));
-        static Material* glassMaterial = AssetManager::GetMaterialByIndex(AssetManager::GetMaterialIndex("WindowExterior"));
+        static int materialIndex = AssetManager::GetMaterialIndex("WindowExterior");
 
         for (int i = 0; i < glassModel->GetMeshIndices().size(); i++) {
             int meshIndex = glassModel->GetMeshIndices()[i];
             Mesh* mesh = AssetManager::GetMeshByIndex(meshIndex);
             RenderItem3D& renderItem = renderItems.emplace_back();
             renderItem.meshIndex = meshIndex;
-            renderItem.baseColorTextureIndex = glassMaterial->_basecolor;
-            renderItem.normalTextureIndex = glassMaterial->_normal;
-            renderItem.rmaTextureIndex = glassMaterial->_rma;
+            renderItem.materialIndex = materialIndex;
             renderItem.indexOffset = mesh->baseIndex;
             renderItem.vertexOffset = mesh->baseVertex;
             renderItem.modelMatrix = window.GetModelMatrix();
@@ -1450,40 +1456,11 @@ std::vector<RenderItem3D> CreateGlassRenderItems() {
         }
     }
 
-
-
     for (int i = 0; i < Game::GetPlayerCount(); i++) {
         Player* player = Game::GetPlayerByIndex(i);
         renderItems.reserve(renderItems.size() + player->GetAttachmentGlassRenderItems().size());
         renderItems.insert(std::end(renderItems), std::begin(player->GetAttachmentGlassRenderItems()), std::end(player->GetAttachmentGlassRenderItems()));
     }
-
-    /*
-    for (AnimatedGameObject& animatedGameObject : Scene::GetAnimatedGamesObjects()) {
-
-        // Glock Sight
-        if (animatedGameObject._skinnedModel->_filename == "Glock") {
-            glm::mat4 modelMatrix = animatedGameObject.GetModelMatrix() * animatedGameObject.GetAnimatedTransformByBoneName("Weapon");// *scale.to_mat4();
-            static int materialIndex = AssetManager::GetMaterialIndex("RedDotSight");
-            uint32_t modelIndex = AssetManager::GetModelIndexByName("Glock_RedDotSight");
-            Model* model = AssetManager::GetModelByIndex(modelIndex);
-            uint32_t& meshIndex = model->GetMeshIndices()[1];
-            Mesh* mesh = AssetManager::GetMeshByIndex(meshIndex);
-            RenderItem3D& renderItem = renderItems.emplace_back();
-            renderItem.vertexOffset = mesh->baseVertex;
-            renderItem.indexOffset = mesh->baseIndex;
-            renderItem.modelMatrix = modelMatrix;
-            renderItem.inverseModelMatrix = inverse(renderItem.modelMatrix);
-            renderItem.meshIndex = meshIndex;
-            renderItem.normalTextureIndex = AssetManager::GetMaterialByIndex(materialIndex)->_normal;
-            renderItem.baseColorTextureIndex = AssetManager::GetMaterialByIndex(materialIndex)->_basecolor;
-            renderItem.rmaTextureIndex = AssetManager::GetMaterialByIndex(materialIndex)->_rma;
-            renderItems.push_back(renderItem);
-        }
-    }
-    */
-
-
 
     return renderItems;
 }

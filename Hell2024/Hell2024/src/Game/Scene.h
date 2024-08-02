@@ -12,8 +12,6 @@
 #include "../Editor/CSG.h"
 #include "../Game/Player.h"
 #include "../Types/Modular/Door.h"
-#include "../Types/Modular/Ceiling.h"
-#include "../Types/Modular/Floor.h"
 #include "../Types/Modular/Toilet.h"
 #include "../Types/Modular/Window.h"
 #include "../Util.hpp"
@@ -72,8 +70,16 @@ public:
     float textureScale = 1.0f;
     float textureOffsetX = 0.0f;
     float textureOffsetY = 0.0f;
+
     glm::mat4 GetModelMatrix() {
         return  m_transform.to_mat4();
+    }
+
+    glm::mat4 GetNormalMatrix() {
+        Transform transform;
+        transform.position = m_transform.position;
+        transform.rotation = m_transform.rotation;
+        return transform.to_mat4();
     }
 
     void SetTransform(Transform transform) {
@@ -272,10 +278,7 @@ namespace Scene {
     inline std::vector<PickUp> _pickUps;
     inline std::vector<Bullet> _bullets;
 
-    inline std::vector<Floor> _floors;
-    inline std::vector<Ceiling> _ceilings;
     inline std::vector<CloudPointOld> _cloudPoints;
-    //inline std::vector<GameObject> _gameObjects;
     inline std::vector<glm::vec3> _rtVertices;
     inline std::vector<RTMesh> _rtMesh;
     inline std::vector<RTInstance> _rtInstances;
@@ -298,10 +301,8 @@ namespace Scene {
     void CreateMeshData();
     void AddLight(Light& light);
     void AddDoor(Door& door);
-    void AddFloor(Floor& floor);
     void UpdateRTInstanceData();
     void RecreateDataStructures();
-    //void CreateScenePhysicsObjects();
     void ProcessPhysicsCollisions();
 	void RecreateAllPhysicsObjects();
 	void RemoveAllDecalsFromWindow(Window* window);

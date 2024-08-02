@@ -71,6 +71,7 @@ namespace AssetManager {
     int GetGoldBaseColorTextureIndex();
     int GetGoldRMATextureIndex();
     int GetMaterialCount();
+    std::vector<GPUMaterial>& GetGPUMaterials();
 
     // Textures
     void LoadTexture(const std::string filepath);

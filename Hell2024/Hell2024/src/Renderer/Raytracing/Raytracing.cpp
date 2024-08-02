@@ -34,7 +34,7 @@ namespace Raytracing {
         }
     }
 
-    const int CreateBLAS(std::vector<Vertex>& vertices, std::vector<unsigned int>& indices, unsigned int meshBaseVertex, unsigned int meshBaseIndex) {
+    const int CreateBLAS(std::vector<CSGVertex>& vertices, std::vector<unsigned int>& indices, unsigned int meshBaseVertex, unsigned int meshBaseIndex) {
 
         BLAS& blas = _bottomLevelAccelerationStructures.emplace_back();
         blas.Create(vertices, indices, meshBaseVertex, meshBaseIndex);
@@ -56,7 +56,7 @@ namespace Raytracing {
         return (int)_bottomLevelAccelerationStructures.size() - 1;
     }
 
-    const void RecreateBLAS(unsigned int blasIndex, std::vector<Vertex>& vertices, std::vector<unsigned int>& indices, unsigned int meshBaseVertex, unsigned int meshBaseIndex) {
+    const void RecreateBLAS(unsigned int blasIndex, std::vector<CSGVertex>& vertices, std::vector<unsigned int>& indices, unsigned int meshBaseVertex, unsigned int meshBaseIndex) {
 
         BLAS& blas = _bottomLevelAccelerationStructures[blasIndex];
 

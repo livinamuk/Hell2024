@@ -71,7 +71,7 @@ void GlobalIllumination::CreatePointCloud() {
 
     g_pointCloud.clear();
 
-    std::vector<Vertex> vertices = CSG::GetVertices();
+    std::vector<CSGVertex> vertices = CSG::GetVertices();
     std::vector<glm::vec3> triangles;
     float spacing = 0.275f;
 

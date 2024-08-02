@@ -22,7 +22,7 @@ struct BLAS {
     int rootIndex = 0;                  // Into the global gBlasNodes array within Raytracing.cpp
     int baseTriangleIndex = 0;          // Into the global gTriIndices array within Raytracing.cpp
 
-    void Create(std::vector<Vertex>& vertices, std::vector<unsigned int>& indices, int baseVertex, int baseIndex) {
+    void Create(std::vector<CSGVertex>& vertices, std::vector<unsigned int>& indices, int baseVertex, int baseIndex) {
 
         meshbaseVertex = baseVertex;
         meshbaseIndex = baseIndex;

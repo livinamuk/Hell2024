@@ -366,6 +366,29 @@ void GameObject::Update(float deltaTime) {
         glm::vec3 maxBounds = center + extents;
         _aabb = AABB(minBounds, maxBounds);
     }
+    else {
+        // Rewrite this to work per mesh
+        _aabbPreviousFrame = _aabb;
+        std::vector<glm::vec3> modelCorners = {
+            glm::vec3(model->aabbMin.x, model->aabbMin.y, model->aabbMin.z),
+            glm::vec3(model->aabbMax.x, model->aabbMin.y, model->aabbMin.z),
+            glm::vec3(model->aabbMin.x, model->aabbMax.y, model->aabbMin.z),
+            glm::vec3(model->aabbMax.x, model->aabbMax.y, model->aabbMin.z),
+            glm::vec3(model->aabbMin.x, model->aabbMin.y, model->aabbMax.z),
+            glm::vec3(model->aabbMax.x, model->aabbMin.y, model->aabbMax.z),
+            glm::vec3(model->aabbMin.x, model->aabbMax.y, model->aabbMax.z),
+            glm::vec3(model->aabbMax.x, model->aabbMax.y, model->aabbMax.z)
+        };
+        glm::vec3 worldMinBounds = glm::vec3(std::numeric_limits<float>::max());
+        glm::vec3 worldMaxBounds = glm::vec3(std::numeric_limits<float>::lowest());
+        for (const auto& corner : modelCorners) {
+            glm::vec4 worldCorner = _modelMatrix * glm::vec4(corner, 1.0f);
+            glm::vec3 worldCornerVec3(worldCorner);
+            worldMinBounds = glm::min(worldMinBounds, worldCornerVec3);
+            worldMaxBounds = glm::max(worldMaxBounds, worldCornerVec3);
+        }
+        _aabb = AABB(worldMinBounds, worldMaxBounds);
+    }
 }
 
 
@@ -958,7 +981,6 @@ void GameObject::UpdateRenderItems() {
     renderItems.clear();
     for (int i = 0; i < model->GetMeshIndices().size(); i++) {
         uint32_t& meshIndex = model->GetMeshIndices()[i];
-        int materialIndex = _meshMaterialIndices[i];
         Mesh* mesh = AssetManager::GetMeshByIndex(meshIndex);
         RenderItem3D& renderItem = renderItems.emplace_back();
         renderItem.vertexOffset = mesh->baseVertex;
@@ -966,18 +988,11 @@ void GameObject::UpdateRenderItems() {
         renderItem.modelMatrix = GetModelMatrix();
         renderItem.inverseModelMatrix = inverse(renderItem.modelMatrix);
         renderItem.meshIndex = meshIndex;
-        renderItem.normalTextureIndex = AssetManager::GetMaterialByIndex(materialIndex)->_normal;
+        renderItem.isGold = m_isGold;
         renderItem.castShadow = m_castShadows;
-
-        if (m_isGold) {
-            renderItem.baseColorTextureIndex = AssetManager::GetGoldBaseColorTextureIndex();
-            renderItem.rmaTextureIndex = AssetManager::GetGoldRMATextureIndex();
-        }
-        else {
-            renderItem.baseColorTextureIndex = AssetManager::GetMaterialByIndex(materialIndex)->_basecolor;
-            renderItem.rmaTextureIndex = AssetManager::GetMaterialByIndex(materialIndex)->_rma;
-        }
-
+        renderItem.materialIndex = _meshMaterialIndices[i];
+        renderItem.aabbMin = _aabb.boundsMin;
+        renderItem.aabbMax = _aabb.boundsMax;
     }
 }
 

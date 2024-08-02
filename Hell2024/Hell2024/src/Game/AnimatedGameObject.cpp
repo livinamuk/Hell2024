@@ -37,22 +37,15 @@ void AnimatedGameObject::CreateSkinnedMeshRenderItems() {
                 return;
             }
 
-            //renderItem.vertexBufferIndex = m_skinnedBufferIndices[i];
-            renderItem.baseColorTextureIndex = material->_basecolor;
-            renderItem.normalTextureIndex = material->_normal;
-            renderItem.rmaTextureIndex = material->_rma;
+            renderItem.materialIndex = _meshRenderingEntries[i].materialIndex;
+            renderItem.isGold = m_isGold;
             renderItem.modelMatrix = GetModelMatrix();
             renderItem.inverseModelMatrix = glm::inverse(GetModelMatrix());
             renderItem.originalMeshIndex = _skinnedModel->GetMeshIndices()[i];
             renderItem.baseVertex = m_baseSkinnedVertex + mesh->baseVertexLocal;
 
-            if (m_isGold && mesh->name != "ArmsMale" && mesh->name != "ArmsFemale") {
-                renderItem.baseColorTextureIndex = AssetManager::GetGoldBaseColorTextureIndex();
-                renderItem.rmaTextureIndex = AssetManager::GetGoldRMATextureIndex();
-            }
-            else {
-                renderItem.baseColorTextureIndex = material->_basecolor;
-                renderItem.rmaTextureIndex = material->_rma;
+            if (m_isGold && mesh->name == "ArmsMale" || mesh->name == "ArmsFemale") {
+                renderItem.isGold = false;
             }
         }
     }

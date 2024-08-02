@@ -102,7 +102,6 @@ namespace Gizmo {
 
     inline Im3d::Mat4 Update(glm::vec3 viewPos, glm::vec3 viewDir, float mouseX, float mouseY, glm::mat4 projection, glm::mat4 view, bool leftMouseDown, float viewportWidth, float viewportHeight, glm::mat4 matrix) {
 
-
         Im3d::Context& ctx = Im3d::GetContext();
         ctx.m_gizmoHeightPixels = 50;
         ctx.m_gizmoSizePixels = 6;
@@ -144,8 +143,6 @@ namespace Gizmo {
         ad.m_snapTranslation = !shiftDown ? 0.05f : 0.0f;
         ad.m_snapRotation = !shiftDown ? Radians(45.0f * 0.5f) : 0.0f;
         ad.m_snapScale = !shiftDown ? 0.05f : 0.0f;
-
-
 
         Im3d::NewFrame();
         g_transform = GlmMat4ToIm3dMat4(matrix);

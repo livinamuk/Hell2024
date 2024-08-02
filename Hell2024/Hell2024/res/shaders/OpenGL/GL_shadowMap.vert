@@ -5,17 +5,21 @@ struct RenderItem3D {
     mat4 modelMatrix;
     mat4 inverseModelMatrix;
     int meshIndex;
-    int baseColorTextureIndex;
-    int normalTextureIndex;
-    int rmaTextureIndex;
+    int materialIndex;
     int vertexOffset;
     int indexOffset;
-    int animatedTransformsOffset;
     int castShadow;
     int useEmissiveMask;
+    int isGold;
     float emissiveColorR;
     float emissiveColorG;
     float emissiveColorB;
+    float aabbMinX;
+    float aabbMinY;
+    float aabbMinZ;
+    float aabbMaxX;
+    float aabbMaxY;
+    float aabbMaxZ;
 };
 
 layout(std430, binding = 12) readonly buffer renderItems {

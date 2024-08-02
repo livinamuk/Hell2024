@@ -22,7 +22,7 @@ public:
     void update_display_list();
     cube_brush_userdata_t(csg::brush_t* brush);
 
-    std::vector<Vertex> m_vertices;
+    std::vector<CSGVertex> m_vertices;
     glm::vec3 m_color;
     glm::vec3 m_origin;
     uint32_t m_index;
@@ -59,8 +59,9 @@ struct CSGObject {
     PxShape* m_pxShape = nullptr;
     AABB m_aabb;
     csg::brush_t* m_brush;
+    glm::mat4 m_parentVolumeNormalMatrix = glm::mat4(1);
 
-    std::span<Vertex> GetVerticesSpan();
+    std::span<CSGVertex> GetVerticesSpan();
     std::span<uint32_t> GetIndicesSpan();
     void CreatePhysicsObjectFromVertices();
     void CleanUpPhysicsObjects();
@@ -72,10 +73,10 @@ namespace CSG {
     void Update();
     void Build();
     bool GeometryExists();
-    std::vector<Vertex>& GetVertices();
+    std::vector<CSGVertex>& GetVertices();
     std::vector<uint32_t>& GetIndices();
     std::vector<CSGObject>& GetCSGObjects();
-    std::span<Vertex> GetRangedVerticesSpan(uint32_t baseVertex, uint32_t vertexCount);
+    std::span<CSGVertex> GetRangedVerticesSpan(uint32_t baseVertex, uint32_t vertexCount);
     std::span<uint32_t> GetRangedIndicesSpan(uint32_t baseIndex, uint32_t indexCount);
     uint32_t GetBaseCSGVertex();
 }

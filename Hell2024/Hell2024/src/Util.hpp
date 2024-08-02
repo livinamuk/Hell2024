@@ -587,6 +587,11 @@ namespace Util {
         return current + DeltaMove;
     }
 
+    inline bool AreNormalsAligned(const glm::vec3& normal1, const glm::vec3& normal2, float threshold = 0.999f) {
+        float dotProduct = glm::dot(glm::normalize(normal1), glm::normalize(normal2));
+        return dotProduct > threshold;
+    }
+
     inline glm::vec3 NormalFromTriangle(glm::vec3 pos0, glm::vec3 pos1, glm::vec3 pos2) {
         return glm::normalize(glm::cross(pos1 - pos0, pos2 - pos0));
     }
@@ -599,6 +604,31 @@ namespace Util {
     }
 
     inline void SetNormalsAndTangentsFromVertices(Vertex* vert0, Vertex* vert1, Vertex* vert2) {
+        // Shortcuts for UVs
+        glm::vec3& v0 = vert0->position;
+        glm::vec3& v1 = vert1->position;
+        glm::vec3& v2 = vert2->position;
+        glm::vec2& uv0 = vert0->uv;
+        glm::vec2& uv1 = vert1->uv;
+        glm::vec2& uv2 = vert2->uv;
+        // Edges of the triangle : position delta. UV delta
+        glm::vec3 deltaPos1 = v1 - v0;
+        glm::vec3 deltaPos2 = v2 - v0;
+        glm::vec2 deltaUV1 = uv1 - uv0;
+        glm::vec2 deltaUV2 = uv2 - uv0;
+        float r = 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV1.y * deltaUV2.x);
+        glm::vec3 tangent = (deltaPos1 * deltaUV2.y - deltaPos2 * deltaUV1.y) * r;
+        glm::vec3 bitangent = (deltaPos2 * deltaUV1.x - deltaPos1 * deltaUV2.x) * r;
+        glm::vec3 normal = NormalFromTriangle(vert0->position, vert1->position, vert2->position);
+        vert0->normal = normal;
+        vert1->normal = normal;
+        vert2->normal = normal;
+        vert0->tangent = tangent;
+        vert1->tangent = tangent;
+        vert2->tangent = tangent;
+    }
+
+    inline void SetNormalsAndTangentsFromVertices(CSGVertex* vert0, CSGVertex* vert1, CSGVertex* vert2) {
         // Shortcuts for UVs
         glm::vec3& v0 = vert0->position;
         glm::vec3& v1 = vert1->position;
@@ -1145,5 +1175,39 @@ namespace Util {
             vertices.push_back(PixelToNDC(pixelPos, viewportWidth, viewportHeight));
         }
         return vertices;
+    }
+
+    inline float CalculateAngle(const glm::vec3& from, const glm::vec3& to) {
+        return atan2(to.x - from.x, to.z - from.z);
+    }
+
+    inline float NormalizeAngle(float angle) {
+        while (angle > HELL_PI) angle -= 2 * HELL_PI;
+        while (angle < -HELL_PI) angle += 2 * HELL_PI;
+        return angle;
+    }
+
+    inline void RotateYTowardsTarget(glm::vec3& objectPosition, float& objectYRotation, const glm::vec3& targetPosition, float rotationSpeed) {
+        float desiredAngle = CalculateAngle(objectPosition, targetPosition);
+        float angleDifference = NormalizeAngle(desiredAngle - objectYRotation);
+        // Determine the shortest direction to rotate
+        if (fabs(angleDifference) < rotationSpeed) {
+            // If the difference is small, set the rotation directly
+            objectYRotation = desiredAngle;
+        }
+        else {
+            // Rotate towards the target with a maximum of rotationSpeed
+            if (angleDifference > 0) {
+                objectYRotation += rotationSpeed;
+            }
+            else {
+                objectYRotation -= rotationSpeed;
+            }
+        }
+        // Keep the rotation within the range [0, 2*pi]
+        objectYRotation = fmod(objectYRotation, 2 * HELL_PI);
+        if (objectYRotation < 0) {
+            objectYRotation += 2 * HELL_PI;
+        }
     }
 }

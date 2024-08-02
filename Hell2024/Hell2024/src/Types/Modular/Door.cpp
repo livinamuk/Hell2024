@@ -209,11 +209,8 @@ void Door::UpdateRenderItems() {
         renderItem.modelMatrix = GetDoorModelMatrix();
         renderItem.inverseModelMatrix = inverse(renderItem.modelMatrix);
         renderItem.meshIndex = meshIndex;
-        renderItem.baseColorTextureIndex = AssetManager::GetMaterialByIndex(materialIndex)->_basecolor;
-        renderItem.normalTextureIndex = AssetManager::GetMaterialByIndex(materialIndex)->_normal;
-        renderItem.rmaTextureIndex = AssetManager::GetMaterialByIndex(materialIndex)->_rma;
+        renderItem.materialIndex = materialIndex;
     }
-
 
     Model* frameModel = AssetManager::GetModelByIndex(AssetManager::GetModelIndexByName("DoorFrame"));
     for (uint32_t& meshIndex : frameModel->GetMeshIndices()) {
@@ -224,9 +221,7 @@ void Door::UpdateRenderItems() {
         renderItem.modelMatrix = GetFrameModelMatrix();
         renderItem.inverseModelMatrix = inverse(renderItem.modelMatrix);
         renderItem.meshIndex = meshIndex;
-        renderItem.baseColorTextureIndex = AssetManager::GetMaterialByIndex(materialIndex)->_basecolor;
-        renderItem.normalTextureIndex = AssetManager::GetMaterialByIndex(materialIndex)->_normal;
-        renderItem.rmaTextureIndex = AssetManager::GetMaterialByIndex(materialIndex)->_rma;
+        renderItem.materialIndex = materialIndex;
     }
 }
 

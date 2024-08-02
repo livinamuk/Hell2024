@@ -6,6 +6,8 @@ layout (location = 2) in vec2 aTexCoord;
 
 out vec2 TexCoord;
 out flat int BaseColorTextureIndex;
+out flat int NormalTextureIndex;
+out flat int RMATextureIndex;
 
 uniform int playerIndex;
 
@@ -13,23 +15,37 @@ struct RenderItem3D {
     mat4 modelMatrix;
     mat4 inverseModelMatrix;
     int meshIndex;
-    int baseColorTextureIndex;
-    int normalTextureIndex;
-    int rmaTextureIndex;
+    int materialIndex;
     int vertexOffset;
     int indexOffset;
-    int animatedTransformsOffset;
     int castShadow;
     int useEmissiveMask;
+    int isGold;
     float emissiveColorR;
     float emissiveColorG;
     float emissiveColorB;
+    float aabbMinX;
+    float aabbMinY;
+    float aabbMinZ;
+    float aabbMaxX;
+    float aabbMaxY;
+    float aabbMaxZ;
+};
+
+struct Material {
+	int baseColorTextureIndex;
+	int normalTextureIndex;
+	int rmaTextureIndex;
+	int emissiveTextureIndex;
 };
 
 layout(std430, binding = 14) readonly buffer renderItems {
     RenderItem3D RenderItems[];
 };
 
+layout(std430, binding = 3) readonly buffer materials {
+    Material Materials[];
+};
 
 struct CameraData {
     mat4 projection;
@@ -59,9 +75,13 @@ void main() {
 	mat4 projection = cameraDataArray[playerIndex].projection;
 	mat4 view = cameraDataArray[playerIndex].view;
 
+	//Material material = Materials[RenderItems[gl_InstanceID+ gl_BaseInstance].materialIndex];
+	//BaseColorTextureIndex =  material.baseColorTextureIndex;
+
+	BaseColorTextureIndex = RenderItems[ gl_InstanceID+ gl_BaseInstance].materialIndex;
+
 	TexCoord = aTexCoord;
 	mat4 model = RenderItems[gl_InstanceID + gl_BaseInstance].modelMatrix;
-	BaseColorTextureIndex =  RenderItems[gl_InstanceID+ gl_BaseInstance].baseColorTextureIndex;
-	gl_Position = projection * view * model *vec4(aPos - vec3(0,0.065,0), 1.0);
+	gl_Position = projection * view * model *vec4(aPos, 1.0);
 }
 

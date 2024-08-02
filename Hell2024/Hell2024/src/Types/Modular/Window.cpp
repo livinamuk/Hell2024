@@ -141,9 +141,7 @@ void Window::UpdateRenderItems() {
         renderItem.modelMatrix = GetModelMatrix();
         renderItem.inverseModelMatrix = inverse(renderItem.modelMatrix);
         renderItem.meshIndex = meshIndex;
-        renderItem.baseColorTextureIndex = AssetManager::GetMaterialByIndex(materialIndex)->_basecolor;
-        renderItem.normalTextureIndex = AssetManager::GetMaterialByIndex(materialIndex)->_normal;
-        renderItem.rmaTextureIndex = AssetManager::GetMaterialByIndex(materialIndex)->_rma;
+        renderItem.materialIndex = materialIndex;
     }
 }
 

@@ -15,7 +15,7 @@ namespace CSG {
 
     std::vector<CSGObject> g_objects;
     csg::world_t g_world;
-    std::vector<Vertex> g_vertices;
+    std::vector<CSGVertex> g_vertices;
     std::vector<uint32_t> g_indices;
     bool g_sceneDirty = true;
     uint32_t g_baseCSGVertex = 0;
@@ -97,6 +97,7 @@ namespace CSG {
             csg.m_parentIndex = i;
             csg.m_textureOffsetX = cubeVolume.textureOffsetX;
             csg.m_textureOffsetY = cubeVolume.textureOffsetY;
+            csg.m_parentVolumeNormalMatrix = cubeVolume.GetNormalMatrix();
         }
 
 
@@ -110,6 +111,7 @@ namespace CSG {
             csg.m_parentIndex = i;
             csg.m_textureOffsetX = cubeVolume.textureOffsetX;
             csg.m_textureOffsetY = cubeVolume.textureOffsetY;
+            csg.m_parentVolumeNormalMatrix = cubeVolume.GetNormalMatrix();
         }
 
         for (Door& door : Scene::GetDoors()) {
@@ -180,7 +182,7 @@ namespace CSG {
                 //(-0.00, 0.00, 0.00)
                 //(-0.00, 2.00, 0.79)
 
-                Vertex v0, v1, v2, v3, v4, v5, v6, v7;
+                CSGVertex v0, v1, v2, v3, v4, v5, v6, v7;
                 v0.position = glm::vec3(mesh->aabbMin.x, mesh->aabbMin.y, mesh->aabbMin.z);
                 v1.position = glm::vec3(mesh->aabbMin.x, mesh->aabbMax.y, mesh->aabbMin.z);
                 v2.position = glm::vec3(mesh->aabbMin.x, mesh->aabbMax.y, mesh->aabbMax.z);
@@ -228,7 +230,7 @@ namespace CSG {
             int vertexCount = 0;
             int indexCount = 0;
             int index = 0;
-            for (Vertex& vertex : brush->m_vertices) {
+            for (CSGVertex& vertex : brush->m_vertices) {
                 glm::vec3 origin = brush->m_origin;
                 origin = glm::vec3(0);
                 vertex.uv = CalculateUV(vertex.position, vertex.normal, origin);
@@ -256,37 +258,28 @@ namespace CSG {
             baseIndex += vertexCount;
         }
 
+
+
+
         // Calculate tangents
         for (int i = g_baseCSGVertex; i < g_vertices.size(); i += 3) {
             Util::SetNormalsAndTangentsFromVertices(&g_vertices[i], &g_vertices[i+1], &g_vertices[i+2]);
         }
 
-
-
-        /*
-        std::cout << "\nVERTICES\n";
-        for (int i = 0; i < g_vertices.size(); i++) {
-            std::cout << i << ": " << Util::Vec3ToString(g_vertices[i].position) << "\n";
-        }
-
-        std::cout << "\nINDICES\n";
-        for (int i = 0; i < g_indices.size(); i++) {
-            std::cout << i << ": " << g_indices[i] << "\n";
-        }
-
-        std::cout << "\ng_objects\n";
-
-
-        std::cout << "\ng_objects.size() : " <<  g_objects.size() << "\n\n";
-
+        // Set materials based on local face normal
         for (CSGObject& csgObject : g_objects) {
-            std::cout << "csgObject.m_baseIndex: " << csgObject.m_baseIndex << "\n";
-            std::cout << "csgObject.m_baseVertex: " << csgObject.m_baseVertex << "\n";
-            std::cout << "csgObject.m_vertexCount: " << csgObject.m_vertexCount << "\n";
+            glm::mat4 inverseNormalMatrix = glm::inverse(csgObject.m_parentVolumeNormalMatrix);
+            for (int i = csgObject.m_baseVertex; i < csgObject.m_baseVertex + csgObject.m_vertexCount; i += 3) {
+                glm::vec4 transformedNormal = inverseNormalMatrix * glm::vec4(g_vertices[i].normal, 0.0f);
+                glm::vec3 transformedNormalXYZ = glm::normalize(glm::vec3(transformedNormal));
 
+                if (Util::AreNormalsAligned(transformedNormalXYZ, glm::vec3(0, 0, -1), 0.9f)) {
+                    g_vertices[i + 0].materialIndex = AssetManager::GetMaterialIndex("Ceiling2");
+                    g_vertices[i + 1].materialIndex = AssetManager::GetMaterialIndex("Ceiling2");;
+                    g_vertices[i + 2].materialIndex = AssetManager::GetMaterialIndex("Ceiling2");
+                }
+            }
         }
-        */
-
 
         for (CSGObject& cube : g_objects) {
             cube.CreatePhysicsObjectFromVertices();
@@ -319,15 +312,15 @@ namespace CSG {
         GlobalIllumination::RecalculateAll();
     }
 
-    std::span<Vertex> CSG::GetRangedVerticesSpan(uint32_t baseVertex, uint32_t vertexCount) {
-        return std::span<Vertex>(CSG::g_vertices.data() + baseVertex, vertexCount);
+    std::span<CSGVertex> CSG::GetRangedVerticesSpan(uint32_t baseVertex, uint32_t vertexCount) {
+        return std::span<CSGVertex>(CSG::g_vertices.data() + baseVertex, vertexCount);
     }
 
     std::span<uint32_t> CSG::GetRangedIndicesSpan(uint32_t baseIndex, uint32_t indexCount) {
         return std::span<uint32_t>(CSG::g_indices.data() + baseIndex, indexCount);
     }
 
-    std::vector<Vertex>& GetVertices() {
+    std::vector<CSGVertex>& GetVertices() {
         return g_vertices;
     }
 
@@ -438,14 +431,14 @@ void cube_brush_userdata_t::update_display_list() {
             for (csg::triangle_t& tri : tris) {
 
                 if (flip_face) {
-                    m_vertices.push_back(Vertex(fragment.vertices[tri.i].position, normal));
-                    m_vertices.push_back(Vertex(fragment.vertices[tri.k].position, normal));
-                    m_vertices.push_back(Vertex(fragment.vertices[tri.j].position, normal));
+                    m_vertices.push_back(CSGVertex(fragment.vertices[tri.i].position, normal));
+                    m_vertices.push_back(CSGVertex(fragment.vertices[tri.k].position, normal));
+                    m_vertices.push_back(CSGVertex(fragment.vertices[tri.j].position, normal));
                 }
                 else {
-                    m_vertices.push_back(Vertex(fragment.vertices[tri.i].position, normal));
-                    m_vertices.push_back(Vertex(fragment.vertices[tri.j].position, normal));
-                    m_vertices.push_back(Vertex(fragment.vertices[tri.k].position, normal));
+                    m_vertices.push_back(CSGVertex(fragment.vertices[tri.i].position, normal));
+                    m_vertices.push_back(CSGVertex(fragment.vertices[tri.j].position, normal));
+                    m_vertices.push_back(CSGVertex(fragment.vertices[tri.k].position, normal));
                 }
             }
         }
@@ -457,8 +450,8 @@ cube_brush_userdata_t::cube_brush_userdata_t(csg::brush_t* _brush) : brush(brush
 }
 
 
-std::span<Vertex> CSGObject::GetVerticesSpan() {
-    return std::span<Vertex>(CSG::g_vertices.data() + m_baseVertex, m_vertexCount);
+std::span<CSGVertex> CSGObject::GetVerticesSpan() {
+    return std::span<CSGVertex>(CSG::g_vertices.data() + m_baseVertex, m_vertexCount);
 }
 
 std::span<uint32_t> CSGObject::GetIndicesSpan() {
@@ -494,7 +487,7 @@ void CSGObject::CreatePhysicsObjectFromVertices() {
         // Create triangle mesh
         std::vector<PxVec3> pxvertices;
         std::vector<unsigned int> pxindices;
-        for (Vertex& vertex : GetVerticesSpan()) {
+        for (CSGVertex& vertex : GetVerticesSpan()) {
             pxvertices.push_back(PxVec3(vertex.position.x, vertex.position.y, vertex.position.z));
         }
         for (int i = 0; i < m_vertexCount; i++) {

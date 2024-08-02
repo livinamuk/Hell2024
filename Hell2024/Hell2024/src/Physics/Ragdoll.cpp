@@ -7,7 +7,7 @@
 #include <rapidjson/ostreamwrapper.h>
 #include <rapidjson/prettywriter.h>
 #include <filesystem>
-#include <sstream> 
+#include <sstream>
 #include <fstream>
 #include <string>
 #include <iostream>
@@ -47,8 +47,8 @@ void Ragdoll::LoadFromJSON(std::string filename, PxU32 collisionGroup) {
             rigidComponent.ID = entity.value["id"].GetInt();
             rigidComponent.name = components["NameComponent"].GetObject()["members"].GetObject()["value"].GetString();
             rigidComponent.restMatrix = Util::Mat4FromJSONArray(components["RestComponent"].GetObject()["members"].GetObject()["matrix"].GetObject()["values"].GetArray());
-                       
-            
+
+
             rigidComponent.scaleAbsoluteVector = Util::Vec3FromJSONArray(components["ScaleComponent"].GetObject()["members"].GetObject()["absolute"].GetObject()["values"].GetArray());
             rigidComponent.capsuleRadius = components["GeometryDescriptionComponent"].GetObject()["members"].GetObject()["radius"].GetFloat();
             rigidComponent.capsuleLength = components["GeometryDescriptionComponent"].GetObject()["members"].GetObject()["length"].GetFloat();
@@ -82,7 +82,7 @@ void Ragdoll::LoadFromJSON(std::string filename, PxU32 collisionGroup) {
             std::string jointName = jointComponent.name;
             if (jointName.find("Absolute") != -1) {
                 continue;
-            } 
+            }
 
             jointComponent.parentID = components["JointComponent"].GetObject()["members"].GetObject()["parent"].GetObject()["value"].GetInt();
             jointComponent.childID = components["JointComponent"].GetObject()["members"].GetObject()["child"].GetObject()["value"].GetInt();
@@ -151,7 +151,7 @@ void Ragdoll::LoadFromJSON(std::string filename, PxU32 collisionGroup) {
         if (Util::StrCmp(rigid.name.c_str(), "rSceneShape")) {
             continue;
         }
-        
+
 
         rigid.pxRigidBody = Physics::CreateRigidDynamic(spawnTransform.to_mat4() * rigid.restMatrix, false);
         rigid.pxRigidBody->wakeUp();
@@ -198,7 +198,7 @@ void Ragdoll::LoadFromJSON(std::string filename, PxU32 collisionGroup) {
         else if (Util::StrCmp(rigid.name.c_str(), "rMarker_CC_Base_NeckTwist01")) {
             rigid.pxRigidBody->setName("RAGDOLL_NECK");
         }
-        
+
         PxRigidBodyExt::setMassAndUpdateInertia(*rigid.pxRigidBody, rigid.mass);
 
         PxFilterData filterData;
@@ -263,9 +263,16 @@ void Ragdoll::LoadFromJSON(std::string filename, PxU32 collisionGroup) {
 
         joint.pxD6->setConstraintFlag(PxConstraintFlag::eVISUALIZATION, false);
 
+
+        //"linearDamping": 10000.0,
+        //"linearStiffness" : 1000000.0,
+
+        joint.limit_linearStiffness = 10000;
+        joint.limit_linearDampening = 1000000;
+
         const PxSpring linearSpring{
-        joint.limit_linearStiffness,
-        joint.limit_linearDampening
+            joint.limit_linearStiffness,
+            joint.limit_linearDampening
         };
 
 
@@ -372,7 +379,7 @@ void Ragdoll::LoadFromJSON(std::string filename, PxU32 collisionGroup) {
             // and child frames, without affecting the drive target
             //
             // TODO: Unravel this. We currently can't edit the child anchorpoint
-            
+
         }
 
         else {

@@ -40,7 +40,7 @@ namespace OpenGLRenderer {
 
     struct Shaders {
         Shader geometry;
-        Shader geometrySkinned;
+        //Shader geometrySkinned;
         Shader lighting;
         Shader UI;
         Shader shadowMap;
@@ -58,7 +58,7 @@ namespace OpenGLRenderer {
         Shader debugProbes;
         Shader csg;
         Shader outline;
-        Shader newDebugShader;
+        Shader gbufferSkinned;
         Shader csgSubtractive;
         Shader triangles2D;
         ComputeShader debugCircle;
@@ -77,11 +77,11 @@ namespace OpenGLRenderer {
         SSBO bulletHoleDecalRenderItems;
         SSBO bloodDecalRenderItems;
         SSBO bloodVATRenderItems;
-        SSBO csgMaterials;
         SSBO tlasNodes;
         SSBO blasNodes;
         SSBO blasInstances;
         SSBO triangleIndices;
+        SSBO materials;
 
         GLuint samplers = 0;
         GLuint renderItems2D = 0;
@@ -144,7 +144,7 @@ void OpenGLRenderer::HotloadShaders() {
     g_shaders.outline.Load("GL_outline.vert", "GL_outline.frag");
     g_shaders.UI.Load("GL_ui.vert", "GL_ui.frag");
     g_shaders.geometry.Load("GL_gbuffer.vert", "GL_gbuffer.frag");
-    g_shaders.geometrySkinned.Load("GL_gbufferSkinned.vert", "GL_gbufferSkinned.frag");
+    //g_shaders.geometrySkinned.Load("GL_gbufferSkinned.vert", "GL_gbufferSkinned.frag");
     g_shaders.lighting.Load("GL_lighting.vert", "GL_lighting.frag");
     g_shaders.shadowMap.Load("GL_shadowMap.vert", "GL_shadowMap.frag");
     g_shaders.shadowMapCSG.Load("GL_shadowMap_csg.vert", "GL_shadowMap_csg.frag");
@@ -159,7 +159,7 @@ void OpenGLRenderer::HotloadShaders() {
     g_shaders.debugSolidColor.Load("GL_debug_solidColor.vert", "GL_debug_solidColor.frag");
     g_shaders.debugPointCloud.Load("GL_debug_pointCloud.vert", "GL_debug_pointCloud.frag");
     g_shaders.debugProbes.Load("GL_debug_probes.vert", "GL_debug_probes.frag");
-    g_shaders.newDebugShader.Load("GL_new_debug_shader.vert", "GL_new_debug_shader.frag");
+    g_shaders.gbufferSkinned.Load("GL_gbuffer_skinned.vert", "GL_gbuffer_skinned.frag");
     g_shaders.emissiveComposite.LoadOLD("res/shaders/OpenGL/GL_emissiveComposite.comp");
     g_shaders.postProcessing.LoadOLD("res/shaders/OpenGL/GL_postProcessing.comp");
     g_shaders.glassComposite.LoadOLD("res/shaders/OpenGL/GL_glassComposite.comp");
@@ -321,7 +321,7 @@ void OpenGLRenderer::InitMinimum() {
     _ssbos.bulletHoleDecalRenderItems.PreAllocate(MAX_DECAL_COUNT * sizeof(RenderItem3D));
     _ssbos.bloodDecalRenderItems.PreAllocate(MAX_BLOOD_DECAL_COUNT * sizeof(RenderItem3D));
     _ssbos.bloodVATRenderItems.PreAllocate(MAX_VAT_INSTANCE_COUNT * sizeof(RenderItem3D));
-    _ssbos.csgMaterials.PreAllocate(MAX_CSG_CUBE_COUNT * sizeof(CSGInstance));
+    //_ssbos.materials.PreAllocate(AssetManager::GetMaterialCount() * sizeof(GPUMaterial));
 
 
 
@@ -611,21 +611,7 @@ void UploadSSBOsGPU(RenderData& renderData) {
     OpenGLRenderer::_ssbos.bulletHoleDecalRenderItems.Update(renderData.bulletHoleDecalDrawInfo.renderItems.size() * sizeof(RenderItem3D), renderData.bulletHoleDecalDrawInfo.renderItems.data());
     OpenGLRenderer::_ssbos.bloodDecalRenderItems.Update(renderData.bloodDecalDrawInfo.renderItems.size() * sizeof(RenderItem3D), renderData.bloodDecalDrawInfo.renderItems.data());
     OpenGLRenderer::_ssbos.bloodVATRenderItems.Update(renderData.bloodVATDrawInfo.renderItems.size() * sizeof(RenderItem3D), renderData.bloodVATDrawInfo.renderItems.data());
-
-    // Hacky CSG Instance Update
-    int cubeCount = CSG::GetCSGObjects().size();
-    std::vector<CSGInstance> csgInstances(cubeCount);
-    for (int i = 0; i < cubeCount; i++) {
-        Material* material = AssetManager::GetMaterialByIndex(CSG::GetCSGObjects()[i].m_materialIndex);
-        if (material) {
-            csgInstances[i].baseColorTextureIndex = material->_basecolor;
-            csgInstances[i].normalTextureIndex = material->_normal;
-            csgInstances[i].rmaTextureIndex = material->_rma;
-        }
-        //std::cout << i << ": " << CSG::GetCubes()[i].materialIndex << "\n";
-    }
-    OpenGLRenderer::_ssbos.csgMaterials.Update(csgInstances.size() * sizeof(CSGInstance), csgInstances.data());
-
+    OpenGLRenderer::_ssbos.materials.Update(AssetManager::GetGPUMaterials().size() * sizeof(GPUMaterial), &AssetManager::GetGPUMaterials()[0]);
 }
 
 void OpenGLRenderer::RenderFrame(RenderData& renderData) {
@@ -638,6 +624,7 @@ void OpenGLRenderer::RenderFrame(RenderData& renderData) {
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, _ssbos.samplers);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, OpenGLRenderer::_ssbos.geometryRenderItems);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, OpenGLRenderer::_ssbos.lights);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, OpenGLRenderer::_ssbos.materials.GetHandle());
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, OpenGLRenderer::_ssbos.animatedTransforms);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, OpenGLRenderer::_ssbos.animatedRenderItems3D);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 11, OpenGLRenderer::_ssbos.glassRenderItems);
@@ -650,7 +637,6 @@ void OpenGLRenderer::RenderFrame(RenderData& renderData) {
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 16, OpenGLRenderer::_ssbos.cameraData);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 17, OpenGLRenderer::_ssbos.skinnedMeshInstanceData);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 18, OpenGLRenderer::_ssbos.muzzleFlashData);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 19, OpenGLRenderer::_ssbos.csgMaterials.GetHandle());
 
     //RaytracingTestPass(renderData);
 
@@ -838,6 +824,73 @@ void EmissivePass(RenderData& renderData) {
     }
 }
 
+
+bool IsBoxInFrustum(const glm::vec3& minBounds, const glm::vec3& maxBounds, const glm::mat4& projectionViewMatrix) {
+    std::vector<glm::vec3> corners = {
+        glm::vec3(minBounds.x, minBounds.y, minBounds.z),
+        glm::vec3(maxBounds.x, minBounds.y, minBounds.z),
+        glm::vec3(minBounds.x, maxBounds.y, minBounds.z),
+        glm::vec3(maxBounds.x, maxBounds.y, minBounds.z),
+        glm::vec3(minBounds.x, minBounds.y, maxBounds.z),
+        glm::vec3(maxBounds.x, minBounds.y, maxBounds.z),
+        glm::vec3(minBounds.x, maxBounds.y, maxBounds.z),
+        glm::vec3(maxBounds.x, maxBounds.y, maxBounds.z)
+    };
+
+    int outCount = 0;
+    for (const auto& corner : corners) {
+        glm::vec4 clipSpaceCorner = projectionViewMatrix * glm::vec4(corner, 1.0f);
+        glm::vec3 ndcCorner = glm::vec3(clipSpaceCorner) / clipSpaceCorner.w;
+
+        // Check if this point is outside of the frustum
+        if (ndcCorner.x < -1 || ndcCorner.x > 1 ||
+            ndcCorner.y < -1 || ndcCorner.y > 1 ||
+            ndcCorner.z < -1 || ndcCorner.z > 1) {
+            outCount++;
+        }
+    }
+
+    // If all corners are outside of the frustum, the box is not visible
+    return outCount != 8;
+}
+
+
+MultiDrawIndirectDrawInfo CreateMultiDrawIndirectDrawInfo2(std::vector<RenderItem3D>& renderItems) {
+
+    MultiDrawIndirectDrawInfo drawInfo;
+    drawInfo.renderItems = renderItems;
+    std::sort(drawInfo.renderItems.begin(), drawInfo.renderItems.end());
+
+    // Create indirect draw commands
+    drawInfo.commands.clear();
+    int baseInstance = 0;
+    for (RenderItem3D& renderItem : drawInfo.renderItems) {
+        Mesh* mesh = AssetManager::GetMeshByIndex(renderItem.meshIndex);
+        bool found = false;
+        // Does a draw command already exist for this mesh?
+        for (auto& cmd : drawInfo.commands) {
+            // If so then increment the instance count
+            if (cmd.baseVertex == mesh->baseVertex) {
+                cmd.instanceCount++;
+                baseInstance++;
+                found = true;
+                break;
+            }
+        }
+        // If not, then create the command
+        if (!found) {
+            auto& cmd = drawInfo.commands.emplace_back();
+            cmd.indexCount = mesh->indexCount;
+            cmd.firstIndex = mesh->baseIndex;
+            cmd.baseVertex = mesh->baseVertex;
+            cmd.baseInstance = baseInstance;
+            cmd.instanceCount = 1;
+            baseInstance++;
+        }
+    }
+    return drawInfo;
+}
+
 void RenderShadowMapss(RenderData& renderData) {
 
     if (0 != 0) {
@@ -854,6 +907,77 @@ void RenderShadowMapss(RenderData& renderData) {
     glEnable(GL_DEPTH_TEST);
     glViewport(0, 0, SHADOW_MAP_SIZE, SHADOW_MAP_SIZE);
     glBindVertexArray(OpenGLBackEnd::GetVertexDataVAO());
+
+
+    /*
+    std::vector<RenderItem3D> renderItems = renderData.shadowMapGeometryDrawInfo.renderItems;
+
+
+    for (int i = 0; i < Scene::g_lights.size(); i++) {
+
+        glBindFramebuffer(GL_FRAMEBUFFER, OpenGLRenderer::_shadowMaps[i]._ID);
+
+
+
+
+        std::vector<glm::mat4> projectionTransforms;
+        glm::vec3 position = Scene::g_lights[i].position;
+        glm::mat4 shadowProj = glm::perspective(glm::radians(90.0f), (float)SHADOW_MAP_SIZE / (float)SHADOW_MAP_SIZE, SHADOW_NEAR_PLANE, SHADOW_FAR_PLANE);
+        projectionTransforms.clear();
+        projectionTransforms.push_back(shadowProj * glm::lookAt(position, position + glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
+        projectionTransforms.push_back(shadowProj * glm::lookAt(position, position + glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
+        projectionTransforms.push_back(shadowProj * glm::lookAt(position, position + glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f)));
+        projectionTransforms.push_back(shadowProj * glm::lookAt(position, position + glm::vec3(0.0f, -1.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f)));
+        projectionTransforms.push_back(shadowProj * glm::lookAt(position, position + glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
+        projectionTransforms.push_back(shadowProj * glm::lookAt(position, position + glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
+
+        shader.SetMat4("shadowMatrices[0]", projectionTransforms[0]);
+        shader.SetMat4("shadowMatrices[1]", projectionTransforms[1]);
+        shader.SetMat4("shadowMatrices[2]", projectionTransforms[2]);
+        shader.SetMat4("shadowMatrices[3]", projectionTransforms[3]);
+        shader.SetMat4("shadowMatrices[4]", projectionTransforms[4]);
+        shader.SetMat4("shadowMatrices[5]", projectionTransforms[5]);
+        shader.SetVec3("lightPosition", position);
+        shader.SetMat4("model", glm::mat4(1));
+
+
+        for (int face = 0; face < 6; ++face) {
+
+            std::vector<RenderItem3D> culledRenderItems;
+            for (RenderItem3D& renderItem : renderItems) {
+                if (IsBoxInFrustum(renderItem.aabbMin, renderItem.aabbMax, projectionTransforms[i]) ||
+                    renderItem.aabbMin == glm::vec3(0) && renderItem.aabbMax == glm::vec3(0)) {
+                    culledRenderItems.push_back(renderItem);
+                }
+                else {
+                    //std::cout << "culled " << Util::Vec3ToString(renderItem.aabbMin) << " " << Util::Vec3ToString(renderItem.aabbMin) << "\n";
+                }
+            }
+            std::cout << "light " << i << "  " << face << " Culled: " << renderItems.size() - culledRenderItems.size() << "items\n";
+
+            MultiDrawIndirectDrawInfo drawInfo = CreateMultiDrawIndirectDrawInfo2(culledRenderItems);
+
+            glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 12, OpenGLRenderer::_ssbos.shadowMapGeometryRenderItems);
+            glNamedBufferSubData(OpenGLRenderer::_ssbos.shadowMapGeometryRenderItems, 0, culledRenderItems.size() * sizeof(RenderItem3D), &culledRenderItems[0]);
+            glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+
+            shader.SetInt("faceIndex", face);
+            GLuint depthCubemap = OpenGLRenderer::_shadowMaps[i]._depthTexture;
+            glFramebufferTextureLayer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, depthCubemap, 0, face);
+            glClear(GL_DEPTH_BUFFER_BIT);
+            MultiDrawIndirect(drawInfo.commands, OpenGLBackEnd::GetVertexDataVAO());
+
+        }
+
+
+
+    }
+
+    glNamedBufferSubData(OpenGLRenderer::_ssbos.shadowMapGeometryRenderItems, 0, renderData.shadowMapGeometryDrawInfo.renderItems.size() * sizeof(RenderItem3D), &renderData.shadowMapGeometryDrawInfo.renderItems[0]);
+
+    glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+    */
+
 
     for (int i = 0; i < Scene::g_lights.size(); i++) {
 
@@ -896,6 +1020,7 @@ void RenderShadowMapss(RenderData& renderData) {
         }
     }
 
+
     // CSG Geometry
     if (CSG::GeometryExists()) {
 
@@ -906,7 +1031,7 @@ void RenderShadowMapss(RenderData& renderData) {
         glBindVertexArray(OpenGLBackEnd::GetCSGVAO());
 
         for (int i = 0; i < Scene::g_lights.size(); i++) {
-
+            
             bool skip = false;
             if (!Scene::g_lights[i].isDirty) {
                 skip = true;
@@ -1160,6 +1285,7 @@ void GeometryPass(RenderData& renderData) {
             std::vector<CSGObject>& cubes = CSG::GetCSGObjects();
             for (int j = 0; j < cubes.size(); j++) {
                 CSGObject& cube = cubes[j];
+                csgShader.SetInt("materialIndex", cube.m_materialIndex);
                 glDrawElementsInstancedBaseVertexBaseInstance(GL_TRIANGLES, cube.m_vertexCount, GL_UNSIGNED_INT, (void*)(sizeof(uint32_t) * cube.m_baseIndex), 1, cube.m_baseVertex, j);
             }
             /*for (Door& door : Scene::GetDoors()) {
@@ -1170,8 +1296,11 @@ void GeometryPass(RenderData& renderData) {
     }
 
     // Draw mesh
+    static Material* goldMaterial = AssetManager::GetMaterialByIndex(AssetManager::GetMaterialIndex("Gold"));
     Shader& gBufferShader = OpenGLRenderer::g_shaders.geometry;
     gBufferShader.Use();
+    gBufferShader.SetInt("goldBaseColorTextureIndex", goldMaterial->_basecolor);
+    gBufferShader.SetInt("goldRMATextureIndex", goldMaterial->_rma);
     for (int i = 0; i < renderData.playerCount; i++) {
 
         ViewportInfo viewportInfo = RendererUtil::CreateViewportInfo(i, Game::GetSplitscreenMode(), gBuffer.GetWidth(), gBuffer.GetHeight());
@@ -1189,8 +1318,10 @@ void GeometryPass(RenderData& renderData) {
     glBindBuffer(GL_ARRAY_BUFFER, OpenGLBackEnd::GetSkinnedVertexDataVBO());
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, OpenGLBackEnd::GetWeightedVertexDataEBO());
 
-    Shader& newDebugShader = OpenGLRenderer::g_shaders.newDebugShader;
-    newDebugShader.Use();
+    Shader& gbufferSkinnedShader = OpenGLRenderer::g_shaders.gbufferSkinned;
+    gbufferSkinnedShader.Use();
+    gbufferSkinnedShader.SetInt("goldBaseColorTextureIndex", goldMaterial->_basecolor);
+    gbufferSkinnedShader.SetInt("goldRMATextureIndex", goldMaterial->_rma);
 
     int k = 0;
     for (int i = 0; i < renderData.playerCount; i++) {
@@ -1198,14 +1329,14 @@ void GeometryPass(RenderData& renderData) {
         ViewportInfo viewportInfo = RendererUtil::CreateViewportInfo(i, Game::GetSplitscreenMode(), gBuffer.GetWidth(), gBuffer.GetHeight());
         SetViewport(viewportInfo);
 
-        newDebugShader.SetInt("playerIndex", i);
-        newDebugShader.SetMat4("projection", renderData.cameraData[i].projection);
-        newDebugShader.SetMat4("view", renderData.cameraData[i].view);
+        gbufferSkinnedShader.SetInt("playerIndex", i);
+        gbufferSkinnedShader.SetMat4("projection", renderData.cameraData[i].projection);
+        gbufferSkinnedShader.SetMat4("view", renderData.cameraData[i].view);
 
         for (SkinnedRenderItem& skinnedRenderItem : renderData.skinnedRenderItems[i]) {
             SkinnedMesh* mesh = AssetManager::GetSkinnedMeshByIndex(skinnedRenderItem.originalMeshIndex);
-            newDebugShader.SetMat4("model", skinnedRenderItem.modelMatrix);
-            newDebugShader.SetInt("renderItemIndex", k);
+            gbufferSkinnedShader.SetMat4("model", skinnedRenderItem.modelMatrix);
+            gbufferSkinnedShader.SetInt("renderItemIndex", k);
             glDrawElementsInstancedBaseVertex(GL_TRIANGLES, mesh->indexCount, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int) * mesh->baseIndex), 1, skinnedRenderItem.baseVertex);
             k++;
         }

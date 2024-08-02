@@ -239,17 +239,8 @@ void Player::UpdateAttachmentRenderItems() {
 
     // Red dot sight
     if (weaponInfo && weaponState && weaponInfo->type == WeaponType::PISTOL && weaponState->hasScope) {
-
         glm::mat4 modelMatrix = viewWeaponAnimatedGameObject->GetModelMatrix() * m_weaponSwayMatrix * viewWeaponAnimatedGameObject->GetAnimatedTransformByBoneName("Weapon");
-        static int redDotSightMaterialIndex = AssetManager::GetMaterialIndex("RedDotSight");
-        static int goldMaterialIndex = AssetManager::GetMaterialIndex("Gold");
-        int materialIndex = 0;
-        if (viewWeaponAnimatedGameObject->IsGold()) {
-            materialIndex = goldMaterialIndex;
-        }
-        else {
-            materialIndex = redDotSightMaterialIndex;
-        }
+        static int materialIndex = AssetManager::GetMaterialIndex("RedDotSight");
         uint32_t modelIndex = AssetManager::GetModelIndexByName("Glock_RedDotSight");
         Model* model = AssetManager::GetModelByIndex(modelIndex);
         uint32_t& meshIndex = model->GetMeshIndices()[0];
@@ -260,25 +251,15 @@ void Player::UpdateAttachmentRenderItems() {
         renderItem.modelMatrix = modelMatrix;
         renderItem.inverseModelMatrix = inverse(renderItem.modelMatrix);
         renderItem.meshIndex = meshIndex;
-        renderItem.normalTextureIndex = AssetManager::GetMaterialByIndex(materialIndex)->_normal;
-        renderItem.baseColorTextureIndex = AssetManager::GetMaterialByIndex(materialIndex)->_basecolor;
-        renderItem.rmaTextureIndex = AssetManager::GetMaterialByIndex(materialIndex)->_rma;
         renderItem.castShadow = false;
+        renderItem.isGold = viewWeaponAnimatedGameObject->IsGold();
+        renderItem.materialIndex = materialIndex;
     }
 
     // Silencer
     if (weaponInfo && weaponState && weaponInfo->type == WeaponType::PISTOL && weaponState->hasSilencer) {
-
         glm::mat4 modelMatrix = viewWeaponAnimatedGameObject->GetModelMatrix() * m_weaponSwayMatrix * viewWeaponAnimatedGameObject->GetAnimatedTransformByBoneName("Muzzle");
-        static int redDotSightMaterialIndex = AssetManager::GetMaterialIndex("RedDotSight");
-        static int goldMaterialIndex = AssetManager::GetMaterialIndex("Gold");
-        int materialIndex = 0;
-        if (viewWeaponAnimatedGameObject->IsGold()) {
-            materialIndex = goldMaterialIndex;
-        }
-        else {
-            materialIndex = redDotSightMaterialIndex;
-        }
+        static int materialIndex = AssetManager::GetMaterialIndex("RedDotSight"); // FIXXXXXXXX
         uint32_t modelIndex = AssetManager::GetModelIndexByName("Glock_Silencer");
         Model* model = AssetManager::GetModelByIndex(modelIndex);
         uint32_t& meshIndex = model->GetMeshIndices()[0];
@@ -289,28 +270,16 @@ void Player::UpdateAttachmentRenderItems() {
         renderItem.modelMatrix = modelMatrix;
         renderItem.inverseModelMatrix = inverse(renderItem.modelMatrix);
         renderItem.meshIndex = meshIndex;
-        renderItem.normalTextureIndex = AssetManager::GetMaterialByIndex(materialIndex)->_normal;
-        renderItem.baseColorTextureIndex = AssetManager::GetMaterialByIndex(materialIndex)->_basecolor;
-        renderItem.rmaTextureIndex = AssetManager::GetMaterialByIndex(materialIndex)->_rma;
         renderItem.castShadow = false;
+        renderItem.isGold = viewWeaponAnimatedGameObject->IsGold();
+        renderItem.materialIndex = materialIndex;
     }
 
-
-
-    if (weaponInfo->name == "GoldenGlock") {
+    if (weaponInfo->name == "GoldenGlock" && false) {
         // Laser
         if (weaponInfo && weaponState && weaponInfo->type == WeaponType::PISTOL && viewWeaponAnimatedGameObject->_skinnedModel->_filename == "Glock") {
-
             glm::mat4 modelMatrix = viewWeaponAnimatedGameObject->GetModelMatrix() * m_weaponSwayMatrix * viewWeaponAnimatedGameObject->GetAnimatedTransformByBoneName("Laser");
-            static int redDotSightMaterialIndex = AssetManager::GetMaterialIndex("GlockLaser");
-            static int goldMaterialIndex = AssetManager::GetMaterialIndex("Gold");
-            int materialIndex = 0;
-            if (viewWeaponAnimatedGameObject->IsGold()) {
-                materialIndex = goldMaterialIndex;
-            }
-            else {
-                materialIndex = redDotSightMaterialIndex;
-            }
+            static int materialIndex = AssetManager::GetMaterialIndex("GlockLaser");
             uint32_t modelIndex = AssetManager::GetModelIndexByName("Glock_Laser");
             Model* model = AssetManager::GetModelByIndex(modelIndex);
             uint32_t& meshIndex = model->GetMeshIndices()[0];
@@ -321,10 +290,9 @@ void Player::UpdateAttachmentRenderItems() {
             renderItem.modelMatrix = modelMatrix;
             renderItem.inverseModelMatrix = inverse(renderItem.modelMatrix);
             renderItem.meshIndex = meshIndex;
-            renderItem.normalTextureIndex = AssetManager::GetMaterialByIndex(materialIndex)->_normal;
-            renderItem.baseColorTextureIndex = AssetManager::GetMaterialByIndex(materialIndex)->_basecolor;
-            renderItem.rmaTextureIndex = AssetManager::GetMaterialByIndex(materialIndex)->_rma;
             renderItem.castShadow = false;
+            renderItem.isGold = viewWeaponAnimatedGameObject->IsGold();
+            renderItem.materialIndex = materialIndex;
         }
 
         // Actual Lazer
@@ -340,7 +308,6 @@ void Player::UpdateAttachmentRenderItems() {
             laserScaleTransform.scale.z = laserLength;
 
             modelMatrix = modelMatrix * laserScaleTransform.to_mat4();
-
             static int materialIndex = AssetManager::GetMaterialIndex("PresentA");
             uint32_t modelIndex = AssetManager::GetModelIndexByName("Glock_ActualLaser");
             Model* model = AssetManager::GetModelByIndex(modelIndex);
@@ -352,12 +319,10 @@ void Player::UpdateAttachmentRenderItems() {
             renderItem.modelMatrix = modelMatrix;
             renderItem.inverseModelMatrix = inverse(renderItem.modelMatrix);
             renderItem.meshIndex = meshIndex;
-            renderItem.normalTextureIndex = AssetManager::GetMaterialByIndex(materialIndex)->_normal;
-            renderItem.baseColorTextureIndex = AssetManager::GetMaterialByIndex(materialIndex)->_basecolor;
-            renderItem.rmaTextureIndex = AssetManager::GetMaterialByIndex(materialIndex)->_rma;
             renderItem.emissiveColor = RED;
             renderItem.useEmissiveMask = true;
             renderItem.castShadow = false;
+            renderItem.materialIndex = materialIndex;
         }
     }
 }
@@ -376,7 +341,6 @@ void Player::UpdateAttachmentGlassRenderItems() {
 
     // Red dot sight
     if (weaponInfo && weaponState && weaponInfo->type == WeaponType::PISTOL && weaponState->hasScope) {
-
         glm::mat4 modelMatrix = viewWeaponAnimatedGameObject->GetModelMatrix() * m_weaponSwayMatrix * viewWeaponAnimatedGameObject->GetAnimatedTransformByBoneName("Weapon");
         static int materialIndex = AssetManager::GetMaterialIndex("RedDotSight");
         uint32_t modelIndex = AssetManager::GetModelIndexByName("Glock_RedDotSight");
@@ -389,11 +353,9 @@ void Player::UpdateAttachmentGlassRenderItems() {
         renderItem.modelMatrix = modelMatrix;
         renderItem.inverseModelMatrix = inverse(renderItem.modelMatrix);
         renderItem.meshIndex = meshIndex;
-        renderItem.normalTextureIndex = AssetManager::GetMaterialByIndex(materialIndex)->_normal;
-        renderItem.baseColorTextureIndex = AssetManager::GetMaterialByIndex(materialIndex)->_basecolor;
-        renderItem.rmaTextureIndex = AssetManager::GetMaterialByIndex(materialIndex)->_rma;
         renderItem.castShadow = false;
-
+        renderItem.isGold = viewWeaponAnimatedGameObject->IsGold();
+        renderItem.materialIndex = materialIndex;
     }
 }
 

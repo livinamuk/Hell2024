@@ -60,6 +60,7 @@ struct Vertex {
     float normal[3];
     float uv[2];
     float tangent[3];
+	int materialIndex;
 };
 
 struct Ray {

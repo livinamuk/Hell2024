@@ -9,6 +9,8 @@ uniform mat4 projection;
 uniform mat4 view;
 uniform int playerIndex;
 uniform int renderItemIndex;
+uniform int goldBaseColorTextureIndex;
+uniform int goldRMATextureIndex;
 
 //out vec3 Normal;
 out vec2 TexCoords;
@@ -24,23 +26,26 @@ out flat int RMATextureIndex;
 struct SkinnedRenderItem {
     mat4 modelMatrix;
     mat4 inverseModelMatrix;
-
-    int originalMeshIndex;
-    int vertexBufferIndex;
-    int baseColorTextureIndex;
-    int normalTextureIndex;
-
-    int rmaTextureIndex;
-    int castShadow;
-    int useEmissiveMask;
-    int padding0;
-
-    vec3 emissiveColor;
-    int padding1;
+    int meshIndex;
+    int materialIndex;
+    int baseVertex;
+	int isGold;
 };
+
+struct Material {
+	int baseColorTextureIndex;
+	int normalTextureIndex;
+	int rmaTextureIndex;
+	int emissiveTextureIndex;
+};
+
 
 layout(std430, binding = 17) readonly buffer renderItems {
     SkinnedRenderItem RenderItems[];
+};
+
+layout(std430, binding = 3) readonly buffer materials {
+    Material Materials[];
 };
 
 void main() {
@@ -50,9 +55,11 @@ void main() {
 
 	mat4 model = RenderItems[renderItemIndex].modelMatrix;
 	mat4 invereseModel = RenderItems[renderItemIndex].inverseModelMatrix;
-	BaseColorTextureIndex =  RenderItems[renderItemIndex].baseColorTextureIndex;
-	NormalTextureIndex =  RenderItems[renderItemIndex].normalTextureIndex;
-	RMATextureIndex =  RenderItems[renderItemIndex].rmaTextureIndex;
+
+	Material material = Materials[RenderItems[renderItemIndex].materialIndex];
+	BaseColorTextureIndex =  material.baseColorTextureIndex;
+	NormalTextureIndex =  material.normalTextureIndex;
+	RMATextureIndex =  material.rmaTextureIndex;
 
 	mat4 normalMatrix = transpose(invereseModel);
 	attrNormal = normalize((normalMatrix * vec4(aNormal, 0)).xyz);
@@ -60,4 +67,10 @@ void main() {
 	attrBiTangent = normalize(cross(attrNormal,attrTangent));
 
 	gl_Position = projection * view * model * vec4(aPos, 1.0);
+
+	// Gold?
+	if (RenderItems[renderItemIndex].isGold == 1) {
+		BaseColorTextureIndex = goldBaseColorTextureIndex;
+		RMATextureIndex = goldRMATextureIndex;
+	}
 }

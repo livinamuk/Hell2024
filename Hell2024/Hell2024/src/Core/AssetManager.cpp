@@ -42,6 +42,7 @@ namespace AssetManager {
     std::vector<ExrTexture> _exrTextures;
     std::vector<Material> _materials;
     std::vector<CubemapTexture> _cubemapTextures;
+    std::vector<GPUMaterial> g_gpuMaterials;
 
     // Used to new data insert into the vectors above
     int _nextVertexInsert = 0;
@@ -313,6 +314,12 @@ void GrabSkeleton(SkinnedModel& skinnedModel, const aiNode* pNode, int parentInd
     }
 }
 
+#include <glm/glm.hpp>
+#include <algorithm>
+#include <numeric>
+#include <vector>
+
+
 void AssetManager::LoadSkinnedModel(const std::string filepath) {
 
     //SkinnedModel& skinnedModel = _skinnedModels.emplace_back();
@@ -389,7 +396,6 @@ void AssetManager::LoadSkinnedModel(const std::string filepath) {
 
             // Get vertices
             for (unsigned int j = 0; j < vertexCount; j++) {
-
                 WeightedVertex vertex;
                 vertex.position = { assimpMesh->mVertices[j].x, assimpMesh->mVertices[j].y, assimpMesh->mVertices[j].z };
                 vertex.normal = { assimpMesh->mNormals[j].x, assimpMesh->mNormals[j].y, assimpMesh->mNormals[j].z };
@@ -412,12 +418,10 @@ void AssetManager::LoadSkinnedModel(const std::string filepath) {
 
                 for (unsigned int i = 0; i < assimpMesh->mNumBones; i++) {
                     for (unsigned int j = 0; j < assimpMesh->mBones[i]->mNumWeights; j++) {
-
                         std::string boneName = assimpMesh->mBones[i]->mName.data;
                         unsigned int boneIndex = _skinnedModels[skinnedModelIndex].m_BoneMapping[boneName];
                         unsigned int vertexIndex = assimpMesh->mBones[i]->mWeights[j].mVertexId;
                         float weight = assimpMesh->mBones[i]->mWeights[j].mWeight;
-
                         WeightedVertex& vertex = vertices[vertexIndex];
 
                         if (vertex.weight.x == 0) {
@@ -438,6 +442,30 @@ void AssetManager::LoadSkinnedModel(const std::string filepath) {
                         }
                     }
                 }
+
+                // Ingore broken weights
+                float threshold = 0.05f;
+                for (unsigned int j = 0; j < vertices.size(); j++) {
+                    WeightedVertex& vertex = vertices[j];
+                    std::vector<float> validWeights;
+                    for (int i = 0; i < 4; ++i) {
+                        if (vertex.weight[i] < threshold) {
+                            vertex.weight[i] = 0.0f;
+                        }
+                        else {
+                            validWeights.push_back(vertex.weight[i]);
+                        }
+                    }
+                    float sum = std::accumulate(validWeights.begin(), validWeights.end(), 0.0f);
+                    int validIndex = 0;
+                    for (int i = 0; i < 4; ++i) {
+                        if (vertex.weight[i] > 0.0f) {
+                            vertex.weight[i] = validWeights[validIndex] / sum;
+                            validIndex++;
+                        }
+                    }
+                }
+
                 _skinnedModels[skinnedModelIndex].AddMeshIndex(AssetManager::CreateSkinnedMesh(meshName, vertices, indices, baseVertexLocal));
                 totalVertexCount += vertices.size();
                 baseVertexLocal += vertices.size();
@@ -719,6 +747,8 @@ void AssetManager::LoadModel(const std::string filepath) {
     boundingBox.offsetFromModelOrigin = modelAabbMin;
     std::lock_guard<std::mutex> lock(_modelsMutex);
     _models[modelIndex].SetBoundingBox(boundingBox);
+    _models[modelIndex].aabbMin = modelAabbMin;
+    _models[modelIndex].aabbMax = modelAabbMax;
 }
 
 Model* AssetManager::GetModelByIndex(int index) {
@@ -928,25 +958,31 @@ void AssetManager::BuildMaterials() {
             }
         }
     }
+
+    // Create GPU version
+    for (Material& material : _materials) {
+        GPUMaterial& gpuMaterial = g_gpuMaterials.emplace_back();
+        gpuMaterial.basecolor = material._basecolor;
+        gpuMaterial.normal = material._normal;
+        gpuMaterial.rma = material._rma;
+    }
     /*
-    // Extra hardcoded materials
-    Material* glockMaterial = GetMaterialByIndex(GetMaterialIndex("Glock"));
-    if (glockMaterial) {
-        Material& material = _materials.emplace_back(Material());
-        material._name = "GoldenGlock";
-        material._basecolor = AssetManager::GetTextureIndexByName("Gold_ALB");
-        material._normal = AssetManager::GetTextureIndexByName("Glock_NRM");
-        material._rma = AssetManager::GetTextureIndexByName("Gold_RMA");
+    for (int i = 0; i < AssetManager::_textures.size(); i++) {
+        std::cout << i << ": " << AssetManager::_textures[i].GetFilename() << " " << AssetManager::_textures[i].GetGLTexture().GetBindlessID() << "\n";
+
     }
-    Material* knifeMaterial = GetMaterialByIndex(GetMaterialIndex("Knife"));
-    if (knifeMaterial) {
-        Material& material = _materials.emplace_back(Material());
-        material._name = "GoldenKnife";
-        material._basecolor = AssetManager::GetTextureIndexByName("Gold_ALB");
-        material._normal = AssetManager::GetTextureIndexByName("Knife_NRM");
-        material._rma = AssetManager::GetTextureIndexByName("Gold_RMA");
+
+    for (int i = 0; i < AssetManager::_materials.size(); i++) {
+        std::cout << i << ": " << AssetManager::_materials[i]._name << " " << AssetManager::_materials[i]._basecolor << "\n";
     }
-    */
+    for (int i = 0; i < AssetManager::GetGPUMaterials().size(); i++) {
+        std::cout << i << ": " << AssetManager::GetGPUMaterials()[i].basecolor << "\n";
+    }*/
+}
+
+
+std::vector<GPUMaterial>& AssetManager::GetGPUMaterials() {
+    return g_gpuMaterials;
 }
 
 Material* AssetManager::GetMaterialByIndex(int index) {

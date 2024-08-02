@@ -251,13 +251,21 @@ struct Material {
     int _rma = 0;
 };
 
+struct GPUMaterial {
+    int basecolor = 0;
+    int normal = 0;
+    int rma = 0;
+    int padding = 0;
+};
+
 enum RaycastGroup {
     RAYCAST_DISABLED = 0,
     RAYCAST_ENABLED = 1,
     PLAYER_1_RAGDOLL = 2,
     PLAYER_2_RAGDOLL = 4,
     PLAYER_3_RAGDOLL = 8,
-    PLAYER_4_RAGDOLL = 16
+    PLAYER_4_RAGDOLL = 16,
+    DOBERMAN = 32
 };
 
 enum class PhysicsObjectType {

@@ -158,12 +158,9 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <ClCompile Include="src\Types\Animation.cpp" />
     <ClCompile Include="src\Types\Modular\Door.cpp" />
     <ClCompile Include="src\Renderer\Renderer.cpp" />
-    <ClCompile Include="src\Types\Modular\Ceiling.cpp" />
-    <ClCompile Include="src\Types\Modular\Floor.cpp" />
     <ClCompile Include="src\Core\Floorplan.cpp" />
     <ClCompile Include="src\Game\AnimatedGameObject.cpp" />
     <ClCompile Include="src\Core\FbxImporter.cpp" />
-    <ClCompile Include="src\Core\File.cpp" />
     <ClCompile Include="src\Game\Game.cpp" />
     <ClCompile Include="src\Game\GameObject.cpp" />
     <ClCompile Include="src\Game\Game.h" />
@@ -272,13 +269,10 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <ClInclude Include="src\Types\Modular\Door.h" />
     <ClInclude Include="src\Types\ExrTexture.h" />
     <ClInclude Include="src\Renderer\Renderer.h" />
-    <ClInclude Include="src\Types\Modular\Ceiling.h" />
     <ClInclude Include="src\Types\Modular\Class.h" />
-    <ClInclude Include="src\Types\Modular\Floor.h" />
     <ClInclude Include="src\Core\Floorplan.h" />
     <ClInclude Include="src\Game\AnimatedGameObject.h" />
     <ClInclude Include="src\Core\FbxImporter.h" />
-    <ClInclude Include="src\Core\File.h" />
     <ClInclude Include="src\Game\GameObject.h" />
     <ClInclude Include="src\Editor\Gizmo.hpp" />
     <ClInclude Include="src\Input\InputMulti.h" />
@@ -358,8 +352,6 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <None Include="res\shaders\OpenGL\GL_flipBook.vert" />
     <None Include="res\shaders\OpenGL\GL_debug.frag" />
     <None Include="res\shaders\OpenGL\GL_debug.vert" />
-    <None Include="res\shaders\OpenGL\GL_gbufferSkinned.frag" />
-    <None Include="res\shaders\OpenGL\GL_gbufferSkinned.vert" />
     <None Include="res\shaders\OpenGL\GL_glass.frag" />
     <None Include="res\shaders\OpenGL\GL_glass.vert" />
     <None Include="res\shaders\OpenGL\GL_glassComposite.comp" />
@@ -372,10 +364,8 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <None Include="res\shaders\OpenGL\GL_raytracing_test.comp" />
     <None Include="res\shaders\OpenGL\GL_sandbox.comp" />
     <None Include="res\shaders\OpenGL\GL_shadowMap.frag" />
-    <None Include="res\shaders\OpenGL\GL_shadowMap.geom" />
     <None Include="res\shaders\OpenGL\GL_shadowMap.vert" />
     <None Include="res\shaders\OpenGL\GL_shadowMap_csg.frag" />
-    <None Include="res\shaders\OpenGL\GL_shadowMap_csg.geom" />
     <None Include="res\shaders\OpenGL\GL_shadowMap_csg.vert" />
     <None Include="res\shaders\OpenGL\GL_triangles_2D.frag" />
     <None Include="res\shaders\OpenGL\GL_triangles_2D.vert" />

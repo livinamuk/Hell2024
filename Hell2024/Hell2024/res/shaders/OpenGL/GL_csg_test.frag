@@ -37,6 +37,7 @@ void main() {
     RMAOut = rma;
 	EmssiveMask = vec4(0,0,0,0);
 
-	//BaseColorOut = vec4(1,0,0,0);
+	//BaseColorOut = vec4(attrNormal, 1);
 	//NormalsOut.rgb = vec3(-1,0,0);
+
 }

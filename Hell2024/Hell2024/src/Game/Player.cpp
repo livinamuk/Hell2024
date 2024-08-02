@@ -249,15 +249,19 @@ void Player::UpdateViewMatrix(float deltaTime) {
     worldTransform.position = camTransform.position;// _position + glm::vec3(0, _currentViewHeight, 0);
     worldTransform.rotation.x = GetViewRotation().x;
     worldTransform.rotation.y = GetViewRotation().y;
-    worldTransform.scale = glm::vec3(0.001);
 
+    worldTransform.scale = glm::vec3(0.001);
     viewWeapon->m_cameraMatrix = worldTransform.to_mat4() * glm::inverse(cameraBindMatrix) * glm::inverse(dmMaster);
-    worldTransform.scale = glm::vec3(0.0095);
+
+    worldTransform.scale = glm::vec3(0.009);
     viewWeapon->m_cameraSpawnMatrix = worldTransform.to_mat4() * glm::inverse(cameraBindMatrix) * glm::inverse(dmMaster);
 
     if (model->_filename == "Knife" ||
         model->_filename == "Shotgun") {
+
+        worldTransform.scale = glm::vec3(0.001);
         viewWeapon->m_cameraMatrix = worldTransform.to_mat4() * glm::inverse(cameraBindMatrix);
+
         worldTransform.scale = glm::vec3(0.0095);
         viewWeapon->m_cameraSpawnMatrix = worldTransform.to_mat4() * glm::inverse(cameraBindMatrix);
     }
@@ -340,13 +344,11 @@ void Player::CheckForAndEvaluateNextWeaponPress() {
 
 void Player::CheckForEnviromentalDamage(float deltaTime) {
 
-    _isOutside = true;
-    for (Floor& floor : Scene::_floors) {
-        if (floor.PointIsAboveThisFloor(_position)) {
-            _isOutside = false;
-            break;
-        }
-    }
+    // THIS HAS BEEN BROKEN EVER SINCE YOU MOVED TO CSG GEOMETRY FOR THE MAP!
+    // THIS HAS BEEN BROKEN EVER SINCE YOU MOVED TO CSG GEOMETRY FOR THE MAP!
+    // THIS HAS BEEN BROKEN EVER SINCE YOU MOVED TO CSG GEOMETRY FOR THE MAP!
+
+    _isOutside = false;
 
     if (Game::GameSettings().takeDamageOutside) {
 
@@ -1572,7 +1574,7 @@ void Player::Kill()  {
 
     DropWeapons();
 
-    PxExtendedVec3 globalPose = PxExtendedVec3(-1, 0.1, -1);
+    PxExtendedVec3 globalPose = PxExtendedVec3(-100, 0.1, -100);
     _characterController->setFootPosition(globalPose);
 
     std::cout << _playerName << " was killed\n";

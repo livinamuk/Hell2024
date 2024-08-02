@@ -80,6 +80,31 @@ struct RenderItem3D {
     glm::mat4 inverseModelMatrix = glm::mat4(1);
 
     int meshIndex;
+    int materialIndex;
+    int vertexOffset;
+    int indexOffset;
+
+    int castShadow = 1;             // if 0 then currently also it is not included in the TLAS
+    int useEmissiveMask = 0;
+    int isGold = 0;
+
+    glm::vec3 emissiveColor = glm::vec3(0);
+    glm::vec3 aabbMin;
+    glm::vec3 aabbMax;
+
+    // Overloading < operator for sorting with std::sort
+    bool operator<(const RenderItem3D& obj) const {
+        return meshIndex < obj.meshIndex;
+    }
+};
+
+/*
+struct RenderItem3D {
+
+    glm::mat4 modelMatrix = glm::mat4(1);
+    glm::mat4 inverseModelMatrix = glm::mat4(1);
+
+    int meshIndex;
     int baseColorTextureIndex;
     int normalTextureIndex;
     int rmaTextureIndex;
@@ -92,11 +117,16 @@ struct RenderItem3D {
     int useEmissiveMask = 0;
     glm::vec3 emissiveColor = glm::vec3(0);
 
+    glm::vec3 aabbMin;
+    float padding0;
+    glm::vec3 aabbMax;
+    float padding1;
+
     // Overloading < operator for sorting with std::sort
     bool operator<(const RenderItem3D& obj) const {
         return meshIndex < obj.meshIndex;
     }
-};
+};*/
 
 struct CSGInstance {
     int baseColorTextureIndex;
@@ -110,19 +140,10 @@ struct SkinnedRenderItem {
 
     glm::mat4 modelMatrix = glm::mat4(1);
     glm::mat4 inverseModelMatrix = glm::mat4(1);
-
     int originalMeshIndex;
-    int b;// vertexBufferIndex;
-    int baseColorTextureIndex;
-    int normalTextureIndex;
-
-    int rmaTextureIndex;
-    int castShadow = 1;
-    int useEmissiveMask = 0;
+    int materialIndex;
     int baseVertex;
-
-    glm::vec3 emissiveColor = glm::vec3(0);
-    int c;// padding1;
+    int isGold;
 };
 
 
@@ -155,7 +176,6 @@ struct BoundingBox {
 };
 
 struct Vertex {
-
     Vertex() = default;
     Vertex(glm::vec3 pos) {
         position = pos;
@@ -168,7 +188,6 @@ struct Vertex {
     glm::vec3 normal = glm::vec3(0);
     glm::vec2 uv = glm::vec2(0);
     glm::vec3 tangent = glm::vec3(0);
-
     bool operator==(const Vertex& other) const {
         return position == other.position && normal == other.normal && uv == other.uv;
     }
@@ -190,6 +209,22 @@ struct WeightedVertex {
 struct DebugVertex {
     glm::vec3 position = glm::vec3(0);
     glm::vec3 color = glm::vec3(0);
+};
+
+struct CSGVertex {
+    CSGVertex() = default;
+    CSGVertex(glm::vec3 pos) {
+        position = pos;
+    }
+    CSGVertex(glm::vec3 pos, glm::vec3 norm) {
+        position = pos;
+        normal = norm;
+    }
+    glm::vec3 position = glm::vec3(0);
+    glm::vec3 normal = glm::vec3(0);
+    glm::vec2 uv = glm::vec2(0);
+    glm::vec3 tangent = glm::vec3(0);
+    int materialIndex = 0;
 };
 
 namespace std {
