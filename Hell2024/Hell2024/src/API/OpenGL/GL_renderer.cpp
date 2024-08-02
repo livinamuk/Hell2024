@@ -9,6 +9,7 @@
 #include "../../Core/AssetManager.h"
 #include "../../Game/Scene.h"
 #include "../../Game/Game.h"
+#include "../../Game/Pathfinding.h"
 #include "../../Editor/CSG.h"
 #include "../../Editor/Editor.h"
 #include "../../Editor/Gizmo.hpp"
@@ -1031,7 +1032,7 @@ void RenderShadowMapss(RenderData& renderData) {
         glBindVertexArray(OpenGLBackEnd::GetCSGVAO());
 
         for (int i = 0; i < Scene::g_lights.size(); i++) {
-            
+
             bool skip = false;
             if (!Scene::g_lights[i].isDirty) {
                 skip = true;
@@ -1133,6 +1134,7 @@ void DebugPass(RenderData& renderData) {
     shader.Use();
     shader.SetMat4("projection", renderData.cameraData[0].projection);
     shader.SetMat4("view", renderData.cameraData[0].view);
+    shader.SetMat4("model", glm::mat4(1));
 
     glDisable(GL_DEPTH_TEST);
 
@@ -1147,6 +1149,82 @@ void DebugPass(RenderData& renderData) {
         glBindVertexArray(pointsMesh.GetVAO());
         glDrawElements(GL_POINTS, pointsMesh.GetIndexCount(), GL_UNSIGNED_INT, 0);
     }
+
+
+    // Grid debug shit
+    auto& mapWithDoors = Pathfinding::GetMap();
+    if (Renderer::GetDebugLineRenderMode() == PATHFINDING) {
+        for (int x = 0; x < Pathfinding::GetGridSpaceWidth(); x++) {
+            for (int z = 0; z < Pathfinding::GetGridSpaceDepth(); z++) {
+
+                //if (Pathfinding::IsObstacle(x, z)) {
+                if (mapWithDoors[x][z] == true) {
+                    Transform transform;
+                    transform.position = glm::vec3(x * Pathfinding::GetGridSpacing(), 0, z * Pathfinding::GetGridSpacing());
+                    transform.position += glm::vec3(Pathfinding::GetGridSpacing() * 0.5f, 0, Pathfinding::GetGridSpacing() * 0.5f);
+                    transform.position.x += Pathfinding::GetWorldSpaceOffsetX();
+                    transform.position.z += Pathfinding::GetWorldSpaceOffsetZ();
+                    transform.scale = glm::vec3(Pathfinding::GetGridSpacing());
+                    shader.SetMat4("model", transform.to_mat4());
+                    shader.SetBool("useUniformColor", true);
+                    shader.SetVec3("uniformColor", WHITE);
+                    Mesh* mesh = AssetManager::GetMeshByIndex(AssetManager::GetUpFacingPlaneMeshIndex());
+                    glDisable(GL_BLEND);
+                    glDisable(GL_DEPTH_TEST);
+                    glBindVertexArray(OpenGLBackEnd::GetVertexDataVAO());
+                    glDrawElementsInstancedBaseVertex(GL_TRIANGLES, mesh->indexCount, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int) * mesh->baseIndex), 1, mesh->baseVertex);
+                }
+            }
+        }
+    }
+
+    /*
+    Player* player = Game::GetPlayerByIndex(0);
+    glm::mat4 projectionMatrix = player->GetProjectionMatrix();
+    glm::mat4 viewMatrix = player->GetViewMatrix();
+    glm::vec3 cameraPos = player->GetViewPos();
+    int mouseX = Input::GetMouseX();
+    int mouseY = Input::GetMouseY();
+    int windowWidth = BackEnd::GetCurrentWindowWidth();
+    int windowHeight = BackEnd::GetCurrentWindowHeight();
+    glm::vec3 rayWorld = Util::GetMouseRay(projectionMatrix, viewMatrix, windowWidth, windowHeight, mouseX, mouseY);
+    if (!Editor::IsOpen()) {
+        rayWorld = player->GetCameraForward();
+    }
+    glm::vec3 rayOrigin = cameraPos;
+    glm::vec3 rayDirection = rayWorld;
+    float t = -rayOrigin.y / rayDirection.y;
+    glm::vec3 intersectionPoint = rayOrigin + t * rayDirection;
+    float worldX = intersectionPoint.x;
+    float worldZ = intersectionPoint.z;
+
+    Transform transform;
+   // transform.position = glm::vec3(worldX * Pathfinding::GetGridSpacing(), 0, worldZ * Pathfinding::GetGridSpacing());
+
+    worldX = (int)(worldX / Pathfinding::GetGridSpacing()) * Pathfinding::GetGridSpacing();
+    worldZ = (int)(worldZ / Pathfinding::GetGridSpacing()) * Pathfinding::GetGridSpacing();
+
+    transform.position = glm::vec3(worldX, 0, worldZ);
+
+    transform.position += glm::vec3(Pathfinding::GetGridSpacing() * 0.5f, 0, Pathfinding::GetGridSpacing() * 0.5f);
+   // transform.position.x += Pathfinding::GetWorldSpaceOffsetX();
+   // transform.position.z += Pathfinding::GetWorldSpaceOffsetZ();
+    transform.scale = glm::vec3(Pathfinding::GetGridSpacing());
+    shader.SetMat4("model", transform.to_mat4());
+    shader.SetBool("useUniformColor", true);
+    shader.SetVec3("uniformColor", BLUE);
+    Mesh* mesh = AssetManager::GetMeshByIndex(AssetManager::GetUpFacingPlaneMeshIndex());
+    glDisable(GL_BLEND);
+    glDisable(GL_DEPTH_TEST);
+    glBindVertexArray(OpenGLBackEnd::GetVertexDataVAO());
+    glDrawElementsInstancedBaseVertex(GL_TRIANGLES, mesh->indexCount, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int) * mesh->baseIndex), 1, mesh->baseVertex);
+    */
+
+
+
+
+    shader.SetBool("useUniformColor", false);
+
 
     // Point cloud
     if (renderData.renderMode == RenderMode::COMPOSITE_PLUS_POINT_CLOUD ||

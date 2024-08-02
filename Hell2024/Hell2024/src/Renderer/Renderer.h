@@ -12,6 +12,7 @@ namespace Renderer {
     void UpdatePointCloud();
     void RecreateBlurBuffers();
     RenderMode GetRenderMode();
+    DebugLineRenderMode GetDebugLineRenderMode();
     void ToggleProbes();
     bool ProbesVisible();
 }

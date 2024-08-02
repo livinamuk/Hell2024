@@ -140,7 +140,10 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <ClCompile Include="src\API\Vulkan\Types\VK_texture3D.cpp" />
     <ClCompile Include="src\Core\AssetManager.cpp" />
     <ClCompile Include="src\Core\DebugMenu.cpp" />
+    <ClCompile Include="src\Game\AStar.cpp" />
+    <ClCompile Include="src\Game\Pathfinding.cpp" />
     <ClCompile Include="src\Editor\Editor.cpp" />
+    <ClCompile Include="src\Game\Dobermann.cpp" />
     <ClCompile Include="src\Game\Player_CharacterModelLogic.cpp" />
     <ClCompile Include="src\Game\Player_RenderItems.cpp" />
     <ClCompile Include="src\Game\Player_WeaponLogic.cpp" />
@@ -233,7 +236,10 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <ClInclude Include="src\API\Vulkan\Vk_util.hpp" />
     <ClInclude Include="src\Core\JSON.hpp" />
     <ClInclude Include="src\Core\CreateInfo.hpp" />
+    <ClInclude Include="src\Game\AStar.h" />
+    <ClInclude Include="src\Game\Pathfinding.h" />
     <ClInclude Include="src\Editor\Editor.h" />
+    <ClInclude Include="src\Game\Dobermann.h" />
     <ClInclude Include="src\Game\WeaponManager.h" />
     <ClInclude Include="src\Effects\BloodDecal.hpp" />
     <ClInclude Include="src\Math\Raycasting.hpp" />

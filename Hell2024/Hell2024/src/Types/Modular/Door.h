@@ -30,6 +30,7 @@ public:
     } state = CLOSED;
 
 
+    float m_currentOpenRotation = 0;
 
 
     AABB _aabb;
@@ -64,5 +65,4 @@ public:
 
 private:
     std::vector<RenderItem3D> renderItems;
-    float m_currentOpenRotation = 0;
 };

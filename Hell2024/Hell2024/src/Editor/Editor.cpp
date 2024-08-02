@@ -6,6 +6,7 @@
 #include "../Core/CreateInfo.hpp"
 #include "../Core/JSON.hpp"
 #include "../Game/Game.h"
+#include "../Game/Pathfinding.h"
 #include "../Game/Scene.h"
 #include "../Input/Input.h"
 #include "../Renderer/RendererUtil.hpp"
@@ -35,6 +36,8 @@ namespace Editor {
             FILE_NEW_MAP,
             FILE_LOAD_MAP,
             FILE_SAVE_MAP,
+            FILE_LOAD_PATHFINDING_MAP,
+            FILE_SAVE_PATHFINDING_MAP,
         } type;
         void* ptr;
         float increment = 1.0f;
@@ -430,6 +433,38 @@ namespace Editor {
         }
 
 
+
+
+        // Paint the path
+        {
+            Player* player = Game::GetPlayerByIndex(0);
+            glm::mat4 projectionMatrix = player->GetProjectionMatrix();
+            glm::mat4 viewMatrix = player->GetViewMatrix();
+            glm::vec3 cameraPos = player->GetViewPos();
+            int mouseX = Input::GetMouseX();
+            int mouseY = Input::GetMouseY();
+            int windowWidth = BackEnd::GetCurrentWindowWidth();
+            int windowHeight = BackEnd::GetCurrentWindowHeight();
+            glm::vec3 rayWorld = Util::GetMouseRay(projectionMatrix, viewMatrix, windowWidth, windowHeight, mouseX, mouseY);
+            if (!Editor::IsOpen()) {
+                rayWorld = player->GetCameraForward();
+            }
+            glm::vec3 rayOrigin = cameraPos;
+            glm::vec3 rayDirection = rayWorld;
+            float t = -rayOrigin.y / rayDirection.y;
+            glm::vec3 intersectionPoint = rayOrigin + t * rayDirection;
+            float worldX = intersectionPoint.x;
+            float worldZ = intersectionPoint.z;
+            int gridX = Pathfinding::WordSpaceXToGridSpaceX(worldX);
+            int gridZ = Pathfinding::WordSpaceZToGridSpaceZ(worldZ);
+            if (Input::KeyDown(HELL_KEY_LEFT_BRACKET)) {
+                Pathfinding::SetObstacle(gridX, gridZ);
+            }
+            if (Input::KeyDown(HELL_KEY_RIGHT_BRACKET)) {
+                Pathfinding::RemoveObstacle(gridX, gridZ);
+            }
+        }
+
         UpdateMenu();
         UpdateDebugText();
     }
@@ -607,6 +642,7 @@ namespace Editor {
     void RebuildEverything() {
         CSG::Build();
         Scene::CreateBottomLevelAccelerationStructures();
+        Pathfinding::Init();
     }
 
     void UpdateMenu() {
@@ -619,6 +655,8 @@ namespace Editor {
             g_menuItems.push_back({ "New map", MenuItem::Type::FILE_NEW_MAP });
             g_menuItems.push_back({ "Load map", MenuItem::Type::FILE_LOAD_MAP });
             g_menuItems.push_back({ "Save map\n", MenuItem::Type::FILE_SAVE_MAP });
+            g_menuItems.push_back({ "Load pathfinding map", MenuItem::Type::FILE_LOAD_PATHFINDING_MAP });
+            g_menuItems.push_back({ "Save pathfinding map\n", MenuItem::Type::FILE_SAVE_PATHFINDING_MAP });
             g_menuItems.push_back({ "Close", MenuItem::Type::CLOSE_MENU });
         }
         // Create insert menu
@@ -839,6 +877,14 @@ namespace Editor {
                 Scene::SaveMapData("mappp.txt");
                 g_fileMenuOpen = false;
             }
+            if (type == MenuItem::Type::FILE_LOAD_PATHFINDING_MAP) {
+                Pathfinding::LoadMap();
+                g_fileMenuOpen = false;
+            }
+            if (type == MenuItem::Type::FILE_SAVE_PATHFINDING_MAP) {
+                Pathfinding::SaveMap();
+                g_fileMenuOpen = false;
+            }
 
             g_insertMenuOpen = false;
             g_fileMenuOpen = false;
@@ -930,6 +976,10 @@ namespace Editor {
                 }
                 menuText += "\n";
             }
+
+
+
+
 
 
             //ivec2 g_menuLocation = ivec2(60, PRESENT_HEIGHT - 60);
@@ -1031,6 +1081,7 @@ namespace Editor {
         if (MenuHasHover()) {
             g_debugText += "Menu HAS HOVER!!!!!!!!!\n";
         }
+
 
         /*  if (ObjectIsHoverered()) {
                g_debugText += "Hovered: " + Util::PhysicsObjectTypeToString(g_hoveredObjectType) + "\n";

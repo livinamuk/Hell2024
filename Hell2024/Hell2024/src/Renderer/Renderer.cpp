@@ -5,6 +5,7 @@
 #include "../API/Vulkan/VK_renderer.h"
 #include "../BackEnd/BackEnd.h"
 #include "../Game/Game.h"
+#include "../Game/Pathfinding.h"
 #include "../Game/Player.h"
 #include "../Game/Scene.h"
 #include "../Editor/CSG.h"
@@ -490,34 +491,57 @@ void UpdateDebugLinesMesh() {
                 }
             }
         }
-        else if (_debugLineRenderMode == DebugLineRenderMode::PATHFINDING) {
 
-            /*
 
-            glm::vec2 position = { -1.7f, -1.2f };
-            glm::vec2 target = { 0, -2.6 };
-            glm::vec2 currentDirection = { 1, 0 }; // Facing right initially
-            float maxAngularChange = 0.75f; // Radians per step
-            float stepSize = 0.1f;
+        /*
 
-            glm::vec2 lastPosition = position;
-            for (int i = 0; i < 100; ++i) {
-                MoveTowards(position, target, currentDirection, maxAngularChange, stepSize);
-                Vertex v0, v1;
-                v0.position = glm::vec3(position.x, 0, position.y);
-                v1.position = glm::vec3(lastPosition.x, 0, lastPosition.y);
-                v0.normal = GREEN;
-                v1.normal = GREEN;
-                vertices.push_back(v0);
-                vertices.push_back(v1);
-                if (distance(position, target) < stepSize) {
-                    break;
+        for (Dobermann& dobermann : Scene::g_dobermann) {
+
+            if (dobermann.m_aStar.m_finalPathPoints.size() >= 2) {
+                for (int i = 0; i < dobermann.m_aStar.m_finalPathPoints.size() - 1; i++) {
+
+                    glm::vec2 point = dobermann.m_aStar.m_finalPathPoints[i];
+                    float worldX = point.x * Pathfinding::GetGridSpacing() + Pathfinding::GetWorldSpaceOffsetX();
+                    float worldZ = point.y * Pathfinding::GetGridSpacing() + Pathfinding::GetWorldSpaceOffsetZ();
+                    vertices.push_back(Vertex(glm::vec3(worldX, 0, worldZ), WHITE));
+
+                    point = dobermann.m_aStar.m_finalPathPoints[i + 1];
+                    worldX = point.x * Pathfinding::GetGridSpacing() + Pathfinding::GetWorldSpaceOffsetX();
+                    worldZ = point.y * Pathfinding::GetGridSpacing() + Pathfinding::GetWorldSpaceOffsetZ();
+                    vertices.push_back(Vertex(glm::vec3(worldX, 0, worldZ), WHITE));
+
                 }
-                lastPosition = position;
             }
-            */
+        }*/
 
-        }
+
+
+        // THE GRID WORKS. U JUST DONT WANNA SEE IT RN.
+        // THE GRID WORKS. U JUST DONT WANNA SEE IT RN.
+        // THE GRID WORKS. U JUST DONT WANNA SEE IT RN.
+        // THE GRID WORKS. U JUST DONT WANNA SEE IT RN.
+
+        /*
+        else if (_debugLineRenderMode == DebugLineRenderMode::PATHFINDING) {
+            glm::vec3 gridColor = glm::vec3(0.25f);
+            for (float x = 0; x < Pathfinding::GetWorldSpaceWidth(); x += Pathfinding::GetGridSpacing()) {
+                for (float z = 0; z < Pathfinding::GetWorldSpaceDepth(); z += Pathfinding::GetGridSpacing()) {
+                    Vertex v0, v1;
+                    v0.position = glm::vec3(x + Pathfinding::GetWorldSpaceOffsetX(), 0, 0 + Pathfinding::GetWorldSpaceOffsetZ());
+                    v1.position = glm::vec3(x + Pathfinding::GetWorldSpaceOffsetX(), 0, Pathfinding::GetWorldSpaceDepth() + Pathfinding::GetWorldSpaceOffsetZ());
+                    v0.normal = gridColor;
+                    v1.normal = gridColor;
+                    vertices.push_back(v0);
+                    vertices.push_back(v1);
+                    v0.position = glm::vec3(0 + Pathfinding::GetWorldSpaceOffsetX(), 0, z + Pathfinding::GetWorldSpaceOffsetZ());
+                    v1.position = glm::vec3(Pathfinding::GetWorldSpaceWidth() + Pathfinding::GetWorldSpaceOffsetX(), 0, z + Pathfinding::GetWorldSpaceOffsetZ());
+                    v0.normal = gridColor;
+                    v1.normal = gridColor;
+                    vertices.push_back(v0);
+                    vertices.push_back(v1);
+                }
+            }
+        }*/
     }
 
     // DRAW ALL BLAS
@@ -751,9 +775,80 @@ void UpdateDebugPointsMesh() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    /*
+    for (Dobermann& dobermann : Scene::g_dobermann) {
+        for (glm::vec2 point : dobermann.m_aStar.m_finalPathPoints) {
+            float worldX = point.x * Pathfinding::GetGridSpacing() + Pathfinding::GetWorldSpaceOffsetX();
+            float worldZ = point.y * Pathfinding::GetGridSpacing() + Pathfinding::GetWorldSpaceOffsetZ();
+            vertices.push_back(Vertex(glm::vec3(worldX, 0, worldZ), RED));
+        }
+    }*/
+
+
+
     /*
 
-    glm::vec2 dobermanOffset = { 1.7f, 2.5f };
+    for (int i = 0; i < Scene::GetCubeVolumeAdditiveCount(); i++) {
+        CubeVolume* cubeVolume = Scene::GetCubeVolumeAdditiveByIndex(i);
+        if (cubeVolume->GetTransform().scale.y < 0.2f ||
+            cubeVolume->GetTransform().position.y > 2.4f) {
+            continue;
+        }
+
+        int x = Pathfinding::WordSpaceXToGridSpaceX(cubeVolume->m_transform.position.x);
+        int z = Pathfinding::WordSpaceZToGridSpaceZ(cubeVolume->m_transform.position.z);
+
+        glm::vec3 aabbMin = cubeVolume->GetTransform().scale * glm::vec3(-0.5f);
+        glm::vec3 aabbMax = cubeVolume->GetTransform().scale * glm::vec3(0.5f);
+        glm::vec3 position = cubeVolume->GetTransform().position;
+        glm::vec3 rotation = cubeVolume->GetTransform().rotation;
+
+        glm::mat4 rotationMatrix = glm::mat4_cast(glm::quat(rotation));
+        glm::vec3 forward = glm::vec3(rotationMatrix * glm::vec4(0, 0, 1, 1));
+        glm::vec3 right = glm::vec3(rotationMatrix * glm::vec4(1, 0, 0, 1));
+
+        float spacing = 0.1f;
+        for (float x = aabbMin.x; x < aabbMax.x + spacing; x += spacing) {
+            for (float z = aabbMin.z; z < aabbMax.z + spacing; z += spacing) {
+                float xClamped = std::min(x, aabbMax.x);
+                float zClamped = std::min(z, aabbMax.z);
+                glm::vec3 pos = position + (forward * zClamped) + (right * xClamped);
+                pos.y = 0;
+                float worldX = float(int(pos.x / spacing)) * spacing;
+                float worldZ = float(int(pos.z / spacing)) * spacing;
+
+                vertices.push_back(Vertex(glm::vec3(worldX, 0, worldZ), RED));
+
+               // int gridX = Pathfinding::WordSpaceXToGridSpaceX(worldX);
+              //  int gridZ = Pathfinding::WordSpaceZToGridSpaceZ(worldZ);
+              //  Pathfinding::SetObstacle(gridX, gridZ);
+            }
+        }
+    }
+    */
+    /*
+
+    glm::vec2 dobermannOffset = { 1.7f, 2.5f };
 
 
     int size = 20;
@@ -781,8 +876,8 @@ void UpdateDebugPointsMesh() {
             float x = (float)(i) * spacing;
             float z = (float)(j) * spacing;
             glm::vec3 position = glm::vec3(x, 0.0f, z);
-            position.x -= dobermanOffset.x;
-            position.z -= dobermanOffset.y;
+            position.x -= dobermannOffset.x;
+            position.z -= dobermannOffset.y;
             vertices.push_back(Vertex(position, color));
         }
     }*/
@@ -1591,12 +1686,13 @@ void ResizeRenderTargets() {
     }
 }*/
 
+
 inline std::vector<DebugLineRenderMode> _allowedDebugLineRenderModes = {
     SHOW_NO_LINES,
     PATHFINDING,
-    PHYSX_COLLISION,
-    RTX_LAND_TOP_LEVEL_ACCELERATION_STRUCTURE,
-    RTX_LAND_BOTTOM_LEVEL_ACCELERATION_STRUCTURES,
+    //PHYSX_COLLISION,
+    //RTX_LAND_TOP_LEVEL_ACCELERATION_STRUCTURE,
+    //RTX_LAND_BOTTOM_LEVEL_ACCELERATION_STRUCTURES,
 };
 
 void Renderer::NextDebugLineRenderMode() {
@@ -1665,6 +1761,10 @@ void Renderer::PreviousRenderMode() {
 
 RenderMode Renderer::GetRenderMode() {
     return _renderMode;
+}
+
+DebugLineRenderMode Renderer::GetDebugLineRenderMode() {
+    return _debugLineRenderMode;
 }
 
 void Renderer::ToggleProbes() {

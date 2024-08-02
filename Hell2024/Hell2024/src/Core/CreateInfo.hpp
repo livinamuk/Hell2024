@@ -19,3 +19,9 @@ struct LightCreateInfo {
     float strength;
     int type;
 };
+
+struct DobermannCreateInfo {
+    glm::vec3 position;
+    float rotation;
+    DobermannState initalState;
+};

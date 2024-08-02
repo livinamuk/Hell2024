@@ -1,5 +1,6 @@
 ﻿
 #include "Game.h"
+#include "Pathfinding.h"
 #include "Scene.h"
 #include "../BackEnd/BackEnd.h"
 #include "../Core/Audio.hpp"

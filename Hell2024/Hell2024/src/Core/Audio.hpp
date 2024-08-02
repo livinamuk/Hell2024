@@ -127,6 +127,7 @@ namespace Audio {
 		return handle;
 	}
 
+
 	inline AudioHandle LoopAudio(const char* name, float volume) {
 		AudioHandle handle;
 		handle.sound = g_loadedAudio[name];
@@ -134,7 +135,44 @@ namespace Audio {
 		handle.channel->setVolume(volume);
 		handle.channel->setMode(FMOD_LOOP_NORMAL);
 		handle.sound->setMode(FMOD_LOOP_NORMAL);
-		handle.sound->setLoopCount(-1);
+        handle.sound->setLoopCount(-1);
+        std::cout << "Audio::LoopAudio() " << name << "\n";
+        std::cout << "Audio::LoopAudio() " << name << "\n";
+        std::cout << "Audio::LoopAudio() " << name << "\n";
+        std::cout << "Audio::LoopAudio() " << name << "\n";
+        std::cout << "Audio::LoopAudio() " << name << "\n";
+        std::cout << "Audio::LoopAudio() " << name << "\n";
 		return handle;
 	}
+
+
+
+
+
+
+
+
+    inline void PlayAudioViaHandle(AudioHandle& handle, std::string filename, float volume) {
+        // Load if needed
+        if (g_loadedAudio.find(filename) == g_loadedAudio.end()) {
+            LoadAudio(filename);
+        }
+        FMOD::Channel* freeChannel = nullptr;
+        g_system->getChannel(g_nextFreeChannel, &freeChannel);
+        g_nextFreeChannel++;
+
+        if (g_nextFreeChannel == AUDIO_CHANNEL_COUNT) {
+            g_nextFreeChannel = 0;
+        }
+
+        handle.sound = g_loadedAudio[filename];
+        handle.filename = filename;
+        handle.channel = freeChannel;
+        g_system->playSound(handle.sound, nullptr, false, &handle.channel);
+        handle.channel->setVolume(volume);
+        handle.channel->setMode(FMOD_LOOP_NORMAL);
+        handle.sound->setMode(FMOD_LOOP_NORMAL);
+        handle.sound->setLoopCount(-1);
+    }
+
 };

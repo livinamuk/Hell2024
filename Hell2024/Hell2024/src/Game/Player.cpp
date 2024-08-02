@@ -5,6 +5,7 @@
 #include "WeaponManager.h"
 #include "../BackEnd/BackEnd.h"
 #include "../Core/Audio.hpp"
+#include "../Game/Pathfinding.h"
 #include "../Input/Input.h"
 #include "../Input/InputMulti.h"
 #include "../Renderer/TextBlitter.h"
@@ -25,6 +26,15 @@ Player::Player(int playerIndex) {
     CreateItemPickupOverlapShape();
 
     g_awaitingRespawn = true;
+}
+
+
+int Player::GetGridX() {
+    return Pathfinding::WordSpaceXToGridSpaceX(GetFeetPosition().x);
+}
+
+int  Player::GetGridZ() {
+    return Pathfinding::WordSpaceZToGridSpaceZ(GetFeetPosition().z);
 }
 
 void Player::Update(float deltaTime) {
@@ -425,6 +435,10 @@ void Player::UpdateTimers(float deltaTime) {
             finalImageColorTint.b = _damageColorTimer + 0.75;
             finalImageColorTint.g = std::min(finalImageColorTint.g, 1.0f);
             finalImageColorTint.b = std::min(finalImageColorTint.b, 1.0f);
+
+           // finalImageColorTint.r = 1.0f;
+           // finalImageColorTint.g *= 0.5f;
+            //finalImageColorTint.b *= 0.5f;
         }
 
         // Outside damage color

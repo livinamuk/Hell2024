@@ -7,6 +7,7 @@
 #include "../Core/JSON.hpp"
 #include "../Editor/CSG.h"
 #include "../Game/Game.h"
+#include "../Game/Pathfinding.h"
 #include "../Input/Input.h"
 #include "../Renderer/TextBlitter.h"
 #include "../Renderer/Raytracing/Raytracing.h"
@@ -23,13 +24,15 @@ namespace Scene {
     std::vector<Door> g_doors;
     std::vector<Window> g_windows;
 
-    void CreateCeilingsHack();
+    AudioHandle dobermannLoopAudio;
+
     void EvaluateDebugKeyPresses();
     void ProcessBullets();
     void CreateDefaultSpawnPoints();
     void CreateDefaultLight();
     void LoadMapData(const std::string& fileName);
     void AllocateStorageSpace();
+    void AddDobermann(DobermannCreateInfo& createInfo);
 }
 
 void Scene::AllocateStorageSpace() {
@@ -214,6 +217,15 @@ void Scene::LoadEmptyScene() {
     CreateBottomLevelAccelerationStructures();
 }
 
+void Scene::AddDobermann(DobermannCreateInfo& createInfo) {
+    Dobermann& dobermann = g_dobermann.emplace_back();
+    dobermann.m_initialPosition = createInfo.position;
+    dobermann.m_currentPosition = createInfo.position;
+    dobermann.m_currentRotation = createInfo.rotation;
+    dobermann.m_initialRotation = createInfo.rotation;
+    dobermann.Init();
+}
+
 void Scene::LoadDefaultScene() {
 
     std::cout << "Loading default scene\n";
@@ -239,27 +251,52 @@ void Scene::LoadDefaultScene() {
 
     LoadMapData("mappp.txt");
 
-    // Hardcoded objects
+    // Dobermann spawn lab
+    {
+        g_dobermann.clear();
+
+        DobermannCreateInfo createInfo;
+        createInfo.position = glm::vec3(-1.7f, 0, -1.2f);
+        createInfo.rotation = 0.7f;
+        createInfo.initalState = DobermannState::LAY;
+        AddDobermann(createInfo);
+
+        createInfo.position = glm::vec3(-2.46f, 0.0f, -3.08f);
+        createInfo.rotation = HELL_PI * 0.5f;
+        createInfo.initalState = DobermannState::LAY;
+        AddDobermann(createInfo);
+
+        createInfo.position = glm::vec3(-1.77f, 0, -5.66f);
+        createInfo.rotation = (1.3f);
+        createInfo.initalState = DobermannState::LAY;
+        AddDobermann(createInfo);
+    }
+
+    std::cout << "DOBERMAN GRID DEBUG STUFF\n";
+    std::cout << "DOBERMAN GRID DEBUG STUFF\n";
+    std::cout << "DOBERMAN GRID DEBUG STUFF\n";
 
 
+    /*
     if (true) {
 
         PxU32 collisionGroupFlags = RaycastGroup::DOBERMAN;
 
+
         int index = CreateAnimatedGameObject();
-        AnimatedGameObject& doberman = g_animatedGameObjects[index];
-        doberman.SetFlag(AnimatedGameObject::Flag::NONE);
-        doberman.SetPlayerIndex(1);
-        doberman.SetSkinnedModel("Doberman");
-        doberman.SetName("Doberman");
-        doberman.SetAnimationModeToBindPose();
-        doberman.SetAllMeshMaterials("Doberman");
-        doberman.SetPosition(glm::vec3(-1.7f, 0, -1.2f));
-        doberman.SetRotationY(0.7f);
-        doberman.SetScale(1.35);
-        doberman.PlayAndLoopAnimation("Doberman_Lay", 1.0f);
-        //doberman.SetAnimationModeToBindPose();
-        doberman.LoadRagdoll("doberman.rag", collisionGroupFlags);
+        AnimatedGameObject& dobermann = g_animatedGameObjects[index];
+        dobermann.SetFlag(AnimatedGameObject::Flag::NONE);
+        dobermann.SetPlayerIndex(1);
+        dobermann.SetSkinnedModel("Dobermann");
+        dobermann.SetName("Dobermann");
+        dobermann.SetAnimationModeToBindPose();
+        dobermann.SetAllMeshMaterials("Dobermann");
+        dobermann.SetPosition(glm::vec3(-1.7f, 0, -1.2f));
+        dobermann.SetRotationY(0.7f);
+        dobermann.SetScale(1.35);
+        dobermann.PlayAndLoopAnimation("Dobermann_Lay", 1.0f);
+        //dobermann.SetAnimationModeToBindPose();
+        dobermann.LoadRagdoll("dobermann.rag", collisionGroupFlags);
     }
 
 
@@ -268,21 +305,21 @@ void Scene::LoadDefaultScene() {
         PxU32 collisionGroupFlags = RaycastGroup::DOBERMAN;
 
         int index = CreateAnimatedGameObject();
-        AnimatedGameObject& doberman = g_animatedGameObjects[index];
-        doberman.SetFlag(AnimatedGameObject::Flag::NONE);
-        doberman.SetPlayerIndex(1);
-        doberman.SetSkinnedModel("Doberman");
-        doberman.SetName("Doberman");
-        doberman.SetAnimationModeToBindPose();
-        doberman.SetAllMeshMaterials("Doberman");
-        doberman.SetPosition(glm::vec3(-1.77f, 0, -5.66f));
-        doberman.SetRotationY(1.3f);
-        doberman.SetScale(1.35);
-        doberman.PlayAndLoopAnimation("Doberman_Lay", 1.0f);
-        //doberman.SetAnimationModeToBindPose();
-        doberman.LoadRagdoll("doberman.rag", collisionGroupFlags);
+        AnimatedGameObject& dobermann = g_animatedGameObjects[index];
+        dobermann.SetFlag(AnimatedGameObject::Flag::NONE);
+        dobermann.SetPlayerIndex(1);
+        dobermann.SetSkinnedModel("Dobermann");
+        dobermann.SetName("Dobermann");
+        dobermann.SetAnimationModeToBindPose();
+        dobermann.SetAllMeshMaterials("Dobermann");
+        dobermann.SetPosition(glm::vec3(-1.77f, 0, -5.66f));
+        dobermann.SetRotationY(1.3f);
+        dobermann.SetScale(1.35);
+        dobermann.PlayAndLoopAnimation("Dobermann_Lay", 1.0f);
+        //dobermann.SetAnimationModeToBindPose();
+        dobermann.LoadRagdoll("dobermann.rag", collisionGroupFlags);
     }
-
+    */
     /*
 
     if (true) {
@@ -643,6 +680,13 @@ void Scene::LoadDefaultScene() {
     RecreateAllPhysicsObjects();
     ResetGameObjectStates();
     CreateBottomLevelAccelerationStructures();
+
+
+    Pathfinding::Init();
+
+
+
+   // dobermannLoopAudio = Audio::LoopAudio("Doberman_Loop.wav", 1.0f);
 }
 
 AABB AABBFromVertices(std::span<Vertex> vertices, std::span<uint32_t> indices, glm::mat4 worldTransform) {
@@ -752,42 +796,157 @@ void Scene::CreateDefaultLight() {
 void Scene::Update(float deltaTime) {
 
 
+    for (Dobermann& dobermann : g_dobermann) {
+        dobermann.Update(deltaTime);
+    }
+
+    Pathfinding::Update();
+
+    static int dogIndex = 0;
+    g_dobermann[dogIndex].FindPath();
+    dogIndex++;
+    if (dogIndex == g_dobermann.size()) {
+        dogIndex = 0;
+    }
+
+
+    Player* player = Game::GetPlayerByIndex(0);
+    if (player->IsDead()) {
+        for (Dobermann& dobermann : g_dobermann) {
+            dobermann.m_currentState = DobermannState::LAY;
+        }
+    }
+
+
+    if (Input::KeyPressed(HELL_KEY_5)) {
+        g_dobermann[0].m_currentState = DobermannState::KAMAKAZI;
+        g_dobermann[0].m_heatlh = 100;
+    }
+    if (Input::KeyPressed(HELL_KEY_6)) {
+        for (Dobermann& dobermann : g_dobermann) {
+            dobermann.m_currentState = DobermannState::KAMAKAZI;
+            dobermann.m_heatlh = 100;
+        }
+    }
+
+
+    static AudioHandle dobermanLoopaudioHandle;
+
+
+    static std::vector<AudioHandle> dobermanAudioHandlesVector;
+
+
+    bool huntedByDogs = false;
+    for (Dobermann& dobermann : g_dobermann) {
+        if (dobermann.m_currentState == DobermannState::KAMAKAZI) {
+            huntedByDogs = true;
+            break;
+        }
+        dobermann.Update(deltaTime);
+    }
+
+    if (huntedByDogs && dobermanAudioHandlesVector.empty()) {
+        dobermanAudioHandlesVector.push_back(Audio::PlayAudio("Doberman_Loop.wav", 1.0f));
+        std::cout << "creating new sound\n";
+    }
+
+    if (!huntedByDogs && dobermanAudioHandlesVector.size()) {
+        dobermanAudioHandlesVector[0].sound->release();
+        dobermanAudioHandlesVector.clear();
+        std::cout << "STOPPING AUDIO\n";
+        Audio::g_loadedAudio.clear();
+    }
+
+
+
+
+    /*
+    if (!huntedByDogs) {
+        dobermanLoopaudioHandle.channel->setVolume(0);
+        Audio::g_system->update();
+    }
+    else {
+        dobermanLoopaudioHandle.channel->setVolume(1.0f);
+        Audio::g_system->update();
+    }*/
+    /*
+    if (Input::KeyPressed(HELL_KEY_7)) {
+      //  Audio::PlayAudioViaHandle(dobermanLoopaudioHandle, "Doberman_Loop.wav", 1.0f);
+        dobermanLoopaudioHandle.channel->setVolume(0);
+        Audio::g_system->update();
+    }
+    if (Input::KeyPressed(HELL_KEY_8)) {
+     //   Audio::PlayAudioViaHandle(dobermanLoopaudioHandle, "Doberman_Loop.wav", 1.0f);
+        dobermanLoopaudioHandle.channel->setVolume(1.0f);
+        Audio::g_system->update();
+    }*/
+
+
+    /*
+    static float huntedAudioTimer = 0;
+
+    if (huntedByDogs && huntedAudioTimer == 0) {
+        Audio::PlayAudio("Doberman_Loop.wav", 1.0f);
+    }
+    if (huntedByDogs) {
+
+        huntedAudioTimer += deltaTime;
+        if (huntedAudioTimer > 9.0f) {
+            huntedAudioTimer = 0;
+        }
+    }*/
+
+
+/*
+    static  = Audio::LoopAudio(const char* name, float volume) {
+        AudioHandle handle;
+        handle.sound = g_loadedAudio[name];
+        g_system->playSound(handle.sound, nullptr, false, &handle.channel);
+        handle.channel->setVolume(volume);
+        handle.channel->setMode(FMOD_LOOP_NORMAL);
+        handle.sound->setMode(FMOD_LOOP_NORMAL);
+        handle.sound->setLoopCount(-1);
+        return handle;
+    }
+    */
+
+
     for (int i = 0; i < g_animatedGameObjects.size(); i++) {
 
-        if (g_animatedGameObjects[i].GetName() == "Doberman") {
+        if (g_animatedGameObjects[i].GetName() == "Dobermann") {
 
-            auto& doberman = g_animatedGameObjects[i];
+            auto& dobermann = g_animatedGameObjects[i];
 
             /*
             if (Input::KeyPressed(HELL_KEY_H)) {
-                doberman.SetAnimatedModeToRagdoll();
+                dobermann.SetAnimatedModeToRagdoll();
             }
 
             if (Input::KeyDown(HELL_KEY_L)) {
-                glm::vec3 object = doberman._transform.position;
+                glm::vec3 object = dobermann._transform.position;
                 glm::vec3 target = Game::GetPlayerByIndex(0)->GetFeetPosition();
-                Util::RotateYTowardsTarget(object, doberman._transform.rotation.y, target, 0.05f);
+                Util::RotateYTowardsTarget(object, dobermann._transform.rotation.y, target, 0.05f);
             }*/
 
             /*
             if (Input::KeyPressed(HELL_KEY_U)) {
                 static std::vector<string> anims2 = {
-                    "Doberman_Attack_F",
-                    "Doberman_Attack_J",
-                    "Doberman_Attack_Jump_Cut",
-                    "Doberman_Attack_R",
-                    "Doberman_Death_L",
-                    "Doberman_Death_R",
-                    "Doberman_Jump",
-                    "Doberman_Lay_Start",
-                    "Doberman_Lay",
-                    "Doberman_Lay_End",
-                    "Doberman_Run"
+                    "Dobermann_Attack_F",
+                    "Dobermann_Attack_J",
+                    "Dobermann_Attack_Jump_Cut",
+                    "Dobermann_Attack_R",
+                    "Dobermann_Death_L",
+                    "Dobermann_Death_R",
+                    "Dobermann_Jump",
+                    "Dobermann_Lay_Start",
+                    "Dobermann_Lay",
+                    "Dobermann_Lay_End",
+                    "Dobermann_Run"
                 };
                 static std::vector<string> anims = {
-                    "Doberman_Run",
-                    "Doberman_Attack_Jump_Cut",
-                    "Doberman_Attack_Jump_Cut2",
+                    "Dobermann_Run",
+                    "Dobermann_Attack_Jump_Cut",
+                    "Dobermann_Attack_Jump_Cut2",
                 };
                 static int index = 0;
                 g_animatedGameObjects[i].PlayAndLoopAnimation(anims[index], 1.0f);
@@ -1432,19 +1591,20 @@ void Scene::ProcessBullets() {
                             counter = 0;
                             */
 
-                        for (int i = 0; i < g_animatedGameObjects.size(); i++) {
-                            if (g_animatedGameObjects[i].GetName() == "Doberman") {
-                                auto& doberman = g_animatedGameObjects[i];
-                                for (auto& rigidComponent : doberman._ragdoll._rigidComponents) {
-                                    if (rigidComponent.pxRigidBody == actor) {
-                                        if (doberman._animationMode == AnimatedGameObject::ANIMATION) {
-                                            doberman.SetAnimatedModeToRagdoll();
-                                            Audio::PlayAudio("Doberman_Death.wav", 1.5f);
-                                        }
+
+                        for (Dobermann& dobermann : Scene::g_dobermann) {
+                            AnimatedGameObject* animatedGameObject = dobermann.GetAnimatedGameObject();
+                            for (RigidComponent& rigidComponent : animatedGameObject->_ragdoll._rigidComponents) {
+                                if (rigidComponent.pxRigidBody == actor) {
+                                    if (animatedGameObject->_animationMode == AnimatedGameObject::ANIMATION) {
+                                        dobermann.TakeDamage();
                                     }
                                 }
                             }
                         }
+
+
+
 
 
 
@@ -2914,6 +3074,9 @@ void Scene::CreateMeshData() {
     }
 }
 
+const size_t Scene::GetCubeVolumeAdditiveCount() {
+    return g_cubeVolumesAdditive.size();
+}
 
 CubeVolume* Scene::GetCubeVolumeAdditiveByIndex(int32_t index) {
     if (index >= 0 && index < g_cubeVolumesAdditive.size()) {

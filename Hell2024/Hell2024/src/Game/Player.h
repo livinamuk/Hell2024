@@ -112,6 +112,9 @@ public:
     Player() = default;
     Player(int playerIndex);
 
+    int GetGridX();
+    int GetGridZ();
+
     // Updates
     void Update(float deltaTime);
     void UpdateRagdoll();

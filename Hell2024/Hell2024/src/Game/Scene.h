@@ -11,6 +11,7 @@
 #include "../Core/VolumetricBloodSplatter.h"
 #include "../Editor/CSG.h"
 #include "../Game/Player.h"
+#include "../Game/Dobermann.h"
 #include "../Types/Modular/Door.h"
 #include "../Types/Modular/Toilet.h"
 #include "../Types/Modular/Window.h"
@@ -242,6 +243,7 @@ namespace Scene {
     // Map stuff
     CubeVolume* GetCubeVolumeAdditiveByIndex(int32_t index);
     CubeVolume* GetCubeVolumeSubtractiveByIndex(int32_t index);
+    const size_t GetCubeVolumeAdditiveCount();
 
     // Containers
     inline std::vector<Light> g_lights;
@@ -249,6 +251,7 @@ namespace Scene {
     inline std::vector<BulletCasing> g_bulletCasings;
     inline std::vector<CubeVolume> g_cubeVolumesAdditive;
     inline std::vector<CubeVolume> g_cubeVolumesSubtractive;
+    inline std::vector<Dobermann> g_dobermann;
 
     // Windows
     uint32_t GetWindowCount();
