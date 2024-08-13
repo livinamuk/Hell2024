@@ -22,5 +22,7 @@ namespace Pathfinding {
     bool IsInBounds(int x, int z);
     void SaveMap();
     void LoadMap();
-    std::vector<std::vector<bool>>& GetMap();
+    std::vector<std::vector<int>>& GetMap();
+
+
 }

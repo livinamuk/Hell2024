@@ -7,6 +7,7 @@
 #include "../Core/JSON.hpp"
 #include "../Game/Game.h"
 #include "../Game/Pathfinding.h"
+#include "../Pathfinding/Pathfinding2.h"
 #include "../Game/Scene.h"
 #include "../Input/Input.h"
 #include "../Renderer/RendererUtil.hpp"

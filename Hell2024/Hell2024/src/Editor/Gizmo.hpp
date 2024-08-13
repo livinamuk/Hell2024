@@ -64,9 +64,9 @@ namespace Gizmo {
     }
 
     inline void Init() {
-        g_TriangleShader.LoadOLD("im3d_triangles.vert", "im3d_triangles.frag");
-        g_LineShader.LoadOLD("im3d_lines.vert", "im3d_lines.frag", "im3d_lines.geom");
-        g_PointShader.LoadOLD("im3d_points.vert", "im3d_points.frag");
+        g_TriangleShader.Load("im3d_triangles.vert", "im3d_triangles.frag");
+        g_LineShader.Load("im3d_lines.vert", "im3d_lines.frag", "im3d_lines.geom");
+        g_PointShader.Load("im3d_points.vert", "im3d_points.frag");
         glGenBuffers(1, &g_Im3dVertexBuffer);;
         glGenVertexArrays(1, &g_Im3dVertexArray);
         glBindVertexArray(g_Im3dVertexArray);

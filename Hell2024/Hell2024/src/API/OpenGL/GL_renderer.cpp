@@ -145,7 +145,6 @@ void OpenGLRenderer::HotloadShaders() {
     g_shaders.outline.Load("GL_outline.vert", "GL_outline.frag");
     g_shaders.UI.Load("GL_ui.vert", "GL_ui.frag");
     g_shaders.geometry.Load("GL_gbuffer.vert", "GL_gbuffer.frag");
-    //g_shaders.geometrySkinned.Load("GL_gbufferSkinned.vert", "GL_gbufferSkinned.frag");
     g_shaders.lighting.Load("GL_lighting.vert", "GL_lighting.frag");
     g_shaders.shadowMap.Load("GL_shadowMap.vert", "GL_shadowMap.frag");
     g_shaders.shadowMapCSG.Load("GL_shadowMap_csg.vert", "GL_shadowMap_csg.frag");
@@ -161,16 +160,14 @@ void OpenGLRenderer::HotloadShaders() {
     g_shaders.debugPointCloud.Load("GL_debug_pointCloud.vert", "GL_debug_pointCloud.frag");
     g_shaders.debugProbes.Load("GL_debug_probes.vert", "GL_debug_probes.frag");
     g_shaders.gbufferSkinned.Load("GL_gbuffer_skinned.vert", "GL_gbuffer_skinned.frag");
-    g_shaders.emissiveComposite.LoadOLD("res/shaders/OpenGL/GL_emissiveComposite.comp");
-    g_shaders.postProcessing.LoadOLD("res/shaders/OpenGL/GL_postProcessing.comp");
-    g_shaders.glassComposite.LoadOLD("res/shaders/OpenGL/GL_glassComposite.comp");
-    g_shaders.pointCloudDirectLigthing.LoadOLD("res/shaders/OpenGL/GL_pointCloudDirectLighting.comp");
-    g_shaders.computeSkinning.LoadOLD("res/shaders/OpenGL/GL_computeSkinning.comp");
-    g_shaders.raytracingTest.LoadOLD("res/shaders/OpenGL/GL_raytracing_test.comp");
-    g_shaders.debugCircle.LoadOLD("res/shaders/OpenGL/GL_debug_circle.comp");
-    g_shaders.probeLighting.LoadOLD("res/shaders/OpenGL/GL_probe_lighting.comp");
-    //g_shaders.sandbox.LoadOLD("res/shaders/OpenGL/GL_sandbox.comp");
-    //g_shaders.bloom.LoadOLD("res/shaders/OpenGL/GL_bloom.comp");
+    g_shaders.emissiveComposite.Load("res/shaders/OpenGL/GL_emissiveComposite.comp");
+    g_shaders.postProcessing.Load("res/shaders/OpenGL/GL_postProcessing.comp");
+    g_shaders.glassComposite.Load("res/shaders/OpenGL/GL_glassComposite.comp");
+    g_shaders.pointCloudDirectLigthing.Load("res/shaders/OpenGL/GL_pointCloudDirectLighting.comp");
+    g_shaders.computeSkinning.Load("res/shaders/OpenGL/GL_computeSkinning.comp");
+    g_shaders.raytracingTest.Load("res/shaders/OpenGL/GL_raytracing_test.comp");
+    g_shaders.debugCircle.Load("res/shaders/OpenGL/GL_debug_circle.comp");
+    g_shaders.probeLighting.Load("res/shaders/OpenGL/GL_probe_lighting.comp");
 }
 
 void OpenGLRenderer::CreatePlayerRenderTargets(int presentWidth, int presentHeight) {
@@ -1123,6 +1120,7 @@ void DebugPass(RenderData& renderData) {
 
     OpenGLDetachedMesh& linesMesh = renderData.debugLinesMesh->GetGLMesh();
     OpenGLDetachedMesh& pointsMesh = renderData.debugPointsMesh->GetGLMesh();
+    OpenGLDetachedMesh& trianglesMesh = renderData.debugTrianglesMesh->GetGLMesh();
 
     // Render target
     GLFrameBuffer& presentBuffer = OpenGLRenderer::g_frameBuffers.present;
@@ -1148,6 +1146,12 @@ void DebugPass(RenderData& renderData) {
         glPointSize(4);
         glBindVertexArray(pointsMesh.GetVAO());
         glDrawElements(GL_POINTS, pointsMesh.GetIndexCount(), GL_UNSIGNED_INT, 0);
+    }
+    // Draw triangles
+    if (trianglesMesh.GetIndexCount() > 0) {
+        glPointSize(4);
+        glBindVertexArray(trianglesMesh.GetVAO());
+        glDrawElements(GL_TRIANGLES, trianglesMesh.GetIndexCount(), GL_UNSIGNED_INT, 0);
     }
 
 
@@ -2276,4 +2280,27 @@ void OpenGLRenderer::ProbeGridDebugPass() {
         int instanceCount = lightVolume->GetProbeCount();
         glDrawElementsInstancedBaseVertex(GL_TRIANGLES, cubeMesh->indexCount, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int) * cubeMesh->baseIndex), instanceCount, cubeMesh->baseVertex);
     }
+
+
+    /*
+    static Transform transform;
+    transform.position = glm::vec3(0, 1, 0);
+    transform.scale = glm::vec3(0.5f, 0.5f, 0.5f);
+    //transform.rotation.y += 0.1f;
+
+    static Model* model = AssetManager::GetModelByIndex(AssetManager::GetModelIndexByName("Cube"));
+    Mesh* cubeMesh = AssetManager::GetMeshByIndex(model->GetMeshIndices()[0]);
+    Player* player = Game::GetPlayerByIndex(0);
+    glm::mat4 projection = player->GetProjectionMatrix();
+    glm::mat4 view = player->GetViewMatrix();
+
+    g_shaders.debugSolidColor.Use();
+
+    g_shaders.debugSolidColor.SetMat4("projection", projection);
+    g_shaders.debugSolidColor.SetMat4("view", view);
+    g_shaders.debugSolidColor.SetMat4("model", transform.to_mat4());
+    g_shaders.debugSolidColor.SetVec3("color", RED);
+    */
+    // glDrawElementsInstancedBaseVertex(GL_TRIANGLES, cubeMesh->indexCount, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int) * cubeMesh->baseIndex), 1, cubeMesh->baseVertex);
+
 }

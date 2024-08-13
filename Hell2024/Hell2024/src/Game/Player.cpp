@@ -13,7 +13,6 @@
 #include "../Common.h"
 #include "../Config.hpp"
 #include "../Util.hpp"
-#include "../EngineState.hpp"
 #include "../Timer.hpp"
 
 Player::Player(int playerIndex) {
@@ -217,6 +216,17 @@ void Player::UpdateViewMatrix(float deltaTime) {
 
     _viewMatrix = inverse(camTransform.to_mat4());
 
+    /*
+    this->_playerName = "";
+    this->_playerName += "_position: " + Util::Vec3ToString(_position) + "\n";
+    this->_playerName += "GetCameraUp(): " + Util::Vec3ToString(GetCameraUp()) + "\n";
+    this->_playerName += "GetCameraRight(): " + Util::Vec3ToString(GetCameraRight()) + "\n";
+    this->_playerName += "m_breatheBob.x: " + std::to_string(m_breatheBob.x) + "\n";
+    this->_playerName += "m_breatheBob.y: " + std::to_string(m_breatheBob.y) + "\n";
+    this->_playerName += "m_headBob.x: " + std::to_string(m_headBob.x) + "\n";
+    this->_playerName += "m_headBob.y: " + std::to_string(m_headBob.y) + "\n";
+    this->_playerName += "\n" + Util::Mat4ToString(_viewMatrix) + "\n";*/
+
     glm::mat4 dmMaster = glm::mat4(1);
     glm::mat4 cameraMatrix = glm::mat4(1);
     glm::mat4 cameraBindMatrix = glm::mat4(1);
@@ -256,7 +266,7 @@ void Player::UpdateViewMatrix(float deltaTime) {
     viewWeapon->m_useCameraMatrix = true;
 
     Transform worldTransform;
-    worldTransform.position = camTransform.position;// _position + glm::vec3(0, _currentViewHeight, 0);
+    worldTransform.position = camTransform.position;
     worldTransform.rotation.x = GetViewRotation().x;
     worldTransform.rotation.y = GetViewRotation().y;
 
@@ -302,8 +312,6 @@ void Player::UpdateViewMatrix(float deltaTime) {
     _movementVector = glm::normalize(glm::vec3(_forward.x, 0, _forward.z));
     _viewPos = _inverseViewMatrix[3];
 }
-
-
 
 void Player::UpdatePickupText(float deltaTime) {
     for (int i = 0; i < m_pickUpTexts.size(); i++) {
@@ -451,19 +459,17 @@ void Player::UpdateTimers(float deltaTime) {
 }
 
 void Player::UpdateMouseLook(float deltaTime) {
-    if (EngineState::GetEngineMode() == GAME) {
-        if (HasControl() && BackEnd::WindowHasFocus()) {
-            float mouseSensitivity = 0.002f;
-            if (InADS()) {
-                mouseSensitivity = 0.001f;
-            }
-            float xOffset = (float)InputMulti::GetMouseXOffset(m_mouseIndex);
-            float yOffset = (float)InputMulti::GetMouseYOffset(m_mouseIndex);
-            _rotation.x += -yOffset * mouseSensitivity;
-            _rotation.y += -xOffset * mouseSensitivity;
-            _rotation.x = std::min(_rotation.x, 1.5f);
-            _rotation.x = std::max(_rotation.x, -1.5f);
+    if (HasControl() && BackEnd::WindowHasFocus()) {
+        float mouseSensitivity = 0.002f;
+        if (InADS()) {
+            mouseSensitivity = 0.001f;
         }
+        float xOffset = (float)InputMulti::GetMouseXOffset(m_mouseIndex);
+        float yOffset = (float)InputMulti::GetMouseYOffset(m_mouseIndex);
+        _rotation.x += -yOffset * mouseSensitivity;
+        _rotation.y += -xOffset * mouseSensitivity;
+        _rotation.x = std::min(_rotation.x, 1.5f);
+        _rotation.x = std::max(_rotation.x, -1.5f);
     }
 }
 
@@ -568,7 +574,6 @@ void Player::UpdateHeadBob(float deltaTime) {
 
 
 void Player::UpdateAudio(float deltaTime) {
-
     // Footstep audio
     if (HasControl()) {
         if (!IsMoving())

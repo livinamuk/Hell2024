@@ -20,6 +20,8 @@
 #include "../Effects/MuzzleFlash.h"
 #include "../Util.hpp"
 
+#include "../Math/Frustum.hpp"
+
 IndirectDrawInfo CreateIndirectDrawInfo(std::vector<RenderItem3D>& potentialRenderItems, int playerCount);
 MultiDrawIndirectDrawInfo CreateMultiDrawIndirectDrawInfo(std::vector<RenderItem3D>& renderItems);
 std::vector<RenderItem2D> CreateRenderItems2D(ivec2 presentSize, int playerCount);
@@ -32,15 +34,9 @@ std::vector<GPULight> CreateGPULights();
 RenderData CreateRenderData();
 BlitDstCoords GetBlitDstCoords(unsigned int playerIndex);
 BlitDstCoords GetBlitDstCoordsPresent(unsigned int playerIndex);
-void UpdateDebugLinesMesh();
-void UpdateDebugPointsMesh();
+
 MuzzleFlashData GetMuzzleFlashData(unsigned int playerIndex);
 std::vector<SkinnedRenderItem> GetSkinnedRenderItemsForPlayer(int playerIndex);
-
-DetachedMesh _debugLinesMesh;
-DetachedMesh _debugPointsMesh;
-std::vector<Vertex> g_debugLines;
-DebugLineRenderMode _debugLineRenderMode = DebugLineRenderMode::SHOW_NO_LINES;
 RenderMode _renderMode = RenderMode::COMPOSITE;
 std::vector<glm::mat4> _animatedTransforms;
 std::vector<glm::mat4> _instanceMatrices;
@@ -63,8 +59,9 @@ std::vector<glm::vec3> g_debugTriangleVertices = {
 void Renderer::RenderFrame() {
 
     UpdatePointCloud();
-    UpdateDebugLinesMesh();
     UpdateDebugPointsMesh();
+    UpdateDebugLinesMesh();
+    UpdateDebugTrianglesMesh();
     Editor::UpdateRenderItems();
 
     if (Input::KeyPressed(HELL_KEY_V)) {
@@ -149,9 +146,10 @@ RenderData CreateRenderData() {
     std::sort(renderData.renderItems.decals.begin(), renderData.renderItems.decals.end());
 
     renderData.lights = CreateGPULights();
-    renderData.debugLinesMesh = &_debugLinesMesh;
-    renderData.debugPointsMesh = &_debugPointsMesh;
-    renderData.renderDebugLines = (_debugLineRenderMode != DebugLineRenderMode::SHOW_NO_LINES);
+    renderData.debugLinesMesh = &Renderer::g_debugLinesMesh;
+    renderData.debugPointsMesh = &Renderer::g_debugPointsMesh;
+    renderData.debugTrianglesMesh = &Renderer::g_debugTrianglesMesh;
+    renderData.renderDebugLines = (Renderer::g_debugLineRenderMode != DebugLineRenderMode::SHOW_NO_LINES);
     renderData.renderItems2D = CreateRenderItems2D(presentSize, renderData.playerCount);
     renderData.renderItems2DHiRes = CreateRenderItems2DHiRes(gbufferSize, renderData.playerCount);
     renderData.blitDstCoords = GetBlitDstCoords(0);
@@ -311,58 +309,7 @@ RenderData CreateRenderData() {
  █ █ █▀▀ █▀▄ █ █ █ █   █    █  █ █ █▀▀ ▀▀█   ▄▀    █▀▀ █ █  █  █ █  █  ▀▀█
  ▀▀  ▀▀▀ ▀▀  ▀▀▀ ▀▀▀   ▀▀▀ ▀▀▀ ▀ ▀ ▀▀▀ ▀▀▀   ▀     ▀   ▀▀▀ ▀▀▀ ▀ ▀  ▀  ▀▀▀ */
 
-void DrawLine(glm::vec3 begin, glm::vec3 end, glm::vec3 color) {
-    Vertex v0 = Vertex(begin, color);
-    Vertex v1 = Vertex(end, color);
-    g_debugLines.push_back(v0);
-    g_debugLines.push_back(v1);
-}
 
-void DrawAABB(AABB& aabb, glm::vec3 color) {
-    glm::vec3 FrontTopLeft = glm::vec3(aabb.GetBoundsMin().x, aabb.GetBoundsMax().y, aabb.GetBoundsMax().z);
-    glm::vec3 FrontTopRight = glm::vec3(aabb.GetBoundsMax().x, aabb.GetBoundsMax().y, aabb.GetBoundsMax().z);
-    glm::vec3 FrontBottomLeft = glm::vec3(aabb.GetBoundsMin().x, aabb.GetBoundsMin().y, aabb.GetBoundsMax().z);
-    glm::vec3 FrontBottomRight = glm::vec3(aabb.GetBoundsMax().x, aabb.GetBoundsMin().y, aabb.GetBoundsMax().z);
-    glm::vec3 BackTopLeft = glm::vec3(aabb.GetBoundsMin().x, aabb.GetBoundsMax().y, aabb.GetBoundsMin().z);
-    glm::vec3 BackTopRight = glm::vec3(aabb.GetBoundsMax().x, aabb.GetBoundsMax().y, aabb.GetBoundsMin().z);
-    glm::vec3 BackBottomLeft = glm::vec3(aabb.GetBoundsMin().x, aabb.GetBoundsMin().y, aabb.GetBoundsMin().z);
-    glm::vec3 BackBottomRight = glm::vec3(aabb.GetBoundsMax().x, aabb.GetBoundsMin().y, aabb.GetBoundsMin().z);
-    DrawLine(FrontTopLeft, FrontTopRight, color);
-    DrawLine(FrontBottomLeft, FrontBottomRight, color);
-    DrawLine(BackTopLeft, BackTopRight, color);
-    DrawLine(BackBottomLeft, BackBottomRight, color);
-    DrawLine(FrontTopLeft, FrontBottomLeft, color);
-    DrawLine(FrontTopRight, FrontBottomRight, color);
-    DrawLine(BackTopLeft, BackBottomLeft, color);
-    DrawLine(BackTopRight, BackBottomRight, color);
-    DrawLine(FrontTopLeft, BackTopLeft, color);
-    DrawLine(FrontTopRight, BackTopRight, color);
-    DrawLine(FrontBottomLeft, BackBottomLeft, color);
-    DrawLine(FrontBottomRight, BackBottomRight, color);
-}
-
-void DrawAABB(AABB& aabb, glm::vec3 color, glm::mat4 worldTransform) {
-    glm::vec3 FrontTopLeft = worldTransform * glm::vec4(aabb.GetBoundsMin().x, aabb.GetBoundsMax().y, aabb.GetBoundsMax().z, 1.0f);
-    glm::vec3 FrontTopRight = worldTransform * glm::vec4(aabb.GetBoundsMax().x, aabb.GetBoundsMax().y, aabb.GetBoundsMax().z, 1.0f);
-    glm::vec3 FrontBottomLeft = worldTransform * glm::vec4(aabb.GetBoundsMin().x, aabb.GetBoundsMin().y, aabb.GetBoundsMax().z, 1.0f);
-    glm::vec3 FrontBottomRight = worldTransform * glm::vec4(aabb.GetBoundsMax().x, aabb.GetBoundsMin().y, aabb.GetBoundsMax().z, 1.0f);
-    glm::vec3 BackTopLeft = worldTransform * glm::vec4(aabb.GetBoundsMin().x, aabb.GetBoundsMax().y, aabb.GetBoundsMin().z, 1.0f);
-    glm::vec3 BackTopRight = worldTransform * glm::vec4(aabb.GetBoundsMax().x, aabb.GetBoundsMax().y, aabb.GetBoundsMin().z, 1.0f);
-    glm::vec3 BackBottomLeft = worldTransform * glm::vec4(aabb.GetBoundsMin().x, aabb.GetBoundsMin().y, aabb.GetBoundsMin().z, 1.0f);
-    glm::vec3 BackBottomRight = worldTransform * glm::vec4(aabb.GetBoundsMax().x, aabb.GetBoundsMin().y, aabb.GetBoundsMin().z, 1.0f);
-    DrawLine(FrontTopLeft, FrontTopRight, color);
-    DrawLine(FrontBottomLeft, FrontBottomRight, color);
-    DrawLine(BackTopLeft, BackTopRight, color);
-    DrawLine(BackBottomLeft, BackBottomRight, color);
-    DrawLine(FrontTopLeft, FrontBottomLeft, color);
-    DrawLine(FrontTopRight, FrontBottomRight, color);
-    DrawLine(BackTopLeft, BackBottomLeft, color);
-    DrawLine(BackTopRight, BackBottomRight, color);
-    DrawLine(FrontTopLeft, BackTopLeft, color);
-    DrawLine(FrontTopRight, BackTopRight, color);
-    DrawLine(FrontBottomLeft, BackBottomLeft, color);
-    DrawLine(FrontBottomRight, BackBottomRight, color);
-}
 
 
 float AngleBetween(const glm::vec2& a, const glm::vec2& b) {
@@ -386,590 +333,7 @@ void MoveTowards(glm::vec2& position, const glm::vec2& target, glm::vec2& curren
 
 
 
-void UpdateDebugLinesMesh() {
 
-    std::vector<Vertex> vertices;
-    std::vector<uint32_t> indices;
-
-    std::vector<PxRigidActor*> ignoreList;
-
-    // Skip debug lines for player 0 ragdoll
-    Player* player = Game::GetPlayerByIndex(0);
-    AnimatedGameObject* characterModel = Scene::GetAnimatedGameObjectByIndex(player->GetCharacterModelAnimatedGameObjectIndex());
-    for (auto r : characterModel->_ragdoll._rigidComponents) {
-        ignoreList.push_back(r.pxRigidBody);
-    }
-
-    if (Editor::IsOpen() && false) {
-        std::vector<CSGObject> cubes = CSG::GetCSGObjects();
-        for (CSGObject& cube : cubes) {
-            std::span<CSGVertex> cubeVertices = cube.GetVerticesSpan();
-            for (int i = 0; i < cubeVertices.size(); i += 3) {
-                Vertex v0, v1, v2;
-                v0.position = cubeVertices[i + 0].position;
-                v1.position = cubeVertices[i + 1].position;
-                v2.position = cubeVertices[i + 2].position;
-                v0.normal = GREEN;
-                v1.normal = GREEN;
-                v2.normal = GREEN;
-                if (cube.m_type == CSGType::SUBTRACTIVE) {
-                    v0.normal = RED;
-                    v1.normal = RED;
-                    v2.normal = RED;
-                }
-                vertices.push_back(v0);
-                vertices.push_back(v1);
-                vertices.push_back(v1);
-                vertices.push_back(v2);
-                vertices.push_back(v2);
-                vertices.push_back(v0);
-            }
-        }
-    }
-    else {
-        if (_debugLineRenderMode == DebugLineRenderMode::PHYSX_ALL ||
-            _debugLineRenderMode == DebugLineRenderMode::PHYSX_COLLISION ||
-            _debugLineRenderMode == DebugLineRenderMode::PHYSX_RAYCAST ||
-            _debugLineRenderMode == DebugLineRenderMode::PHYSX_EDITOR) {
-            std::vector<Vertex> physicsDebugLineVertices = Physics::GetDebugLineVertices(_debugLineRenderMode, ignoreList);
-            vertices.reserve(vertices.size() + physicsDebugLineVertices.size());
-            vertices.insert(std::end(vertices), std::begin(physicsDebugLineVertices), std::end(physicsDebugLineVertices));
-        }
-        else if (_debugLineRenderMode == DebugLineRenderMode::BOUNDING_BOXES) {
-            for (GameObject& gameObject : Scene::GetGamesObjects()) {
-                std::vector<Vertex> aabbVertices = gameObject.GetAABBVertices();
-                vertices.reserve(vertices.size() + aabbVertices.size());
-                vertices.insert(std::end(vertices), std::begin(aabbVertices), std::end(aabbVertices));
-            }
-        }
-
-        else if (_debugLineRenderMode == DebugLineRenderMode::RTX_LAND_AABBS) {
-            for (Door& door : Scene::GetDoors()) {
-                std::vector<Vertex> aabbVertices = Util::GetAABBVertices(door._aabb, GREEN);
-                vertices.reserve(vertices.size() + aabbVertices.size());
-                vertices.insert(std::end(vertices), std::begin(aabbVertices), std::end(aabbVertices));
-            }
-        }
-        else if (_debugLineRenderMode == DebugLineRenderMode::RTX_LAND_BOTTOM_LEVEL_ACCELERATION_STRUCTURES) {
-
-            for (CSGObject& csgObject : CSG::GetCSGObjects()) {
-                BLAS* blas = Raytracing::GetBLASByIndex(csgObject.m_blasIndex);
-                if (blas) {
-                    for (BVHNode& node : blas->bvhNodes) {
-                        if (node.IsLeaf()) {
-                            AABB aabb(node.aabbMin, node.aabbMax);
-                            //DrawAABB(aabb, RED);
-                        }
-                    }
-                }
-            }
-            TLAS* tlas = Raytracing::GetTLASByIndex(0);
-            if (tlas) {
-
-
-                for (int i = 0; i < tlas->GetInstanceCount(); i++) {
-                    glm::mat4 worldTransform = tlas->GetInstanceWorldTransformByInstanceIndex(i);
-                    unsigned int blasIndex = tlas->GetInstanceBLASIndexByInstanceIndex(i);
-                    BLAS* blas = Raytracing::GetBLASByIndex(blasIndex);
-                    if (blas) {
-                        for (BVHNode& node : blas->bvhNodes) {
-                            if (node.IsLeaf()) {
-                                AABB aabb(node.aabbMin, node.aabbMax);
-                                DrawAABB(aabb, RED, worldTransform);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        else if (_debugLineRenderMode == DebugLineRenderMode::RTX_LAND_TOP_LEVEL_ACCELERATION_STRUCTURE) {
-            TLAS* tlas = Raytracing::GetTLASByIndex(0);
-            if (tlas) {
-                for (BVHNode& node : tlas->GetNodes()) {
-                    AABB tlasAabb(node.aabbMin, node.aabbMax);
-                    DrawAABB(tlasAabb, YELLOW);
-                }
-            }
-        }
-
-
-        /*
-
-        for (Dobermann& dobermann : Scene::g_dobermann) {
-
-            if (dobermann.m_aStar.m_finalPathPoints.size() >= 2) {
-                for (int i = 0; i < dobermann.m_aStar.m_finalPathPoints.size() - 1; i++) {
-
-                    glm::vec2 point = dobermann.m_aStar.m_finalPathPoints[i];
-                    float worldX = point.x * Pathfinding::GetGridSpacing() + Pathfinding::GetWorldSpaceOffsetX();
-                    float worldZ = point.y * Pathfinding::GetGridSpacing() + Pathfinding::GetWorldSpaceOffsetZ();
-                    vertices.push_back(Vertex(glm::vec3(worldX, 0, worldZ), WHITE));
-
-                    point = dobermann.m_aStar.m_finalPathPoints[i + 1];
-                    worldX = point.x * Pathfinding::GetGridSpacing() + Pathfinding::GetWorldSpaceOffsetX();
-                    worldZ = point.y * Pathfinding::GetGridSpacing() + Pathfinding::GetWorldSpaceOffsetZ();
-                    vertices.push_back(Vertex(glm::vec3(worldX, 0, worldZ), WHITE));
-
-                }
-            }
-        }*/
-
-
-
-        // THE GRID WORKS. U JUST DONT WANNA SEE IT RN.
-        // THE GRID WORKS. U JUST DONT WANNA SEE IT RN.
-        // THE GRID WORKS. U JUST DONT WANNA SEE IT RN.
-        // THE GRID WORKS. U JUST DONT WANNA SEE IT RN.
-
-        /*
-        else if (_debugLineRenderMode == DebugLineRenderMode::PATHFINDING) {
-            glm::vec3 gridColor = glm::vec3(0.25f);
-            for (float x = 0; x < Pathfinding::GetWorldSpaceWidth(); x += Pathfinding::GetGridSpacing()) {
-                for (float z = 0; z < Pathfinding::GetWorldSpaceDepth(); z += Pathfinding::GetGridSpacing()) {
-                    Vertex v0, v1;
-                    v0.position = glm::vec3(x + Pathfinding::GetWorldSpaceOffsetX(), 0, 0 + Pathfinding::GetWorldSpaceOffsetZ());
-                    v1.position = glm::vec3(x + Pathfinding::GetWorldSpaceOffsetX(), 0, Pathfinding::GetWorldSpaceDepth() + Pathfinding::GetWorldSpaceOffsetZ());
-                    v0.normal = gridColor;
-                    v1.normal = gridColor;
-                    vertices.push_back(v0);
-                    vertices.push_back(v1);
-                    v0.position = glm::vec3(0 + Pathfinding::GetWorldSpaceOffsetX(), 0, z + Pathfinding::GetWorldSpaceOffsetZ());
-                    v1.position = glm::vec3(Pathfinding::GetWorldSpaceWidth() + Pathfinding::GetWorldSpaceOffsetX(), 0, z + Pathfinding::GetWorldSpaceOffsetZ());
-                    v0.normal = gridColor;
-                    v1.normal = gridColor;
-                    vertices.push_back(v0);
-                    vertices.push_back(v1);
-                }
-            }
-        }*/
-    }
-
-    // DRAW ALL BLAS
-    /*
-    for (int i = 0; i < Raytracing::GetBottomLevelAccelerationStructureCount(); i++) {
-        BLAS* blas = Raytracing::GetBLASByIndex(i);
-        if (blas) {
-            for (Triangle& triangle : blas->triangles) {
-                Vertex v0;
-                Vertex v1;
-                Vertex v2;
-                v0.normal = YELLOW;
-                v1.normal = YELLOW;
-                v2.normal = YELLOW;
-                v0.position = triangle.v0;
-                v1.position = triangle.v1;
-                v2.position = triangle.v2;
-                vertices.push_back(v0);
-                vertices.push_back(v1);
-                vertices.push_back(v1);
-                vertices.push_back(v2);
-                vertices.push_back(v2);
-                vertices.push_back(v0);
-            }
-        }
-    }*/
-
-
-
-    /*
-    glm::mat4 projection = Game::GetPlayerByIndex(0)->GetProjectionMatrix();
-    glm::mat4 view = Editor::GetViewMatrix();
-    glm::vec3 rayOrigin = Editor::GetViewPos();
-    glm::vec3 rayDir = Game::GetPlayerByIndex(0)->GetCameraForward();
-    glm::vec3 color = RED;
-    int viewportWidth = PRESENT_WIDTH;
-    int viewportHeight = PRESENT_HEIGHT;
-    float mouseX = Util::MapRange(Input::GetMouseX(), 0, BackEnd::GetCurrentWindowWidth(), 0, viewportWidth);
-    float mouseY = Util::MapRange(Input::GetMouseY(), 0, BackEnd::GetCurrentWindowHeight(), 0, viewportHeight);
-    rayDir = Math::GetMouseRay(projection, view, viewportWidth, viewportHeight, mouseX, mouseY);
-
-    IntersectionResult intersectionResult;
-    for (int i = 0; i < g_debugTriangleVertices.size(); i += 3) {
-        glm::vec3 v0 = g_debugTriangleVertices[i];
-        glm::vec3 v1 = g_debugTriangleVertices[i + 1];
-        glm::vec3 v2 = g_debugTriangleVertices[i + 2];
-        intersectionResult = Math::RayTriangleIntersectTest(rayOrigin, rayDir, v0, v1, v2);
-    }
-
-    std::vector<glm::vec3> closestTri = Math::ClosestTriangleRayIntersection(rayOrigin, rayDir, g_debugTriangleVertices);
-
-    for (int i = 0; i < g_debugTriangleVertices.size(); i += 3) {
-        Vertex v0;
-        Vertex v1;
-        Vertex v2;
-        v0.normal = RED;
-        v1.normal = RED;
-        v2.normal = RED;
-        v0.position = g_debugTriangleVertices[i];
-        v1.position = g_debugTriangleVertices[i + 1];
-        v2.position = g_debugTriangleVertices[i + 2];
-        vertices.push_back(v0);
-        vertices.push_back(v1);
-        vertices.push_back(v1);
-        vertices.push_back(v2);
-        vertices.push_back(v2);
-        vertices.push_back(v0);
-    }
-    for (int i = 0; i < closestTri.size(); i += 3) {
-        Vertex v0;
-        Vertex v1;
-        Vertex v2;
-        v0.normal = YELLOW;
-        v1.normal = YELLOW;
-        v2.normal = YELLOW;
-        v0.position = closestTri[i];
-        v1.position = closestTri[i + 1];
-        v2.position = closestTri[i + 2];
-        vertices.push_back(v0);
-        vertices.push_back(v1);
-        vertices.push_back(v1);
-        vertices.push_back(v2);
-        vertices.push_back(v2);
-        vertices.push_back(v0);
-    }*/
-
-    /*
-    Player* player = Game::GetPlayerByIndex(0);
-
-    // Frustum
-    float FoV = player->_zoom;
-    float yFac = tanf(FoV * HELL_PI / 360.0f);
-    float width = (float)BackEnd::GetWindowedWidth();
-    float height = (float)BackEnd::GetWindowedHeight();
-
-    glm::mat4 prjMatrix = player->GetProjectionMatrix();
-
-    float aspectRatio = prjMatrix[1][1] / prjMatrix[0][0];;
-    float xFac = yFac * aspectRatio;
-    float near = NEAR_PLANE;
-    float far = FAR_PLANE;
-    glm::vec3 viewPos = player->GetViewPos();
-    glm::vec3 Forward, Right, Up; //Simply the three columns from your transformation matrix (or the inverse of your view matrix)
-
-    glm::vec3 farLeftTop = viewPos + Forward * far - far * Right * xFac * far + Up * yFac * far;
-    glm::vec3 farRightTop = viewPos + Forward * far + far * Right * xFac * far + Up * yFac * far;
-    glm::vec3 farLeftBottom = viewPos + Forward * far - far * Right * xFac * far - Up * yFac * far;
-    glm::vec3 farRightBottom = viewPos + Forward * far + far * Right * xFac * far - Up * yFac * far;
-    glm::vec3 nearLeftTop = viewPos + Forward * near - near * Right * xFac * near + Up * yFac * near;
-    glm::vec3 nearRightTop = viewPos + Forward * near + near * Right * xFac * near + Up * yFac * near;
-    glm::vec3 nearLeftBottom = viewPos + Forward * near - near * Right * xFac * near - Up * yFac * near;
-    glm::vec3 nearRightBottom = viewPos + Forward * near + near * Right * xFac * near - Up * yFac * near;
-
-
-
-    glm::vec3 p = player->GetViewPos();
-    glm::vec3 d = -player->GetCameraForward();
-    float farDist = FAR_PLANE;
-    float nearDist = NEAR_PLANE;
-    glm::vec3 fc = p + d * farDist;
-
-
-    float Hfar = 2 * tan(FoV / 2) * farDist;
-    float Wfar = Hfar * aspectRatio;
-    float Hnear = 2 * tan(FoV / 2) * nearDist;
-    float Wnear = Hnear * aspectRatio;
-
-    glm::vec3 up = player->GetCameraUp();
-    glm::vec3 right = player->GetCameraRight();
-
-    glm::vec3 ftl = fc + (up * Hfar / 2.0f) - (right * Wfar / 2.0f);
-    glm::vec3 ftr = fc + (up * Hfar / 2.0f) + (right * Wfar / 2.0f);
-    glm::vec3 fbl = fc - (up * Hfar / 2.0f) - (right * Wfar / 2.0f);
-    glm::vec3 fbr = fc - (up * Hfar / 2.0f) + (right * Wfar / 2.0f);
-
-
-    glm::vec3 nc = p + d * nearDist;
-
-    glm::vec3 ntl = nc + (up * Hnear / 2.0f) - (right * Wnear / 2.0f);
-    glm::vec3 ntr = nc + (up * Hnear / 2.0f) + (right * Wnear / 2.0f);
-    glm::vec3 nbl = nc - (up * Hnear / 2.0f) - (right * Wnear / 2.0f);
-    glm::vec3 nbr = nc - (up * Hnear / 2.0f) + (right * Wnear / 2.0f);
-
-    Vertex cornerA;
-    Vertex cornerB;
-    Vertex cornerC;
-    Vertex cornerD;
-    Vertex cornerA2;
-    Vertex cornerB2;
-    Vertex cornerC2;
-    Vertex cornerD2;
-    cornerA.normal = GREEN;
-    cornerB.normal = GREEN;
-    cornerC.normal = GREEN;
-    cornerD.normal = GREEN;
-    cornerA2.normal = GREEN;
-    cornerB2.normal = GREEN;
-    cornerC2.normal = GREEN;
-    cornerD2.normal = GREEN;
-
-    cornerA.position = nbl;
-    cornerB.position = nbr;
-    cornerC.position = ntl;
-    cornerD.position = ntr;
-
-    cornerA2.position = fbl;
-    cornerB2.position = fbr;
-    cornerC2.position = ftl;
-    cornerD2.position = ftr;
-
-    vertices.push_back(cornerA);
-    vertices.push_back(cornerB);
-
-    vertices.push_back(cornerC);
-    vertices.push_back(cornerD);
-
-    vertices.push_back(cornerA);
-    vertices.push_back(cornerC);
-
-    vertices.push_back(cornerB);
-    vertices.push_back(cornerD);
-
-    vertices.push_back(cornerA2);
-    vertices.push_back(cornerB2);
-
-    vertices.push_back(cornerC2);
-    vertices.push_back(cornerD2);
-
-    vertices.push_back(cornerA2);
-    vertices.push_back(cornerC2);
-
-    vertices.push_back(cornerB2);
-    vertices.push_back(cornerD2);
-
-
-    vertices.push_back(cornerA);
-    vertices.push_back(cornerA2);
-
-    vertices.push_back(cornerB);
-    vertices.push_back(cornerB2);
-
-    vertices.push_back(cornerC);
-    vertices.push_back(cornerC2);
-
-    vertices.push_back(cornerD);
-    vertices.push_back(cornerD2);
-    */
-
-    // std::cout << Util::Vec3ToString(cornerA.position) << " " << Util::Vec3ToString(cornerB.position) << "\n";
-
-vertices.insert(std::end(vertices), std::begin(g_debugLines), std::end(g_debugLines));
-g_debugLines.clear();
-
-    for (int i = 0; i < vertices.size(); i++) {
-        indices.push_back(i);
-    }
-    _debugLinesMesh.UpdateVertexBuffer(vertices, indices);
-}
-
-void UpdateDebugPointsMesh() {
-
-    std::vector<Vertex> vertices;
-    std::vector<uint32_t> indices;
-
-
-    Player* player = Game::GetPlayerByIndex(0);
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    /*
-    for (Dobermann& dobermann : Scene::g_dobermann) {
-        for (glm::vec2 point : dobermann.m_aStar.m_finalPathPoints) {
-            float worldX = point.x * Pathfinding::GetGridSpacing() + Pathfinding::GetWorldSpaceOffsetX();
-            float worldZ = point.y * Pathfinding::GetGridSpacing() + Pathfinding::GetWorldSpaceOffsetZ();
-            vertices.push_back(Vertex(glm::vec3(worldX, 0, worldZ), RED));
-        }
-    }*/
-
-
-
-    /*
-
-    for (int i = 0; i < Scene::GetCubeVolumeAdditiveCount(); i++) {
-        CubeVolume* cubeVolume = Scene::GetCubeVolumeAdditiveByIndex(i);
-        if (cubeVolume->GetTransform().scale.y < 0.2f ||
-            cubeVolume->GetTransform().position.y > 2.4f) {
-            continue;
-        }
-
-        int x = Pathfinding::WordSpaceXToGridSpaceX(cubeVolume->m_transform.position.x);
-        int z = Pathfinding::WordSpaceZToGridSpaceZ(cubeVolume->m_transform.position.z);
-
-        glm::vec3 aabbMin = cubeVolume->GetTransform().scale * glm::vec3(-0.5f);
-        glm::vec3 aabbMax = cubeVolume->GetTransform().scale * glm::vec3(0.5f);
-        glm::vec3 position = cubeVolume->GetTransform().position;
-        glm::vec3 rotation = cubeVolume->GetTransform().rotation;
-
-        glm::mat4 rotationMatrix = glm::mat4_cast(glm::quat(rotation));
-        glm::vec3 forward = glm::vec3(rotationMatrix * glm::vec4(0, 0, 1, 1));
-        glm::vec3 right = glm::vec3(rotationMatrix * glm::vec4(1, 0, 0, 1));
-
-        float spacing = 0.1f;
-        for (float x = aabbMin.x; x < aabbMax.x + spacing; x += spacing) {
-            for (float z = aabbMin.z; z < aabbMax.z + spacing; z += spacing) {
-                float xClamped = std::min(x, aabbMax.x);
-                float zClamped = std::min(z, aabbMax.z);
-                glm::vec3 pos = position + (forward * zClamped) + (right * xClamped);
-                pos.y = 0;
-                float worldX = float(int(pos.x / spacing)) * spacing;
-                float worldZ = float(int(pos.z / spacing)) * spacing;
-
-                vertices.push_back(Vertex(glm::vec3(worldX, 0, worldZ), RED));
-
-               // int gridX = Pathfinding::WordSpaceXToGridSpaceX(worldX);
-              //  int gridZ = Pathfinding::WordSpaceZToGridSpaceZ(worldZ);
-              //  Pathfinding::SetObstacle(gridX, gridZ);
-            }
-        }
-    }
-    */
-    /*
-
-    glm::vec2 dobermannOffset = { 1.7f, 2.5f };
-
-
-    int size = 20;
-    std::vector<std::vector<bool>> grid(size, std::vector<bool>(size, false));
-
-    std::vector<ivec2> path;
-    path.push_back({ 2, 15 });
-    path.push_back({ 3, 15 });
-    path.push_back({ 4, 15 });
-    path.push_back({ 5, 15 });
-    path.push_back({ 6, 14 });
-    path.push_back({ 7, 14 });
-    path.push_back({ 8, 13 });
-    for (auto& cell : path) {
-        grid[cell.x][cell.y] = true;
-    }
-
-    float spacing = 0.2f;
-    for (int i = 0; i < size; ++i) {
-        for (int j = 0; j < size; ++j) {
-            glm::vec3 color = BLUE;
-            if (grid[i][j]) {
-                color = WHITE;
-            }
-            float x = (float)(i) * spacing;
-            float z = (float)(j) * spacing;
-            glm::vec3 position = glm::vec3(x, 0.0f, z);
-            position.x -= dobermannOffset.x;
-            position.z -= dobermannOffset.y;
-            vertices.push_back(Vertex(position, color));
-        }
-    }*/
-
-
-
-    /*
-    for (GameObject& gameObject : Scene::GetGamesObjects()) {
-        if (gameObject.m_collisionType == CollisionType::PICKUP) {
-            if (gameObject.m_convexModelIndex != -1) {
-                Model* model = AssetManager::GetModelByIndex(gameObject.m_convexModelIndex);
-                Mesh* mesh = AssetManager::GetMeshByIndex(model->GetMeshIndices()[0]);
-
-                for (int i = mesh->baseIndex; i < mesh->baseIndex + mesh->indexCount; i += 3) {
-
-                    int idx0 = AssetManager::GetIndices()[i + 0] + mesh->baseVertex;
-                    int idx1 = AssetManager::GetIndices()[i + 1] + mesh->baseVertex;
-                    int idx2 = AssetManager::GetIndices()[i + 2] + mesh->baseVertex;
-
-                    glm::vec3 v0 = gameObject.GetModelMatrix() * glm::vec4(AssetManager::GetVertices()[idx0].position, 1.0f);
-                    glm::vec3 v1 =  gameObject.GetModelMatrix() * glm::vec4(AssetManager::GetVertices()[idx1].position, 1.0f);
-                    glm::vec3 v2 =  gameObject.GetModelMatrix() * glm::vec4(AssetManager::GetVertices()[idx2].position, 1.0f);
-
-                    vertices.push_back(Vertex(v0, RED));
-                    vertices.push_back(Vertex(v1, RED));
-                    vertices.push_back(Vertex(v2, RED));
-                }
-            }
-        }
-    }
-    */
-
-    if (true) {
-
-        for (auto& object : Scene::GetAnimatedGamesObjects()) {
-
-
-            if (object.GetName() == "TestGlock") {
-
-                Vertex v;
-                v.normal = RED;
-                v.position = object.GetModelMatrix() * object.GetAnimatedTransformByBoneName("Slide") * glm::vec4(0, 0, 0, 1);
-                vertices.push_back(v);
-
-            }
-
-            /*
-            if (object._skinnedModel->_filename == "Glock") {
-                WeaponInfo* weaponInfo = WeaponManager::GetWeaponInfoByName("Glock");
-                Vertex v;
-                v.normal = GREEN;
-                v.position = object.GetModelMatrix() * object.GetAnimatedTransformByBoneName(weaponInfo->muzzleFlashBoneName) * glm::vec4(0, 0, 0, 1);
-                //   vertices.push_back(v);
-                v.normal = RED;
-                v.position = object.GetModelMatrix() * object.GetAnimatedTransformByBoneName(weaponInfo->casingEjectionBoneName) * glm::vec4(0, 0, 0, 1);
-                vertices.push_back(v);
-            }
-            if (object._skinnedModel->_filename == "AKS74U") {
-                WeaponInfo* weaponInfo = WeaponManager::GetWeaponInfoByName("AKS74U");
-                Vertex v;
-                v.normal = GREEN;
-                v.position = object.GetModelMatrix() * object.GetAnimatedTransformByBoneName(weaponInfo->muzzleFlashBoneName) * glm::vec4(0, 0, 0, 1);
-                //  vertices.push_back(v);
-                v.normal = RED;
-                v.position = object.GetModelMatrix() * object.GetAnimatedTransformByBoneName(weaponInfo->casingEjectionBoneName) * glm::vec4(0, 0, 0, 1);
-                vertices.push_back(v);
-            }
-            if (object._skinnedModel->_filename == "Tokarev") {
-                WeaponInfo* weaponInfo = WeaponManager::GetWeaponInfoByName("Tokarev");
-                Vertex v;
-                v.normal = GREEN;
-                v.position = object.GetModelMatrix() * object.GetAnimatedTransformByBoneName(weaponInfo->muzzleFlashBoneName) * glm::vec4(0, 0, 0, 1);
-                //   vertices.push_back(v);
-                v.normal = RED;
-                v.position = object.GetModelMatrix() * object.GetAnimatedTransformByBoneName(weaponInfo->casingEjectionBoneName) * glm::vec4(0, 0, 0, 1);
-                vertices.push_back(v);
-            }*/
-
-        }
-    }
-
-    // int index = Game::GetPlayerByIndex(0)->GetFirstPersonWeaponAnimatedGameObjectIndex();
-    // index = Game::GetPlayerByIndex(1)->GetCharacterModelAnimatedGameObjectIndex();
-    // AnimatedGameObject* object = Scene::GetAnimatedGameObjectByIndex(index);
-   //  SkinnedModel* skinnedModel = object->_skinnedModel;
-
-    for (int i = 0; i < vertices.size(); i++) {
-        indices.push_back(i);
-    }
-
-    _debugPointsMesh.UpdateVertexBuffer(vertices, indices);
-}
 /*
 
 ██████╗ ███████╗███╗   ██╗██████╗ ███████╗██████╗     ██████╗  █████╗ ████████╗ █████╗
@@ -1012,61 +376,8 @@ std::vector<RenderItem2D> CreateRenderItems2D(ivec2 presentSize, int playerCount
 
         // Debug Text
         if (Game::DebugTextIsEnabled()) {
-            std::string text = "";
-            /*
-            text += "Splitscreen mode: " + Util::SplitscreenModeToString(Game::GetSplitscreenMode()) + "\n";
-            text += "Render mode: " + Util::RenderModeToString(_renderMode) + "\n";
-            //text += "Cam pos: " + Util::Vec3ToString(Game::GetPlayerByIndex(i)->GetViewPos()) + "\n";
-            text += "Weapon Action: " + Util::WeaponActionToString(Game::GetPlayerByIndex(i)->GetWeaponAction()) + "\n";
 
-            Player* player = Game::GetPlayerByIndex(i);
-
-            text += "\n";
-            text += "Current weapon index: " + std::to_string(player->m_currentWeaponIndex) + "\n\n";
-            for (int i = 0; i < player->m_weaponStates.size(); i++) {
-
-                if (player->m_weaponStates[i].has) {
-                    std::string str;
-                    str += player->m_weaponStates[i].name;
-                    str += " ";
-                    str += "\n";
-                    if (i == player->m_currentWeaponIndex) {
-                        str = ">" + str;
-                    }
-                    else {
-                        str = " " + str;
-                    }
-                    text += str;
-                }
-            }
-            text += "\nAMMO\n";
-            for (int i = 0; i < player->m_ammoStates.size(); i++) {
-                text += "-";
-                text += player->m_ammoStates[i].name;
-                text += " ";
-                text += std::to_string(player->m_ammoStates[i].ammoOnHand);
-                text += "\n";
-            }*/
-
-            if (Renderer::GetRenderMode() == COMPOSITE) {
-                text = "Direct + Indirect Light\n";
-            }
-            else if (Renderer::GetRenderMode() == DIRECT_LIGHT) {
-                text = "Direct Light\n";
-            }
-            else if (Renderer::GetRenderMode() == COMPOSITE_PLUS_POINT_CLOUD) {
-                text = "Direct + Indirect Light + Point cloud\n";
-            }
-            else if (Renderer::GetRenderMode() == POINT_CLOUD) {
-                text = "Point Cloud\n";
-            }
-            if (_debugLineRenderMode != SHOW_NO_LINES) {
-                text += "Line mode: " + Util::DebugLineRenderModeToString(_debugLineRenderMode) + "\n";
-            }
-
-            if (Editor::IsOpen()) {
-                text = Editor::GetDebugText();
-            }
+            std::string& text = Renderer::GetDebugText();
 
             int x = RendererUtil::GetViewportLeftX(i, Game::GetSplitscreenMode(), presentSize.x, presentSize.y);
             int y = RendererUtil::GetViewportTopY(i, Game::GetSplitscreenMode(), presentSize.x, presentSize.y);
@@ -1423,13 +734,14 @@ std::vector<RenderItem3D> CreateBloodVATRenderItems() {
     return renderItems;
 }
 
+/*
 struct Frustum {
 
     bool ContainsAABB(glm::vec3 aabbMin, glm::vec3 aabbMax) {
         return true;
     }
 
-};
+};*/
 
 std::vector<DrawIndexedIndirectCommand> CreateMultiDrawIndirectCommands(std::vector<RenderItem3D>& renderItems) {
 
@@ -1687,31 +999,7 @@ void ResizeRenderTargets() {
 }*/
 
 
-inline std::vector<DebugLineRenderMode> _allowedDebugLineRenderModes = {
-    SHOW_NO_LINES,
-    PATHFINDING,
-    //PHYSX_COLLISION,
-    //RTX_LAND_TOP_LEVEL_ACCELERATION_STRUCTURE,
-    //RTX_LAND_BOTTOM_LEVEL_ACCELERATION_STRUCTURES,
-};
 
-void Renderer::NextDebugLineRenderMode() {
-    _debugLineRenderMode = (DebugLineRenderMode)(int(_debugLineRenderMode) + 1);
-    if (_debugLineRenderMode == DEBUG_LINE_MODE_COUNT) {
-        _debugLineRenderMode = (DebugLineRenderMode)0;
-    }
-    // If mode isn't in available modes list, then go to next
-    bool allowed = false;
-    for (auto& avaliableMode : _allowedDebugLineRenderModes) {
-        if (_debugLineRenderMode == avaliableMode) {
-            allowed = true;
-            break;
-        }
-    }
-    if (!allowed && _debugLineRenderMode != DebugLineRenderMode::SHOW_NO_LINES) {
-        NextDebugLineRenderMode();
-    }
-}
 
 inline static std::vector<RenderMode> _allowedRenderModes = {
     COMPOSITE,
@@ -1763,9 +1051,7 @@ RenderMode Renderer::GetRenderMode() {
     return _renderMode;
 }
 
-DebugLineRenderMode Renderer::GetDebugLineRenderMode() {
-    return _debugLineRenderMode;
-}
+
 
 void Renderer::ToggleProbes() {
     g_showProbes = !g_showProbes;

@@ -2,6 +2,7 @@
 #include "../Common.h"
 #include "../Game/AnimatedGameObject.h"
 #include "../Game/AStar.h"
+#include "../Pathfinding/Pathfinding2.h"
 
 struct Dobermann {
 
@@ -16,6 +17,8 @@ struct Dobermann {
     float m_speed = 0.090f;
     float m_footstepAudioTimer = 0;
     float m_heatlh = 100;
+
+    Path m_pathToPlayer;
 
     void Init();
     void Update(float deltaTime);

@@ -15,8 +15,8 @@ namespace Pathfinding {
     float g_gridSpaceWidth = 0;
     float g_gridSpaceDepth = 0;
 
-    std::vector<std::vector<bool>> g_map;
-    std::vector<std::vector<bool>> g_mapWithDoors;
+    std::vector<std::vector<int>> g_map;
+    std::vector<std::vector<int>> g_mapWithDoors;
 
     void Init() {
 
@@ -25,8 +25,8 @@ namespace Pathfinding {
         g_gridSpaceWidth = g_worldSpaceGridWidth / g_gridSpacing;
         g_gridSpaceDepth = g_worldSpaceGridDepth / g_gridSpacing;
 
-        g_map.resize(g_gridSpaceWidth, std::vector<bool>(g_gridSpaceDepth, false));
-        g_mapWithDoors.resize(g_gridSpaceWidth, std::vector<bool>(g_gridSpaceDepth, false));
+        g_map.resize(g_gridSpaceWidth, std::vector<int>(g_gridSpaceDepth, false));
+        g_mapWithDoors.resize(g_gridSpaceWidth, std::vector<int>(g_gridSpaceDepth, false));
 
         for (int x = 0; x < g_gridSpaceWidth; x++) {
             for (int z = 0; z < g_gridSpaceDepth; z++) {
@@ -234,7 +234,7 @@ namespace Pathfinding {
         }
     }
 
-    std::vector<std::vector<bool>>& GetMap() {
+    std::vector<std::vector<int>>& GetMap() {
         return g_mapWithDoors;
     }
 

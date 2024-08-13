@@ -9,6 +9,7 @@
 #include "../BackEnd/Backend.h"
 #include "../Core/AssetManager.h"
 #include "../Game/Scene.h"
+#include "../Pathfinding/Pathfinding2.h"
 #include "../Renderer/GlobalIllumination.h"
 
 namespace CSG {
@@ -19,6 +20,7 @@ namespace CSG {
     std::vector<uint32_t> g_indices;
     bool g_sceneDirty = true;
     uint32_t g_baseCSGVertex = 0;
+    std::vector<glm::vec3> g_navMeshVertices;
 
     void Init() {
         csg::volume_t void_volume = g_world.get_void_volume();
@@ -73,6 +75,7 @@ namespace CSG {
             cube.CleanUpPhysicsObjects();
         }
         g_objects.clear();
+        g_navMeshVertices.clear();
     }
 
     void Build() {
@@ -85,6 +88,61 @@ namespace CSG {
             g_world.remove(brush);
             brush = g_world.first();
         }
+
+
+        static int materialIndex = AssetManager::GetMaterialIndex("Ceiling2");
+
+        for (Staircase& staircase : Scene::g_staircases) {
+
+            Transform segmentOffset;
+
+            float offsetY = 0;
+            float offsetZ = 0;
+
+            for (int i = 0; i < staircase.m_segmentCount * 3; i++) {
+
+                Transform transform;
+                transform.position = staircase.m_position;
+                transform.position.y += offsetY;
+                transform.position.z += offsetZ;
+                transform.position.y += (0.122f * 0.5f);
+                transform.position.z += (0.122f * 0.5f);
+                transform.scale.y = 0.122f;
+                transform.scale.z = 0.122f;
+                CSGObject& csg = g_objects.emplace_back();
+                csg.m_transform = transform;
+                csg.m_type = CSGType::ADDITIVE;
+                csg.m_materialIndex = materialIndex;
+                csg.m_textureScale = 1;
+                csg.m_parentIndex = i;
+                csg.m_textureOffsetX = 1;
+                csg.m_textureOffsetY = 1;
+
+                float magic = 0.202 - 0.052;
+                offsetY += magic;
+                offsetZ += magic;
+
+                /*
+
+                for (auto& meshIndex : model->GetMeshIndices()) {
+                    RenderItem3D renderItem;
+                    renderItem.meshIndex = meshIndex;
+                    renderItem.modelMatrix = staircase.GetModelMatrix() * segmentOffset.to_mat4();
+                    renderItem.inverseModelMatrix = glm::inverse(staircase.GetModelMatrix());
+                    renderItem.materialIndex = materialIndex;
+                    renderItems.push_back(renderItem);
+
+                    csg.m_parentVolumeNormalMatrix = cubeVolume.GetNormalMatrix();
+                }
+                segmentOffset.position.y += 0.411;
+                segmentOffset.position.z += 0.44f;*/
+            }
+        }
+
+
+
+
+
 
 
         for (int i = 0; i < Scene::g_cubeVolumesAdditive.size(); i++) {
@@ -278,6 +336,15 @@ namespace CSG {
                     g_vertices[i + 1].materialIndex = AssetManager::GetMaterialIndex("Ceiling2");;
                     g_vertices[i + 2].materialIndex = AssetManager::GetMaterialIndex("Ceiling2");
                 }
+
+                float dotProduct = glm::dot(g_vertices[i].normal, glm::vec3(0,1,0));
+                float minCosAngle = glm::cos(glm::radians(45.0f));
+
+                if (dotProduct >= minCosAngle && dotProduct <= 1.0f) {
+                    g_navMeshVertices.push_back(g_vertices[i + 0].position);
+                    g_navMeshVertices.push_back(g_vertices[i + 1].position);
+                    g_navMeshVertices.push_back(g_vertices[i + 2].position);
+                }
             }
         }
 
@@ -310,6 +377,7 @@ namespace CSG {
             light.isDirty = true;
         }
         GlobalIllumination::RecalculateAll();
+        Pathfinding2::UpdateNavMesh(GetNavMeshVertices());
     }
 
     std::span<CSGVertex> CSG::GetRangedVerticesSpan(uint32_t baseVertex, uint32_t vertexCount) {
@@ -326,6 +394,10 @@ namespace CSG {
 
     std::vector<uint32_t>& GetIndices() {
         return g_indices;
+    }
+
+    std::vector<glm::vec3>& GetNavMeshVertices() {
+        return g_navMeshVertices;
     }
 
     std::vector<CSGObject>& GetCSGObjects() {

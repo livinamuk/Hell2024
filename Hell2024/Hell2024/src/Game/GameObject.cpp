@@ -3,11 +3,8 @@
 #include "Scene.h"
 #include "../Input/Input.h"
 #include "../Config.hpp"
-#include "../EngineState.hpp"
 #include "../BackEnd/BackEnd.h"
 #include "../Core/AssetManager.h"
-
-#include "../EngineState.hpp"
 
 PxFilterData GetPxFilterDataFromCollisionType(CollisionType collisionType) {
 
@@ -319,7 +316,7 @@ void GameObject::Update(float deltaTime) {
 	}
 
     // Editor or has no physics
-	if (_modelMatrixMode == ModelMatrixMode::GAME_TRANSFORM || EngineState::GetEngineMode() == EngineMode::EDITOR) {
+	if (_modelMatrixMode == ModelMatrixMode::GAME_TRANSFORM) {
 		_modelMatrix = GetGameWorldMatrix();
 		if (m_collisionRigidBody.Exists()) {
             if (m_collisionRigidBody.kinematic) {
@@ -452,10 +449,6 @@ glm::mat4 GameObject::GetGameWorldMatrix() {
 
 void GameObject::AddForceToCollisionObject(glm::vec3 direction, float strength) {
 
-    if (EngineState::_skipPhysics) {
-        return;
-    }
-
 	if (!m_collisionRigidBody.Exists()) {
 		return;
 	}
@@ -468,9 +461,6 @@ void GameObject::AddForceToCollisionObject(glm::vec3 direction, float strength) 
 }
 
 void GameObject::UpdateRigidBodyMassAndInertia(float density) {
-    if (EngineState::_skipPhysics) {
-        return;
-    }
 	if (m_collisionRigidBody.pxRigidBody) {
 		PxRigidBodyExt::updateMassAndInertia(*m_collisionRigidBody.pxRigidBody, density);
 	}
@@ -617,9 +607,6 @@ void GameObject::DisableRespawnOnPickup() {
 }
 
 void GameObject::AddCollisionShape(PxShape* shape, PhysicsFilterData physicsFilterData) {
-    if (EngineState::_skipPhysics) {
-        return;
-    }
     if (!m_collisionRigidBody.Exists()) {
         m_collisionRigidBody.CreateRigidBody(_transform.to_mat4());
         m_collisionRigidBody.PutToSleep();
@@ -629,9 +616,6 @@ void GameObject::AddCollisionShape(PxShape* shape, PhysicsFilterData physicsFilt
 
 void GameObject::AddCollisionShapeFromModelIndex(unsigned int modelIndex, glm::vec3 scale) {
     m_convexModelIndex = modelIndex;
-    if (EngineState::_skipPhysics) {
-        return;
-    }
     if (model && !m_collisionRigidBody.Exists()) {
         m_collisionRigidBody.CreateRigidBody(_transform.to_mat4());
         m_collisionRigidBody.PutToSleep();
@@ -640,9 +624,6 @@ void GameObject::AddCollisionShapeFromModelIndex(unsigned int modelIndex, glm::v
 }
 
 void GameObject::AddCollisionShapeFromBoundingBox(BoundingBox& boundingBox) {
-    if (EngineState::_skipPhysics) {
-        return;
-    }
     if (!m_collisionRigidBody.Exists()) {
         m_collisionRigidBody.CreateRigidBody(_transform.to_mat4());
         m_collisionRigidBody.PutToSleep();
@@ -650,35 +631,7 @@ void GameObject::AddCollisionShapeFromBoundingBox(BoundingBox& boundingBox) {
     m_collisionRigidBody.AddCollisionShapeFromBoundingBox(boundingBox, GetPxFilterDataFromCollisionType(m_collisionType));
 }
 
-/*
-void GameObject::SetRaycastShapeFromMesh(OpenGLMesh* mesh) {
-    if (EngineState::_skipPhysics) {
-        return;
-    }
-	if (!mesh) {
-		return;
-	}
-	if (m_raycastRigidStatic.pxRigidStatic) {
-        m_raycastRigidStatic.pxRigidStatic->release();
-	}
-	if (!mesh->_triangleMesh) {
-		mesh->CreateTriangleMesh();
-	}
-	PhysicsFilterData filterData;
-	filterData.raycastGroup = RAYCAST_ENABLED;
-	filterData.collisionGroup = CollisionGroup::NO_COLLISION;
-	filterData.collidesWith = CollisionGroup::NO_COLLISION;
-	PxShapeFlags shapeFlags(PxShapeFlag::eSCENE_QUERY_SHAPE); // Most importantly NOT eSIMULATION_SHAPE. PhysX does not allow for tri mesh.
-    m_raycastRigidStatic.pxShape = Physics::CreateShapeFromTriangleMesh(mesh->_triangleMesh, shapeFlags);
-    m_raycastRigidStatic.pxRigidStatic = Physics::CreateRigidStatic(Transform(), filterData, m_raycastRigidStatic.pxShape);
-    m_raycastRigidStatic.pxRigidStatic->userData = new PhysicsObjectData(PhysicsObjectType::GAME_OBJECT, this);
-}*/
-
 void GameObject::UpdateRigidStatic() {
-
-    if (EngineState::_skipPhysics) {
-        return;
-    }
 
     // check what calls this and fix the code below
     // check what calls this and fix the code below
@@ -725,11 +678,6 @@ void GameObject::UpdateRigidStatic() {
 }
 
 void GameObject::SetRaycastShapeFromModelIndex(unsigned int modelIndex) {
-
-    if (EngineState::_skipPhysics) {
-        return;
-    }
-
     if (!model) {
 		return;
 	}
@@ -740,12 +688,6 @@ void GameObject::SetRaycastShapeFromModelIndex(unsigned int modelIndex) {
 }
 
 void GameObject::SetRaycastShape(PxShape* shape) {
-
-
-    if (EngineState::_skipPhysics) {
-        return;
-    }
-
 	if (!shape) {
 		return;
 	}
@@ -766,11 +708,6 @@ void GameObject::SetModelMatrixMode(ModelMatrixMode modelMatrixMode) {
 }
 
 void GameObject::SetPhysicsTransform(glm::mat4 worldMatrix) {
-
-    if (EngineState::_skipPhysics) {
-        return;
-    }
-
 	m_collisionRigidBody.SetGlobalPose(worldMatrix);
 }
 

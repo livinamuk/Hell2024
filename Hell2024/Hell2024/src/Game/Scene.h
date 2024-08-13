@@ -13,6 +13,7 @@
 #include "../Game/Player.h"
 #include "../Game/Dobermann.h"
 #include "../Types/Modular/Door.h"
+#include "../Types/Modular/Staircase.h"
 #include "../Types/Modular/Toilet.h"
 #include "../Types/Modular/Window.h"
 #include "../Util.hpp"
@@ -252,6 +253,7 @@ namespace Scene {
     inline std::vector<CubeVolume> g_cubeVolumesAdditive;
     inline std::vector<CubeVolume> g_cubeVolumesSubtractive;
     inline std::vector<Dobermann> g_dobermann;
+    inline std::vector<Staircase> g_staircases;
 
     // Windows
     uint32_t GetWindowCount();

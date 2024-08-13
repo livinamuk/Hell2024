@@ -12,7 +12,6 @@
 #include "../Renderer/TextBlitter.h"
 #include "../Renderer/Raytracing/Raytracing.h"
 #include "../Util.hpp"
-#include "../EngineState.hpp"
 
 int _volumetricBloodObjectsSpawnedThisFrame = 0;
 
@@ -248,6 +247,17 @@ void Scene::LoadDefaultScene() {
     g_windows.clear();
     g_windows.reserve(sizeof(Window) * 1000);
 
+    /*
+    g_staircases.clear();
+    Staircase& stairCase = g_staircases.emplace_back();
+    stairCase.m_position = glm::vec3(-1.0f, 0, 0);
+    stairCase.m_segmentCount = 2;*/
+
+    /*
+    Staircase& stairCase2 = g_staircases.emplace_back();
+    stairCase2.m_position = glm::vec3(0.5f, 0, 0);
+    stairCase2.m_segmentCount = 5;
+    */
 
     LoadMapData("mappp.txt");
 
@@ -717,7 +727,12 @@ void Scene::CreateBottomLevelAccelerationStructures() {
         std::span<uint32_t> spanIndices = csgObject.GetIndicesSpan();
         std::vector<CSGVertex> vertices(spanVertices.begin(), spanVertices.end());
         std::vector<uint32_t> indices(spanIndices.begin(), spanIndices.end());
-        csgObject.m_blasIndex = Raytracing::CreateBLAS(vertices, indices, csgObject.m_baseVertex, csgObject.m_baseIndex);
+        if (indices.size()) {
+            csgObject.m_blasIndex = Raytracing::CreateBLAS(vertices, indices, csgObject.m_baseVertex, csgObject.m_baseIndex);
+        }
+        else {
+            csgObject.m_blasIndex = -1;
+        }
     }
 
 }
@@ -796,8 +811,28 @@ void Scene::CreateDefaultLight() {
 void Scene::Update(float deltaTime) {
 
 
+
     for (Dobermann& dobermann : g_dobermann) {
         dobermann.Update(deltaTime);
+
+        AnimatedGameObject* animatedGameObject = dobermann.GetAnimatedGameObject();
+        if (Input::KeyDown(HELL_KEY_NUMPAD_4)) {
+            animatedGameObject->_transform.rotation.y += 0.05f;
+        }
+        if (Input::KeyDown(HELL_KEY_NUMPAD_5)) {
+            animatedGameObject->_transform.rotation.y -= 0.05f;
+        }
+        if (Input::KeyDown(HELL_KEY_NUMPAD_1)) {
+            dobermann.m_currentPosition.x += 0.05f;
+            }
+        if (Input::KeyDown(HELL_KEY_NUMPAD_2)) {
+            dobermann.m_currentPosition.x -= 0.05f;
+        }
+
+        animatedGameObject->_transform.rotation.z = 0.00f;
+        animatedGameObject->_transform.rotation.x = 0.00f;
+        animatedGameObject->SetPosition(dobermann.m_currentPosition);
+
     }
 
     Pathfinding::Update();
@@ -1187,6 +1222,38 @@ void Scene::Init() {
 std::vector<RenderItem3D> Scene::GetAllRenderItems() {
 
     std::vector<RenderItem3D> renderItems;
+
+
+    // Staircase
+    static Model* model = AssetManager::GetModelByIndex(AssetManager::GetModelIndexByName("Staircase"));
+    static int materialIndex = AssetManager::GetMaterialIndex("Stairs01");
+
+
+
+    for (Staircase& staircase: Scene::g_staircases) {
+
+        Transform segmentOffset;
+
+        for (int i = 0; i < staircase.m_segmentCount; i++) {
+
+            for (auto& meshIndex : model->GetMeshIndices()) {
+                RenderItem3D renderItem;
+                renderItem.meshIndex = meshIndex;
+                renderItem.modelMatrix = staircase.GetModelMatrix() * segmentOffset.to_mat4();
+                renderItem.inverseModelMatrix = glm::inverse(staircase.GetModelMatrix());
+                renderItem.materialIndex = materialIndex;
+                renderItems.push_back(renderItem);
+            }
+            segmentOffset.position.y += 0.411;
+            segmentOffset.position.z += 0.44f;
+        }
+    }
+
+
+
+
+
+
 
     for (GameObject& gameObject : Scene::g_gameObjects) {
         renderItems.reserve(renderItems.size() + gameObject.GetRenderItems().size());

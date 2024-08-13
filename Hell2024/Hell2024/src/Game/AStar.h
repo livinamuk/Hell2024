@@ -36,7 +36,7 @@ struct MinHeap {
 };
 
 struct AStar {
-    void InitSearch(std::vector<std::vector<bool>>& map, int startX, int startY, int destinationX, int destinationY);
+    void InitSearch(std::vector<std::vector<int>>& map, int startX, int startY, int destinationX, int destinationY);
     void FindPath();
     void FindSmoothPath();
     void ClearData();
@@ -55,6 +55,7 @@ struct AStar {
     std::list<Cell*> m_closedList;
     std::vector<Cell*> m_finalPath;
     std::vector<glm::vec2> m_finalPathPoints;
+    int m_iterationCounter = 0;
 
 private:
     bool IsDestination(Cell* cell);

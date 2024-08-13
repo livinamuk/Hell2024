@@ -64,6 +64,8 @@ void Dobermann::FindPath() {
         else {
             std::cout << "CANNOT LOOK FOR PATH. DOG IS OUT OF GRID BOUNDS!!!\n";
         }
+
+        std::cout << "Iteration: " << std::to_string(m_aStar.m_iterationCounter) + "\n";
     }
 }
 
@@ -82,9 +84,8 @@ void Dobermann::Update(float deltaTime) {
         m_currentState = DobermannState::LAY;
     }
 
-
-
-
+    glm::vec3 playerPosition = player->GetFeetPosition() * glm::vec3(1, 0, 1);
+    //m_pathToPlayer = Pathfinding2::FindPath(m_currentPosition, playerPosition);
 
 
     // WALK
@@ -119,7 +120,7 @@ void Dobermann::Update(float deltaTime) {
 
         if (m_currentState == DobermannState::KAMAKAZI) {
             if (distanceToPlayer < 1.0f) {
-                animatedGameObject->PlayAndLoopAnimation("Dobermann_Attack_Jump_Cut2", 1.0f);
+                animatedGameObject->PlayAndLoopAnimation("Dobermann_Attack_Jump_Cut", 1.0f);
             }
             else {
                 animatedGameObject->PlayAndLoopAnimation("Dobermann_Run", 1.0f);

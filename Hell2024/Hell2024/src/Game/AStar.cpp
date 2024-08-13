@@ -1,7 +1,7 @@
 #include "AStar.h"
 #include "Pathfinding.h"
 
-void AStar::InitSearch(std::vector<std::vector<bool>>& map, int startX, int startY, int destinationX, int destinationY) {
+void AStar::InitSearch(std::vector<std::vector<int>>& map, int startX, int startY, int destinationX, int destinationY) {
     ClearData();
     m_cells.resize(Pathfinding::GetGridSpaceWidth(), std::vector<Cell>(Pathfinding::GetGridSpaceDepth()));
     m_openList.AllocateSpace(Pathfinding::GetGridSpaceWidth() * Pathfinding::GetGridSpaceDepth());
@@ -25,6 +25,7 @@ void AStar::InitSearch(std::vector<std::vector<bool>>& map, int startX, int star
     m_start->GetF(m_destination);
     m_openList.AddItem(m_start);
     m_searchInitilized = true;
+    m_iterationCounter = 0;
 }
 
 
@@ -62,6 +63,14 @@ void AStar::FindPath() {
         return;
     }
     while (!m_openList.IsEmpty()) {
+
+        m_iterationCounter++;
+
+        if (m_iterationCounter > 750 && false) {
+            m_gridPathFound = false;
+            return;
+        }
+
         m_current = m_openList.RemoveFirst();
         if (IsDestination(m_current)) {
             m_gridPathFound = true;

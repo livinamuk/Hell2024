@@ -359,8 +359,8 @@ bool OpenGLTexture::Bake() {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, _width, _height, 0, format, GL_UNSIGNED_BYTE, _data);
-        //stbi_image_free(_data);
-        std::cout << "WARNING: u didn't call stbi_image_free(_data) on: '" + GetFilename() << "'\n";
+        stbi_image_free(_data);
+        //std::cout << "WARNING: u didn't call stbi_image_free(_data) on: '" + GetFilename() << "'\n";
         // find out why the line above crashes sometimes. most likely an async mutex thing.
         // ..
         // well actually no it cant be

@@ -82,17 +82,7 @@ struct SkinnedMeshPushConstants {
     int emptp2;
 };
 
-/*
-struct FlipBookData {
-    glm::mat4 modelMatrix;
-    int frameIndex;
-    int RowCount;
-    int ColumnCont;
-    float timeLerp;
-};*/
-
 struct RenderData {
-
 
     MultiDrawIndirectDrawInfo bulletHoleDecalDrawInfo;
     MultiDrawIndirectDrawInfo geometryDrawInfo;
@@ -110,6 +100,7 @@ struct RenderData {
 
     DetachedMesh* debugLinesMesh = nullptr;
     DetachedMesh* debugPointsMesh = nullptr;
+    DetachedMesh* debugTrianglesMesh = nullptr;
 
     bool renderDebugLines = false;
 

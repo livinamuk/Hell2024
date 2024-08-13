@@ -74,6 +74,7 @@ namespace CSG {
     void Build();
     bool GeometryExists();
     std::vector<CSGVertex>& GetVertices();
+    std::vector<glm::vec3>& GetNavMeshVertices();
     std::vector<uint32_t>& GetIndices();
     std::vector<CSGObject>& GetCSGObjects();
     std::span<CSGVertex> GetRangedVerticesSpan(uint32_t baseVertex, uint32_t vertexCount);

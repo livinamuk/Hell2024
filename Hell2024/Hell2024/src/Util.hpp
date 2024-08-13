@@ -568,6 +568,20 @@ namespace Util {
         return result;
     }
 
+    inline std::string Mat4ToString10(glm::mat4 m) {
+        std::string result;
+        /* result += std::format("{:.2f}", m[0][0]) + ", " + std::format("{:.2f}", m[1][0]) + ", " + std::format("{:.2f}", m[2][0]) + ", " + std::format("{:.2f}", m[3][0]) + "\n";
+         result += std::format("{:.2f}", m[0][1]) + ", " + std::format("{:.2f}", m[1][1]) + ", " + std::format("{:.2f}", m[2][1]) + ", " + std::format("{:.2f}", m[3][1]) + "\n";
+         result += std::format("{:.2f}", m[0][2]) + ", " + std::format("{:.2f}", m[1][2]) + ", " + std::format("{:.2f}", m[2][2]) + ", " + std::format("{:.2f}", m[3][2]) + "\n";
+         result += std::format("{:.2f}", m[0][3]) + ", " + std::format("{:.2f}", m[1][3]) + ", " + std::format("{:.2f}", m[2][3]) + ", " + std::format("{:.2f}", m[3][3]);
+        */
+        result += std::format("{:.10f}", m[0][0]) + ", " + std::format("{:.10f}", m[1][0]) + ", " + std::format("{:.10f}", m[2][0]) + ", " + std::format("{:.10f}", m[3][0]) + "\n";
+        result += std::format("{:.10f}", m[0][1]) + ", " + std::format("{:.10f}", m[1][1]) + ", " + std::format("{:.10f}", m[2][1]) + ", " + std::format("{:.10f}", m[3][1]) + "\n";
+        result += std::format("{:.10f}", m[0][2]) + ", " + std::format("{:.10f}", m[1][2]) + ", " + std::format("{:.10f}", m[2][2]) + ", " + std::format("{:.10f}", m[3][2]) + "\n";
+        result += std::format("{:.10f}", m[0][3]) + ", " + std::format("{:.10f}", m[1][3]) + ", " + std::format("{:.10f}", m[2][3]) + ", " + std::format("{:.10f}", m[3][3]);
+        return result;
+    }
+
     inline bool FileExists(const std::string_view name) {
         struct stat buffer;
         return (stat(name.data(), &buffer) == 0);

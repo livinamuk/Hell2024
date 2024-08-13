@@ -10,6 +10,7 @@
 #include "../Input/InputMulti.h"
 #include "../Renderer/GlobalIllumination.h"
 #include "../Renderer/Renderer.h"
+#include "../Pathfinding/Pathfinding2.h"
 
 namespace Game {
 
@@ -80,6 +81,7 @@ namespace Game {
             Audio::PlayAudio(AUDIO_SELECT, 1.00f);
         }
         CSG::Update();
+        Pathfinding2::Update(deltaTime);
 
         // Editor
         if (Input::KeyPressed(HELL_KEY_F1) || Input::KeyPressed(HELL_KEY_F2)) {

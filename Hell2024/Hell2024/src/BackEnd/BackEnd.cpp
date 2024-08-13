@@ -8,17 +8,11 @@
 #include "../Core/Audio.hpp"
 #include "../Editor/CSG.h"
 #include "../Editor/Gizmo.hpp"
+#include "../Game/WeaponManager.h"
 #include "../Input/Input.h"
 #include "../Input/InputMulti.h"
 #include "../Physics/Physics.h"
-
-// GET ME OUT OF HERE
-// GET ME OUT OF HERE
-// GET ME OUT OF HERE
-#include "../EngineState.hpp"
-// GET ME OUT OF HERE
-// GET ME OUT OF HERE
-// GET ME OUT OF HERE
+#include "../Pathfinding/Pathfinding2.h"
 
 namespace BackEnd {
 
@@ -117,6 +111,8 @@ namespace BackEnd {
         Physics::Init();
         InputMulti::Init();
         CSG::Init();
+        Pathfinding2::Init();
+        WeaponManager::Init();
         glfwShowWindow(BackEnd::GetWindowPointer());
     }
 

@@ -98,7 +98,7 @@ copy /Y "$(ProjectDir)vendor\dll_debug\PVDRuntime_64.dll" "$(TargetDir)PVDRuntim
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;TRACY_ENABLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>vendor\nlohmann_json\include;vendor\lz4\include;vendor\VkBootstrap;vendor\VulkanMemoryAllocator\include;vendor\Vulkan\include;vendor\tinyexr;vendor\compressonator\include;vendor\tracy\public;vendor\tinyobj;vendor\GLFW\include;vendor\glm;vendor\glad\include;vendor\stb_image;vendor\fmod\include;vendor\assimp\include;vendor\rapidjson\include;vendor\physx\include;vendor\thread_pool\include;vendor\tinycsg\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>vendor\recast\include;vendor\nlohmann_json\include;vendor\lz4\include;vendor\VkBootstrap;vendor\VulkanMemoryAllocator\include;vendor\Vulkan\include;vendor\tinyexr;vendor\compressonator\include;vendor\tracy\public;vendor\tinyobj;vendor\GLFW\include;vendor\glm;vendor\glad\include;vendor\stb_image;vendor\fmod\include;vendor\assimp\include;vendor\rapidjson\include;vendor\physx\include;vendor\thread_pool\include;vendor\tinycsg\include</AdditionalIncludeDirectories>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
@@ -144,12 +144,15 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <ClCompile Include="src\Game\Pathfinding.cpp" />
     <ClCompile Include="src\Editor\Editor.cpp" />
     <ClCompile Include="src\Game\Dobermann.cpp" />
+    <ClCompile Include="src\Pathfinding\Pathfinding2.cpp" />
     <ClCompile Include="src\Game\Player_CharacterModelLogic.cpp" />
     <ClCompile Include="src\Game\Player_RenderItems.cpp" />
     <ClCompile Include="src\Game\Player_WeaponLogic.cpp" />
     <ClCompile Include="src\Game\WeaponManager.cpp" />
+    <ClCompile Include="src\Pathfinding\NavMesh.cpp" />
     <ClCompile Include="src\Renderer\Raytracing\Raytracing.cpp" />
     <ClCompile Include="src\Renderer\RendererStorage.cpp" />
+    <ClCompile Include="src\Renderer\Renderer_Debug.cpp" />
     <ClCompile Include="src\Renderer\Types\VertexBuffer.cpp" />
     <ClCompile Include="src\Renderer\GlobalIllumination.cpp" />
     <ClCompile Include="src\Renderer\Types\CubemapTexutre.cpp" />
@@ -167,6 +170,7 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <ClCompile Include="src\Game\Game.cpp" />
     <ClCompile Include="src\Game\GameObject.cpp" />
     <ClCompile Include="src\Game\Game.h" />
+    <ClCompile Include="src\Types\Modular\Staircase.cpp" />
     <ClCompile Include="src\Types\Modular\Toilet.cpp" />
     <ClCompile Include="src\BackEnd\BackEnd.cpp" />
     <ClCompile Include="src\API\OpenGL\GL_backEnd.cpp" />
@@ -203,6 +207,29 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <ClCompile Include="vendor\lz4\include\lz4frame.c" />
     <ClCompile Include="vendor\lz4\include\lz4hc.c" />
     <ClCompile Include="vendor\lz4\include\xxhash.c" />
+    <ClCompile Include="vendor\recast\include\detour\DetourAlloc.cpp" />
+    <ClCompile Include="vendor\recast\include\detour\DetourAssert.cpp" />
+    <ClCompile Include="vendor\recast\include\detour\DetourCommon.cpp" />
+    <ClCompile Include="vendor\recast\include\detour\DetourNavMesh.cpp" />
+    <ClCompile Include="vendor\recast\include\detour\DetourNavMeshBuilder.cpp" />
+    <ClCompile Include="vendor\recast\include\detour\DetourNavMeshQuery.cpp" />
+    <ClCompile Include="vendor\recast\include\detour\DetourNode.cpp" />
+    <ClCompile Include="vendor\recast\include\detour\DetourTileCache.cpp" />
+    <ClCompile Include="vendor\recast\include\detour\DetourTileCacheBuilder.cpp" />
+    <ClCompile Include="vendor\recast\include\detour\fastlz.c" />
+    <ClCompile Include="vendor\recast\include\recast\DebugDraw.cpp" />
+    <ClCompile Include="vendor\recast\include\recast\Recast.cpp" />
+    <ClCompile Include="vendor\recast\include\recast\RecastAlloc.cpp" />
+    <ClCompile Include="vendor\recast\include\recast\RecastArea.cpp" />
+    <ClCompile Include="vendor\recast\include\recast\RecastAssert.cpp" />
+    <ClCompile Include="vendor\recast\include\recast\RecastContour.cpp" />
+    <ClCompile Include="vendor\recast\include\recast\RecastDebugDraw.cpp" />
+    <ClCompile Include="vendor\recast\include\recast\RecastFilter.cpp" />
+    <ClCompile Include="vendor\recast\include\recast\RecastLayers.cpp" />
+    <ClCompile Include="vendor\recast\include\recast\RecastMesh.cpp" />
+    <ClCompile Include="vendor\recast\include\recast\RecastMeshDetail.cpp" />
+    <ClCompile Include="vendor\recast\include\recast\RecastRasterization.cpp" />
+    <ClCompile Include="vendor\recast\include\recast\RecastRegion.cpp" />
     <ClCompile Include="vendor\tinycsg\include\tinycsg\query_box.cpp" />
     <ClCompile Include="vendor\tinycsg\include\tinycsg\query_frustum.cpp" />
     <ClCompile Include="vendor\tinycsg\include\tinycsg\query_point.cpp" />
@@ -240,9 +267,12 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <ClInclude Include="src\Game\Pathfinding.h" />
     <ClInclude Include="src\Editor\Editor.h" />
     <ClInclude Include="src\Game\Dobermann.h" />
+    <ClInclude Include="src\Pathfinding\Pathfinding2.h" />
     <ClInclude Include="src\Game\WeaponManager.h" />
     <ClInclude Include="src\Effects\BloodDecal.hpp" />
+    <ClInclude Include="src\Math\Frustum.hpp" />
     <ClInclude Include="src\Math\Raycasting.hpp" />
+    <ClInclude Include="src\Pathfinding\NavMesh.h" />
     <ClInclude Include="src\Renderer\Raytracing\BLAS.hpp" />
     <ClInclude Include="src\Renderer\Raytracing\Raytracing.h" />
     <ClInclude Include="src\Renderer\Raytracing\TLAS.hpp" />
@@ -269,6 +299,7 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <ClInclude Include="src\Renderer\Types\Texture.h" />
     <ClInclude Include="src\Renderer\Types\Texture3D.h" />
     <ClInclude Include="src\Types\Animation.h" />
+    <ClInclude Include="src\Types\Modular\Staircase.h" />
     <ClInclude Include="src\Types\SkinnedMesh.hpp" />
     <ClInclude Include="src\API\OpenGL\GL_assetManager.h" />
     <ClInclude Include="src\Core\Audio.hpp" />
@@ -287,7 +318,6 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <ClInclude Include="src\Types\Modular\Toilet.h" />
     <ClInclude Include="src\Physics\Ragdoll.h" />
     <ClInclude Include="src\Core\VolumetricBloodSplatter.h" />
-    <ClInclude Include="src\EngineState.hpp" />
     <ClInclude Include="src\API\OpenGL\GL_backEnd.h" />
     <ClInclude Include="src\Input\Input.h" />
     <ClInclude Include="src\Input\keycodes.h" />
@@ -330,6 +360,35 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <ClInclude Include="vendor\lz4\include\lz4frame_static.h" />
     <ClInclude Include="vendor\lz4\include\lz4hc.h" />
     <ClInclude Include="vendor\lz4\include\xxhash.h" />
+    <ClInclude Include="vendor\recast\DetourAlloc.h" />
+    <ClInclude Include="vendor\recast\DetourAssert.h" />
+    <ClInclude Include="vendor\recast\DetourCommon.h" />
+    <ClInclude Include="vendor\recast\DetourMath.h" />
+    <ClInclude Include="vendor\recast\DetourNavMesh.h" />
+    <ClInclude Include="vendor\recast\DetourNavMeshBuilder.h" />
+    <ClInclude Include="vendor\recast\DetourNavMeshQuery.h" />
+    <ClInclude Include="vendor\recast\DetourNode.h" />
+    <ClInclude Include="vendor\recast\DetourStatus.h" />
+    <ClInclude Include="vendor\recast\include\detour\DetourAlloc.h" />
+    <ClInclude Include="vendor\recast\include\detour\DetourAssert.h" />
+    <ClInclude Include="vendor\recast\include\detour\DetourCommon.h" />
+    <ClInclude Include="vendor\recast\include\detour\DetourMath.h" />
+    <ClInclude Include="vendor\recast\include\detour\DetourNavMesh.h" />
+    <ClInclude Include="vendor\recast\include\detour\DetourNavMeshBuilder.h" />
+    <ClInclude Include="vendor\recast\include\detour\DetourNavMeshQuery.h" />
+    <ClInclude Include="vendor\recast\include\detour\DetourNode.h" />
+    <ClInclude Include="vendor\recast\include\detour\DetourStatus.h" />
+    <ClInclude Include="vendor\recast\include\detour\DetourTileCache.h" />
+    <ClInclude Include="vendor\recast\include\detour\DetourTileCacheBuilder.h" />
+    <ClInclude Include="vendor\recast\include\detour\fastlz.h" />
+    <ClInclude Include="vendor\recast\include\recast\DebugDraw.h" />
+    <ClInclude Include="vendor\recast\include\recast\Recast.h" />
+    <ClInclude Include="vendor\recast\include\recast\RecastAlloc.h" />
+    <ClInclude Include="vendor\recast\include\recast\RecastAssert.h" />
+    <ClInclude Include="vendor\recast\include\recast\RecastDebugDraw.h" />
+    <ClInclude Include="vendor\recast\Recast.h" />
+    <ClInclude Include="vendor\recast\RecastAlloc.h" />
+    <ClInclude Include="vendor\recast\RecastAssert.h" />
     <ClInclude Include="vendor\tinycsg\include\tinycsg\tinycsg.hpp" />
     <ClInclude Include="vendor\tinyexr\tinyexr.h" />
     <ClInclude Include="src\API\Vulkan\VK_backEnd.h" />
@@ -375,6 +434,8 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <None Include="res\shaders\OpenGL\GL_shadowMap_csg.vert" />
     <None Include="res\shaders\OpenGL\GL_triangles_2D.frag" />
     <None Include="res\shaders\OpenGL\GL_triangles_2D.vert" />
+    <None Include="res\shaders\OpenGL\GL_triangles_3D.frag" />
+    <None Include="res\shaders\OpenGL\GL_triangles_3D.vert" />
     <None Include="res\shaders\OpenGL_OLD\animated_quad.frag" />
     <None Include="res\shaders\OpenGL_OLD\animated_quad.vert" />
     <None Include="res\shaders\OpenGL_OLD\blood_decals.frag" />
