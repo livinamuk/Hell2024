@@ -5,38 +5,20 @@
 #include <vector>
 #include <iostream>
 
-void OpenGLCubemapTexture::LoadAndBake(std::string name, std::string filetype) {
-
-    std::vector<std::string> filepaths;
-    filepaths.push_back("res/textures/skybox/" + name + "_Right." + filetype);
-    filepaths.push_back("res/textures/skybox/" + name + "_Left." + filetype);
-    filepaths.push_back("res/textures/skybox/" + name + "_Top." + filetype);
-    filepaths.push_back("res/textures/skybox/" + name + "_Bottom." + filetype);
-    filepaths.push_back("res/textures/skybox/" + name + "_Front." + filetype);
-    filepaths.push_back("res/textures/skybox/" + name + "_Back." + filetype);
-
-    for (auto& filepath : filepaths) {
-        std::cout << filepath << "\n";
-    }
-
+void OpenGLCubemapTexture::Bake() {
+    width = m_textureData[0].m_width;
+    height = m_textureData[0].m_height;
     glGenTextures(1, &ID);
     glBindTexture(GL_TEXTURE_CUBE_MAP, ID);
-
-    int numOfChannels;
     for (unsigned int i = 0; i < 6; i++) {
-        unsigned char* data = stbi_load(filepaths[i].c_str(), &width, &height, &numOfChannels, 0);
-        if (data) {
+        if (m_textureData[i].m_data) {
             GLint format = GL_RGB;
-            if (numOfChannels == 4)
+            if (m_textureData[i].m_numChannels == 4)
                 format = GL_RGBA;
-            if (numOfChannels == 1)
+            if (m_textureData[i].m_numChannels == 1)
                 format = GL_RED;
-            glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGBA, width, height, 0, format, GL_UNSIGNED_BYTE, data);
-            stbi_image_free(data);
-        }
-        else {
-            std::cout << "Failed to load cubemap\n";
-            stbi_image_free(data);
+            glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGBA, width, height, 0, format, GL_UNSIGNED_BYTE, m_textureData[i].m_data);
+            stbi_image_free(m_textureData[i].m_data);
         }
     }
     glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
@@ -45,7 +27,25 @@ void OpenGLCubemapTexture::LoadAndBake(std::string name, std::string filetype) {
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+}
 
+void OpenGLCubemapTexture::Load(std::string name, std::string filetype) {
+
+    std::vector<std::string> filepaths;
+    filepaths.push_back("res/textures/skybox/" + name + "_Right." + filetype);
+    filepaths.push_back("res/textures/skybox/" + name + "_Left." + filetype);
+    filepaths.push_back("res/textures/skybox/" + name + "_Top." + filetype);
+    filepaths.push_back("res/textures/skybox/" + name + "_Bottom." + filetype);
+    filepaths.push_back("res/textures/skybox/" + name + "_Front." + filetype);
+    filepaths.push_back("res/textures/skybox/" + name + "_Back." + filetype);
+    for (unsigned int i = 0; i < 6; i++) {
+        m_textureData[i].m_data = stbi_load(filepaths[i].c_str(), &m_textureData[i].m_width, &m_textureData[i].m_height, &m_textureData[i].m_numChannels, 0);
+    }
+
+    /*
+    for (auto& filepath : filepaths) {
+        std::cout << filepath << "\n";
+    }*/
 }
 
 void OpenGLCubemapTexture::Bind(unsigned int slot) {

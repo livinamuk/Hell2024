@@ -22,11 +22,16 @@ struct AnimatedNode {
 class Animation
 {
 public: // methods
-    Animation(std::string filepath);
+    Animation() = default;
+    Animation(std::string fulllPath);
     ~Animation();
     float GetTicksPerSecond();
 
-public: // fields                
+public: // fields
+    bool m_awaitingLoadingFromDisk = true;
+    bool m_loadedFromDisk = false;
+    std::string m_fullPath = "";
+
     float m_duration;
     float m_ticksPerSecond;
     float m_finalTimeStamp;

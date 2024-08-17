@@ -72,8 +72,19 @@ private:
     std::vector<uint32_t> meshIndices;
 public:
 
+    SkinnedModel() {
+        m_VAO = 0;
+        ZERO_MEM(m_Buffers);
+        m_NumBones = 0;
+    }
 
-    SkinnedModel();
+    SkinnedModel(std::string fullPath) {
+        m_VAO = 0;
+        ZERO_MEM(m_Buffers);
+        m_NumBones = 0;
+        m_fullPath = fullPath;
+    }
+
     ~SkinnedModel();
     void UpdateBoneTransformsFromAnimation(float animTime, Animation* animation, AnimatedTransforms& animatedTransforms, glm::mat4& outCameraMatrix);
     void UpdateBoneTransformsFromBindPose(AnimatedTransforms& animatedTransforms);
@@ -83,6 +94,10 @@ public:
     int FindAnimatedNodeIndex(float AnimationTime, const AnimatedNode* animatedNode);
     const AnimatedNode* FindAnimatedNode(Animation* animation, const char* NodeName);
 
+
+    bool m_awaitingLoadingFromDisk = true;
+    bool m_loadedFromDisk = false;
+    std::string m_fullPath = "";
 
     std::vector<Joint> m_joints;
     std::string _filename = "undefined";

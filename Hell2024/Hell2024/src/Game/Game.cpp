@@ -1,6 +1,5 @@
 ﻿
 #include "Game.h"
-#include "Pathfinding.h"
 #include "Scene.h"
 #include "../BackEnd/BackEnd.h"
 #include "../Core/Audio.hpp"
@@ -42,7 +41,7 @@ namespace Game {
 
         GlobalIllumination::DestroyAllLightVolumes();
         GlobalIllumination::CreatePointCloud();
-        GlobalIllumination::CreateLightVolume(7.0f, 3.0f, 11.0f, -3.5f, 0.0f, -8.0f);
+        GlobalIllumination::CreateLightVolume(10.0f, 5.5f, 11.0f, -6.5f, 0.0f, -8.0f);
 
         //CreatePlayers(2);
         CreatePlayers(4);

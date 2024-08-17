@@ -1,14 +1,13 @@
 #include "Animation.h"
 #include "../Util.hpp"
 
-Animation::Animation(std::string filepath) {
-
-    FileInfo info = Util::GetFileInfo(filepath);
+Animation::Animation(std::string fullPath) {
+    m_fullPath = fullPath;
+    FileInfo info = Util::GetFileInfo(fullPath);
     _filename = info.filename;
 }
 
-Animation::~Animation()
-{
+Animation::~Animation() {
 }
 
 float Animation::GetTicksPerSecond() {

@@ -23,10 +23,17 @@ struct Light {
     glm::vec3 position;
     float strength = 1.0f;
     glm::vec3 color = glm::vec3(1, 0.7799999713897705, 0.5289999842643738);
-    bool isDirty = false;
     float radius = 6.0f;
     int type = 0;
+    bool isDirty = false;
     bool extraDirty = false;
 
-    std::vector<BoundingVolume> boundingVolumes;
+
+    bool m_pointCloudIndicesNeedRecalculating = true;
+
+
+    void FindVisibleCloudPoints();
+
+    std::vector<unsigned int> visibleCloudPointIndices;
+    //std::vector<BoundingVolume> boundingVolumes;
 };

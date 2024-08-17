@@ -1,7 +1,6 @@
 #include "Dobermann.h"
 #include "Scene.h"
 #include "../Input/Input.h"
-#include "../Game/Pathfinding.h"
 #include "../Game/Game.h"
 #include "../Timer.hpp"
 
@@ -21,6 +20,27 @@ void Dobermann::Init() {
     PxU32 collisionGroupFlags = RaycastGroup::DOBERMAN;
     animatedGameObject->LoadRagdoll("dobermann.rag", collisionGroupFlags);
     m_heatlh = 100;
+
+    // Create character controller
+
+    PxMaterial* material = Physics::GetDefaultMaterial();
+    PxCapsuleControllerDesc* desc = new PxCapsuleControllerDesc;
+    desc->setToDefault();
+    desc->height = PLAYER_CAPSULE_HEIGHT;
+    desc->radius = PLAYER_CAPSULE_RADIUS;
+    desc->position = PxExtendedVec3(m_initialPosition.x, m_initialPosition.y + (PLAYER_CAPSULE_HEIGHT / 2) + (PLAYER_CAPSULE_RADIUS * 2), m_initialPosition.z);
+    desc->material = material;
+    desc->stepOffset = 0.1f;
+    desc->contactOffset = 0.001;
+    desc->scaleCoeff = .99f;
+    desc->reportCallback = &Physics::_cctHitCallback;
+    m_characterController = Physics::_characterControllerManager->createController(*desc);
+    m_characterController->getActor()->getShapes(&m_shape, 1);
+    PxFilterData filterData;
+   // filterData.word1 = CollisionGroup::PLAYER; // DOG_CHARACTER_CONTROLLER
+    filterData.word1 = CollisionGroup::DOG_CHARACTER_CONTROLLER;
+    filterData.word2 = CollisionGroup(ENVIROMENT_OBSTACLE);
+    m_shape->setQueryFilterData(filterData);
 }
 
 void Dobermann::TakeDamage() {
@@ -47,6 +67,9 @@ void Dobermann::FindPath() {
 
         Timer timer("FindPath()");
 
+
+        /*
+
         Player* player = Game::GetPlayerByIndex(0);
         int currentGridX = Pathfinding::WordSpaceXToGridSpaceX(m_currentPosition.x);
         int currentGridZ = Pathfinding::WordSpaceZToGridSpaceZ(m_currentPosition.z);
@@ -66,10 +89,24 @@ void Dobermann::FindPath() {
         }
 
         std::cout << "Iteration: " << std::to_string(m_aStar.m_iterationCounter) + "\n";
+
+        */
     }
 }
 
 void Dobermann::Update(float deltaTime) {
+
+    // Is grounded?
+
+
+
+
+
+
+
+
+
+
 
     AnimatedGameObject* animatedGameObject = GetAnimatedGameObject();
 
@@ -84,23 +121,28 @@ void Dobermann::Update(float deltaTime) {
         m_currentState = DobermannState::LAY;
     }
 
-    glm::vec3 playerPosition = player->GetFeetPosition() * glm::vec3(1, 0, 1);
-    //m_pathToPlayer = Pathfinding2::FindPath(m_currentPosition, playerPosition);
+    glm::vec3 playerPosition = player->GetFeetPosition() * glm::vec3(1, 1, 1);
+    m_pathToPlayer = Pathfinding2::FindPath(m_currentPosition, playerPosition);
+
+
 
 
     // WALK
-    if (m_aStar.SmoothPathFound()) {
 
-        int currentGridX = Pathfinding::WordSpaceXToGridSpaceX(m_currentPosition.x);
-        int currentGridZ = Pathfinding::WordSpaceZToGridSpaceZ(m_currentPosition.z);
-        int targetGridX = m_aStar.m_finalPathPoints[1].x;
-        int targetGridZ = m_aStar.m_finalPathPoints[1].y;
+    if (m_currentState == DobermannState::KAMAKAZI && m_pathToPlayer.Found() && m_pathToPlayer.points.size()) {
 
-        bool atTarget = (currentGridX == targetGridX && currentGridZ == targetGridZ);
+  //  if (m_aStar.SmoothPathFound()) {
+
+       // int currentGridX = Pathfinding::WordSpaceXToGridSpaceX(m_currentPosition.x);
+       // int currentGridZ = Pathfinding::WordSpaceZToGridSpaceZ(m_currentPosition.z);
+      //  int targetGridX = m_aStar.m_finalPathPoints[1].x;
+     //   int targetGridZ = m_aStar.m_finalPathPoints[1].y;
+
+       // bool atTarget = (currentGridX == targetGridX && currentGridZ == targetGridZ);
 
 
         float speed = m_speed;
-        float distanceToPlayer = glm::distance(m_currentPosition, player->GetFeetPosition() * glm::vec3(1, 0, 1));
+        float distanceToPlayer = glm::distance(m_currentPosition, player->GetFeetPosition());
 
         if (distanceToPlayer < 1.0f && m_currentState == DobermannState::KAMAKAZI) {
             speed = m_speed * 0.5f;
@@ -128,24 +170,29 @@ void Dobermann::Update(float deltaTime) {
         }
 
 
-        if (!atTarget && m_heatlh > 0) {
+        //if (!atTarget && m_heatlh > 0) {
+        if (m_heatlh > 0) {
 
-            glm::vec3 currentGridLocation = { currentGridX, 0, currentGridZ };
-            glm::vec3 targetGridLocation = { targetGridX, 0, targetGridZ };
-            glm::vec3 direction = glm::normalize(targetGridLocation - currentGridLocation);
+            glm::vec3 direction = glm::normalize(m_pathToPlayer.points[1] - m_currentPosition);
+
+            // Compute the new rotation
             glm::vec3 nextPosition = m_currentPosition + direction * glm::vec3(speed);
             Util::RotateYTowardsTarget(m_currentPosition, animatedGameObject->_transform.rotation.y, nextPosition, 0.1);
 
+            // Move PhysX character controller
+            glm::vec3 movementVector = glm::normalize(direction * glm::vec3(1, 0, 1)) * glm::vec3(speed);
+            PxFilterData filterData;
+            filterData.word0 = 0;
+            filterData.word1 = CollisionGroup::ENVIROMENT_OBSTACLE;	// Things to collide with
+            PxControllerFilters data;
+            data.mFilterData = &filterData;
+            PxF32 minDist = 0.001f;
+            float fixedDeltaTime = (1.0f / 60.0f);
+            m_characterController->move(PxVec3(movementVector.x, -0.981f, movementVector.z), minDist, fixedDeltaTime, data);
+            m_currentPosition = Util::PxVec3toGlmVec3(m_characterController->getFootPosition());
 
-            // If this doesn't place the dog inside a wall, then move it there
-
-            int nextPositionGridX = Pathfinding::WordSpaceXToGridSpaceX(nextPosition.x);
-            int nextPositionGridZ = Pathfinding::WordSpaceZToGridSpaceZ(nextPosition.z);
-
-            //if (!Pathfinding::IsObstacle(nextPositionGridX, nextPositionGridZ)) {
-                m_currentPosition = nextPosition;
-                animatedGameObject->SetPosition(m_currentPosition);
-            //}
+            // Update render position
+            animatedGameObject->SetPosition(m_currentPosition);
 
             // Play footsteps
             float m_footstepAudioLoopLength = 0.25;
@@ -175,10 +222,11 @@ AnimatedGameObject* Dobermann::GetAnimatedGameObject() {
     return Scene::GetAnimatedGameObjectByIndex(m_animatedGameObjectIndex);
 }
 
-int Dobermann::GetGridX() {
-    return Pathfinding::WordSpaceXToGridSpaceX(m_currentPosition.x);
-}
-
-int  Dobermann::GetGridZ() {
-    return Pathfinding::WordSpaceZToGridSpaceZ(m_currentPosition.z);
+void Dobermann::CleanUp() {
+    if (m_shape) {
+        m_shape->release();
+    }
+    if (m_characterController) {
+        m_characterController->release();
+    }
 }

@@ -186,7 +186,7 @@ namespace RendererUtil {
         dst.insert(std::end(dst), std::begin(src), std::end(src));
     }
 
-    inline RenderItem2D CreateRenderItem2D(const char* textureName, ivec2 location, ivec2 viewportSize, Alignment alignment, glm::vec3 colorTint = WHITE, ivec2 size = ivec2(-1, -1)) {
+    inline RenderItem2D CreateRenderItem2D(const char* textureName, hell::ivec2 location, hell::ivec2 viewportSize, Alignment alignment, glm::vec3 colorTint = WHITE, hell::ivec2 size = hell::ivec2(-1, -1)) {
 
         static std::unordered_map<const char*, int> textureIndices;
         if (textureIndices.find(textureName) == textureIndices.end()) {

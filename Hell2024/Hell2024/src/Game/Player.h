@@ -112,14 +112,10 @@ public:
     Player() = default;
     Player(int playerIndex);
 
-    int GetGridX();
-    int GetGridZ();
-
     // Updates
     void Update(float deltaTime);
     void UpdateRagdoll();
     void UpdateMouseLook(float deltaTime);
-    void UpdateCamera2(float deltaTime);
     void UpdateViewMatrix(float deltaTime);
     void UpdateMovement(float deltaTime);
     void UpdatePickupText(float deltaTime);
@@ -355,8 +351,8 @@ public:
     float _currentSpeed = 0.0f;
 
     void ForceSetViewMatrix(glm::mat4 viewMatrix);
-    std::vector<RenderItem2D> GetHudRenderItems(ivec2 presentSize);
-    std::vector<RenderItem2D> GetHudRenderItemsHiRes(ivec2 gBufferSize);
+    std::vector<RenderItem2D> GetHudRenderItems(hell::ivec2 presentSize);
+    std::vector<RenderItem2D> GetHudRenderItemsHiRes(hell::ivec2 gBufferSize);
     CrosshairType GetCrosshairType();
 
 

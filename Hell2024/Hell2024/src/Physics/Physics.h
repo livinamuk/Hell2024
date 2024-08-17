@@ -80,7 +80,10 @@ namespace Physics {
     PxTriangleMesh* CreateTriangleMeshFromModelIndex(int modelIndex);
 
     std::vector<Vertex> GetDebugLineVertices(DebugLineRenderMode debugLineRenderMode, std::vector<PxRigidActor*> ignoreList);
-    
+
+    void EnableRaycast(PxShape* shape);
+    void DisableRaycast(PxShape* shape);
+
 }
 
 class ContactReportCallback : public PxSimulationEventCallback {

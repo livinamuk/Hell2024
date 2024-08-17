@@ -9,6 +9,9 @@ struct CubemapTexture {
 public:
 
     CubemapTexture() = default;
+    CubemapTexture(std::string fullPath) {
+        m_fullPath = fullPath;
+    }
     void Load();
     void SetName(std::string name);
     void SetFiletype(std::string filetype);
@@ -18,6 +21,11 @@ public:
     OpenGLCubemapTexture& GetGLTexture();
     //VulkanCubeMapTexture& GetVKTexture();
 
+    bool m_awaitingLoadingFromDisk = true;
+    bool m_loadedFromDisk = false;
+    std::string m_fullPath = "";
+    bool m_baked = false;
+
 private:
     OpenGLCubemapTexture glTexture;
     //VulkanCubeMapTexture vkTexture;
@@ -25,5 +33,5 @@ private:
     std::string filetype;
     int width = 0;
     int height = 0;
-    int channelCount = 0;
+
 };

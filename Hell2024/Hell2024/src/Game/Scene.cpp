@@ -7,10 +7,10 @@
 #include "../Core/JSON.hpp"
 #include "../Editor/CSG.h"
 #include "../Game/Game.h"
-#include "../Game/Pathfinding.h"
 #include "../Input/Input.h"
 #include "../Renderer/TextBlitter.h"
 #include "../Renderer/Raytracing/Raytracing.h"
+#include "../Timer.hpp"
 #include "../Util.hpp"
 
 int _volumetricBloodObjectsSpawnedThisFrame = 0;
@@ -247,17 +247,25 @@ void Scene::LoadDefaultScene() {
     g_windows.clear();
     g_windows.reserve(sizeof(Window) * 1000);
 
-    /*
-    g_staircases.clear();
-    Staircase& stairCase = g_staircases.emplace_back();
-    stairCase.m_position = glm::vec3(-1.0f, 0, 0);
-    stairCase.m_segmentCount = 2;*/
 
-    /*
+    g_staircases.clear();
+
+    /*Staircase& stairCase = g_staircases.emplace_back();
+    stairCase.m_position = glm::vec3(-1.0f, 0, 0);
+    stairCase.m_stepCount = 9;
+
+
     Staircase& stairCase2 = g_staircases.emplace_back();
     stairCase2.m_position = glm::vec3(0.5f, 0, 0);
-    stairCase2.m_segmentCount = 5;
-    */
+    stairCase2.m_rotation = 0.4f;
+    stairCase2.m_stepCount = 12;*/
+
+
+    Staircase& stairCase3 = g_staircases.emplace_back();
+    stairCase3.m_position = glm::vec3(-3.0f, 0, -3.1f);
+    stairCase3.m_rotation = -HELL_PI * 0.5f;
+    stairCase3.m_stepCount = 18;
+
 
     LoadMapData("mappp.txt");
 
@@ -281,10 +289,6 @@ void Scene::LoadDefaultScene() {
         createInfo.initalState = DobermannState::LAY;
         AddDobermann(createInfo);
     }
-
-    std::cout << "DOBERMAN GRID DEBUG STUFF\n";
-    std::cout << "DOBERMAN GRID DEBUG STUFF\n";
-    std::cout << "DOBERMAN GRID DEBUG STUFF\n";
 
 
     /*
@@ -691,12 +695,7 @@ void Scene::LoadDefaultScene() {
     ResetGameObjectStates();
     CreateBottomLevelAccelerationStructures();
 
-
-    Pathfinding::Init();
-
-
-
-   // dobermannLoopAudio = Audio::LoopAudio("Doberman_Loop.wav", 1.0f);
+    Pathfinding2::UpdateNavMesh(CSG::GetNavMeshVertices());
 }
 
 AABB AABBFromVertices(std::span<Vertex> vertices, std::span<uint32_t> indices, glm::mat4 worldTransform) {
@@ -714,6 +713,10 @@ AABB AABBFromVertices(std::span<Vertex> vertices, std::span<uint32_t> indices, g
 uint32_t g_doorBLASIndex = 0;
 
 void Scene::CreateBottomLevelAccelerationStructures() {
+
+    std::cout << "Creating TLAS\n";
+
+   // Timer timer("Scene::CreateBottomLevelAccelerationStructures()");
 
     if (BackEnd::GetAPI() == API::VULKAN) {
         return;
@@ -810,6 +813,23 @@ void Scene::CreateDefaultLight() {
 
 void Scene::Update(float deltaTime) {
 
+    /*
+    for (Light& light : g_lights) {
+        if (light.m_pointCloudIndicesNeedRecalculating) {
+            light.FindVisibleCloudPoints();
+        }
+    }
+    */
+
+
+    if (Input::KeyPressed(HELL_KEY_L)) {
+        Light& light = g_lights[0];
+        if (light.m_pointCloudIndicesNeedRecalculating) {
+            light.m_pointCloudIndicesNeedRecalculating = false;
+            light.FindVisibleCloudPoints();
+        }
+    }
+
 
 
     for (Dobermann& dobermann : g_dobermann) {
@@ -834,8 +854,6 @@ void Scene::Update(float deltaTime) {
         animatedGameObject->SetPosition(dobermann.m_currentPosition);
 
     }
-
-    Pathfinding::Update();
 
     static int dogIndex = 0;
     g_dobermann[dogIndex].FindPath();
@@ -1234,7 +1252,7 @@ std::vector<RenderItem3D> Scene::GetAllRenderItems() {
 
         Transform segmentOffset;
 
-        for (int i = 0; i < staircase.m_segmentCount; i++) {
+        for (int i = 0; i < staircase.m_stepCount / 3; i++) {
 
             for (auto& meshIndex : model->GetMeshIndices()) {
                 RenderItem3D renderItem;
@@ -1244,8 +1262,13 @@ std::vector<RenderItem3D> Scene::GetAllRenderItems() {
                 renderItem.materialIndex = materialIndex;
                 renderItems.push_back(renderItem);
             }
-            segmentOffset.position.y += 0.411;
-            segmentOffset.position.z += 0.44f;
+            //segmentOffset.position.y += 0.411;
+            //segmentOffset.position.z += 0.44f;
+
+            segmentOffset.position.y += 0.432;
+            segmentOffset.position.z += 0.45f;
+
+
         }
     }
 
@@ -2735,8 +2758,13 @@ void Scene::ResetGameObjectStates() {
 
 
 void Scene::CleanUp() {
+
     for (Door& door : g_doors) {
         door.CleanUp();
+    }
+
+    for (Dobermann& dobermann : g_dobermann) {
+        dobermann.CleanUp();
     }
 
     CleanUpBulletHoleDecals();

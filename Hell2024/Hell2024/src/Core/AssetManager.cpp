@@ -13,19 +13,15 @@
 #include "../Util.hpp"
 
 #include "../DDS/DDS_Helpers.h"
-
+#include <numeric>
 
 namespace AssetManager {
 
-    std::vector<std::string> _texturePaths;
-    std::vector<std::string> _cubemapTexturePaths;
-    std::vector<std::string> _vatTexturePaths;
-    std::vector<std::string> _modelPaths;
-    std::vector<std::string> _skinnedModelPaths;
-    std::vector<std::string> _animationPaths;
     std::vector<std::string> _loadLog;
     bool _materialsCreated = false;
     bool _hardCodedModelsCreated = false;
+    bool _texuturesBaked = false;
+    bool _cubeMapTexuturesBaked = false;
     bool _finalInitComplete = false;
 
     std::vector<Vertex> _vertices;
@@ -37,7 +33,7 @@ namespace AssetManager {
     std::vector<Model> _models;
     std::vector<SkinnedModel> _skinnedModels;
     std::vector<SkinnedMesh> _skinnedMeshes;
-    std::vector<Animation*> _animations;
+    std::vector<Animation> _animations;
     std::vector<Texture> _textures;
     std::vector<ExrTexture> _exrTextures;
     std::vector<Material> _materials;
@@ -73,59 +69,66 @@ namespace AssetManager {
 //                         //
 
 void AssetManager::FindAssetPaths() {
-
-    auto modelPaths = std::filesystem::directory_iterator("res/models/");
-    for (const auto& entry : modelPaths) {
-        FileInfo info = Util::GetFileInfo(entry);
-        if (info.filetype == "obj") {
-            _modelPaths.push_back(info.fullpath.c_str());
-        }
-    }
-    auto skinnedModelPaths = std::filesystem::directory_iterator("res/models/");
-    for (const auto& entry : skinnedModelPaths) {
-        FileInfo info = Util::GetFileInfo(entry);
-        if (info.filetype == "fbx") {
-            _skinnedModelPaths.push_back(info.fullpath.c_str());
-        }
-    }
-    auto texturePaths = std::filesystem::directory_iterator("res/textures/");
-    for (const auto& entry : texturePaths) {
-        FileInfo info = Util::GetFileInfo(entry);
-        if (info.filetype == "png" || info.filetype == "jpg" || info.filetype == "tga") {
-            _texturePaths.push_back(info.fullpath.c_str());
-        }
-    }
+    // Cubemap Textures
     auto skyboxTexturePaths = std::filesystem::directory_iterator("res/textures/skybox/");
     for (const auto& entry : skyboxTexturePaths) {
         FileInfo info = Util::GetFileInfo(entry);
         if (info.filetype == "png" || info.filetype == "jpg" || info.filetype == "tga") {
             if (info.filename.substr(info.filename.length() - 5) == "Right") {
                 std::cout << info.fullpath << "\n";
-                _cubemapTexturePaths.push_back(info.fullpath.c_str());
+                _cubemapTextures.emplace_back(info.fullpath);
             }
+        }
+    }
+    // Animations
+    auto animationPaths = std::filesystem::directory_iterator("res/animations/");
+    for (const auto& entry : animationPaths) {
+        FileInfo info = Util::GetFileInfo(entry);
+        if (info.filetype == "fbx") {
+            _animations.emplace_back(info.fullpath);
+        }
+    }
+    // Models
+    auto modelPaths = std::filesystem::directory_iterator("res/models/");
+    for (const auto& entry : modelPaths) {
+        FileInfo info = Util::GetFileInfo(entry);
+        if (info.filetype == "obj") {
+            _models.emplace_back(info.fullpath);
+        }
+    }
+    // Skinned models
+    auto skinnedModelPaths = std::filesystem::directory_iterator("res/models/");
+    for (const auto& entry : skinnedModelPaths) {
+        FileInfo info = Util::GetFileInfo(entry);
+        if (info.filetype == "fbx") {
+            _skinnedModels.emplace_back(info.fullpath.c_str());
+        }
+    }
+    // Textures
+    std::vector<std::string> allTexturePaths;
+    auto texturePaths = std::filesystem::directory_iterator("res/textures/");
+    for (const auto& entry : texturePaths) {
+        FileInfo info = Util::GetFileInfo(entry);
+        if (info.filetype == "png" || info.filetype == "jpg" || info.filetype == "tga") {
+            allTexturePaths.push_back(info.fullpath.c_str());
         }
     }
     auto uiTexturePaths = std::filesystem::directory_iterator("res/textures/ui/");
     for (const auto& entry : uiTexturePaths) {
         FileInfo info = Util::GetFileInfo(entry);
         if (info.filetype == "png" || info.filetype == "jpg" || info.filetype == "tga") {
-            _texturePaths.push_back(info.fullpath.c_str());
+            allTexturePaths.push_back(info.fullpath.c_str());
         }
     }
     auto vatTexturePaths = std::filesystem::directory_iterator("res/textures/exr/");
     for (const auto& entry : vatTexturePaths) {
         FileInfo info = Util::GetFileInfo(entry);
         if (info.filetype == "exr") {
-            _vatTexturePaths.push_back(info.fullpath.c_str());
-            _texturePaths.push_back(info.fullpath.c_str());
+            allTexturePaths.push_back(info.fullpath.c_str());
         }
     }
-    auto animationPaths = std::filesystem::directory_iterator("res/animations/");
-    for (const auto& entry : animationPaths) {
-        FileInfo info = Util::GetFileInfo(entry);
-        if (info.filetype == "fbx") {
-            _animationPaths.push_back(info.fullpath.c_str());
-        }
+    for (auto& path : allTexturePaths) {
+        _textures.emplace_back(Texture(path));
     }
 }
 
@@ -139,11 +142,6 @@ std::vector<std::string>& AssetManager::GetLoadLog() {
 
 bool AssetManager::LoadingComplete() {
     return (
-        _modelPaths.empty() &&
-        _texturePaths.empty() &&
-        _skinnedModelPaths.empty() &&
-        _animationPaths.empty() &&
-        _vatTexturePaths.empty() &&
         _materialsCreated &&
         _hardCodedModelsCreated &&
         _finalInitComplete
@@ -158,47 +156,76 @@ void AssetManager::LoadNextItem() {
         _hardCodedModelsCreated = true;
         return;
     }
-    if (_modelPaths.size()) {
-        std::string path = _modelPaths[0];
-        _modelPaths.erase(_modelPaths.begin());
-        _futures.push_back(std::async(std::launch::async, LoadModel, path));
-        AddItemToLoadLog(path);
-        return;
-    }
-    if (_skinnedModelPaths.size()) {
-        std::string path = _skinnedModelPaths[0];
-        _skinnedModelPaths.erase(_skinnedModelPaths.begin());
-        _futures.push_back(std::async(std::launch::async, LoadSkinnedModel, path));
-        AddItemToLoadLog(path);
-        return;
-    }
-    if (_texturePaths.size()) {
-        /*std::string path = _texturePaths[0];
-        _texturePaths.erase(_texturePaths.begin());
-        _futures.push_back(std::async(std::launch::async, LoadTexture, path));
-        AddItemToLoadLog(path);
-        */
-        if (BackEnd::GetAPI() == API::VULKAN && Util::GetFileInfo(_texturePaths[0]).filetype == "exr") {
-            _texturePaths.erase(_texturePaths.begin());
+
+    // Animations
+    for (Animation& animation: _animations) {
+        if (animation.m_awaitingLoadingFromDisk) {
+            animation.m_awaitingLoadingFromDisk = false;
+            AddItemToLoadLog(animation.m_fullPath);
+            _futures.push_back(std::async(std::launch::async, LoadAnimation, &animation));
             return;
         }
+    }
+    // Skinned Models
+    for (SkinnedModel& skinnedModel : _skinnedModels) {
+        if (skinnedModel.m_awaitingLoadingFromDisk) {
+            skinnedModel.m_awaitingLoadingFromDisk = false;
+            AddItemToLoadLog(skinnedModel.m_fullPath);
+            _futures.push_back(std::async(std::launch::async, LoadSkinnedModel, &skinnedModel));
+            return;
+        }
+    }
+    // Models
+    for (Model& model : _models) {
+        if (model.m_awaitingLoadingFromDisk) {
+            model.m_awaitingLoadingFromDisk = false;
+            AddItemToLoadLog(model.m_fullPath);
+            _futures.push_back(std::async(std::launch::async, LoadModel, &model));
+            return;
+        }
+    }
+    // Textures
+    for (Texture& texture : _textures) {
+        if (!texture.m_loadingBegan) {
+            texture.m_loadingBegan = true;
+            AddItemToLoadLog(texture.m_fullPath);
+            _futures.push_back(std::async(std::launch::async, LoadTexture, &texture));
+            return;
+        }
+    }
+    // Cubemap Textures
+    for (CubemapTexture& cubemapTexture : _cubemapTextures) {
+        if (cubemapTexture.m_awaitingLoadingFromDisk) {
+            cubemapTexture.m_awaitingLoadingFromDisk = false;
+            AddItemToLoadLog(cubemapTexture.m_fullPath);
+            _futures.push_back(std::async(std::launch::async, LoadCubemapTexture, &cubemapTexture));
+            return;
+        }
+    }
 
-        Texture& texture = _textures.emplace_back();
-        texture.Load(_texturePaths[0].c_str());
-        AddItemToLoadLog(_texturePaths[0]);
-        _texturePaths.erase(_texturePaths.begin());
-        return;
+    // Check all is done
+    for (Texture& texture : _textures) {
+        if (!texture.m_loadingComplete) {
+            return;
+        }
     }
-    if (_cubemapTexturePaths.size()) {
-        CubemapTexture& cubemapTexture = _cubemapTextures.emplace_back();
-        FileInfo fileInfo = Util::GetFileInfo(_cubemapTexturePaths[0]);
-        cubemapTexture.SetName(fileInfo.filename.substr(0, fileInfo.filename.length() - 6));
-        cubemapTexture.SetFiletype(fileInfo.filetype);
-        cubemapTexture.Load();
-        //AddItemToLoadLog(_cubemapTexturePaths[0]);
-        _cubemapTexturePaths.erase(_cubemapTexturePaths.begin());
-        return;
+    for (Model& model : _models) {
+        if (!model.m_loadedFromDisk) {
+            return;
+        }
     }
+    for (SkinnedModel& skinnedModel : _skinnedModels) {
+        if (!skinnedModel.m_loadedFromDisk) {
+            return;
+        }
+    }
+    for (Animation& animation: _animations) {
+        if (!animation.m_loadedFromDisk) {
+            return;
+        }
+    }
+
+    /*
     if (_vatTexturePaths.size()) {
         ExrTexture& texture = _exrTextures.emplace_back();
         if (BackEnd::GetAPI() == API::OPENGL) {
@@ -210,14 +237,8 @@ void AssetManager::LoadNextItem() {
         AddItemToLoadLog(_vatTexturePaths[0]);
         _vatTexturePaths.erase(_vatTexturePaths.begin());
         return;
-    }
-    if (_animationPaths.size()) {
-        Animation* animation = FbxImporter::LoadAnimation(_animationPaths[0].c_str());
-        _animations.emplace_back(animation);
-        AddItemToLoadLog(_animationPaths[0]);
-        _animationPaths.erase(_animationPaths.begin());
-        return;
-    }
+    }*/
+
     if (!_materialsCreated) {
         BuildMaterials();
         AddItemToLoadLog("Building Materials");
@@ -226,6 +247,29 @@ void AssetManager::LoadNextItem() {
     }
 
     if (!_finalInitComplete) {
+
+        if (!_texuturesBaked) {
+            for (Texture& texture : _textures) {
+                if (BackEnd::GetAPI() == API::OPENGL) {
+                    texture.GetGLTexture().Bake();
+                }
+            }
+            AddItemToLoadLog("Uploading textures to GPU");
+            _texuturesBaked = true;
+            return;
+        }
+        if (!_cubeMapTexuturesBaked) {
+            for (CubemapTexture& cubemapTexture : _cubemapTextures) {
+                if (BackEnd::GetAPI() == API::OPENGL) {
+                    cubemapTexture.GetGLTexture().Bake();
+                }
+            }
+            AddItemToLoadLog("Upload cubemap textures to GPU");
+            _cubeMapTexuturesBaked = true;
+            return;
+        }
+
+
         if (BackEnd::GetAPI() == API::OPENGL) {
             OpenGLRenderer::BindBindlessTextures();
         }
@@ -238,17 +282,28 @@ void AssetManager::LoadNextItem() {
     }
 }
 
+void AssetManager::LoadCubemapTexture(CubemapTexture* cubemapTexture) {
+    FileInfo fileInfo = Util::GetFileInfo(cubemapTexture->m_fullPath);
+    cubemapTexture->SetName(fileInfo.filename.substr(0, fileInfo.filename.length() - 6));
+    cubemapTexture->SetFiletype(fileInfo.filetype);
+    cubemapTexture->Load();
+}
+
+void AssetManager::LoadAnimation(Animation* animation) {
+    FbxImporter::LoadAnimation(animation);
+    animation->m_loadedFromDisk = true;
+}
 
 void AssetManager::LoadFont() {
-    static auto paths = std::filesystem::directory_iterator("res/textures/font/");
-    for (const auto& entry : paths) {
+    auto texturePaths = std::filesystem::directory_iterator("res/textures/font/");
+    for (const auto& entry : texturePaths) {
         FileInfo info = Util::GetFileInfo(entry);
         if (info.filetype == "png" || info.filetype == "jpg" || info.filetype == "tga") {
-            Texture& texture = _textures.emplace_back();
-            texture.Load(info.fullpath);
+            Texture& texture = _textures.emplace_back(Texture(info.fullpath.c_str()));
+            LoadTexture(&texture);
+            texture.GetGLTexture().Bake();
         }
     }
-
     if (BackEnd::GetAPI() == API::OPENGL) {
         OpenGLRenderer::BindBindlessTextures();
     }
@@ -320,32 +375,25 @@ void GrabSkeleton(SkinnedModel& skinnedModel, const aiNode* pNode, int parentInd
 #include <vector>
 
 
-void AssetManager::LoadSkinnedModel(const std::string filepath) {
+void AssetManager::LoadSkinnedModel(SkinnedModel* skinnedModel) {
 
-    //SkinnedModel& skinnedModel = _skinnedModels.emplace_back();
     glm::mat4 globalInverseTransform;
-    //FbxImporter::LoadSkinnedModel(_skinnedModelPaths[0].c_str(), skinnedModel);
 
-    int skinnedModelIndex = -1;
+
     int totalVertexCount = 0;
     int baseVertexLocal = 0;
     std::map<std::string, unsigned int> boneMapping;
     int boneCount = 0;
 
-    {
-        std::lock_guard<std::mutex> lock(_skinnedModelsMutex);
-        skinnedModelIndex = _skinnedModels.size();
-        _skinnedModels.emplace_back();
-        FileInfo fileInfo = Util::GetFileInfo(filepath);
-        _skinnedModels[skinnedModelIndex].m_NumBones = 0;
-        _skinnedModels[skinnedModelIndex]._filename = fileInfo.filename;
-    }
+    FileInfo fileInfo = Util::GetFileInfo(skinnedModel->m_fullPath);
+    skinnedModel->m_NumBones = 0;
+    skinnedModel->_filename = fileInfo.filename;
 
     Assimp::Importer importer;
-    const aiScene* scene = importer.ReadFile(filepath, aiProcess_LimitBoneWeights | aiProcess_Triangulate | aiProcess_GenSmoothNormals | aiProcess_FlipUVs | aiProcess_CalcTangentSpace);
+    const aiScene* scene = importer.ReadFile(skinnedModel->m_fullPath, aiProcess_LimitBoneWeights | aiProcess_Triangulate | aiProcess_GenSmoothNormals | aiProcess_FlipUVs | aiProcess_CalcTangentSpace);
 
     if (!scene) {
-        std::cout << "Something fucked up loading your skinned model: " << filepath << "\n";
+        std::cout << "Something fucked up loading your skinned model: " << skinnedModel->m_fullPath << "\n";
         std::cout << "Error: " << importer.GetErrorString() << "\n";
         return;
     }
@@ -365,17 +413,17 @@ void AssetManager::LoadSkinnedModel(const std::string filepath) {
                 std::string boneName = (assimpMesh->mBones[j]->mName.data);
 
                 // Created bone if it doesn't exist yet
-                if (_skinnedModels[skinnedModelIndex].m_BoneMapping.find(boneName) == _skinnedModels[skinnedModelIndex].m_BoneMapping.end()) {
+                if (skinnedModel->m_BoneMapping.find(boneName) == skinnedModel->m_BoneMapping.end()) {
 
                     // Allocate an index for a new bone
-                    boneIndex = _skinnedModels[skinnedModelIndex].m_NumBones;
-                    _skinnedModels[skinnedModelIndex].m_NumBones++;
+                    boneIndex = skinnedModel->m_NumBones;
+                    skinnedModel->m_NumBones++;
 
                     BoneInfo bi;
-                    _skinnedModels[skinnedModelIndex].m_BoneInfo.push_back(bi);
-                    _skinnedModels[skinnedModelIndex].m_BoneInfo[boneIndex].BoneOffset = Util::aiMatrix4x4ToGlm(assimpMesh->mBones[j]->mOffsetMatrix);
-                    _skinnedModels[skinnedModelIndex].m_BoneInfo[boneIndex].BoneName = boneName;
-                    _skinnedModels[skinnedModelIndex].m_BoneMapping[boneName] = boneIndex;
+                    skinnedModel->m_BoneInfo.push_back(bi);
+                    skinnedModel->m_BoneInfo[boneIndex].BoneOffset = Util::aiMatrix4x4ToGlm(assimpMesh->mBones[j]->mOffsetMatrix);
+                    skinnedModel->m_BoneInfo[boneIndex].BoneName = boneName;
+                    skinnedModel->m_BoneMapping[boneName] = boneIndex;
                 }
             }
         }
@@ -414,12 +462,11 @@ void AssetManager::LoadSkinnedModel(const std::string filepath) {
 
             // Get vertex weights and bone IDs
             {
-                std::lock_guard<std::mutex> lock(_skinnedModelsMutex);
 
                 for (unsigned int i = 0; i < assimpMesh->mNumBones; i++) {
                     for (unsigned int j = 0; j < assimpMesh->mBones[i]->mNumWeights; j++) {
                         std::string boneName = assimpMesh->mBones[i]->mName.data;
-                        unsigned int boneIndex = _skinnedModels[skinnedModelIndex].m_BoneMapping[boneName];
+                        unsigned int boneIndex = skinnedModel->m_BoneMapping[boneName];
                         unsigned int vertexIndex = assimpMesh->mBones[i]->mWeights[j].mVertexId;
                         float weight = assimpMesh->mBones[i]->mWeights[j].mWeight;
                         WeightedVertex& vertex = vertices[vertexIndex];
@@ -466,19 +513,22 @@ void AssetManager::LoadSkinnedModel(const std::string filepath) {
                     }
                 }
 
-                _skinnedModels[skinnedModelIndex].AddMeshIndex(AssetManager::CreateSkinnedMesh(meshName, vertices, indices, baseVertexLocal));
+                std::lock_guard<std::mutex> lock(_skinnedModelsMutex);
+                skinnedModel->AddMeshIndex(AssetManager::CreateSkinnedMesh(meshName, vertices, indices, baseVertexLocal));
                 totalVertexCount += vertices.size();
                 baseVertexLocal += vertices.size();
             }
         }
 
     }
-    std::lock_guard<std::mutex> lock(_skinnedModelsMutex);
-    _skinnedModels[skinnedModelIndex].m_GlobalInverseTransform = globalInverseTransform;
-    _skinnedModels[skinnedModelIndex].m_vertexCount = totalVertexCount;
-    GrabSkeleton(_skinnedModels[skinnedModelIndex], scene->mRootNode, -1);
+    skinnedModel->m_GlobalInverseTransform = globalInverseTransform;
+    skinnedModel->m_vertexCount = totalVertexCount;
+    GrabSkeleton(*skinnedModel, scene->mRootNode, -1);
 
     importer.FreeScene();
+
+    // Done
+    skinnedModel->m_loadedFromDisk = true;
 }
 
 SkinnedModel* AssetManager::GetSkinnedModelByName(const std::string& name) {
@@ -625,15 +675,9 @@ void AssetManager::LoadModelAssimp(const std::string& filepath) {
 
     importer.FreeScene();*/
 }
-void AssetManager::LoadModel(const std::string filepath) {
+void AssetManager::LoadModel(Model* model) {
 
-    int modelIndex = -1;
-    {
-        std::lock_guard<std::mutex> lock(_modelsMutex);
-        modelIndex = _models.size();
-        Model& model = _models.emplace_back();
-        model.SetName(Util::GetFilename(filepath));
-    }
+    model->SetName(Util::GetFilename(model->m_fullPath));
 
     glm::vec3 modelAabbMin = glm::vec3(std::numeric_limits<float>::max());
     glm::vec3 modelAabbMax = glm::vec3(-std::numeric_limits<float>::max());
@@ -647,8 +691,8 @@ void AssetManager::LoadModel(const std::string filepath) {
     std::string warn;
     std::string err;
 
-    if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, filepath.c_str())) {
-        std::cout << "LoadModel() failed to load: '" << filepath << "'\n";
+    if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, model->m_fullPath.c_str())) {
+        std::cout << "LoadModel() failed to load: '" << model->m_fullPath << "'\n";
         return;
     }
 
@@ -700,11 +744,6 @@ void AssetManager::LoadModel(const std::string filepath) {
             aabbMax.y = std::max(aabbMax.y, vertex.position.y);
             aabbMax.z = std::max(aabbMax.z, vertex.position.z);
 
-
-            if (_models[modelIndex].GetName() == "Casing9mm") {
-                //std::cout << "vertex.position: " << Util::Vec3ToString10(vertex.position) << "\n";
-            }
-
             indices.push_back(uniqueVertices[vertex]);
         }
 
@@ -728,14 +767,8 @@ void AssetManager::LoadModel(const std::string filepath) {
         modelAabbMin = Util::Vec3Min(modelAabbMin, aabbMin);
         modelAabbMax = Util::Vec3Max(modelAabbMax, aabbMax);
 
-        if (_models[modelIndex].GetName() == "Casing9mm") {
-            //std::cout << "modelAabbMin: " << Util::Vec3ToString10(modelAabbMin) << "\n";
-            //std::cout << "modelAabbMax: " << Util::Vec3ToString10(modelAabbMax) << "\n";
-        }
-
-
         std::lock_guard<std::mutex> lock(_modelsMutex);
-        _models[modelIndex].AddMeshIndex(AssetManager::CreateMesh(shape.name, vertices, indices, aabbMin, aabbMax));
+        model->AddMeshIndex(AssetManager::CreateMesh(shape.name, vertices, indices, aabbMin, aabbMax));
     }
 
     // Build the bounding box
@@ -745,10 +778,12 @@ void AssetManager::LoadModel(const std::string filepath) {
     BoundingBox boundingBox;
     boundingBox.size = glm::vec3(width, height, depth);
     boundingBox.offsetFromModelOrigin = modelAabbMin;
-    std::lock_guard<std::mutex> lock(_modelsMutex);
-    _models[modelIndex].SetBoundingBox(boundingBox);
-    _models[modelIndex].aabbMin = modelAabbMin;
-    _models[modelIndex].aabbMax = modelAabbMax;
+    model->SetBoundingBox(boundingBox);
+    model->aabbMin = modelAabbMin;
+    model->aabbMax = modelAabbMax;
+
+    // Done
+    model->m_loadedFromDisk = true;
 }
 
 Model* AssetManager::GetModelByIndex(int index) {
@@ -908,9 +943,9 @@ int AssetManager::GetSkinnedMeshIndexByName(const std::string& name) {
 //      Animation       //
 
 Animation* AssetManager::GetAnimationByName(const std::string& name) {
-    for (auto* animation : _animations) {
-        if (name == animation->_filename) {
-            return animation;
+    for (auto& animation : _animations) {
+        if (name == animation._filename) {
+            return &animation;
         }
     }
     std::cout << "AssetManager::GetAnimationByName() failed because '" << name << "' does not exist!\n";
@@ -1062,194 +1097,10 @@ int AssetManager::GetCubemapTextureIndexByName(const std::string& name) {
 //                      //
 //      Textures        //
 
-void AssetManager::LoadTexture(const std::string filepath) {
 
-    int textureIndex = -1;
-    int width = 0;
-    int height = 0;
-    int channelCount = 0;
-    unsigned char* data = nullptr;
-    std::string filename = Util::GetFilename(filepath);
-
-    if (BackEnd::GetAPI() == API::OPENGL) {
-
-        //CMP_Texture cmpTexture;
-        CMP_Texture destTexture;
-        bool compressed = true;
-
-        if (!Util::FileExists(filepath)) {
-            std::cout << filepath << " does not exist.\n";
-        }
-
-        // Check if compressed version exists. If not, create one.
-        std::string suffix = filename.substr(filename.length() - 3);
-        std::string compressedPath = "res/assets/" + filename + ".dds";
-
-        if (!Util::FileExists(compressedPath)) {
-            stbi_set_flip_vertically_on_load(false);
-            data = stbi_load(filepath.data(), &width, &height, &channelCount, 0);
-
-            if (suffix == "NRM") {
-                //swizzle
-                if (channelCount == 3) {
-                    uint8_t* image = data;
-                    const uint64_t pitch = static_cast<uint64_t>(width) * 3UL;
-                    for (auto r = 0; r < height; ++r) {
-                        uint8_t* row = image + r * pitch;
-                        for (auto c = 0UL; c < static_cast<uint64_t>(width); ++c) {
-                            uint8_t* pixel = row + c * 3UL;
-                            uint8_t  p = pixel[0];
-                            pixel[0] = pixel[2];
-                            pixel[2] = p;
-                        }
-                    }
-                }
-                CMP_Texture srcTexture = { 0 };
-                srcTexture.dwSize = sizeof(CMP_Texture);
-                srcTexture.dwWidth = width;
-                srcTexture.dwHeight = height;
-                srcTexture.dwPitch = channelCount == 4 ? width * 4 : width * 3;
-                srcTexture.format = channelCount == 4 ? CMP_FORMAT_RGBA_8888 : CMP_FORMAT_RGB_888;
-                srcTexture.dwDataSize = srcTexture.dwHeight * srcTexture.dwPitch;
-                srcTexture.pData = data;
-                destTexture.dwSize = sizeof(destTexture);
-                destTexture.dwWidth = width;
-                destTexture.dwHeight = height;
-                destTexture.dwPitch = width;
-                destTexture.format = CMP_FORMAT_DXT3;
-                destTexture.dwDataSize = CMP_CalculateBufferSize(&destTexture);
-                destTexture.pData = (CMP_BYTE*)malloc(destTexture.dwDataSize);
-                CMP_CompressOptions options = { 0 };
-                options.dwSize = sizeof(options);
-                options.fquality = 0.88f;
-                CMP_ERROR   cmp_status;
-                cmp_status = CMP_ConvertTexture(&srcTexture, &destTexture, &options, nullptr);
-                if (cmp_status != CMP_OK) {
-                    free(destTexture.pData);
-                    std::printf("Compression returned an error %d\n", cmp_status);
-                    return;
-                }
-                else {
-                    std::cout << "saving compressed texture: " << compressedPath.c_str() << "\n";
-                    SaveDDSFile(compressedPath.c_str(), destTexture);
-                }
-            }
-            else if (suffix == "RMA") {
-                //swizzle
-                if (channelCount == 3) {
-                    uint8_t* image = data;
-                    const uint64_t pitch = static_cast<uint64_t>(width) * 3UL;
-                    for (auto r = 0; r < height; ++r) {
-                        uint8_t* row = image + r * pitch;
-                        for (auto c = 0UL; c < static_cast<uint64_t>(width); ++c) {
-                            uint8_t* pixel = row + c * 3UL;
-                            uint8_t  p = pixel[0];
-                            pixel[0] = pixel[2];
-                            pixel[2] = p;
-                        }
-                    }
-                }
-                CMP_Texture srcTexture = { 0 };
-                srcTexture.dwSize = sizeof(CMP_Texture);
-                srcTexture.dwWidth = width;
-                srcTexture.dwHeight = height;
-                srcTexture.dwPitch = channelCount == 4 ? width * 4 : width * 3;
-                srcTexture.format = channelCount == 4 ? CMP_FORMAT_RGBA_8888 : CMP_FORMAT_BGR_888;
-                srcTexture.dwDataSize = srcTexture.dwHeight * srcTexture.dwPitch;
-                srcTexture.pData = data;
-                destTexture.dwSize = sizeof(destTexture);
-                destTexture.dwWidth = width;
-                destTexture.dwHeight = height;
-                destTexture.dwPitch = width;
-                destTexture.format = CMP_FORMAT_DXT3;
-                destTexture.dwDataSize = CMP_CalculateBufferSize(&destTexture);
-                destTexture.pData = (CMP_BYTE*)malloc(destTexture.dwDataSize);
-                CMP_CompressOptions options = { 0 };
-                options.dwSize = sizeof(options);
-                options.fquality = 0.88f;
-                CMP_ERROR   cmp_status;
-                cmp_status = CMP_ConvertTexture(&srcTexture, &destTexture, &options, nullptr);
-                if (cmp_status != CMP_OK) {
-                    free(destTexture.pData);
-                    std::printf("Compression returned an error %d\n", cmp_status);
-                    return;
-                }
-                else {
-                    SaveDDSFile(compressedPath.c_str(), destTexture);
-                }
-            }
-            else if (suffix == "ALB") {
-                //swizzle
-                if (channelCount == 3) {
-                    uint8_t* image = data;
-                    const uint64_t pitch = static_cast<uint64_t>(width) * 3UL;
-                    for (auto r = 0; r < height; ++r) {
-                        uint8_t* row = image + r * pitch;
-                        for (auto c = 0UL; c < static_cast<uint64_t>(width); ++c) {
-                            uint8_t* pixel = row + c * 3UL;
-                            uint8_t  p = pixel[0];
-                            pixel[0] = pixel[2];
-                            pixel[2] = p;
-                        }
-                    }
-                }
-                CMP_Texture srcTexture = { 0 };
-                srcTexture.dwSize = sizeof(CMP_Texture);
-                srcTexture.dwWidth = width;
-                srcTexture.dwHeight = height;
-                srcTexture.dwPitch = channelCount == 4 ? width * 4 : width * 3;
-                srcTexture.format = channelCount == 4 ? CMP_FORMAT_RGBA_8888 : CMP_FORMAT_RGB_888;
-                srcTexture.dwDataSize = srcTexture.dwHeight * srcTexture.dwPitch;
-                srcTexture.pData = data;
-                destTexture.dwSize = sizeof(destTexture);
-                destTexture.dwWidth = width;
-                destTexture.dwHeight = height;
-                destTexture.dwPitch = width;
-                destTexture.format = CMP_FORMAT_DXT3;
-                destTexture.dwDataSize = CMP_CalculateBufferSize(&destTexture);
-                destTexture.pData = (CMP_BYTE*)malloc(destTexture.dwDataSize);
-                CMP_CompressOptions options = { 0 };
-                options.dwSize = sizeof(options);
-                options.fquality = 0.88f;
-                CMP_ERROR   cmp_status;
-                cmp_status = CMP_ConvertTexture(&srcTexture, &destTexture, &options, nullptr);
-                if (cmp_status != CMP_OK) {
-                    free(destTexture.pData);
-                    std::printf("Compression returned an error %d\n", cmp_status);
-                    return;
-                }
-                else {
-                    SaveDDSFile(compressedPath.c_str(), destTexture);
-                }
-            }
-            // For everything else just load the raw texture. Compression fucks up UI elements.
-            else {
-                stbi_set_flip_vertically_on_load(false);
-                data = stbi_load(filepath.data(), &width, &height, &channelCount, 0);
-                compressed = false;
-            }
-        }
-        CMP_Texture* cmpTexture = &destTexture;
-        if (!compressed) {
-            cmpTexture = nullptr;
-        }
-
-        std::lock_guard<std::mutex> lock(_texturesMutex);
-        textureIndex = _textures.size();
-        Texture& texture = _textures.emplace_back(Texture(filename, width, height, channelCount));
-        texture.GetGLTexture().UploadToGPU(data, cmpTexture, width, height, channelCount);
-
-        return;
-    }
-
-
-
-    else if (BackEnd::GetAPI() == API::VULKAN) {
-
-    }
-
-
-
+void AssetManager::LoadTexture(Texture* texture) {
+    texture->Load(texture->m_fullPath);
+    texture->m_loadingBegan = true;
 }
 
 int AssetManager::GetTextureCount() {
@@ -1330,7 +1181,7 @@ ExrTexture* AssetManager::GetExrTextureByName(const std::string& name) {
     return nullptr;
 }
 
-ivec2 AssetManager::GetTextureSizeByName(const char* textureName) {
+hell::ivec2 AssetManager::GetTextureSizeByName(const char* textureName) {
 
     static std::unordered_map<const char*, int> textureIndices;
     if (textureIndices.find(textureName) == textureIndices.end()) {
@@ -1338,10 +1189,10 @@ ivec2 AssetManager::GetTextureSizeByName(const char* textureName) {
     }
     Texture* texture = AssetManager::GetTextureByIndex(textureIndices[textureName]);
     if (texture) {
-        return ivec2(texture->GetWidth(), texture->GetHeight());
+        return hell::ivec2(texture->GetWidth(), texture->GetHeight());
     }
     else {
-        return ivec2(0, 0);
+        return hell::ivec2(0, 0);
     }
 }
 
@@ -1457,6 +1308,8 @@ void AssetManager::CreateHardcodedModels() {
         _quadMeshIndexQuadscreenBottomLeft = model.GetMeshIndices()[5];
         _quadMeshIndexQuadscreenBottomRight = model.GetMeshIndices()[6];
         _halfSizeQuadMeshIndex = model.GetMeshIndices()[7];
+        model.m_awaitingLoadingFromDisk = false;
+        model.m_loadedFromDisk = true;
     }
 
     /* Upfacing Plane */ {
@@ -1489,6 +1342,8 @@ void AssetManager::CreateHardcodedModels() {
         Model& model = _models.emplace_back();
         model.SetName("UpFacingPLane");
         model.AddMeshIndex(AssetManager::CreateMesh(name, vertices, indices));
+        model.m_awaitingLoadingFromDisk = false;
+        model.m_loadedFromDisk = true;
         _upFacingPlaneMeshIndex = model.GetMeshIndices()[0];
     }
 

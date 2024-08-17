@@ -12,6 +12,7 @@
 #include <glm/gtc/type_ptr.hpp>
 #include "glm/gtx/hash.hpp"
 #include "Math.h"
+#include <gli/gli.hpp>
 #pragma warning(pop)
 
 enum class API { OPENGL, VULKAN, UNDEFINED };
@@ -20,7 +21,7 @@ enum class SplitscreenMode { NONE, TWO_PLAYER, FOUR_PLAYER, SPLITSCREEN_MODE_COU
 enum class BulletHoleDecalType { REGULAR, GLASS };
 enum class PickUpType { NONE, AMMO, GLOCK, GLOCK_AMMO, TOKAREV_AMMO, SHOTGUN, SHOTGUN_AMMO, AKS74U, AKS74U_AMMO, AKS74U_SCOPE };
 enum class DobermannState { LAY, PATROL, KAMAKAZI, DOG_SHAPED_PIECE_OF_MEAT };
-
+enum class FacingDirection { LEFT, RIGHT, ALIGNED };
 
 enum EngineMode { GAME = 0, FLOORPLAN, EDITOR };
 enum Weapon { KNIFE = 0, GLOCK, SHOTGUN, AKS74U, MP7, WEAPON_COUNT };
@@ -117,28 +118,30 @@ enum WeaponAction {
 #define BONE_ID_LOCATION     4
 #define BONE_WEIGHT_LOCATION 5
 
-struct ivec2 {
-    int x;
-    int y;
-    ivec2() = default;
-    template <typename T>
-    ivec2(T x_, T y_) : x(static_cast<int>(x_)), y(static_cast<int>(y_)) {}
-    ivec2(const ivec2& other_) : x(other_.x), y(other_.y) {}
-    ivec2(int x_, int y_) : x(x_), y(y_) {}
-    ivec2 operator+(const ivec2& other) const {
-        return ivec2(x + other.x, y + other.y);
-    }
-    ivec2 operator-(const ivec2& other) const {
-        return ivec2(x - other.x, y - other.y);
-    }
-    ivec2& operator=(const ivec2& other) {
-        if (this != &other) {
-            x = other.x;
-            y = other.y;
+namespace hell {
+    struct ivec2 {
+        int x;
+        int y;
+        ivec2() = default;
+        template <typename T>
+        ivec2(T x_, T y_) : x(static_cast<int>(x_)), y(static_cast<int>(y_)) {}
+        ivec2(const ivec2& other_) : x(other_.x), y(other_.y) {}
+        ivec2(int x_, int y_) : x(x_), y(y_) {}
+        ivec2 operator+(const ivec2& other) const {
+            return ivec2(x + other.x, y + other.y);
         }
-        return *this;
-    }
-};
+        ivec2 operator-(const ivec2& other) const {
+            return ivec2(x - other.x, y - other.y);
+        }
+        ivec2& operator=(const ivec2& other) {
+            if (this != &other) {
+                x = other.x;
+                y = other.y;
+            }
+            return *this;
+        }
+    };
+}
 
 enum VB_TYPES {
     INDEX_BUFFER,
@@ -311,6 +314,7 @@ enum CollisionGroup {
     GENERIC_BOUNCEABLE = 8,
     ITEM_PICK_UP = 16,
     RAGDOLL = 32,
+    DOG_CHARACTER_CONTROLLER = 64,
 };
 
 /*struct AABB2 {
@@ -385,4 +389,20 @@ struct BVHNode {
     glm::vec3 aabbMin; int leftFirst = -1;
     glm::vec3 aabbMax; int instanceCount = -1;
     bool IsLeaf() { return instanceCount > 0; }
+};
+
+struct TextureData {
+    int m_width = 0;
+    int m_height = 0;
+    int m_numChannels = 0;
+    void* m_data = nullptr;
+};
+
+struct CompressedTextureData {
+    int width = 0;
+    int height = 0;
+    int size = 0;
+    void* data = nullptr;
+    gli::target target = gli::TARGET_2D;
+    GLenum format = 0;
 };

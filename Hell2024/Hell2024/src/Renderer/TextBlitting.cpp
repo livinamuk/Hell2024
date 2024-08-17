@@ -31,11 +31,11 @@ int TextBlitter::GetLineHeight(BitmapFontType fontType) {
     }
 }
 
-ivec2 TextBlitter::GetCharacterSize(const char* character, BitmapFontType fontType) {
+hell::ivec2 TextBlitter::GetCharacterSize(const char* character, BitmapFontType fontType) {
 
 
     if (fontType == BitmapFontType::STANDARD) {
-        static std::unordered_map<const char*, ivec2> standardFontTextureSizes;
+        static std::unordered_map<const char*, hell::ivec2> standardFontTextureSizes;
         if (standardFontTextureSizes.find(character) == standardFontTextureSizes.end()) {
             int charPos = _charSheet.find(character);
             std::string textureName = "char_" + std::to_string(charPos + 1);
@@ -44,7 +44,7 @@ ivec2 TextBlitter::GetCharacterSize(const char* character, BitmapFontType fontTy
         return standardFontTextureSizes[character];
     }
     else if (fontType == BitmapFontType::AMMO_NUMBERS) {
-        static std::unordered_map<const char*, ivec2> ammoNumbersFontTextureSizes;
+        static std::unordered_map<const char*, hell::ivec2> ammoNumbersFontTextureSizes;
         if (ammoNumbersFontTextureSizes.find(character) == ammoNumbersFontTextureSizes.end()) {
             int charPos = _numSheet.find(character);
             std::string textureName = "num_" + std::to_string(charPos);
@@ -53,11 +53,11 @@ ivec2 TextBlitter::GetCharacterSize(const char* character, BitmapFontType fontTy
         return ammoNumbersFontTextureSizes[character];
     }
     else {
-        return ivec2(0, 0);
+        return hell::ivec2(0, 0);
     }
 }
 
-std::vector<RenderItem2D> TextBlitter::CreateText(std::string text, ivec2 location, ivec2 viewportSize, Alignment alignment, BitmapFontType fontType, glm::vec2 scale) {
+std::vector<RenderItem2D> TextBlitter::CreateText(std::string text, hell::ivec2 location, hell::ivec2 viewportSize, Alignment alignment, BitmapFontType fontType, glm::vec2 scale) {
 
     std::vector<RenderItem2D> renderItems;
 
@@ -172,7 +172,7 @@ std::vector<RenderItem2D> TextBlitter::CreateText(std::string text, ivec2 locati
     return renderItems;
 }
 
-ivec2 TextBlitter::GetTextSizeInPixels(std::string text, ivec2 viewportSize, BitmapFontType fontType, glm::vec2 scale) {
+hell::ivec2 TextBlitter::GetTextSizeInPixels(std::string text, hell::ivec2 viewportSize, BitmapFontType fontType, glm::vec2 scale) {
 
     int xcursor = 0;
     int ycursor = 0;
@@ -231,5 +231,5 @@ ivec2 TextBlitter::GetTextSizeInPixels(std::string text, ivec2 viewportSize, Bit
         maxWidth = std::max(maxWidth, xcursor);
     }
     maxWidth = std::max(maxWidth, xcursor);
-    return ivec2(maxWidth, ycursor);
+    return hell::ivec2(maxWidth, ycursor);
 }

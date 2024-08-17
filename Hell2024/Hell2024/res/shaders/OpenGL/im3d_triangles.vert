@@ -9,13 +9,13 @@ struct VertexData {
 #define kAntialiasing 2.0
 
 uniform mat4 uViewProjMatrix;
-	
+
 layout(location=0) in vec4 aPositionSize;
 layout(location=1) in vec4 aColor;
-	
+
 out VertexData vData;
-	
-void main() 
+
+void main()
 {
 	vData.m_color = aColor.abgr;
 	vData.m_color.a *= smoothstep(0.0, 1.0, aPositionSize.w / kAntialiasing);

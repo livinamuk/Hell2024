@@ -139,6 +139,9 @@ namespace BackEnd {
     }
 
     void CleanUp() {
+        if (GetWindowMode() == WindowedMode::FULLSCREEN) {
+            ToggleFullscreen();
+        }
         glfwTerminate();
     }
 

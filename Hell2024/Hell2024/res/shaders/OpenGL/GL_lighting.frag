@@ -371,7 +371,7 @@ void main() {
 		float factor = min(1, roughness * 1.0);
 		float factor2 = min(1, 1 - metallic * 1.0);
 		float factor3 = min (factor, factor2);
-		adjustedIndirectLighting *= (0.4) * vec3(factor2);
+		adjustedIndirectLighting *= (0.45) * vec3(factor2);
 		adjustedIndirectLighting = max(adjustedIndirectLighting, vec3(0));
 		adjustedIndirectLighting *= baseColor2.rgb * 1.0;
 		FragColor.rgb += adjustedIndirectLighting * 0.1;
@@ -382,12 +382,6 @@ void main() {
 		FragColor.rgb = vec3(0);
 	}
 
-
-	// FragColor.rgb = indirectLighting;
-	//float d = distance(viewPos, WorldPos);
-	//float alpha = getFogFactor(d);
-	//vec3 FogColor = vec3(0.0);
-	//FragColor.rgb = mix(FragColor.rgb, FogColor, alpha);
 	FragColor.rgb = mix(FragColor.rgb, Tonemap_ACES(FragColor.rgb), 1.0);
 	FragColor.rgb = pow(FragColor.rgb, vec3(1.0/2.2));
 
@@ -431,16 +425,7 @@ void main() {
 	FragColor.rgb -= vec3(0.020);
 
 
-	//FragColor.rgb = vec3(TexCoords, 0);
 
-
-//	FragColor.rgb = vec3( normal);
-//	FragColor.rgb = vec3( WorldPos);
-	//FragColor.rgb = vec3( 1,1,0);
-
-//	FragColor.rgb = vec3( baseColor);
-	//FragColor.g = 0;
-//	FragColor.b = 0;
 
 
 //	FragColor.rgb = vec3( TexCoords, 0); ]
@@ -455,8 +440,7 @@ void main() {
 	float NOISE =  (x * -noiseFactor) + (noiseFactor / 2);
 	//FragColor.rgb = vec3( NOISE);
 
-
-	//FragColor.rgb = vec3( normal);
+//FragColor.rgb = vec3( normal);
 	//FragColor.rgb = vec3( baseColor);
 
 

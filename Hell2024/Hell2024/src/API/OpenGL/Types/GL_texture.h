@@ -4,6 +4,7 @@
 #include <Compressonator.h>
 #include <string>
 #include <memory>
+#include "../../../Common.h"
 
 struct OpenGLTexture {
 
@@ -26,9 +27,15 @@ private:
     GLuint64 bindlessID;
     std::string _filename;
     std::string _filetype;
-    std::unique_ptr<CMP_Texture> _CMP_texture;
-    unsigned char* _data = nullptr;
+
+    bool m_compressed = false;
+    //unsigned char* _data = nullptr;
     float* _floatData = nullptr;
+
+    CompressedTextureData m_compressedTextureData;
+
+    void* m_data = nullptr;
+
     int _NumOfChannels = 0;
     int _width = 0;
     int _height = 0;

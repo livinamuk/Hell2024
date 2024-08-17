@@ -11,6 +11,7 @@
 #include "../Game/Scene.h"
 #include "../Pathfinding/Pathfinding2.h"
 #include "../Renderer/GlobalIllumination.h"
+#include "../Timer.hpp"
 
 namespace CSG {
 
@@ -80,304 +81,313 @@ namespace CSG {
 
     void Build() {
 
+        Timer timer("CSG::Build()");
+
         CleanUp();
 
-        // Remove all brushes
-        csg::brush_t* brush = g_world.first();
-        while (brush) {
-            g_world.remove(brush);
-            brush = g_world.first();
-        }
+        {
+            Timer timer2("-brush stuff");
+
+            // Remove all brushes
+            csg::brush_t* brush = g_world.first();
+            while (brush) {
+                g_world.remove(brush);
+                brush = g_world.first();
+            }
+
+            static int materialIndex = AssetManager::GetMaterialIndex("Ceiling2");
+
+            for (Staircase& staircase : Scene::g_staircases) {
+
+                float offsetY = 0;
+                float offsetZ = 0;
+
+                for (int i = 0; i < staircase.m_stepCount; i++) {
+
+                    Transform stepTransform;
+                    stepTransform.position.y = offsetY;
+                    stepTransform.position.z = offsetZ;
+                    stepTransform.position.y += (0.122f * 0.5f);
+                    stepTransform.position.z += (0.122f * 0.5f);
+                    stepTransform.scale.y = 0.122f;
+                    stepTransform.scale.z = 0.122f;
+
+                    Transform worldTransform;
+                    worldTransform.position = Util::GetTranslationFromMatrix(staircase.GetModelMatrix() * stepTransform.to_mat4());
+                    worldTransform.rotation.y = staircase.m_rotation;
+                    worldTransform.scale.y = 0.122f;
+                    worldTransform.scale.z = 0.122f;
+
+                    CSGObject& csg = g_objects.emplace_back();
+                    csg.m_transform = worldTransform;
+                    csg.m_type = CSGType::ADDITIVE;
+                    csg.m_materialIndex = materialIndex;
+                    csg.m_textureScale = 1;
+                    csg.m_parentIndex = i;
+                    csg.m_textureOffsetX = 1;
+                    csg.m_textureOffsetY = 1;
+                    csg.m_disableRendering = true;
+
+                    float magic = 0.202 - 0.052;
+                    magic = 0.432 * 0.333333f;
+                    offsetY += magic;
+                    offsetZ += magic;
+                }
+            }
 
 
-        static int materialIndex = AssetManager::GetMaterialIndex("Ceiling2");
 
-        for (Staircase& staircase : Scene::g_staircases) {
-
-            Transform segmentOffset;
-
-            float offsetY = 0;
-            float offsetZ = 0;
-
-            for (int i = 0; i < staircase.m_segmentCount * 3; i++) {
-
-                Transform transform;
-                transform.position = staircase.m_position;
-                transform.position.y += offsetY;
-                transform.position.z += offsetZ;
-                transform.position.y += (0.122f * 0.5f);
-                transform.position.z += (0.122f * 0.5f);
-                transform.scale.y = 0.122f;
-                transform.scale.z = 0.122f;
+            for (int i = 0; i < Scene::g_cubeVolumesAdditive.size(); i++) {
+                CubeVolume& cubeVolume = Scene::g_cubeVolumesAdditive[i];
                 CSGObject& csg = g_objects.emplace_back();
-                csg.m_transform = transform;
+                csg.m_transform = cubeVolume.GetTransform();
                 csg.m_type = CSGType::ADDITIVE;
-                csg.m_materialIndex = materialIndex;
-                csg.m_textureScale = 1;
+                csg.m_materialIndex = cubeVolume.materialIndex;
+                csg.m_textureScale = cubeVolume.textureScale;
                 csg.m_parentIndex = i;
-                csg.m_textureOffsetX = 1;
-                csg.m_textureOffsetY = 1;
+                csg.m_textureOffsetX = cubeVolume.textureOffsetX;
+                csg.m_textureOffsetY = cubeVolume.textureOffsetY;
+                csg.m_parentVolumeNormalMatrix = cubeVolume.GetNormalMatrix();
+            }
 
-                float magic = 0.202 - 0.052;
-                offsetY += magic;
-                offsetZ += magic;
 
-                /*
+            for (int i = 0; i < Scene::g_cubeVolumesSubtractive.size(); i++) {
+                CubeVolume& cubeVolume = Scene::g_cubeVolumesSubtractive[i];
+                CSGObject& csg = g_objects.emplace_back();
+                csg.m_transform = cubeVolume.GetTransform();
+                csg.m_type = CSGType::SUBTRACTIVE;
+                csg.m_materialIndex = cubeVolume.materialIndex;
+                csg.m_textureScale = cubeVolume.textureScale;
+                csg.m_parentIndex = i;
+                csg.m_textureOffsetX = cubeVolume.textureOffsetX;
+                csg.m_textureOffsetY = cubeVolume.textureOffsetY;
+                csg.m_parentVolumeNormalMatrix = cubeVolume.GetNormalMatrix();
+            }
 
-                for (auto& meshIndex : model->GetMeshIndices()) {
-                    RenderItem3D renderItem;
-                    renderItem.meshIndex = meshIndex;
-                    renderItem.modelMatrix = staircase.GetModelMatrix() * segmentOffset.to_mat4();
-                    renderItem.inverseModelMatrix = glm::inverse(staircase.GetModelMatrix());
-                    renderItem.materialIndex = materialIndex;
-                    renderItems.push_back(renderItem);
+            for (Door& door : Scene::GetDoors()) {
+                CSGObject& csg = g_objects.emplace_back();
+                csg.m_transform.position = door.m_position + glm::vec3(0, DOOR_HEIGHT / 2, 0);
+                csg.m_transform.rotation = glm::vec3(0, door.m_rotation, 0);
+                csg.m_transform.scale = glm::vec3(0.2f, DOOR_HEIGHT, 0.8f);
+                csg.m_type = CSGType::DOOR;
+                csg.m_materialIndex = AssetManager::GetMaterialIndex("FloorBoards"); // add this to the door object somehow
+                csg.m_textureScale = 0.5f;                                           // add this to the door object somehow
+            }
 
-                    csg.m_parentVolumeNormalMatrix = cubeVolume.GetNormalMatrix();
+            for (Window& window : Scene::GetWindows()) {
+                CSGObject& csg = g_objects.emplace_back();
+                csg.m_transform.position = window.GetPosition() + glm::vec3(0, 1.5f, 0);
+                csg.m_transform.scale = glm::vec3(0.8f, 1.3f, 0.2f);
+                csg.m_transform.rotation.y = window.GetRotationY();
+                csg.m_type = CSGType::SUBTRACTIVE;
+                csg.m_materialIndex = AssetManager::GetMaterialIndex("FloorBoards"); // add this to the door object somehow
+                csg.m_textureScale = 0.5f;                                           // add this to the door object somehow
+            }
+
+
+            for (int i = 0; i < g_objects.size(); i++) {
+
+                CSGObject& cube = g_objects[i];
+
+                Transform transform = cube.m_transform;
+                transform.scale *= glm::vec3(0.5f);
+
+                cube.m_brush = g_world.add();
+
+                cube.m_brush->userdata = cube_brush_userdata_t(cube.m_brush);
+                cube_brush_userdata_t* userdata = any_cast<cube_brush_userdata_t>(&cube.m_brush->userdata);
+
+                if (cube.m_type == CSGType::ADDITIVE) {
+                    userdata->set_brush_type(SOLID_BRUSH);
                 }
-                segmentOffset.position.y += 0.411;
-                segmentOffset.position.z += 0.44f;*/
-            }
-        }
-
-
-
-
-
-
-
-        for (int i = 0; i < Scene::g_cubeVolumesAdditive.size(); i++) {
-            CubeVolume& cubeVolume = Scene::g_cubeVolumesAdditive[i];
-            CSGObject& csg = g_objects.emplace_back();
-            csg.m_transform = cubeVolume.GetTransform();
-            csg.m_type = CSGType::ADDITIVE;
-            csg.m_materialIndex = cubeVolume.materialIndex;
-            csg.m_textureScale = cubeVolume.textureScale;
-            csg.m_parentIndex = i;
-            csg.m_textureOffsetX = cubeVolume.textureOffsetX;
-            csg.m_textureOffsetY = cubeVolume.textureOffsetY;
-            csg.m_parentVolumeNormalMatrix = cubeVolume.GetNormalMatrix();
-        }
-
-
-        for (int i = 0; i < Scene::g_cubeVolumesSubtractive.size(); i++) {
-            CubeVolume& cubeVolume = Scene::g_cubeVolumesSubtractive[i];
-            CSGObject& csg = g_objects.emplace_back();
-            csg.m_transform = cubeVolume.GetTransform();
-            csg.m_type = CSGType::SUBTRACTIVE;
-            csg.m_materialIndex = cubeVolume.materialIndex;
-            csg.m_textureScale = cubeVolume.textureScale;
-            csg.m_parentIndex = i;
-            csg.m_textureOffsetX = cubeVolume.textureOffsetX;
-            csg.m_textureOffsetY = cubeVolume.textureOffsetY;
-            csg.m_parentVolumeNormalMatrix = cubeVolume.GetNormalMatrix();
-        }
-
-        for (Door& door : Scene::GetDoors()) {
-            CSGObject& csg = g_objects.emplace_back();
-            csg.m_transform.position = door.m_position + glm::vec3(0, DOOR_HEIGHT / 2, 0);
-            csg.m_transform.rotation = glm::vec3(0, door.m_rotation, 0);
-            csg.m_transform.scale = glm::vec3(0.2f, DOOR_HEIGHT, 0.8f);
-            csg.m_type = CSGType::DOOR;
-            csg.m_materialIndex = AssetManager::GetMaterialIndex("FloorBoards"); // add this to the door object somehow
-            csg.m_textureScale = 0.5f;                                           // add this to the door object somehow
-        }
-
-        for (Window& window: Scene::GetWindows()) {
-            CSGObject& csg = g_objects.emplace_back();
-            csg.m_transform.position = window.GetPosition() + glm::vec3(0, 1.5f, 0);
-            csg.m_transform.scale = glm::vec3(0.8f, 1.3f, 0.2f);
-            csg.m_transform.rotation.y = window.GetRotationY();
-            csg.m_type = CSGType::SUBTRACTIVE;
-            csg.m_materialIndex = AssetManager::GetMaterialIndex("FloorBoards"); // add this to the door object somehow
-            csg.m_textureScale = 0.5f;                                           // add this to the door object somehow
-        }
-
-
-        for (int i = 0; i < g_objects.size(); i++) {
-
-            CSGObject& cube = g_objects[i];
-
-            Transform transform = cube.m_transform;
-            transform.scale *= glm::vec3(0.5f);
-
-            cube.m_brush = g_world.add();
-
-            cube.m_brush->userdata = cube_brush_userdata_t(cube.m_brush);
-            cube_brush_userdata_t* userdata = any_cast<cube_brush_userdata_t>(&cube.m_brush->userdata);
-
-            if (cube.m_type == CSGType::ADDITIVE) {
-                userdata->set_brush_type(SOLID_BRUSH);
-            }
-            else if (cube.m_type == CSGType::SUBTRACTIVE) {
-                userdata->set_brush_type(AIR_BRUSH);
-            }
-            else if (cube.m_type == CSGType::DOOR) {
-                userdata->set_brush_type(AIR_BRUSH);
-            }
-            else if (cube.m_type == CSGType::WINDOW) {
-                userdata->set_brush_type(AIR_BRUSH);
-            }
-            userdata->set_transform(transform.to_mat4());
-            userdata->set_parentIndex(i);
-        }
-
-        // Calculate vertices
-        auto rebuilt = g_world.rebuild();
-
-        g_vertices.clear();
-        g_indices.clear();
-
-        // Hack in the door vertices. They need to be in this vector for raytracing.
-
-        uint32_t modelIndex = AssetManager::GetModelIndexByName("Door");
-        Model* model = AssetManager::GetModelByIndex(modelIndex);
-        for (auto& meshIndex : model->GetMeshIndices()) {
-            Mesh* mesh = AssetManager::GetMeshByIndex(meshIndex);
-            if (mesh->name == "SM_Door") {
-                std::cout << Util::Vec3ToString10(mesh->aabbMin) << "\n";
-                std::cout << Util::Vec3ToString10(mesh->aabbMax) << "\n";
-
-                //(-0.00, 0.00, 0.00)
-                //(-0.00, 2.00, 0.79)
-
-                CSGVertex v0, v1, v2, v3, v4, v5, v6, v7;
-                v0.position = glm::vec3(mesh->aabbMin.x, mesh->aabbMin.y, mesh->aabbMin.z);
-                v1.position = glm::vec3(mesh->aabbMin.x, mesh->aabbMax.y, mesh->aabbMin.z);
-                v2.position = glm::vec3(mesh->aabbMin.x, mesh->aabbMax.y, mesh->aabbMax.z);
-                v3.position = glm::vec3(mesh->aabbMin.x, mesh->aabbMin.y, mesh->aabbMax.z);
-                v4.position = glm::vec3(mesh->aabbMax.x, mesh->aabbMin.y, mesh->aabbMax.z);
-                v5.position = glm::vec3(mesh->aabbMax.x, mesh->aabbMax.y, mesh->aabbMax.z);
-                v6.position = glm::vec3(mesh->aabbMax.x, mesh->aabbMax.y, mesh->aabbMin.z);
-                v7.position = glm::vec3(mesh->aabbMax.x, mesh->aabbMin.y, mesh->aabbMin.z);
-                g_vertices.push_back(v0);
-                g_vertices.push_back(v1);
-                g_vertices.push_back(v2);
-                g_vertices.push_back(v3);
-                g_vertices.push_back(v4);
-                g_vertices.push_back(v5);
-                g_vertices.push_back(v6);
-                g_vertices.push_back(v7);
-                g_indices.push_back(2);
-                g_indices.push_back(1);
-                g_indices.push_back(0);
-                g_indices.push_back(0);
-                g_indices.push_back(3);
-                g_indices.push_back(2);
-                g_indices.push_back(2 + 4);
-                g_indices.push_back(1 + 4);
-                g_indices.push_back(0 + 4);
-                g_indices.push_back(0 + 4);
-                g_indices.push_back(3 + 4);
-                g_indices.push_back(2 + 4);
-            }
-        }
-        g_baseCSGVertex = g_vertices.size();
-        int baseIndex = g_indices.size();
-        int baseVertex = g_vertices.size();
-
-        for (CSGObject& csgObject : g_objects) {
-
-            csg::brush_t* b = csgObject.m_brush;
-            cube_brush_userdata_t* brush = any_cast<cube_brush_userdata_t>(&b->userdata);
-            brush->update_display_list();
-
-            //CSGObject & cube = g_objects[brush->m_index];
-            glm::vec3 boundsMin = glm::vec3(1e30f);
-            glm::vec3 boundsMax = glm::vec3(-1e30f);
-
-            int vertexCount = 0;
-            int indexCount = 0;
-            int index = 0;
-            for (CSGVertex& vertex : brush->m_vertices) {
-                glm::vec3 origin = brush->m_origin;
-                origin = glm::vec3(0);
-                vertex.uv = CalculateUV(vertex.position, vertex.normal, origin);
-                vertex.uv *= csgObject.m_textureScale;
-                vertex.uv.x += csgObject.m_textureOffsetX;
-                vertex.uv.y += csgObject.m_textureOffsetY;
-
-                g_vertices.push_back(vertex);
-                vertexCount++; // remove duplicate vertices somehow ya fool
-                indexCount++;
-
-                boundsMin = Util::Vec3Min(boundsMin, vertex.position);
-                boundsMax = Util::Vec3Max(boundsMax, vertex.position);
-
-                g_indices.push_back(index);
-                index++;
-            }
-            csgObject.m_baseIndex = baseIndex;
-            csgObject.m_baseVertex = baseVertex;
-            csgObject.m_vertexCount = vertexCount;
-            csgObject.m_indexCount = indexCount;
-            csgObject.m_aabb = AABB(boundsMin, boundsMax);
-
-            baseVertex += vertexCount;
-            baseIndex += vertexCount;
-        }
-
-
-
-
-        // Calculate tangents
-        for (int i = g_baseCSGVertex; i < g_vertices.size(); i += 3) {
-            Util::SetNormalsAndTangentsFromVertices(&g_vertices[i], &g_vertices[i+1], &g_vertices[i+2]);
-        }
-
-        // Set materials based on local face normal
-        for (CSGObject& csgObject : g_objects) {
-            glm::mat4 inverseNormalMatrix = glm::inverse(csgObject.m_parentVolumeNormalMatrix);
-            for (int i = csgObject.m_baseVertex; i < csgObject.m_baseVertex + csgObject.m_vertexCount; i += 3) {
-                glm::vec4 transformedNormal = inverseNormalMatrix * glm::vec4(g_vertices[i].normal, 0.0f);
-                glm::vec3 transformedNormalXYZ = glm::normalize(glm::vec3(transformedNormal));
-
-                if (Util::AreNormalsAligned(transformedNormalXYZ, glm::vec3(0, 0, -1), 0.9f)) {
-                    g_vertices[i + 0].materialIndex = AssetManager::GetMaterialIndex("Ceiling2");
-                    g_vertices[i + 1].materialIndex = AssetManager::GetMaterialIndex("Ceiling2");;
-                    g_vertices[i + 2].materialIndex = AssetManager::GetMaterialIndex("Ceiling2");
+                else if (cube.m_type == CSGType::SUBTRACTIVE) {
+                    userdata->set_brush_type(AIR_BRUSH);
                 }
+                else if (cube.m_type == CSGType::DOOR) {
+                    userdata->set_brush_type(AIR_BRUSH);
+                }
+                else if (cube.m_type == CSGType::WINDOW) {
+                    userdata->set_brush_type(AIR_BRUSH);
+                }
+                userdata->set_transform(transform.to_mat4());
+                userdata->set_parentIndex(i);
+            }
 
-                float dotProduct = glm::dot(g_vertices[i].normal, glm::vec3(0,1,0));
-                float minCosAngle = glm::cos(glm::radians(45.0f));
+            // Calculate vertices
 
-                if (dotProduct >= minCosAngle && dotProduct <= 1.0f) {
+        }
+        {
+            Timer timer3("-g_world.rebuild()");
+            g_world.rebuild();
+        }
+
+
+        {
+            Timer timer3("-vertex stuff");
+
+            g_vertices.clear();
+            g_indices.clear();
+
+            // Hack in the door vertices. They need to be in this vector for raytracing.
+
+            uint32_t modelIndex = AssetManager::GetModelIndexByName("Door");
+            Model* model = AssetManager::GetModelByIndex(modelIndex);
+            for (auto& meshIndex : model->GetMeshIndices()) {
+                Mesh* mesh = AssetManager::GetMeshByIndex(meshIndex);
+                if (mesh->name == "SM_Door") {
+                    //std::cout << Util::Vec3ToString10(mesh->aabbMin) << "\n";
+                    //std::cout << Util::Vec3ToString10(mesh->aabbMax) << "\n";
+                    //(-0.00, 0.00, 0.00)
+                    //(-0.00, 2.00, 0.79)
+                    CSGVertex v0, v1, v2, v3, v4, v5, v6, v7;
+                    v0.position = glm::vec3(mesh->aabbMin.x, mesh->aabbMin.y, mesh->aabbMin.z);
+                    v1.position = glm::vec3(mesh->aabbMin.x, mesh->aabbMax.y, mesh->aabbMin.z);
+                    v2.position = glm::vec3(mesh->aabbMin.x, mesh->aabbMax.y, mesh->aabbMax.z);
+                    v3.position = glm::vec3(mesh->aabbMin.x, mesh->aabbMin.y, mesh->aabbMax.z);
+                    v4.position = glm::vec3(mesh->aabbMax.x, mesh->aabbMin.y, mesh->aabbMax.z);
+                    v5.position = glm::vec3(mesh->aabbMax.x, mesh->aabbMax.y, mesh->aabbMax.z);
+                    v6.position = glm::vec3(mesh->aabbMax.x, mesh->aabbMax.y, mesh->aabbMin.z);
+                    v7.position = glm::vec3(mesh->aabbMax.x, mesh->aabbMin.y, mesh->aabbMin.z);
+                    g_vertices.push_back(v0);
+                    g_vertices.push_back(v1);
+                    g_vertices.push_back(v2);
+                    g_vertices.push_back(v3);
+                    g_vertices.push_back(v4);
+                    g_vertices.push_back(v5);
+                    g_vertices.push_back(v6);
+                    g_vertices.push_back(v7);
+                    g_indices.push_back(2);
+                    g_indices.push_back(1);
+                    g_indices.push_back(0);
+                    g_indices.push_back(0);
+                    g_indices.push_back(3);
+                    g_indices.push_back(2);
+                    g_indices.push_back(2 + 4);
+                    g_indices.push_back(1 + 4);
+                    g_indices.push_back(0 + 4);
+                    g_indices.push_back(0 + 4);
+                    g_indices.push_back(3 + 4);
+                    g_indices.push_back(2 + 4);
+                }
+            }
+            g_baseCSGVertex = g_vertices.size();
+            int baseIndex = g_indices.size();
+            int baseVertex = g_vertices.size();
+
+            // THIS NEEDS WRITING: getting total vertex count before hand and reserving that much space
+            /*
+            int totalVertexCount = 8; // Begins with 8 vertices for the door
+            for (CSGObject& csgObject : g_objects) {
+
+                brush->m_vertices
+            }*/
+
+            for (CSGObject& csgObject : g_objects) {
+
+                csg::brush_t* b = csgObject.m_brush;
+                cube_brush_userdata_t* brush = any_cast<cube_brush_userdata_t>(&b->userdata);
+                brush->update_display_list();
+
+                //CSGObject & cube = g_objects[brush->m_index];
+                glm::vec3 boundsMin = glm::vec3(1e30f);
+                glm::vec3 boundsMax = glm::vec3(-1e30f);
+
+                int vertexCount = 0;
+                int indexCount = 0;
+                int index = 0;
+                for (CSGVertex& vertex : brush->m_vertices) {
+                    glm::vec3 origin = brush->m_origin;
+                    origin = glm::vec3(0);
+                    vertex.uv = CalculateUV(vertex.position, vertex.normal, origin);
+                    vertex.uv *= csgObject.m_textureScale;
+                    vertex.uv.x += csgObject.m_textureOffsetX;
+                    vertex.uv.y += csgObject.m_textureOffsetY;
+
+                    g_vertices.push_back(vertex);
+                    vertexCount++; // remove duplicate vertices somehow ya fool
+                    indexCount++;
+
+                    boundsMin = Util::Vec3Min(boundsMin, vertex.position);
+                    boundsMax = Util::Vec3Max(boundsMax, vertex.position);
+
+                    g_indices.push_back(index);
+                    index++;
+                }
+                csgObject.m_baseIndex = baseIndex;
+                csgObject.m_baseVertex = baseVertex;
+                csgObject.m_vertexCount = vertexCount;
+                csgObject.m_indexCount = indexCount;
+                csgObject.m_aabb = AABB(boundsMin, boundsMax);
+
+                baseVertex += vertexCount;
+                baseIndex += vertexCount;
+            }
+
+
+
+
+            // Calculate tangents
+            for (int i = g_baseCSGVertex; i < g_vertices.size(); i += 3) {
+                Util::SetNormalsAndTangentsFromVertices(&g_vertices[i], &g_vertices[i + 1], &g_vertices[i + 2]);
+            }
+
+            // Set materials based on local face normal
+            for (CSGObject& csgObject : g_objects) {
+                glm::mat4 inverseNormalMatrix = glm::inverse(csgObject.m_parentVolumeNormalMatrix);
+                for (int i = csgObject.m_baseVertex; i < csgObject.m_baseVertex + csgObject.m_vertexCount; i += 3) {
+                    glm::vec4 transformedNormal = inverseNormalMatrix * glm::vec4(g_vertices[i].normal, 0.0f);
+                    glm::vec3 transformedNormalXYZ = glm::normalize(glm::vec3(transformedNormal));
+
+                    if (Util::AreNormalsAligned(transformedNormalXYZ, glm::vec3(0, 0, -1), 0.9f)) {
+                        g_vertices[i + 0].materialIndex = AssetManager::GetMaterialIndex("Ceiling2");
+                        g_vertices[i + 1].materialIndex = AssetManager::GetMaterialIndex("Ceiling2");;
+                        g_vertices[i + 2].materialIndex = AssetManager::GetMaterialIndex("Ceiling2");
+                    }
+
+                    //float dotProduct = glm::dot(g_vertices[i].normal, glm::vec3(0,1,0));
+                    //float minCosAngle = glm::cos(glm::radians(45.0f));
+
+                    //if (dotProduct >= minCosAngle && dotProduct <= 1.0f) {
                     g_navMeshVertices.push_back(g_vertices[i + 0].position);
                     g_navMeshVertices.push_back(g_vertices[i + 1].position);
                     g_navMeshVertices.push_back(g_vertices[i + 2].position);
+                    //}
                 }
             }
         }
 
-        for (CSGObject& cube : g_objects) {
-            cube.CreatePhysicsObjectFromVertices();
-        }
+        {
+            Timer timer4("-extra stuff");
 
-        g_sceneDirty = true;
-        std::cout << "Built constructive solid geometry\n";
-
-        // create indices
-        // TODO: remove duplicates or this is redundant
-       /* g_indices.clear();
-        g_indices.resize(g_vertices.size());
-        for (int i = 0; i < g_indices.size(); i++) {
-            g_indices[i] = i;
-        }*/
-
-        if (g_sceneDirty && g_vertices.size()) {
-            if (BackEnd::GetAPI() == API::OPENGL) {
-                OpenGLBackEnd::UploadConstructiveSolidGeometry(g_vertices, g_indices);
+            for (CSGObject& cube : g_objects) {
+                cube.CreatePhysicsObjectFromVertices();
             }
-            else if (BackEnd::GetAPI() == API::VULKAN) {
 
+            g_sceneDirty = true;
+
+            // create indices
+            // TODO: remove duplicates or this is redundant
+           /* g_indices.clear();
+            g_indices.resize(g_vertices.size());
+            for (int i = 0; i < g_indices.size(); i++) {
+                g_indices[i] = i;
+            }*/
+
+            if (g_sceneDirty && g_vertices.size()) {
+                if (BackEnd::GetAPI() == API::OPENGL) {
+                    OpenGLBackEnd::UploadConstructiveSolidGeometry(g_vertices, g_indices);
+                }
+                else if (BackEnd::GetAPI() == API::VULKAN) {
+
+                }
+                g_sceneDirty = false;
             }
-            g_sceneDirty = false;
-        }
 
-        for (Light& light : Scene::g_lights) {
-            light.isDirty = true;
+            for (Light& light : Scene::g_lights) {
+                light.isDirty = true;
+            }
+            GlobalIllumination::RecalculateAll();
         }
-        GlobalIllumination::RecalculateAll();
-        Pathfinding2::UpdateNavMesh(GetNavMeshVertices());
     }
 
     std::span<CSGVertex> CSG::GetRangedVerticesSpan(uint32_t baseVertex, uint32_t vertexCount) {

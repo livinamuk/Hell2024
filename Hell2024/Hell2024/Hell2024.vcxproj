@@ -98,7 +98,7 @@ copy /Y "$(ProjectDir)vendor\dll_debug\PVDRuntime_64.dll" "$(TargetDir)PVDRuntim
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;TRACY_ENABLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>vendor\recast\include;vendor\nlohmann_json\include;vendor\lz4\include;vendor\VkBootstrap;vendor\VulkanMemoryAllocator\include;vendor\Vulkan\include;vendor\tinyexr;vendor\compressonator\include;vendor\tracy\public;vendor\tinyobj;vendor\GLFW\include;vendor\glm;vendor\glad\include;vendor\stb_image;vendor\fmod\include;vendor\assimp\include;vendor\rapidjson\include;vendor\physx\include;vendor\thread_pool\include;vendor\tinycsg\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>vendor\gli\include;vendor\recast\include;vendor\nlohmann_json\include;vendor\lz4\include;vendor\VkBootstrap;vendor\VulkanMemoryAllocator\include;vendor\Vulkan\include;vendor\tinyexr;vendor\compressonator\include;vendor\tracy\public;vendor\tinyobj;vendor\GLFW\include;vendor\glm;vendor\glad\include;vendor\stb_image;vendor\fmod\include;vendor\assimp\include;vendor\rapidjson\include;vendor\physx\include;vendor\thread_pool\include;vendor\tinycsg\include</AdditionalIncludeDirectories>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
@@ -138,10 +138,9 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <ClCompile Include="src\API\OpenGL\Types\GL_texture.cpp" />
     <ClCompile Include="src\API\Vulkan\Types\VK_texture.cpp" />
     <ClCompile Include="src\API\Vulkan\Types\VK_texture3D.cpp" />
+    <ClCompile Include="src\Core\AssetLoader.cpp" />
     <ClCompile Include="src\Core\AssetManager.cpp" />
     <ClCompile Include="src\Core\DebugMenu.cpp" />
-    <ClCompile Include="src\Game\AStar.cpp" />
-    <ClCompile Include="src\Game\Pathfinding.cpp" />
     <ClCompile Include="src\Editor\Editor.cpp" />
     <ClCompile Include="src\Game\Dobermann.cpp" />
     <ClCompile Include="src\Pathfinding\Pathfinding2.cpp" />
@@ -261,10 +260,9 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <ClInclude Include="src\API\Vulkan\Types\VK_vertexBuffer.hpp" />
     <ClInclude Include="src\API\Vulkan\VK_common.h" />
     <ClInclude Include="src\API\Vulkan\Vk_util.hpp" />
+    <ClInclude Include="src\Core\AssetLoader.h" />
     <ClInclude Include="src\Core\JSON.hpp" />
     <ClInclude Include="src\Core\CreateInfo.hpp" />
-    <ClInclude Include="src\Game\AStar.h" />
-    <ClInclude Include="src\Game\Pathfinding.h" />
     <ClInclude Include="src\Editor\Editor.h" />
     <ClInclude Include="src\Game\Dobermann.h" />
     <ClInclude Include="src\Pathfinding\Pathfinding2.h" />

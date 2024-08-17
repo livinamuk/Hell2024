@@ -146,8 +146,8 @@ namespace Util {
         else if (mode == DebugLineRenderMode::RTX_LAND_TOP_AND_BOTTOM_LEVEL_ACCELERATION_STRUCTURES) {
             return "RTX_LAND_TOP_AND_BOTTOM_LEVEL_ACCELERATION_STRUCTURES";
         }
-        else if (mode == DebugLineRenderMode::PATHFINDING) {
-            return "Pathfinding";
+        else if (mode == DebugLineRenderMode::PATHFINDING_RECAST) {
+            return "Pathfinding Recast";
         }
         else {
             return "UNDEFINED";
@@ -197,30 +197,30 @@ namespace Util {
         glm::vec4 backTopRight = glm::vec4(aabb.boundsMax.x, aabb.boundsMax.y, aabb.boundsMin.z, 1.0f);
         glm::vec4 backBottomLeft = glm::vec4(aabb.boundsMin.x, aabb.boundsMin.y, aabb.boundsMin.z, 1.0f);
         glm::vec4 backBottomRight = glm::vec4(aabb.boundsMax.x, aabb.boundsMin.y, aabb.boundsMin.z, 1.0f);
-        vertices.push_back(Vertex(frontBottomLeft, color));
-        vertices.push_back(Vertex(frontBottomRight, color));
-        vertices.push_back(Vertex(frontTopLeft, color));
-        vertices.push_back(Vertex(frontTopRight, color));
-        vertices.push_back(Vertex(frontBottomLeft, color));
-        vertices.push_back(Vertex(frontTopLeft, color));
-        vertices.push_back(Vertex(frontBottomRight, color));
-        vertices.push_back(Vertex(frontTopRight, color));
-        vertices.push_back(Vertex(backBottomLeft, color));
-        vertices.push_back(Vertex(backBottomRight, color));
-        vertices.push_back(Vertex(backTopLeft, color));
-        vertices.push_back(Vertex(backTopRight, color));
-        vertices.push_back(Vertex(backBottomLeft, color));
-        vertices.push_back(Vertex(backTopLeft, color));
-        vertices.push_back(Vertex(backBottomRight, color));
-        vertices.push_back(Vertex(backTopRight, color));
-        vertices.push_back(Vertex(frontBottomLeft, color));
-        vertices.push_back(Vertex(backBottomLeft, color));
-        vertices.push_back(Vertex(frontBottomRight, color));
-        vertices.push_back(Vertex(backBottomRight, color));
-        vertices.push_back(Vertex(frontTopLeft, color));
-        vertices.push_back(Vertex(backTopLeft, color));
-        vertices.push_back(Vertex(frontTopRight, color));
-        vertices.push_back(Vertex(backTopRight, color));
+        vertices.push_back(Vertex(glm::vec3(frontBottomLeft), color));
+        vertices.push_back(Vertex(glm::vec3(frontBottomRight), color));
+        vertices.push_back(Vertex(glm::vec3(frontTopLeft), color));
+        vertices.push_back(Vertex(glm::vec3(frontTopRight), color));
+        vertices.push_back(Vertex(glm::vec3(frontBottomLeft), color));
+        vertices.push_back(Vertex(glm::vec3(frontTopLeft), color));
+        vertices.push_back(Vertex(glm::vec3(frontBottomRight), color));
+        vertices.push_back(Vertex(glm::vec3(frontTopRight), color));
+        vertices.push_back(Vertex(glm::vec3(backBottomLeft), color));
+        vertices.push_back(Vertex(glm::vec3(backBottomRight), color));
+        vertices.push_back(Vertex(glm::vec3(backTopLeft), color));
+        vertices.push_back(Vertex(glm::vec3(backTopRight), color));
+        vertices.push_back(Vertex(glm::vec3(backBottomLeft), color));
+        vertices.push_back(Vertex(glm::vec3(backTopLeft), color));
+        vertices.push_back(Vertex(glm::vec3(backBottomRight), color));
+        vertices.push_back(Vertex(glm::vec3(backTopRight), color));
+        vertices.push_back(Vertex(glm::vec3(frontBottomLeft), color));
+        vertices.push_back(Vertex(glm::vec3(backBottomLeft), color));
+        vertices.push_back(Vertex(glm::vec3(frontBottomRight), color));
+        vertices.push_back(Vertex(glm::vec3(backBottomRight), color));
+        vertices.push_back(Vertex(glm::vec3(frontTopLeft), color));
+        vertices.push_back(Vertex(glm::vec3(backTopLeft), color));
+        vertices.push_back(Vertex(glm::vec3(frontTopRight), color));
+        vertices.push_back(Vertex(glm::vec3(backTopRight), color));
         return vertices;
     }
 
@@ -510,7 +510,7 @@ namespace Util {
     }
 
     inline glm::vec3 Translate(glm::mat4& translation, glm::vec3 position) {
-        return translation * glm::vec4(position, 1.0);
+        return glm::vec3(translation * glm::vec4(position, 1.0));
     }
 
     inline float RandomFloat(float min, float max) {
@@ -1223,5 +1223,26 @@ namespace Util {
         if (objectYRotation < 0) {
             objectYRotation += 2 * HELL_PI;
         }
+    }
+
+    inline FacingDirection DetermineFacingDirection(glm::vec3& forwardA, const glm::vec3& forwardB) {
+        glm::vec3 xzForwardA = glm::normalize(glm::vec3(forwardA.x, 0, forwardA.z));
+        glm::vec3 xzForwardB = glm::normalize(glm::vec3(forwardB.x, 0, forwardB.z));
+        glm::vec3 rightB = glm::vec3(xzForwardB.z, 0.0f, -xzForwardB.x);
+        float dotProduct = glm::dot(xzForwardA, rightB);
+        if (dotProduct > 0) {
+            return FacingDirection::RIGHT;
+        }
+        else if (dotProduct < 0) {
+            return FacingDirection::LEFT;
+        }
+        return FacingDirection::ALIGNED;
+    }
+
+    inline int RoundDownToMultiple(int inputValue, int roundingValue) {
+        if (roundingValue == 0) {
+            return inputValue; // Avoid division by zero
+        }
+        return (inputValue / roundingValue) * roundingValue;
     }
 }

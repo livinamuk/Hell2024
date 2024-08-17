@@ -6,10 +6,9 @@
 #include "../Core/CreateInfo.hpp"
 #include "../Core/JSON.hpp"
 #include "../Game/Game.h"
-#include "../Game/Pathfinding.h"
-#include "../Pathfinding/Pathfinding2.h"
 #include "../Game/Scene.h"
 #include "../Input/Input.h"
+#include "../Pathfinding/Pathfinding2.h"
 #include "../Renderer/RendererUtil.hpp"
 #include "../Renderer/TextBlitter.h"
 #include "../Util.hpp"
@@ -36,9 +35,7 @@ namespace Editor {
             CLOSE_MENU,
             FILE_NEW_MAP,
             FILE_LOAD_MAP,
-            FILE_SAVE_MAP,
-            FILE_LOAD_PATHFINDING_MAP,
-            FILE_SAVE_PATHFINDING_MAP,
+            FILE_SAVE_MAP
         } type;
         void* ptr;
         float increment = 1.0f;
@@ -73,10 +70,10 @@ namespace Editor {
     bool g_insertMenuOpen = false;
     bool g_fileMenuOpen = false;
     bool g_isDraggingMenu = false;
-    ivec2 g_menuLocation = ivec2(76, 460);
-    ivec2 g_backgroundLocation = ivec2(0, 0);
-    ivec2 g_backgroundSize = ivec2(0, 0);
-    ivec2 g_dragOffset = ivec2(0, 0);
+    hell::ivec2 g_menuLocation = hell::ivec2(76, 460);
+    hell::ivec2 g_backgroundLocation = hell::ivec2(0, 0);
+    hell::ivec2 g_backgroundSize = hell::ivec2(0, 0);
+    hell::ivec2 g_dragOffset = hell::ivec2(0, 0);
 
     // Forward declarations
     glm::dvec3 Rot3D(glm::dvec3 v, glm::dvec2 rot);
@@ -224,7 +221,7 @@ namespace Editor {
         if (Input::LeftMousePressed() && MenuHasHover()) {
             int offsetX = Input::GetViewportMappedMouseX(PRESENT_WIDTH) - g_menuLocation.x;
             int offsetY = PRESENT_HEIGHT - Input::GetViewportMappedMouseY(PRESENT_HEIGHT) - g_menuLocation.y;
-            g_dragOffset = ivec2(offsetX, offsetY);
+            g_dragOffset = hell::ivec2(offsetX, offsetY);
             g_isDraggingMenu = true;
         }
         else if (g_isDraggingMenu) {
@@ -235,7 +232,7 @@ namespace Editor {
             g_isDraggingMenu = false;
         }
         if (Input::KeyPressed(HELL_KEY_SPACE)) {
-            g_menuLocation = ivec2(360, PRESENT_HEIGHT - 60);
+            g_menuLocation = hell::ivec2(360, PRESENT_HEIGHT - 60);
         }
         if (Input::KeyPressed(HELL_KEY_I)) {
             g_menuLocation.y = 490;
@@ -433,39 +430,6 @@ namespace Editor {
             g_menuSelectionIndex = 0;
         }
 
-
-
-
-        // Paint the path
-        {
-            Player* player = Game::GetPlayerByIndex(0);
-            glm::mat4 projectionMatrix = player->GetProjectionMatrix();
-            glm::mat4 viewMatrix = player->GetViewMatrix();
-            glm::vec3 cameraPos = player->GetViewPos();
-            int mouseX = Input::GetMouseX();
-            int mouseY = Input::GetMouseY();
-            int windowWidth = BackEnd::GetCurrentWindowWidth();
-            int windowHeight = BackEnd::GetCurrentWindowHeight();
-            glm::vec3 rayWorld = Util::GetMouseRay(projectionMatrix, viewMatrix, windowWidth, windowHeight, mouseX, mouseY);
-            if (!Editor::IsOpen()) {
-                rayWorld = player->GetCameraForward();
-            }
-            glm::vec3 rayOrigin = cameraPos;
-            glm::vec3 rayDirection = rayWorld;
-            float t = -rayOrigin.y / rayDirection.y;
-            glm::vec3 intersectionPoint = rayOrigin + t * rayDirection;
-            float worldX = intersectionPoint.x;
-            float worldZ = intersectionPoint.z;
-            int gridX = Pathfinding::WordSpaceXToGridSpaceX(worldX);
-            int gridZ = Pathfinding::WordSpaceZToGridSpaceZ(worldZ);
-            if (Input::KeyDown(HELL_KEY_LEFT_BRACKET)) {
-                Pathfinding::SetObstacle(gridX, gridZ);
-            }
-            if (Input::KeyDown(HELL_KEY_RIGHT_BRACKET)) {
-                Pathfinding::RemoveObstacle(gridX, gridZ);
-            }
-        }
-
         UpdateMenu();
         UpdateDebugText();
     }
@@ -489,8 +453,18 @@ namespace Editor {
 
         Input::ShowCursor();
         Game::SetSplitscreenMode(SplitscreenMode::NONE);
+
+        // Disable all player control
         for (int i = 0; i < Game::GetPlayerCount(); i++) {
             Game::GetPlayerByIndex(i)->DisableControl();
+        }
+        // Enable ray casts on subtractive CSG
+        for (CubeVolume& cubeVolume : Scene::g_cubeVolumesSubtractive) {
+            cubeVolume.EnableRaycast();
+        }
+        // Return dobermann to lay
+        for (Dobermann& dobermann : Scene::g_dobermann) {
+            dobermann.m_currentState = DobermannState::LAY;
         }
 
         g_editorOpen = true;
@@ -538,6 +512,11 @@ namespace Editor {
         Game::GiveControlToPlayer1();
         Gizmo::ResetHover();
         Input::DisableCursor();
+        Pathfinding2::UpdateNavMesh(CSG::GetNavMeshVertices());
+
+        for (CubeVolume& cubeVolume : Scene::g_cubeVolumesSubtractive) {
+            cubeVolume.DisableRaycast();
+        }
     }
 
     bool IsOpen() {
@@ -641,9 +620,13 @@ namespace Editor {
     }
 
     void RebuildEverything() {
+
+        for (Light& light : Scene::g_lights) {
+            light.isDirty = true;
+        }
+
         CSG::Build();
         Scene::CreateBottomLevelAccelerationStructures();
-        Pathfinding::Init();
     }
 
     void UpdateMenu() {
@@ -656,8 +639,6 @@ namespace Editor {
             g_menuItems.push_back({ "New map", MenuItem::Type::FILE_NEW_MAP });
             g_menuItems.push_back({ "Load map", MenuItem::Type::FILE_LOAD_MAP });
             g_menuItems.push_back({ "Save map\n", MenuItem::Type::FILE_SAVE_MAP });
-            g_menuItems.push_back({ "Load pathfinding map", MenuItem::Type::FILE_LOAD_PATHFINDING_MAP });
-            g_menuItems.push_back({ "Save pathfinding map\n", MenuItem::Type::FILE_SAVE_PATHFINDING_MAP });
             g_menuItems.push_back({ "Close", MenuItem::Type::CLOSE_MENU });
         }
         // Create insert menu
@@ -878,14 +859,6 @@ namespace Editor {
                 Scene::SaveMapData("mappp.txt");
                 g_fileMenuOpen = false;
             }
-            if (type == MenuItem::Type::FILE_LOAD_PATHFINDING_MAP) {
-                Pathfinding::LoadMap();
-                g_fileMenuOpen = false;
-            }
-            if (type == MenuItem::Type::FILE_SAVE_PATHFINDING_MAP) {
-                Pathfinding::SaveMap();
-                g_fileMenuOpen = false;
-            }
 
             g_insertMenuOpen = false;
             g_fileMenuOpen = false;
@@ -988,15 +961,15 @@ namespace Editor {
             //ivec2 g_backgroundSize = ivec2(0, 0);
 
             glm::vec3 menuColor = WHITE;
-            ivec2 menuMargin = ivec2(16, 20);
-            ivec2 textLocation = g_menuLocation;
+            hell::ivec2 menuMargin = hell::ivec2(16, 20);
+            hell::ivec2 textLocation = g_menuLocation;
             //textLocation.x += 130;
             //textLocation.y -= 40;
-            g_backgroundLocation = textLocation - ivec2(menuMargin.x, -menuMargin.y);
-            ivec2 viewportSize = ivec2(PRESENT_WIDTH, PRESENT_HEIGHT);
-            g_backgroundSize = TextBlitter::GetTextSizeInPixels(menuText, viewportSize, BitmapFontType::STANDARD) + ivec2(menuMargin.x * 2, menuMargin.y * 2);
+            g_backgroundLocation = textLocation - hell::ivec2(menuMargin.x, -menuMargin.y);
+            hell::ivec2 viewportSize = hell::ivec2(PRESENT_WIDTH, PRESENT_HEIGHT);
+            g_backgroundSize = TextBlitter::GetTextSizeInPixels(menuText, viewportSize, BitmapFontType::STANDARD) + hell::ivec2(menuMargin.x * 2, menuMargin.y * 2);
             g_backgroundSize.x = 200;
-            ivec2 headingLocation = ivec2(g_backgroundLocation.x + g_backgroundSize.x / 2, textLocation.y);
+            hell::ivec2 headingLocation = hell::ivec2(g_backgroundLocation.x + g_backgroundSize.x / 2, textLocation.y);
 
             RenderItem2D bg = RendererUtil::CreateRenderItem2D("MenuBG", g_backgroundLocation, viewportSize, Alignment::TOP_LEFT, menuColor, g_backgroundSize);
             std::vector<RenderItem2D> textRenderItems = TextBlitter::CreateText(menuText, textLocation, viewportSize, Alignment::TOP_LEFT, BitmapFontType::STANDARD);
@@ -1004,10 +977,10 @@ namespace Editor {
 
             gMenuRenderItems.clear();
             gMenuRenderItems.push_back(bg);
-            gMenuRenderItems.push_back(RendererUtil::CreateRenderItem2D("MenuBorderHorizontal", g_backgroundLocation, viewportSize, Alignment::BOTTOM_LEFT, menuColor, ivec2(g_backgroundSize.x, 3)));
-            gMenuRenderItems.push_back(RendererUtil::CreateRenderItem2D("MenuBorderHorizontal", { g_backgroundLocation.x, g_backgroundLocation.y - g_backgroundSize.y }, viewportSize, Alignment::TOP_LEFT, menuColor, ivec2(g_backgroundSize.x, 3)));
-            gMenuRenderItems.push_back(RendererUtil::CreateRenderItem2D("MenuBorderVertical", { g_backgroundLocation.x, g_backgroundLocation.y - g_backgroundSize.y }, viewportSize, Alignment::BOTTOM_RIGHT, menuColor, ivec2(3, g_backgroundSize.y)));
-            gMenuRenderItems.push_back(RendererUtil::CreateRenderItem2D("MenuBorderVertical", { g_backgroundLocation.x + g_backgroundSize.x, g_backgroundLocation.y - g_backgroundSize.y }, viewportSize, Alignment::BOTTOM_LEFT, menuColor, ivec2(3, g_backgroundSize.y)));
+            gMenuRenderItems.push_back(RendererUtil::CreateRenderItem2D("MenuBorderHorizontal", g_backgroundLocation, viewportSize, Alignment::BOTTOM_LEFT, menuColor, hell::ivec2(g_backgroundSize.x, 3)));
+            gMenuRenderItems.push_back(RendererUtil::CreateRenderItem2D("MenuBorderHorizontal", { g_backgroundLocation.x, g_backgroundLocation.y - g_backgroundSize.y }, viewportSize, Alignment::TOP_LEFT, menuColor, hell::ivec2(g_backgroundSize.x, 3)));
+            gMenuRenderItems.push_back(RendererUtil::CreateRenderItem2D("MenuBorderVertical", { g_backgroundLocation.x, g_backgroundLocation.y - g_backgroundSize.y }, viewportSize, Alignment::BOTTOM_RIGHT, menuColor, hell::ivec2(3, g_backgroundSize.y)));
+            gMenuRenderItems.push_back(RendererUtil::CreateRenderItem2D("MenuBorderVertical", { g_backgroundLocation.x + g_backgroundSize.x, g_backgroundLocation.y - g_backgroundSize.y }, viewportSize, Alignment::BOTTOM_LEFT, menuColor, hell::ivec2(3, g_backgroundSize.y)));
             gMenuRenderItems.push_back(RendererUtil::CreateRenderItem2D("MenuBorderCornerTL", g_backgroundLocation, viewportSize, Alignment::BOTTOM_RIGHT, menuColor));
             gMenuRenderItems.push_back(RendererUtil::CreateRenderItem2D("MenuBorderCornerTR", { g_backgroundLocation.x + g_backgroundSize.x, g_backgroundLocation.y }, viewportSize, Alignment::BOTTOM_LEFT, menuColor));
             gMenuRenderItems.push_back(RendererUtil::CreateRenderItem2D("MenuBorderCornerBL", { g_backgroundLocation.x, g_backgroundLocation.y - g_backgroundSize.y }, viewportSize, Alignment::TOP_RIGHT, menuColor));
@@ -1024,7 +997,7 @@ namespace Editor {
             glm::vec3 viewPos = Editor::GetViewPos();
             glm::vec3 cameraForward = player->GetCameraForward();
 
-            ivec2 presentSize = ivec2(PRESENT_WIDTH, PRESENT_HEIGHT);
+            hell::ivec2 presentSize = hell::ivec2(PRESENT_WIDTH, PRESENT_HEIGHT);
             for (Light& light : Scene::g_lights) {
                 glm::vec3 d = glm::normalize(viewPos - light.position);
                 float ndotl = glm::dot(d, cameraForward);

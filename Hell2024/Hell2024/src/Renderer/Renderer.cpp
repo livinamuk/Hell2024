@@ -5,7 +5,6 @@
 #include "../API/Vulkan/VK_renderer.h"
 #include "../BackEnd/BackEnd.h"
 #include "../Game/Game.h"
-#include "../Game/Pathfinding.h"
 #include "../Game/Player.h"
 #include "../Game/Scene.h"
 #include "../Editor/CSG.h"
@@ -24,8 +23,8 @@
 
 IndirectDrawInfo CreateIndirectDrawInfo(std::vector<RenderItem3D>& potentialRenderItems, int playerCount);
 MultiDrawIndirectDrawInfo CreateMultiDrawIndirectDrawInfo(std::vector<RenderItem3D>& renderItems);
-std::vector<RenderItem2D> CreateRenderItems2D(ivec2 presentSize, int playerCount);
-std::vector<RenderItem2D> CreateRenderItems2DHiRes(ivec2 gBufferSize, int playerCount);
+std::vector<RenderItem2D> CreateRenderItems2D(hell::ivec2 presentSize, int playerCount);
+std::vector<RenderItem2D> CreateRenderItems2DHiRes(hell::ivec2 gBufferSize, int playerCount);
 std::vector<RenderItem3D> CreateRenderItems3D();
 std::vector<RenderItem3D> CreateGlassRenderItems();
 std::vector<RenderItem3D> CreateBloodDecalRenderItems();
@@ -58,7 +57,6 @@ std::vector<glm::vec3> g_debugTriangleVertices = {
 
 void Renderer::RenderFrame() {
 
-    UpdatePointCloud();
     UpdateDebugPointsMesh();
     UpdateDebugLinesMesh();
     UpdateDebugTrianglesMesh();
@@ -89,8 +87,8 @@ void Renderer::RenderFrame() {
 RenderData CreateRenderData() {
 
     // Viewport size
-    ivec2 viewportSize = { PRESENT_WIDTH, PRESENT_HEIGHT };
-    ivec2 viewportDoubleSize = { PRESENT_WIDTH * 2, PRESENT_HEIGHT * 2 };
+    hell::ivec2 viewportSize = { PRESENT_WIDTH, PRESENT_HEIGHT };
+    hell::ivec2 viewportDoubleSize = { PRESENT_WIDTH * 2, PRESENT_HEIGHT * 2 };
 
     if (Editor::IsOpen()) {
         Game::GetPlayerByIndex(0)->ForceSetViewMatrix(Editor::GetViewMatrix());
@@ -107,8 +105,8 @@ RenderData CreateRenderData() {
         viewportDoubleSize.y *= 0.5;
     }
 
-    ivec2 presentSize = { PRESENT_WIDTH, PRESENT_HEIGHT };
-    ivec2 gbufferSize = { PRESENT_WIDTH, PRESENT_HEIGHT };
+    hell::ivec2 presentSize = { PRESENT_WIDTH, PRESENT_HEIGHT };
+    hell::ivec2 gbufferSize = { PRESENT_WIDTH, PRESENT_HEIGHT };
 
     std::vector<RenderItem3D> decalRenderItems = Scene::CreateDecalRenderItems();
     std::vector<RenderItem3D> geometryRenderItems = CreateRenderItems3D();
@@ -186,8 +184,8 @@ RenderData CreateRenderData() {
         renderData.cameraData[i].contrast = Game::GetPlayerByIndex(i)->finalImageContrast;
 
         // Viewport size
-        ivec2 viewportSize = { PRESENT_WIDTH, PRESENT_HEIGHT };
-        ivec2 viewportDoubleSize = { PRESENT_WIDTH * 2, PRESENT_HEIGHT * 2 };
+        hell::ivec2 viewportSize = { PRESENT_WIDTH, PRESENT_HEIGHT };
+        hell::ivec2 viewportDoubleSize = { PRESENT_WIDTH * 2, PRESENT_HEIGHT * 2 };
 
         if (Game::GetSplitscreenMode() == SplitscreenMode::TWO_PLAYER) {
             viewportSize.y *= 0.5;
@@ -360,15 +358,15 @@ std::vector<RenderItem2D> CreateLoadingScreenRenderItems() {
         text += AssetManager::GetLoadLog()[i] + "\n";
     }
 
-    ivec2 location = ivec2(0.0f, loadingScreenHeight);
-    ivec2 viewportSize = ivec2(loadingScreenWidth, loadingScreenHeight);
+    hell::ivec2 location = hell::ivec2(0.0f, loadingScreenHeight);
+    hell::ivec2 viewportSize = hell::ivec2(loadingScreenWidth, loadingScreenHeight);
     return TextBlitter::CreateText(text, location, viewportSize, Alignment::TOP_LEFT, BitmapFontType::STANDARD);
 }
 
 
 
 
-std::vector<RenderItem2D> CreateRenderItems2D(ivec2 presentSize, int playerCount) {
+std::vector<RenderItem2D> CreateRenderItems2D(hell::ivec2 presentSize, int playerCount) {
 
     std::vector<RenderItem2D> renderItems;
 
@@ -397,7 +395,7 @@ std::vector<RenderItem2D> CreateRenderItems2D(ivec2 presentSize, int playerCount
     return renderItems;
 }
 
-std::vector<RenderItem2D> CreateRenderItems2DHiRes(ivec2 gbufferSize, int playerCount) {
+std::vector<RenderItem2D> CreateRenderItems2DHiRes(hell::ivec2 gbufferSize, int playerCount) {
 
     std::vector<RenderItem2D> renderItems;
     for (int i = 0; i < playerCount; i++) {

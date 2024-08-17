@@ -1,7 +1,6 @@
 #pragma once
 #include "../Common.h"
 #include "../Game/AnimatedGameObject.h"
-#include "../Game/AStar.h"
 #include "../Pathfinding/Pathfinding2.h"
 
 struct Dobermann {
@@ -13,7 +12,6 @@ struct Dobermann {
     DobermannState m_initalState;
     DobermannState m_currentState;
     int m_animatedGameObjectIndex = -1;
-    AStar m_aStar;
     float m_speed = 0.090f;
     float m_footstepAudioTimer = 0;
     float m_heatlh = 100;
@@ -22,10 +20,13 @@ struct Dobermann {
 
     void Init();
     void Update(float deltaTime);
-    int GetGridX();
-    int GetGridZ();
     void TakeDamage();
     void Kill();
     void FindPath();
+    void CleanUp();
     AnimatedGameObject* GetAnimatedGameObject();
+
+    PxController* m_characterController = nullptr;
+    PxShape* m_shape = nullptr;
+
 };

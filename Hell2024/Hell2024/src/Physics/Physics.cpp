@@ -122,11 +122,11 @@ PxFilterFlags PhysicsMainFilterShader(PxFilterObjectAttributes attributes0, PxFi
 
 // Setup common cooking params
 void SetupCommonCookingParams(PxCookingParams& params, bool skipMeshCleanup, bool skipEdgeData) {
-    // we suppress the triangle mesh remap table computation to gain some speed, as we will not need it 
+    // we suppress the triangle mesh remap table computation to gain some speed, as we will not need it
 // in this snippet
     params.suppressTriangleMeshRemapTable = true;
 
-    // If DISABLE_CLEAN_MESH is set, the mesh is not cleaned during the cooking. The input mesh must be valid. 
+    // If DISABLE_CLEAN_MESH is set, the mesh is not cleaned during the cooking. The input mesh must be valid.
     // The following conditions are true for a valid triangle mesh :
     //  1. There are no duplicate vertices(within specified vertexWeldTolerance.See PxCookingParams::meshWeldTolerance)
     //  2. There are no large triangles(within specified PxTolerancesScale.)
@@ -137,8 +137,8 @@ void SetupCommonCookingParams(PxCookingParams& params, bool skipMeshCleanup, boo
     else
         params.meshPreprocessParams |= PxMeshPreprocessingFlag::eDISABLE_CLEAN_MESH;
 
-    // If eDISABLE_ACTIVE_EDGES_PRECOMPUTE is set, the cooking does not compute the active (convex) edges, and instead 
-    // marks all edges as active. This makes cooking faster but can slow down contact generation. This flag may change 
+    // If eDISABLE_ACTIVE_EDGES_PRECOMPUTE is set, the cooking does not compute the active (convex) edges, and instead
+    // marks all edges as active. This makes cooking faster but can slow down contact generation. This flag may change
     // the collision behavior, as all edges of the triangle mesh will now be considered active.
     if (!skipEdgeData)
         params.meshPreprocessParams &= ~static_cast<PxMeshPreprocessingFlags>(PxMeshPreprocessingFlag::eDISABLE_ACTIVE_EDGES_PRECOMPUTE);
@@ -169,7 +169,7 @@ PxTriangleMesh* Physics::CreateTriangleMesh(PxU32 numVertices, const PxVec3* ver
     bool meshSizePerfTradeoff = true;
     SetupCommonCookingParams(params, skipMeshCleanup, skipEdgeData);
 
-    // The COOKING_PERFORMANCE flag for BVH33 midphase enables a fast cooking path at the expense of somewhat lower quality BVH construction.	
+    // The COOKING_PERFORMANCE flag for BVH33 midphase enables a fast cooking path at the expense of somewhat lower quality BVH construction.
     if (cookingPerformance) {
         params.midphaseDesc.mBVH33Desc.meshCookingHint = PxMeshCookingHint::eCOOKING_PERFORMANCE;
     }
@@ -275,11 +275,11 @@ void Physics::Init() {
     _scene->addActor(*_groundPlane);
     _groundPlane->getShapes(&_groundShape, 1);
     PxFilterData filterData;
-    filterData.word0 = RaycastGroup::RAYCAST_DISABLED; // must be disabled or it causes crash in scene::update when it tries to retrieve rigid body flags from this actor 
+    filterData.word0 = RaycastGroup::RAYCAST_DISABLED; // must be disabled or it causes crash in scene::update when it tries to retrieve rigid body flags from this actor
     filterData.word1 = CollisionGroup::ENVIROMENT_OBSTACLE;
     filterData.word2 = CollisionGroup::BULLET_CASING | CollisionGroup::GENERIC_BOUNCEABLE | CollisionGroup::PLAYER;
     _groundShape->setQueryFilterData(filterData);
-    _groundShape->setSimulationFilterData(filterData); // sim is for ragz   
+    _groundShape->setSimulationFilterData(filterData); // sim is for ragz
 }
 
 void Physics::StepPhysics(float deltaTime) {
@@ -380,7 +380,7 @@ PxRigidStatic* Physics::CreateRigidStatic(Transform transform, PhysicsFilterData
 
     body->attachShape(*shape);
     _scene->addActor(*body);
-    
+
     return body;
 }
 
@@ -497,7 +497,7 @@ PxConvexMesh* Physics::CreateConvexMeshFromModelIndex(int modelIndex) {
     else {
         return _convexMeshes[modelIndex];
     }
-    
+
 }
 
 PxTriangleMesh* Physics::CreateTriangleMeshFromModelIndex(int modelIndex) {
@@ -516,11 +516,11 @@ PxTriangleMesh* Physics::CreateTriangleMeshFromModelIndex(int modelIndex) {
         int pxBaseVertex = 0;
         for (unsigned int meshIndex : model->GetMeshIndices()) {
             Mesh* mesh = AssetManager::GetMeshByIndex(meshIndex);
-            
+
             for (int i = 0; i < mesh->vertexCount; i++) {
                 Vertex& vertex = AssetManager::GetVertices()[i + mesh->baseVertex];
                 pxvertices.push_back(PxVec3(vertex.position.x, vertex.position.y, vertex.position.z));
-                
+
             }
             for (int i = 0; i < mesh->indexCount; i++) {
                 unsigned int index = AssetManager::GetIndices()[i + mesh->baseIndex];
@@ -594,9 +594,22 @@ std::vector<Vertex> Physics::GetDebugLineVertices(DebugLineRenderMode debugLineR
         else if (debugLineRenderMode == DebugLineRenderMode::PHYSX_RAYCAST) {
             v1.normal = RED;
             v2.normal = RED;
-        }        
+        }
         vertices.push_back(v1);
         vertices.push_back(v2);
     }
     return vertices;
+}
+
+
+void Physics::EnableRaycast(PxShape* shape) {
+    PxFilterData filterData = shape->getQueryFilterData();
+    filterData.word0 = RaycastGroup::RAYCAST_ENABLED;
+    shape->setQueryFilterData(filterData);
+}
+
+void Physics::DisableRaycast(PxShape* shape) {
+    PxFilterData filterData = shape->getQueryFilterData();
+    filterData.word0 = RaycastGroup::RAYCAST_DISABLED;
+    shape->setQueryFilterData(filterData);
 }

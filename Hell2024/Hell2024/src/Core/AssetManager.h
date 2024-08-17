@@ -10,7 +10,6 @@
 
 namespace AssetManager {
 
-
     // Asset Loading
     void FindAssetPaths();
     void LoadNextItem();
@@ -45,13 +44,13 @@ namespace AssetManager {
     // Models
     Model* GetModelByIndex(int index);
     int GetModelIndexByName(const std::string& name);
-    void LoadModel(const std::string filepath);
+    void LoadModel(Model* model);
     void LoadModelAssimp(const std::string& filepath);
     bool ModelExists(const std::string& name);
     void CreateHardcodedModels();
 
     // Skinned Models
-    void LoadSkinnedModel(const std::string filepath);
+    void LoadSkinnedModel(SkinnedModel* skinnedModel);
     SkinnedModel* GetSkinnedModelByName(const std::string& name);
 
     // Skinned Mesh
@@ -60,6 +59,7 @@ namespace AssetManager {
     int CreateSkinnedMesh(std::string name, std::vector<WeightedVertex>& vertices, std::vector<uint32_t>& indices, uint32_t baseVertexLocal);
 
     // Animations
+    void LoadAnimation(Animation* animation);
     Animation* GetAnimationByName(const std::string& name);
 
     // Materials
@@ -74,7 +74,7 @@ namespace AssetManager {
     std::vector<GPUMaterial>& GetGPUMaterials();
 
     // Textures
-    void LoadTexture(const std::string filepath);
+    void LoadTexture(Texture* texture);
     Texture* GetTextureByName(const std::string& name);
     Texture* GetTextureByIndex(const int index);
     int GetTextureCount();
@@ -82,9 +82,10 @@ namespace AssetManager {
     bool TextureExists(const std::string& name);
     std::vector<Texture>& GetTextures();
     void LoadFont();
-    ivec2 GetTextureSizeByName(const char* textureName);
+    hell::ivec2 GetTextureSizeByName(const char* textureName);
 
     // Cubemap Textures
+    void LoadCubemapTexture(CubemapTexture* texture);
     CubemapTexture* GetCubemapTextureByIndex(const int index);
     int GetCubemapTextureIndexByName(const std::string& name);
 

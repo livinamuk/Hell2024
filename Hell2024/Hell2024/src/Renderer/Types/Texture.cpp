@@ -4,10 +4,12 @@
 void Texture::Load(const std::string filepath) {
     if (BackEnd::GetAPI() == API::OPENGL) {
         glTexture.Load(filepath);
-        glTexture.Bake();
+        m_loadingComplete = true;
+        return;
     }
     else if (BackEnd::GetAPI() == API::VULKAN) {
         vkTexture.Load(filepath);
+        m_loadingComplete = true;
         return;
     }
 }

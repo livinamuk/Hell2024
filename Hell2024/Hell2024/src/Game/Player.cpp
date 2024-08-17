@@ -5,7 +5,6 @@
 #include "WeaponManager.h"
 #include "../BackEnd/BackEnd.h"
 #include "../Core/Audio.hpp"
-#include "../Game/Pathfinding.h"
 #include "../Input/Input.h"
 #include "../Input/InputMulti.h"
 #include "../Renderer/TextBlitter.h"
@@ -25,15 +24,6 @@ Player::Player(int playerIndex) {
     CreateItemPickupOverlapShape();
 
     g_awaitingRespawn = true;
-}
-
-
-int Player::GetGridX() {
-    return Pathfinding::WordSpaceXToGridSpaceX(GetFeetPosition().x);
-}
-
-int  Player::GetGridZ() {
-    return Pathfinding::WordSpaceZToGridSpaceZ(GetFeetPosition().z);
 }
 
 void Player::Update(float deltaTime) {
@@ -180,6 +170,7 @@ void Player::Respawn() {
 
     GiveDefaultLoadout();
     SwitchWeapon("Glock", SPAWNING);
+//    SwitchWeapon("GoldenGlock", SPAWNING);
 
     if (_characterController) {
         PxExtendedVec3 globalPose = PxExtendedVec3(spawnPoint.position.x, spawnPoint.position.y, spawnPoint.position.z);
@@ -258,7 +249,8 @@ void Player::UpdateViewMatrix(float deltaTime) {
     glm::mat4 cameraAnimation = inverse(cameraBindMatrix) * inverse(dmMaster) * cameraMatrix;
 
     if (model->_filename == "Knife" ||
-        model->_filename == "Shotgun") {
+        model->_filename == "Shotgun" ||
+        model->_filename == "P90") {
         cameraAnimation = inverse(cameraBindMatrix) * cameraMatrix;
     }
 
@@ -277,7 +269,8 @@ void Player::UpdateViewMatrix(float deltaTime) {
     viewWeapon->m_cameraSpawnMatrix = worldTransform.to_mat4() * glm::inverse(cameraBindMatrix) * glm::inverse(dmMaster);
 
     if (model->_filename == "Knife" ||
-        model->_filename == "Shotgun") {
+        model->_filename == "Shotgun" ||
+        model->_filename == "P90") {
 
         worldTransform.scale = glm::vec3(0.001);
         viewWeapon->m_cameraMatrix = worldTransform.to_mat4() * glm::inverse(cameraBindMatrix);
@@ -701,7 +694,8 @@ glm::vec3 Player::GetMuzzleFlashPosition() {
     }
     // Otherwise find it
     if (viewWeaponModel && weaponInfo) {
-        glm::vec3 position = viewWeaponModel->m_cameraSpawnMatrix * viewWeaponModel->GetAnimatedTransformByBoneName(weaponInfo->muzzleFlashBoneName) * glm::vec4(0, 0, 0, 1);
+        glm::vec3 muzzleFlashOffset = weaponInfo->muzzleFlashOffset;
+        glm::vec3 position = viewWeaponModel->m_cameraSpawnMatrix * viewWeaponModel->GetAnimatedTransformByBoneName(weaponInfo->muzzleFlashBoneName) * glm::vec4(muzzleFlashOffset, 1);
         return position;
     }
     else {

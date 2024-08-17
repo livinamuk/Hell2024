@@ -98,7 +98,7 @@ public:
     }
 
     PxRigidStatic* pxRigidStatic = nullptr;
-    PxShape* pxShape = nullptr;
+    PxShape* m_pxShape = nullptr;
 
     void CleanUp() {
         if (pxRigidStatic) {
@@ -114,8 +114,8 @@ public:
             }
             pxRigidStatic->release();
         }
-        if (pxShape) {
-            pxShape->release();
+        if (m_pxShape) {
+            m_pxShape->release();
         }
     }
 
@@ -131,8 +131,8 @@ public:
         float height = m_transform.scale.y * 0.5f;
         float depth = m_transform.scale.z * 0.5f;
 
-        pxShape = Physics::CreateBoxShape(width, height, depth);
-        pxRigidStatic = Physics::CreateRigidStatic(Transform(), filterData2, pxShape);
+        m_pxShape = Physics::CreateBoxShape(width, height, depth);
+        pxRigidStatic = Physics::CreateRigidStatic(Transform(), filterData2, m_pxShape);
 
         PhysicsObjectData* physicsObjectData = new PhysicsObjectData(PhysicsObjectType::CSG_OBJECT_SUBTRACTIVE, this);
         pxRigidStatic->userData = physicsObjectData;
@@ -140,7 +140,15 @@ public:
         PxMat44 m2 = Util::GlmMat4ToPxMat44(GetModelMatrix());
         PxTransform transform2 = PxTransform(m2);
         pxRigidStatic->setGlobalPose(transform2);
+        Physics::DisableRaycast(m_pxShape);
+    }
 
+    void DisableRaycast() {
+        Physics::DisableRaycast(m_pxShape);
+    }
+
+    void EnableRaycast() {
+        Physics::EnableRaycast(m_pxShape);
     }
 };
 

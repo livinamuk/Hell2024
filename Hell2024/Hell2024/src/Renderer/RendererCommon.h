@@ -243,7 +243,7 @@ struct CloudPointOld {
 
 enum DebugLineRenderMode {
     SHOW_NO_LINES,
-    PATHFINDING,
+    PATHFINDING_RECAST,
     PHYSX_ALL,
     PHYSX_RAYCAST,
     PHYSX_COLLISION,

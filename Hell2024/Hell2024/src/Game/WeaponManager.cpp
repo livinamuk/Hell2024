@@ -60,6 +60,16 @@ namespace WeaponManager {
         shotgunAmmo.casingMaterialName = "Shell";
 
 
+        AmmoInfo& p90Ammo = g_ammos.emplace_back();
+        p90Ammo.name = "P90";
+        p90Ammo.modelName = "TODO!!!";
+        p90Ammo.convexMeshModelName = "TODO!!!";
+        p90Ammo.materialName = "TODO!!!";
+        p90Ammo.pickupAmount = 666;
+        p90Ammo.casingModelName = "CasingAKS74U";
+        p90Ammo.casingMaterialName = "Casing_AkS74U";
+
+
         // Weapons
 
         WeaponInfo& aks74u = g_weapons.emplace_back();
@@ -411,61 +421,90 @@ namespace WeaponManager {
 
 
 
-
-
-
-
-
-
         WeaponInfo& p90 = g_weapons.emplace_back();
         p90.name = "P90";
         p90.modelName = "P90";
         p90.type = WeaponType::AUTOMATIC;
-        p90.damage = 5;
-        p90.animationNames.idle = "P90_Draw";
-        p90.animationNames.walk = "P90_Draw";
+        p90.damage = 4;
+        p90.animationNames.idle = "P90_Idle";
+        p90.animationNames.walk = "P90_Walk";
         p90.animationNames.draw = "P90_Draw";
-        p90.animationNames.reload = "AKS74U_Reload";
-        p90.animationNames.reloadempty.push_back("AKS74U_ReloadEmpty");
-        p90.animationNames.fire.push_back("AKS74U_Fire0");
-        p90.animationNames.fire.push_back("AKS74U_Fire1");
-        p90.animationNames.fire.push_back("AKS74U_Fire2");
-        p90.animationNames.draw = "AKS74U_Draw";
+        p90.animationNames.reload = "P90_Reload";
+        p90.animationNames.reloadempty.push_back("P90_ReloadEmpty");
+        p90.animationNames.fire.push_back("P90_Fire0");
+        p90.animationNames.fire.push_back("P90_Fire1");
+        p90.animationNames.fire.push_back("P90_Fire2");
         p90.hiddenMeshAtStart.push_back("ArmsFemale");
         p90.meshMaterials["ArmsMale"] = "Hands";
         p90.meshMaterials["ArmsFemale"] = "FemaleArms";
-        p90.meshMaterials["AKS74UBarrel"] = "AKS74U_4";
-        p90.meshMaterials["AKS74UBolt"] = "AKS74U_1";
-        p90.meshMaterials["AKS74UHandGuard"] = "AKS74U_0";
-        p90.meshMaterials["AKS74UMag"] = "AKS74U_3";
-        p90.meshMaterials["AKS74UPistolGrip"] = "AKS74U_2";
-        p90.meshMaterials["AKS74UReceiver"] = "AKS74U_1";
+
+        p90.meshMaterials["Magazine_low"] = "P90_Mag";
+        p90.meshMaterials["Magazine_low2"] = "P90_Mag";
+        p90.meshMaterials["LowerReceiver_low"] = "P90_Main";
+        p90.meshMaterials["SideRail_low"] = "P90_Rails";
+        p90.meshMaterials["TopRailStandard_low"] = "P90_Rails";
+        p90.meshMaterials["UpperReceiver_low"] = "P90_FrontEnd";
+        p90.meshMaterials["SideRailScrews_low"] = "P90_Rails";
+        p90.meshMaterials["Compensator_low"] = "P90_FrontEnd";
+        p90.meshMaterials["ChargingHandle_low"] = "P90_FrontEnd";
+        p90.meshMaterials["ChargingHamdlePlate_low"] = "P90_FrontEnd";
+        p90.meshMaterials["Trigger_low"] = "P90_Main";
+        p90.meshMaterials["FireSelector_low"] = "P90_Main";
+        p90.meshMaterials["MagRelease_low"] = "P90_Main"; // could be wrong
+        p90.meshMaterials["Velcro_Clip"] = "P90_Sling";
         p90.ammoType = "AKS74U";
-        p90.magSize = 30;
-        p90.muzzleFlashBoneName = "Weapon";
-        p90.muzzleFlashOffset = glm::vec3(0, 0.002, 0.02f);
+        p90.magSize = 50;
+        //p90.muzzleFlashBoneName = "Weapon";
+        p90.muzzleFlashBoneName = "Muzzle";
+        p90.muzzleFlashOffset = glm::vec3(0, 0.002, 40.9207f);
         p90.casingEjectionBoneName = "SlideCatch";
         p90.casingEjectionOffset = glm::vec3(0, 0, 0);
-        p90.animationCancelPercentages.fire = 20.0f;
+        p90.animationCancelPercentages.fire = 10.0f;
         p90.animationCancelPercentages.reload = 80.0f;
         p90.animationCancelPercentages.reloadFromEmpty = 95.0f;
         p90.animationCancelPercentages.draw = 75.0f;
         p90.animationCancelPercentages.adsFire = 22.0f;
-        p90.audioFiles.fire.push_back("AKS74U_Fire0.wav");
-        p90.audioFiles.fire.push_back("AKS74U_Fire1.wav");
-        p90.audioFiles.fire.push_back("AKS74U_Fire2.wav");
-        p90.audioFiles.fire.push_back("AKS74U_Fire3.wav");
-        p90.audioFiles.reload = "AKS74U_Reload.wav";
-        p90.audioFiles.reloadEmpty = "AKS74U_ReloadEmpty.wav";
+        p90.audioFiles.fire.push_back("P90_Fire0.wav");
+        p90.audioFiles.fire.push_back("P90_Fire1.wav");
+        p90.audioFiles.fire.push_back("P90_Fire2.wav");
+        p90.audioFiles.fire.push_back("P90_Fire3.wav");
+        //p90.audioFiles.fire.push_back("P90_Fire4.wav");
+        p90.audioFiles.reload = "P90_Reload.wav";
+        p90.audioFiles.reloadEmpty = "P90_ReloadEmpty.wav";
         p90.animationSpeeds.fire = 1.625f;
-        p90.muzzleFlashBoneName = "Muzzle";
-        p90.casingEjectionBoneName = "EjectionPort";
+        //p90.animationSpeeds.reload = 1.625f;
+        //p90.animationSpeeds.reloadempty = 1.625f;
+        p90.muzzleFlashBoneName = "Weapon";
+        p90.casingEjectionBoneName = "Ejection_Port";  // FIGURE THIS OUT LATER
+        p90.casingEjectionBoneName = "Weapon";
         p90.muzzleFlashScale = 1.5f;
         p90.casingEjectionForce = 3.5f;
         p90.animationNames.adsIn = "AKS74U_ADS_In";
         p90.animationNames.adsOut = "AKS74U_ADS_Out";
         p90.animationNames.adsIdle = "AKS74U_ADS_Idle";
         p90.animationNames.adsWalk = "AKS74U_ADS_Walk";
+        p90.reloadMagInFrameNumber = 23;
+        p90.reloadEmptyMagInFrameNumber = 21;
+        p90.pickupModelName = "P90_Isolated";
+        p90.pickUpMeshMaterials["Magazine_low"] = "P90_Mag";
+        p90.pickUpMeshMaterials["LowerReceiver_low"] = "P90_Main";
+        p90.pickUpMeshMaterials["SideRail_low"] = "P90_Rails";
+        p90.pickUpMeshMaterials["TopRailStandard_low"] = "P90_Rails";
+        p90.pickUpMeshMaterials["UpperReceiver_low"] = "P90_FrontEnd";
+        p90.pickUpMeshMaterials["SideRailScrews_low"] = "P90_Rails";
+        p90.pickUpMeshMaterials["Compensator_low"] = "P90_FrontEnd";
+        p90.pickUpMeshMaterials["ChargingHandle_low"] = "P90_FrontEnd";
+        p90.pickUpMeshMaterials["ChargingHamdlePlate_low"] = "P90_FrontEnd";
+        p90.pickUpMeshMaterials["Trigger_low"] = "P90_Main";
+        p90.pickUpMeshMaterials["FireSelector_low"] = "P90_Main";
+        p90.pickUpMeshMaterials["MagRelease_low"] = "P90_Main"; // could be wrong
+        p90.pickUpMeshMaterials["Velcro_Clip"] = "P90_Sling";
+        p90.pickupConvexMeshModelName = "P90_ConvexMesh";
+
+
+
+
+
 
         SortList();
     }

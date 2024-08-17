@@ -13,7 +13,7 @@ void Player::GiveDefaultLoadout() {
     GiveWeapon("GoldenGlock");
     GiveWeapon("Tokarev");
     GiveWeapon("AKS74U");
- //   GiveWeapon("P90");
+    GiveWeapon("P90");
     GiveWeapon("Shotgun");
 
     GiveAmmo("Glock", 80000);
@@ -273,7 +273,7 @@ void Player::UpdateViewWeaponLogic(float deltaTime) {
                 _weaponAction = RELOAD_FROM_EMPTY;
             }
             else {
-                viewWeapon->PlayAnimation(weaponInfo->animationNames.reload, 1.0f);
+                viewWeapon->PlayAnimation(weaponInfo->animationNames.reload, weaponInfo->animationSpeeds.reload);
                 Audio::PlayAudio(weaponInfo->audioFiles.reload, 0.8f);
                 _weaponAction = RELOAD;
             }
@@ -289,6 +289,12 @@ void Player::UpdateViewWeaponLogic(float deltaTime) {
             _weaponAction = IDLE;
         }
         //Idle
+        bool p90Draw = false;
+
+        if (viewWeapon->GetName() == "P90" && _weaponAction == DRAWING) {
+        //    _weaponAction = IDLE;
+        }
+
         if (_weaponAction == IDLE) {
             if (Player::IsMoving()) {
                 viewWeapon->PlayAndLoopAnimation(weaponInfo->animationNames.walk, 1.0f);

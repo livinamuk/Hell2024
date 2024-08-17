@@ -6,19 +6,19 @@
 #include "../Renderer/TextBlitter.h"
 #include "../Renderer/Renderer.h"
 
-std::vector<RenderItem2D> Player::GetHudRenderItems(ivec2 presentSize) {
+std::vector<RenderItem2D> Player::GetHudRenderItems(hell::ivec2 presentSize) {
 
     std::vector<RenderItem2D> renderItems;
 
-    ivec2 debugTextLocation;
+    hell::ivec2 debugTextLocation;
     debugTextLocation.x = RendererUtil::GetViewportLeftX(m_playerIndex, Game::GetSplitscreenMode(), presentSize.x, presentSize.y);
     debugTextLocation.y = RendererUtil::GetViewportTopY(m_playerIndex, Game::GetSplitscreenMode(), presentSize.x, presentSize.y);
 
-    ivec2 pickupTextLocation;
+    hell::ivec2 pickupTextLocation;
     pickupTextLocation.x = RendererUtil::GetViewportLeftX(m_playerIndex, Game::GetSplitscreenMode(), presentSize.x, presentSize.y);
     pickupTextLocation.y = RendererUtil::GetViewportBottomY(m_playerIndex, Game::GetSplitscreenMode(), presentSize.x, presentSize.y);
 
-    ivec2 viewportCenter;
+    hell::ivec2 viewportCenter;
     viewportCenter.x = RendererUtil::GetViewportCenterX(m_playerIndex, Game::GetSplitscreenMode(), presentSize.x, presentSize.y);
     viewportCenter.y = RendererUtil::GetViewportCenterY(m_playerIndex, Game::GetSplitscreenMode(), presentSize.x, presentSize.y);
 
@@ -122,7 +122,7 @@ std::vector<RenderItem2D> Player::GetHudRenderItems(ivec2 presentSize) {
     return renderItems;
 }
 
-std::vector<RenderItem2D> Player::GetHudRenderItemsHiRes(ivec2 gBufferSize) {
+std::vector<RenderItem2D> Player::GetHudRenderItemsHiRes(hell::ivec2 gBufferSize) {
 
     std::vector<RenderItem2D> renderItems;
 
@@ -131,7 +131,7 @@ std::vector<RenderItem2D> Player::GetHudRenderItemsHiRes(ivec2 gBufferSize) {
     int bottomY = RendererUtil::GetViewportBottomY(m_playerIndex, Game::GetSplitscreenMode(), gBufferSize.x, gBufferSize.y);
 
     float ammoTextScale = 0.7f;
-    ivec2 ammoSlashTextLocation = { 0,0 };
+    hell::ivec2 ammoSlashTextLocation = { 0,0 };
     if (Game::GetSplitscreenMode() == SplitscreenMode::NONE) {
         ammoSlashTextLocation.x = rightX - (gBufferSize.x * 0.125f);
         ammoSlashTextLocation.y = bottomY + (gBufferSize.x * 0.1f);
@@ -145,8 +145,8 @@ std::vector<RenderItem2D> Player::GetHudRenderItemsHiRes(ivec2 gBufferSize) {
         ammoSlashTextLocation.y = bottomY + (gBufferSize.x * 0.065f);
     }
 
-    ivec2 ammoClipTextLocation = { ammoSlashTextLocation.x - int(TextBlitter::GetCharacterSize("/", BitmapFontType::AMMO_NUMBERS).x * 0.7f * ammoTextScale), ammoSlashTextLocation.y };
-    ivec2 ammoTotalTextLocation = { ammoSlashTextLocation.x + int(TextBlitter::GetCharacterSize("/", BitmapFontType::AMMO_NUMBERS).x * 1.6f * ammoTextScale), ammoSlashTextLocation.y };
+    hell::ivec2 ammoClipTextLocation = { ammoSlashTextLocation.x - int(TextBlitter::GetCharacterSize("/", BitmapFontType::AMMO_NUMBERS).x * 0.7f * ammoTextScale), ammoSlashTextLocation.y };
+    hell::ivec2 ammoTotalTextLocation = { ammoSlashTextLocation.x + int(TextBlitter::GetCharacterSize("/", BitmapFontType::AMMO_NUMBERS).x * 1.6f * ammoTextScale), ammoSlashTextLocation.y };
 
 
     if (IsAlive()) {

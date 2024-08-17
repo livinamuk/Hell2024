@@ -60,6 +60,7 @@ struct CSGObject {
     AABB m_aabb;
     csg::brush_t* m_brush;
     glm::mat4 m_parentVolumeNormalMatrix = glm::mat4(1);
+    bool m_disableRendering = false;
 
     std::span<CSGVertex> GetVerticesSpan();
     std::span<uint32_t> GetIndicesSpan();

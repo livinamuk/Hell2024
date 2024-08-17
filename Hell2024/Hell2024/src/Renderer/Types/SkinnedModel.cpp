@@ -2,24 +2,16 @@
 #include "SkinnedModel.h"
 #include "../../Util.hpp"
 
-SkinnedModel::SkinnedModel()
-{
-    m_VAO = 0;
-    ZERO_MEM(m_Buffers);
-    m_NumBones = 0;
-}
 
 SkinnedModel::~SkinnedModel() {
 }
 
 void BackAllMesh() {
 
-
-
 }
 
 void SkinnedModel::UpdateBoneTransformsFromBindPose(AnimatedTransforms& animatedTransforms) {
-    // Traverse the tree 
+    // Traverse the tree
     for (int i = 0; i < m_joints.size(); i++)
     {
         // Get the node and its um bind pose transform?
@@ -36,7 +28,7 @@ void SkinnedModel::UpdateBoneTransformsFromBindPose(AnimatedTransforms& animated
         if (m_BoneMapping.find(NodeName) != m_BoneMapping.end()) {
             unsigned int BoneIndex = m_BoneMapping[NodeName];
             m_BoneInfo[BoneIndex].FinalTransformation = GlobalTransformation * m_BoneInfo[BoneIndex].BoneOffset;
-            m_BoneInfo[BoneIndex].ModelSpace_AnimatedTransform = GlobalTransformation;          
+            m_BoneInfo[BoneIndex].ModelSpace_AnimatedTransform = GlobalTransformation;
         }
     }
 
@@ -80,7 +72,7 @@ void SkinnedModel::CalcInterpolatedPosition(glm::vec3& Out, float AnimationTime,
     if (Index == -1 || animatedNode->m_nodeKeys.size() == 1) {
         Out = animatedNode->m_nodeKeys[0].positon;
         return;
-    }       
+    }
     float DeltaTime = animatedNode->m_nodeKeys[NextIndex].timeStamp - animatedNode->m_nodeKeys[Index].timeStamp;
     float Factor = (AnimationTime - animatedNode->m_nodeKeys[Index].timeStamp) / DeltaTime;
 
@@ -95,7 +87,7 @@ void SkinnedModel::CalcInterpolatedRotation(glm::quat& Out, float AnimationTime,
 {
     int Index = FindAnimatedNodeIndex(AnimationTime, animatedNode);
     int NextIndex = (Index + 1);
-    
+
     // Is next frame out of range?
     if (NextIndex == animatedNode->m_nodeKeys.size()) {
         Out = animatedNode->m_nodeKeys[Index].rotation;
@@ -156,7 +148,7 @@ void SkinnedModel::UpdateBoneTransformsFromAnimation(float animTime, Animation* 
 		AnimationTime = std::min(TimeInTicks, animation->m_duration);
     //}
 
-    // Traverse the tree 
+    // Traverse the tree
     for (int i = 0; i < m_joints.size(); i++)
     {
         // Get the node and its um bind pose transform?
@@ -166,7 +158,7 @@ void SkinnedModel::UpdateBoneTransformsFromAnimation(float animTime, Animation* 
        // if (this->_filename == "Shotgun") {
         //    std::cout << i << ": " << NodeName << "\n";
        // }
-        
+
         // Calculate any animation
         //if (m_animations.size() > 0)
         //{
@@ -223,7 +215,7 @@ void SkinnedModel::UpdateBoneTransformsFromAnimation(float animTime, Animation* 
                 outCameraMatrix[0][1] *= -1.0f; // roll
                 outCameraMatrix[1][0] *= -1.0f; // roll
         }
-     
+
         // Store the current transformation, so child nodes can access it
         m_joints[i].m_currentFinalTransform = GlobalTransformation;
 

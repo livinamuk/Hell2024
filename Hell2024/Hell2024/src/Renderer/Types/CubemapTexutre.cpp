@@ -12,7 +12,7 @@ void CubemapTexture::SetFiletype(std::string filetype) {
 void CubemapTexture::Load() {
 
     if (BackEnd::GetAPI() == API::OPENGL) {
-        glTexture.LoadAndBake(name, filetype);
+        glTexture.Load(name, filetype);
     }
     else if (BackEnd::GetAPI() == API::VULKAN) {
         //vkTexture.Load(filepath);
