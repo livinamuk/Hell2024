@@ -341,15 +341,15 @@ void GameObject::Update(float deltaTime) {
 
 	// Update raycast object PhysX pointer
 	if (m_raycastRigidStatic.pxRigidStatic) {
-		if (m_raycastRigidStatic.pxRigidStatic->userData) {
-			delete m_raycastRigidStatic.pxRigidStatic->userData;
+        if (m_raycastRigidStatic.pxRigidStatic->userData) {
+            delete static_cast<PhysicsObjectData*>(m_raycastRigidStatic.pxRigidStatic->userData);
 		}
         m_raycastRigidStatic.pxRigidStatic->userData = new PhysicsObjectData(PhysicsObjectType::GAME_OBJECT, this);
 	}
 	// Update collision object PhysX pointer
 	if (m_collisionRigidBody.Exists()) {
-		if (m_collisionRigidBody.pxRigidBody->userData) {
-			delete m_collisionRigidBody.pxRigidBody->userData;
+        if (m_collisionRigidBody.pxRigidBody->userData) {
+            delete static_cast<PhysicsObjectData*>(m_collisionRigidBody.pxRigidBody->userData);
 		}
         m_collisionRigidBody.pxRigidBody->userData = new PhysicsObjectData(PhysicsObjectType::GAME_OBJECT, this);
 	}
@@ -505,7 +505,7 @@ void GameObject::SetModel(const std::string& name){
     }
 }
 
-void GameObject::SetMeshMaterialByMeshName(std::string meshName, std::string materialName) {
+void GameObject::SetMeshMaterialByMeshName(std::string meshName, const char* materialName) {
 	int materialIndex = AssetManager::GetMaterialIndex(materialName);
 	if (model && materialIndex != -1) {
         for (int i = 0; i < model->GetMeshCount(); i++) {
@@ -688,16 +688,12 @@ void GameObject::SetRaycastShapeFromModelIndex(unsigned int modelIndex) {
 }
 
 void GameObject::SetRaycastShape(PxShape* shape) {
-	if (!shape) {
-		return;
-	}
-	if (m_raycastRigidStatic.pxRigidStatic) {
-        m_raycastRigidStatic.pxRigidStatic->release();
-	}
+    m_raycastRigidStatic.Destroy();
 	PhysicsFilterData filterData;
 	filterData.raycastGroup = RAYCAST_ENABLED;
 	filterData.collisionGroup = CollisionGroup::NO_COLLISION;
 	filterData.collidesWith = CollisionGroup::NO_COLLISION;
+    m_raycastRigidStatic.pxShape = shape;
     m_raycastRigidStatic.pxRigidStatic = Physics::CreateRigidStatic(Transform(), filterData, shape);
     m_raycastRigidStatic.pxRigidStatic->userData = new PhysicsObjectData(PhysicsObjectType::GAME_OBJECT, this);
 
@@ -712,8 +708,8 @@ void GameObject::SetPhysicsTransform(glm::mat4 worldMatrix) {
 }
 
 void GameObject::CleanUp() {
-    m_collisionRigidBody.CleanUp();
-    m_raycastRigidStatic.CleanUp();
+    m_collisionRigidBody.Destroy();
+    m_raycastRigidStatic.Destroy();
 }
 
 std::vector<Vertex> GameObject::GetAABBVertices() {
@@ -806,8 +802,8 @@ void GameObject::PickUp() {
                 }*/
 
                 // Cleanup
-                m_raycastRigidStatic.CleanUp();
-                m_collisionRigidBody.CleanUp();
+                m_raycastRigidStatic.Destroy();
+                m_collisionRigidBody.Destroy();
                 Scene::GetGamesObjects().erase(Scene::GetGamesObjects().begin() + i);
                 break;
             }

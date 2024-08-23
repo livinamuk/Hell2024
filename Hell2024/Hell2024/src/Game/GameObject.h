@@ -128,7 +128,7 @@ public:
 	const InteractType& GetInteractType();
 	OpenState& GetOpenState();
 	void SetTransform(Transform& transform);
-	void SetMeshMaterialByMeshName(std::string meshName, std::string materialName);
+	void SetMeshMaterialByMeshName(std::string meshName, const char* materialName);
 	void PickUp();
 	void SetPickUpType(PickUpType pickupType);
 	bool IsCollectable();

@@ -116,6 +116,25 @@ namespace Game {
         }
         InputMulti::ResetMouseOffsets();
         Scene::Update(deltaTime);
+
+
+
+
+
+        if (g_dogDeaths == -1) {
+            std::ifstream file("DogDeaths.txt");
+            std::stringstream buffer;
+            buffer << file.rdbuf();
+            g_dogDeaths = std::stoi(buffer.str());
+        }
+
+
+        if (g_playerDeaths == -1) {
+            std::ifstream file("PlayerDeaths.txt");
+            std::stringstream buffer;
+            buffer << file.rdbuf();
+            g_playerDeaths = std::stoi(buffer.str());
+        }
     }
 
     void CreatePlayers(unsigned int playerCount) {

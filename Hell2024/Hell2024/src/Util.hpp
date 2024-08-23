@@ -602,8 +602,8 @@ namespace Util {
     }
 
     inline bool AreNormalsAligned(const glm::vec3& normal1, const glm::vec3& normal2, float threshold = 0.999f) {
-        float dotProduct = glm::dot(glm::normalize(normal1), glm::normalize(normal2));
-        return dotProduct > threshold;
+        float dotProduct = glm::dot(normal1, normal2);
+        return dotProduct * dotProduct > threshold * threshold;
     }
 
     inline glm::vec3 NormalFromTriangle(glm::vec3 pos0, glm::vec3 pos1, glm::vec3 pos2) {
@@ -633,7 +633,7 @@ namespace Util {
         float r = 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV1.y * deltaUV2.x);
         glm::vec3 tangent = (deltaPos1 * deltaUV2.y - deltaPos2 * deltaUV1.y) * r;
         glm::vec3 bitangent = (deltaPos2 * deltaUV1.x - deltaPos1 * deltaUV2.x) * r;
-        glm::vec3 normal = NormalFromTriangle(vert0->position, vert1->position, vert2->position);
+        glm::vec3 normal = glm::normalize(glm::cross(deltaPos1, deltaPos2));
         vert0->normal = normal;
         vert1->normal = normal;
         vert2->normal = normal;
@@ -658,7 +658,7 @@ namespace Util {
         float r = 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV1.y * deltaUV2.x);
         glm::vec3 tangent = (deltaPos1 * deltaUV2.y - deltaPos2 * deltaUV1.y) * r;
         glm::vec3 bitangent = (deltaPos2 * deltaUV1.x - deltaPos1 * deltaUV2.x) * r;
-        glm::vec3 normal = NormalFromTriangle(vert0->position, vert1->position, vert2->position);
+        glm::vec3 normal = glm::normalize(glm::cross(deltaPos1, deltaPos2));
         vert0->normal = normal;
         vert1->normal = normal;
         vert2->normal = normal;
@@ -1107,23 +1107,18 @@ namespace Util {
     inline bool IsPointInTriangle2D(const glm::vec2& pt, const glm::vec2& v0, const glm::vec2& v1, const glm::vec2& v2) {
         glm::vec2 v0v1 = v1 - v0;
         glm::vec2 v0v2 = v2 - v0;
-        // Compute vectors
         glm::vec2 v0pt = pt - v0;
-        glm::vec2 v1pt = pt - v1;
-        glm::vec2 v2pt = pt - v2;
-        // Compute dot products
-        float d00 = glm::dot(v0v1, v0v1);
-        float d01 = glm::dot(v0v1, v0v2);
-        float d11 = glm::dot(v0v2, v0v2);
-        float d20 = glm::dot(v0pt, v0v1);
-        float d21 = glm::dot(v0pt, v0v2);
-        // Compute barycentric coordinates
-        float denom = d00 * d11 - d01 * d01;
-        float v = (d11 * d20 - d01 * d21) / denom;
-        float w = (d00 * d21 - d01 * d20) / denom;
+        // Precompute the determinant to avoid division in each barycentric calculation
+        float denom = v0v1.x * v0v2.y - v0v1.y * v0v2.x;
+        // Early out if the denominator is zero (i.e., the triangle is degenerate)
+        if (denom == 0.0f) return false;
+        float invDenom = 1.0f / denom;
+        // Compute the barycentric coordinates (u, v, w) directly
+        float v = (v0pt.x * v0v2.y - v0pt.y * v0v2.x) * invDenom;
+        float w = (v0v1.x * v0pt.y - v0v1.y * v0pt.x) * invDenom;
         float u = 1.0f - v - w;
-        // Check if point is in triangle
-        return (u >= 0) && (v >= 0) && (w >= 0);
+        // Check if point is inside the triangle
+        return (u >= 0.0f) && (v >= 0.0f) && (w >= 0.0f);
     }
 
     inline bool IsPointInCircle(const glm::vec2& point, const glm::vec2& circleCenter, float radius) {

@@ -6,6 +6,7 @@
 #include "../BackEnd/BackEnd.h"
 #include "../Game/Scene.h"
 #include "../Editor/CSG.h"
+#include "../Timer.hpp"
 
 namespace GlobalIllumination {
 
@@ -69,69 +70,60 @@ bool isPointInTriangle2D(const glm::vec2& pt, const glm::vec2& v0, const glm::ve
 
 void GlobalIllumination::CreatePointCloud() {
 
-    g_pointCloud.clear();
-
-    std::vector<CSGVertex> vertices = CSG::GetVertices();
-    std::vector<glm::vec3> triangles;
+    std::vector<CSGVertex>& vertices = CSG::GetVertices();
     float spacing = 0.275f;
 
-    for (int i = CSG::GetBaseCSGVertex(); i < vertices.size(); i++) {
-        triangles.push_back(vertices[i].position);
-    }
+    g_pointCloud.clear();
+    g_pointCloud.reserve(vertices.size() / 3);
 
-    for (size_t i = 0; i < triangles.size(); i += 3) {
-        glm::vec3 v0 = triangles[i];
-        glm::vec3 v1 = triangles[i + 1];
-        glm::vec3 v2 = triangles[i + 2];
+    {
+        Timer timer4("-CreatePointCloud() loop");
+        for (size_t i = CSG::GetBaseCSGVertex(); i < vertices.size(); i += 3) {
 
-        // Calculate the normal of the triangle
-        glm::vec3 normal = glm::normalize(glm::cross(v1 - v0, v2 - v0));
+            const CSGVertex& v0 = vertices[i];
+            const CSGVertex& v1 = vertices[i + 1];
+            const CSGVertex& v2 = vertices[i + 2];
 
-        // Create a transformation matrix to project the triangle onto the XY plane
-        glm::vec3 up(0.0f, 0.0f, 1.0f); // Default to Z-axis as up direction
-        if (std::abs(normal.z) > 0.999f) {
-            up = glm::vec3(1.0f, 0.0f, 0.0f); // Use X-axis if normal is aligned with Z axis
-        }
-        glm::vec3 right = glm::normalize(glm::cross(up, normal));
-        up = glm::normalize(glm::cross(normal, right));
+            // Calculate the normal of the triangle
+            const glm::vec3& normal = v0.normal;
 
-        glm::mat3 transform(right.x, right.y, right.z,
-            up.x, up.y, up.z,
-            normal.x, normal.y, normal.z);
+            // Choose the up vector based on the normal
+            glm::vec3 up = (std::abs(normal.z) > 0.999f) ? glm::vec3(1.0f, 0.0f, 0.0f) : glm::vec3(0.0f, 0.0f, 1.0f);
 
-        glm::vec2 v0_2d(glm::dot(right, v0), glm::dot(up, v0));
-        glm::vec2 v1_2d(glm::dot(right, v1), glm::dot(up, v1));
-        glm::vec2 v2_2d(glm::dot(right, v2), glm::dot(up, v2));
+            // Calculate right and up vectors
+            glm::vec3 right = glm::normalize(glm::cross(up, normal));
+            up = glm::cross(normal, right);  // No need to normalize again as the cross product of two unit vectors is already normalized
 
-        // Determine the bounding box of the 2D triangle
-        glm::vec2 min = glm::min(glm::min(v0_2d, v1_2d), v2_2d);
-        glm::vec2 max = glm::max(glm::max(v0_2d, v1_2d), v2_2d);
+            glm::mat3 transform(right.x, right.y, right.z,
+                up.x, up.y, up.z,
+                normal.x, normal.y, normal.z);
 
-        // Round min and max values
-        min.x = roundDown(min.x, spacing) - spacing * 0.5f;
-        min.y = roundDown(min.y, spacing) - spacing * 0.5f;
-        max.x = roundUp(max.x, spacing) + spacing * 0.5f;
-        max.y = roundUp(max.y, spacing) + spacing * 0.5f;
+            glm::vec2 v0_2d(glm::dot(right, v0.position), glm::dot(up, v0.position));
+            glm::vec2 v1_2d(glm::dot(right, v1.position), glm::dot(up, v1.position));
+            glm::vec2 v2_2d(glm::dot(right, v2.position), glm::dot(up, v2.position));
 
-        // Generate points within the bounding box
-        for (float x = min.x; x <= max.x; x += spacing) {
-            for (float y = min.y; y <= max.y; y += spacing) {
-                glm::vec2 pt(x, y);
-                if (Util::IsPointInTriangle2D(pt, v0_2d, v1_2d, v2_2d)) {
-                //if (isPointInTriangle2D(pt, v0_2d, v1_2d, v2_2d)) {
-                    // Transform the 2D point back to 3D space
-                    glm::vec3 pt3d = v0 + right * (pt.x - v0_2d.x) + up * (pt.y - v0_2d.y);
+            // Determine the bounding box of the 2D triangle
+            glm::vec2 min = glm::min(glm::min(v0_2d, v1_2d), v2_2d);
+            glm::vec2 max = glm::max(glm::max(v0_2d, v1_2d), v2_2d);
 
+            // Round min and max values
+            min.x = roundDown(min.x, spacing) - spacing * 0.5f;
+            min.y = roundDown(min.y, spacing) - spacing * 0.5f;
+            max.x = roundUp(max.x, spacing) + spacing * 0.5f;
+            max.y = roundUp(max.y, spacing) + spacing * 0.5f;
 
-                    CloudPoint cloudPoint;
-                    cloudPoint.position = pt3d;
-                    cloudPoint.normal = glm::vec4(normal, 0);
-                    g_pointCloud.push_back(cloudPoint);
+            // Generate points within the bounding box
+            for (float x = min.x; x <= max.x; x += spacing) {
+                for (float y = min.y; y <= max.y; y += spacing) {
+                    glm::vec2 pt(x, y);
+                    if (Util::IsPointInTriangle2D(pt, v0_2d, v1_2d, v2_2d)) {
+                        glm::vec3 pt3d = v0.position + right * (pt.x - v0_2d.x) + up * (pt.y - v0_2d.y);
+                        g_pointCloud.emplace_back(CloudPoint{ pt3d, glm::vec4(normal, 0) });
+                    }
                 }
             }
         }
     }
-
 
     if (BackEnd::GetAPI() == API::OPENGL) {
         OpenGLBackEnd::CreatePointCloudVertexBuffer(g_pointCloud);

@@ -1,8 +1,11 @@
 #include "csg.h"
+#include "brush.h"
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <iostream>
+#include <future>
+#include <vector>
 #include "../Common.h"
 #include "../Util.hpp"
 #include "../API/OpenGL/GL_backEnd.h"
@@ -22,6 +25,8 @@ namespace CSG {
     bool g_sceneDirty = true;
     uint32_t g_baseCSGVertex = 0;
     std::vector<glm::vec3> g_navMeshVertices;
+
+    void UpdateDisplayLists();
 
     void Init() {
         csg::volume_t void_volume = g_world.get_void_volume();
@@ -81,7 +86,7 @@ namespace CSG {
 
     void Build() {
 
-        Timer timer("CSG::Build()");
+        std::cout << "\n";
 
         CleanUp();
 
@@ -120,7 +125,7 @@ namespace CSG {
 
                     CSGObject& csg = g_objects.emplace_back();
                     csg.m_transform = worldTransform;
-                    csg.m_type = CSGType::ADDITIVE;
+                    csg.m_type = CSGType::ADDITIVE_CUBE;
                     csg.m_materialIndex = materialIndex;
                     csg.m_textureScale = 1;
                     csg.m_parentIndex = i;
@@ -137,31 +142,35 @@ namespace CSG {
 
 
 
-            for (int i = 0; i < Scene::g_cubeVolumesAdditive.size(); i++) {
-                CubeVolume& cubeVolume = Scene::g_cubeVolumesAdditive[i];
-                CSGObject& csg = g_objects.emplace_back();
-                csg.m_transform = cubeVolume.GetTransform();
-                csg.m_type = CSGType::ADDITIVE;
-                csg.m_materialIndex = cubeVolume.materialIndex;
-                csg.m_textureScale = cubeVolume.textureScale;
-                csg.m_parentIndex = i;
-                csg.m_textureOffsetX = cubeVolume.textureOffsetX;
-                csg.m_textureOffsetY = cubeVolume.textureOffsetY;
-                csg.m_parentVolumeNormalMatrix = cubeVolume.GetNormalMatrix();
+            for (int i = 0; i < Scene::g_csgAdditiveShapes.size(); i++) {
+                CSGShape& csgShape = Scene::g_csgAdditiveShapes[i];
+                CSGObject& csgObject = g_objects.emplace_back();
+                csgObject.m_transform = csgShape.GetTransform();
+                if (csgShape.m_brushShape == BrushShape::CUBE) {
+                    csgObject.m_type = CSGType::ADDITIVE_CUBE;
+                }
+                else if (csgShape.m_brushShape == BrushShape::PLANE) {
+                    csgObject.m_type = CSGType::ADDITIVE_PLANE;
+                }
+                csgObject.m_materialIndex = csgShape.materialIndex;
+                csgObject.m_textureScale = csgShape.textureScale;
+                csgObject.m_parentIndex = i;
+                csgObject.m_textureOffsetX = csgShape.textureOffsetX;
+                csgObject.m_textureOffsetY = csgShape.textureOffsetY;
+                csgObject.m_parentVolumeNormalMatrix = csgShape.GetNormalMatrix();
             }
 
-
-            for (int i = 0; i < Scene::g_cubeVolumesSubtractive.size(); i++) {
-                CubeVolume& cubeVolume = Scene::g_cubeVolumesSubtractive[i];
+            for (int i = 0; i < Scene::g_csgSubtractiveShapes.size(); i++) {
+                CSGShape& csgShape = Scene::g_csgSubtractiveShapes[i];
                 CSGObject& csg = g_objects.emplace_back();
-                csg.m_transform = cubeVolume.GetTransform();
+                csg.m_transform = csgShape.GetTransform();
                 csg.m_type = CSGType::SUBTRACTIVE;
-                csg.m_materialIndex = cubeVolume.materialIndex;
-                csg.m_textureScale = cubeVolume.textureScale;
+                csg.m_materialIndex = csgShape.materialIndex;
+                csg.m_textureScale = csgShape.textureScale;
                 csg.m_parentIndex = i;
-                csg.m_textureOffsetX = cubeVolume.textureOffsetX;
-                csg.m_textureOffsetY = cubeVolume.textureOffsetY;
-                csg.m_parentVolumeNormalMatrix = cubeVolume.GetNormalMatrix();
+                csg.m_textureOffsetX = csgShape.textureOffsetX;
+                csg.m_textureOffsetY = csgShape.textureOffsetY;
+                csg.m_parentVolumeNormalMatrix = csgShape.GetNormalMatrix();
             }
 
             for (Door& door : Scene::GetDoors()) {
@@ -187,30 +196,33 @@ namespace CSG {
 
             for (int i = 0; i < g_objects.size(); i++) {
 
-                CSGObject& cube = g_objects[i];
+                CSGObject& csgObject = g_objects[i];
+                csgObject.m_brush = g_world.add();
+                csgObject.m_brush->userdata = Brush(csgObject.m_brush);
+                Brush* userdata = any_cast<Brush>(&csgObject.m_brush->userdata);
 
-                Transform transform = cube.m_transform;
+                Transform transform = csgObject.m_transform;
                 transform.scale *= glm::vec3(0.5f);
 
-                cube.m_brush = g_world.add();
-
-                cube.m_brush->userdata = cube_brush_userdata_t(cube.m_brush);
-                cube_brush_userdata_t* userdata = any_cast<cube_brush_userdata_t>(&cube.m_brush->userdata);
-
-                if (cube.m_type == CSGType::ADDITIVE) {
-                    userdata->set_brush_type(SOLID_BRUSH);
+                if (csgObject.m_type == CSGType::ADDITIVE_CUBE) {
+                    userdata->SetBrushType(SOLID_BRUSH);
+                    userdata->SetBrushShape(BrushShape::CUBE);
                 }
-                else if (cube.m_type == CSGType::SUBTRACTIVE) {
-                    userdata->set_brush_type(AIR_BRUSH);
+                else if (csgObject.m_type == CSGType::ADDITIVE_PLANE) {
+                    userdata->SetBrushType(SOLID_BRUSH);
+                    userdata->SetBrushShape(BrushShape::PLANE);
+                    transform.scale *= glm::vec3(1.0f, 1.0f, 0.00001f);
                 }
-                else if (cube.m_type == CSGType::DOOR) {
-                    userdata->set_brush_type(AIR_BRUSH);
+                else if (csgObject.m_type == CSGType::SUBTRACTIVE) {
+                    userdata->SetBrushType(AIR_BRUSH);
                 }
-                else if (cube.m_type == CSGType::WINDOW) {
-                    userdata->set_brush_type(AIR_BRUSH);
+                else if (csgObject.m_type == CSGType::DOOR) {
+                    userdata->SetBrushType(AIR_BRUSH);
                 }
-                userdata->set_transform(transform.to_mat4());
-                userdata->set_parentIndex(i);
+                else if (csgObject.m_type == CSGType::WINDOW) {
+                    userdata->SetBrushType(AIR_BRUSH);
+                }
+                userdata->SetTransform(transform.to_mat4());
             }
 
             // Calculate vertices
@@ -274,29 +286,32 @@ namespace CSG {
             int baseIndex = g_indices.size();
             int baseVertex = g_vertices.size();
 
-            // THIS NEEDS WRITING: getting total vertex count before hand and reserving that much space
-            /*
-            int totalVertexCount = 8; // Begins with 8 vertices for the door
+            // Do some important CSG thing
+            UpdateDisplayLists();
+
+            // Reserve enough space in g_vertices
+            int vertexCount = baseVertex;
             for (CSGObject& csgObject : g_objects) {
-
-                brush->m_vertices
-            }*/
-
-            for (CSGObject& csgObject : g_objects) {
-
                 csg::brush_t* b = csgObject.m_brush;
-                cube_brush_userdata_t* brush = any_cast<cube_brush_userdata_t>(&b->userdata);
-                brush->update_display_list();
+                Brush* brush = any_cast<Brush>(&b->userdata);
+                vertexCount += brush->m_vertices.size();
+            }
+            g_vertices.reserve(vertexCount);
 
-                //CSGObject & cube = g_objects[brush->m_index];
+
+            for (CSGObject& csgObject : g_objects) {
+
                 glm::vec3 boundsMin = glm::vec3(1e30f);
                 glm::vec3 boundsMax = glm::vec3(-1e30f);
+
+                csg::brush_t* b = csgObject.m_brush;
+                Brush* brush = any_cast<Brush>(&b->userdata);
 
                 int vertexCount = 0;
                 int indexCount = 0;
                 int index = 0;
                 for (CSGVertex& vertex : brush->m_vertices) {
-                    glm::vec3 origin = brush->m_origin;
+                    glm::vec3 origin = glm::vec3(0, 0, 0);
                     origin = glm::vec3(0);
                     vertex.uv = CalculateUV(vertex.position, vertex.normal, origin);
                     vertex.uv *= csgObject.m_textureScale;
@@ -319,6 +334,10 @@ namespace CSG {
                 csgObject.m_indexCount = indexCount;
                 csgObject.m_aabb = AABB(boundsMin, boundsMax);
 
+                //std::cout << baseVertex << "\n";
+                //std::cout << " -boundsMin:" << Util::Vec3ToString(boundsMin) << " " << Util::Vec3ToString(b->box.min) << "\n";
+                //std::cout << " -boundsMax:" << Util::Vec3ToString(boundsMax) << " " << Util::Vec3ToString(b->box.max) << "\n\n";
+
                 baseVertex += vertexCount;
                 baseIndex += vertexCount;
             }
@@ -332,21 +351,24 @@ namespace CSG {
             }
 
             // Set materials based on local face normal
+            g_navMeshVertices.reserve(g_vertices.size());
+
             for (CSGObject& csgObject : g_objects) {
-                glm::mat4 inverseNormalMatrix = glm::inverse(csgObject.m_parentVolumeNormalMatrix);
+                //glm::mat4 inverseNormalMatrix = glm::inverse(csgObject.m_parentVolumeNormalMatrix);
                 for (int i = csgObject.m_baseVertex; i < csgObject.m_baseVertex + csgObject.m_vertexCount; i += 3) {
-                    glm::vec4 transformedNormal = inverseNormalMatrix * glm::vec4(g_vertices[i].normal, 0.0f);
+
+                    /*glm::vec4 transformedNormal = inverseNormalMatrix * glm::vec4(g_vertices[i].normal, 0.0f);
                     glm::vec3 transformedNormalXYZ = glm::normalize(glm::vec3(transformedNormal));
 
                     if (Util::AreNormalsAligned(transformedNormalXYZ, glm::vec3(0, 0, -1), 0.9f)) {
                         g_vertices[i + 0].materialIndex = AssetManager::GetMaterialIndex("Ceiling2");
                         g_vertices[i + 1].materialIndex = AssetManager::GetMaterialIndex("Ceiling2");;
                         g_vertices[i + 2].materialIndex = AssetManager::GetMaterialIndex("Ceiling2");
-                    }
+                    }*/
 
+                    // Nav mesh vertices
                     //float dotProduct = glm::dot(g_vertices[i].normal, glm::vec3(0,1,0));
                     //float minCosAngle = glm::cos(glm::radians(45.0f));
-
                     //if (dotProduct >= minCosAngle && dotProduct <= 1.0f) {
                     g_navMeshVertices.push_back(g_vertices[i + 0].position);
                     g_navMeshVertices.push_back(g_vertices[i + 1].position);
@@ -357,22 +379,16 @@ namespace CSG {
         }
 
         {
-            Timer timer4("-extra stuff");
-
+            Timer timer4("-creating csg object physx objects");
             for (CSGObject& cube : g_objects) {
                 cube.CreatePhysicsObjectFromVertices();
             }
+        }
 
+
+        {
+            Timer timer4("-uploading csg geo to gpu");
             g_sceneDirty = true;
-
-            // create indices
-            // TODO: remove duplicates or this is redundant
-           /* g_indices.clear();
-            g_indices.resize(g_vertices.size());
-            for (int i = 0; i < g_indices.size(); i++) {
-                g_indices[i] = i;
-            }*/
-
             if (g_sceneDirty && g_vertices.size()) {
                 if (BackEnd::GetAPI() == API::OPENGL) {
                     OpenGLBackEnd::UploadConstructiveSolidGeometry(g_vertices, g_indices);
@@ -382,10 +398,13 @@ namespace CSG {
                 }
                 g_sceneDirty = false;
             }
-
             for (Light& light : Scene::g_lights) {
                 light.isDirty = true;
             }
+        }
+
+
+        {
             GlobalIllumination::RecalculateAll();
         }
     }
@@ -425,112 +444,22 @@ namespace CSG {
     bool  IsDirty() {
         return g_sceneDirty;
     }
-}
 
-
-
-static float signed_distance(const glm::vec3& point, const csg::plane_t& plane) {
-    return dot(plane.normal, point) + plane.offset;
-}
-
-static glm::vec3 project_point(const glm::vec3& point, const csg::plane_t& plane) {
-    return point - signed_distance(point, plane) * plane.normal;
-}
-
-static csg::plane_t make_plane(const glm::vec3& point, const glm::vec3& normal) {
-    return csg::plane_t{ normal, -dot(point, normal) };
-}
-
-static csg::plane_t transformed(const csg::plane_t& plane, const glm::mat4& transform) {
-    glm::vec3 origin_transformed = glm::vec3(transform * glm::vec4(project_point(glm::vec3(0, 0, 0), plane), 1.0f));
-    glm::vec3 normal_transformed = glm::normalize(glm::vec3(transpose(glm::inverse(transform)) * glm::vec4(plane.normal, 0.0f)));
-    csg::plane_t transformed_plane = make_plane(origin_transformed, normal_transformed);
-    return transformed_plane;
-}
-
-
-void cube_brush_userdata_t::set_parentIndex(uint32_t index) {
-    m_index = index;
-}
-
-void cube_brush_userdata_t::set_brush_type(brush_type_t type) {
-    this->type = type;
-    switch (type) {
-    case AIR_BRUSH: brush->set_volume_operation(csg::make_fill_operation(AIR)); break;
-    case SOLID_BRUSH: brush->set_volume_operation(csg::make_fill_operation(SOLID)); break;
-    default:;
-    }
-}
-
-brush_type_t cube_brush_userdata_t::get_brush_type() {
-    return type;
-}
-
-void cube_brush_userdata_t::set_transform(const glm::mat4& transform) {
-    static std::vector<csg::plane_t> cube_planes = {
-        make_plane(glm::vec3(+1,0,0), glm::vec3(+1,0,0)),
-        make_plane(glm::vec3(-1,0,0), glm::vec3(-1,0,0)),
-        make_plane(glm::vec3(0,+1,0), glm::vec3(0,+1,0)),
-        make_plane(glm::vec3(0,-1,0), glm::vec3(0,-1,0)),
-        make_plane(glm::vec3(0,0,+1), glm::vec3(0,0,+1)),
-        make_plane(glm::vec3(0,0,-1), glm::vec3(0,0,-1))
-    };
-    this->transform = transform;
-
-    std::vector<csg::plane_t> transformed_planes;
-    for (const csg::plane_t& plane : cube_planes)
-        transformed_planes.push_back(transformed(plane, transform));
-
-    brush->set_planes(transformed_planes);
-}
-
-const glm::mat4& cube_brush_userdata_t::get_transform() {
-    return transform;
-}
-
-void cube_brush_userdata_t::update_display_list() {
-
-    m_vertices.clear();
-    auto faces = brush->get_faces();
-
-    for (csg::face_t& face : faces) {
-
-        for (csg::fragment_t& fragment : face.fragments) {
-
-            if (fragment.back_volume == fragment.front_volume) {
-                continue;
-            }
-
-            glm::vec3 normal = face.plane->normal;
-            bool flip_face = fragment.back_volume == AIR;
-
-            if (flip_face) {
-                normal = -normal;
-            }
-
-            std::vector<csg::triangle_t> tris = triangulate(fragment);
-
-            for (csg::triangle_t& tri : tris) {
-
-                if (flip_face) {
-                    m_vertices.push_back(CSGVertex(fragment.vertices[tri.i].position, normal));
-                    m_vertices.push_back(CSGVertex(fragment.vertices[tri.k].position, normal));
-                    m_vertices.push_back(CSGVertex(fragment.vertices[tri.j].position, normal));
-                }
-                else {
-                    m_vertices.push_back(CSGVertex(fragment.vertices[tri.i].position, normal));
-                    m_vertices.push_back(CSGVertex(fragment.vertices[tri.j].position, normal));
-                    m_vertices.push_back(CSGVertex(fragment.vertices[tri.k].position, normal));
-                }
-            }
+    void UpdateDisplayLists() {
+        std::vector<std::future<void>> futures;
+        for (CSGObject& csgObject : g_objects) {
+            futures.push_back(std::async(std::launch::async, [&csgObject]() {
+                // Update
+                csg::brush_t* b = csgObject.m_brush;
+                Brush* brush = any_cast<Brush>(&b->userdata);
+                brush->update_display_list();
+            }));
+        }
+        for (auto& future : futures) {
+            future.get();
         }
     }
 }
-
-cube_brush_userdata_t::cube_brush_userdata_t(csg::brush_t* _brush) : brush(brush) {
-    brush = _brush;
-}
-
 
 std::span<CSGVertex> CSGObject::GetVerticesSpan() {
     return std::span<CSGVertex>(CSG::g_vertices.data() + m_baseVertex, m_vertexCount);
@@ -540,35 +469,24 @@ std::span<uint32_t> CSGObject::GetIndicesSpan() {
     return std::span<uint32_t>(CSG::g_indices.data() + m_baseIndex, m_indexCount);
 }
 
-
 void CSGObject::CleanUpPhysicsObjects() {
-
-    if (m_triangleMesh) {
-        m_triangleMesh->release();
-    }
-    if (m_pxRigidStatic) {
-        if (m_pxRigidStatic->userData) {
-            auto* data = static_cast<PhysicsObjectData*>(m_pxRigidStatic->userData);
-            delete data;
-        }
-        Physics::GetScene()->removeActor(*m_pxRigidStatic);
-        m_pxRigidStatic->release();
-        m_pxRigidStatic = nullptr;
-    }
-    if (m_pxShape) {
-        m_pxShape->release();
-    }
+    Physics::Destroy(m_triangleMesh);
+    Physics::Destroy(m_pxRigidStatic);
+    Physics::Destroy(m_pxShape);
 }
 
 void CSGObject::CreatePhysicsObjectFromVertices() {
 
     CleanUpPhysicsObjects();
 
-    if (m_type == CSGType::ADDITIVE && m_vertexCount > 0) {
+    if (m_type == CSGType::ADDITIVE_CUBE || m_type == CSGType::ADDITIVE_PLANE && m_vertexCount > 0) {
 
         // Create triangle mesh
+        int count = GetVerticesSpan().size();
         std::vector<PxVec3> pxvertices;
         std::vector<unsigned int> pxindices;
+        pxvertices.reserve(count);
+        pxindices.reserve(count);
         for (CSGVertex& vertex : GetVerticesSpan()) {
             pxvertices.push_back(PxVec3(vertex.position.x, vertex.position.y, vertex.position.z));
         }
@@ -577,13 +495,6 @@ void CSGObject::CreatePhysicsObjectFromVertices() {
         }
 
         m_triangleMesh = Physics::CreateTriangleMesh(pxvertices.size(), pxvertices.data(), pxindices.size() / 3, pxindices.data());
-
-        /*
-        PhysicsFilterData filterData;
-        filterData.raycastGroup = RAYCAST_ENABLED;
-        filterData.collisionGroup = CollisionGroup::NO_COLLISION;
-        filterData.collidesWith = CollisionGroup::NO_COLLISION;
-        PxShapeFlags shapeFlags(PxShapeFlag::eSCENE_QUERY_SHAPE);*/
 
         PhysicsFilterData filterData;
         filterData.raycastGroup = RAYCAST_ENABLED;
@@ -594,6 +505,5 @@ void CSGObject::CreatePhysicsObjectFromVertices() {
         m_pxShape = Physics::CreateShapeFromTriangleMesh(m_triangleMesh, shapeFlags);
         m_pxRigidStatic = Physics::CreateRigidStatic(Transform(), filterData, m_pxShape);
         m_pxRigidStatic->userData = new PhysicsObjectData(PhysicsObjectType::CSG_OBJECT_ADDITIVE, this);
-
     }
 }

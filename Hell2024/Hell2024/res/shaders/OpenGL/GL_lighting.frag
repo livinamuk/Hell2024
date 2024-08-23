@@ -440,8 +440,7 @@ void main() {
 	float NOISE =  (x * -noiseFactor) + (noiseFactor / 2);
 	//FragColor.rgb = vec3( NOISE);
 
-//FragColor.rgb = vec3( normal);
-	//FragColor.rgb = vec3( baseColor);
+//	FragColor.rgb = vec3( WorldPos);
 
 
 }

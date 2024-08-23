@@ -37,8 +37,8 @@ namespace Scene {
 void Scene::AllocateStorageSpace() {
 
     g_doors.reserve(sizeof(Door) * 1000);
-    g_cubeVolumesAdditive.reserve(sizeof(CubeVolume) * 1000);
-    g_cubeVolumesSubtractive.reserve(sizeof(CubeVolume) * 1000);
+    g_csgAdditiveShapes.reserve(sizeof(CSGShape) * 1000);
+    g_csgSubtractiveShapes.reserve(sizeof(CSGShape) * 1000);
     g_windows.reserve(sizeof(Window) * 1000);
     g_animatedGameObjects.reserve(sizeof(Window) * 50);
 }
@@ -81,7 +81,7 @@ void Scene::SaveMapData(const std::string& fileName) {
 
     // save additive cube volumes
     nlohmann::json jsonCubeVolumesAdditive = nlohmann::json::array();
-    for (CubeVolume& cubeVolume : g_cubeVolumesAdditive) {
+    for (CSGShape& cubeVolume : g_csgAdditiveShapes) {
         nlohmann::json jsonObject;
         jsonObject["position"] = { {"x", cubeVolume.m_transform.position.x}, {"y", cubeVolume.m_transform.position.y}, {"z", cubeVolume.m_transform.position.z} };
         jsonObject["rotation"] = { {"x", cubeVolume.m_transform.rotation.x}, {"y", cubeVolume.m_transform.rotation.y}, {"z", cubeVolume.m_transform.rotation.z} };
@@ -96,7 +96,7 @@ void Scene::SaveMapData(const std::string& fileName) {
 
     // save subtractive cube volumes
     nlohmann::json jsonCubeVolumesSubtractive = nlohmann::json::array();
-    for (CubeVolume& cubeVolume : g_cubeVolumesSubtractive) {
+    for (CSGShape& cubeVolume : g_csgSubtractiveShapes) {
         nlohmann::json jsonObject;
         jsonObject["position"] = { {"x", cubeVolume.m_transform.position.x}, {"y", cubeVolume.m_transform.position.y}, {"z", cubeVolume.m_transform.position.z} };
         jsonObject["rotation"] = { {"x", cubeVolume.m_transform.rotation.x}, {"y", cubeVolume.m_transform.rotation.y}, {"z", cubeVolume.m_transform.rotation.z} };
@@ -164,22 +164,22 @@ void Scene::LoadMapData(const std::string& fileName) {
     }
     // Load Volumes Additive
     for (const auto& jsonObject : data["VolumesAdditive"]) {
-        CubeVolume& cube = g_cubeVolumesAdditive.emplace_back();
+        CSGShape& cube = g_csgAdditiveShapes.emplace_back();
         cube.m_transform.position = { jsonObject["position"]["x"], jsonObject["position"]["y"], jsonObject["position"]["z"] };
         cube.m_transform.rotation = { jsonObject["rotation"]["x"], jsonObject["rotation"]["y"], jsonObject["rotation"]["z"] };
         cube.m_transform.scale = { jsonObject["scale"]["x"], jsonObject["scale"]["y"], jsonObject["scale"]["z"] };
-        cube.materialIndex = AssetManager::GetMaterialIndex(jsonObject["materialName"]);
+        cube.materialIndex = AssetManager::GetMaterialIndex(jsonObject["materialName"].get<std::string>().c_str());
         cube.textureOffsetX = jsonObject["texOffsetX"];
         cube.textureOffsetY = jsonObject["texOffsetY"];
         cube.textureScale = jsonObject["texScale"];
     }
     // Load Volumes Subtractive
     for (const auto& jsonObject : data["VolumesSubtractive"]) {
-        CubeVolume& cube = g_cubeVolumesSubtractive.emplace_back();
+        CSGShape& cube = g_csgSubtractiveShapes.emplace_back();
         cube.m_transform.position = { jsonObject["position"]["x"], jsonObject["position"]["y"], jsonObject["position"]["z"] };
         cube.m_transform.rotation = { jsonObject["rotation"]["x"], jsonObject["rotation"]["y"], jsonObject["rotation"]["z"] };
         cube.m_transform.scale = { jsonObject["scale"]["x"], jsonObject["scale"]["y"], jsonObject["scale"]["z"] };
-        cube.materialIndex = AssetManager::GetMaterialIndex(jsonObject["materialName"]);
+        cube.materialIndex = AssetManager::GetMaterialIndex(jsonObject["materialName"].get<std::string>().c_str());
         cube.textureOffsetX = jsonObject["texOffsetX"];
         cube.textureOffsetY = jsonObject["texOffsetY"];
         cube.textureScale = jsonObject["texScale"];
@@ -207,8 +207,8 @@ void Scene::LoadEmptyScene() {
         light.isDirty = true;
     }
     g_doors.clear();
-    g_cubeVolumesAdditive.clear();
-    g_cubeVolumesSubtractive.clear();
+    g_csgAdditiveShapes.clear();
+    g_csgSubtractiveShapes.clear();
     g_windows.clear();
     CSG::Build();
     RecreateAllPhysicsObjects();
@@ -239,10 +239,10 @@ void Scene::LoadDefaultScene() {
 
     g_doors.clear();
     g_doors.reserve(sizeof(Door) * 1000);
-    g_cubeVolumesAdditive.clear();
-    g_cubeVolumesSubtractive.clear();
-    g_cubeVolumesAdditive.reserve(sizeof(CubeVolume) * 1000);
-    g_cubeVolumesSubtractive.reserve(sizeof(CubeVolume) * 1000);
+    g_csgAdditiveShapes.clear();
+    g_csgSubtractiveShapes.clear();
+    g_csgAdditiveShapes.reserve(sizeof(CSGShape) * 1000);
+    g_csgSubtractiveShapes.reserve(sizeof(CSGShape) * 1000);
 
     g_windows.clear();
     g_windows.reserve(sizeof(Window) * 1000);
@@ -714,10 +714,6 @@ uint32_t g_doorBLASIndex = 0;
 
 void Scene::CreateBottomLevelAccelerationStructures() {
 
-    std::cout << "Creating TLAS\n";
-
-   // Timer timer("Scene::CreateBottomLevelAccelerationStructures()");
-
     if (BackEnd::GetAPI() == API::VULKAN) {
         return;
     }
@@ -855,12 +851,13 @@ void Scene::Update(float deltaTime) {
 
     }
 
+    /*
     static int dogIndex = 0;
     g_dobermann[dogIndex].FindPath();
     dogIndex++;
     if (dogIndex == g_dobermann.size()) {
         dogIndex = 0;
-    }
+    }*/
 
 
     Player* player = Game::GetPlayerByIndex(0);
@@ -877,8 +874,7 @@ void Scene::Update(float deltaTime) {
     }
     if (Input::KeyPressed(HELL_KEY_6)) {
         for (Dobermann& dobermann : g_dobermann) {
-            dobermann.m_currentState = DobermannState::KAMAKAZI;
-            dobermann.m_heatlh = 100;
+            dobermann.Revive();
         }
     }
 
@@ -1306,12 +1302,12 @@ std::vector<RenderItem3D> Scene::GetAllRenderItems() {
     static int aks74uCasingMeshIndex = AssetManager::GetModelByIndex(AssetManager::GetModelIndexByName("CasingAKS74U"))->GetMeshIndices()[0];
     for (BulletCasing& casing : Scene::g_bulletCasings) {
         RenderItem3D& renderItem = renderItems.emplace_back();
-        renderItem.modelMatrix = casing.modelMatrix;
+        renderItem.modelMatrix = casing.m_modelMatrix;
         renderItem.inverseModelMatrix = inverse(renderItem.modelMatrix);
         renderItem.castShadow = false;
-        int meshIndex = AssetManager::GetModelByIndex(casing.modelIndex)->GetMeshIndices()[0];
+        int meshIndex = AssetManager::GetModelByIndex(casing.m_modelIndex)->GetMeshIndices()[0];
         if (meshIndex != -1) {
-            renderItem.materialIndex = casing.materialIndex;
+            renderItem.materialIndex = casing.m_materialIndex;
         }
         renderItem.meshIndex = meshIndex;
     }
@@ -2785,10 +2781,10 @@ void Scene::CleanUp() {
     for (AnimatedGameObject& animatedGameObject : g_animatedGameObjects) {
         //animatedGameObject.DestroyRagdoll();
     }
-    for (CubeVolume& cubeVolume : g_cubeVolumesAdditive) {
+    for (CSGShape& cubeVolume : g_csgAdditiveShapes) {
         cubeVolume.CleanUp();
     }
-    for (CubeVolume& cubeVolume : g_cubeVolumesSubtractive) {
+    for (CSGShape& cubeVolume : g_csgSubtractiveShapes) {
         cubeVolume.CleanUp();
     }
 
@@ -3170,25 +3166,25 @@ void Scene::CreateMeshData() {
 }
 
 const size_t Scene::GetCubeVolumeAdditiveCount() {
-    return g_cubeVolumesAdditive.size();
+    return g_csgAdditiveShapes.size();
 }
 
-CubeVolume* Scene::GetCubeVolumeAdditiveByIndex(int32_t index) {
-    if (index >= 0 && index < g_cubeVolumesAdditive.size()) {
-        return &g_cubeVolumesAdditive[index];
+CSGShape* Scene::GetCubeVolumeAdditiveByIndex(int32_t index) {
+    if (index >= 0 && index < g_csgAdditiveShapes.size()) {
+        return &g_csgAdditiveShapes[index];
     }
     else {
-        std::cout << "Scene::GetCubeVolumeAdditiveByIndex() failed coz " << index << " out of range of size " << g_cubeVolumesAdditive.size() << "\n";
+        std::cout << "Scene::GetCubeVolumeAdditiveByIndex() failed coz " << index << " out of range of size " << g_csgAdditiveShapes.size() << "\n";
         return nullptr;
     }
 }
 
-CubeVolume* Scene::GetCubeVolumeSubtractiveByIndex(int32_t index) {
-    if (index >= 0 && index < g_cubeVolumesSubtractive.size()) {
-        return &g_cubeVolumesSubtractive[index];
+CSGShape* Scene::GetCubeVolumeSubtractiveByIndex(int32_t index) {
+    if (index >= 0 && index < g_csgSubtractiveShapes.size()) {
+        return &g_csgSubtractiveShapes[index];
     }
     else {
-        std::cout << "Scene::GetCubeVolumeSubtractiveByIndex() failed coz " << index << " out of range of size " << g_cubeVolumesSubtractive.size() << "\n";
+        std::cout << "Scene::GetCubeVolumeSubtractiveByIndex() failed coz " << index << " out of range of size " << g_csgSubtractiveShapes.size() << "\n";
         return nullptr;
     }
 }

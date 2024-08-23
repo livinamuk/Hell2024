@@ -106,6 +106,20 @@ struct BLAS {
 
                 Triangle& triangle = triangles[triIndices[node.leftFirst + i]];
                 int binIdx = std::min(BVH_BINS - 1, (int)((triangle.centoid[a] - boundsMin) * scale));
+
+                if (binIdx >= BVH_BINS || binIdx < 0) {
+                    std::cout << "ERROR!\n";
+                    std::cout << " binIdx: " << binIdx << "\n";
+                    std::cout << " boundsMin: " << boundsMin << "\n";
+                    std::cout << " boundsMin: " << boundsMax << "\n";
+                    std::cout << " scale: " << scale << "\n";
+                    std::cout << " node.instanceCount: " << node.instanceCount << "\n";
+                    std::cout << " triangle.centoid: " << Util::Vec3ToString(triangle.centoid) << "\n";
+                    std::cout << " triangle.v0: " << Util::Vec3ToString(triangle.v0) << "\n";
+                    std::cout << " triangle.v1: " << Util::Vec3ToString(triangle.v1) << "\n";
+                    std::cout << " triangle.v2: " << Util::Vec3ToString(triangle.v2) << "\n";
+                }
+
                 bin[binIdx].triCount++;
                 bin[binIdx].bounds.Grow(triangle.v0);
                 bin[binIdx].bounds.Grow(triangle.v1);

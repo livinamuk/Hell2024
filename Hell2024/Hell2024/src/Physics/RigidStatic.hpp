@@ -8,10 +8,8 @@ struct RigidStatic {
     PxShape* pxShape = NULL;
 
     void SetShape(PxShape* shape, void* parent) {
+        Destroy();
         pxShape = shape;
-        if (pxRigidStatic) {
-            pxRigidStatic->release();
-        }
         PhysicsFilterData filterData;
         filterData.raycastGroup = RAYCAST_ENABLED;
         filterData.collisionGroup = CollisionGroup::NO_COLLISION;
@@ -21,12 +19,8 @@ struct RigidStatic {
         pxRigidStatic->userData = new PhysicsObjectData(PhysicsObjectType::GAME_OBJECT, parent);
     }
 
-    void CleanUp() {       
-        if (pxRigidStatic) {
-            pxRigidStatic->release();
-        }
-        if (pxShape) {
-            pxShape->release();
-        }
+    void Destroy() {
+        Physics::Destroy(pxRigidStatic);
+        Physics::Destroy(pxShape);
     }
 };

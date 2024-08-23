@@ -16,5 +16,6 @@ namespace Raytracing {
     //AABB CalculateMeshWorldSpaceAABB(Mesh& mesh, glm::mat4 worldMatrix);
     void CleanUp();
     int GetBottomLevelAccelerationStructureCount();
+    bool LineOfSight(glm::vec3 rayOrigin, glm::vec3 rayDirection, float rayLength);
 
 }

@@ -40,6 +40,8 @@ namespace AssetManager {
     std::vector<CubemapTexture> _cubemapTextures;
     std::vector<GPUMaterial> g_gpuMaterials;
 
+    std::unordered_map<std::string, int> g_materialIndexMap;
+
     // Used to new data insert into the vectors above
     int _nextVertexInsert = 0;
     int _nextIndexInsert = 0;
@@ -157,6 +159,15 @@ void AssetManager::LoadNextItem() {
         return;
     }
 
+    // Cubemap Textures
+    for (CubemapTexture& cubemapTexture : _cubemapTextures) {
+        if (cubemapTexture.m_awaitingLoadingFromDisk) {
+            cubemapTexture.m_awaitingLoadingFromDisk = false;
+            AddItemToLoadLog(cubemapTexture.m_fullPath);
+            _futures.push_back(std::async(std::launch::async, LoadCubemapTexture, &cubemapTexture));
+            return;
+        }
+    }
     // Animations
     for (Animation& animation: _animations) {
         if (animation.m_awaitingLoadingFromDisk) {
@@ -193,17 +204,13 @@ void AssetManager::LoadNextItem() {
             return;
         }
     }
-    // Cubemap Textures
-    for (CubemapTexture& cubemapTexture : _cubemapTextures) {
-        if (cubemapTexture.m_awaitingLoadingFromDisk) {
-            cubemapTexture.m_awaitingLoadingFromDisk = false;
-            AddItemToLoadLog(cubemapTexture.m_fullPath);
-            _futures.push_back(std::async(std::launch::async, LoadCubemapTexture, &cubemapTexture));
+    /* TO DO
+    // Check all is done
+    for (CubemapTexture& texture : _cubemapTextures) {
+        if (!texture.m_loadingComplete) {
             return;
         }
-    }
-
-    // Check all is done
+    }*/
     for (Texture& texture : _textures) {
         if (!texture.m_loadingComplete) {
             return;
@@ -269,6 +276,11 @@ void AssetManager::LoadNextItem() {
             return;
         }
 
+        // Build index maps
+        g_materialIndexMap.clear();
+        for (int i = 0; i < _materials.size(); i++) {
+            g_materialIndexMap[_materials[i]._name.c_str()] = i;
+        }
 
         if (BackEnd::GetAPI() == API::OPENGL) {
             OpenGLRenderer::BindBindlessTextures();
@@ -430,9 +442,18 @@ void AssetManager::LoadSkinnedModel(SkinnedModel* skinnedModel) {
     }
 
 
+
+
+
+    // store bounding box shit
+
+
     {
         // Get vertex data
         for (int i = 0; i < scene->mNumMeshes; i++) {
+
+            glm::vec3 aabbMin = glm::vec3(std::numeric_limits<float>::max());
+            glm::vec3 aabbMax = glm::vec3(-std::numeric_limits<float>::max());
 
             const aiMesh* assimpMesh = scene->mMeshes[i];
             int vertexCount = assimpMesh->mNumVertices;
@@ -450,6 +471,14 @@ void AssetManager::LoadSkinnedModel(SkinnedModel* skinnedModel) {
                 vertex.tangent = { assimpMesh->mTangents[j].x, assimpMesh->mTangents[j].y, assimpMesh->mTangents[j].z };
                 vertex.uv = { assimpMesh->HasTextureCoords(0) ? glm::vec2(assimpMesh->mTextureCoords[0][j].x, assimpMesh->mTextureCoords[0][j].y) : glm::vec2(0.0f, 0.0f) };
                 vertices.push_back(vertex);
+
+                aabbMin.x = std::min(aabbMin.x, vertex.position.x);
+                aabbMin.y = std::min(aabbMin.y, vertex.position.y);
+                aabbMin.z = std::min(aabbMin.z, vertex.position.z);
+                aabbMax.x = std::max(aabbMax.x, vertex.position.x);
+                aabbMax.y = std::max(aabbMax.y, vertex.position.y);
+                aabbMax.z = std::max(aabbMax.z, vertex.position.z);
+
             }
 
             // Get indices
@@ -513,8 +542,10 @@ void AssetManager::LoadSkinnedModel(SkinnedModel* skinnedModel) {
                     }
                 }
 
+                std::cout << meshName << "\n";
+
                 std::lock_guard<std::mutex> lock(_skinnedModelsMutex);
-                skinnedModel->AddMeshIndex(AssetManager::CreateSkinnedMesh(meshName, vertices, indices, baseVertexLocal));
+                skinnedModel->AddMeshIndex(AssetManager::CreateSkinnedMesh(meshName, vertices, indices, baseVertexLocal, aabbMin, aabbMax));
                 totalVertexCount += vertices.size();
                 baseVertexLocal += vertices.size();
             }
@@ -895,7 +926,7 @@ int AssetManager::GetMeshIndexByName(const std::string& name) {
 //                         //
 //      Skinned Mesh       //
 
-int AssetManager::CreateSkinnedMesh(std::string name, std::vector<WeightedVertex>& vertices, std::vector<uint32_t>& indices, uint32_t baseVertexLocal) {
+int AssetManager::CreateSkinnedMesh(std::string name, std::vector<WeightedVertex>& vertices, std::vector<uint32_t>& indices, uint32_t baseVertexLocal, glm::vec3 aabbMin, glm::vec3 aabbMax) {
 
     SkinnedMesh& mesh = _skinnedMeshes.emplace_back();
     mesh.baseVertexGlobal = _nextWeightedVertexInsert;
@@ -904,6 +935,8 @@ int AssetManager::CreateSkinnedMesh(std::string name, std::vector<WeightedVertex
     mesh.vertexCount = (uint32_t)vertices.size();
     mesh.indexCount = (uint32_t)indices.size();
     mesh.name = name;
+    mesh.aabbMin = aabbMin;
+    mesh.aabbMax = aabbMax;
 
     _weightedVertices.reserve(_weightedVertices.size() + vertices.size());
     _weightedVertices.insert(std::end(_weightedVertices), std::begin(vertices), std::end(vertices));
@@ -1030,14 +1063,16 @@ Material* AssetManager::GetMaterialByIndex(int index) {
     }
 }
 
+
 int AssetManager::GetMaterialIndex(const std::string& name) {
-    for (int i = 0; i < _materials.size(); i++) {
-        if (_materials[i]._name == name) {
-            return i;
-        }
+    auto it = g_materialIndexMap.find(name);
+    if (it != g_materialIndexMap.end()) {
+        return it->second;
     }
-    std::cout << "AssetManager::GetMaterialByIndex() failed because '" << name << "' does not exist\n";
-    return -1;
+    else {
+        std::cout << "AssetManager::GetMaterialIndex() failed because '" << name << "' does not exist\n";
+        return -1;
+    }
 }
 
 // FIND A BETTER WAY TO DO THIS
@@ -1348,4 +1383,10 @@ void AssetManager::CreateHardcodedModels() {
     }
 
     UploadVertexData();
+}
+
+void AssetManager::DebugTest() {
+    for (const auto& pair : g_materialIndexMap) {
+        std::cout << "Material Name: " << pair.first << ", Index: " << pair.second << std::endl;
+    }
 }

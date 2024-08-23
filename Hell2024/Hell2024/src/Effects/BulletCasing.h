@@ -4,18 +4,18 @@
 
 struct BulletCasing {
 
-    //Weapon type;
-    PxRigidBody* rigidBody = NULL;
-    float audioDelay = 0.0f;
-    float lifeTime = 0.0f;
-    glm::mat4 modelMatrix = glm::mat4(1);
+    PxRigidBody* m_rigidBody = NULL;
+    PxShape* m_shape = NULL;
+    float m_audioDelay = 0.0f;
+    float m_lifeTime = 0.0f;
+    glm::mat4 m_modelMatrix = glm::mat4(1);
+    bool m_collisionsEnabled = false;
+    int m_modelIndex;
+    int m_materialIndex;
+    bool m_hasBeenRemoved = false;
 
     void CleanUp();
     glm::mat4 GetModelMatrix();
     void Update(float deltaTime);
     void CollisionResponse();
-    bool HasActivePhysics();
-    bool collisionsEnabled = false;
-    int modelIndex;
-    int materialIndex;
 };

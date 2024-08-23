@@ -8,6 +8,8 @@
 #include "../Renderer/Raytracing/Raytracing.h"
 #include "../Math/Frustum.hpp"
 
+#include "../Math/BVH.h"
+
 /*
  █▀█ █▀█ ▀█▀ █▀█ ▀█▀ █▀▀
  █▀▀ █ █  █  █ █  █  ▀▀█
@@ -25,8 +27,8 @@ void Renderer::UpdateDebugPointsMesh() {
     if (g_debugLineRenderMode == DebugLineRenderMode::PATHFINDING_RECAST) {
         // Dobermann path
         for (Dobermann& dobermann : Scene::g_dobermann) {
-            for (int i = 0; i < dobermann.m_pathToPlayer.points.size(); i++) {
-                vertices.push_back(Vertex(dobermann.m_pathToPlayer.points[i], RED));
+            for (int i = 0; i < dobermann.m_pathToTarget.points.size(); i++) {
+                vertices.push_back(Vertex(dobermann.m_pathToTarget.points[i], RED));
             }
         }
     }
@@ -37,6 +39,53 @@ void Renderer::UpdateDebugPointsMesh() {
             vertices.push_back(Vertex(cloudPoint.position, GREEN));
         }
     }
+
+
+    for (glm::vec3& position: Game::testPoints) {
+        vertices.push_back(Vertex(position, WHITE));
+       // std::cout << Util::Vec3ToString10(position) << "\n";
+
+    }
+
+
+    /*
+    for (BulletCasing& casing : Scene::g_bulletCasings) {
+
+
+        glm::vec3 extents = Util::PxVec3toGlmVec3(casing.m_rigidBody->getWorldBounds().getExtents());
+        glm::vec3 center = Util::PxVec3toGlmVec3(casing.m_rigidBody->getWorldBounds().getCenter());
+        glm::vec3 minBounds = center - extents;
+        glm::vec3 maxBounds = center + extents;
+
+
+        AABB aabb = AABB(minBounds, maxBounds);
+
+    glm::vec3 FrontTopLeft = glm::vec3(aabb.GetBoundsMin().x, aabb.GetBoundsMax().y, aabb.GetBoundsMax().z);
+    glm::vec3 FrontTopRight = glm::vec3(aabb.GetBoundsMax().x, aabb.GetBoundsMax().y, aabb.GetBoundsMax().z);
+    glm::vec3 FrontBottomLeft = glm::vec3(aabb.GetBoundsMin().x, aabb.GetBoundsMin().y, aabb.GetBoundsMax().z);
+    glm::vec3 FrontBottomRight = glm::vec3(aabb.GetBoundsMax().x, aabb.GetBoundsMin().y, aabb.GetBoundsMax().z);
+    glm::vec3 BackTopLeft = glm::vec3(aabb.GetBoundsMin().x, aabb.GetBoundsMax().y, aabb.GetBoundsMin().z);
+    glm::vec3 BackTopRight = glm::vec3(aabb.GetBoundsMax().x, aabb.GetBoundsMax().y, aabb.GetBoundsMin().z);
+    glm::vec3 BackBottomLeft = glm::vec3(aabb.GetBoundsMin().x, aabb.GetBoundsMin().y, aabb.GetBoundsMin().z);
+    glm::vec3 BackBottomRight = glm::vec3(aabb.GetBoundsMax().x, aabb.GetBoundsMin().y, aabb.GetBoundsMin().z);
+
+        //Player* player = Game::GetPlayerByIndex(0);
+    glm::mat4 mvp = player->GetProjectionMatrix() * player->GetViewMatrix();
+
+    glm::vec2 p0 = Util::CalculateScreenSpaceCoordinates(FrontTopLeft, mvp, PRESENT_WIDTH, PRESENT_HEIGHT);
+
+       // vertices.push_back(Vertex(cloudPoint.position, GREEN));
+
+
+        std::cout << p0.x << ", " << p0.y << "\n";
+
+    }
+
+    */
+
+
+
+
 
     /*
     Light& light = Scene::g_lights[0];
@@ -171,10 +220,10 @@ void Renderer::UpdateDebugLinesMesh() {
             }
             // Doberman path
             for (Dobermann& dobermann : Scene::g_dobermann) {
-                if (dobermann.m_pathToPlayer.points.size() >= 2) {
-                    for (int i = 0; i < dobermann.m_pathToPlayer.points.size() - 1; i++) {
-                        vertices.push_back(Vertex(dobermann.m_pathToPlayer.points[i], WHITE));
-                        vertices.push_back(Vertex(dobermann.m_pathToPlayer.points[i + 1], WHITE));
+                if (dobermann.m_pathToTarget.points.size() >= 2) {
+                    for (int i = 0; i < dobermann.m_pathToTarget.points.size() - 1; i++) {
+                        vertices.push_back(Vertex(dobermann.m_pathToTarget.points[i], WHITE));
+                        vertices.push_back(Vertex(dobermann.m_pathToTarget.points[i + 1], WHITE));
                     }
                 }
             }
@@ -448,6 +497,12 @@ std::string& Renderer::GetDebugText() {
     if (Editor::IsOpen()) {
         g_debugText = Editor::GetDebugText();
     }
+
+
+    g_debugText += "Dog deaths: " + std::to_string(Game::g_dogDeaths) + "\n";
+    g_debugText += "Dog kills: " + std::to_string(Game::g_playerDeaths) + "\n";
+
+
     /*
     Player* player = Game::GetPlayerByIndex(0);
     glm::mat4 projectionMatrix = player->GetProjectionMatrix();
@@ -476,6 +531,8 @@ std::string& Renderer::GetDebugText() {
     }*/
 
     Player* player = Game::GetPlayerByIndex(0);
+
+    /*
     Frustum frustum;
     frustum.Update(player->GetProjectionMatrix(), player->GetViewMatrix());
 
@@ -490,7 +547,37 @@ std::string& Renderer::GetDebugText() {
     }
     else {
         g_debugText = "AABB is NOT frustum\n";
+    }*/
+
+
+    glm::vec3 rayTarget = Scene::g_lights[0].position;
+
+    std::vector<glm::vec3> vertices;
+
+    for (auto& csgObject : CSG::GetCSGObjects()) {
+        std::span<CSGVertex> span = csgObject.GetVerticesSpan();
+        for (auto& vertex : span) {
+            vertices.push_back(vertex.position);
+        }
     }
+
+    Ray ray;
+    ray.origin = player->GetViewPos();
+    ray.direction = glm::normalize(rayTarget - ray.origin);
+    ray.minDist = 0;
+    ray.maxDist = glm::distance(rayTarget, ray.origin);;
+
+    /*
+
+    bool lineOfSight = BVH::Test(ray, vertices);
+
+    if (!lineOfSight) {
+        g_debugText += "NO line of sight\n";
+    }
+    else {
+        g_debugText += "Line of sight\n";
+    }*/
+
 
     /*
     static Transform transform;

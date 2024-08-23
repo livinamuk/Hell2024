@@ -77,11 +77,11 @@ public:
 	void PlayAndLoopAnimation(std::string animationName, float speed);
     void PauseAnimation();
     void SetAnimationModeToBindPose();
-    void SetMeshMaterialByMeshName(std::string meshName, std::string materialName);
-    void SetMeshMaterialByMeshIndex(int meshIndex, std::string materialName);
+    void SetMeshMaterialByMeshName(std::string meshName, const char* materialName);
+    void SetMeshMaterialByMeshIndex(int meshIndex, const char* materialName);
     void SetMeshToRenderAsGlassByMeshIndex(std::string materialName);
     void SetMeshEmissiveColorTextureByMeshName(std::string meshName, std::string textureName);
-	void SetAllMeshMaterials(std::string materialName);
+	void SetAllMeshMaterials(const char* materialName);
     void UpdateBoneTransformsFromBindPose();
     void UpdateBoneTransformsFromRagdoll();
 	glm::mat4 GetBoneWorldMatrixFromBoneName(std::string name);

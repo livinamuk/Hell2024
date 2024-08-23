@@ -7,7 +7,7 @@ struct Path {
     glm::vec3 end;
     std::vector<glm::vec3> points;
     bool Found() {
-        return points.size();
+        return points.size() >= 2;
     }
 };
 

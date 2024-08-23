@@ -152,18 +152,10 @@ bool Door::IsInteractable(glm::vec3 playerPosition) {
 
 void Door::CreatePhysicsObject() {
 
-	if (collisionBody) {
-		collisionBody->release();
-	}
-	if (raycastBody) {
-		raycastBody->release();
-	}
-	if (collisionShape) {
-		collisionShape->release();
-	}
-	if (raycastShape) {
-        raycastShape->release();
-	}
+    Physics::Destroy(collisionBody);
+    Physics::Destroy(raycastBody);
+    Physics::Destroy(collisionShape);
+    Physics::Destroy(raycastShape);
 
     PhysicsFilterData filterData;
     filterData.raycastGroup = RAYCAST_DISABLED;

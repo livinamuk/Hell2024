@@ -50,9 +50,7 @@ struct RigidBody {
     }
 
     void CreateRigidBody(glm::mat4 worldMatrix) {
-        if (pxRigidBody) {
-            pxRigidBody->release();
-        }
+        Physics::Destroy(pxRigidBody);
         pxRigidBody = Physics::GetPhysics()->createRigidDynamic(PxTransform(Util::GlmMat4ToPxMat44(worldMatrix)));
         Physics::GetScene()->addActor(*pxRigidBody);
     }
@@ -114,16 +112,10 @@ struct RigidBody {
         }
     }
 
-    void CleanUp() {
-        if (pxRigidBody) {
-            pxRigidBody->release();
-        }
+    void Destroy() {
+        Physics::Destroy(pxRigidBody);
         for (auto* shape : collisionShapes) {
-            if (shape) {
-                if (shape) {
-                    shape->release();
-                }
-            }
+            Physics::Destroy(shape);
         }
     }
 

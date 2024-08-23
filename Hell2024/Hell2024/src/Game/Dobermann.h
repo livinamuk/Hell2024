@@ -16,17 +16,23 @@ struct Dobermann {
     float m_footstepAudioTimer = 0;
     float m_heatlh = 100;
 
-    Path m_pathToPlayer;
+    Path m_pathToTarget;
 
     void Init();
     void Update(float deltaTime);
     void TakeDamage();
     void Kill();
-    void FindPath();
+    void Revive();
     void CleanUp();
     AnimatedGameObject* GetAnimatedGameObject();
 
     PxController* m_characterController = nullptr;
     PxShape* m_shape = nullptr;
+
+private:
+    void UpdateLay(float deltaTime);
+    void UpdateDead(float deltaTime);
+    void UpdateKamakazi(float deltaTime);
+    void UpdateAudio(float deltaTime);
 
 };

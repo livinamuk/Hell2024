@@ -402,7 +402,7 @@ void Player::UpdateTimers(float deltaTime) {
     _muzzleFlashCounter -= deltaTime;
     _muzzleFlashCounter = std::max(_muzzleFlashCounter, 0.0f);
     if (_muzzleFlashTimer >= 0) {
-        _muzzleFlashTimer += deltaTime * 20;                            // maybe you only use one of these?
+        _muzzleFlashTimer += deltaTime * 30;                            // maybe you only use one of these?
     }
 
     finalImageColorTint = glm::vec3(1, 1, 1);
@@ -1130,9 +1130,10 @@ void Player::SpawnCasing(AmmoInfo* ammoInfo) {
 
 
         BulletCasing bulletCasing;
-        bulletCasing.modelIndex = modelIndex;
-        bulletCasing.materialIndex = materialIndex;
-        bulletCasing.rigidBody = body;
+        bulletCasing.m_modelIndex = modelIndex;
+        bulletCasing.m_materialIndex = materialIndex;
+        bulletCasing.m_rigidBody = body;
+        bulletCasing.m_shape = shape;
         Scene::g_bulletCasings.push_back(bulletCasing);
     }
     else {

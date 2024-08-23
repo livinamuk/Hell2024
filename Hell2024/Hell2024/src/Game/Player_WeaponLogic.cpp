@@ -134,6 +134,12 @@ void Player::UpdateViewWeaponLogic(float deltaTime) {
         // ZOOM
         _zoom = std::max(0.575f, _zoom);
         _zoom = std::min(1.0f, _zoom);
+
+
+        if (weaponInfo->name == "P90") {
+            _zoom = std::max(0.775f, _zoom);
+        }
+
         float adsInOutSpeed = 3.0f;
 
         // ADS in
@@ -534,7 +540,7 @@ bool Player::CanEnterADS() {
         return false;
     }
 
-    if (weaponState && !weaponState->hasScope) {
+    if (weaponInfo->name != "P90" && weaponState && !weaponState->hasScope) {
         return false;
     }
 

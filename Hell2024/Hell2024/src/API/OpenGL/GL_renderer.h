@@ -13,4 +13,6 @@ namespace OpenGLRenderer {
     void UpdatePointCloud();
     void PresentFinalImage();
     void RecreateBlurBuffers();
+    void QueryAvaliability();
+
 }

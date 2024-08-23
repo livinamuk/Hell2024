@@ -5,6 +5,7 @@
 #include "Light.h"
 #include "../Core/CreateInfo.hpp"
 #include "../Physics/Physics.h"
+#include "../Editor/CSGShape.h"
 #include "../Effects/BloodDecal.hpp"
 #include "../Effects/BulletCasing.h"
 #include "../Effects/BulletHoleDecal.hpp"
@@ -56,101 +57,7 @@ inline void SetNormalsAndTangentsFromVertices(Vertex* vert0, Vertex* vert1, Vert
 #define PROPOGATION_HEIGHT (MAP_HEIGHT / PROPOGATION_SPACING)
 #define PROPOGATION_DEPTH (MAP_DEPTH / PROPOGATION_SPACING)
 
-struct CubeVolume {
 
-
-private:
-public:
-    // MAKE PRIVATE, AND ADD CONST FOR THE RETURN TYPE OF GETTER
-    // MAKE PRIVATE, AND ADD CONST FOR THE RETURN TYPE OF GETTER
-    // MAKE PRIVATE, AND ADD CONST FOR THE RETURN TYPE OF GETTER
-    // MAKE PRIVATE, AND ADD CONST FOR THE RETURN TYPE OF GETTER
-    Transform m_transform;
-
-public:
-    uint32_t materialIndex = 0;
-    float textureScale = 1.0f;
-    float textureOffsetX = 0.0f;
-    float textureOffsetY = 0.0f;
-
-    glm::mat4 GetModelMatrix() {
-        return  m_transform.to_mat4();
-    }
-
-    glm::mat4 GetNormalMatrix() {
-        Transform transform;
-        transform.position = m_transform.position;
-        transform.rotation = m_transform.rotation;
-        return transform.to_mat4();
-    }
-
-    void SetTransform(Transform transform) {
-        m_transform = transform;
-        if (pxRigidStatic) {
-            PxMat44 matrix = Util::GlmMat4ToPxMat44(GetModelMatrix());
-            PxTransform transform2 = PxTransform(matrix);
-            pxRigidStatic->setGlobalPose(transform2);
-        }
-    }
-
-    Transform& GetTransform() {
-        return m_transform;
-    }
-
-    PxRigidStatic* pxRigidStatic = nullptr;
-    PxShape* m_pxShape = nullptr;
-
-    void CleanUp() {
-        if (pxRigidStatic) {
-            if (pxRigidStatic->userData) {
-                // MEMORY LEAK! FIX!!!
-                // MEMORY LEAK! FIX!!!
-                // MEMORY LEAK! FIX!!!
-                // MEMORY LEAK! FIX!!!
-                // MEMORY LEAK! FIX!!!
-                // MEMORY LEAK! FIX!!!
-                // MEMORY LEAK! FIX!!!
-                // MEMORY LEAK! FIX!!!
-            }
-            pxRigidStatic->release();
-        }
-        if (m_pxShape) {
-            m_pxShape->release();
-        }
-    }
-
-    void CreateCubePhysicsObject() {
-
-        PhysicsFilterData filterData2;
-        filterData2.raycastGroup = RaycastGroup::RAYCAST_ENABLED;
-        filterData2.collisionGroup = NO_COLLISION;
-        filterData2.collidesWith = NO_COLLISION;
-        PxShapeFlags shapeFlags(PxShapeFlag::eSCENE_QUERY_SHAPE); // Most importantly NOT eSIMULATION_SHAPE. PhysX does not allow for tri mesh.
-
-        float width = m_transform.scale.x * 0.5f;
-        float height = m_transform.scale.y * 0.5f;
-        float depth = m_transform.scale.z * 0.5f;
-
-        m_pxShape = Physics::CreateBoxShape(width, height, depth);
-        pxRigidStatic = Physics::CreateRigidStatic(Transform(), filterData2, m_pxShape);
-
-        PhysicsObjectData* physicsObjectData = new PhysicsObjectData(PhysicsObjectType::CSG_OBJECT_SUBTRACTIVE, this);
-        pxRigidStatic->userData = physicsObjectData;
-
-        PxMat44 m2 = Util::GlmMat4ToPxMat44(GetModelMatrix());
-        PxTransform transform2 = PxTransform(m2);
-        pxRigidStatic->setGlobalPose(transform2);
-        Physics::DisableRaycast(m_pxShape);
-    }
-
-    void DisableRaycast() {
-        Physics::DisableRaycast(m_pxShape);
-    }
-
-    void EnableRaycast() {
-        Physics::EnableRaycast(m_pxShape);
-    }
-};
 
 struct SpawnPoint {
     glm::vec3 position = glm::vec3(0);
@@ -250,16 +157,16 @@ namespace Scene {
     const size_t GetAnimatedGameObjectCount();
 
     // Map stuff
-    CubeVolume* GetCubeVolumeAdditiveByIndex(int32_t index);
-    CubeVolume* GetCubeVolumeSubtractiveByIndex(int32_t index);
+    CSGShape* GetCubeVolumeAdditiveByIndex(int32_t index);
+    CSGShape* GetCubeVolumeSubtractiveByIndex(int32_t index);
     const size_t GetCubeVolumeAdditiveCount();
 
     // Containers
     inline std::vector<Light> g_lights;
     inline std::vector<SpawnPoint> g_spawnPoints;
     inline std::vector<BulletCasing> g_bulletCasings;
-    inline std::vector<CubeVolume> g_cubeVolumesAdditive;
-    inline std::vector<CubeVolume> g_cubeVolumesSubtractive;
+    inline std::vector<CSGShape> g_csgAdditiveShapes;
+    inline std::vector<CSGShape> g_csgSubtractiveShapes;
     inline std::vector<Dobermann> g_dobermann;
     inline std::vector<Staircase> g_staircases;
 

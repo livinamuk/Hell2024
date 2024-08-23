@@ -100,12 +100,13 @@ private:
     int m_keyboardIndex = -1;
     float m_capsuleRadius = 0.1f;
     ShellEjectionState m_shellEjectionState;
-    glm::mat4 m_weaponSwayMatrix = glm::mat4(1);
+
     glm::mat4 m_casingSpawnMatrix = glm::mat4(1);
     glm::mat4 m_muzzleFlashMatrix = glm::mat4(1);
 
 
 public:
+    glm::mat4 m_weaponSwayMatrix = glm::mat4(1);
     bool m_pickUpInteractable = false;
     bool g_awaitingRespawn = true;
 

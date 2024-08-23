@@ -47,7 +47,7 @@ void main() {
 	attrNormal = normalize((normalMatrix * vec4(vNormal, 0)).xyz);
 	attrTangent = (model * vec4(vTangent, 0.0)).xyz;
 	attrBiTangent = normalize(cross(attrNormal,attrTangent));
-
+	/*
 	// you can probably remove all that matrix shit above. we're all identity here baby.
 	if (vMaterialIndex > 0 && vPos.z < -2.4) {
 		material = Materials[vMaterialIndex];
@@ -55,7 +55,7 @@ void main() {
 		NormalTextureIndex =  material.normalTextureIndex;
 		RMATextureIndex =  material.rmaTextureIndex;
 		//BaseColorTextureIndex = /100;
-	}
+	}*/
 
 	gl_Position = projection * view * model * vec4(vPos, 1.0);
 	PlayerIndex = playerIndex;

@@ -11,6 +11,7 @@
 #include "../Pathfinding/Pathfinding2.h"
 #include "../Renderer/RendererUtil.hpp"
 #include "../Renderer/TextBlitter.h"
+#include "../Timer.hpp"
 #include "../Util.hpp"
 
 #define MENU_SELECT_AUDIO "SELECT.wav"
@@ -28,6 +29,7 @@ namespace Editor {
             VALUE_STRING,
             VALUE_BOOL,
             INSERT_CSG_ADDITIVE,
+            INSERT_CSG_ADDITIVE_PLANE,
             INSERT_CSG_SUBTRACTIVE,
             INSERT_DOOR,
             INSERT_WINDOW,
@@ -188,8 +190,8 @@ namespace Editor {
             }
             // CSG subtractive
             if (hitResult.physicsObjectType == PhysicsObjectType::CSG_OBJECT_SUBTRACTIVE) {
-                for (int i = 0; i < Scene::g_cubeVolumesSubtractive.size(); i++) {
-                    CubeVolume& cubeVolume = Scene::g_cubeVolumesSubtractive[i];
+                for (int i = 0; i < Scene::g_csgSubtractiveShapes.size(); i++) {
+                    CSGShape& cubeVolume = Scene::g_csgSubtractiveShapes[i];
                     if (&cubeVolume == hitResult.parent) {
                         g_hoveredObjectIndex = i;
                         break;
@@ -307,13 +309,13 @@ namespace Editor {
             if (Input::LeftMousePressed()) {
 
                 if (g_selectedObjectType == PhysicsObjectType::CSG_OBJECT_ADDITIVE) {
-                    CubeVolume* cubeVolume = Scene::GetCubeVolumeAdditiveByIndex(g_selectedObjectIndex);
+                    CSGShape* cubeVolume = Scene::GetCubeVolumeAdditiveByIndex(g_selectedObjectIndex);
                     if (cubeVolume) {
                         gizmoMatrix = cubeVolume->GetModelMatrix();
                     }
                 }
                 if (g_selectedObjectType == PhysicsObjectType::CSG_OBJECT_SUBTRACTIVE) {
-                    CubeVolume* cubeVolume = Scene::GetCubeVolumeSubtractiveByIndex(g_selectedObjectIndex);
+                    CSGShape* cubeVolume = Scene::GetCubeVolumeSubtractiveByIndex(g_selectedObjectIndex);
                     if (cubeVolume) {
                         gizmoMatrix = cubeVolume->GetModelMatrix();
                     }
@@ -356,14 +358,14 @@ namespace Editor {
             if (Input::LeftMouseDown() && Gizmo::HasHover()) {
 
                 if (g_selectedObjectType == PhysicsObjectType::CSG_OBJECT_ADDITIVE) {
-                    CubeVolume* cubeVolume = Scene::GetCubeVolumeAdditiveByIndex(g_selectedObjectIndex);
+                    CSGShape* cubeVolume = Scene::GetCubeVolumeAdditiveByIndex(g_selectedObjectIndex);
                     if (cubeVolume) {
                         cubeVolume->SetTransform(gizmoTransform);
                         gizmoMatrix = cubeVolume->GetModelMatrix();
                     }
                 }
                 if (g_selectedObjectType == PhysicsObjectType::CSG_OBJECT_SUBTRACTIVE) {
-                    CubeVolume* cubeVolume = Scene::GetCubeVolumeSubtractiveByIndex(g_selectedObjectIndex);
+                    CSGShape* cubeVolume = Scene::GetCubeVolumeSubtractiveByIndex(g_selectedObjectIndex);
                     if (cubeVolume) {
                         cubeVolume->SetTransform(gizmoTransform);
                         gizmoMatrix = cubeVolume->GetModelMatrix();
@@ -459,7 +461,7 @@ namespace Editor {
             Game::GetPlayerByIndex(i)->DisableControl();
         }
         // Enable ray casts on subtractive CSG
-        for (CubeVolume& cubeVolume : Scene::g_cubeVolumesSubtractive) {
+        for (CSGShape& cubeVolume : Scene::g_csgSubtractiveShapes) {
             cubeVolume.EnableRaycast();
         }
         // Return dobermann to lay
@@ -514,7 +516,7 @@ namespace Editor {
         Input::DisableCursor();
         Pathfinding2::UpdateNavMesh(CSG::GetNavMeshVertices());
 
-        for (CubeVolume& cubeVolume : Scene::g_cubeVolumesSubtractive) {
+        for (CSGShape& cubeVolume : Scene::g_csgSubtractiveShapes) {
             cubeVolume.DisableRaycast();
         }
     }
@@ -594,7 +596,7 @@ namespace Editor {
         }
         // CSG Subtractive
         if (objectType == PhysicsObjectType::CSG_OBJECT_SUBTRACTIVE) {
-            CubeVolume& cubeVolume = Scene::g_cubeVolumesSubtractive[objectIndex];
+            CSGShape& cubeVolume = Scene::g_csgSubtractiveShapes[objectIndex];
             static int meshIndex = AssetManager::GetModelByIndex(AssetManager::GetModelIndexByName("Cube"))->GetMeshIndices()[0];
             RenderItem3D renderItem;
             renderItem.meshIndex = meshIndex;
@@ -627,6 +629,7 @@ namespace Editor {
 
         CSG::Build();
         Scene::CreateBottomLevelAccelerationStructures();
+
     }
 
     void UpdateMenu() {
@@ -643,8 +646,9 @@ namespace Editor {
         }
         // Create insert menu
         else if (g_insertMenuOpen) {
-            g_menuItems.push_back({ "CSG Additive", MenuItem::Type::INSERT_CSG_ADDITIVE });
-            g_menuItems.push_back({ "CSG Subtractive", MenuItem::Type::INSERT_CSG_SUBTRACTIVE });
+            g_menuItems.push_back({ "CSG Additive Cube", MenuItem::Type::INSERT_CSG_ADDITIVE });
+            g_menuItems.push_back({ "CSG Additive Plane", MenuItem::Type::INSERT_CSG_ADDITIVE_PLANE });
+            g_menuItems.push_back({ "CSG Subtractive Cube", MenuItem::Type::INSERT_CSG_SUBTRACTIVE });
             g_menuItems.push_back({ "Light", MenuItem::Type::INSERT_LIGHT });
             g_menuItems.push_back({ "Door", MenuItem::Type::INSERT_DOOR });
             g_menuItems.push_back({ "Window\n", MenuItem::Type::INSERT_WINDOW });
@@ -672,7 +676,7 @@ namespace Editor {
                 }
             }
             else if (g_selectedObjectType == PhysicsObjectType::CSG_OBJECT_ADDITIVE || g_selectedObjectType == PhysicsObjectType::CSG_OBJECT_SUBTRACTIVE && g_selectedObjectIndex != -1) {
-                CubeVolume* cubeVolume = nullptr;
+                CSGShape* cubeVolume = nullptr;
                 if (g_selectedObjectType == PhysicsObjectType::CSG_OBJECT_ADDITIVE) {
                     cubeVolume = Scene::GetCubeVolumeAdditiveByIndex(g_selectedObjectIndex);
                 }
@@ -790,31 +794,54 @@ namespace Editor {
 
         // Interact with menu
         if (Input::KeyPressed(HELL_KEY_E) || Input::KeyPressed(HELL_KEY_ENTER)) {
+
             Audio::PlayAudio(MENU_SELECT_AUDIO, MENU_SELECT_VOLUME);
             MenuItem::Type& type = g_menuItems[g_menuSelectionIndex].type;
             Player* player = Game::GetPlayerByIndex(0);
             glm::vec3 spawnPos = player->GetViewPos() - (player->GetCameraForward() * glm::vec3(2));
+
             if (type == MenuItem::Type::INSERT_CSG_ADDITIVE) {
-                CubeVolume& cube = Scene::g_cubeVolumesAdditive.emplace_back();
                 Transform transform;
                 transform.position = spawnPos;
                 transform.scale = glm::vec3(1.0f);
-                cube.SetTransform(transform);
-                cube.materialIndex = AssetManager::GetMaterialIndex("Ceiling2");
-                g_selectedObjectIndex = Scene::g_cubeVolumesAdditive.size() - 1;
+
+                CSGShape& csgShape = Scene::g_csgAdditiveShapes.emplace_back();
+                csgShape.SetTransform(transform);
+                csgShape.materialIndex = AssetManager::GetMaterialIndex("Ceiling2");
+                csgShape.m_brushShape = BrushShape::CUBE;
+
+                g_selectedObjectIndex = Scene::g_csgAdditiveShapes.size() - 1;
                 g_selectedObjectType = PhysicsObjectType::CSG_OBJECT_ADDITIVE;
+
+                RebuildEverything();
+            }
+            if (type == MenuItem::Type::INSERT_CSG_ADDITIVE_PLANE) {
+                Transform transform;
+                transform.position = spawnPos;
+                transform.scale = glm::vec3(1.0f);
+
+                CSGShape& csgShape = Scene::g_csgAdditiveShapes.emplace_back();
+                csgShape.SetTransform(transform);
+                csgShape.materialIndex = AssetManager::GetMaterialIndex("GlockAmmoBox");
+                csgShape.m_brushShape = BrushShape::PLANE;
+
+                g_selectedObjectIndex = Scene::g_csgAdditiveShapes.size() - 1;
+                g_selectedObjectType = PhysicsObjectType::CSG_OBJECT_ADDITIVE;
+
                 RebuildEverything();
             }
             if (type == MenuItem::Type::INSERT_CSG_SUBTRACTIVE) {
-                CubeVolume& cube = Scene::g_cubeVolumesSubtractive.emplace_back();
                 Transform transform;
                 transform.position = spawnPos;
                 transform.scale = glm::vec3(1.0f);
-                cube.SetTransform(transform);
-                cube.materialIndex = AssetManager::GetMaterialIndex("FloorBoards");
-                cube.CreateCubePhysicsObject();
-                cube.textureScale = 0.5f;
-                g_selectedObjectIndex = Scene::g_cubeVolumesSubtractive.size() - 1;
+
+                CSGShape& csgShape = Scene::g_csgSubtractiveShapes.emplace_back();
+                csgShape.SetTransform(transform);
+                csgShape.materialIndex = AssetManager::GetMaterialIndex("FloorBoards");
+                csgShape.CreateCubePhysicsObject();
+                csgShape.textureScale = 0.5f;
+
+                g_selectedObjectIndex = Scene::g_csgSubtractiveShapes.size() - 1;
                 g_selectedObjectType = PhysicsObjectType::CSG_OBJECT_SUBTRACTIVE;
                 RebuildEverything();
             }

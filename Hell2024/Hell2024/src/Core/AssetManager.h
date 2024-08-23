@@ -56,7 +56,7 @@ namespace AssetManager {
     // Skinned Mesh
     SkinnedMesh* GetSkinnedMeshByIndex(int index);
     int GetSkinnedMeshIndexByName(const std::string& name);
-    int CreateSkinnedMesh(std::string name, std::vector<WeightedVertex>& vertices, std::vector<uint32_t>& indices, uint32_t baseVertexLocal);
+    int CreateSkinnedMesh(std::string name, std::vector<WeightedVertex>& vertices, std::vector<uint32_t>& indices, uint32_t baseVertexLocal, glm::vec3 aabbMin, glm::vec3 aabbMax);
 
     // Animations
     void LoadAnimation(Animation* animation);
@@ -65,7 +65,7 @@ namespace AssetManager {
     // Materials
     void BuildMaterials();
     void BindMaterialByIndex(int index);
-    int GetMaterialIndex(const std::string&_name);
+    int GetMaterialIndex(const std::string& name);
     Material* GetMaterialByIndex(int index);
     std::string& GetMaterialNameByIndex(int index);
     int GetGoldBaseColorTextureIndex();
@@ -96,4 +96,6 @@ namespace AssetManager {
 
     // Raytracing
     void CreateMeshBLAS();
+
+    void DebugTest();
 }

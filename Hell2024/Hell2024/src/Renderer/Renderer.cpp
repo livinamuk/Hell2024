@@ -832,7 +832,48 @@ std::vector<SkinnedRenderItem> GetSkinnedRenderItemsForPlayer (int playerIndex) 
         if (animatedGameObject->GetFlag() == AnimatedGameObject::Flag::CHARACTER_MODEL && i == player->GetCharacterModelAnimatedGameObjectIndex()) {
             continue;
         }
+
+
         std::vector<SkinnedRenderItem>& items = animatedGameObject->GetSkinnedMeshRenderItems();
+
+
+        // Skip p90 bullets you dont have
+        if (animatedGameObject->GetFlag() == AnimatedGameObject::Flag::VIEW_WEAPON) {
+            WeaponInfo* weaponInfo = player->GetCurrentWeaponInfo();
+            int currentAmmoCountInMag = player->GetCurrentWeaponMagAmmo();
+            if (weaponInfo && weaponInfo->name == "P90") {
+
+                for (int i = 0; i < items.size(); i++) {
+
+                    SkinnedMesh* skinnedMesh = AssetManager::GetSkinnedMeshByIndex(items[i].originalMeshIndex);
+
+                    if (skinnedMesh->name.substr(0, 3) == "Rev") {
+
+
+                        int bulletNumber = 50 - std::stoi(skinnedMesh->name.substr(9));
+
+                       // std::string suffix = skinnedMesh->name.substr(9);
+
+                      //  std::cout << skinnedMesh->name << " " << bulletNumber << "\n";
+
+                        if (bulletNumber > currentAmmoCountInMag) {
+                            items.erase(items.begin() + i);
+                            i--;
+                        }
+
+
+                    }
+
+                }
+
+
+
+            }
+        }
+
+
+
+
         skinnedMeshRenderItems.insert(skinnedMeshRenderItems.end(), items.begin(), items.end());
     }
     return skinnedMeshRenderItems;

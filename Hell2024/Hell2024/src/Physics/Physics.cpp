@@ -28,9 +28,9 @@ public:
 PxFoundation* _foundation;
 PxDefaultAllocator      _allocator;
 PxPvd* _pvd = NULL;
-PxPhysics* _physics = NULL;
+PxPhysics* g_physics = NULL;
 PxDefaultCpuDispatcher* _dispatcher = NULL;
-PxScene* _scene = NULL;
+PxScene* g_scene = NULL;
 PxScene* _editorScene = NULL;
 PxMaterial* _defaultMaterial = NULL;
 ContactReportCallback   _contactReportCallback;
@@ -193,7 +193,7 @@ PxTriangleMesh* Physics::CreateTriangleMesh(PxU32 numVertices, const PxVec3* ver
     PxTriangleMesh* triMesh = NULL;
     //PxU32 meshSize = 0;
 
-    triMesh = PxCreateTriangleMesh(params, meshDesc, _physics->getPhysicsInsertionCallback());
+    triMesh = PxCreateTriangleMesh(params, meshDesc, g_physics->getPhysicsInsertionCallback());
     return triMesh;
     //triMesh->release();
 }
@@ -216,7 +216,7 @@ PxConvexMesh* Physics::CreateConvexMesh(PxU32 numVertices, const PxVec3* vertice
         return NULL;
     }
     PxDefaultMemoryInputData input(buf.getData(), buf.getSize());
-    return _physics->createConvexMesh(input);
+    return g_physics->createConvexMesh(input);
 }
 
 
@@ -235,12 +235,12 @@ void Physics::Init() {
     PxPvdTransport* transport = PxDefaultPvdSocketTransportCreate(PVD_HOST, 5425, 10);
     _pvd->connect(*transport, PxPvdInstrumentationFlag::eALL);
 
-    _physics = PxCreatePhysics(PX_PHYSICS_VERSION, *_foundation, PxTolerancesScale(), true, _pvd);
-    if (!_physics) {
+    g_physics = PxCreatePhysics(PX_PHYSICS_VERSION, *_foundation, PxTolerancesScale(), true, _pvd);
+    if (!g_physics) {
         std::cout << "PxCreatePhysics failed!\n";
     }
 
-    PxSceneDesc sceneDesc(_physics->getTolerancesScale());
+    PxSceneDesc sceneDesc(g_physics->getTolerancesScale());
     sceneDesc.gravity = PxVec3(0.0f, -9.81f, 0.0f);
     _dispatcher = PxDefaultCpuDispatcherCreate(2);
     sceneDesc.cpuDispatcher = _dispatcher;
@@ -249,30 +249,30 @@ void Physics::Init() {
     sceneDesc.filterShader = contactReportFilterShader;
     sceneDesc.simulationEventCallback = &_contactReportCallback;
 
-    _scene = _physics->createScene(sceneDesc);
-    _scene->setVisualizationParameter(PxVisualizationParameter::eSCALE, 1.0f);
-    _scene->setVisualizationParameter(PxVisualizationParameter::eCOLLISION_SHAPES, 2.0f);
+    g_scene = g_physics->createScene(sceneDesc);
+    g_scene->setVisualizationParameter(PxVisualizationParameter::eSCALE, 1.0f);
+    g_scene->setVisualizationParameter(PxVisualizationParameter::eCOLLISION_SHAPES, 2.0f);
 
-	_editorScene = _physics->createScene(sceneDesc);
+	_editorScene = g_physics->createScene(sceneDesc);
 	_editorScene->setVisualizationParameter(PxVisualizationParameter::eSCALE, 1.0f);
 	_editorScene->setVisualizationParameter(PxVisualizationParameter::eCOLLISION_SHAPES, 2.0f);
 
-    PxPvdSceneClient* pvdClient = _scene->getScenePvdClient();
+    PxPvdSceneClient* pvdClient = g_scene->getScenePvdClient();
     if (pvdClient) {
         pvdClient->setScenePvdFlag(PxPvdSceneFlag::eTRANSMIT_CONSTRAINTS, true);
         pvdClient->setScenePvdFlag(PxPvdSceneFlag::eTRANSMIT_CONTACTS, true);
         pvdClient->setScenePvdFlag(PxPvdSceneFlag::eTRANSMIT_SCENEQUERIES, true);
     }
-    _defaultMaterial = _physics->createMaterial(0.5f, 0.5f, 0.6f);
+    _defaultMaterial = g_physics->createMaterial(0.5f, 0.5f, 0.6f);
 
     // Character controller shit
-    _characterControllerManager = PxCreateControllerManager(*_scene);
+    _characterControllerManager = PxCreateControllerManager(*g_scene);
 
 
 
 
-    _groundPlane = PxCreatePlane(*_physics, PxPlane(0, 1, 0, 0.0f), *_defaultMaterial);
-    _scene->addActor(*_groundPlane);
+    _groundPlane = PxCreatePlane(*g_physics, PxPlane(0, 1, 0, 0.0f), *_defaultMaterial);
+    g_scene->addActor(*_groundPlane);
     _groundPlane->getShapes(&_groundShape, 1);
     PxFilterData filterData;
     filterData.word0 = RaycastGroup::RAYCAST_DISABLED; // must be disabled or it causes crash in scene::update when it tries to retrieve rigid body flags from this actor
@@ -283,19 +283,19 @@ void Physics::Init() {
 }
 
 void Physics::StepPhysics(float deltaTime) {
-    _scene->simulate(deltaTime);
-    _scene->fetchResults(true);
+    g_scene->simulate(deltaTime);
+    g_scene->fetchResults(true);
 }
 
 PxScene* Physics::GetScene() {
-    return _scene;
+    return g_scene;
 }
 PxScene* Physics::GetEditorScene() {
 	return _editorScene;
 }
 
 PxPhysics* Physics::GetPhysics() {
-    return _physics;
+    return g_physics;
 }
 
 PxMaterial* Physics::GetDefaultMaterial() {
@@ -306,7 +306,7 @@ PxShape* Physics::CreateBoxShape(float width, float height, float depth, Transfo
     if (material == NULL) {
         material = _defaultMaterial;
     }
-    PxShape* shape = _physics->createShape(PxBoxGeometry(width, height, depth), *material, true);
+    PxShape* shape = g_physics->createShape(PxBoxGeometry(width, height, depth), *material, true);
     PxMat44 localShapeMatrix = Util::GlmMat4ToPxMat44(shapeOffset.to_mat4());
     PxTransform localShapeTransform(localShapeMatrix);
     shape->setLocalPose(localShapeTransform);
@@ -323,7 +323,7 @@ PxShape* Physics::CreateShapeFromTriangleMesh(PxTriangleMesh* triangleMesh, PxSh
     PxTriangleMeshGeometry geometry(triangleMesh, PxMeshScale(PxVec3(scale.x, scale.y, scale.z)), flags);
 
     PxShapeFlags shapeFlags(PxShapeFlag::eSCENE_QUERY_SHAPE); // Most importantly NOT eSIMULATION_SHAPE. PhysX does not allow for tri mesh.
-    return _physics->createShape(geometry, *material, shapeFlags);
+    return g_physics->createShape(geometry, *material, shapeFlags);
 }
 
 PxShape* Physics::CreateShapeFromConvexMesh(PxConvexMesh* convexMesh, PxMaterial* material, glm::vec3 scale) {
@@ -332,7 +332,7 @@ PxShape* Physics::CreateShapeFromConvexMesh(PxConvexMesh* convexMesh, PxMaterial
     }
     PxConvexMeshGeometryFlags flags(~PxConvexMeshGeometryFlag::eTIGHT_BOUNDS);
     PxConvexMeshGeometry geometry(convexMesh, PxMeshScale(PxVec3(scale.x, scale.y, scale.z)), flags);
-    return _physics->createShape(geometry, *material);
+    return g_physics->createShape(geometry, *material);
 }
 
 
@@ -340,7 +340,7 @@ PxRigidDynamic* Physics::CreateRigidDynamic(Transform transform, PhysicsFilterDa
 
     PxQuat quat = Util::GlmQuatToPxQuat(glm::quat(transform.rotation));
     PxTransform trans = PxTransform(PxVec3(transform.position.x, transform.position.y, transform.position.z), quat);
-    PxRigidDynamic* body = _physics->createRigidDynamic(trans);
+    PxRigidDynamic* body = g_physics->createRigidDynamic(trans);
 
     // You are passing in a PxShape pointer and any shape offset will affects that actually object, wherever the fuck it is up the function chain.
     // Maybe look into this when you can be fucked, possibly you can just set the isExclusive bool to true, where and whenever the fuck that is and happens.
@@ -356,7 +356,7 @@ PxRigidDynamic* Physics::CreateRigidDynamic(Transform transform, PhysicsFilterDa
 
     body->attachShape(*shape);
     PxRigidBodyExt::updateMassAndInertia(*body, 10.0f);
-    _scene->addActor(*body);
+    g_scene->addActor(*body);
     return body;
 }
 
@@ -364,7 +364,7 @@ PxRigidStatic* Physics::CreateRigidStatic(Transform transform, PhysicsFilterData
 
     PxQuat quat = Util::GlmQuatToPxQuat(glm::quat(transform.rotation));
     PxTransform trans = PxTransform(PxVec3(transform.position.x, transform.position.y, transform.position.z), quat);
-    PxRigidStatic* body = _physics->createRigidStatic(trans);
+    PxRigidStatic* body = g_physics->createRigidStatic(trans);
 
     // You are passing in a PxShape pointer and any shape offset will affects that actually object, wherever the fuck it is up the function chain.
     // Maybe look into this when you can be fucked, possibly you can just set the isExclusive bool to true, where and whenever the fuck that is and happens.
@@ -379,7 +379,7 @@ PxRigidStatic* Physics::CreateRigidStatic(Transform transform, PhysicsFilterData
     shape->setLocalPose(localShapeTransform);
 
     body->attachShape(*shape);
-    _scene->addActor(*body);
+    g_scene->addActor(*body);
 
     return body;
 }
@@ -388,7 +388,7 @@ PxRigidStatic* Physics::CreateEditorRigidStatic(Transform transform, PxShape* sh
     PxQuat quat = Util::GlmQuatToPxQuat(glm::quat(transform.rotation));
 	PxTransform trans = PxTransform(PxVec3(transform.position.x, transform.position.y, transform.position.z), quat);
 
-	PxRigidStatic* body = _physics->createRigidStatic(trans);
+	PxRigidStatic* body = g_physics->createRigidStatic(trans);
 	//PxRigidStatic* body = _physics->createRigidStatic(PxTransform());
 	body->attachShape(*shape);
     PxFilterData filterData;
@@ -412,19 +412,19 @@ PxRigidDynamic* Physics::CreateRigidDynamic(glm::mat4 matrix, PhysicsFilterData 
     shape->setSimulationFilterData(filterData);  // collisions
     PxMat44 mat = Util::GlmMat4ToPxMat44(matrix);
     PxTransform transform(mat);
-    PxRigidDynamic* body = _physics->createRigidDynamic(transform);
+    PxRigidDynamic* body = g_physics->createRigidDynamic(transform);
     body->attachShape(*shape);
     PxRigidBodyExt::updateMassAndInertia(*body, 10.0f);
-    _scene->addActor(*body);
+    g_scene->addActor(*body);
     return body;
 }
 
 PxRigidDynamic* Physics::CreateRigidDynamic(glm::mat4 matrix, bool kinematic) {
     PxMat44 mat = Util::GlmMat4ToPxMat44(matrix);
     PxTransform transform(mat);
-    PxRigidDynamic* body = _physics->createRigidDynamic(transform);
+    PxRigidDynamic* body = g_physics->createRigidDynamic(transform);
     body->setRigidBodyFlag(PxRigidBodyFlag::eKINEMATIC, kinematic);
-    _scene->addActor(*body);
+    g_scene->addActor(*body);
     return body;
 }
 
@@ -546,10 +546,10 @@ PxTriangleMesh* Physics::CreateTriangleMeshFromModelIndex(int modelIndex) {
 std::vector<Vertex> Physics::GetDebugLineVertices(DebugLineRenderMode debugLineRenderMode, std::vector<PxRigidActor*> ignoreList) {
 
     // Prepare
-    PxU32 nbActors = _scene->getNbActors(PxActorTypeFlag::eRIGID_DYNAMIC | PxActorTypeFlag::eRIGID_STATIC);
+    PxU32 nbActors = g_scene->getNbActors(PxActorTypeFlag::eRIGID_DYNAMIC | PxActorTypeFlag::eRIGID_STATIC);
     if (nbActors) {
         std::vector<PxRigidActor*> actors(nbActors);
-        _scene->getActors(PxActorTypeFlag::eRIGID_DYNAMIC | PxActorTypeFlag::eRIGID_STATIC, reinterpret_cast<PxActor**>(&actors[0]), nbActors);
+        g_scene->getActors(PxActorTypeFlag::eRIGID_DYNAMIC | PxActorTypeFlag::eRIGID_STATIC, reinterpret_cast<PxActor**>(&actors[0]), nbActors);
         for (PxRigidActor* actor : actors) {
             if (actor == Physics::GetGroundPlane()) {
                 actor->setActorFlag(PxActorFlag::eVISUALIZATION, false);
@@ -577,7 +577,7 @@ std::vector<Vertex> Physics::GetDebugLineVertices(DebugLineRenderMode debugLineR
     }
     // Build vertices
     std::vector<Vertex> vertices;
-    auto* renderBuffer = &_scene->getRenderBuffer();
+    auto* renderBuffer = &g_scene->getRenderBuffer();
     for (unsigned int i = 0; i < renderBuffer->getNbLines(); i++) {
         auto pxLine = renderBuffer->getLines()[i];
         Vertex v1, v2;
@@ -612,4 +612,57 @@ void Physics::DisableRaycast(PxShape* shape) {
     PxFilterData filterData = shape->getQueryFilterData();
     filterData.word0 = RaycastGroup::RAYCAST_DISABLED;
     shape->setQueryFilterData(filterData);
+}
+
+void Physics::Destroy(PxRigidDynamic* rigidDynamic) {
+    if (rigidDynamic) {
+        if (rigidDynamic->userData) {
+            delete static_cast<PhysicsObjectData*>(rigidDynamic->userData);
+            rigidDynamic->userData = nullptr;
+        }
+        g_scene->removeActor(*rigidDynamic);
+        rigidDynamic->release();
+        rigidDynamic = nullptr;
+    }
+}
+
+void Physics::Destroy(PxRigidStatic* rigidStatic) {
+    if (rigidStatic) {
+        if (rigidStatic->userData) {
+            delete static_cast<PhysicsObjectData*>(rigidStatic->userData);
+            rigidStatic->userData = nullptr;
+        }
+        g_scene->removeActor(*rigidStatic);
+        rigidStatic->release();
+        rigidStatic = nullptr;
+    }
+}
+
+void Physics::Destroy(PxShape* shape) {
+    if (shape) {
+        if (shape->userData) {
+            delete static_cast<PhysicsObjectData*>(shape->userData);
+            shape->userData = nullptr;
+        }
+        shape->release();
+        shape = nullptr;
+    }
+}
+
+void Physics::Destroy(PxRigidBody* rigidBody) {
+    if (rigidBody) {
+        if (rigidBody->userData) {
+            delete static_cast<PhysicsObjectData*>(rigidBody->userData);
+            rigidBody->userData = nullptr;
+        }
+        g_scene->removeActor(*rigidBody);
+        rigidBody->release();
+        rigidBody = nullptr;
+    }
+}
+
+void Physics::Destroy(PxTriangleMesh* triangleMesh) {
+    if (triangleMesh) {
+        triangleMesh = nullptr;
+    }
 }

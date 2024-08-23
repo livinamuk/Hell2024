@@ -61,6 +61,9 @@ namespace OpenGLRenderer {
         Shader gbufferSkinned;
         Shader csgSubtractive;
         Shader triangles2D;
+        Shader p90Mag;
+        Shader p90Bullet;
+        Shader p90MagSpecular;
         ComputeShader debugCircle;
         ComputeShader postProcessing;
         ComputeShader glassComposite;
@@ -71,6 +74,7 @@ namespace OpenGLRenderer {
         ComputeShader computeSkinning;
         ComputeShader raytracingTest;
         ComputeShader probeLighting;
+        ComputeShader p90Composite;
     } g_shaders;
 
     struct SSBOs {
@@ -132,6 +136,7 @@ void DownScaleGBuffer();
 void ComputeSkin(RenderData& renderData);
 void EmissivePass(RenderData& renderData);
 void OutlinePass(RenderData& renderData);
+void P90MagPass(RenderData& renderData);
 void CSGSubtractivePass();
 
 void OpenGLRenderer::HotloadShaders() {
@@ -159,6 +164,7 @@ void OpenGLRenderer::HotloadShaders() {
     g_shaders.debugPointCloud.Load("GL_debug_pointCloud.vert", "GL_debug_pointCloud.frag");
     g_shaders.debugProbes.Load("GL_debug_probes.vert", "GL_debug_probes.frag");
     g_shaders.gbufferSkinned.Load("GL_gbuffer_skinned.vert", "GL_gbuffer_skinned.frag");
+    g_shaders.p90MagSpecular.Load("GL_p90_mag_specular.vert", "GL_p90_mag_specular.frag");
     g_shaders.emissiveComposite.Load("res/shaders/OpenGL/GL_emissiveComposite.comp");
     g_shaders.postProcessing.Load("res/shaders/OpenGL/GL_postProcessing.comp");
     g_shaders.glassComposite.Load("res/shaders/OpenGL/GL_glassComposite.comp");
@@ -167,6 +173,9 @@ void OpenGLRenderer::HotloadShaders() {
     g_shaders.raytracingTest.Load("res/shaders/OpenGL/GL_raytracing_test.comp");
     g_shaders.debugCircle.Load("res/shaders/OpenGL/GL_debug_circle.comp");
     g_shaders.probeLighting.Load("res/shaders/OpenGL/GL_probe_lighting.comp");
+    g_shaders.p90Mag.Load("GL_p90_mag.vert", "GL_p90_mag.frag");
+    g_shaders.p90Bullet.Load("GL_p90_bullets.vert", "GL_p90_bullets.frag");
+    g_shaders.p90Composite.Load("res/shaders/OpenGL/GL_p90_composite.comp");
 }
 
 void OpenGLRenderer::CreatePlayerRenderTargets(int presentWidth, int presentHeight) {
@@ -189,7 +198,9 @@ void OpenGLRenderer::CreatePlayerRenderTargets(int presentWidth, int presentHeig
     g_frameBuffers.gBuffer.CreateAttachment("FinalLighting", GL_RGBA8);
     g_frameBuffers.gBuffer.CreateAttachment("Glass", GL_RGBA8);
     g_frameBuffers.gBuffer.CreateAttachment("EmissiveMask", GL_RGBA8);
-    g_frameBuffers.gBuffer.CreateAttachment("BloomPrePass", GL_RGBA8);
+    //g_frameBuffers.gBuffer.CreateAttachment("BloomPrePass", GL_RGBA8);
+    g_frameBuffers.gBuffer.CreateAttachment("P90MagDirectLighting", GL_RGBA8);
+    g_frameBuffers.gBuffer.CreateAttachment("P90MagSpecular", GL_RGBA8);
     g_frameBuffers.gBuffer.CreateDepthAttachment(GL_DEPTH32F_STENCIL8);
 }
 
@@ -257,6 +268,7 @@ void OpenGLRenderer::RecreateBlurBuffers() {
 
 void OpenGLRenderer::InitMinimum() {
 
+    QueryAvaliability();
     HotloadShaders();
 
     int desiredTotalLines = 40;
@@ -646,6 +658,7 @@ void OpenGLRenderer::RenderFrame(RenderData& renderData) {
     DrawBloodDecals(renderData);
     DrawBulletDecals(renderData);
     LightingPass(renderData);
+    P90MagPass(renderData);
 
     // DebugPassProbePass(renderData);
     SkyBoxPass(renderData);
@@ -679,17 +692,20 @@ void ClearRenderTargets() {
 
     gBuffer.Bind();
     gBuffer.SetViewport();
-    unsigned int attachments[7] = {
+    unsigned int attachments[8] = {
         GL_COLOR_ATTACHMENT0,
         GL_COLOR_ATTACHMENT1,
         GL_COLOR_ATTACHMENT2,
         GL_COLOR_ATTACHMENT6,
         GL_COLOR_ATTACHMENT7,
         gBuffer.GetColorAttachmentSlotByName("Glass"),
-        gBuffer.GetColorAttachmentSlotByName("EmissiveMask") };
+        gBuffer.GetColorAttachmentSlotByName("EmissiveMask"),
+        gBuffer.GetColorAttachmentSlotByName("P90MagSpecular") };
     glDrawBuffers(7, attachments);
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+
 
 }
 
@@ -1127,34 +1143,40 @@ void DebugPass(RenderData& renderData) {
 
     // Render target
     GLFrameBuffer& presentBuffer = OpenGLRenderer::g_frameBuffers.present;
-    ViewportInfo viewportInfo = RendererUtil::CreateViewportInfo(0, Game::GetSplitscreenMode(), presentBuffer.GetWidth(), presentBuffer.GetHeight());
+   // ViewportInfo viewportInfo = RendererUtil::CreateViewportInfo(0, Game::GetSplitscreenMode(), presentBuffer.GetWidth(), presentBuffer.GetHeight());
     BindFrameBuffer(presentBuffer);
-    SetViewport(viewportInfo);
+  //  SetViewport(viewportInfo);
 
     Shader& shader = OpenGLRenderer::g_shaders.debugSolidColor;
     shader.Use();
-    shader.SetMat4("projection", renderData.cameraData[0].projection);
-    shader.SetMat4("view", renderData.cameraData[0].view);
-    shader.SetMat4("model", glm::mat4(1));
 
-    glDisable(GL_DEPTH_TEST);
+    for (int i = 0; i < renderData.playerCount; i++) {
+        ViewportInfo viewportInfo = RendererUtil::CreateViewportInfo(i, Game::GetSplitscreenMode(), presentBuffer.GetWidth(), presentBuffer.GetHeight());
+        SetViewport(viewportInfo);
+        glViewport(viewportInfo.xOffset, viewportInfo.yOffset, viewportInfo.width, viewportInfo.height);
+        shader.SetMat4("projection", renderData.cameraData[i].projection);
+        shader.SetMat4("view", renderData.cameraData[i].view);
+        shader.SetMat4("model", glm::mat4(1));
 
-    // Draw lines
-    if (linesMesh.GetIndexCount() > 0) {
-        glBindVertexArray(linesMesh.GetVAO());
-        glDrawElements(GL_LINES, linesMesh.GetIndexCount(), GL_UNSIGNED_INT, 0);
-    }
-    // Draw points
-    if (pointsMesh.GetIndexCount() > 0) {
-        glPointSize(4);
-        glBindVertexArray(pointsMesh.GetVAO());
-        glDrawElements(GL_POINTS, pointsMesh.GetIndexCount(), GL_UNSIGNED_INT, 0);
-    }
-    // Draw triangles
-    if (trianglesMesh.GetIndexCount() > 0) {
-        glPointSize(4);
-        glBindVertexArray(trianglesMesh.GetVAO());
-        glDrawElements(GL_TRIANGLES, trianglesMesh.GetIndexCount(), GL_UNSIGNED_INT, 0);
+        glDisable(GL_DEPTH_TEST);
+
+        // Draw lines
+        if (linesMesh.GetIndexCount() > 0) {
+            glBindVertexArray(linesMesh.GetVAO());
+            glDrawElements(GL_LINES, linesMesh.GetIndexCount(), GL_UNSIGNED_INT, 0);
+        }
+        // Draw points
+        if (pointsMesh.GetIndexCount() > 0) {
+            glPointSize(4);
+            glBindVertexArray(pointsMesh.GetVAO());
+            glDrawElements(GL_POINTS, pointsMesh.GetIndexCount(), GL_UNSIGNED_INT, 0);
+        }
+        // Draw triangles
+        if (trianglesMesh.GetIndexCount() > 0) {
+            glPointSize(4);
+            glBindVertexArray(trianglesMesh.GetVAO());
+            glDrawElements(GL_TRIANGLES, trianglesMesh.GetIndexCount(), GL_UNSIGNED_INT, 0);
+        }
     }
 
     /*
@@ -1397,11 +1419,230 @@ void GeometryPass(RenderData& renderData) {
             SkinnedMesh* mesh = AssetManager::GetSkinnedMeshByIndex(skinnedRenderItem.originalMeshIndex);
             gbufferSkinnedShader.SetMat4("model", skinnedRenderItem.modelMatrix);
             gbufferSkinnedShader.SetInt("renderItemIndex", k);
-            glDrawElementsInstancedBaseVertex(GL_TRIANGLES, mesh->indexCount, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int) * mesh->baseIndex), 1, skinnedRenderItem.baseVertex);
+
+            if (mesh->name != "Magazine_low" && mesh->name != "Magazine_low2") {
+                glDrawElementsInstancedBaseVertex(GL_TRIANGLES, mesh->indexCount, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int) * mesh->baseIndex), 1, skinnedRenderItem.baseVertex);
+
+            }
             k++;
         }
     }
     glBindVertexArray(0);
+
+// Mesh names
+//      58 Magazine_low
+//      91 Magazine_low2
+
+// Bone names
+//      Magazine
+//      Magazine2
+
+
+    /*
+    static int p90MeshIndex = -1;
+    if (p90MeshIndex == -1) {
+        SkinnedModel* p90Model = AssetManager::GetSkinnedModelByName("P90");
+        for (auto& meshIndex : p90Model->GetMeshIndices()) {
+            SkinnedMesh* skinnedMesh = AssetManager::GetSkinnedMeshByIndex(meshIndex);
+            if (skinnedMesh->name == "Magazine_low2") {
+                p90MeshIndex = meshIndex;
+                break;
+            }
+        }
+
+        //for (int i = 0; i < p90Model->m_joints.size(); i++) {
+        //    std::cout << i << ": " << p90Model->m_joints[i].m_name << "\n";
+        //}
+    }
+
+    SkinnedMesh* magMesh = AssetManager::GetSkinnedMeshByIndex(p90MeshIndex);
+
+ //   std::cout << magMesh->name << "\n";
+
+    glBindVertexArray(OpenGLBackEnd::GetWeightedVertexDataVAO());
+    glBindBuffer(GL_ARRAY_BUFFER, OpenGLBackEnd::GetWeightedVertexDataVBO());
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, OpenGLBackEnd::GetWeightedVertexDataEBO());
+
+    Player* player = Game::GetPlayerByIndex(0);
+
+    Shader& shader = OpenGLRenderer::g_shaders.p90Shader;
+    shader.Use();
+
+    Transform transform;
+    transform.position = glm::vec3(0, 1, 0);
+
+    AnimatedGameObject* viewWeapon = player->GetViewWeaponAnimatedGameObject();
+
+    if (viewWeapon) {
+        glm::mat4 p90WorldTransform = viewWeapon->GetModelMatrix() * viewWeapon->GetBoneWorldMatrixFromBoneName("Magazine");
+
+        Shader& p90shader = OpenGLRenderer::g_shaders.csgSubtractive;
+        p90shader.Use();
+        p90shader.SetMat4("projection", player->GetProjectionMatrix());
+        p90shader.SetMat4("view", player->GetViewMatrix());
+        //p90shader.SetMat4("model", transform.to_mat4());
+        p90shader.SetMat4("model", p90WorldTransform);
+
+
+        glDisable(GL_DEPTH_TEST);
+        glDrawElementsInstancedBaseVertex(GL_TRIANGLES, magMesh->indexCount, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int) * magMesh->baseIndex), 1, magMesh->baseVertexGlobal);
+
+    }
+
+
+    */
+
+}
+
+
+void P90MagPass(RenderData& renderData) {
+
+    GLFrameBuffer& gBuffer = OpenGLRenderer::g_frameBuffers.gBuffer;
+    Shader& p90MagShader = OpenGLRenderer::g_shaders.p90Mag;
+    Shader& p90BulletShader = OpenGLRenderer::g_shaders.p90Bullet;
+    Shader& p90MagSpecularShader = OpenGLRenderer::g_shaders.p90MagSpecular;
+
+    struct P90MagData {
+        glm::mat4 modelMatrix = glm::mat4(1);
+        int meshIndex = -1;
+    };
+
+    /*
+    // First pass: plastic
+    p90MagShader.Use();
+    unsigned int attachments[1] = {
+    gBuffer.GetColorAttachmentSlotByName("P90Mags") };
+    glDrawBuffers(1, attachments);
+    glEnable(GL_DEPTH_TEST);
+    glDepthMask(GL_FALSE);
+    glBindVertexArray(OpenGLBackEnd::GetSkinnedVertexDataVAO());
+    glBindBuffer(GL_ARRAY_BUFFER, OpenGLBackEnd::GetSkinnedVertexDataVBO());
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, OpenGLBackEnd::GetWeightedVertexDataEBO());
+    std::vector<P90MagData> p90MagDatas;
+
+    for (int i = 0; i < renderData.playerCount; i++) {
+        Player* player = Game::GetPlayerByIndex(i);
+        ViewportInfo viewportInfo = RendererUtil::CreateViewportInfo(i, Game::GetSplitscreenMode(), gBuffer.GetWidth(), gBuffer.GetHeight());
+        SetViewport(viewportInfo);
+        p90MagShader.SetMat4("projection", player->GetProjectionMatrix());
+        p90MagShader.SetMat4("view", player->GetViewMatrix());
+        p90MagShader.SetInt("playerIndex", i);
+        for (SkinnedRenderItem& skinnedRenderItem : renderData.skinnedRenderItems[i]) {
+            SkinnedMesh* mesh = AssetManager::GetSkinnedMeshByIndex(skinnedRenderItem.originalMeshIndex);
+            if (mesh->name == "Magazine_low" || mesh->name == "Magazine_low2") {
+                p90MagShader.SetMat4("model", skinnedRenderItem.modelMatrix);
+                glDrawElementsInstancedBaseVertex(GL_TRIANGLES, mesh->indexCount, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int) * mesh->baseIndex), 1, skinnedRenderItem.baseVertex);
+
+                P90MagData magData;
+                magData.modelMatrix = skinnedRenderItem.modelMatrix;
+                magData.meshIndex = skinnedRenderItem.originalMeshIndex;
+                p90MagDatas.push_back(magData);
+            }
+        }
+    }
+
+
+
+    */
+
+
+    // Specular pass
+    gBuffer.Bind();
+
+
+    static int magBaseColorTextureIndex = AssetManager::GetTextureIndexByName("P90_Mag_ALB");
+    static int magNormalTextureIndex = AssetManager::GetTextureIndexByName("P90_Mag_NRM");
+    static int magRMATextureIndex = AssetManager::GetTextureIndexByName("P90_Mag_RMA");
+
+    /*
+    std::cout << "magBaseColorTextureIndex: " << magBaseColorTextureIndex << "\n";
+    std::cout << "magNormalTextureIndex: " << magNormalTextureIndex << "\n";
+    std::cout << "magRMATextureIndex: " << magRMATextureIndex << "\n\n";
+    */
+    p90MagSpecularShader.Use();
+
+    unsigned int attachments2[2] = {
+        gBuffer.GetColorAttachmentSlotByName("P90MagSpecular"),
+        gBuffer.GetColorAttachmentSlotByName("P90MagDirectLighting") }
+    ;
+    glDrawBuffers(2, attachments2);
+
+    glBindVertexArray(OpenGLBackEnd::GetSkinnedVertexDataVAO());
+    glBindBuffer(GL_ARRAY_BUFFER, OpenGLBackEnd::GetSkinnedVertexDataVBO());
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, OpenGLBackEnd::GetWeightedVertexDataEBO());
+    glDepthMask(GL_TRUE);
+
+    glClearColor(0, 0, 0, 0);
+    glClear(GL_COLOR_BUFFER_BIT);
+    glEnable(GL_DEPTH_TEST);
+
+    static int testTexutreIndex = AssetManager::GetMaterialIndex("P90_Mag");
+
+    for (int i = 0; i < renderData.playerCount; i++) {
+        Player* player = Game::GetPlayerByIndex(i);
+        ViewportInfo viewportInfo = RendererUtil::CreateViewportInfo(i, Game::GetSplitscreenMode(), gBuffer.GetWidth(), gBuffer.GetHeight());
+        SetViewport(viewportInfo);
+        p90MagSpecularShader.SetMat4("projection", player->GetProjectionMatrix());
+        p90MagSpecularShader.SetMat4("view", player->GetViewMatrix());
+        p90MagSpecularShader.SetVec3("viewPos", player->GetViewPos());
+        p90MagSpecularShader.SetInt("playerIndex", i);
+        for (SkinnedRenderItem& skinnedRenderItem : renderData.skinnedRenderItems[i]) {
+            SkinnedMesh* mesh = AssetManager::GetSkinnedMeshByIndex(skinnedRenderItem.originalMeshIndex);
+            if (mesh->name == "Magazine_low" || mesh->name == "Magazine_low2") {
+                p90MagSpecularShader.SetMat4("model", skinnedRenderItem.modelMatrix);
+                p90MagSpecularShader.SetInt("materialIndex", skinnedRenderItem.materialIndex);
+                p90MagSpecularShader.SetInt("materialIndex", testTexutreIndex);
+                glDrawElementsInstancedBaseVertex(GL_TRIANGLES, mesh->indexCount, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int) * mesh->baseIndex), 1, skinnedRenderItem.baseVertex);
+            }
+        }
+    }
+
+
+
+
+    // Composite that render back into the lighting texture
+    gBuffer.SetViewport();
+    ComputeShader& computeShader = OpenGLRenderer::g_shaders.p90Composite;
+    computeShader.Use();
+    glBindImageTexture(0, gBuffer.GetColorAttachmentHandleByName("FinalLighting"), 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA8);
+    glBindImageTexture(1, gBuffer.GetColorAttachmentHandleByName("P90MagSpecular"), 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA8);
+    glBindImageTexture(2, gBuffer.GetColorAttachmentHandleByName("P90MagDirectLighting"), 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA8);
+    glDispatchCompute(gBuffer.GetWidth() / 16, gBuffer.GetHeight() / 4, 1);
+
+
+
+
+
+
+    /*
+
+    // SEcond pass: composite one
+    attachments[0] = {
+    gBuffer.GetColorAttachmentSlotByName("FinalLighting") };
+    glDrawBuffers(1, attachments);
+    glBindVertexArray(OpenGLBackEnd::GetVertexDataVAO());
+    glBindBuffer(GL_ARRAY_BUFFER, OpenGLBackEnd::GetVertexDataVBO());
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, OpenGLBackEnd::GetVertexDataEBO());
+    glEnable(GL_DEPTH_TEST);
+
+
+
+    static int bulletBaseColorTextureIndex = AssetManager::GetTextureIndexByName("P90_Mag_ALB");
+    static int bulletNormalTextureIndex = AssetManager::GetTextureIndexByName("P90_Mag_NRM");
+    static int bulletRMATextureIndex = AssetManager::GetTextureIndexByName("P90_Mag_RMA");
+
+    p90BulletShader.Use();
+    p90BulletShader.SetInt("bulletBaseColorTextureIndex", bulletBaseColorTextureIndex);
+    p90BulletShader.SetInt("bulletNormalTextureIndex", bulletNormalTextureIndex);
+    p90BulletShader.SetInt("bulletRMATextureIndex", bulletRMATextureIndex);
+
+    for (int i = 0; i < renderData.lights.size(); i++) {
+        glActiveTexture(GL_TEXTURE6 + i);
+        glBindTexture(GL_TEXTURE_CUBE_MAP, OpenGLRenderer::_shadowMaps[i]._depthTexture);
+    }
+
+    */
+
 
 }
 
@@ -1740,12 +1981,12 @@ void OutlinePass(RenderData& renderData) {
 
     // Draw CSG vertices
     if (Editor::ObjectIsSelected()) {
-        CubeVolume* cubeVolume = nullptr;
+        CSGShape* cubeVolume = nullptr;
         if (Editor::GetSelectedObjectType() == PhysicsObjectType::CSG_OBJECT_ADDITIVE) {
-            cubeVolume = &Scene::g_cubeVolumesAdditive[Editor::GetSelectedObjectIndex()];
+            cubeVolume = &Scene::g_csgAdditiveShapes[Editor::GetSelectedObjectIndex()];
         }
         if (Editor::GetSelectedObjectType() == PhysicsObjectType::CSG_OBJECT_SUBTRACTIVE) {
-            cubeVolume = &Scene::g_cubeVolumesSubtractive[Editor::GetSelectedObjectIndex()];
+            cubeVolume = &Scene::g_csgSubtractiveShapes[Editor::GetSelectedObjectIndex()];
         }
         if (cubeVolume) {
             static int meshIndex = AssetManager::GetModelByIndex(AssetManager::GetModelIndexByName("Cube"))->GetMeshIndices()[0];
@@ -1782,7 +2023,7 @@ void CSGSubtractivePass() {
 
     std::vector<glm::mat4> planeTransforms;
 
-    for (CubeVolume& cubeVolume : Scene::g_cubeVolumesSubtractive) {
+    for (CSGShape& cubeVolume : Scene::g_csgSubtractiveShapes) {
 
         // cube test
         /*
@@ -1914,7 +2155,7 @@ void CSGSubtractivePass() {
 
 
 
-    for (CubeVolume& cubeVolume : Scene::g_cubeVolumesSubtractive) {
+    for (CSGShape& cubeVolume : Scene::g_csgSubtractiveShapes) {
 
         std::vector<Vertex> vertices;
 
@@ -2292,4 +2533,12 @@ void OpenGLRenderer::ProbeGridDebugPass() {
 
     // glDrawElementsInstancedBaseVertex(GL_TRIANGLES, cubeMesh->indexCount, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int) * cubeMesh->baseIndex), 1, cubeMesh->baseVertex);
 
+}
+
+
+void OpenGLRenderer::QueryAvaliability() {
+    GLint maxLayers;
+    glGetIntegerv(GL_MAX_ARRAY_TEXTURE_LAYERS, &maxLayers);
+    std::cout << "GL_MAX_ARRAY_TEXTURE_LAYERS: " << maxLayers << "\n";
+    std::cout << "Max cubemaps in cubemap array: " << (maxLayers / 6) << "\n";
 }

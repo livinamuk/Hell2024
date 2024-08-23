@@ -373,7 +373,7 @@ float map(float value, float min1, float max1, float min2, float max2) {
 
 void main() {
 
-	//return;
+//	return;
 
 	uint x = gl_GlobalInvocationID.x;
 	uint y = gl_GlobalInvocationID.y;

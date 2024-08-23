@@ -3,42 +3,10 @@
 #include "../Renderer/RendererCommon.h"
 #include "../Physics/RigidStatic.hpp"
 #include <span>
+#include "CSGCommon.h"
 
 static constexpr csg::volume_t AIR = 0;
 static constexpr csg::volume_t SOLID = 1;
-
-enum brush_type_t {
-    AIR_BRUSH,
-    SOLID_BRUSH
-};
-
-struct cube_brush_userdata_t {
-public:
-    void set_parentIndex(uint32_t index);
-    void set_brush_type(brush_type_t type);
-    brush_type_t get_brush_type();
-    void set_transform(const glm::mat4& transform);
-    const glm::mat4& get_transform();
-    void update_display_list();
-    cube_brush_userdata_t(csg::brush_t* brush);
-
-    std::vector<CSGVertex> m_vertices;
-    glm::vec3 m_color;
-    glm::vec3 m_origin;
-    uint32_t m_index;
-
-private:
-    glm::mat4 transform;
-    csg::brush_t* brush;
-    brush_type_t type;
-};
-
-enum class CSGType {
-    ADDITIVE,
-    SUBTRACTIVE,
-    DOOR,
-    WINDOW
-};
 
 struct CSGObject {
 

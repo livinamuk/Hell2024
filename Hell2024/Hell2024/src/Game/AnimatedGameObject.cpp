@@ -156,7 +156,7 @@ void AnimatedGameObject::PauseAnimation() {
     _animationPaused = true;
 }
 
-void AnimatedGameObject::SetMeshMaterialByMeshName(std::string meshName, std::string materialName) {
+void AnimatedGameObject::SetMeshMaterialByMeshName(std::string meshName, const char* materialName) {
     if (!_skinnedModel) {
         return;
     }
@@ -167,7 +167,7 @@ void AnimatedGameObject::SetMeshMaterialByMeshName(std::string meshName, std::st
     }
 }
 
-void AnimatedGameObject::SetMeshMaterialByMeshIndex(int meshIndex, std::string materialName) {
+void AnimatedGameObject::SetMeshMaterialByMeshIndex(int meshIndex, const char* materialName) {
     if (!_skinnedModel) {
         return;
     }
@@ -219,12 +219,12 @@ glm::mat4 AnimatedGameObject::GetJointWorldTransformByName(const char* jointName
 
 
 
-void AnimatedGameObject::SetAllMeshMaterials(std::string materialName) {
+void AnimatedGameObject::SetAllMeshMaterials(const char* materialName) {
     if (!_skinnedModel) {
         return;
     }
     for (MeshRenderingEntry& meshRenderingEntry : _meshRenderingEntries) {
-        meshRenderingEntry.materialIndex =AssetManager::GetMaterialIndex(materialName);
+        meshRenderingEntry.materialIndex = AssetManager::GetMaterialIndex(materialName);
     }
 }
 
@@ -235,7 +235,7 @@ glm::mat4 AnimatedGameObject::GetBoneWorldMatrixFromBoneName(std::string name) {
         }
     }
     std::cout << "GetBoneWorldMatrixFromBoneName() failed to find name " << name << "\n";
-    return glm::mat4();
+    return glm::mat4(1);
 }
 
 void AnimatedGameObject::SetAnimationModeToBindPose() {

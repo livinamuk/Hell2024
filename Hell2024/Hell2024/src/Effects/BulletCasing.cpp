@@ -6,76 +6,58 @@
 #define BULLET_CASING_LIFETIME 2.0f
 
 void BulletCasing::CleanUp() {
-    if (rigidBody) {
-        if (rigidBody->userData) {
-            delete rigidBody->userData;
-        }
-        Physics::GetScene()->removeActor(*rigidBody);
-        rigidBody->release();
-        rigidBody = nullptr;
-    }
+    Physics::Destroy(m_rigidBody);
+    Physics::Destroy(m_shape);
 }
 
-glm::mat4  BulletCasing::GetModelMatrix() {
-    return modelMatrix;
+glm::mat4 BulletCasing::GetModelMatrix() {
+    return m_modelMatrix;
 }
 
 void BulletCasing::Update(float deltaTime) {
 
+    m_lifeTime += deltaTime;
+
     // These don't have collision right away because it fucks with the muzzle flash
-    if (rigidBody && !collisionsEnabled && lifeTime > 0.0005) {
+    if (m_rigidBody && !m_collisionsEnabled && m_lifeTime > 0.0005) {
         PxShape* shape;
-        rigidBody->getShapes(&shape, 1);
+        m_rigidBody->getShapes(&shape, 1);
         PxFilterData filterData = shape->getQueryFilterData();
-       // filterData.word0 = RaycastGroup::RAYCAST_DISABLED;
-       // filterData.word1 = CollisionGroup::BULLET_CASING;
         filterData.word2 = CollisionGroup::ENVIROMENT_OBSTACLE;
         shape->setQueryFilterData(filterData);
         shape->setSimulationFilterData(filterData);
-        collisionsEnabled = true;
-
-        // this is kinda broken
-
-       // std::cout << "set\n";
-
-
-       /* PhysicsFilterData filterData;
-        filterData.raycastGroup = RaycastGroup::RAYCAST_DISABLED;
-        filterData.collisionGroup = CollisionGroup::BULLET_CASING;
-        filterData.collidesWith = CollisionGroup::ENVIROMENT_OBSTACLE;
-        filterData.collidesWith = CollisionGroup::NO_COLLISION;
-
-        PxFilterData filterData;
-        filterData.word0 = (PxU32)physicsFilterData.raycastGroup;
-        filterData.word1 = (PxU32)physicsFilterData.collisionGroup;
-        filterData.word2 = (PxU32)physicsFilterData.collidesWith;
-        shape->setQueryFilterData(filterData);       // ray casts
-        shape->setSimulationFilterData(filterData);  // collisions*/
+        m_collisionsEnabled = true;
     }
 
 
-   // if (lifeTime < BULLET_CASING_LIFETIME) {
-        lifeTime += deltaTime;
+    if (m_lifeTime < BULLET_CASING_LIFETIME) {
         Transform localTransform;
         localTransform.scale *= glm::vec3(2.0f);
-        modelMatrix = Util::PxMat44ToGlmMat4(rigidBody->getGlobalPose()) * localTransform.to_mat4();
+        m_modelMatrix = Util::PxMat44ToGlmMat4(m_rigidBody->getGlobalPose()) * localTransform.to_mat4();
+    }
+    // Remove the physics object
+    else {
+        /*if (!m_hasBeenRemoved) {
+            Physics::Destroy(m_shape);
+            Physics::Destroy(m_rigidBody);
+            std::cout << "cleaned up\n";
+            m_hasBeenRemoved = true;
+        }*/
+    }
 
-        // Kill it
-        if (rigidBody && lifeTime >= BULLET_CASING_LIFETIME) {
-        //    rigidBody->release();
-        }
-  //  }
-    audioDelay = std::max(audioDelay - deltaTime, 0.0f);
+
+    m_audioDelay = std::max(m_audioDelay - deltaTime, 0.0f);
 }
 
 void  BulletCasing::CollisionResponse() {
 
-    if (audioDelay == 0) {
+    if (m_audioDelay == 0) {
         Audio::PlayAudio("BulletCasingBounce.wav", Util::RandomFloat(0.1f, 0.2f));
     }
-    audioDelay = 0.1f;
+    m_audioDelay = 0.1f;
 }
 
+/*
 bool BulletCasing::HasActivePhysics() {
     return (lifeTime < BULLET_CASING_LIFETIME);
-}
+}*/

@@ -452,6 +452,57 @@ namespace WeaponManager {
         p90.meshMaterials["FireSelector_low"] = "P90_Main";
         p90.meshMaterials["MagRelease_low"] = "P90_Main"; // could be wrong
         p90.meshMaterials["Velcro_Clip"] = "P90_Sling";
+        p90.meshMaterials["Revolved.001"] = "P90_Mag";
+        p90.meshMaterials["Revolved.002"] = "P90_Mag";
+        p90.meshMaterials["Revolved.003"] = "P90_Mag";
+        p90.meshMaterials["Revolved.004"] = "P90_Mag";
+        p90.meshMaterials["Revolved.005"] = "P90_Mag";
+        p90.meshMaterials["Revolved.006"] = "P90_Mag";
+        p90.meshMaterials["Revolved.007"] = "P90_Mag";
+        p90.meshMaterials["Revolved.008"] = "P90_Mag";
+        p90.meshMaterials["Revolved.009"] = "P90_Mag";
+        p90.meshMaterials["Revolved.010"] = "P90_Mag";
+        p90.meshMaterials["Revolved.011"] = "P90_Mag";
+        p90.meshMaterials["Revolved.012"] = "P90_Mag";
+        p90.meshMaterials["Revolved.013"] = "P90_Mag";
+        p90.meshMaterials["Revolved.014"] = "P90_Mag";
+        p90.meshMaterials["Revolved.015"] = "P90_Mag";
+        p90.meshMaterials["Revolved.016"] = "P90_Mag";
+        p90.meshMaterials["Revolved.017"] = "P90_Mag";
+        p90.meshMaterials["Revolved.018"] = "P90_Mag";
+        p90.meshMaterials["Revolved.019"] = "P90_Mag";
+        p90.meshMaterials["Revolved.022"] = "P90_Mag";
+        p90.meshMaterials["Revolved.023"] = "P90_Mag";
+        p90.meshMaterials["Revolved.024"] = "P90_Mag";
+        p90.meshMaterials["Revolved.025"] = "P90_Mag";
+        p90.meshMaterials["Revolved.026"] = "P90_Mag";
+        p90.meshMaterials["Revolved.027"] = "P90_Mag";
+        p90.meshMaterials["Revolved.028"] = "P90_Mag";
+        p90.meshMaterials["Revolved.029"] = "P90_Mag";
+        p90.meshMaterials["Revolved.030"] = "P90_Mag";
+        p90.meshMaterials["Revolved.031"] = "P90_Mag";
+        p90.meshMaterials["Revolved.032"] = "P90_Mag";
+        p90.meshMaterials["Revolved.033"] = "P90_Mag";
+        p90.meshMaterials["Revolved.034"] = "P90_Mag";
+        p90.meshMaterials["Revolved.035"] = "P90_Mag";
+        p90.meshMaterials["Revolved.036"] = "P90_Mag";
+        p90.meshMaterials["Revolved.037"] = "P90_Mag";
+        p90.meshMaterials["Revolved.038"] = "P90_Mag";
+        p90.meshMaterials["Revolved.039"] = "P90_Mag";
+        p90.meshMaterials["Revolved.040"] = "P90_Mag";
+        p90.meshMaterials["Revolved.041"] = "P90_Mag";
+        p90.meshMaterials["Revolved.042"] = "P90_Mag";
+        p90.meshMaterials["Revolved.043"] = "P90_Mag";
+        p90.meshMaterials["Revolved.044"] = "P90_Mag";
+        p90.meshMaterials["Revolved.045"] = "P90_Mag";
+        p90.meshMaterials["Revolved.046"] = "P90_Mag";
+        p90.meshMaterials["Revolved.047"] = "P90_Mag";
+        p90.meshMaterials["Revolved.048"] = "P90_Mag";
+        p90.meshMaterials["Revolved.049"] = "P90_Mag";
+        p90.meshMaterials["Revolved.050"] = "P90_Mag";
+        p90.meshMaterials["Revolved.051"] = "P90_Mag";
+        p90.meshMaterials["Revolved.052"] = "P90_Mag";
+        p90.meshMaterials["Revolved.053"] = "P90_Mag";
         p90.ammoType = "AKS74U";
         p90.magSize = 50;
         //p90.muzzleFlashBoneName = "Weapon";
@@ -459,11 +510,11 @@ namespace WeaponManager {
         p90.muzzleFlashOffset = glm::vec3(0, 0.002, 40.9207f);
         p90.casingEjectionBoneName = "SlideCatch";
         p90.casingEjectionOffset = glm::vec3(0, 0, 0);
-        p90.animationCancelPercentages.fire = 10.0f;
-        p90.animationCancelPercentages.reload = 80.0f;
+        p90.animationCancelPercentages.fire = 15.0f;
+        p90.animationCancelPercentages.reload = 95.0f;
         p90.animationCancelPercentages.reloadFromEmpty = 95.0f;
         p90.animationCancelPercentages.draw = 75.0f;
-        p90.animationCancelPercentages.adsFire = 22.0f;
+        p90.animationCancelPercentages.adsFire = 10.0;
         p90.audioFiles.fire.push_back("P90_Fire0.wav");
         p90.audioFiles.fire.push_back("P90_Fire1.wav");
         p90.audioFiles.fire.push_back("P90_Fire2.wav");
@@ -500,6 +551,13 @@ namespace WeaponManager {
         p90.pickUpMeshMaterials["MagRelease_low"] = "P90_Main"; // could be wrong
         p90.pickUpMeshMaterials["Velcro_Clip"] = "P90_Sling";
         p90.pickupConvexMeshModelName = "P90_ConvexMesh";
+        p90.animationNames.adsIn = "P90_ADS_In";
+        p90.animationNames.adsOut = "P90_ADS_Out";
+        p90.animationNames.adsIdle = "P90_ADS_Idle";
+        p90.animationNames.adsWalk = "P90_ADS_Idle";
+        p90.animationNames.adsFire.push_back("P90_ADS_Fire0");
+        p90.animationNames.adsFire.push_back("P90_ADS_Fire1");
+        p90.animationNames.adsFire.push_back("P90_ADS_Fire2");
 
 
 
