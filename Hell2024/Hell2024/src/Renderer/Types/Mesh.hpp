@@ -12,8 +12,10 @@ struct Mesh {
     uint32_t vertexCount = 0;
     uint32_t indexCount = 0;
 
-    glm::vec3 aabbMin;
-    glm::vec3 aabbMax;
+    glm::vec3 aabbMin = glm::vec3(0);
+    glm::vec3 aabbMax = glm::vec3(0);
+    glm::vec3 extents = glm::vec3(0);
+    float boundingSphereRadius = 0;
 
     AccelerationStructure accelerationStructure;
 

@@ -28,11 +28,12 @@ layout(std430, binding = 12) readonly buffer renderItems {
 
 uniform mat4 shadowMatrices[6];
 uniform int faceIndex;
+uniform int baseInstance;
 
 out vec3 FragPos;
 
 void main() {
-	mat4 model = RenderItems[gl_InstanceID + gl_BaseInstance].modelMatrix;
+	mat4 model = RenderItems[gl_InstanceID + gl_BaseInstance + baseInstance].modelMatrix;
 	vec4 worldPos = model * vec4(aPos, 1.0);
     FragPos = worldPos.xyz;
     gl_Position = shadowMatrices[faceIndex] * worldPos;

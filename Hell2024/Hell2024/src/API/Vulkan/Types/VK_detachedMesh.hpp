@@ -1,8 +1,8 @@
 #pragma once
+#include "HellCommon.h"
 #include "vk_allocation.hpp"
 #include <vector>
 #include "../VK_backEnd.h"
-#include "../../../Renderer/RendererCommon.h"
 
 struct VulkanDetachedMesh {
 

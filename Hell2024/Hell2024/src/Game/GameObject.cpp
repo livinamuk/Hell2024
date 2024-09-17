@@ -367,14 +367,14 @@ void GameObject::Update(float deltaTime) {
         // Rewrite this to work per mesh
         _aabbPreviousFrame = _aabb;
         std::vector<glm::vec3> modelCorners = {
-            glm::vec3(model->aabbMin.x, model->aabbMin.y, model->aabbMin.z),
-            glm::vec3(model->aabbMax.x, model->aabbMin.y, model->aabbMin.z),
-            glm::vec3(model->aabbMin.x, model->aabbMax.y, model->aabbMin.z),
-            glm::vec3(model->aabbMax.x, model->aabbMax.y, model->aabbMin.z),
-            glm::vec3(model->aabbMin.x, model->aabbMin.y, model->aabbMax.z),
-            glm::vec3(model->aabbMax.x, model->aabbMin.y, model->aabbMax.z),
-            glm::vec3(model->aabbMin.x, model->aabbMax.y, model->aabbMax.z),
-            glm::vec3(model->aabbMax.x, model->aabbMax.y, model->aabbMax.z)
+            glm::vec3(model->m_aabbMin.x, model->m_aabbMin.y, model->m_aabbMin.z),
+            glm::vec3(model->m_aabbMax.x, model->m_aabbMin.y, model->m_aabbMin.z),
+            glm::vec3(model->m_aabbMin.x, model->m_aabbMax.y, model->m_aabbMin.z),
+            glm::vec3(model->m_aabbMax.x, model->m_aabbMax.y, model->m_aabbMin.z),
+            glm::vec3(model->m_aabbMin.x, model->m_aabbMin.y, model->m_aabbMax.z),
+            glm::vec3(model->m_aabbMax.x, model->m_aabbMin.y, model->m_aabbMax.z),
+            glm::vec3(model->m_aabbMin.x, model->m_aabbMax.y, model->m_aabbMax.z),
+            glm::vec3(model->m_aabbMax.x, model->m_aabbMax.y, model->m_aabbMax.z)
         };
         glm::vec3 worldMinBounds = glm::vec3(std::numeric_limits<float>::max());
         glm::vec3 worldMaxBounds = glm::vec3(std::numeric_limits<float>::lowest());
@@ -713,7 +713,6 @@ void GameObject::CleanUp() {
 }
 
 std::vector<Vertex> GameObject::GetAABBVertices() {
-
     glm::vec3 color = YELLOW;
     if (HasMovedSinceLastFrame()) {
         color = RED;

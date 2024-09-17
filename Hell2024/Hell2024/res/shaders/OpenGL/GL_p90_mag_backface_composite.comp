@@ -1,0 +1,40 @@
+#version 450 core
+
+layout (local_size_x = 16, local_size_y = 4, local_size_z = 1) in;
+layout(rgba8, binding = 0) uniform image2D finalLightingTexture;
+layout(rgba8, binding = 1) uniform image2D p90MagSpecularTexture;
+
+void main() {
+
+	ivec2 texCoord = ivec2(gl_GlobalInvocationID.xy);
+
+    vec3 finalLightingColor = imageLoad(finalLightingTexture, texCoord).rgb;
+    vec4 p90SpecularColor = imageLoad(p90MagSpecularTexture, texCoord);
+
+	vec3 color = finalLightingColor + p90SpecularColor.rgb;
+
+	//if (p90SpecularColor.rgb != vec3(0,0,0)) {
+	//	color = p90SpecularColor.rgb;
+	//}
+
+	//vec3 color = finalLightingColor;
+	//if (p90DirectLightingColor.a == 1.0) {
+
+		// old approach
+		// color += mix(p90DirectLightingColor.rgb, color, 0.5);
+		// color += p90DirectLightingColor.rgb * 0.1;
+
+		// current approach
+	//color = mix(p90DirectLightingColor.rgb, color, 0.95);
+		//color *= vec3(0.922, 0.914, 0.875) ;
+
+		//color += vec3(p90SpecularColor.rgb);
+		//imageStore(finalLightingTexture, texCoord, vec4(color, 1));
+	//}
+
+	//vec3 color = finalLightingColor;
+	//color *= vec3(1,0,0);
+	imageStore(finalLightingTexture, texCoord, vec4(color.rgb, 1));
+	//imageStore(finalLightingTexture, texCoord, vec4(p90SpecularColor.rgb, 1));
+}
+

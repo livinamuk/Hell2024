@@ -1,10 +1,10 @@
 #pragma once
+#include "HellCommon.h"
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <Compressonator.h>
 #include <string>
 #include <memory>
-#include "../../../Common.h"
 
 struct OpenGLTexture {
 
@@ -15,7 +15,7 @@ struct OpenGLTexture {
     void Bind(unsigned int slot);
     bool Load(const std::string filepath);
     bool Bake();
-    void UploadToGPU(void* data, CMP_Texture* cmpTexture, int width, int height, int channelCount);
+    //void UploadToGPU(void* data, CMP_Texture* cmpTexture, int width, int height, int channelCount);
     bool IsBaked();
     int GetWidth();
     int GetHeight();
@@ -30,7 +30,7 @@ private:
 
     bool m_compressed = false;
     //unsigned char* _data = nullptr;
-    float* _floatData = nullptr;
+    //float* _floatData = nullptr;
 
     CompressedTextureData m_compressedTextureData;
 
@@ -39,5 +39,5 @@ private:
     int _NumOfChannels = 0;
     int _width = 0;
     int _height = 0;
-    bool _baked = false;
+    //bool _baked = false;
 };

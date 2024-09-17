@@ -62,7 +62,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>vendor\bvh\include;vendor\nlohmann_json\include;vendor\lz4\include;vendor\VulkanMemoryAllocator\include;vendor\Vulkan\include;vendor\tinyexr;vendor\compressonator\include;vendor\tinycsg\include;vendor\tracy\public;vendor\tinyobj;vendor\GLFW\include;vendor\glm;vendor\glad\include;vendor\stb_image;vendor\fmod\include;vendor\assimp\include;vendor\rapidjson\include;vendor\physx\include;vendor\thread_pool\include;vendor\VkBootstrap</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>src\Common;vendor\bvh\include;vendor\nlohmann_json\include;vendor\lz4\include;vendor\VulkanMemoryAllocator\include;vendor\Vulkan\include;vendor\tinyexr;vendor\compressonator\include;vendor\tinycsg\include;vendor\tracy\public;vendor\tinyobj;vendor\GLFW\include;vendor\glm;vendor\glad\include;vendor\stb_image;vendor\fmod\include;vendor\assimp\include;vendor\rapidjson\include;vendor\physx\include;vendor\thread_pool\include;vendor\VkBootstrap</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
@@ -98,7 +98,7 @@ copy /Y "$(ProjectDir)vendor\dll_debug\PVDRuntime_64.dll" "$(TargetDir)PVDRuntim
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;TRACY_ENABLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>vendor\bvh\include;vendor\gli\include;vendor\recast\include;vendor\nlohmann_json\include;vendor\lz4\include;vendor\VkBootstrap;vendor\VulkanMemoryAllocator\include;vendor\Vulkan\include;vendor\tinyexr;vendor\compressonator\include;vendor\tracy\public;vendor\tinyobj;vendor\GLFW\include;vendor\glm;vendor\glad\include;vendor\stb_image;vendor\fmod\include;vendor\assimp\include;vendor\rapidjson\include;vendor\physx\include;vendor\thread_pool\include;vendor\tinycsg\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>src\Common;vendor\bvh\include;vendor\gli\include;vendor\recast\include;vendor\nlohmann_json\include;vendor\lz4\include;vendor\VkBootstrap;vendor\VulkanMemoryAllocator\include;vendor\Vulkan\include;vendor\tinyexr;vendor\compressonator\include;vendor\tracy\public;vendor\tinyobj;vendor\GLFW\include;vendor\glm;vendor\glad\include;vendor\stb_image;vendor\fmod\include;vendor\assimp\include;vendor\rapidjson\include;vendor\physx\include;vendor\thread_pool\include;vendor\tinycsg\include</AdditionalIncludeDirectories>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
@@ -135,11 +135,13 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="res\shaders\OpenGL\test.cpp" />
+    <ClCompile Include="src\API\OpenGL\Types\GL_CubeMap2.cpp" />
+    <ClCompile Include="src\API\OpenGL\Types\GL_shadowMapArray.cpp" />
     <ClCompile Include="src\API\OpenGL\Types\GL_cubemapTexutre.cpp" />
     <ClCompile Include="src\API\OpenGL\Types\GL_texture.cpp" />
     <ClCompile Include="src\API\Vulkan\Types\VK_texture.cpp" />
     <ClCompile Include="src\API\Vulkan\Types\VK_texture3D.cpp" />
-    <ClCompile Include="src\Core\AssetLoader.cpp" />
+    <ClCompile Include="src\Common\RapidHotload.cpp" />
     <ClCompile Include="src\Core\AssetManager.cpp" />
     <ClCompile Include="src\Core\DebugMenu.cpp" />
     <ClCompile Include="src\Editor\Brush.cpp" />
@@ -157,6 +159,8 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <ClCompile Include="src\Renderer\Raytracing\Raytracing.cpp" />
     <ClCompile Include="src\Renderer\RendererStorage.cpp" />
     <ClCompile Include="src\Renderer\Renderer_Debug.cpp" />
+    <ClCompile Include="src\Renderer\RendererData.cpp" />
+    <ClCompile Include="src\Renderer\Types\HeightMap.cpp" />
     <ClCompile Include="src\Renderer\Types\VertexBuffer.cpp" />
     <ClCompile Include="src\Renderer\GlobalIllumination.cpp" />
     <ClCompile Include="src\Renderer\Types\CubemapTexutre.cpp" />
@@ -245,9 +249,10 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <ClCompile Include="vendor\VkBootstrap\VkBootstrap.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\API\OpenGL\Types\GL_Cubemap2.h" />
+    <ClInclude Include="src\API\OpenGL\Types\GL_shadowMapArray.h" />
     <ClInclude Include="src\API\OpenGL\Types\GL_cubemapTexture.h" />
     <ClInclude Include="src\API\OpenGL\Types\GL_detachedMesh.hpp" />
-    <ClInclude Include="src\API\OpenGL\Types\GL_ShadowMap2.hpp" />
     <ClInclude Include="src\API\OpenGL\Types\GL_ssbo.hpp" />
     <ClInclude Include="src\API\OpenGL\Types\GL_texture.h" />
     <ClInclude Include="src\API\OpenGL\Types\GL_vertexBuffer.hpp" />
@@ -265,12 +270,19 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <ClInclude Include="src\API\Vulkan\Types\VK_vertexBuffer.hpp" />
     <ClInclude Include="src\API\Vulkan\VK_common.h" />
     <ClInclude Include="src\API\Vulkan\Vk_util.hpp" />
-    <ClInclude Include="src\Core\AssetLoader.h" />
+    <ClInclude Include="src\Common\Defines.h" />
+    <ClInclude Include="src\Common\Enums.h" />
+    <ClInclude Include="src\Common\RapidHotload.h" />
+    <ClInclude Include="src\Common\Types.h" />
     <ClInclude Include="src\Core\JSON.hpp" />
     <ClInclude Include="src\Core\CreateInfo.hpp" />
     <ClInclude Include="src\Editor\Brush.h" />
     <ClInclude Include="src\Editor\CSGShape.h" />
     <ClInclude Include="src\Editor\Editor.h" />
+    <ClInclude Include="src\Common\HellCommon.h" />
+    <ClInclude Include="src\Renderer\RendererData.h" />
+    <ClInclude Include="src\Renderer\Types\HeightMap.h" />
+    <ClInclude Include="src\Types\Enums.h" />
     <ClInclude Include="src\Game\Dobermann.h" />
     <ClInclude Include="src\Pathfinding\Pathfinding2.h" />
     <ClInclude Include="src\Game\WeaponManager.h" />
@@ -278,7 +290,6 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <ClInclude Include="src\Math\Frustum.hpp" />
     <ClInclude Include="src\Math\Raycasting.hpp" />
     <ClInclude Include="src\Pathfinding\NavMesh.h" />
-    <ClInclude Include="src\Physics\Renderer.h" />
     <ClInclude Include="src\Math\BVH.h" />
     <ClInclude Include="src\Renderer\Raytracing\BLAS.hpp" />
     <ClInclude Include="src\Renderer\Raytracing\Raytracing.h" />
@@ -290,7 +301,6 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <ClInclude Include="src\Core\AssetManager.h" />
     <ClInclude Include="src\Config.hpp" />
     <ClInclude Include="src\Core\DebugMenu.h" />
-    <ClInclude Include="src\Common.h" />
     <ClInclude Include="src\File\File.hpp" />
     <ClInclude Include="src\Renderer\GlobalIllumination.h" />
     <ClInclude Include="src\Renderer\PointCloud.h" />
@@ -338,7 +348,7 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <ClInclude Include="src\Effects\BulletHoleDecal.hpp" />
     <ClInclude Include="src\Effects\MuzzleFlash.h" />
     <ClInclude Include="src\Engine.h" />
-    <ClInclude Include="src\Math.h" />
+    <ClInclude Include="src\Math\Types.h" />
     <ClInclude Include="src\Physics\RigidBody.hpp" />
     <ClInclude Include="src\Physics\RigidStatic.hpp" />
     <ClInclude Include="vendor\DDS\DDS_Helpers.h" />
@@ -348,7 +358,7 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <ClInclude Include="src\API\OpenGL\Types\GL_frameBuffer.hpp" />
     <ClInclude Include="src\API\OpenGL\Types\GL_presentBuffer.h" />
     <ClInclude Include="src\BackEnd\BackEnd.h" />
-    <ClInclude Include="src\Renderer\RendererCommon.h" />
+    <ClInclude Include="src\Common\RendererCommon.h" />
     <ClInclude Include="src\API\OpenGL\Types\GL_shader.h" />
     <ClInclude Include="src\API\OpenGL\Types\GL_shadowMap.h" />
     <ClInclude Include="src\Types\Texture.h" />
@@ -405,8 +415,11 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <ClInclude Include="vendor\VulkanMemoryAllocator\include\vk_mem_alloc.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="res\shaders\OpenGL\GL_bloodDecals.frag" />
-    <None Include="res\shaders\OpenGL\GL_bloodDecals.vert" />
+    <None Include="res\shaders\OpenGL\GL_compute_test.comp" />
+    <None Include="res\shaders\OpenGL\GL_debug_light_volume_aabb.frag" />
+    <None Include="res\shaders\OpenGL\GL_debug_light_volume_aabb.vert" />
+    <None Include="res\shaders\OpenGL\GL_decals_blood.frag" />
+    <None Include="res\shaders\OpenGL\GL_decals_blood.vert" />
     <None Include="res\shaders\OpenGL\GL_bloodVAT.frag" />
     <None Include="res\shaders\OpenGL\GL_bloodVAT.vert" />
     <None Include="res\shaders\OpenGL\GL_bloom.comp" />
@@ -418,8 +431,8 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <None Include="res\shaders\OpenGL\GL_csg_test.frag" />
     <None Include="res\shaders\OpenGL\GL_csg_test.vert" />
     <None Include="res\shaders\OpenGL\GL_debug_circle.comp" />
-    <None Include="res\shaders\OpenGL\GL_decals.frag" />
-    <None Include="res\shaders\OpenGL\GL_decals.vert" />
+    <None Include="res\shaders\OpenGL\GL_decals_bullet.frag" />
+    <None Include="res\shaders\OpenGL\GL_decals_bullet.vert" />
     <None Include="res\shaders\OpenGL\GL_emissiveComposite.comp" />
     <None Include="res\shaders\OpenGL\GL_flipBook.frag" />
     <None Include="res\shaders\OpenGL\GL_flipBook.vert" />
@@ -428,17 +441,24 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <None Include="res\shaders\OpenGL\GL_glass.frag" />
     <None Include="res\shaders\OpenGL\GL_glass.vert" />
     <None Include="res\shaders\OpenGL\GL_glassComposite.comp" />
+    <None Include="res\shaders\OpenGL\GL_heightmap.frag" />
+    <None Include="res\shaders\OpenGL\GL_heightmap.vert" />
+    <None Include="res\shaders\OpenGL\GL_lightvolume_prepass.frag" />
+    <None Include="res\shaders\OpenGL\GL_lightvolume_prepass.geom" />
+    <None Include="res\shaders\OpenGL\GL_lightvolume_prepass.vert" />
     <None Include="res\shaders\OpenGL\GL_lighting.frag" />
     <None Include="res\shaders\OpenGL\GL_lighting.vert" />
+    <None Include="res\shaders\OpenGL\GL_lightvolume_prepass_aabb.comp" />
+    <None Include="res\shaders\OpenGL\GL_light_culling.comp" />
+    <None Include="res\shaders\OpenGL\GL_light_volume_clear.comp" />
     <None Include="res\shaders\OpenGL\GL_outline.frag" />
     <None Include="res\shaders\OpenGL\GL_outline.vert" />
-    <None Include="res\shaders\OpenGL\GL_p90_bullets.frag" />
-    <None Include="res\shaders\OpenGL\GL_p90_bullets.vert" />
-    <None Include="res\shaders\OpenGL\GL_p90_composite.comp" />
-    <None Include="res\shaders\OpenGL\GL_p90_mag.frag" />
-    <None Include="res\shaders\OpenGL\GL_p90_mag.vert" />
-    <None Include="res\shaders\OpenGL\GL_p90_mag_specular.frag" />
-    <None Include="res\shaders\OpenGL\GL_p90_mag_specular.vert" />
+    <None Include="res\shaders\OpenGL\GL_p90_mag_backface_composite.comp" />
+    <None Include="res\shaders\OpenGL\GL_p90_mag_backface_lighting.frag" />
+    <None Include="res\shaders\OpenGL\GL_p90_mag_backface_lighting.vert" />
+    <None Include="res\shaders\OpenGL\GL_p90_mag_frontface_composite.comp" />
+    <None Include="res\shaders\OpenGL\GL_p90_mag_frontface_lighting.frag" />
+    <None Include="res\shaders\OpenGL\GL_p90_mag_frontface_lighting.vert" />
     <None Include="res\shaders\OpenGL\GL_postProcessing.comp" />
     <None Include="res\shaders\OpenGL\GL_probe_lighting.comp" />
     <None Include="res\shaders\OpenGL\GL_raytracing_test.comp" />
@@ -447,8 +467,8 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <None Include="res\shaders\OpenGL\GL_shadowMap.vert" />
     <None Include="res\shaders\OpenGL\GL_shadowMap_csg.frag" />
     <None Include="res\shaders\OpenGL\GL_shadowMap_csg.vert" />
-    <None Include="res\shaders\OpenGL\GL_triangles_2D.frag" />
-    <None Include="res\shaders\OpenGL\GL_triangles_2D.vert" />
+    <None Include="res\shaders\OpenGL\GL_debug_solid_color_2D.frag" />
+    <None Include="res\shaders\OpenGL\GL_debug_solid_color_2D.vert" />
     <None Include="res\shaders\OpenGL\GL_triangles_3D.frag" />
     <None Include="res\shaders\OpenGL\GL_triangles_3D.vert" />
     <None Include="res\shaders\OpenGL_OLD\animated_quad.frag" />

@@ -1,17 +1,39 @@
 #include "Texture.h"
 #include "../../BackEnd/BackEnd.h"
+#include "../../Util.hpp"
 
-void Texture::Load(const std::string filepath) {
-    if (BackEnd::GetAPI() == API::OPENGL) {
-        glTexture.Load(filepath);
-        m_loadingComplete = true;
+Texture::Texture(std::string fullpath) {
+    m_fullPath = fullpath;
+    m_fileName = Util::GetFilename(m_fullPath);
+    m_fileType = Util::GetFileInfo(m_fullPath).filetype;
+}
+
+void Texture::Load() {
+    if (m_loadingState == LoadingState::LOADING_FROM_DISK) {
+        for (int i = 0; i < 100; i++) {
+            //std::cout << "ATTENTION!!!! This happened and should never. Your async code is fucked! " << m_fullPath << "\n";
+            //
+        }
         return;
+    }
+    m_loadingState = LoadingState::LOADING_FROM_DISK;
+    if (BackEnd::GetAPI() == API::OPENGL) {
+        glTexture.Load(m_fullPath);
     }
     else if (BackEnd::GetAPI() == API::VULKAN) {
-        vkTexture.Load(filepath);
-        m_loadingComplete = true;
-        return;
+        vkTexture.Load(m_fullPath);
     }
+    m_loadingState = LoadingState::LOADING_COMPLETE;
+    return;
+}
+
+void Texture::Bake() {
+    if (m_bakingState == BakingState::AWAITING_BAKE) {
+        if (BackEnd::GetAPI() == API::OPENGL) {
+            glTexture.Bake();
+        }
+    }
+    m_bakingState = BakingState::BAKE_COMPLETE;
 }
 
 int Texture::GetWidth() {
@@ -33,22 +55,24 @@ int Texture::GetHeight() {
 }
 
 std::string& Texture::GetFilename() {
-    //return filename;
-    if (BackEnd::GetAPI() == API::OPENGL) {
+    return m_fileName;
+    /*if (BackEnd::GetAPI() == API::OPENGL) {
         return glTexture.GetFilename();
     }
     else if (BackEnd::GetAPI() == API::VULKAN) {
         return vkTexture.GetFilename();
-    }
+    }*/
 }
 
 std::string& Texture::GetFiletype() {
+    return m_fileType;
+    /*
     if (BackEnd::GetAPI() == API::OPENGL) {
         return glTexture.GetFiletype();
     }
     else if (BackEnd::GetAPI() == API::VULKAN) {
         return vkTexture.GetFiletype();
-    }
+    }*/
 }
 
 OpenGLTexture& Texture::GetGLTexture() {
@@ -57,4 +81,12 @@ OpenGLTexture& Texture::GetGLTexture() {
 
 VulkanTexture& Texture::GetVKTexture() {
     return vkTexture;
+}
+
+const LoadingState Texture::GetLoadingState() {
+    return m_loadingState;
+}
+
+const BakingState Texture::GetBakingState() {
+    return m_bakingState;
 }

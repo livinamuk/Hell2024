@@ -1,5 +1,5 @@
 #include "GL_gBuffer.h"
-#include "../../../Common.h"
+#include <glad/glad.h>
 
 void GBuffer::Configure(int width, int height) {
 

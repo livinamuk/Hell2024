@@ -51,84 +51,11 @@ glm::mat4 VolumetricBloodSplatter::GetModelMatrix() {
     else if (m_type == 4)
         bloodMeshOffset.position = glm::vec3(-0.0500000045f, -0.4149999917f, -0.1900000125f);
 
-    Transform rotTransform; 
+    Transform rotTransform;
     rotTransform.rotation = glm::vec3(0, -HELL_PI / 2, 0);
 
     Transform scaleTransform;
     scaleTransform.scale = glm::vec3(3);
 
     return bloodMeshTransform.to_mat4() * scaleTransform.to_mat4() * rotTransform.to_mat4() * bloodMeshOffset.to_mat4();
-}
-
-
-void VolumetricBloodSplatter::Draw(Shader* shader)
-{
-    shader->Use();
-    shader->SetMat4("u_MatrixWorld", GetModelMatrix());
-    shader->SetFloat("u_Time", this->m_CurrentTime);
-
-    glBindVertexArray(OpenGLBackEnd::GetVertexDataVAO());
-
-    if (m_type == 0) {
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, AssetManager::GetExrTextureByName("blood_pos")->gTexId);
-        glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, AssetManager::GetExrTextureByName("blood_norm")->gTexId);
-        static Model* model = AssetManager::GetModelByIndex(AssetManager::GetModelIndexByName("blood_mesh"));
-        Mesh* mesh = AssetManager::GetMeshByIndex(model->GetMeshIndices()[0]);
-        glBindVertexArray(OpenGLBackEnd::GetVertexDataVAO());
-        glDrawElementsBaseVertex(GL_TRIANGLES, mesh->indexCount, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int) * mesh->baseIndex), mesh->baseVertex);
-
-    }
-    else if (m_type == 7) {
-        glActiveTexture(GL_TEXTURE0);
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, AssetManager::GetExrTextureByName("blood_pos7")->gTexId);
-        glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, AssetManager::GetExrTextureByName("blood_norm7")->gTexId);
-        static Model* model = AssetManager::GetModelByIndex(AssetManager::GetModelIndexByName("blood_mesh7"));
-        Mesh* mesh = AssetManager::GetMeshByIndex(model->GetMeshIndices()[0]);
-        glBindVertexArray(OpenGLBackEnd::GetVertexDataVAO());
-        glDrawElementsBaseVertex(GL_TRIANGLES, mesh->indexCount, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int) * mesh->baseIndex), mesh->baseVertex);
-    }
-    else if (m_type == 6) {
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, AssetManager::GetExrTextureByName("blood_pos6")->gTexId);
-        glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, AssetManager::GetExrTextureByName("blood_norm6")->gTexId);
-        static Model* model = AssetManager::GetModelByIndex(AssetManager::GetModelIndexByName("blood_mesh6"));
-        Mesh* mesh = AssetManager::GetMeshByIndex(model->GetMeshIndices()[0]);
-        glBindVertexArray(OpenGLBackEnd::GetVertexDataVAO());
-        glDrawElementsBaseVertex(GL_TRIANGLES, mesh->indexCount, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int) * mesh->baseIndex), mesh->baseVertex);
-    }
-    else if (m_type == 8) {
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, AssetManager::GetExrTextureByName("blood_pos8")->gTexId);
-        glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, AssetManager::GetExrTextureByName("blood_norm8")->gTexId);
-        static Model* model = AssetManager::GetModelByIndex(AssetManager::GetModelIndexByName("blood_mesh8"));
-        Mesh* mesh = AssetManager::GetMeshByIndex(model->GetMeshIndices()[0]);
-        glBindVertexArray(OpenGLBackEnd::GetVertexDataVAO());
-        glDrawElementsBaseVertex(GL_TRIANGLES, mesh->indexCount, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int) * mesh->baseIndex), mesh->baseVertex);
-    }
-    else if (m_type == 9) {
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, AssetManager::GetExrTextureByName("blood_pos9")->gTexId);
-        glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, AssetManager::GetExrTextureByName("blood_norm9")->gTexId);
-        static Model* model = AssetManager::GetModelByIndex(AssetManager::GetModelIndexByName("blood_mesh9"));
-        Mesh* mesh = AssetManager::GetMeshByIndex(model->GetMeshIndices()[0]);
-        glBindVertexArray(OpenGLBackEnd::GetVertexDataVAO());
-        glDrawElementsBaseVertex(GL_TRIANGLES, mesh->indexCount, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int) * mesh->baseIndex), mesh->baseVertex);
-    }
-    else if (m_type == 4) {
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, AssetManager::GetExrTextureByName("blood_pos4")->gTexId);
-        glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, AssetManager::GetExrTextureByName("blood_norm4")->gTexId);
-        static Model* model = AssetManager::GetModelByIndex(AssetManager::GetModelIndexByName("blood_mesh4"));
-        Mesh* mesh = AssetManager::GetMeshByIndex(model->GetMeshIndices()[0]);
-        glBindVertexArray(OpenGLBackEnd::GetVertexDataVAO());
-        glDrawElementsBaseVertex(GL_TRIANGLES, mesh->indexCount, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int) * mesh->baseIndex), mesh->baseVertex);
-    }
 }

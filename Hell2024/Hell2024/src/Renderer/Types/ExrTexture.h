@@ -1,5 +1,5 @@
 #pragma once
-#include "../../common.h"
+#include "HellCommon.h"
 #include "../../API/OpenGL/Types/GL_texture.h"
 #include "../../API/Vulkan/Types/VK_texture.h"
 

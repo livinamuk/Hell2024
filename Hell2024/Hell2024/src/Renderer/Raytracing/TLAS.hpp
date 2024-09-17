@@ -1,5 +1,5 @@
 #pragma once
-#include "../../Common.h"
+#include "HellCommon.h"
 #include "../../Util.hpp"
 #include <vector>
 #include <algorithm>

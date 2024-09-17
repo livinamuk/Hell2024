@@ -1,8 +1,7 @@
 #pragma once
-#include "RendererCommon.h"
+#include "HellCommon.h"
 #include "../BackEnd/BackEnd.h"
 #include "../Core/AssetManager.h"
-#include "../Common.h"
 
 namespace RendererUtil {
 

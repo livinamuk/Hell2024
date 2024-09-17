@@ -1,5 +1,5 @@
 #pragma once
-#include "../Common.h"
+#include "Enums.h"
 
 namespace NumberBlitter {
 	enum class Justification {LEFT, RIGHT};

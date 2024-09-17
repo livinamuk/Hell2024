@@ -41,6 +41,15 @@ namespace WeaponManager {
         tokarevAmmo.casingMaterialName = "Casing9mm";
         tokarevAmmo.pickupAmount = 50;
 
+        AmmoInfo& smithAmmo = g_ammos.emplace_back();
+        smithAmmo.name = "Smith";
+        smithAmmo.modelName = "YOU NEED THIS MODEL";
+        smithAmmo.convexMeshModelName = "YOU NEED THIS MODEL";
+        smithAmmo.materialName = "YOU NEED THIS MATERIAL";
+        smithAmmo.casingModelName = "None";
+        smithAmmo.casingMaterialName = "None";
+        smithAmmo.pickupAmount = 50;
+
         AmmoInfo& aks74uAmmo = g_ammos.emplace_back();
         aks74uAmmo.name = "AKS74U";
         aks74uAmmo.modelName = "TODO!!!";
@@ -76,7 +85,7 @@ namespace WeaponManager {
         aks74u.name = "AKS74U";
         aks74u.modelName = "AKS74U";
         aks74u.type = WeaponType::AUTOMATIC;
-        aks74u.damage = 4;
+        aks74u.damage = 15;
         aks74u.animationNames.idle = "AKS74U_Idle";
         aks74u.animationNames.walk = "AKS74U_Walk";
         aks74u.animationNames.draw = "AKS74U_Draw";
@@ -235,6 +244,48 @@ namespace WeaponManager {
         smith.name = "Smith & Wesson";
         smith.type = WeaponType::PISTOL;
         smith.damage = 50;
+        smith.modelName = "Smith";
+        smith.animationNames.idle = "Smith_Idle";
+        smith.animationNames.walk = "Smith_Walk";
+        smith.animationNames.revolverReloadBegin = "Smith_ReloadStart";
+        smith.animationNames.revolverReloadLoop = "Smith_ReloadLoop";
+        smith.animationNames.revolverReloadEnd = "Smith_ReloadEnd";
+        //smith.animationNames.reloadempty.push_back("Tokarev_ReloadEmpty");
+        smith.animationNames.fire.push_back("Smith_Fire0");
+        smith.animationNames.fire.push_back("Smith_Fire1");
+        smith.animationNames.fire.push_back("Smith_Fire2");
+        smith.animationSpeeds.fire = 1.0f;
+        smith.animationNames.draw = "Smith_Draw";
+        smith.meshMaterials["ArmsMale"] = "Hands";
+        smith.meshMaterials["ArmsFemale"] = "FemaleArms";
+        smith.meshMaterials["Smith"] = "Smith";
+        smith.meshMaterials["LoadedBullet"] = "SmithBullet";
+        smith.meshMaterials["Bullet_0"] = "SmithBullet";
+        smith.meshMaterials["Bullet_1"] = "SmithBullet";
+        smith.meshMaterials["Bullet_2"] = "SmithBullet";
+        smith.meshMaterials["Bullet_3"] = "SmithBullet";
+        smith.meshMaterials["Bullet_4"] = "SmithBullet";
+        smith.meshMaterials["Bullet_5"] = "SmithBullet";
+        smith.hiddenMeshAtStart.push_back("ArmsFemale");
+        smith.audioFiles.fire.push_back("Smith_Fire0.wav");
+        smith.audioFiles.fire.push_back("Smith_Fire1.wav");
+        smith.audioFiles.fire.push_back("Smith_Fire2.wav");
+        smith.audioFiles.revolverCocks.push_back("Smith_Cock0.wav");
+        smith.audioFiles.revolverCocks.push_back("Smith_Cock1.wav");
+        smith.audioFiles.revolverCocks.push_back("Smith_Cock2.wav");
+        smith.muzzleFlashBoneName = "muzzle";
+        smith.type = WeaponType::PISTOL;
+        smith.damage = 500;
+        smith.magSize = 6;
+        smith.casingEjectionBoneName = "Ejection";
+        smith.casingEjectionOffset = glm::vec3(-0.066, -0.007, 0.249);
+        smith.ammoType = "Tokarev";
+        smith.animationCancelPercentages.draw = 50.0f;
+        smith.animationCancelPercentages.fire = 5.0f;
+        smith.animationCancelPercentages.reload = 80.0f;
+        smith.animationCancelPercentages.reloadFromEmpty = 80.0f;
+        smith.revolverCockFrameNumber = 18;
+        smith.relolverStyleReload = true;
 
         WeaponInfo& spas12 = g_weapons.emplace_back();
         spas12.name = "SPAS 12";
@@ -425,7 +476,7 @@ namespace WeaponManager {
         p90.name = "P90";
         p90.modelName = "P90";
         p90.type = WeaponType::AUTOMATIC;
-        p90.damage = 4;
+        p90.damage = 15;
         p90.animationNames.idle = "P90_Idle";
         p90.animationNames.walk = "P90_Walk";
         p90.animationNames.draw = "P90_Draw";
@@ -616,7 +667,7 @@ namespace WeaponManager {
         }
 
         for (int i = 0; i < g_weapons.size(); i++) {
-            std::cout << i << ": " << g_weapons[i].name << "\n";
+           // std::cout << i << ": " << g_weapons[i].name << "\n";
         }
     }
 

@@ -1,6 +1,5 @@
 #pragma once
-
-#include "../Common.h"
+#include "HellCommon.h"
 #include "../API/OpenGL/Types/GL_shader.h"
 
 class MuzzleFlash

@@ -339,12 +339,6 @@ const char* GetGLFormatString(GLenum format) {
 
 bool OpenGLTexture::Bake() {
 
-    if (_baked) {
-        return true;
-    }
-
-    _baked = true;
-
     if (m_compressed) {
 
         std::cout << _filename << ": " << GetGLFormatString(m_compressedTextureData.format) << "\n";
@@ -353,7 +347,6 @@ bool OpenGLTexture::Bake() {
         std::cout << " -size: " << std::to_string(m_compressedTextureData.size) << "\n";
         std::cout << " -data: " << m_compressedTextureData.data << "\n";
 
-
         glGenTextures(1, &ID);
         glBindTexture(GL_TEXTURE_2D, ID);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -361,23 +354,14 @@ bool OpenGLTexture::Bake() {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         glCompressedTexImage2D(GL_TEXTURE_2D, 0, m_compressedTextureData.format, m_compressedTextureData.width, m_compressedTextureData.height, 0, m_compressedTextureData.size, m_compressedTextureData.data);
-
         glGenerateMipmap(GL_TEXTURE_2D);
-
         bindlessID = glGetTextureHandleARB(ID);
         glMakeTextureHandleResidentARB(bindlessID);
-
         return true;
-
     }
 
-    if (m_data == nullptr && _floatData == nullptr) {
-
-
-        if (_filetype == "exr") {
-            std::cout << "exr bake failed coz some pointer was null\n";
-        }
-
+    if (m_data == nullptr) {
+        std::cout << "ATTENTION! OpenGLTexture::Bake() called but m_data was nullptr:" << _filename << "\n";
         return false;
     }
 
@@ -395,14 +379,16 @@ bool OpenGLTexture::Bake() {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16, _width, _height, 0, GL_RGBA, GL_FLOAT, m_data);
-        std::cout << "baked exr texture\n";
+        //std::cout << "baked exr texture\n";
         free(m_data);
+        m_data = nullptr;
     }
     else {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, _width, _height, 0, format, GL_UNSIGNED_BYTE, m_data);
         stbi_image_free(m_data);
+        m_data = nullptr;
     }
 
     // Hack to make Resident Evil font look okay when scaled
@@ -447,6 +433,8 @@ std::string& OpenGLTexture::GetFiletype() {
     return _filetype;
 }
 
+/*
 bool OpenGLTexture::IsBaked() {
     return _baked;
 }
+*/

@@ -1,5 +1,6 @@
 #include "GL_presentBuffer.h"
-#include "../../../Common.h"
+#include <glad/glad.h>
+#include <iostream>
 
 void PresentFrameBuffer::Configure(int width, int height) {
 

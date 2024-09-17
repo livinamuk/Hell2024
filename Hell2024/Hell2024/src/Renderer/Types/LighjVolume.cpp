@@ -1,6 +1,6 @@
 #include "LightVolume.h"
 #include "../../BackEnd/BackEnd.h"
-#include "../../Renderer/RendererCommon.h"
+#include "RendererCommon.h"
 
 LightVolume::LightVolume(float width, float height, float depth, float posX, float posY, float posZ) {
 

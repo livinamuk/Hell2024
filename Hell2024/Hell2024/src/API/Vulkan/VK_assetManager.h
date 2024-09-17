@@ -1,7 +1,6 @@
 #pragma once
 #include "Types/VK_texture.h"
-#include "../../Common.h"
-#include "../../Renderer/RendererCommon.h"
+#include "HellCommon.h"
 #include <string>
 
 struct AssetFile {

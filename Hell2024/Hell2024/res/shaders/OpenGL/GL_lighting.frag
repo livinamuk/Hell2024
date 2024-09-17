@@ -7,7 +7,9 @@ layout (binding = 2) uniform sampler2D rmaTexture;
 layout (binding = 3) uniform sampler2D depthTexture;
 layout (binding = 4) uniform sampler2D emissiveTexture;
 layout (binding = 5) uniform sampler3D probeGridTexture;
-layout (binding = 6) uniform samplerCube shadowMap[16];
+//layout (binding = 6) uniform samplerCube shadowMap[16];
+layout (binding = 6) uniform samplerCubeArray shadowMapArray;
+
 
 uniform int probeSpaceWidth;
 uniform int probeSpaceHeight;
@@ -16,6 +18,7 @@ uniform float probeSpacing;
 uniform vec3 lightVolumePosition;
 uniform float time;
 uniform int renderMode;
+uniform int lightCount;
 
 in vec2 TexCoords;
 
@@ -30,14 +33,18 @@ in vec2 TexCoords;
 const float PI = 3.14159265359;
 
 struct Light {
-	float posX;
-	float posY;
-	float posZ;
-	float colorR;
-	float colorG;
-	float colorB;
-	float strength;
-	float radius;
+    float posX;
+    float posY;
+    float posZ;
+    float colorR;
+    float colorG;
+    float colorB;
+    float strength;
+    float radius;
+    int shadowMapIndex;
+    int contributesToGI;
+    float padding0;
+    float padding1;
 };
 
 struct CameraData {
@@ -194,10 +201,10 @@ vec3 gridSamplingDisk[20] = vec3[](
    vec3(0, 1,  1), vec3( 0, -1,  1), vec3( 0, -1, -1), vec3( 0, 1, -1)
 );
 
-float ShadowCalculation(samplerCube depthTex, vec3 lightPos, vec3 fragPos, vec3 viewPos, vec3 Normal) {
+/*float ShadowCalculation(samplerCube depthTex, vec3 lightPos, float lightRadius, vec3 fragPos, vec3 viewPos, vec3 Normal) {
     vec3 fragToLight = fragPos - lightPos;
     float currentDepth = length(fragToLight);
-    float far_plane = 20.0; // you probably wanna send this as a uniform, or at least check it matches what you have in c++
+    float far_plane = lightRadius; // far plane was hardcoded 20, you're gonna need to look into this at some point.
     float shadow = 0.0;
     vec3 lightDir = fragPos - lightPos;
     float bias = max(0.0125 * (1.0 - dot(Normal, lightDir)), 0.00125);
@@ -212,6 +219,32 @@ float ShadowCalculation(samplerCube depthTex, vec3 lightPos, vec3 fragPos, vec3 
     }
     shadow /= float(samples);
     return 1 - shadow;
+}*/
+
+float ShadowCalculation(int lightIndex, vec3 lightPos, float lightRadius, vec3 fragPos, vec3 viewPos, vec3 Normal) {
+    vec3 fragToLight = fragPos - lightPos;
+    float currentDepth = length(fragToLight);
+    float far_plane = lightRadius; // far plane was hardcoded to 20, you can pass it as an argument if needed
+    float shadow = 0.0;
+    vec3 lightDir = fragPos - lightPos;
+    float bias = max(0.0125 * (1.0 - dot(Normal, normalize(lightDir))), 0.00125);  // Added normalize to lightDir
+    int samples = 20;
+    float viewDistance = length(viewPos - fragPos);
+    float diskRadius = (1.0 + (viewDistance / far_plane)) / 200.0;
+    // Sample the cubemap array for shadows
+    for (int i = 0; i < samples; ++i) {
+        // Sample the cubemap array with the light index and the current sampling offset
+        float closestDepth = texture(shadowMapArray, vec4(fragToLight + gridSamplingDisk[i] * diskRadius, lightIndex)).r;
+        closestDepth *= far_plane;  // Undo mapping [0;1]        
+        // Apply bias and check if the fragment is in shadow
+        if (currentDepth - bias > closestDepth) {
+            shadow += 1.0;
+        }
+    }
+    // Average the shadow results
+    shadow /= float(samples);    
+    // Return the final shadow factor (1 means fully lit, 0 means fully in shadow)
+    return 1.0 - shadow;
 }
 
 float map(float value, float min1, float max1, float min2, float max2) {
@@ -347,7 +380,7 @@ void main() {
 
 	vec3 directLighting = vec3(0);
 
-	for (int i = 0; i < 8; i++) {
+	for (int i = 0; i < lightCount; i++) {
 		Light light = lights[i];
 		vec3 lightPosition = vec3(light.posX, light.posY, light.posZ);
 		vec3 lightColor = vec3(light.colorR, light.colorG, light.colorB);
@@ -355,7 +388,12 @@ void main() {
 		float lightStrength = light.strength;
 		const vec3 lightDirection = normalize(lightPosition - WorldPos);
 		vec3 ligthting = GetDirectLighting(lightPosition, lightColor, lightRadius, lightStrength, normal, WorldPos, baseColor.rgb, roughness, metallic, viewPos);
-		float shadow = ShadowCalculation(shadowMap[i], lightPosition, WorldPos, viewPos, normal);
+		
+		//float shadow = ShadowCalculation(shadowMap[i], lightPosition, lightRadius, WorldPos, viewPos, normal);
+		float shadow = 1;
+		if (light.shadowMapIndex != -1) {
+			shadow = ShadowCalculation(light.shadowMapIndex, lightPosition, lightRadius, WorldPos, viewPos, normal);
+		}
 		directLighting += ligthting * vec3(shadow);
 	}
 
@@ -371,7 +409,8 @@ void main() {
 		float factor = min(1, roughness * 1.0);
 		float factor2 = min(1, 1 - metallic * 1.0);
 		float factor3 = min (factor, factor2);
-		adjustedIndirectLighting *= (0.45) * vec3(factor2);
+		//adjustedIndirectLighting *= (0.45) * vec3(factor2);
+		adjustedIndirectLighting *= (0.35) * vec3(factor2);
 		adjustedIndirectLighting = max(adjustedIndirectLighting, vec3(0));
 		adjustedIndirectLighting *= baseColor2.rgb * 1.0;
 		FragColor.rgb += adjustedIndirectLighting * 0.1;
@@ -440,7 +479,7 @@ void main() {
 	float NOISE =  (x * -noiseFactor) + (noiseFactor / 2);
 	//FragColor.rgb = vec3( NOISE);
 
-//	FragColor.rgb = vec3( WorldPos);
+	//FragColor.rgb = vec3( normal);
 
-
-}
+	
+	}

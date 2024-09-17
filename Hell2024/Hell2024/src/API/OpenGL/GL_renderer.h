@@ -1,6 +1,6 @@
 #pragma once
+#include "HellCommon.h"
 #include "../../Renderer/RenderData.h"
-#include "../../Renderer/RendererCommon.h"
 
 namespace OpenGLRenderer {
 

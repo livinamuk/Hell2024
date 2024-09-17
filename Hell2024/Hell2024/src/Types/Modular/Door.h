@@ -1,11 +1,8 @@
 #pragma once
-#include "../../Common.h"
+#include "HellCommon.h"
 #include "../../Physics/Physics.h"
-#include "../../Renderer/RendererCommon.h"
 
 struct Door {
-
-public:
 
     Door() = default;
     Door(glm::vec3 position, float rotation, bool openOnStart = false);
@@ -36,6 +33,10 @@ public:
     AABB _aabb;
     AABB _aabbPreviousFrame;
 
+
+  //  AABB m_doorFrameAABB;
+
+
     glm::mat4 GetFrameModelMatrix();
     glm::mat4 GetDoorModelMatrix();
     glm::mat4 GetGizmoMatrix();
@@ -62,6 +63,9 @@ public:
 
     void UpdateRenderItems();
     std::vector<RenderItem3D>& GetRenderItems();
+
+    std::vector<Vertex> GetDoorAABBVertices();
+    std::vector<Vertex> GetFrameAABBVertices();
 
 private:
     std::vector<RenderItem3D> renderItems;

@@ -10,9 +10,9 @@ struct CameraData {
     mat4 view;
     mat4 viewInverse;
 	float viewportWidth;
-	float viewportHeight;   
+	float viewportHeight;
     float viewportOffsetX;
-    float viewportOffsetY; 
+    float viewportOffsetY;
 	float clipSpaceXMin;
     float clipSpaceXMax;
     float clipSpaceYMin;

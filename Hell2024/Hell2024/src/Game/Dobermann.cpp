@@ -4,6 +4,7 @@
 #include "../Game/Game.h"
 #include "../Timer.hpp"
 
+
 void Dobermann::Init() {
     m_animatedGameObjectIndex = Scene::CreateAnimatedGameObject();
     AnimatedGameObject* animatedGameObject = GetAnimatedGameObject();
@@ -19,10 +20,9 @@ void Dobermann::Init() {
     animatedGameObject->PlayAndLoopAnimation("Dobermann_Lay", 1.0f);
     PxU32 collisionGroupFlags = RaycastGroup::DOBERMAN;
     animatedGameObject->LoadRagdoll("dobermann.rag", collisionGroupFlags);
-    m_heatlh = 100;
+    m_heatlh = DOG_MAX_HEALTH;
 
     // Create character controller
-
     PxMaterial* material = Physics::GetDefaultMaterial();
     PxCapsuleControllerDesc* desc = new PxCapsuleControllerDesc;
     desc->setToDefault();
@@ -43,8 +43,8 @@ void Dobermann::Init() {
     m_shape->setQueryFilterData(filterData);
 }
 
-void Dobermann::TakeDamage() {
-    m_heatlh -= 34;
+void Dobermann::GiveDamage(int amount) {
+    m_heatlh -= amount;
     int rand = Util::RandomInt(0, 7);
     std::string audioName = "FLY_Bullet_Impact_Flesh_0" + std::to_string(rand) + ".wav";
     Audio::PlayAudio(audioName, 1.0f);
@@ -52,12 +52,12 @@ void Dobermann::TakeDamage() {
     if (m_heatlh <= 0) {
         Kill();
     }
+    std::cout << "Dobermann::GiveDamage() amt: " << amount << " health: " << m_heatlh << "\n";
 }
 
 void Dobermann::Revive() {
-
     m_currentState = DobermannState::KAMAKAZI;
-    m_heatlh = 100;
+    m_heatlh = DOG_MAX_HEALTH;
     m_characterController->setFootPosition({ m_currentPosition.x, m_currentPosition.y, m_currentPosition.z });
 }
 
@@ -66,7 +66,7 @@ void Dobermann::Kill() {
     animatedGameObject->SetAnimatedModeToRagdoll();
     Audio::PlayAudio("Dobermann_Death.wav", 1.5f);
     m_currentState = DobermannState::DOG_SHAPED_PIECE_OF_MEAT;
-
+    m_heatlh = 0;
 
     // Save to file
     Game::g_dogDeaths++;

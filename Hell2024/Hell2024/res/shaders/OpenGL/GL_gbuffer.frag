@@ -28,7 +28,8 @@ void main() {
     vec4 normalMap = texture(sampler2D(textureSamplers[NormalTextureIndex]), TexCoord);
     vec4 rma = texture(sampler2D(textureSamplers[RMATextureIndex]), TexCoord);
 
-	mat3 tbn = mat3(normalize(attrTangent), normalize(attrBiTangent), normalize(attrNormal));
+	//mat3 tbn = mat3(normalize(attrTangent), normalize(attrBiTangent), normalize(attrNormal));
+	mat3 tbn = mat3(attrTangent, attrBiTangent, attrNormal);
 	vec3 normal = normalize(tbn * (normalMap.rgb * 2.0 - 1.0));
 
 	if (baseColor.a < 0.05) {

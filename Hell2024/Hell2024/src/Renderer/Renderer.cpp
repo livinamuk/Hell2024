@@ -13,6 +13,7 @@
 #include "../Math/Raycasting.hpp"
 #include "../Renderer/GlobalIllumination.h"
 #include "../Renderer/RenderData.h"
+#include "../Renderer/RendererData.h"
 #include "../Renderer/TextBlitter.h"
 #include "../Renderer/RendererUtil.hpp"
 #include "../Renderer/Raytracing/Raytracing.h"
@@ -59,6 +60,7 @@ void Renderer::RenderFrame() {
 
     UpdateDebugPointsMesh();
     UpdateDebugLinesMesh();
+    UpdateDebugLinesMesh2D();
     UpdateDebugTrianglesMesh();
     Editor::UpdateRenderItems();
 
@@ -68,6 +70,8 @@ void Renderer::RenderFrame() {
     }
 
     RenderData renderData = CreateRenderData();
+
+    RendererData::CreateDrawCommands(renderData.playerCount);
 
     if (BackEnd::GetAPI() == API::OPENGL) {
         OpenGLRenderer::RenderFrame(renderData);
@@ -108,7 +112,6 @@ RenderData CreateRenderData() {
     hell::ivec2 presentSize = { PRESENT_WIDTH, PRESENT_HEIGHT };
     hell::ivec2 gbufferSize = { PRESENT_WIDTH, PRESENT_HEIGHT };
 
-    std::vector<RenderItem3D> decalRenderItems = Scene::CreateDecalRenderItems();
     std::vector<RenderItem3D> geometryRenderItems = CreateRenderItems3D();
     std::vector<RenderItem3D> glassRenderItems = CreateGlassRenderItems();
     std::vector<RenderItem3D> bloodDecalRenderItems = CreateBloodDecalRenderItems();
@@ -137,17 +140,82 @@ RenderData CreateRenderData() {
 
     // Create render items
     renderData.renderItems.geometry = CreateRenderItems3D();
-    renderData.renderItems.decals = Scene::CreateDecalRenderItems();
+
+
+    /*
+     █▀▀ █▀▀ █▀█ █▄█ █▀▀ ▀█▀ █▀▄ █ █
+     █ █ █▀▀ █ █ █ █ █▀▀  █  █▀▄  █
+     ▀▀▀ ▀▀▀ ▀▀▀ ▀ ▀ ▀▀▀  ▀  ▀ ▀  ▀  */
+
+    std::vector<RenderItem3D> sceneGeometryRenderItems = Scene::GetAllRenderItems();
+    for (int i = 0; i < renderData.playerCount; i++) {
+        Player* player = Game::GetPlayerByIndex(i);
+        Frustum& frustum = player->m_frustum;        
+        int culled = 0;
+        std::vector<RenderItem3D> playerGeometryRenderItems = sceneGeometryRenderItems;
+
+        // Frustum cull remove them
+        /*
+        for (int j = 0; j < playerGeometryRenderItems.size(); j++) {
+            RenderItem3D& renderItem = playerGeometryRenderItems[j];
+            AABB aabb;
+            aabb.boundsMin = renderItem.aabbMin;
+            aabb.boundsMax = renderItem.aabbMax;
+            if (!frustum.IntersectsAABBFast(aabb)) {
+                playerGeometryRenderItems.erase(playerGeometryRenderItems.begin() + j);
+                culled++;
+                j--;
+            }
+        }
+        std::cout << i << ": " << culled << " / " << sceneGeometryRenderItems.size() << "\n";
+        */
+        //renderData.geometryDrawInfo[i] = CreateMultiDrawIndirectDrawInfo(playerGeometryRenderItems);
+
+
+    }
+
+
+    //renderData.geometryDrawInfo = CreateIndirectDrawInfo(sceneGeometryRenderItems, renderData.playerCount);
+    //renderData.bulletHoleDecalDrawInfo = CreateIndirectDrawInfo(sceneDecalRenderItems, renderData.playerCount);
+
+
+    /*
+     █▀▄ █▀▀ █▀▀ █▀█ █   █▀▀
+     █ █ █▀▀ █   █▀█ █   ▀▀█
+     ▀▀  ▀▀▀ ▀▀▀ ▀ ▀ ▀▀▀ ▀▀▀ */
+
+    /*for (int i = 0; i < renderData.playerCount; i++) {
+        Player* player = Game::GetPlayerByIndex(i);
+        Frustum& frustum = player->m_frustum;
+        //int culled = 0;
+        std::vector<RenderItem3D> playerDecalRenderItems = sceneDecalRenderItems;
+
+        // Frustum cull remove them
+        for (int j = 0; j < playerDecalRenderItems.size(); j++) {
+            RenderItem3D& renderItem = playerDecalRenderItems[j];
+            Sphere sphere;
+            sphere.radius = 0.015;
+            sphere.origin = Util::GetTranslationFromMatrix(renderItem.modelMatrix);
+            if (!frustum.IntersectsSphere(sphere)) {
+                playerDecalRenderItems.erase(playerDecalRenderItems.begin() + j);
+                //culled++;
+                j--;
+            }
+        }
+        //std::cout << i << ": " << culled << " / " << sceneDecalRenderItems.size() << "\n";
+        //renderData.bulletHoleDecalDrawInfo[i] = CreateMultiDrawIndirectDrawInfo(playerDecalRenderItems);
+    }*/
 
     // Sort render items by mesh index
     std::sort(renderData.renderItems.geometry.begin(), renderData.renderItems.geometry.end());
-    std::sort(renderData.renderItems.decals.begin(), renderData.renderItems.decals.end());
+    //std::sort(renderData.renderItems.decals.begin(), renderData.renderItems.decals.end());
 
     renderData.lights = CreateGPULights();
     renderData.debugLinesMesh = &Renderer::g_debugLinesMesh;
+    renderData.debugLinesMesh2D = &Renderer::g_debugLinesMesh2D;
     renderData.debugPointsMesh = &Renderer::g_debugPointsMesh;
     renderData.debugTrianglesMesh = &Renderer::g_debugTrianglesMesh;
-    renderData.renderDebugLines = (Renderer::g_debugLineRenderMode != DebugLineRenderMode::SHOW_NO_LINES);
+    //renderData.bbugLines = (Renderer::g_debugLineRenderMode != DebugLineRenderMode::SHOW_NO_LINES);
     renderData.renderItems2D = CreateRenderItems2D(presentSize, renderData.playerCount);
     renderData.renderItems2DHiRes = CreateRenderItems2DHiRes(gbufferSize, renderData.playerCount);
     renderData.blitDstCoords = GetBlitDstCoords(0);
@@ -163,8 +231,8 @@ RenderData CreateRenderData() {
     renderData.finalImageColorContrast = Game::GetPlayerByIndex(0)->finalImageContrast;
     renderData.renderMode = _renderMode;
 
-    renderData.geometryDrawInfo = CreateMultiDrawIndirectDrawInfo(geometryRenderItems);
-    renderData.bulletHoleDecalDrawInfo = CreateMultiDrawIndirectDrawInfo(decalRenderItems);
+    //renderData.geometryDrawInfo = CreateMultiDrawIndirectDrawInfo(geometryRenderItems);
+    //renderData.bulletHoleDecalDrawInfo = CreateMultiDrawIndirectDrawInfo(decalRenderItems);
     renderData.glassDrawInfo = CreateMultiDrawIndirectDrawInfo(glassRenderItems);
     renderData.bloodDecalDrawInfo = CreateMultiDrawIndirectDrawInfo(bloodDecalRenderItems);
     renderData.shadowMapGeometryDrawInfo = CreateMultiDrawIndirectDrawInfo(shadowMapGeometryRenderItems);
@@ -292,11 +360,11 @@ RenderData CreateRenderData() {
     for (int i = 0; i < renderData.playerCount; i++) {
         renderData.allSkinnedRenderItems.insert(renderData.allSkinnedRenderItems.end(), renderData.skinnedRenderItems[i].begin(), renderData.skinnedRenderItems[i].end());
     }
-    std::vector<RenderItem3D> geometryRenderItems2 = CreateRenderItems3D();
+    //std::vector<RenderItem3D> geometryRenderItems2 = CreateRenderItems3D();
     std::vector<RenderItem3D> bulletHoleDecalRenderItems = Scene::CreateDecalRenderItems();
 
-    renderData.geometryIndirectDrawInfo = CreateIndirectDrawInfo(geometryRenderItems2, 4);
-    renderData.bulletHoleDecalIndirectDrawInfo = CreateIndirectDrawInfo(bulletHoleDecalRenderItems, 4);
+    // renderData.geometryIndirectDrawInfo = CreateIndirectDrawInfo(geometryRenderItems2, 4);
+    //renderData.bulletHoleDecalIndirectDrawInfo = CreateIndirectDrawInfo(bulletHoleDecalRenderItems, 4);
 
     return renderData;
 }
@@ -410,6 +478,14 @@ std::vector<RenderItem2D> CreateRenderItems2DHiRes(hell::ivec2 gbufferSize, int 
 std::vector<RenderItem3D> CreateRenderItems3D() {
     std::vector<RenderItem3D> renderItems = Scene::GetAllRenderItems();
     return renderItems;
+
+    // REMOVE ME
+    // REMOVE ME
+    // REMOVE ME
+    // REMOVE ME
+    // REMOVE ME
+    // REMOVE ME
+    // REMOVE ME
 }
 
 std::vector<GPULight> CreateGPULights() {
@@ -426,6 +502,8 @@ std::vector<GPULight> CreateGPULights() {
         gpuLight.colorB = light.color.z;
         gpuLight.strength = light.strength;
         gpuLight.radius = light.radius;
+        gpuLight.shadowMapIndex = light.m_shadowMapIndex;
+        gpuLight.contributesToGI = light.m_contributesToGI ? 1 : 0;
     }
     return gpuLights;
 }
@@ -567,8 +645,8 @@ MuzzleFlashData GetMuzzleFlashData(unsigned int playerIndex) {
 
     int rows = 5;
     int columns = 4;
-    float time =player->GetMuzzleFlashTime() * 0.25f;
-    float duration = 1.0;
+    float time =player->GetMuzzleFlashTime();
+    float duration = 1.0f;
 
     auto dt = duration / static_cast<float>(rows * columns - 1);
     int frameIndex = (int)std::floorf(time / dt);
@@ -587,7 +665,7 @@ MuzzleFlashData GetMuzzleFlashData(unsigned int playerIndex) {
     localTransform.scale = glm::vec3(1.0f, 0.5f, 1);
     localTransform.scale *= glm::vec3(weaponInfo->muzzleFlashScale);
 
-    if (time > duration * 0.125f) {
+    if (time > duration * 0.25f) {
         localTransform.scale = glm::vec3(0);
     }
 
@@ -732,15 +810,6 @@ std::vector<RenderItem3D> CreateBloodVATRenderItems() {
     return renderItems;
 }
 
-/*
-struct Frustum {
-
-    bool ContainsAABB(glm::vec3 aabbMin, glm::vec3 aabbMax) {
-        return true;
-    }
-
-};*/
-
 std::vector<DrawIndexedIndirectCommand> CreateMultiDrawIndirectCommands(std::vector<RenderItem3D>& renderItems) {
 
     std::vector<DrawIndexedIndirectCommand> commands;
@@ -781,6 +850,11 @@ MultiDrawIndirectDrawInfo CreateMultiDrawIndirectDrawInfo(std::vector<RenderItem
 
     MultiDrawIndirectDrawInfo drawInfo;
     drawInfo.renderItems = renderItems;
+
+    if (renderItems.empty()) {
+        return drawInfo;
+    }
+
     std::sort(drawInfo.renderItems.begin(), drawInfo.renderItems.end());
 
     // Create indirect draw commands
@@ -842,37 +916,18 @@ std::vector<SkinnedRenderItem> GetSkinnedRenderItemsForPlayer (int playerIndex) 
             WeaponInfo* weaponInfo = player->GetCurrentWeaponInfo();
             int currentAmmoCountInMag = player->GetCurrentWeaponMagAmmo();
             if (weaponInfo && weaponInfo->name == "P90") {
-
                 for (int i = 0; i < items.size(); i++) {
-
                     SkinnedMesh* skinnedMesh = AssetManager::GetSkinnedMeshByIndex(items[i].originalMeshIndex);
-
                     if (skinnedMesh->name.substr(0, 3) == "Rev") {
-
-
                         int bulletNumber = 50 - std::stoi(skinnedMesh->name.substr(9));
-
-                       // std::string suffix = skinnedMesh->name.substr(9);
-
-                      //  std::cout << skinnedMesh->name << " " << bulletNumber << "\n";
-
                         if (bulletNumber > currentAmmoCountInMag) {
                             items.erase(items.begin() + i);
                             i--;
                         }
-
-
                     }
-
                 }
-
-
-
             }
         }
-
-
-
 
         skinnedMeshRenderItems.insert(skinnedMeshRenderItems.end(), items.begin(), items.end());
     }
@@ -942,23 +997,8 @@ IndirectDrawInfo CreateIndirectDrawInfo(std::vector<RenderItem3D>& potentialRend
         drawInfo.playerDrawCommands[i].reserve(MAX_INDIRECT_COMMANDS);
     }
 
-    // Create draw commands for each player, frustum culling against the potential render items
+    // Create draw frustum culled commands for each player
     for (int playerIndex = 0; playerIndex < playerCount; playerIndex++) {
-        for (int i = 0; i < potentialRenderItems.size(); i++) {
-
-            RenderItem3D& renderItem = potentialRenderItems[i];
-
-            /*
-            glm::vec4 position = renderItem.modelMatrix[3];
-            if (playerIndex == 0 && position.x > 8) {
-                continue;
-            }
-            if (playerIndex == 2 && position.x > 4) {
-                continue;
-            }*/
-
-            playerRenderItems[playerIndex].push_back(renderItem);
-        }
         drawInfo.playerDrawCommands[playerIndex] = CreateMultiDrawIndirectCommands(playerRenderItems[playerIndex]);
     }
 

@@ -1,5 +1,5 @@
 #pragma once
-#include "../../Common.h"
+#include "HellCommon.h"
 #include "../../API/OpenGL/Types/GL_shader.h"
 #include "../../Core/AssetManager.h"
 #include "../../Game/GameObject.h"

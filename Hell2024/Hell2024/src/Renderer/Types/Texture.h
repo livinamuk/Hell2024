@@ -4,25 +4,16 @@
 #include <memory>
 #include "../../API/OpenGL/Types/GL_texture.h"
 #include "../../API/Vulkan/Types/VK_texture.h"
+#include "../../Types/Enums.h"
 
 class Texture {
 
 public:
 
     Texture() = default;
-    Texture(std::string fullpath) {
-        m_fullPath = fullpath;
-    }
-    /*
-    Texture(std::string filename, int width, int height, int channelCount) {
-        this->width = width;
-        this->height = height;
-        this->channelCount = channelCount;
-        this->filename = filename;
-    }*/
-
-    //void UploadToGPU(void* data, CMP_Texture* cmpTexture, int width, int height, int channelCount);
-	void Load(const std::string filepath);
+    Texture(std::string fullpath);
+	void Load();
+    void Bake();
 	int GetWidth();
 	int GetHeight();
 	std::string& GetFilename();
@@ -30,24 +21,19 @@ public:
     OpenGLTexture& GetGLTexture();
     VulkanTexture& GetVKTexture();
 
-    void SetFilename(std::string name) {
-        filename = name;
-    }
-    void SetFiletype(std::string type) {
-        filetype = type;
-    }
-    bool m_loadingBegan = false;
-    bool m_loadingComplete = false;
-    bool m_baked = false;
+    const LoadingState GetLoadingState();
+    const BakingState GetBakingState();
 
     std::string m_fullPath = "";
 
 private:
     OpenGLTexture glTexture;
     VulkanTexture vkTexture;
-    std::string filename;
-    std::string filetype;
+    std::string m_fileName;
+    std::string m_fileType;
     int width = 0;
     int height = 0;
     int channelCount = 0;
+    LoadingState m_loadingState = LoadingState::AWAITING_LOADING_FROM_DISK;
+    BakingState m_bakingState = BakingState::AWAITING_BAKE;
 };

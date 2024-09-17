@@ -1,6 +1,6 @@
 #pragma once
+#include "HellCommon.h"
 #include <glad/glad.h>
-#include "../../../Renderer/RendererCommon.h"
 
 struct OpenGLVertexBuffer {
 

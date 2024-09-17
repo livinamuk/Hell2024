@@ -1,5 +1,5 @@
 #pragma once
-#include "../Common.h"
+#include "HellCommon.h"
 #include <map>
 
 struct SQT {

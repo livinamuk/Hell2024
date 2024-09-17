@@ -1,10 +1,10 @@
 #pragma once
+#include "RendererCommon.h"
 #include "../Core/Audio.hpp"
 #include "../Physics/RigidBody.hpp"
 #include "../Physics/RigidStatic.hpp"
 #include "../Physics/Physics.h"
 #include "../Renderer/Types/Model.hpp"
-#include "../Renderer/RendererCommon.h"
 #include "../Util.hpp"
 
 enum class OpenState { NONE, CLOSED, CLOSING, OPEN, OPENING };

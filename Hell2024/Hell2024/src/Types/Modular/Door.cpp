@@ -64,6 +64,20 @@ void Door::Update(float deltaTime) {
         PxTransform transform2 = PxTransform(m2);
         raycastBody->setGlobalPose(transform2);
     }
+
+    // Door RenderItem AABB
+
+    //glm::vec3 extents = Util::PxVec3toGlmVec3(raycastBody->getWorldBounds().getExtents());
+    //glm::vec3 center = Util::PxVec3toGlmVec3(raycastBody->getWorldBounds().getCenter());
+    //m_doorRenderItemAABB.boundsMin = center - extents;
+    //m_doorRenderItemAABB.boundsMax = center + extents;
+
+    /*
+    glm::vec3 extents = Util::PxVec3toGlmVec3(doorFrameCastBody->getWorldBounds().getExtents());
+    glm::vec3 center = Util::PxVec3toGlmVec3(doorFrameCastBody->getWorldBounds().getCenter());
+    m_doorFrameRenderItemAABB.boundsMin = center - extents;
+    m_doorFrameRenderItemAABB.boundsMax = center + extents;*/
+
     // AABB
     if (raycastBody) {
         _aabbPreviousFrame = _aabb;
@@ -175,6 +189,32 @@ void Door::CreatePhysicsObject() {
 
     PhysicsObjectData* physicsObjectData = new PhysicsObjectData(PhysicsObjectType::DOOR, this);
     raycastBody->userData = physicsObjectData;
+
+    /*
+    // Door frame phyics object
+    {
+        Physics::Destroy(doorFrameCollisionShape);
+        Physics::Destroy(doorFrameRaycastShape);
+
+        PhysicsFilterData filterData;
+        filterData.raycastGroup = RAYCAST_DISABLED;
+        filterData.collisionGroup = CollisionGroup::ENVIROMENT_OBSTACLE;
+        filterData.collidesWith = (CollisionGroup)(GENERIC_BOUNCEABLE | BULLET_CASING | RAGDOLL);
+        collisionShape = Physics::CreateBoxShape(DOOR_EDITOR_DEPTH * 0.5f, DOOR_HEIGHT * 0.5f, DOOR_WIDTH * 0.5f);
+        collisionBody = Physics::CreateRigidStatic(Transform(), filterData, collisionShape);
+
+        PxShapeFlags shapeFlags(PxShapeFlag::eSCENE_QUERY_SHAPE); // Most importantly NOT eSIMULATION_SHAPE. PhysX does not allow for tri mesh.
+        PhysicsFilterData filterData2;
+        filterData2.raycastGroup = RaycastGroup::RAYCAST_ENABLED;
+        filterData2.collisionGroup = NO_COLLISION;
+        filterData2.collidesWith = NO_COLLISION;
+        PxTriangleMesh* triangleMesh = Physics::CreateTriangleMeshFromModelIndex(AssetManager::GetModelIndexByName("DoorFrame"));
+        raycastShape = Physics::CreateShapeFromTriangleMesh(triangleMesh, shapeFlags);
+        raycastBody = Physics::CreateRigidStatic(Transform(), filterData2, raycastShape);
+
+        PhysicsObjectData* physicsObjectData = new PhysicsObjectData(PhysicsObjectType::DOOR, this);
+        raycastBody->userData = physicsObjectData;
+    }*/
 }
 
 glm::vec3 Door::GetWorldDoorWayCenter() {
@@ -186,6 +226,9 @@ bool Door::HasMovedSinceLastFrame() {
         _aabb.boundsMax != _aabbPreviousFrame.boundsMax &&
         _aabb.GetCenter() != _aabbPreviousFrame.GetCenter());
 }
+
+
+
 
 void Door::UpdateRenderItems() {
 
@@ -237,3 +280,18 @@ void Door::SetPosition(glm::vec3 position) {
 void Door::SetRotation(float rotation) {
     m_rotation = rotation;
 }
+
+// TODO
+
+/*
+std::vector<Vertex> Door::GetDoorAABBVertices() {
+    glm::vec3 color = YELLOW;
+    return Util::GetAABBVertices(m_doorRenderItemAABB, color);
+}*/
+
+/*
+
+std::vector<Vertex> Door::GetFrameAABBVertices() {
+    glm::vec3 color = YELLOW;
+    return Util::GetAABBVertices(m_frameAABB, color);
+}*/

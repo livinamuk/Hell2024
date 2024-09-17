@@ -1,11 +1,10 @@
 #pragma once
-
+#include "HellCommon.h"
 #include <fstream>
 #include <sstream>
 #include <iostream>
 #include <string>
 #include <vector>
-#include "Common.h"
 #include "glm/gtx/intersect.hpp"
 #include <random>
 #include <format>
@@ -20,7 +19,7 @@
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/ostreamwrapper.h>
 #include <rapidjson/prettywriter.h>
-#include "Renderer/RendererCommon.h"
+#include "RendererCommon.h"
 
 namespace Util {
 
@@ -1240,4 +1239,35 @@ namespace Util {
         }
         return (inputValue / roundingValue) * roundingValue;
     }
+
+    inline void CalculateAABB(const std::vector<Vertex>& vertices, glm::vec3& aabbMin, glm::vec3& aabbMax) {
+        if (vertices.empty()) {
+            return;
+        }
+        aabbMin = vertices[0].position;
+        aabbMax = vertices[0].position;
+        for (const auto& vertex : vertices) {
+            aabbMin = glm::min(aabbMin, vertex.position);
+            aabbMax = glm::max(aabbMax, vertex.position);
+        }
+    }
+    /*
+    inline AABB GetWorldSpaceAABBFromMeshSpaceOBB(const glm::vec3& obbMin, const glm::vec3& obbMax, const glm::mat4& modelMatrix) {
+        // Calculate the center of the OBB in local space
+        glm::vec3 obbCenter = (obbMin + obbMax) * 0.5f;
+        // Calculate the extents of the OBB (half-sizes)
+        glm::vec3 obbExtent = (obbMax - obbMin) * 0.5f;
+        // Extract the 3 basis vectors from the model matrix (the rotational part)
+        glm::vec3 right = glm::vec3(modelMatrix[0]);   // X-axis (right)
+        glm::vec3 up = glm::vec3(modelMatrix[1]);      // Y-axis (up)
+        glm::vec3 forward = glm::vec3(modelMatrix[2]); // Z-axis (forward)
+        // Transform the OBB center to world space
+        glm::vec3 worldCenter = glm::vec3(modelMatrix * glm::vec4(obbCenter, 1.0f));
+        // Calculate the new AABB extents by projecting the OBB extents along the basis vectors
+        glm::vec3 worldExtent = glm::abs(obbExtent.x * right) + glm::abs(obbExtent.y * up) + glm::abs(obbExtent.z * forward);
+        // The world AABB min and max
+        glm::vec3 aabbMin = worldCenter - worldExtent;
+        glm::vec3 aabbMax = worldCenter + worldExtent;
+        return AABB(aabbMin, aabbMax);
+    }*/
 }

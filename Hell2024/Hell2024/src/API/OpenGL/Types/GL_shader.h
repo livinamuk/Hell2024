@@ -1,7 +1,7 @@
 #pragma once
+#include "HellCommon.h"
 #include <string>
 #include <unordered_map>
-#include "../../../Common.h"
 
 struct Shader {
 public:

@@ -3,7 +3,7 @@
 #include <unordered_map>
 #include "iostream"
 #include "../Core/AssetManager.h"
-#include "../Common.h"
+#include "HellCommon.h"
 #include "../Util.hpp"
 
 /*
@@ -326,6 +326,7 @@ PxShape* Physics::CreateShapeFromTriangleMesh(PxTriangleMesh* triangleMesh, PxSh
     return g_physics->createShape(geometry, *material, shapeFlags);
 }
 
+
 PxShape* Physics::CreateShapeFromConvexMesh(PxConvexMesh* convexMesh, PxMaterial* material, glm::vec3 scale) {
     if (material == NULL) {
         material = _defaultMaterial;
@@ -359,6 +360,7 @@ PxRigidDynamic* Physics::CreateRigidDynamic(Transform transform, PhysicsFilterDa
     g_scene->addActor(*body);
     return body;
 }
+
 
 PxRigidStatic* Physics::CreateRigidStatic(Transform transform, PhysicsFilterData physicsFilterData, PxShape* shape, Transform shapeOffset) {
 
@@ -614,6 +616,107 @@ void Physics::DisableRaycast(PxShape* shape) {
     shape->setQueryFilterData(filterData);
 }
 
+
+/*
+PxHeightField* createHeightField(PxPhysics* physics, const std::vector<Vertex>& positions, int numRows, int numCols) {
+    // Validate input
+    if (positions.size() != numRows * numCols) {
+        return nullptr; // Incorrect dimensions
+    }
+
+    // Prepare height field samples
+    std::vector<PxHeightFieldSample> samples(numRows * numCols);
+    for (int row = 0; row < numRows; ++row) {
+        for (int col = 0; col < numCols; ++col) {
+            int index = row * numCols + col;
+            samples[index].height = static_cast<PxI16>(positions[index].position.y); // Use the y-coordinate as height
+            samples[index].materialIndex0 = 0;
+            samples[index].materialIndex1 = 0;
+            samples[index].setTessFlag();
+        }
+    }
+
+    // Height field description
+    PxHeightFieldDesc heightFieldDesc;
+    heightFieldDesc.format = PxHeightFieldFormat::eS16_TM;
+    heightFieldDesc.nbRows = numRows;
+    heightFieldDesc.nbColumns = numCols;
+    heightFieldDesc.samples.data = samples.data();
+    heightFieldDesc.samples.stride = sizeof(PxHeightFieldSample);
+
+    // Ensure height field description is valid
+    if (!heightFieldDesc.isValid()) {
+        return nullptr; // Invalid height field description
+    }
+
+    // Use PxCreateHeightField with the descriptor and insertion callback
+    PxHeightField* heightField = PxCreateHeightField(heightFieldDesc, physics->getPhysicsInsertionCallback());
+    if (!heightField) {
+        return nullptr; // Failed to create height field
+    }
+
+    return heightField;
+}
+*/
+
+PxHeightField* Physics::CreateHeightField( const std::vector<Vertex>& positions, int numRows, int numCols) {
+    // Validate input
+    if (positions.size() != numRows * numCols) {
+        return nullptr; // Incorrect dimensions
+    }
+
+    // Prepare height field samples
+    std::vector<PxHeightFieldSample> samples(numRows * numCols);
+    for (int row = 0; row < numRows; ++row) {
+        for (int col = 0; col < numCols; ++col) {
+            int index = row * numCols + col;
+            samples[index].height = static_cast<PxI16>(positions[index].position.y); // Use the y-coordinate as height
+            samples[index].materialIndex0 = 0;
+            samples[index].materialIndex1 = 0;
+            samples[index].setTessFlag();
+        }
+    }
+
+    // Height field description
+    PxHeightFieldDesc heightFieldDesc;
+    heightFieldDesc.nbRows = numRows;
+    heightFieldDesc.nbColumns = numCols;
+    heightFieldDesc.samples.data = samples.data();
+    heightFieldDesc.samples.stride = sizeof(PxHeightFieldSample);
+
+    // Ensure height field description is valid
+    if (!heightFieldDesc.isValid()) {
+        std::cout << "Failed to create PxHeightField\n";
+        return nullptr; // Invalid height field description
+    }
+
+    PxHeightField* heightField = PxCreateHeightField(heightFieldDesc, g_physics->getPhysicsInsertionCallback());
+    std::cout << "Created PxHeightField\n";
+    return heightField;
+}
+
+PxShape* Physics::CreateShapeFromHeightField(PxHeightField* heightField, PxShapeFlags shapeFlags, float heightScale, float rowScale, float colScale, PxMaterial* material) {
+    if (material == NULL) {
+        material = _defaultMaterial;
+    }
+    PxHeightFieldGeometry hfGeom(heightField, PxMeshGeometryFlags(), heightScale, rowScale, colScale);
+    std::cout << "Created PxShape from PxHeightField\n";
+    return g_physics->createShape(hfGeom, *material, shapeFlags);
+}
+
+/*
+PxShape* Physics::CreateShapeFromTriangleMesh(PxTriangleMesh* triangleMesh, PxShapeFlags shapeFlags2, PxMaterial* material, glm::vec3 scale) {
+    if (material == NULL) {
+        material = _defaultMaterial;
+    }
+    PxMeshGeometryFlags flags(~PxMeshGeometryFlag::eDOUBLE_SIDED);
+    PxTriangleMeshGeometry geometry(triangleMesh, PxMeshScale(PxVec3(scale.x, scale.y, scale.z)), flags);
+
+    PxShapeFlags shapeFlags(PxShapeFlag::eSCENE_QUERY_SHAPE); // Most importantly NOT eSIMULATION_SHAPE. PhysX does not allow for tri mesh.
+    return g_physics->createShape(geometry, *material, shapeFlags);
+}
+
+*/
 void Physics::Destroy(PxRigidDynamic* rigidDynamic) {
     if (rigidDynamic) {
         if (rigidDynamic->userData) {

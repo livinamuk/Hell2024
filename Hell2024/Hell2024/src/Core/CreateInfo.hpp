@@ -1,5 +1,5 @@
 #pragma once
-#include "../Common.h"
+#include "HellCommon.h"
 
 struct DoorCreateInfo {
     glm::vec3 position = glm::vec3(0);

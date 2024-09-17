@@ -1,11 +1,10 @@
 #pragma once
+#include "HellCommon.h"
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include "Types/vk_allocation.hpp"
 #include "Types/vk_frameData.hpp"
-#include "../../Common.h"
 #include "../../Renderer/Types/Mesh.hpp"
-#include "../../Renderer/RendererCommon.h"
 
 namespace VulkanBackEnd {
 

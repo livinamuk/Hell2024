@@ -41,6 +41,7 @@ void main() {
 
 	int playerIndex = int(imageLoad(normalTexture, texCoord).a * 4 + 0.5);
 
+
 	float r = cameraDataArray[playerIndex].finalImageColorR;
 	float g = cameraDataArray[playerIndex].finalImageColorG;
 	float b = cameraDataArray[playerIndex].finalImageColorB;
@@ -51,6 +52,6 @@ void main() {
 	color *= finalImageColorTint;
     contrastAdjust(color, finalImageColorContrast);
 
-	imageStore(tex, texCoord, vec4(color, 1));
+    imageStore(tex, texCoord, vec4(color, 1));
 }
 

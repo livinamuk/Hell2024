@@ -1,7 +1,7 @@
 #pragma once
+#include "HellCommon.h"
 #include <glad/glad.h>
 #include "vk_allocation.hpp"
-#include "../../../Renderer/RendererCommon.h"
 #include "../VK_BackEnd.h"
 
 struct VulkanVertexBuffer {

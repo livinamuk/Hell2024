@@ -1,6 +1,6 @@
 #pragma once
 #include "VK_backend.h"
-#include "../../common.h"
+#include "Enums.h"
 
 VkViewport GetViewport(int playerIndex, SplitscreenMode& splitscreenMode, int renderTargetWidth, int renderTargetHeight) {
     VkViewport viewport = {};

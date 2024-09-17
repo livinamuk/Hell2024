@@ -1,0 +1,283 @@
+#version 430 core
+
+#define TILE_SIZE 12
+layout(local_size_x = TILE_SIZE, local_size_y = TILE_SIZE, local_size_z = 1) in;
+
+layout(rgba8, binding = 0) uniform image2D tex;
+layout(r16f, binding = 1) uniform imageCubeArray shadowMapArray;
+
+layout (binding = 1) uniform sampler2D depthTexture;
+layout (binding = 2) uniform sampler2DArray shadowMapArrayView;
+layout (binding = 3) uniform sampler2DArray lightVolumeShadowMapArray;
+layout (binding = 4) uniform sampler2D normalTexture;
+
+uniform mat4 shadowProjectionMatrix;
+uniform mat4 shadowViewMatrix;
+uniform float shadowNearPlane;
+uniform float shadowFarPlane;
+
+const int x1 = 100;  // Left bound
+const int x2 = 400;  // Right bound
+const int y1 = 100;  // Bottom bound
+const int y2 = 300;  // Top bound
+
+const vec3 aabbmin = vec3(-0.75, 0.75, -0.25);
+const vec3 aabbmax = vec3(-0.25, 1.25, 0.25);
+
+uniform mat4 projectionMatrix;
+uniform mat4 viewMatrix;
+uniform vec3 viewPos;
+uniform float viewportWidth;
+uniform float viewportHeight;
+
+// Shared values between all the threads in the group
+shared uint minDepthInt;
+shared uint maxDepthInt;
+shared vec4 frustumPlanes[6];
+
+shared uint minWorldSpaceXInt;
+shared uint maxWorldSpaceXInt;
+shared uint minWorldSpaceYInt;
+shared uint maxWorldSpaceYInt;
+shared uint minWorldSpaceZInt;
+shared uint maxWorldSpaceZInt;
+
+struct CameraData {
+    mat4 projection;
+    mat4 projectionInverse;
+    mat4 view;
+    mat4 viewInverse;
+	float viewportWidth;
+	float viewportHeight;
+    float viewportOffsetX;
+    float viewportOffsetY;
+	float clipSpaceXMin;
+    float clipSpaceXMax;
+    float clipSpaceYMin;
+    float clipSpaceYMax;
+	float finalImageColorContrast;
+    float finalImageColorR;
+    float finalImageColorG;
+    float finalImageColorB;
+};
+
+layout(std430, binding = 16) readonly buffer CameraDataArray {
+    CameraData cameraDataArray[];
+};
+
+
+
+struct LightVolumeData {
+	float aabbMinX;
+	float aabbMinY;
+	float aabbMinZ;
+	float padding;
+	float aabbMaxX;
+	float aabbMaxY;
+	float aabbMaxZ;
+	float padding2;
+};
+
+layout(std430, binding = 19) buffer Buffer {
+    LightVolumeData lightVolumeData[];
+};
+
+
+float map(float value, float min1, float max1, float min2, float max2) {
+	float perc = (value - min1) / (max1 - min1);
+	return perc * (max2 - min2) + min2;
+}
+
+
+bool SphereVsAABB(vec3 aabbMin, vec3 aabbMax, vec3 sphereOrigin, float sphereRadius) {
+    // Find the closest point on the AABB to the sphere's center
+    vec3 closestPoint = clamp(sphereOrigin, aabbMin, aabbMax);
+    // Calculate the distance between the sphere's center and the closest point
+    float distanceSquared = dot(closestPoint - sphereOrigin, closestPoint - sphereOrigin);
+    // If the distance is less than or equal to the square of the sphere's radius, there's an intersection
+    return distanceSquared <= (sphereRadius * sphereRadius);
+}
+
+void main() {
+
+	vec2 viewportSize = vec2(viewportWidth, viewportHeight);
+	ivec2 pixelCoords = ivec2(gl_GlobalInvocationID.xy);
+    vec3 color = imageLoad(tex, pixelCoords).rgb;
+	mat4 viewProjection = projectionMatrix * viewMatrix;
+	
+	vec2 uv = vec2(pixelCoords) / viewportSize;
+
+
+	int playerIndex = int(texture(normalTexture, uv).a * 4 + 0.5);
+	mat4 inverseProjection = cameraDataArray[playerIndex].projectionInverse;
+	mat4 inverseView = cameraDataArray[playerIndex].viewInverse;
+	vec3 viewPos = cameraDataArray[playerIndex].viewInverse[3].xyz;
+	float clipSpaceXMin = cameraDataArray[playerIndex].clipSpaceXMin;
+	float clipSpaceXMax = cameraDataArray[playerIndex].clipSpaceXMax;
+	float clipSpaceYMin = cameraDataArray[playerIndex].clipSpaceYMin;
+	float clipSpaceYMax = cameraDataArray[playerIndex].clipSpaceYMax;
+
+	if (gl_LocalInvocationIndex == 0) {
+		minWorldSpaceXInt = 0xFFFFFFFF;
+		minWorldSpaceYInt = 0xFFFFFFFF;
+		minWorldSpaceZInt = 0xFFFFFFFF;
+		maxWorldSpaceXInt = 0;
+		maxWorldSpaceYInt = 0;
+		maxWorldSpaceZInt = 0;
+	}
+	barrier();
+
+	float maxDepth, minDepth;
+
+	// Reconstruct mix/max world position from min/max depth	
+	float z = texture(depthTexture, uv).r;
+    vec2 clipSpaceTexCoord = uv;
+	clipSpaceTexCoord.x = map(clipSpaceTexCoord.x, clipSpaceXMin, clipSpaceXMax, 0.0, 1.0);
+	clipSpaceTexCoord.y = map(clipSpaceTexCoord.y, clipSpaceYMin, clipSpaceYMax, 0.0, 1.0);
+	vec4 clipSpacePosition = vec4(clipSpaceTexCoord * 2.0 - 1.0, z, 1.0);
+    vec4 viewSpacePosition = inverseProjection * clipSpacePosition;
+    viewSpacePosition /= viewSpacePosition.w;
+    vec4 worldSpacePosition = inverseView * viewSpacePosition;
+	
+	atomicMin(minWorldSpaceXInt, floatBitsToUint(worldSpacePosition.x));
+	atomicMin(minWorldSpaceYInt, floatBitsToUint(worldSpacePosition.y));
+	atomicMin(minWorldSpaceZInt, floatBitsToUint(worldSpacePosition.z));	
+	atomicMax(maxWorldSpaceXInt, floatBitsToUint(worldSpacePosition.x));
+	atomicMax(maxWorldSpaceYInt, floatBitsToUint(worldSpacePosition.y));
+	atomicMax(maxWorldSpaceZInt, floatBitsToUint(worldSpacePosition.z));
+
+	barrier();
+
+	float worldSpaceXMin = uintBitsToFloat(minWorldSpaceXInt);
+	float worldSpaceYMin = uintBitsToFloat(minWorldSpaceYInt);
+	float worldSpaceZMin = uintBitsToFloat(minWorldSpaceZInt);
+	float worldSpaceXMax = uintBitsToFloat(maxWorldSpaceXInt);
+	float worldSpaceYMax = uintBitsToFloat(maxWorldSpaceYInt);
+	float worldSpaceZMax = uintBitsToFloat(maxWorldSpaceZInt);
+	
+	vec3 worldSpaceMin = vec3(worldSpaceXMin, worldSpaceYMin, worldSpaceZMin);
+	vec3 worldSpaceMax = vec3(worldSpaceXMax, worldSpaceYMax, worldSpaceZMax);
+
+	vec3 lightPos = vec3(0, 2.2, 0);
+	float lightRadius = 4.0;
+
+	//color = worldSpacePosition.rgb;
+
+	if (SphereVsAABB(worldSpaceMin, worldSpaceMax, lightPos, lightRadius)) {
+		color.r = 0;
+		color += vec3(0.15);
+	}
+	
+	//color = worldSpaceMin.rgb;
+	//color = worldSpacePosition.rgb;
+
+
+	float maxX = lightVolumeData[0].aabbMaxX;
+	float maxY = lightVolumeData[0].aabbMaxY;
+	float maxZ = lightVolumeData[0].aabbMaxZ;
+	float minX = lightVolumeData[0].aabbMinX;
+	float minY = lightVolumeData[0].aabbMinY;
+	float minZ = lightVolumeData[0].aabbMinZ;
+	
+	if (worldSpaceMin.x > minX && 
+		worldSpaceMin.y > minY && 
+		worldSpaceMin.z > minZ && 
+		worldSpaceMax.x < maxX && 
+		worldSpaceMax.y < maxY && 
+		worldSpaceMax.z < maxZ 
+	) {
+		//imageStore(tex, pixelCoords, vec4(color, 1));
+	}
+	//	imageStore(tex, pixelCoords, vec4(worldSpaceMin, 1));
+}
+
+float linearDepth(float z, float nearPlane, float farPlane) {
+    return nearPlane * farPlane / (farPlane - z * (farPlane - nearPlane));
+}
+
+void main2() {
+
+
+	vec3 color = vec3(0,0,0);
+	ivec2 pixelCoords = ivec2(gl_GlobalInvocationID.xy);
+
+	// Test to sample cubemap array as texture 2d array
+	int layerIndex = 0;
+	ivec2 shadowPixelCoords = pixelCoords * 2;
+    vec4 texel = texelFetch(shadowMapArrayView, ivec3(shadowPixelCoords, layerIndex), 0);
+	color = vec3(texel.r);	
+    imageStore(tex, pixelCoords, vec4(color, 1));
+
+	
+	//float linearDepth = linearDepth(texel.r, shadowNearPlane, shadowFarPlane);
+	float depth = texel.r;
+
+	float mappedDepth = map(depth, 0, 1, -1, 1);
+
+	float linearDepth = shadowNearPlane * shadowFarPlane / (shadowFarPlane - depth * (shadowFarPlane - shadowNearPlane));
+	//float linearDepth = (shadowNearPlane * shadowFarPlane) / (shadowFarPlane - depth * (shadowFarPlane - shadowNearPlane));
+
+
+	color = vec3(mappedDepth);	
+    imageStore(tex, pixelCoords, vec4(color, 1));
+
+	float worldUnitDepth = depth * shadowFarPlane;
+	if (worldUnitDepth > 3.3) {
+		color = vec3(linearDepth, 0, 0);	
+		imageStore(tex, pixelCoords, vec4(color, 1));
+	}
+
+
+
+
+	
+	int SHADOW_MAP_SIZE = 2048;
+	mat4 inverseProjection = inverse(shadowProjectionMatrix);
+	mat4 inverseView = inverse(shadowViewMatrix);	
+
+	float z = texelFetch(shadowMapArrayView, ivec3(shadowPixelCoords, layerIndex), 0).r;
+	float worldDepth = z * shadowFarPlane;
+
+	float lightDistance = z * shadowFarPlane; 
+
+	vec2 uv = vec2(shadowPixelCoords) / vec2(SHADOW_MAP_SIZE, SHADOW_MAP_SIZE);
+	vec2 clipSpaceTexCoord = uv * 2.0 - 1.0;
+
+	// Reconstruct the clip space position (Z is the worldDepth, no perspective divide needed)
+	vec4 clipSpacePosition = vec4(clipSpaceTexCoord, worldDepth, 1.0);
+
+	// Transform to view space (no divide by w because w = 1 in orthographic projection)
+	vec4 viewSpacePosition = inverseProjection * clipSpacePosition;
+    viewSpacePosition /= viewSpacePosition.w;
+
+	// Transform to world space
+	vec4 worldSpacePosition = inverseView * viewSpacePosition;
+
+	color = worldSpacePosition.rgb;	
+
+
+	if (uv.x > 1 || uv.y > 1) {
+		color = vec3(0,0,0);
+	}
+	//	color = vec3(z);
+
+	imageStore(tex, pixelCoords, vec4(color, 1));
+}
+
+
+void main666() {
+
+
+	ivec2 pixelCoords = ivec2(gl_GlobalInvocationID.xy);
+	// Test to sample cubemap array as texture 2d array
+	ivec2 shadowPixelCoords = pixelCoords * 2;
+	
+	vec3 worldPos = texelFetch(lightVolumeShadowMapArray, ivec3(shadowPixelCoords, 5), 0).rgb;
+
+
+	vec3 color = worldPos;	
+ //   imageStore(tex, pixelCoords, vec4(color, 1));
+
+
+
+}

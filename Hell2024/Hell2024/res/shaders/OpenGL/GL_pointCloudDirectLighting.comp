@@ -3,6 +3,7 @@
 layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
 
 uniform int frameNumber;
+uniform int lightCount;
 
 struct CloudPoint {
     float posX;
@@ -19,16 +20,19 @@ struct CloudPoint {
 	float padding2;
 };
 
-
 struct Light {
-	float posX;
-	float posY;
-	float posZ;
-	float colorR;
-	float colorG;
-	float colorB;
-	float strength;
-	float radius;
+    float posX;
+    float posY;
+    float posZ;
+    float colorR;
+    float colorG;
+    float colorB;
+    float strength;
+    float radius;
+    int shadowMapIndex;
+    int contributesToGI;
+    float padding0;
+    float padding1;
 };
 
 layout(std430, binding = 0) readonly buffer lights {
@@ -393,9 +397,14 @@ void main() {
 
 	vec3 color = vec3(0);
 
-	for (int i = 0; i < 8; i++) {
+	for (int i = 0; i < lightCount; i++) {
 
 		Light light = Lights[i];
+
+		if (light.contributesToGI == 0) {
+			continue;
+		}
+
 		vec3 lightPosition = vec3(light.posX, light.posY, light.posZ);
 		vec3 lightColor = vec3(light.colorR, light.colorG, light.colorB);
 		float lightRadius = light.radius;

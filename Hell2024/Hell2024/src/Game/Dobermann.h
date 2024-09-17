@@ -1,7 +1,9 @@
 #pragma once
-#include "../Common.h"
+#include "HellCommon.h"
 #include "../Game/AnimatedGameObject.h"
 #include "../Pathfinding/Pathfinding2.h"
+
+#define DOG_MAX_HEALTH 45
 
 struct Dobermann {
 
@@ -14,13 +16,13 @@ struct Dobermann {
     int m_animatedGameObjectIndex = -1;
     float m_speed = 0.090f;
     float m_footstepAudioTimer = 0;
-    float m_heatlh = 100;
+    float m_heatlh = DOG_MAX_HEALTH;
 
     Path m_pathToTarget;
 
     void Init();
     void Update(float deltaTime);
-    void TakeDamage();
+    void GiveDamage(int amount);
     void Kill();
     void Revive();
     void CleanUp();

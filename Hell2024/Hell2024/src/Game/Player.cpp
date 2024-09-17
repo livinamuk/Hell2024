@@ -9,7 +9,7 @@
 #include "../Input/InputMulti.h"
 #include "../Renderer/TextBlitter.h"
 #include "../Renderer/RendererUtil.hpp"
-#include "../Common.h"
+#include "HellCommon.h"
 #include "../Config.hpp"
 #include "../Util.hpp"
 #include "../Timer.hpp"
@@ -55,12 +55,17 @@ void Player::Update(float deltaTime) {
     UpdateMouseLook(deltaTime);
     UpdateViewWeaponLogic(deltaTime);
     UpdateWeaponSway(deltaTime); // this needs checking
+
     UpdateViewMatrix(deltaTime);
 
     UpdateCharacterModelAnimation(deltaTime);
 
     UpdateAttachmentRenderItems();
     UpdateAttachmentGlassRenderItems();
+
+
+    glm::mat4 projectionView = GetProjectionMatrix() * GetViewMatrix();
+    m_frustum.Update(projectionView);
 
     /*
     // Check for game object pick up collision
@@ -179,7 +184,7 @@ void Player::Respawn() {
     _position = spawnPoint.position;
     _rotation = spawnPoint.rotation;
     Audio::PlayAudio("Glock_Equip.wav", 0.5f);
-    std::cout << "Respawn " << m_playerIndex << "\n";
+    //std::cout << "Respawn " << m_playerIndex << "\n";
     g_awaitingRespawn = false;
 }
 
@@ -223,6 +228,9 @@ void Player::UpdateViewMatrix(float deltaTime) {
     glm::mat4 cameraBindMatrix = glm::mat4(1);
     glm::mat4 root = glm::mat4(1);
 
+
+
+
     for (int i = 0; i < viewWeapon->m_jointWorldMatrices.size(); i++) {
         if (Util::StrCmp(viewWeapon->m_jointWorldMatrices[i].name, "camera")) {
             cameraMatrix = viewWeapon->m_jointWorldMatrices[i].worldMatrix;
@@ -234,6 +242,7 @@ void Player::UpdateViewMatrix(float deltaTime) {
         }
     }
 
+
     SkinnedModel* model = viewWeapon->_skinnedModel;
 
     for (int i = 0; i < model->m_joints.size(); i++) {
@@ -244,12 +253,25 @@ void Player::UpdateViewMatrix(float deltaTime) {
         }
     }
 
+    /*
+    this->_playerName = "cameraMatrix\n";
+    this->_playerName += Util::Mat4ToString(cameraMatrix) + '\n';
+
+    this->_playerName += "\ndmMaster\n";
+    this->_playerName += Util::Mat4ToString(dmMaster) + '\n';
+
+    this->_playerName += "\ncameraBindMatrix\n";
+    this->_playerName += Util::Mat4ToString(cameraBindMatrix) + '\n';
+    */
+
+
     // cameraMatrix = cameraMatrix * glm::inverse(m_headBobTransform.to_mat4() * m_breatheBobTransform.to_mat4());
 
     glm::mat4 cameraAnimation = inverse(cameraBindMatrix) * inverse(dmMaster) * cameraMatrix;
 
     if (model->_filename == "Knife" ||
         model->_filename == "Shotgun" ||
+        model->_filename == "Smith" ||
         model->_filename == "P90") {
         cameraAnimation = inverse(cameraBindMatrix) * cameraMatrix;
     }
@@ -270,7 +292,8 @@ void Player::UpdateViewMatrix(float deltaTime) {
 
     if (model->_filename == "Knife" ||
         model->_filename == "Shotgun" ||
-        model->_filename == "P90") {
+        model->_filename == "P90" ||
+        model->_filename == "Smith") {
 
         worldTransform.scale = glm::vec3(0.001);
         viewWeapon->m_cameraMatrix = worldTransform.to_mat4() * glm::inverse(cameraBindMatrix);
@@ -402,7 +425,7 @@ void Player::UpdateTimers(float deltaTime) {
     _muzzleFlashCounter -= deltaTime;
     _muzzleFlashCounter = std::max(_muzzleFlashCounter, 0.0f);
     if (_muzzleFlashTimer >= 0) {
-        _muzzleFlashTimer += deltaTime * 30;                            // maybe you only use one of these?
+        _muzzleFlashTimer += deltaTime * 5000;                            // maybe you only use one of these?
     }
 
     finalImageColorTint = glm::vec3(1, 1, 1);
@@ -449,6 +472,7 @@ void Player::UpdateTimers(float deltaTime) {
             finalImageColorTint.b = _outsideDamageAudioTimer;
         }
     }
+
 }
 
 void Player::UpdateMouseLook(float deltaTime) {
@@ -1155,15 +1179,18 @@ void Player::SpawnAKS74UCasing() {
 
 
 void Player::SpawnBullet(float variance, Weapon type) {
+    _muzzleFlashCounter = 0.0005f;
 
-	_muzzleFlashCounter = 0.0005f;
-
-	Bullet bullet;
-	bullet.spawnPosition = GetViewPos();
+    Bullet bullet;
+    bullet.spawnPosition = GetViewPos();
     bullet.type = type;
     bullet.raycastFlags = _bulletFlags;// RaycastGroup::RAYCAST_ENABLED;
     bullet.parentPlayersViewRotation = GetCameraRotation();
 
+    WeaponInfo* weaponInfo = GetCurrentWeaponInfo();
+    if (weaponInfo) {
+        bullet.damage = weaponInfo->damage;
+    }
 
     glm::vec3 offset = glm::vec3(0);
 	offset.x = Util::RandomFloat(-(variance * 0.5f), variance * 0.5f);

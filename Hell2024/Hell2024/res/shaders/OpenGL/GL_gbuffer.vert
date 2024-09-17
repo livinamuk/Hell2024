@@ -12,6 +12,7 @@ uniform mat4 view;
 uniform int playerIndex;
 uniform int goldBaseColorTextureIndex;
 uniform int goldRMATextureIndex;
+uniform int instanceDataOffset;
 
 out vec2 TexCoord;
 out flat int BaseColorTextureIndex;
@@ -60,36 +61,43 @@ layout(std430, binding = 3) readonly buffer materials {
     Material Materials[];
 };
 
-
 void main() {
 
-	TexCoord = aTexCoord;
-	mat4 model = RenderItems[gl_InstanceID + gl_BaseInstance].modelMatrix;
-	mat4 invereseModel = RenderItems[gl_InstanceID + gl_BaseInstance].inverseModelMatrix;
+	int index = gl_InstanceID + gl_BaseInstance + instanceDataOffset;
 
-	Material material = Materials[RenderItems[gl_InstanceID + gl_BaseInstance].materialIndex];
-	//Material material = Materials[5];
-	BaseColorTextureIndex =  material.baseColorTextureIndex;
-	NormalTextureIndex =  material.normalTextureIndex;
-	RMATextureIndex =  material.rmaTextureIndex;
+    // Set the texture coordinates
+    TexCoord = aTexCoord;
 
-	useEmissiveMask = RenderItems[gl_InstanceID+ gl_BaseInstance].useEmissiveMask;
-	emissiveColor.r = RenderItems[gl_InstanceID+ gl_BaseInstance].emissiveColorR;
-	emissiveColor.g = RenderItems[gl_InstanceID+ gl_BaseInstance].emissiveColorG;
-	emissiveColor.b = RenderItems[gl_InstanceID+ gl_BaseInstance].emissiveColorB;
+    // Load render item and material data
+    RenderItem3D renderItem = RenderItems[index];
+    Material material = Materials[renderItem.materialIndex];
 
-	mat4 normalMatrix = transpose(invereseModel);
-	attrNormal = normalize((normalMatrix * vec4(aNormal, 0)).xyz);
-	attrTangent = (model * vec4(aTangent, 0.0)).xyz;
-	attrBiTangent = normalize(cross(attrNormal,attrTangent));
+    // Base textures
+    BaseColorTextureIndex = material.baseColorTextureIndex;
+    NormalTextureIndex = material.normalTextureIndex;
+    RMATextureIndex = material.rmaTextureIndex;
 
-	gl_Position = projection * view * model * vec4(aPos, 1.0);
-	PlayerIndex = playerIndex;
+    // Check if the item is gold early on
+    if (renderItem.isGold == 1) {
+        BaseColorTextureIndex = goldBaseColorTextureIndex;
+        RMATextureIndex = goldRMATextureIndex;
+    }
 
-	// Gold?
-	if (RenderItems[gl_InstanceID + gl_BaseInstance].isGold == 1) {
-		BaseColorTextureIndex = goldBaseColorTextureIndex;
-		RMATextureIndex = goldRMATextureIndex;
-	}
+    // Emissive mask and color
+    useEmissiveMask = renderItem.useEmissiveMask;
+    emissiveColor = vec3(renderItem.emissiveColorR, renderItem.emissiveColorG, renderItem.emissiveColorB);
 
+    // Compute model-space and normal-space transformations
+    mat4 modelMatrix = renderItem.modelMatrix;
+    mat4 normalMatrix = transpose(renderItem.inverseModelMatrix);
+
+    attrNormal = normalize((normalMatrix * vec4(aNormal, 0)).xyz);
+    attrTangent = (modelMatrix * vec4(aTangent, 0.0)).xyz;
+    attrBiTangent = normalize(cross(attrNormal, attrTangent));
+
+    // Compute the final position of the vertex in screen space
+    gl_Position = projection * view * modelMatrix * vec4(aPos, 1.0);
+
+    // Pass the player index to the fragment shader
+    PlayerIndex = playerIndex;
 }

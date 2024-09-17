@@ -1,7 +1,7 @@
 #pragma once
+#include "Types.h"
 #include "CSGCommon.h"
 #include "../Physics/Physics.h"
-#include "../Common.h"
 #include "../Util.hpp"
 
 struct CSGShape {

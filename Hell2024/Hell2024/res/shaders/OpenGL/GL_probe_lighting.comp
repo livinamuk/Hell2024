@@ -2,8 +2,7 @@
 
 layout (local_size_x = 4, local_size_y = 4, local_size_z = 4) in;
 
-layout(rgba8, binding = 0) uniform image2D colorTexture;
-layout(rgba32f, binding = 1) uniform image3D texture3D;
+layout(rgba32f, binding = 0) uniform image3D texture3D;
 
 uniform int probeSpaceWidth;
 uniform int probeSpaceHeight;
@@ -12,9 +11,6 @@ uniform float probeSpacing;
 uniform vec3 lightVolumePosition;
 uniform int cloudPointCount;
 uniform int frameNumber;
-
-//layout (binding = 1) uniform sampler2D normalTexture;
-//layout (binding = 2) uniform sampler2D depthTexture;
 
 struct BVHNode {
     vec3 aabbMin;
@@ -398,7 +394,7 @@ void main() {
 	float probeWorldZ = (z * probeSpacing) + lightVolumePosition.z;
 	vec3 probePosition = vec3(probeWorldX, probeWorldY, probeWorldZ);
 
-	float maxDistance = 2.0;
+	float maxDistance = 3.0;
 	vec3 finalColor = vec3(0, 0, 0);
 
 	for (int i = 0; i < cloudPointCount; i++) {
@@ -444,7 +440,8 @@ void main() {
 				//vec3 value = vdotn * pointColor.rgb * (maxDistance - dist) * (maxDistance - dist) / maxDistance;
 				vec3 value = pointColor / dist;
 				//vec3 value += vdotn * pointColor.rgb
-				finalColor += value * 0.0035;
+				//finalColor += value * 0.0035;
+				finalColor += value * 0.003535;
 			}
 		}
 	}

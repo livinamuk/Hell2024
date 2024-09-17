@@ -1,5 +1,5 @@
 #pragma once
-#include "../Common.h"
+#include "HellCommon.h"
 #include "GameObject.h"
 #include "AnimatedGameObject.h"
 #include "Light.h"
@@ -13,11 +13,13 @@
 #include "../Editor/CSG.h"
 #include "../Game/Player.h"
 #include "../Game/Dobermann.h"
+#include "../Renderer/Types/HeightMap.h"
 #include "../Types/Modular/Door.h"
 #include "../Types/Modular/Staircase.h"
 #include "../Types/Modular/Toilet.h"
 #include "../Types/Modular/Window.h"
 #include "../Util.hpp"
+
 
 inline float RandFloat(float min, float max) {
     return min + static_cast <float> (rand()) / (static_cast <float> (RAND_MAX / (max - min)));
@@ -86,6 +88,7 @@ struct Bullet {
     Weapon type;
     PxU32 raycastFlags;
     glm::vec3 parentPlayersViewRotation;
+    int damage = 0;
 };
 
 struct PickUp {
@@ -169,6 +172,11 @@ namespace Scene {
     inline std::vector<CSGShape> g_csgSubtractiveShapes;
     inline std::vector<Dobermann> g_dobermann;
     inline std::vector<Staircase> g_staircases;
+    inline std::vector<BulletHoleDecal> g_bulletHoleDecals;
+
+    // Shadow map stuff
+    inline std::vector<int> g_shadowMapLightIndices;
+    int AssignNextFreeShadowMapIndex(int lightIndex);
 
     // Windows
     uint32_t GetWindowCount();
@@ -202,6 +210,7 @@ namespace Scene {
     inline std::vector<glm::vec3> _rtVertices;
     inline std::vector<RTMesh> _rtMesh;
     inline std::vector<RTInstance> _rtInstances;
+
 
     // New shit
     void Init();

@@ -1,5 +1,5 @@
 #pragma once
-#include "../Common.h"
+#include "HellCommon.h"
 
 #define WORLD_WIDTH MAP_WIDTH
 #define WORLD_DEPTH MAP_DEPTH

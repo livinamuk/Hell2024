@@ -1,7 +1,11 @@
 #pragma once
-#include "../Common.h"
+#include "HellCommon.h"
+#include "../Math/Frustum.hpp"
 
 #define DEFAULT_LIGHT_COLOR glm::vec3(1, 0.7799999713897705, 0.5289999842643738)
+#define SHADOW_MAP_SIZE 2048
+#define SHADOW_NEAR_PLANE 0.01f
+#define SHADOW_FAR_PLANE 20.0f	// change this to be the lights radius
 
 struct Light {
 
@@ -28,9 +32,37 @@ struct Light {
     bool isDirty = false;
     bool extraDirty = false;
 
-
+    Frustum m_frustum[6];
+    glm::mat4 m_projectionTransforms[6];
+    glm::mat4 m_viewMatrix[6];
+    glm::mat4 m_projectionMatrix;
+    bool m_aaabbVolumeIsDirty = true;
     bool m_pointCloudIndicesNeedRecalculating = true;
+    bool m_shadowCasting = false;
+    bool m_contributesToGI = false;
+    int m_shadowMapIndex = -1;
 
+    void UpdateMatricesAndFrustum() {
+        m_projectionMatrix = glm::perspective(glm::radians(90.0f), (float)SHADOW_MAP_SIZE / (float)SHADOW_MAP_SIZE, SHADOW_NEAR_PLANE, radius);
+
+        m_viewMatrix[0] = glm::lookAt(position, position + glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f));
+        m_viewMatrix[1] = glm::lookAt(position, position + glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f));
+        m_viewMatrix[2] = glm::lookAt(position, position + glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+        m_viewMatrix[3] = glm::lookAt(position, position + glm::vec3(0.0f, -1.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f));
+        m_viewMatrix[4] = glm::lookAt(position, position + glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, -1.0f, 0.0f));
+        m_viewMatrix[5] = glm::lookAt(position, position + glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, -1.0f, 0.0f));
+
+        m_projectionTransforms[0] = m_projectionMatrix * glm::lookAt(position, position + glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f));
+        m_projectionTransforms[1] = m_projectionMatrix * glm::lookAt(position, position + glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f));
+        m_projectionTransforms[2] = m_projectionMatrix * glm::lookAt(position, position + glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+        m_projectionTransforms[3] = m_projectionMatrix * glm::lookAt(position, position + glm::vec3(0.0f, -1.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f));
+        m_projectionTransforms[4] = m_projectionMatrix * glm::lookAt(position, position + glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, -1.0f, 0.0f));
+        m_projectionTransforms[5] = m_projectionMatrix * glm::lookAt(position, position + glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, -1.0f, 0.0f));
+        
+        for (int i = 0; i < 6; i++) {
+            m_frustum[i].Update(m_projectionTransforms[i]);
+        }
+    }
 
     void FindVisibleCloudPoints();
 

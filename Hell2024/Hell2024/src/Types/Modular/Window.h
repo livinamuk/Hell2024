@@ -1,7 +1,6 @@
 #pragma once
-#include "../../common.h"
+#include "HellCommon.h"
 #include "../../Physics/Physics.h"
-#include "../../Renderer/RendererCommon.h"
 
 class Window {
 

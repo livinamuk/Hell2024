@@ -28,14 +28,18 @@ readonly restrict layout(std430, binding = 0) buffer textureSamplerers {
 };
 
 struct Light {
-	float posX;
-	float posY;
-	float posZ;
-	float colorR;
-	float colorG;
-	float colorB;
-	float strength;
-	float radius;
+    float posX;
+    float posY;
+    float posZ;
+    float colorR;
+    float colorG;
+    float colorB;
+    float strength;
+    float radius;
+    int shadowMapIndex;
+    int contributesToGI;
+    float padding0;
+    float padding1;
 };
 
 layout(std430, binding = 2) readonly buffer Lights {

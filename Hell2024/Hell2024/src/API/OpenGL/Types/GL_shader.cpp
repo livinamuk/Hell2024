@@ -1,6 +1,19 @@
 #include "GL_shader.h"
-#include "../../../Common.h"
-#include "../../../Util.hpp"
+#include <glad/glad.h>
+#include <string>
+#include <iostream>
+#include <fstream>
+#include <sstream>
+
+std::string readTextFromFile(std::string path) {
+    std::ifstream file(path);
+    std::string str;
+    std::string line;
+    while (std::getline(file, line)) {
+        str += line + "\n";
+    }
+    return str;
+}
 
 int checkCompileErrors(unsigned int shader, std::string type) {
     int success;
@@ -24,8 +37,8 @@ int checkCompileErrors(unsigned int shader, std::string type) {
 
 void Shader::Load(std::string vertexPath, std::string fragmentPath) {
 
-    std::string vertexSource = Util::ReadTextFromFile("res/shaders/OpenGL/" + vertexPath);
-    std::string fragmentSource = Util::ReadTextFromFile("res/shaders/OpenGL/" + fragmentPath);
+    std::string vertexSource = readTextFromFile("res/shaders/OpenGL/" + vertexPath);
+    std::string fragmentSource = readTextFromFile("res/shaders/OpenGL/" + fragmentPath);
 
     const char* vShaderCode = vertexSource.c_str();
     const char* fShaderCode = fragmentSource.c_str();
@@ -61,9 +74,9 @@ void Shader::Load(std::string vertexPath, std::string fragmentPath) {
 
 
 void Shader::Load(std::string vertexPath, std::string fragmentPath, std::string geomPath) {
-    std::string vertexSource = Util::ReadTextFromFile("res/shaders/OpenGL/" + vertexPath);
-    std::string fragmentSource = Util::ReadTextFromFile("res/shaders/OpenGL/" + fragmentPath);
-    std::string geometrySource = Util::ReadTextFromFile("res/shaders/OpenGL/" + geomPath);
+    std::string vertexSource = readTextFromFile("res/shaders/OpenGL/" + vertexPath);
+    std::string fragmentSource = readTextFromFile("res/shaders/OpenGL/" + fragmentPath);
+    std::string geometrySource = readTextFromFile("res/shaders/OpenGL/" + geomPath);
 
     const char* vShaderCode = vertexSource.c_str();
     const char* fShaderCode = fragmentSource.c_str();

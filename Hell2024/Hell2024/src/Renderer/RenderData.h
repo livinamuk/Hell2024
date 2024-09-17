@@ -3,6 +3,12 @@
 #include "Types/DetachedMesh.hpp"
 #include "../Game/AnimatedGameObject.h"
 
+/*
+struct PlayerInstanceDataOffsets {
+    int geometry[4];
+    int decalsBullets[4];
+};*/
+
 struct AnimatedRenderItem3D {
     std::vector<RenderItem3D> renderItems;
     std::vector<glm::mat4>* animatedTransforms;
@@ -48,11 +54,18 @@ struct RenderItems {
     std::vector<DrawIndexedIndirectCommand> geometry;
 };*/
 
+
 struct IndirectDrawInfo {
     uint32_t instanceDataOffests[4];
     std::vector<RenderItem3D> instanceData;
     std::vector<DrawIndexedIndirectCommand> playerDrawCommands[4];
 };
+/*
+struct IndirectDrawInfo {
+    std::vector<RenderItem3D> instanceData;
+    std::vector<uint32_t> instanceDataOffests;
+    std::vector<std::vector<DrawIndexedIndirectCommand>> playerDrawCommands;
+};*/
 
 struct PushConstants {
     int playerIndex;
@@ -84,8 +97,12 @@ struct SkinnedMeshPushConstants {
 
 struct RenderData {
 
-    MultiDrawIndirectDrawInfo bulletHoleDecalDrawInfo;
-    MultiDrawIndirectDrawInfo geometryDrawInfo;
+    //MultiDrawIndirectDrawInfo bulletHoleDecalDrawInfo[4];
+    //MultiDrawIndirectDrawInfo geometryDrawInfo[4];
+
+    IndirectDrawInfo geometryDrawInfo;
+    IndirectDrawInfo bulletHoleDecalDrawInfo;
+
     MultiDrawIndirectDrawInfo glassDrawInfo;
     MultiDrawIndirectDrawInfo shadowMapGeometryDrawInfo;
     MultiDrawIndirectDrawInfo bloodDecalDrawInfo;
@@ -94,15 +111,14 @@ struct RenderData {
     std::vector<RenderItem2D> renderItems2D;
     std::vector<RenderItem2D> renderItems2DHiRes;
 
-    std::vector<RenderItem3D> animatedRenderItems3D; // remove me
+    //std::vector<RenderItem3D> animatedRenderItems3D; // remove me
     std::vector<glm::mat4>* animatedTransforms;
     std::vector<GPULight> lights;
 
     DetachedMesh* debugLinesMesh = nullptr;
+    DetachedMesh* debugLinesMesh2D = nullptr;
     DetachedMesh* debugPointsMesh = nullptr;
     DetachedMesh* debugTrianglesMesh = nullptr;
-
-    bool renderDebugLines = false;
 
     BlitDstCoords blitDstCoords;
     BlitDstCoords blitDstCoordsPresent;
@@ -124,6 +140,11 @@ struct RenderData {
     IndirectDrawInfo geometryIndirectDrawInfo;
     IndirectDrawInfo bulletHoleDecalIndirectDrawInfo;
 
+    //MultiDrawIndirectDrawInfo decalDrawCommands[4];
+
+    //std::vector<RenderItem3D> meshesByBoneTransformRenderItems[4];
+    //MultiDrawIndirectDrawInfo meshesByBoneTransformDrawCommands[4];
+
     std::vector<SkinnedRenderItem> skinnedRenderItems[4];
 
     std::vector<SkinnedRenderItem> allSkinnedRenderItems;
@@ -131,6 +152,8 @@ struct RenderData {
     std::vector<AnimatedGameObject*> animatedGameObjectsToSkin;
     std::vector<uint32_t> baseAnimatedTransformIndices;
     std::vector<glm::mat4> skinningTransforms;
+
+    //PlayerInstanceDataOffsets playerInstanceDataOffsets;
 
 };
 

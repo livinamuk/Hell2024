@@ -6,7 +6,6 @@
 #include <iostream>
 #include <future>
 #include <vector>
-#include "../Common.h"
 #include "../Util.hpp"
 #include "../API/OpenGL/GL_backEnd.h"
 #include "../BackEnd/Backend.h"
@@ -299,6 +298,58 @@ namespace CSG {
             g_vertices.reserve(vertexCount);
 
 
+            // Inflate the triangles
+            float inflateAmount = 0.0001f;
+            std::vector<std::future<void>> futures;
+            for (CSGObject& csgObject : g_objects) {
+                // Access the brush object
+                csg::brush_t* b = csgObject.m_brush;
+                Brush* brush = any_cast<Brush>(&b->userdata);
+                // Capture brush and inflateAmount in the lambda
+                futures.push_back(std::async(std::launch::async, [brush, inflateAmount]() {
+                    for (size_t i = 0; i < brush->m_vertices.size(); i += 3) {
+                        glm::vec3& v0 = brush->m_vertices[i + 0].position;
+                        glm::vec3& v1 = brush->m_vertices[i + 1].position;
+                        glm::vec3& v2 = brush->m_vertices[i + 2].position;
+                        glm::vec3 center = (v0 + v1 + v2) / 3.0f;
+                        // Inflate each vertex based on its position relative to the center
+                        auto InflateVertex = [&](glm::vec3& vertex) {
+                            if (vertex.x < center.x) {
+                                vertex.x -= inflateAmount;
+                            }
+                            else if (vertex.x > center.x) {
+                                vertex.x += inflateAmount;
+                            }
+                            if (vertex.y < center.y) {
+                                vertex.y -= inflateAmount;
+                            }
+                            else if (vertex.y > center.y) {
+                                vertex.y += inflateAmount;
+                            }
+                            if (vertex.z < center.z) {
+                                vertex.z -= inflateAmount;
+                            }
+                            else if (vertex.z > center.z) {
+                                vertex.z += inflateAmount;
+                            }
+                        };
+                        InflateVertex(v0);
+                        InflateVertex(v1);
+                        InflateVertex(v2);
+                    }
+                }));
+            }
+            // Wait for all threads to finish
+            for (auto& future : futures) {
+                future.get();
+            }
+
+            futures.clear();
+
+
+
+
+
             for (CSGObject& csgObject : g_objects) {
 
                 glm::vec3 boundsMin = glm::vec3(1e30f);
@@ -306,11 +357,50 @@ namespace CSG {
 
                 csg::brush_t* b = csgObject.m_brush;
                 Brush* brush = any_cast<Brush>(&b->userdata);
+                
+                
 
                 int vertexCount = 0;
                 int indexCount = 0;
                 int index = 0;
+
+               // float inflateAmount = 0.1f;
+                //glm::vec3 center = Util::GetTranslationFromMatrix(csgObject.m_transform.to_mat4());
+
                 for (CSGVertex& vertex : brush->m_vertices) {
+
+                  /*  glm::vec3 inflatedVertex = vertex.position;
+                    if (vertex.position.x < center.x) {
+                        inflatedVertex.x -= inflateAmount;
+                    }
+                    else if (vertex.position.x > center.x) {
+                        inflatedVertex.x += inflateAmount;
+                    }
+                    if (vertex.position.y < center.y) {
+                        inflatedVertex.y -= inflateAmount;
+                    }
+                    else if (vertex.position.y > center.y) {
+                        inflatedVertex.y += inflateAmount;
+                    }
+                    if (vertex.position.z < center.z) {
+                        inflatedVertex.z -= inflateAmount;
+                    }
+                    else if (vertex.position.z > center.z) {
+                        inflatedVertex.z += inflateAmount;
+                    }
+                    vertex.position = inflatedVertex;
+                    */
+
+
+
+
+
+
+
+
+
+
+
                     glm::vec3 origin = glm::vec3(0, 0, 0);
                     origin = glm::vec3(0);
                     vertex.uv = CalculateUV(vertex.position, vertex.normal, origin);

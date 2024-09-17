@@ -6,9 +6,13 @@
 #include "../Renderer/GlobalIllumination.h"
 #include "../Pathfinding/Pathfinding2.h"
 #include "../Renderer/Raytracing/Raytracing.h"
+#include "../Renderer/RendererData.h"
 #include "../Math/Frustum.hpp"
 
 #include "../Math/BVH.h"
+#include "tinycsg/tinycsg.hpp"
+
+#include "RapidHotload.h"
 
 /*
  █▀█ █▀█ ▀█▀ █▀█ ▀█▀ █▀▀
@@ -16,6 +20,16 @@
  ▀   ▀▀▀ ▀▀▀ ▀ ▀  ▀  ▀▀▀ */
 
 std::string g_debugText = "";
+
+AABB g_testAABB = {
+    glm::vec3(-0.75f, 0.75f, -0.25f),
+    glm::vec3(-0.25f, 1.25f, 0.25f)
+};
+
+Sphere g_testSphere = {
+    glm::vec3(0.5f, 1.0f, 0.0f),
+    0.35f
+};
 
 void Renderer::UpdateDebugPointsMesh() {
 
@@ -33,12 +47,13 @@ void Renderer::UpdateDebugPointsMesh() {
         }
     }
 
+    /*
     for (Light& light : Scene::g_lights) {
         for (unsigned int index : light.visibleCloudPointIndices) {
             CloudPoint& cloudPoint = GlobalIllumination::GetPointCloud()[index];
             vertices.push_back(Vertex(cloudPoint.position, GREEN));
         }
-    }
+    }*/
 
 
     for (glm::vec3& position: Game::testPoints) {
@@ -108,6 +123,12 @@ void Renderer::UpdateDebugPointsMesh() {
  █    █  █ █ █▀▀ ▀▀█
  ▀▀▀ ▀▀▀ ▀ ▀ ▀▀▀ ▀▀▀ */
 
+glm::vec3 PixelToNDC(int pixelX, int pixelY, int viewportWidth, int viewportHeight) {
+    float ndcX = (2.0f * pixelX) / viewportWidth - 1.0f;
+    float ndcY = 1.0f - (2.0f * pixelY) / viewportHeight;  // Flip y-axis to match OpenGL's coordinate system
+    return glm::vec3(ndcX, ndcY, 0.0f);
+}
+
 void Renderer::UpdateDebugLinesMesh() {
 
     std::vector<Vertex> vertices;
@@ -158,10 +179,14 @@ void Renderer::UpdateDebugLinesMesh() {
             vertices.insert(std::end(vertices), std::begin(physicsDebugLineVertices), std::end(physicsDebugLineVertices));
         }
         else if (g_debugLineRenderMode == DebugLineRenderMode::BOUNDING_BOXES) {
-            for (GameObject& gameObject : Scene::GetGamesObjects()) {
+            /*for (GameObject & gameObject : Scene::GetGamesObjects()) {
                 std::vector<Vertex> aabbVertices = gameObject.GetAABBVertices();
                 vertices.reserve(vertices.size() + aabbVertices.size());
                 vertices.insert(std::end(vertices), std::begin(aabbVertices), std::end(aabbVertices));
+            }*/
+            for (auto& renderItem : RendererData::g_sceneGeometryRenderItems) {
+                AABB aabb(renderItem.aabbMin, renderItem.aabbMax);
+                DrawAABB(aabb, RED);
             }
         }
 
@@ -173,7 +198,6 @@ void Renderer::UpdateDebugLinesMesh() {
             }
         }
         else if (g_debugLineRenderMode == DebugLineRenderMode::RTX_LAND_BOTTOM_LEVEL_ACCELERATION_STRUCTURES) {
-
             for (CSGObject& csgObject : CSG::GetCSGObjects()) {
                 BLAS* blas = Raytracing::GetBLASByIndex(csgObject.m_blasIndex);
                 if (blas) {
@@ -228,6 +252,35 @@ void Renderer::UpdateDebugLinesMesh() {
                 }
             }
         }
+
+
+        /*
+        float screenWidth = PRESENT_WIDTH;
+        float screenHeight = PRESENT_HEIGHT;
+
+        // Convert pixel coordinates to normalized device coordinates (NDC)
+        auto ConvertToNDC = [screenWidth, screenHeight](glm::vec2 pixelCoord) -> glm::vec3 {
+            float ndcX = (2.0f * pixelCoord.x) / screenWidth - 1.0f;
+            float ndcY = 1.0f - (2.0f * pixelCoord.y) / screenHeight; // Invert Y for OpenGL's coordinate system
+            return glm::vec3(ndcX, ndcY, 0.0f); // z = 0 for 2D lines
+        };
+
+        glm::vec2 pixelStart = { 50, 50 };
+        glm::vec2 pixelEnd = { 100, 150 };
+
+        // Create two vertices (start and end)
+        Vertex startVertex;
+        startVertex.position = ConvertToNDC(pixelStart);
+        startVertex.normal = glm::vec3(0.0f, 0.0f, 1.0f); // Arbitrary normal, as it's not needed for lines
+
+        Vertex endVertex;
+        endVertex.position = ConvertToNDC(pixelEnd);
+        endVertex.normal = glm::vec3(0.0f, 0.0f, 1.0f);
+
+        // Add both vertices to the vector
+        vertices.push_back(startVertex);
+        vertices.push_back(endVertex);*/
+
 
 
         /*
@@ -366,16 +419,41 @@ void Renderer::UpdateDebugLinesMesh() {
     }*/
 
 
-    /*
-    glm::vec3 aabbMin = glm::vec3(-0.25f, 0.75f, -0.25f);
-    glm::vec3 aabbMax = glm::vec3(0.25f, 1.25f, 0.25f);
-    AABB aabb(aabbMin, aabbMax);
-    DrawAABB(aabb, YELLOW);
-    Frustum frustm;
-    std::vector<Vertex> cornersLineVertices = frustm.GetFrustumCornerLineVertices(player->GetProjectionMatrix(), player->GetViewMatrix(), GREEN);
-    vertices.insert(std::end(vertices), std::begin(cornersLineVertices), std::end(cornersLineVertices));
-    */
+    //DrawAABB(g_testAABB, YELLOW);
+    
+    //std::cout << Util::Vec3ToString(g_testAABB.boundsMin) << " " << Util::Vec3ToString(g_testAABB.boundsMax) << "\n";
 
+    //DrawSphere(g_testSphere, 12, YELLOW);
+
+
+
+    Sphere sphere;
+    sphere.origin = Scene::g_lights[3].position;
+    sphere.radius = Scene::g_lights[3].radius;
+//    DrawSphere(sphere, 12, YELLOW);
+
+
+    for (BulletHoleDecal& bulletHoleDecal : Scene::g_bulletHoleDecals) {
+        Sphere sphere;
+        sphere.radius = 0.015;
+        sphere.origin = Util::GetTranslationFromMatrix(bulletHoleDecal.GetModelMatrix());
+       // DrawSphere(sphere, 12, YELLOW);
+    }
+    /*
+    for (auto& renderItem : Scene::CreateDecalRenderItems()) {
+        Mesh* mesh = AssetManager::GetMeshByIndex(renderItem.meshIndex);
+
+        Sphere sphere;
+        sphere.radius = mesh->boundingSphereRadius;
+        sphere.origin = Util::GetTranslationFromMatrix(renderItem.modelMatrix);
+        DrawSphere(sphere, 12, YELLOW);
+    }
+
+    if (Scene::CreateDecalRenderItems().size()) {
+        Mesh* mesh = AssetManager::GetMeshByIndex(Scene::CreateDecalRenderItems()[0].meshIndex);
+        std::cout << "\nmesh->boundingSphereRadius: " << mesh->boundingSphereRadius << "\n";
+        std::cout << "g_bulletDecalRenderItems[0]: " << Scene::CreateDecalRenderItems().size() << "\n";
+    }*/
 
     vertices.insert(std::end(vertices), std::begin(g_debugLines), std::end(g_debugLines));
     g_debugLines.clear();
@@ -384,6 +462,101 @@ void Renderer::UpdateDebugLinesMesh() {
         indices.push_back(i);
     }
     g_debugLinesMesh.UpdateVertexBuffer(vertices, indices);
+}
+
+
+glm::mat4 CreatePerspectiveProjectionMatrix(int x1, int x2, int y1, int y2, float nearPlane, float farPlane, float screenWidth, float screenHeight) {
+    float ndcX1 = (2.0f * x1 / screenWidth) - 1.0f;
+    float ndcX2 = (2.0f * x2 / screenWidth) - 1.0f;
+    float ndcY1 = 1.0f - (2.0f * y1 / screenHeight);
+    float ndcY2 = 1.0f - (2.0f * y2 / screenHeight);
+    float fov = Game::GetPlayerByIndex(0)->_zoom;
+    float tanHalfFov = tan(fov / 2.0f);
+    float left = ndcX1 * nearPlane * tanHalfFov;
+    float right = ndcX2 * nearPlane * tanHalfFov;
+    float bottom = ndcY2 * nearPlane * tanHalfFov;
+    float top = ndcY1 * nearPlane * tanHalfFov;
+    glm::mat4 projectionMatrix = glm::frustum(left, right, bottom, top, nearPlane, farPlane);
+    return projectionMatrix;
+}
+
+void Renderer::UpdateDebugLinesMesh2D() {
+
+    return;
+
+
+    std::vector<Vertex> vertices;
+    std::vector<uint32_t> indices;
+
+    int x1 = 50;
+    int x2 = 150;
+    int y1 = 150;
+    int y2 = 200;
+
+   // x1 = PRESENT_WIDTH / 2 - 100;
+   // x2 = PRESENT_WIDTH / 2 + 100;
+   // y1 = PRESENT_HEIGHT / 2 - 50;
+   // y2 = PRESENT_HEIGHT / 2 + 50;
+
+    Vertex x1y1, x2y1, x1y2, x2y2;
+    x1y1.position = PixelToNDC(x1, y1, PRESENT_WIDTH, PRESENT_HEIGHT);
+    x2y1.position = PixelToNDC(x2, y1, PRESENT_WIDTH, PRESENT_HEIGHT);
+    x1y2.position = PixelToNDC(x1, y2, PRESENT_WIDTH, PRESENT_HEIGHT);
+    x2y2.position = PixelToNDC(x2, y2, PRESENT_WIDTH, PRESENT_HEIGHT);
+    x1y1.normal = WHITE;
+    x2y1.normal = WHITE;
+    x1y2.normal = WHITE;
+    x2y2.normal = WHITE;
+
+
+    // WARNING YOU REPlACED THE LINE BELOW WITH AN IDENTIY MATRIX!
+    // WARNING YOU REPlACED THE LINE BELOW WITH AN IDENTIY MATRIX!
+    // WARNING YOU REPlACED THE LINE BELOW WITH AN IDENTIY MATRIX!
+    // WARNING YOU REPlACED THE LINE BELOW WITH AN IDENTIY MATRIX!
+    // WARNING YOU REPlACED THE LINE BELOW WITH AN IDENTIY MATRIX!
+    // WARNING YOU REPlACED THE LINE BELOW WITH AN IDENTIY MATRIX!
+    // WARNING YOU REPlACED THE LINE BELOW WITH AN IDENTIY MATRIX!
+    // WARNING YOU REPlACED THE LINE BELOW WITH AN IDENTIY MATRIX!
+
+    glm::mat4 projectionMatrix = glm::mat4(1);// RapidHotload::TestMatrix();// CreatePerspectiveProjectionMatrix(x1, x2, y1, y2, 0.1f, 100, PRESENT_WIDTH, PRESENT_HEIGHT);
+    glm::mat4 viewProjectionMatrix = projectionMatrix * Game::GetPlayerByIndex(0)->GetViewMatrix();
+    Frustum frustum;
+    frustum.Update(viewProjectionMatrix);
+
+    if (frustum.IntersectsAABB(g_testAABB)) {
+    //    if (frustum.IntersectsSphere(g_testSphere)) {
+        x1y1.normal = RED;
+        x2y1.normal = RED;
+        x1y2.normal = RED;
+        x2y2.normal = RED;
+    }
+
+
+    vertices.push_back(x1y1);
+    vertices.push_back(x2y1);
+
+    vertices.push_back(x1y2);
+    vertices.push_back(x2y2);
+
+    vertices.push_back(x1y1);
+    vertices.push_back(x1y2);
+
+    vertices.push_back(x2y1);
+    vertices.push_back(x2y2);
+
+
+    Vertex a, b;
+    a.position = PixelToNDC(PRESENT_WIDTH * 0.5, PRESENT_HEIGHT * 0.5, PRESENT_WIDTH, PRESENT_HEIGHT);
+    b.position = PixelToNDC(PRESENT_WIDTH - 10, PRESENT_HEIGHT - 10, PRESENT_WIDTH, PRESENT_HEIGHT);
+    a.normal = WHITE;
+    b.normal = WHITE;
+   // vertices.push_back(a);
+   // vertices.push_back(b);
+
+    for (int i = 0; i < vertices.size(); i++) {
+        indices.push_back(i);
+    }
+    g_debugLinesMesh2D.UpdateVertexBuffer(vertices, indices);
 }
 
 
@@ -501,6 +674,12 @@ std::string& Renderer::GetDebugText() {
 
     g_debugText += "Dog deaths: " + std::to_string(Game::g_dogDeaths) + "\n";
     g_debugText += "Dog kills: " + std::to_string(Game::g_playerDeaths) + "\n";
+    g_debugText += "Muzzle flash timer: " + std::to_string(Game::GetPlayerByIndex(0)->_muzzleFlashTimer) + "\n";
+
+
+
+    g_debugText += "\n";
+    g_debugText += Game::GetPlayerByIndex(0)->_playerName;
 
 
     /*
@@ -567,9 +746,15 @@ std::string& Renderer::GetDebugText() {
     ray.minDist = 0;
     ray.maxDist = glm::distance(rayTarget, ray.origin);;
 
-    /*
 
-    bool lineOfSight = BVH::Test(ray, vertices);
+    /*
+    static bool runOnce = true;
+    if (runOnce) {
+        BVH::UpdateBVH(vertices);
+        runOnce = false;
+    }
+
+    bool lineOfSight = BVH::AnyHit(ray);
 
     if (!lineOfSight) {
         g_debugText += "NO line of sight\n";
@@ -586,92 +771,80 @@ std::string& Renderer::GetDebugText() {
 
 
 
-
-    text += "\n";
-    std::vector<glm::vec3> corners = frustum.GetFrustumCorners(player->GetProjectionMatrix(), player->GetViewMatrix());
-    for (int i = 0; i < corners.size(); i++) {
-        text += Util::Vec3ToString10(corners[i]) + "\n";
-    }
-
-
-    text += "\n";
     glm::mat4 projectionMatrix = player->GetProjectionMatrix();
     glm::mat4 viewMatrix = player->GetViewMatrix();
-    glm::mat4 inverseViewMatrix = glm::inverse(viewMatrix);
-    glm::vec3 viewPos = glm::vec3(inverseViewMatrix[3][0], inverseViewMatrix[3][1], inverseViewMatrix[3][2]);
-    glm::vec3 camForward = -glm::vec3(viewMatrix[0][2], viewMatrix[1][2], viewMatrix[2][2]);
-    glm::vec3 camRight = glm::vec3(viewMatrix[0][0], viewMatrix[1][0], viewMatrix[2][0]);
-    glm::vec3 camUp = glm::vec3(viewMatrix[0][1], viewMatrix[1][1], viewMatrix[2][1]);
-    float fov = 2.0f * atan(1.0f / projectionMatrix[1][1]);
-    float aspectRatio = projectionMatrix[1][1] / projectionMatrix[0][0];
-    float nearPlane = projectionMatrix[3][2] / (projectionMatrix[2][2] - 1.0f);
-    float farPlane = projectionMatrix[3][2] / (projectionMatrix[2][2] + 1.0f);
-    glm::vec3 fc = viewPos + camForward * farPlane;
-    glm::vec3 nc = viewPos + camForward * nearPlane;
-    float Hfar = 2.0f * tan(fov / 2) * farPlane;
-    float Wfar = Hfar * aspectRatio;
-    float Hnear = 2.0f * tan(fov / 2) * nearPlane;
-    float Wnear = Hnear * aspectRatio;
-    glm::vec3 up = camUp;
-    glm::vec3 right = camRight;
-    glm::vec3 ftl = fc + (up * Hfar / 2.0f) - (right * Wfar / 2.0f);
-    glm::vec3 ftr = fc + (up * Hfar / 2.0f) + (right * Wfar / 2.0f);
-    glm::vec3 fbl = fc - (up * Hfar / 2.0f) - (right * Wfar / 2.0f);
-    glm::vec3 fbr = fc - (up * Hfar / 2.0f) + (right * Wfar / 2.0f);
-    glm::vec3 ntl = nc + (up * Hnear / 2.0f) - (right * Wnear / 2.0f);
-    glm::vec3 ntr = nc + (up * Hnear / 2.0f) + (right * Wnear / 2.0f);
-    glm::vec3 nbl = nc - (up * Hnear / 2.0f) - (right * Wnear / 2.0f);
-    glm::vec3 nbr = nc - (up * Hnear / 2.0f) + (right * Wnear / 2.0f);
-
-
-    text += Util::Mat4ToString10(projectionMatrix) + "\n\n";
-    text += Util::Mat4ToString10(viewMatrix) + "\n\n";
-
-    text += Util::Mat4ToString(projectionMatrix) + "\n\n";
-    text += Util::Mat4ToString(viewMatrix) + "\n";
-    */
-
+    glm::mat4 projectionViewMatrix = projectionMatrix * viewMatrix;
     /*
-    const Plane* planes[] = {
-        &frustum.topFace,
-        &frustum.bottomFace,
-        &frustum.rightFace,
-        &frustum.leftFace,
-        &frustum.farFace,
-        &frustum.nearFace
-    };
-    text += "\n";
-    for (const Plane* plane : planes) {
-        glm::vec3 positiveVertex = aabbMin;
-        if (plane->normal.x >= 0) {
-            positiveVertex.x = aabbMax.x;
-        }
-        if (plane->normal.y >= 0) {
-            positiveVertex.y = aabbMax.y;
-        }
-        if (plane->normal.z >= 0) {
-            positiveVertex.z = aabbMax.z;
-        }
-        text += "normal: " + Util::Vec3ToString10(plane->normal) + "\n";
-        text += "distance: " + std::to_string(plane->distance) + "\n";
-        text += "positiveVertex: " + Util::Vec3ToString10(positiveVertex) + "\n";
-        text += "signedDist: " + std::to_string(plane->GetSignedDistanceToPlane(positiveVertex));
+    Frustum frustum;
+    frustum.Update(projectionViewMatrix);
 
-        if (plane->GetSignedDistanceToPlane(positiveVertex) < 0) {
-            text += "\n";
-        }
-        else {
-            text += "   BELOW 0 \n";
-        }
+    if (frustum.IntersectsAABB(g_testAABB)) {
+        g_debugText += "AABB in frustum\n";
+    }
+    else {
+        g_debugText += "AABB not in frustum\n";
+    }
+    if (frustum.IntersectsSphere(g_testSphere)) {
+        g_debugText += "Sphere in frustum\n";
+    }
+    else {
+        g_debugText += "Sphere not in frustum\n";
     }*/
 
 
-    //g_debugText = "";
+    for (int i = 0; i < Scene::g_lights.size(); i++) {
+        g_debugText += "\n";
+        g_debugText += "light " + std::to_string(i) + ": " + std::to_string(Scene::g_lights[i].m_shadowMapIndex) + '\n';
+    }
 
 
     return g_debugText;
 }
 
+void Renderer::DrawSphere(const Sphere& sphere, int segments, const glm::vec3& color) {
+    // Ensure segments is at least 4 to form a basic sphere
+    segments = std::max(segments, 4);
+    // Angles for generating circle points
+    float theta_step = glm::two_pi<float>() / segments;
+    float phi_step = glm::pi<float>() / segments;
+    // Iterate over latitude (phi) and longitude (theta)
+    for (int i = 0; i <= segments; ++i) {
+        float phi = i * phi_step;
+        for (int j = 0; j <= segments; ++j) {
+            float theta = j * theta_step;
+            // Spherical to Cartesian conversion
+            glm::vec3 point_on_sphere(
+                sphere.radius * sin(phi) * cos(theta),
+                sphere.radius * cos(phi),
+                sphere.radius * sin(phi) * sin(theta)
+            );
+            // Transform the point to the sphere's origin
+            glm::vec3 current_point = sphere.origin + point_on_sphere;
+            // Draw line to the next point in theta direction
+            if (j > 0) {
+                float prev_theta = (j - 1) * theta_step;
+                glm::vec3 prev_point_on_sphere(
+                    sphere.radius * sin(phi) * cos(prev_theta),
+                    sphere.radius * cos(phi),
+                    sphere.radius * sin(phi) * sin(prev_theta)
+                );
+                glm::vec3 previous_point = sphere.origin + prev_point_on_sphere;
+                DrawLine(previous_point, current_point, color);
+            }
+            // Draw line to the next point in phi direction
+            if (i > 0) {
+                float prev_phi = (i - 1) * phi_step;
+                glm::vec3 prev_point_on_sphere(
+                    sphere.radius * sin(prev_phi) * cos(theta),
+                    sphere.radius * cos(prev_phi),
+                    sphere.radius * sin(prev_phi) * sin(theta)
+                );
+                glm::vec3 previous_point = sphere.origin + prev_point_on_sphere;
+                DrawLine(previous_point, current_point, color);
+            }
+        }
+    }
+}
 
 void Renderer::DrawLine(glm::vec3 begin, glm::vec3 end, glm::vec3 color) {
     Vertex v0 = Vertex(begin, color);
@@ -733,6 +906,7 @@ inline std::vector<DebugLineRenderMode> _allowedDebugLineRenderModes = {
     PATHFINDING_RECAST,
     RTX_LAND_TOP_LEVEL_ACCELERATION_STRUCTURE,
     RTX_LAND_BOTTOM_LEVEL_ACCELERATION_STRUCTURES,
+    BOUNDING_BOXES,
 };
 
 void Renderer::NextDebugLineRenderMode() {

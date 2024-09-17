@@ -1,6 +1,6 @@
 #pragma once
+#include "HellCommon.h"
 #include <string>
-#include "../../../Common.h"
 
 struct OpenGLCubemapTexture {
 

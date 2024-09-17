@@ -1,5 +1,5 @@
 #pragma once
-#include "../../Common.h"
+#include "HellCommon.h"
 #include "../../Physics/Physics.h"
 
 struct Staircase {

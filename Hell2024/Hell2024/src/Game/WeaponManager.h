@@ -1,7 +1,7 @@
 #pragma once
+#include "HellCommon.h"
 #include <string>
 #include <unordered_map>
-#include "../Common.h"
 
 enum class WeaponType { MELEE, PISTOL, SHOTGUN, AUTOMATIC };
 
@@ -20,6 +20,9 @@ struct AnimationNames {
     std::string adsWalk;
     std::string melee;
     std::vector<std::string> adsFire;
+    std::string revolverReloadBegin;
+    std::string revolverReloadLoop;
+    std::string revolverReloadEnd;
 };
 
 struct AnimationCancelPercentages {
@@ -43,6 +46,7 @@ struct AnimationSpeeds {
 
 struct AudioFiles {
     std::vector<std::string> fire;
+    std::vector<std::string> revolverCocks;
     std::string reload;
     std::string reloadEmpty;
 };
@@ -75,6 +79,8 @@ struct WeaponInfo {
     float pistolSlideOffset = 0;
     float reloadMagInFrameNumber = 0;
     float reloadEmptyMagInFrameNumber = 0;
+    int revolverCockFrameNumber = 0;
+    bool relolverStyleReload = false;
 
     const char* pickupModelName = UNDEFINED_STRING;
     const char* pickupConvexMeshModelName = UNDEFINED_STRING;

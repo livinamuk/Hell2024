@@ -20,13 +20,10 @@ extern "C" {
 
 #include "Engine.h"
 #include <iostream>
-#include "Core/JSON.hpp"
+
+// check out ​​nuklear ui library
 
 int main() {
-
-    //JSONObject j;
-    //j.test();
-    //return 0;
 
     std::cout << "We are all alone on life's journey, held captive by the limitations of human consciousness.\n";
     Engine::Run();

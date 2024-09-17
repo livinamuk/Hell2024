@@ -1,7 +1,9 @@
 #pragma once
-#include "../Common.h"
+#include "HellCommon.h"
+#include "../Math/Types.h"
 #include "../Renderer/Types/CubemapTexture.h"
 #include "../Renderer/Types/ExrTexture.h"
+#include "../Renderer/Types/HeightMap.h"
 #include "../Renderer/Types/Mesh.hpp"
 #include "../Renderer/Types/Model.hpp"
 #include "../Renderer/Types/SkinnedMesh.hpp"
@@ -26,22 +28,15 @@ namespace AssetManager {
     void UploadWeightedVertexData();
 
     // Mesh
+    Mesh* GetMeshByModelNameAndMeshName(const std::string& modelName, const std::string& meshName);
+    Mesh* GetMeshByModelNameAndMeshIndex(const std::string& modelName, int meshIndex);
     Mesh* GetMeshByIndex(int index);
     Mesh* GetQuadMesh();
     int GetMeshIndexByName(const std::string& name);
-    int CreateMesh(std::string name, std::vector<Vertex>& vertices, std::vector<uint32_t>& indices, glm::vec3 aabbMin = glm::vec3(0), glm::vec3 aabbMax = glm::vec3(0));
-
-    unsigned int GetUpFacingPlaneMeshIndex();
-    unsigned int GetQuadMeshIndex();
-    unsigned int GetQuadMeshIndexSplitscreenTop();
-    unsigned int GetQuadMeshIndexSplitscreenBottom();
-    unsigned int GetQuadMeshIndexQuadscreenTopLeft();
-    unsigned int GetQuadMeshIndexQuadscreenTopRight();
-    unsigned int GetQuadMeshIndexQuadscreenBottomLeft();
-    unsigned int GetQuadMeshIndexQuadscreenBottomRight();
-    unsigned int GetHalfSizeQuadMeshIndex();
+    int CreateMesh(std::string name, std::vector<Vertex>& vertices, std::vector<uint32_t>& indices, glm::vec3 aabbMin, glm::vec3 aabbMax);
 
     // Models
+    Model* GetModelByName(const std::string& name);
     Model* GetModelByIndex(int index);
     int GetModelIndexByName(const std::string& name);
     void LoadModel(Model* model);
@@ -64,7 +59,6 @@ namespace AssetManager {
 
     // Materials
     void BuildMaterials();
-    void BindMaterialByIndex(int index);
     int GetMaterialIndex(const std::string& name);
     Material* GetMaterialByIndex(int index);
     std::string& GetMaterialNameByIndex(int index);
@@ -89,13 +83,20 @@ namespace AssetManager {
     CubemapTexture* GetCubemapTextureByIndex(const int index);
     int GetCubemapTextureIndexByName(const std::string& name);
 
-    // EXR Textures
-    ExrTexture* GetExrTextureByName(const std::string& name);
-    ExrTexture* GetExrTextureByIndex(const int index);
-    int GetExrTextureIndexByName(const std::string& filename, bool ignoreWarning = false);
+    // Heightmap 
+    inline HeightMap g_heightMap;
 
     // Raytracing
     void CreateMeshBLAS();
-
     void DebugTest();
+
+    unsigned int GetUpFacingPlaneMeshIndex();
+    unsigned int GetQuadMeshIndex();
+    unsigned int GetQuadMeshIndexSplitscreenTop();
+    unsigned int GetQuadMeshIndexSplitscreenBottom();
+    unsigned int GetQuadMeshIndexQuadscreenTopLeft();
+    unsigned int GetQuadMeshIndexQuadscreenTopRight();
+    unsigned int GetQuadMeshIndexQuadscreenBottomLeft();
+    unsigned int GetQuadMeshIndexQuadscreenBottomRight();
+    unsigned int GetHalfSizeQuadMeshIndex();
 }

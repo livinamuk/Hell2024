@@ -11,6 +11,7 @@ struct Ray {
 
 namespace BVH {
 
-    bool Test(Ray& ray, std::vector<glm::vec3>& vertices);
+    void UpdateBVH(std::vector<glm::vec3>& vertices);
+    bool AnyHit(Ray& ray);
 
 }

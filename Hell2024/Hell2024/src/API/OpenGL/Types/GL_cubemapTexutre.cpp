@@ -41,11 +41,6 @@ void OpenGLCubemapTexture::Load(std::string name, std::string filetype) {
     for (unsigned int i = 0; i < 6; i++) {
         m_textureData[i].m_data = stbi_load(filepaths[i].c_str(), &m_textureData[i].m_width, &m_textureData[i].m_height, &m_textureData[i].m_numChannels, 0);
     }
-
-    /*
-    for (auto& filepath : filepaths) {
-        std::cout << filepath << "\n";
-    }*/
 }
 
 void OpenGLCubemapTexture::Bind(unsigned int slot) {

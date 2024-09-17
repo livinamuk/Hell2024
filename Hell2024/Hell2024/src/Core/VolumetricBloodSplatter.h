@@ -1,5 +1,5 @@
 #pragma once
-#include "../Common.h"
+#include "HellCommon.h"
 #include "../API/OpenGL/Types/GL_shader.h"
 #include "../Renderer/Types/Model.hpp"
 
@@ -13,7 +13,6 @@ struct VolumetricBloodSplatter {
 
 	VolumetricBloodSplatter(glm::vec3 position, glm::vec3 rotation, glm::vec3 front);
 	void Update(float deltaTime);
-	void Draw(Shader* shader);
 	glm::mat4 GetModelMatrix();
 
     static GLuint s_buffer_mode_matrices;

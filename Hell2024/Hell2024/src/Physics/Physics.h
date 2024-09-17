@@ -1,7 +1,5 @@
 #pragma once
-
-#include "../Common.h"
-#include "../Renderer/RendererCommon.h"
+#include "HellCommon.h"
 
 #pragma warning(push, 0)
 #include "PxPhysicsAPI.h"
@@ -63,7 +61,9 @@ namespace Physics {
 	PxRigidDynamic* CreateRigidDynamic(glm::mat4 matrix, bool kinematic);
 	PxShape* CreateShapeFromTriangleMesh(PxTriangleMesh* triangleMesh, PxShapeFlags shapeFlags, PxMaterial* material = NULL, glm::vec3 scale = glm::vec3(1));
 	PxShape* CreateShapeFromConvexMesh(PxConvexMesh* convexMesh, PxMaterial* material = NULL, glm::vec3 scale = glm::vec3(1));
-	void EnableRigidBodyDebugLines(PxRigidBody* rigidBody);
+    PxShape* CreateShapeFromHeightField(PxHeightField* heightField, PxShapeFlags shapeFlags, float heightScale, float rowScale, float colScale, PxMaterial* material = NULL);
+    PxHeightField* CreateHeightField(const std::vector<Vertex>& positions, int numRows, int numCols);
+    void EnableRigidBodyDebugLines(PxRigidBody* rigidBody);
 	void DisableRigidBodyDebugLines(PxRigidBody* rigidBody);
 	std::vector<CollisionReport>& GetCollisions();
 	void ClearCollisionLists();

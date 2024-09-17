@@ -1,9 +1,11 @@
 #pragma once
-#include "../Common.h"
+#include "HellCommon.h"
 #include "../Game/WeaponManager.h"
 #include "../Game/AnimatedGameObject.h"
 #include "../Input/keycodes.h"
 #include "../Physics/Physics.h"
+#include "../Math/Frustum.hpp"
+#include "../Math/Types.h"
 
 #define GLOCK_CLIP_SIZE 12
 #define GLOCK_MAX_AMMO_SIZE 200
@@ -87,8 +89,8 @@ private:
     int32_t m_characterModelAnimatedGameObjectIndex = -1;
     int32_t m_playerIndex = -1;
     std::vector<PickUpText> m_pickUpTexts;
-    glm::vec2 m_headBob;
-    glm::vec2 m_breatheBob;
+    glm::vec2 m_headBob = glm::vec2(0, 0);
+    glm::vec2 m_breatheBob = glm::vec2(0, 0);
     Transform m_weaponSwayTransform;
     bool m_crouching = false;
     bool m_moving = false;
@@ -221,6 +223,7 @@ public:
 
 public:
 
+    Frustum m_frustum;
 
     InputType _inputType = KEYBOARD_AND_MOUSE;
     PlayerControls _controls;
@@ -388,13 +391,16 @@ private:
 	glm::vec3 _up = glm::vec3(0);
 	glm::vec3 _right = glm::vec3(0);
 
-	float _muzzleFlashTimer = 0;
 	float _muzzleFlashRotation = 0;
 	//int _currentWeaponIndex = 0;
 	WeaponAction _weaponAction = DRAW_BEGIN;
 	bool _needsRespawning = true;
 	glm::vec2 _weaponSwayFactor = glm::vec2(0);
-	glm::vec3 _weaponSwayTargetPos = glm::vec3(0);
-	bool _needsAmmoReloaded = false;
+    glm::vec3 _weaponSwayTargetPos = glm::vec3(0);
+    bool _needsAmmoReloaded = false;
+    bool m_revolverNeedsCocking = false;
+    int m_revolverReloadIterations = 0;
 
+    public:
+    float _muzzleFlashTimer = 0;
 };

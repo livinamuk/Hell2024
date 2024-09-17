@@ -1,9 +1,9 @@
 #pragma once
+#include "RendererCommon.h"
 #include <map>
 #include <vector>
 #include <assert.h>
 #include "../../Types/Animation.h"
-#include "../RendererCommon.h"
 #include "SkinnedMesh.hpp"
 
 struct Joint {
@@ -73,14 +73,10 @@ private:
 public:
 
     SkinnedModel() {
-        m_VAO = 0;
-        ZERO_MEM(m_Buffers);
         m_NumBones = 0;
     }
 
     SkinnedModel(std::string fullPath) {
-        m_VAO = 0;
-        ZERO_MEM(m_Buffers);
         m_NumBones = 0;
         m_fullPath = fullPath;
     }
@@ -101,8 +97,6 @@ public:
 
     std::vector<Joint> m_joints;
     std::string _filename = "undefined";
-    GLuint m_VAO;
-    GLuint m_Buffers[NUM_VBs];
     std::map<std::string, unsigned int> m_BoneMapping;
     unsigned int m_NumBones;
     std::vector<BoneInfo> m_BoneInfo;

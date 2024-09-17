@@ -1,5 +1,5 @@
 #pragma once
-#include "../Common.h"
+#include "HellCommon.h"
 #include "../Physics/Physics.h"
 #include "../Util.hpp"
 
@@ -12,6 +12,7 @@ private:
     float m_randomRotation;
     PxRigidBody* m_parent;
     BulletHoleDecalType m_type;
+
 
 public:
     BulletHoleDecal() = default;

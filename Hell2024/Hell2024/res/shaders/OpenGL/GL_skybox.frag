@@ -16,14 +16,14 @@ void contrastAdjust( inout vec4 color, in float c) {
 
 void main() {
 
+
     FinalLighting.rgb = texture(cubeMap, TexCoords).rgb;
 
 	FinalLighting.rgb *= skyboxTint;
 
 
-	Normal.rgb = vec3(0,0,0);
-	Normal.a = float(playerIndex) * 0.25;
-
+		Normal.rgb = vec3(0,0,0);
+		Normal.a = float(playerIndex) * 0.25;
 
 //	FragColor.rgb = vec3(0,0,0);
 

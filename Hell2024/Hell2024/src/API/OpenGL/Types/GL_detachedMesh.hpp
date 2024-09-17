@@ -1,7 +1,7 @@
 #pragma once
-#include "../../../Common.h"
-#include "../../../Renderer/RendererCommon.h"
+#include "HellCommon.h"
 #include <vector>
+#include <string>
 
 struct OpenGLDetachedMesh {
 

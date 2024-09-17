@@ -2,6 +2,7 @@
 #include "Game.h"
 #include "Scene.h"
 #include "../Core/Audio.hpp"
+#include "../Input/Input.h"
 #include "../Input/InputMulti.h"
 #include "../Util.hpp"
 
@@ -12,6 +13,7 @@ void Player::GiveDefaultLoadout() {
     GiveWeapon("Glock");
     GiveWeapon("GoldenGlock");
     GiveWeapon("Tokarev");
+    GiveWeapon("Smith & Wesson");
     GiveWeapon("AKS74U");
     GiveWeapon("P90");
     GiveWeapon("Shotgun");
@@ -22,7 +24,7 @@ void Player::GiveDefaultLoadout() {
     GiveAmmo("Shotgun", 6666);
 
     GiveRedDotToWeapon("GoldenGlock");
-    //GiveSilencerToWeapon("Glock");
+   // GiveSilencerToWeapon("Glock");
 }
 
 /*
@@ -238,9 +240,26 @@ void Player::UpdateViewWeaponLogic(float deltaTime) {
             }
         }
 
+
+
+        // Revolver cocks
+        if (weaponInfo->revolverCockFrameNumber != 0 &&
+            m_revolverNeedsCocking &&
+            viewWeapon->AnimationIsPastFrameNumber(weaponInfo->revolverCockFrameNumber)) {
+            int rand = std::rand() % weaponInfo->audioFiles.revolverCocks.size();
+            Audio::PlayAudio(weaponInfo->audioFiles.revolverCocks[rand], 1.0f);
+            m_revolverNeedsCocking = false;
+        }
+
+
         // Fire (has ammo)
         if (triggeredFire && CanFire() && weaponState->ammoInMag > 0) {
             _weaponAction = FIRE;
+
+            // Await cock
+            if (weaponInfo->revolverCockFrameNumber != 0) {
+                m_revolverNeedsCocking = true;
+            }
 
             SpawnMuzzleFlash();
             SpawnBullet(0.05f, Weapon::AKS74U);
@@ -267,31 +286,81 @@ void Player::UpdateViewWeaponLogic(float deltaTime) {
         }
         // Reload
         if (PressedReload() && CanReload()) {
-            if (GetCurrentWeaponMagAmmo() == 0) {
 
-                if (weaponInfo->animationNames.reloadempty.size()) {
-                    int rand = std::rand() % weaponInfo->animationNames.reloadempty.size();
-                    viewWeapon->PlayAnimation(weaponInfo->animationNames.reloadempty[rand], weaponInfo->animationSpeeds.reloadempty);
-                }
-
-                //  viewWeapon->PlayAnimation(weaponInfo->animationNames.reloadempty, 1.0f);
-                Audio::PlayAudio(weaponInfo->audioFiles.reloadEmpty, 0.7f);
-                _weaponAction = RELOAD_FROM_EMPTY;
+            // Revolver reload
+            if (weaponInfo->relolverStyleReload) {
+                _weaponAction = RELOAD_REVOLVER_BEGIN;
+                viewWeapon->PlayAnimation(weaponInfo->animationNames.revolverReloadBegin, 1.0f);
+                _needsAmmoReloaded = true;
+                weaponState->ammoInMag = 0;
+                Audio::PlayAudio("Smith_ReloadBegin.wav", 1.0f);
+                m_revolverReloadIterations = 0;
             }
+            // Non revolver reloads
             else {
-                viewWeapon->PlayAnimation(weaponInfo->animationNames.reload, weaponInfo->animationSpeeds.reload);
-                Audio::PlayAudio(weaponInfo->audioFiles.reload, 0.8f);
-                _weaponAction = RELOAD;
+                if (GetCurrentWeaponMagAmmo() == 0) {
+                    if (weaponInfo->animationNames.reloadempty.size()) {
+                        int rand = std::rand() % weaponInfo->animationNames.reloadempty.size();
+                        viewWeapon->PlayAnimation(weaponInfo->animationNames.reloadempty[rand], weaponInfo->animationSpeeds.reloadempty);
+                    }
+
+                    //  viewWeapon->PlayAnimation(weaponInfo->animationNames.reloadempty, 1.0f);
+                    Audio::PlayAudio(weaponInfo->audioFiles.reloadEmpty, 0.7f);
+                    _weaponAction = RELOAD_FROM_EMPTY;
+                }
+                else {
+                    viewWeapon->PlayAnimation(weaponInfo->animationNames.reload, weaponInfo->animationSpeeds.reload);
+                    Audio::PlayAudio(weaponInfo->audioFiles.reload, 0.8f);
+                    _weaponAction = RELOAD;
+                }
+                _needsAmmoReloaded = true;
             }
+        }
+
+        // Revolver reload reloading logic
+        if (_weaponAction == RELOAD_REVOLVER_BEGIN && viewWeapon->IsAnimationComplete()) {
+            _weaponAction = RELOAD_REVOLVER_LOOP;
+            viewWeapon->PlayAnimation(weaponInfo->animationNames.revolverReloadLoop, 1.0f);
+            m_revolverReloadIterations++;
+        }
+
+        // Add next revolver bullet
+        if (_needsAmmoReloaded && _weaponAction == RELOAD_REVOLVER_LOOP && viewWeapon->AnimationIsPastFrameNumber(8)) {
+            weaponState->ammoInMag++;
+            ammoState->ammoOnHand--;
+            _needsAmmoReloaded = false;
+            Audio::PlayAudio("Smith_ReloadLoop0.wav", 1.0f);
+        }
+        // Continue revolver reload loop
+        if (_weaponAction == RELOAD_REVOLVER_LOOP && viewWeapon->IsAnimationComplete() && GetCurrentWeaponMagAmmo() < 6) {
+            viewWeapon->PlayAnimation(weaponInfo->animationNames.revolverReloadLoop, 1.0f);
             _needsAmmoReloaded = true;
         }
+        // Trigger the end of the revolver reload loop
+        if (_weaponAction == RELOAD_REVOLVER_LOOP && viewWeapon->IsAnimationComplete() && GetCurrentWeaponMagAmmo() >= 6) {
+            viewWeapon->PlayAnimation(weaponInfo->animationNames.revolverReloadEnd, 1.0f);
+            _weaponAction = RELOAD_REVOLVER_END;
+            Audio::PlayAudio("Smith_ReloadEnd.wav", 1.0f);
+            std::cout << " Audio::PlayAudio(\"Smith_ReloadEnd.wav\", 1.0f);\n";
+        }
+        // End the revolver loop
+        if (_weaponAction == RELOAD_REVOLVER_END && viewWeapon->IsAnimationComplete()) {
+            _weaponAction = IDLE;
+        }
+
+
+        if (Input::KeyPressed(HELL_KEY_9)) {
+            weaponState->ammoInMag = 0;
+        }
+
+
         // Return to idle
         if (_weaponAction == RELOAD && viewWeapon->IsAnimationComplete() ||
             _weaponAction == RELOAD_FROM_EMPTY && viewWeapon->IsAnimationComplete() ||
             _weaponAction == SPAWNING && viewWeapon->IsAnimationComplete()) {
             _weaponAction = IDLE;
         }
-        if (_weaponAction == FIRE && viewWeapon->AnimationIsPastPercentage(50.0f)) {
+        if (weaponInfo->name != "Smith & Wesson" && _weaponAction == FIRE && viewWeapon->AnimationIsPastPercentage(50.0f)) {
             _weaponAction = IDLE;
         }
         //Idle
@@ -509,6 +578,89 @@ void Player::UpdateViewWeaponLogic(float deltaTime) {
         }
     }
 
+
+
+
+
+    // Remove Smith bullets you don't have
+    if (weaponInfo->name == "Smith & Wesson") {
+       
+        /*if (_weaponAction == RELOAD_REVOLVER_BEGIN && viewWeapon->AnimationIsPastFrameNumber(30)) {
+            viewWeapon->DisableDrawingForMeshByMeshName("Bullet_0");
+            viewWeapon->DisableDrawingForMeshByMeshName("Bullet_1");
+            viewWeapon->DisableDrawingForMeshByMeshName("Bullet_2");
+            viewWeapon->DisableDrawingForMeshByMeshName("Bullet_3");
+            viewWeapon->DisableDrawingForMeshByMeshName("Bullet_4");
+            viewWeapon->DisableDrawingForMeshByMeshName("Bullet_5");
+        }
+
+        if (_weaponAction == RELOAD_REVOLVER_LOOP) {
+
+            if (GetCurrentWeaponMagAmmo() == 1) {
+                viewWeapon->DisableDrawingForMeshByMeshName("Bullet_0");
+                viewWeapon->EnableDrawingForMeshByMeshName("Bullet_1");
+                viewWeapon->DisableDrawingForMeshByMeshName("Bullet_2");
+                viewWeapon->DisableDrawingForMeshByMeshName("Bullet_3");
+                viewWeapon->DisableDrawingForMeshByMeshName("Bullet_4");
+                viewWeapon->DisableDrawingForMeshByMeshName("Bullet_5");
+            }
+
+            if (m_revolverReloadIterations == 2) {
+                if (viewWeapon->AnimationIsPastFrameNumber(8)) {
+                    //viewWeapon->EnableDrawingForMeshByMeshName("Bullet_0");
+                }
+                else {
+                    viewWeapon->EnableDrawingForMeshByMeshName("Bullet_0");
+                }
+            }
+        }*/
+        /*
+        if (GetCurrentWeaponMagAmmo() == 2) {
+            viewWeapon->DisableDrawingForMeshByMeshName("Bullet_0");
+            viewWeapon->DisableDrawingForMeshByMeshName("Bullet_1");
+            viewWeapon->EnableDrawingForMeshByMeshName("Bullet_2");
+            viewWeapon->DisableDrawingForMeshByMeshName("Bullet_3");
+            viewWeapon->DisableDrawingForMeshByMeshName("Bullet_4");
+            viewWeapon->DisableDrawingForMeshByMeshName("Bullet_5");
+        }
+        if (GetCurrentWeaponMagAmmo() == 3) {
+            viewWeapon->DisableDrawingForMeshByMeshName("Bullet_0");
+            viewWeapon->DisableDrawingForMeshByMeshName("Bullet_1");
+            viewWeapon->DisableDrawingForMeshByMeshName("Bullet_2");
+            viewWeapon->EnableDrawingForMeshByMeshName("Bullet_3");
+            viewWeapon->DisableDrawingForMeshByMeshName("Bullet_4");
+            viewWeapon->DisableDrawingForMeshByMeshName("Bullet_5");
+        }
+        if (GetCurrentWeaponMagAmmo() == 4) {
+            viewWeapon->DisableDrawingForMeshByMeshName("Bullet_0");
+            viewWeapon->DisableDrawingForMeshByMeshName("Bullet_1");
+            viewWeapon->DisableDrawingForMeshByMeshName("Bullet_2");
+            viewWeapon->DisableDrawingForMeshByMeshName("Bullet_3");
+            viewWeapon->EnableDrawingForMeshByMeshName("Bullet_4");
+            viewWeapon->DisableDrawingForMeshByMeshName("Bullet_5");
+        }
+        if (GetCurrentWeaponMagAmmo() == 5) {
+            viewWeapon->DisableDrawingForMeshByMeshName("Bullet_0");
+            viewWeapon->DisableDrawingForMeshByMeshName("Bullet_1");
+            viewWeapon->DisableDrawingForMeshByMeshName("Bullet_2");
+            viewWeapon->DisableDrawingForMeshByMeshName("Bullet_3");
+            viewWeapon->DisableDrawingForMeshByMeshName("Bullet_4");
+            viewWeapon->EnableDrawingForMeshByMeshName("Bullet_5");
+        }
+        if (GetCurrentWeaponMagAmmo() == 6) {
+            viewWeapon->EnableDrawingForMeshByMeshName("Bullet_0");
+            viewWeapon->EnableDrawingForMeshByMeshName("Bullet_1");
+            viewWeapon->EnableDrawingForMeshByMeshName("Bullet_2");
+            viewWeapon->EnableDrawingForMeshByMeshName("Bullet_3");
+            viewWeapon->EnableDrawingForMeshByMeshName("Bullet_4");
+            viewWeapon->EnableDrawingForMeshByMeshName("Bullet_5");
+        }*/
+    }
+
+
+
+
+
     viewWeapon->Update(deltaTime);
 }
 
@@ -703,6 +855,13 @@ void Player::UpdateWeaponSway(float deltaTime) {
         if (_zoom < 0.99f) {
             xMax = 2.0f;
         }
+
+        if (weaponInfo && weaponInfo->name == "P90"
+            // || weaponInfo && weaponInfo->name == "Tokarev"            // MAKE THIS A FLAG IN WEAPON INFO
+            ) {
+            xMax *= 2;
+        }
+
         float SWAY_AMOUNT = 0.125f;
         float SMOOTH_AMOUNT = 4.0f;
         float SWAY_MIN_X = -2.25f;
@@ -714,7 +873,7 @@ void Player::UpdateWeaponSway(float deltaTime) {
 
 
         if (weaponInfo && weaponInfo->name == "Remington 870"
-           // || weaponInfo && weaponInfo->name == "Tokarev"            // MAKE THIS A FLAG IN WEAPON INFO
+            // || weaponInfo && weaponInfo->name == "Tokarev"            // MAKE THIS A FLAG IN WEAPON INFO
             ) {
             xOffset *= -1;
         }
@@ -787,7 +946,7 @@ void Player::DropWeapons() {
             weapon->UpdateRigidBodyMassAndInertia(50.0f);
             weapon->DisableRespawnOnPickup();
             weapon->SetCollisionType(CollisionType::PICKUP);
-            weapon->DisableShadows();
+            //weapon->DisableShadows();
             weapon->m_collisionRigidBody.SetGlobalPose(weapon->_transform.to_mat4());
         }
     }

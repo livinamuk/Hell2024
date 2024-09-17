@@ -1,5 +1,7 @@
 #include "Scene.h"
 #include "Player.h"
+#include <memory>
+#include <stdlib.h>
 
 #include "../BackEnd/BackEnd.h"
 #include "../Core/AssetManager.h"
@@ -19,7 +21,6 @@ namespace Scene {
 
     std::vector<GameObject> g_gameObjects;
     std::vector<AnimatedGameObject> g_animatedGameObjects;
-    std::vector<BulletHoleDecal> g_bulletHoleDecals;
     std::vector<Door> g_doors;
     std::vector<Window> g_windows;
 
@@ -225,6 +226,19 @@ void Scene::AddDobermann(DobermannCreateInfo& createInfo) {
     dobermann.Init();
 }
 
+int Scene::AssignNextFreeShadowMapIndex(int lightIndex) {
+    if (lightIndex >= MAX_SHADOW_CASTING_LIGHTS) {
+        return -1;
+    }    
+    for (int i = 0; i < g_shadowMapLightIndices.size(); i++) {
+        if (g_shadowMapLightIndices[i] == -1) {
+            g_shadowMapLightIndices[i] = lightIndex;
+            return i;
+        }
+    }
+    return -1;
+}
+
 void Scene::LoadDefaultScene() {
 
     std::cout << "Loading default scene\n";
@@ -233,9 +247,19 @@ void Scene::LoadDefaultScene() {
     CreateDefaultSpawnPoints();
     //CreateDefaultLight();
 
-    for (Light& light : g_lights) {
-        light.isDirty = true;
-    }
+
+    HeightMap& heightMap = AssetManager::g_heightMap;
+    int rows = heightMap.m_heightScale;
+    int columns = heightMap.m_depth;
+
+    /*
+    if (heightMap.m_pxRigidStatic == NULL) {
+        heightMap.CreatePhysicsObject();
+        std::cout << "Created heightmap physics shit\n";
+    }*/
+
+
+
 
     g_doors.clear();
     g_doors.reserve(sizeof(Door) * 1000);
@@ -268,6 +292,76 @@ void Scene::LoadDefaultScene() {
 
 
     LoadMapData("mappp.txt");
+    for (Light& light : g_lights) {
+        light.isDirty = true;
+    }
+      
+    // Reset all shadow map light indices
+    g_shadowMapLightIndices.resize(MAX_SHADOW_CASTING_LIGHTS);
+    for (int i = 0; i < g_shadowMapLightIndices.size(); i++) {
+        g_shadowMapLightIndices[i] = -1;
+    }
+
+    // Create 100 test lights
+    float size = 30;
+    float xMin = 10;
+    float xMax = xMin + size * 2;
+    float yMin = -5;
+    float yMax = yMin + size;;
+    float zMin = -size * 0.5f;
+    float zMax = zMin + size * 2;
+    int cubeCount = 50;
+    for (int i = 0; i < cubeCount; i++) {
+        float x = Util::RandomFloat(xMin, xMax);
+        float y = Util::RandomFloat(yMin, yMax);
+        float z = Util::RandomFloat(zMin, zMax);
+        float r = Util::RandomFloat(0.0f, 1.0f);
+        float g = Util::RandomFloat(0.0f, 1.0f);
+        float b = Util::RandomFloat(0.0f, 1.0f);
+        LightCreateInfo createInfo;
+        createInfo.position = { x, y, z };
+        createInfo.color = { r, g, b };
+        createInfo.strength = 1;
+        createInfo.type = 1;
+        createInfo.radius = 10;
+        Scene::CreateLight(createInfo);
+    }
+
+
+
+
+
+    // Debug test init shit
+    for (int i = 0; i < g_lights.size(); i++) {
+        Light& light = g_lights[i];
+        light.m_shadowCasting = true;
+        light.m_contributesToGI = true;
+        if (i < 15) {
+            light.m_shadowCasting = false;
+            light.m_contributesToGI = false;
+        }
+    }
+
+    // Assign a shadow map to any shadow casting lights
+    for (int i = 0; i < g_lights.size(); i++) {
+        Light& light = g_lights[i];
+        if (light.m_shadowCasting) {
+            light.m_shadowMapIndex = AssignNextFreeShadowMapIndex(i);
+        }
+    }
+
+
+    // Error checking
+    for (int i = 0; i < g_lights.size(); i++) {
+        Light& light = g_lights[i];
+        if (light.m_shadowMapIndex == -1) {
+            light.m_shadowCasting = false;
+        }
+    }
+
+   
+
+    std::cout << "Light Count: " << g_lights.size() << "\n";
 
     // Dobermann spawn lab
     {
@@ -288,6 +382,25 @@ void Scene::LoadDefaultScene() {
         createInfo.rotation = (1.3f);
         createInfo.initalState = DobermannState::LAY;
         AddDobermann(createInfo);
+    }
+
+
+
+    if (false) {
+
+        int index = CreateAnimatedGameObject();
+        AnimatedGameObject& dobermann = g_animatedGameObjects[index];
+        dobermann.SetFlag(AnimatedGameObject::Flag::NONE);
+        dobermann.SetPlayerIndex(1);
+        dobermann.SetSkinnedModel("Smith");
+        dobermann.SetName("SMITHTHTIHSAOIAISDH");
+        dobermann.SetAnimationModeToBindPose();
+        dobermann.SetAllMeshMaterials("Dobermann");
+        dobermann.SetPosition(glm::vec3(0, 0, 0));
+        dobermann.SetRotationY(1.3f);
+        dobermann.SetScale(0.01);
+        dobermann.PlayAndLoopAnimation("Smith_Idle", 1.0f);
+        dobermann.PrintMeshNames();
     }
 
 
@@ -567,6 +680,35 @@ void Scene::LoadDefaultScene() {
         }
     }
 
+    {
+        float size = 30;
+        float xMin = 10;
+        float xMax = xMin + size * 2;
+        float yMin = -5;
+        float yMax = yMin + size;;
+        float zMin = -size * 0.5f;
+        float zMax = zMin + size * 2;
+        int cubeCount = 200;
+        for (int i = 0; i < cubeCount; i++) {
+            float x = Util::RandomFloat(xMin, xMax);
+            float y = Util::RandomFloat(yMin, yMax);
+            float z = Util::RandomFloat(zMin, zMax);
+            CreateGameObject();
+            GameObject* cube = GetGameObjectByIndex(GetGameObjectCount() - 1);
+            cube->SetPosition(x, y, z);
+            cube->SetRotationX(Util::RandomFloat(0, HELL_PI * 2));
+            cube->SetRotationY(Util::RandomFloat(0, HELL_PI * 2));
+            cube->SetRotationZ(Util::RandomFloat(0, HELL_PI * 2));
+            cube->SetModel("Cube");
+            cube->SetScale(3.0f);
+            cube->SetMeshMaterial("Ceiling2");
+        }
+    }
+
+
+
+
+
     /*
     // Walls
     {
@@ -825,7 +967,6 @@ void Scene::Update(float deltaTime) {
             light.FindVisibleCloudPoints();
         }
     }
-
 
 
     for (Dobermann& dobermann : g_dobermann) {
@@ -1242,8 +1383,6 @@ std::vector<RenderItem3D> Scene::GetAllRenderItems() {
     static Model* model = AssetManager::GetModelByIndex(AssetManager::GetModelIndexByName("Staircase"));
     static int materialIndex = AssetManager::GetMaterialIndex("Stairs01");
 
-
-
     for (Staircase& staircase: Scene::g_staircases) {
 
         Transform segmentOffset;
@@ -1447,6 +1586,30 @@ std::vector<RenderItem3D> Scene::CreateDecalRenderItems() {
             renderItem.meshIndex = AssetManager::GetQuadMeshIndex();
         }
     }
+
+    /*
+
+    Player* player = Game::GetPlayerByIndex(playerIndex);
+    Frustum& frustum = player->m_frustum;
+
+    int culled = 0;
+    int oldSize = renderItems.size();
+
+    // Frustum cull remove them
+    for (int i = 0; i < renderItems.size(); i++) {
+        RenderItem3D& renderItem = renderItems[i];
+        Sphere sphere;
+        sphere.radius = 0.015;
+        sphere.origin = Util::GetTranslationFromMatrix(renderItem.modelMatrix);
+        if (!frustum.IntersectsSphere(sphere)) {
+            renderItems.erase(renderItems.begin() + i);
+            culled++;
+            i--;
+        }
+    }
+
+    std::cout << playerIndex << " CULLED: " << culled <<  " of " << oldSize << "\n";
+    */
     return renderItems;
 }
 
@@ -1575,6 +1738,7 @@ void Scene::Update_OLD(float deltaTime) {
 void Scene::DirtyAllLights() {
     for (Light& light : Scene::g_lights) {
         light.extraDirty = true;
+        light.m_aaabbVolumeIsDirty = true;
     }
 }
 
@@ -1683,7 +1847,7 @@ void Scene::ProcessBullets() {
                             for (RigidComponent& rigidComponent : animatedGameObject->_ragdoll._rigidComponents) {
                                 if (rigidComponent.pxRigidBody == actor) {
                                     if (animatedGameObject->_animationMode == AnimatedGameObject::ANIMATION) {
-                                        dobermann.TakeDamage();
+                                        dobermann.GiveDamage(bullet.damage);
                                     }
                                 }
                             }
@@ -1711,7 +1875,7 @@ void Scene::ProcessBullets() {
                         if (found && !parentPlayerHit->_isDead) {
 
                             parentPlayerHit->GiveDamageColor();
-                            parentPlayerHit->_health -= 15;
+                            parentPlayerHit->_health -= bullet.damage;
                             parentPlayerHit->_health = std::max(0, parentPlayerHit->_health);
 
                             if (actor->getName() == "RAGDOLL_HEAD") {
@@ -1785,6 +1949,7 @@ void Scene::ProcessBullets() {
 					newBullet.direction = bullet.direction;
 					newBullet.spawnPosition = rayResult.hitPosition + (bullet.direction * glm::vec3(0.5f));
                     newBullet.raycastFlags = bullet.raycastFlags;
+                    newBullet.damage = bullet.damage;
                     Scene::_bullets.push_back(newBullet);
 
 					// Front glass bullet decal
@@ -1858,7 +2023,7 @@ void Scene::LoadHardCodedObjects() {
     _toilets.push_back(Toilet(glm::vec3(11.2f, 0.1f, 3.65f), HELL_PI * 0.5f));
 
 
-    if (false) {
+    if (true) {
         int testIndex = CreateAnimatedGameObject();
         AnimatedGameObject& glock = g_animatedGameObjects[testIndex];
         glock.SetFlag(AnimatedGameObject::Flag::NONE);
@@ -1876,6 +2041,25 @@ void Scene::LoadHardCodedObjects() {
         glock.PlayAndLoopAnimation("Glock_Reload", 0.1f);
         glock.SetPosition(glm::vec3(2, 0, 2));
         glock.SetScale(0.01);
+    }
+
+
+    if (true) {
+        int testIndex = CreateAnimatedGameObject();
+        AnimatedGameObject& object = g_animatedGameObjects[testIndex];
+        object.SetFlag(AnimatedGameObject::Flag::NONE);
+        object.SetPlayerIndex(1);
+        object.SetSkinnedModel("Smith");
+        object.SetName("TestSmith");
+        object.SetAnimationModeToBindPose();
+        object.SetAllMeshMaterials("Glock");
+        object.SetMeshMaterialByMeshName("ArmsMale", "Hands");
+        object.SetMeshMaterialByMeshName("ArmsFemale", "FemaleArms");
+        object.PrintMeshNames();
+        //glock.DisableDrawingForMeshByMeshName("Silencer");
+        object.PlayAndLoopAnimation("Smith_Idle", 0.1f);
+        object.SetPosition(glm::vec3(3, 0, 2));
+        object.SetScale(0.01);
     }
 
     /*

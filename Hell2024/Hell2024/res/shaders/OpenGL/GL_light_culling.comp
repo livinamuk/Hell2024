@@ -1,0 +1,443 @@
+#version 430 core
+
+#define TILE_SIZE 12
+layout(local_size_x = TILE_SIZE, local_size_y = TILE_SIZE, local_size_z = 1) in;
+
+layout(rgba8, binding = 0) uniform image2D tex;
+layout(r16f, binding = 1) uniform imageCubeArray shadowMapArray;
+
+layout (binding = 1) uniform sampler2D depthTexture;
+layout (binding = 2) uniform sampler2DArray shadowMapArrayView;
+layout (binding = 3) uniform sampler2DArray lightVolumeShadowMapArray;
+layout (binding = 4) uniform sampler2D normalTexture;
+
+uniform mat4 projectionMatrix;
+uniform mat4 viewMatrix;
+uniform vec3 viewPos;
+uniform float viewportWidth;
+uniform float viewportHeight;
+uniform int lightCount;
+uniform int tileXCount;
+uniform int tileYCount;
+
+// Shared values between all the threads in the group
+//shared uint minDepthInt;
+//shared uint maxDepthInt;
+
+shared uint minWorldSpaceXInt;
+shared uint maxWorldSpaceXInt;
+shared uint minWorldSpaceYInt;
+shared uint maxWorldSpaceYInt;
+shared uint minWorldSpaceZInt;
+shared uint maxWorldSpaceZInt;
+
+shared uint tileIndex;
+
+struct CameraData {
+    mat4 projection;
+    mat4 projectionInverse;
+    mat4 view;
+    mat4 viewInverse;
+	float viewportWidth;
+	float viewportHeight;
+    float viewportOffsetX;
+    float viewportOffsetY;
+	float clipSpaceXMin;
+    float clipSpaceXMax;
+    float clipSpaceYMin;
+    float clipSpaceYMax;
+	float finalImageColorContrast;
+    float finalImageColorR;
+    float finalImageColorG;
+    float finalImageColorB;
+};
+
+struct Light {
+    float posX;
+    float posY;
+    float posZ;
+    float colorR;
+    float colorG;
+    float colorB;
+    float strength;
+    float radius;
+    int shadowMapIndex;
+    int contributesToGI;
+    float padding0;
+    float padding1;
+};
+
+layout(std430, binding = 16) readonly buffer CameraDataArray {
+    CameraData cameraDataArray[];
+};
+
+struct LightVolumeData {
+	float aabbMinX;
+	float aabbMinY;
+	float aabbMinZ;
+	float padding;
+	float aabbMaxX;
+	float aabbMaxY;
+	float aabbMaxZ;
+	float padding2;
+};
+
+
+layout(std430, binding = 19) buffer Buffer {
+    LightVolumeData lightVolumeData[];
+};
+
+struct TileData {
+    uint lightCount;
+    uint lightIndices[31];
+};
+
+layout(std430, binding = 20) buffer Buffer2 {
+    TileData tileData[];
+};
+
+
+float map(float value, float min1, float max1, float min2, float max2) {
+	float perc = (value - min1) / (max1 - min1);
+	return perc * (max2 - min2) + min2;
+}
+
+
+bool SphereVsAABB_BROKEN(vec3 aabbMin, vec3 aabbMax, vec3 sphereOrigin, float sphereRadius) {
+    vec3 closestPoint = clamp(sphereOrigin, aabbMin, aabbMax);
+    float distanceSquared = dot(closestPoint - sphereOrigin, closestPoint - sphereOrigin);
+    return distanceSquared <= (sphereRadius * sphereRadius);
+}
+
+bool SphereVsAABB_ALSO_BROKEN(vec3 aabbMin, vec3 aabbMax, vec3 sphereOrigin, float sphereRadius) {
+    float dmin = 0.0;
+    for (int i = 0; i < 3; i++) {
+        if (sphereOrigin[i] < aabbMin[i]) {
+            dmin += (sphereOrigin[i] - aabbMin[i]) * (sphereOrigin[i] - aabbMin[i]);
+        } else if (sphereOrigin[i] > aabbMax[i]) {
+            dmin += (sphereOrigin[i] - aabbMax[i]) * (sphereOrigin[i] - aabbMax[i]);
+        }
+    }
+    return dmin <= (sphereRadius * sphereRadius);
+}
+
+bool SphereVsAABB(vec3 aabbMin, vec3 aabbMax, vec3 sphereOrigin, float sphereRadius) {
+    vec3 corners[8] = vec3[8](
+		aabbMin,
+        vec3(aabbMax.x, aabbMin.y, aabbMin.z),
+        vec3(aabbMin.x, aabbMax.y, aabbMin.z),
+        vec3(aabbMin.x, aabbMin.y, aabbMax.z),
+        vec3(aabbMax.x, aabbMax.y, aabbMin.z),
+        vec3(aabbMax.x, aabbMin.y, aabbMax.z),
+        vec3(aabbMin.x, aabbMax.y, aabbMax.z),
+        aabbMax 
+    );
+
+    float radiusSquared = sphereRadius * sphereRadius;
+    for (int i = 0; i < 8; i++) {   
+		vec3 corner = corners[i];
+        float distanceSquared = dot(corner - sphereOrigin, corner - sphereOrigin);
+        if (distanceSquared <= radiusSquared) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+layout(std430, binding = 2) readonly buffer Lights {
+    Light lights[];
+};
+
+bool AABBsIntersect(vec3 minA, vec3 maxA, vec3 minB, vec3 maxB) {
+    return !(minA.x > maxB.x || maxA.x < minB.x ||
+             minA.y > maxB.y || maxA.y < minB.y ||
+             minA.z > maxB.z || maxA.z < minB.z);
+}
+
+bool IsWithinLightRadius(vec3 position, vec3 lightPosition, float lightRadius) {
+    // Calculate the squared distance between the world-space position and the light's position
+    float distanceSquared = dot(position - lightPosition, position - lightPosition);
+
+    // Compare the squared distance with the squared radius
+    return distanceSquared <= (lightRadius * lightRadius);
+}
+
+// Check isnan(value) before use.
+uint order_preserving_float_map(float value)
+{
+    // For negative values, the mask becomes 0xffffffff.
+    // For positive values, the mask becomes 0x80000000.
+    uint uvalue = floatBitsToUint(value);
+    uint mask = -int(uvalue >> 31) | 0x80000000;
+    return uvalue ^ mask;
+}
+
+float inverse_order_preserving_float_map(uint value)
+{
+    // If the msb is set, the mask becomes 0x80000000.
+    // If the msb is unset, the mask becomes 0xffffffff.
+    uint mask = ((value >> 31) - 1) | 0x80000000;
+    return uintBitsToFloat(value ^ mask);
+}
+
+
+void main() {
+
+	vec2 viewportSize = vec2(viewportWidth, viewportHeight);
+	ivec2 pixelCoords = ivec2(gl_GlobalInvocationID.xy);
+    vec3 color = imageLoad(tex, pixelCoords).rgb;
+	mat4 viewProjection = projectionMatrix * viewMatrix;
+	vec2 uv = vec2(pixelCoords) / viewportSize;
+
+	int tileSize = 12;	
+	int tileX = pixelCoords.x / tileSize;
+	int tileY = pixelCoords.y / tileSize;	
+	
+	float offset = 10000;
+
+	float maxDepth, minDepth;
+	
+	int playerIndex = int(texture(normalTexture, uv).a * 4 + 0.5);
+	vec3 fragmentNormal = texture(normalTexture, uv).rgb;
+	mat4 inverseProjection = cameraDataArray[playerIndex].projectionInverse;
+	mat4 inverseView = cameraDataArray[playerIndex].viewInverse;
+	vec3 viewPos = cameraDataArray[playerIndex].viewInverse[3].xyz;
+	float clipSpaceXMin = cameraDataArray[playerIndex].clipSpaceXMin;
+	float clipSpaceXMax = cameraDataArray[playerIndex].clipSpaceXMax;
+	float clipSpaceYMin = cameraDataArray[playerIndex].clipSpaceYMin;
+	float clipSpaceYMax = cameraDataArray[playerIndex].clipSpaceYMax;
+	
+
+	// Reconstruct mix/max world position from min/max depth	
+	float z = texture(depthTexture, uv).r;
+    vec2 clipSpaceTexCoord = uv;
+	clipSpaceTexCoord.x = map(clipSpaceTexCoord.x, clipSpaceXMin, clipSpaceXMax, 0.0, 1.0);
+	clipSpaceTexCoord.y = map(clipSpaceTexCoord.y, clipSpaceYMin, clipSpaceYMax, 0.0, 1.0);
+	vec4 clipSpacePosition = vec4(clipSpaceTexCoord * 2.0 - 1.0, z, 1.0);
+    vec4 viewSpacePosition = inverseProjection * clipSpacePosition;
+    viewSpacePosition /= viewSpacePosition.w;
+    vec4 worldSpacePosition = inverseView * viewSpacePosition;
+	
+	worldSpacePosition.x += offset;
+	worldSpacePosition.y += offset;
+	worldSpacePosition.z += offset;
+
+	if (gl_LocalInvocationIndex == 0) {
+		minWorldSpaceXInt = 0xFFFFFFFF;
+		minWorldSpaceYInt = 0xFFFFFFFF;
+		minWorldSpaceZInt = 0xFFFFFFFF;
+		maxWorldSpaceXInt = 0;
+		maxWorldSpaceYInt = 0;
+		maxWorldSpaceZInt = 0;
+		tileIndex = (tileY * tileXCount) + tileX;
+	}
+	barrier();
+
+
+    uint worldSpaceXInt = floatBitsToUint(worldSpacePosition.x);
+    uint worldSpaceYInt = floatBitsToUint(worldSpacePosition.y);
+    uint worldSpaceZInt = floatBitsToUint(worldSpacePosition.z);
+	
+	worldSpaceXInt = order_preserving_float_map(worldSpacePosition.x);
+	worldSpaceYInt = order_preserving_float_map(worldSpacePosition.y);
+	worldSpaceZInt = order_preserving_float_map(worldSpacePosition.z);
+	
+	atomicMin(minWorldSpaceXInt, worldSpaceXInt);
+	atomicMin(minWorldSpaceYInt, worldSpaceYInt);
+	atomicMin(minWorldSpaceZInt, worldSpaceZInt);    
+	atomicMax(maxWorldSpaceXInt, worldSpaceXInt);
+	atomicMax(maxWorldSpaceYInt, worldSpaceYInt);
+	atomicMax(maxWorldSpaceZInt, worldSpaceZInt);
+
+    barrier();
+	
+	
+	
+    float worldSpaceXMin = uintBitsToFloat(minWorldSpaceXInt);
+    float worldSpaceYMin = uintBitsToFloat(minWorldSpaceYInt);
+    float worldSpaceZMin = uintBitsToFloat(minWorldSpaceZInt);
+    float worldSpaceXMax = uintBitsToFloat(maxWorldSpaceXInt);
+    float worldSpaceYMax = uintBitsToFloat(maxWorldSpaceYInt);
+    float worldSpaceZMax = uintBitsToFloat(maxWorldSpaceZInt);
+	worldSpaceXMin = inverse_order_preserving_float_map(minWorldSpaceXInt);
+	worldSpaceYMin = inverse_order_preserving_float_map(minWorldSpaceYInt);
+	worldSpaceZMin = inverse_order_preserving_float_map(minWorldSpaceZInt);
+	worldSpaceXMax = inverse_order_preserving_float_map(maxWorldSpaceXInt);
+	worldSpaceYMax = inverse_order_preserving_float_map(maxWorldSpaceYInt);
+	worldSpaceZMax = inverse_order_preserving_float_map(maxWorldSpaceZInt);
+	
+	vec3 worldSpaceMin = vec3(worldSpaceXMin, worldSpaceYMin, worldSpaceZMin);
+	vec3 worldSpaceMax = vec3(worldSpaceXMax, worldSpaceYMax, worldSpaceZMax);
+	
+	worldSpaceMin.x -= offset;
+	worldSpaceMax.x -= offset;
+	worldSpaceMin.y -= offset;
+	worldSpaceMax.y -= offset;
+	worldSpaceMin.z -= offset;
+	worldSpaceMax.z -= offset;
+
+	if (gl_LocalInvocationIndex == 0) {
+	
+		tileData[tileIndex].lightCount = 0;	
+
+
+		for (int i = 0; i < lightCount; i++)
+		//int i = 3;
+		{
+			//int i = 3;
+			vec3 lightPos = vec3(lights[i].posX, lights[i].posY, lights[i].posZ);
+			float lightRadius = lights[i].radius;
+			
+			vec3 lightAabbMin = vec3(lightVolumeData[i].aabbMinX, lightVolumeData[i].aabbMinY, lightVolumeData[i].aabbMinZ);
+			vec3 lightAabbMax = vec3(lightVolumeData[i].aabbMaxX, lightVolumeData[i].aabbMaxY, lightVolumeData[i].aabbMaxZ);
+			
+			if (AABBsIntersect(worldSpaceMin, worldSpaceMax, lightAabbMin, lightAabbMax) && SphereVsAABB(worldSpaceMin, worldSpaceMax, lightPos, lightRadius)) {
+			//if (AABBsIntersect(worldSpaceMin, worldSpaceMax, lightAabbMin, lightAabbMax)) {
+			//if (SphereVsAABB(worldSpaceMin, worldSpaceMax, lightPos, lightRadius)) {
+				tileData[tileIndex].lightCount++;
+			}
+		}
+	}
+
+	barrier();
+
+	
+	return;
+
+	uint contributingLightCount = tileData[tileIndex].lightCount;
+
+	float test = contributingLightCount / 10.0;
+
+	//test = float(contributingLightCount);
+	
+
+	
+	if (test < 0.5) {
+	    // color += mix(vec3(0,0,1), vec3(1, 1, 0), test * test* test);
+	} else {	
+		// color += mix(vec3(1,1,0), vec3(1, 0, 0), test * test* test);
+	}	
+	test = clamp(test, 0, 1);	
+    float level = test * 3.14159265/2;
+    vec3 col;
+    col.r = sin(level);
+    col.g = sin(level*2.);
+    col.b = cos(level);
+	color = color * 0.5  + col * col;
+    
+	//color += vec3(contributingLightCount * 0.125);
+
+	
+
+	//test = tileIndex / 14400.0;
+
+
+	//color = vec3(test,test,test);
+
+	//color = worldSpaceMin;
+
+//	color = vec3(worldSpaceYMax);
+	//color = worldSpaceMax;
+	
+//	color = vec3(worldSpaceMin);
+
+	if (worldSpaceMax.x < -1000) {
+		//color = vec3(1,0,0);	
+	}
+	//color = vec3(worldSpaceMin);
+
+	int i =3;
+	vec3 lightPos = vec3(lights[i].posX, lights[i].posY, lights[i].posZ);
+	float lightRadius = lights[i].radius;
+
+	
+	/*
+	worldSpacePosition.xyz -= vec3(offset);
+
+	if (IsWithinLightRadius(worldSpaceMin.xyz, lightPos, lightRadius)) {
+		color = vec3(1,0,0);	
+	}
+
+	if (SphereVsAABB(worldSpaceMin, worldSpaceMax, lightPos, lightRadius)) {
+		color = vec3(1,1,0);	
+	}
+	
+	vec3 testPos = vec3(worldSpaceMax.x, worldSpaceMin.y, worldSpaceMin.z);
+	if (IsWithinLightRadius(testPos, lightPos, lightRadius)) {
+		color = vec3(0,0,1);	
+	}
+	*/
+
+//	return;
+
+
+	if (worldSpaceMax.z <  lightPos.z - lightRadius) {
+	//	color = vec3(1,0,0);
+	}
+
+	vec3 testPos = vec3(worldSpaceMax.x, worldSpaceMin.y, worldSpaceMin.z);
+	if (distance(testPos, lightPos) < lightRadius) {
+		//color = vec3(0,0,1);	
+	}
+
+
+	imageStore(tex, pixelCoords, vec4(color, 1));
+	
+
+	// Lines
+	if (gl_LocalInvocationIndex.x < 12 || gl_LocalInvocationIndex.x % 12 == 0 ||
+		gl_LocalInvocationIndex.x < 12 || gl_LocalInvocationIndex.x % 12 == 1
+	) {	
+		imageStore(tex, pixelCoords, vec4(0,0,0, 1));
+	}
+
+
+
+
+
+
+	//imageStore(tex, pixelCoords, vec4(color * vec3(1,0,0), 1));
+
+	/*
+	imageStore(tex, pixelCoords, vec4(worldSpaceMax, 1));
+	
+
+
+	if (
+	
+
+
+	
+	imageStore(tex, pixelCoords, vec4(worldSpaceMax, 1));
+
+
+	
+	float tileXMapped = float(tileX) / float(tileXCount);
+	float tileYMapped = float(tileY) / float(tileYCount);	
+	float test = tileIndex / 14400.0;
+	*/
+	
+	//imageStore(tex, pixelCoords, vec4(tileXMapped,tileYMapped,0, 1));
+
+	//tileData[tileIndex].lightCount = 0;	
+
+	//imageStore(tex, pixelCoords, vec4(worldSpaceMax.xyz, 1));
+
+
+	/*
+	color = worldSpacePosition.xyz;
+
+	imageStore(tex, pixelCoords, vec4(color.xyz, 1));
+
+	//maxZ
+	if (worldSpaceMax.z > maxZ) {
+	
+	imageStore(tex, pixelCoords, vec4(color.xyz * vec3(1,0,0), 1));
+	////imageStore(tex, pixelCoords, vec4(vec3(0,0,1), 1));
+	}*/
+}
+
+float linearDepth(float z, float nearPlane, float farPlane) {
+    return nearPlane * farPlane / (farPlane - z * (farPlane - nearPlane));
+}

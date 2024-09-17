@@ -1,0 +1,69 @@
+#version 430 core
+
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+
+layout(rgba32f, binding = 0) uniform image2DArray finalLightingTexture;
+
+struct Light {
+    float posX;
+    float posY;
+    float posZ;
+    float colorR;
+    float colorG;
+    float colorB;
+    float strength;
+    float radius;
+    int shadowMapIndex;
+    int contributesToGI;
+    float padding0;
+    float padding1;
+};
+
+layout(std430, binding = 2) readonly buffer Lights {
+    Light lights[];
+};
+
+uniform int lightIndex;
+
+void main() {
+	
+	ivec2 texCoord = ivec2(gl_GlobalInvocationID.xy);	
+
+	Light light = lights[lightIndex];
+	
+	float x = light.posX;
+	float y = light.posY;
+	float z = light.posZ;
+	float radius = light.radius;
+	
+	// GL_TEXTURE_CUBE_MAP_POSITIVE_X
+	int layerIndex = 0;	
+	vec3 color = vec3(x + radius, y, z);
+	imageStore(finalLightingTexture, ivec3(texCoord, layerIndex), vec4(color, 1));
+	
+	// GL_TEXTURE_CUBE_MAP_NEGATIVE_X
+	layerIndex = 1;	
+	color = vec3(x - radius, y, z);
+	imageStore(finalLightingTexture, ivec3(texCoord, layerIndex), vec4(color, 1));
+	
+	// GL_TEXTURE_CUBE_MAP_POSITIVE_Y
+	layerIndex = 2;	
+	color = vec3(x, y + radius, z);
+	imageStore(finalLightingTexture, ivec3(texCoord, layerIndex), vec4(color, 1));
+	
+	// GL_TEXTURE_CUBE_MAP_NEGATIVE_Y
+	layerIndex = 3;	
+	color = vec3(x, y - radius, z);
+	imageStore(finalLightingTexture, ivec3(texCoord, layerIndex), vec4(color, 1));
+	
+	// GL_TEXTURE_CUBE_MAP_POSITIVE_Z
+	layerIndex = 4;	
+	color = vec3(x, y, z + radius);
+	imageStore(finalLightingTexture, ivec3(texCoord, layerIndex), vec4(color, 1));
+
+	// GL_TEXTURE_CUBE_MAP_NEGATIVE_Z
+	layerIndex = 5;	
+	color = vec3(x, y, z - radius);
+	imageStore(finalLightingTexture, ivec3(texCoord, layerIndex), vec4(color, 1));
+
+}

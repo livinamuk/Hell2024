@@ -3,7 +3,7 @@
 #include "Types/VK_raytracing.hpp"
 #include "../../Game/Light.h"
 #include "../../Renderer/RenderData.h"
-#include "../../Renderer/RendererCommon.h"
+#include "RendererCommon.h"
 #include "../../Util.hpp"
 
 namespace VulkanRenderer {

@@ -57,7 +57,12 @@ void main() {
 		//BaseColorTextureIndex = /100;
 	}*/
 
-	gl_Position = projection * view * model * vec4(vPos, 1.0);
+	float inflateAmount = 0.0;//01;  
+    vec3 inflatedPosition = vPos + vNormal * inflateAmount;
+    vec4 worldPosition = model * vec4(inflatedPosition, 1.0);
+
+
+	gl_Position = projection * view * worldPosition;
 	PlayerIndex = playerIndex;
 
 }
