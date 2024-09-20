@@ -274,17 +274,6 @@ void Scene::LoadDefaultScene() {
 
     g_staircases.clear();
 
-    /*Staircase& stairCase = g_staircases.emplace_back();
-    stairCase.m_position = glm::vec3(-1.0f, 0, 0);
-    stairCase.m_stepCount = 9;
-
-
-    Staircase& stairCase2 = g_staircases.emplace_back();
-    stairCase2.m_position = glm::vec3(0.5f, 0, 0);
-    stairCase2.m_rotation = 0.4f;
-    stairCase2.m_stepCount = 12;*/
-
-
     Staircase& stairCase3 = g_staircases.emplace_back();
     stairCase3.m_position = glm::vec3(-3.0f, 0, -3.1f);
     stairCase3.m_rotation = -HELL_PI * 0.5f;
@@ -310,7 +299,7 @@ void Scene::LoadDefaultScene() {
     float yMax = yMin + size;;
     float zMin = -size * 0.5f;
     float zMax = zMin + size * 2;
-    int cubeCount = 50;
+    int cubeCount = 150;
     for (int i = 0; i < cubeCount; i++) {
         float x = Util::RandomFloat(xMin, xMax);
         float y = Util::RandomFloat(yMin, yMax);
@@ -336,7 +325,7 @@ void Scene::LoadDefaultScene() {
         Light& light = g_lights[i];
         light.m_shadowCasting = true;
         light.m_contributesToGI = true;
-        if (i < 15) {
+        if (i > 15) {
             light.m_shadowCasting = false;
             light.m_contributesToGI = false;
         }

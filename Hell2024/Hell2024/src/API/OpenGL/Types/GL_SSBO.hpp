@@ -1,4 +1,4 @@
-#include "HellCommon.h"
+#include <glad/glad.h>
 
 struct SSBO {
 public:

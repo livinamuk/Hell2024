@@ -20,7 +20,7 @@
 #include "../Effects/MuzzleFlash.h"
 #include "../Util.hpp"
 
-#include "../Math/Frustum.hpp"
+#include "../Math/Frustum.h"
 
 IndirectDrawInfo CreateIndirectDrawInfo(std::vector<RenderItem3D>& potentialRenderItems, int playerCount);
 MultiDrawIndirectDrawInfo CreateMultiDrawIndirectDrawInfo(std::vector<RenderItem3D>& renderItems);

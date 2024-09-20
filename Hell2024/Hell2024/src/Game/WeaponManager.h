@@ -107,6 +107,7 @@ namespace WeaponManager {
 
     void Init();
     void SortList();
+    void PreLoadWeaponPickUpConvexHulls();
     WeaponInfo* GetWeaponInfoByName(std::string name);
     WeaponInfo* GetWeaponInfoByIndex(int index);
     AmmoInfo* GetAmmoInfoByName(std::string name);

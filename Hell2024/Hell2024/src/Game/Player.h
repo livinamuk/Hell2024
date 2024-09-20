@@ -4,7 +4,7 @@
 #include "../Game/AnimatedGameObject.h"
 #include "../Input/keycodes.h"
 #include "../Physics/Physics.h"
-#include "../Math/Frustum.hpp"
+#include "../Math/Frustum.h"
 #include "../Math/Types.h"
 
 #define GLOCK_CLIP_SIZE 12
@@ -313,6 +313,7 @@ public:
 
 
     glm::mat4 GetProjectionMatrix();
+    float GetZoom();
 
     bool CanEnterADS();
     bool InADS();

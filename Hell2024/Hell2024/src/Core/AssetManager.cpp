@@ -199,12 +199,22 @@ void AssetManager::LoadNextItem() {
             return;
         }
     }
+    for (Animation& animation : g_animations) {
+        if (!animation.m_loadedFromDisk) {
+            return;
+        }
+    }
     // Skinned Models
     for (SkinnedModel& skinnedModel : g_skinnedModels) {
         if (skinnedModel.m_awaitingLoadingFromDisk) {
             skinnedModel.m_awaitingLoadingFromDisk = false;
             AddItemToLoadLog(skinnedModel.m_fullPath);
             _futures.push_back(std::async(std::launch::async, LoadSkinnedModel, &skinnedModel));
+            return;
+        }
+    }
+    for (SkinnedModel& skinnedModel : g_skinnedModels) {
+        if (!skinnedModel.m_loadedFromDisk) {
             return;
         }
     }
@@ -217,9 +227,15 @@ void AssetManager::LoadNextItem() {
             return;
         }
     }
+    for (Model& model : g_models) {
+        if (!model.m_loadedFromDisk) {
+            return;
+        }
+    }
     // Textures
     for (Texture& texture : g_textures) {
         if (texture.GetLoadingState() == LoadingState::AWAITING_LOADING_FROM_DISK) {
+            texture.SetLoadingState(LoadingState::LOADING_FROM_DISK);
             _futures.push_back(std::async(std::launch::async, LoadTexture, &texture));
             AddItemToLoadLog(texture.m_fullPath);
             return;
@@ -228,21 +244,6 @@ void AssetManager::LoadNextItem() {
     // Await async loading
     for (Texture& texture : g_textures) {
         if (texture.GetLoadingState() != LoadingState::LOADING_COMPLETE) {
-            return;
-        }
-    }
-    for (Model& model : g_models) {
-        if (!model.m_loadedFromDisk) {
-            return;
-        }
-    }
-    for (SkinnedModel& skinnedModel : g_skinnedModels) {
-        if (!skinnedModel.m_loadedFromDisk) {
-            return;
-        }
-    }
-    for (Animation& animation: g_animations) {
-        if (!animation.m_loadedFromDisk) {
             return;
         }
     }
@@ -310,6 +311,10 @@ void AssetManager::LoadNextItem() {
 
     // We're done
     g_completedLoadingTasks.g_all = true;
+
+    for (auto& text : g_loadLog) {
+        //std::cout << text << "\n";
+    }
 }
 
 
@@ -915,7 +920,7 @@ int AssetManager::GetModelIndexByName(const std::string& name) {
     std::cout << "AssetManager::GetModelIndexByName() failed because name '" << name << "' was not found in _models!\n";
 
     for (auto& model : g_models) {
-        std::cout << model.GetName() << "\n";
+        //std::cout << model.GetName() << "\n";
     }
 
     return -1;

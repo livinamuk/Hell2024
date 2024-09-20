@@ -81,7 +81,8 @@ namespace OpenGLRenderer {
         Shader debugLightVolumeAabb;
 
         Shader lightVolumePrePassGeometry;
-        ComputeShader lightVolumePrePassAABB;
+        ComputeShader lightVolumeFromCubeMap;
+        ComputeShader lightVolumeFromUniforms;
         ComputeShader lightCulling;
 
         Shader p90MagFrontFaceLighting;
@@ -181,15 +182,13 @@ void LightCullingPass(RenderData& renderData);
 
 void OpenGLRenderer::HotloadShaders() {
 
-    std::cout << "Hotloading shaders...\n";    
+    std::cout << "Hotloading shaders...\n";        
 
-    
-
-        g_shaders.lightVolumeClear.Load("res/shaders/OpenGL/GL_light_volume_clear.comp");
-
+    g_shaders.lightVolumeClear.Load("res/shaders/OpenGL/GL_light_volume_clear.comp");
     g_shaders.debugLightVolumeAabb.Load("GL_debug_light_volume_aabb.vert", "GL_debug_light_volume_aabb.frag");
-    g_shaders.lightCulling.Load("res/shaders/OpenGL/GL_light_culling.comp");       
-    g_shaders.lightVolumePrePassAABB.Load("res/shaders/OpenGL/GL_lightvolume_prepass_AABB.comp");
+    g_shaders.lightCulling.Load("res/shaders/OpenGL/GL_light_culling.comp");
+    g_shaders.lightVolumeFromCubeMap.Load("res/shaders/OpenGL/GL_lightvolume_aabb_from_cubemap.comp");
+    g_shaders.lightVolumeFromUniforms.Load("res/shaders/OpenGL/GL_lightvolume_aabb_from_uniforms.comp");
     g_shaders.lightVolumePrePassGeometry.Load("GL_lightvolume_prepass_geometry.vert", "GL_lightvolume_prepass_geometry.frag", "GL_lightvolume_prepass_geometry.geom");
     g_shaders.heightMap.Load("GL_heightmap.vert", "GL_heightmap.frag");
     //g_shaders.triangles2D.Load("GL_triangles_2D.vert", "GL_triangles_2D.frag");
@@ -381,32 +380,18 @@ void OpenGLRenderer::InitMinimum() {
     glNamedBufferStorage(g_ssbos.muzzleFlashData, sizeof(MuzzleFlashData) * 4, NULL, GL_DYNAMIC_STORAGE_BIT);
 
     g_shadowMapArray.Init(MAX_SHADOW_CASTING_LIGHTS);
-
-    /*
-    for (int i = 0; i < 16; i++) {        
-        ShadowMap& shadowMap = _shadowMaps.emplace_back();
-        shadowMap.Init();
-    }*/
-
-
     g_lightVolumePrePassCubeMap.Init(512);
-
     g_ssbos.lightVolumeData.PreAllocate(MAX_LIGHTS* sizeof(LightVolumeData));
-
 
     GLFrameBuffer& gBuffer = g_frameBuffers.gBuffer;
     int tileXCount = gBuffer.GetWidth() / 12;
     int tileYCount = gBuffer.GetHeight() / 12;
     int tileCount = tileXCount * tileYCount;
     std::cout << "Tile count: " << tileCount << "\n";
-    g_ssbos.tileData.PreAllocate(tileCount * sizeof(TileData));
-    
-
-
+    g_ssbos.tileData.PreAllocate(tileCount * sizeof(TileData));   
 }
 
 void OpenGLRenderer::BindBindlessTextures() {
-
     // Create the samplers SSBO if needed
     if (g_ssbos.samplers == 0) {
         glCreateBuffers(1, &g_ssbos.samplers);
@@ -440,7 +425,6 @@ void MultiDrawIndirect(std::vector<DrawIndexedIndirectCommand>& commands, GLuint
 }
 
 void MultiDrawIndirect(std::vector<RenderItem3D>& renderItems, GLuint vertexArray) {
-
     if (renderItems.empty()) {
         return;
     }
@@ -473,7 +457,6 @@ void MultiDrawIndirect(std::vector<RenderItem3D>& renderItems, GLuint vertexArra
     else {
         return;
     }
-
     // Feed the draw command data to the gpu
     glBindBuffer(GL_DRAW_INDIRECT_BUFFER, OpenGLRenderer::_indirectBuffer);
     glBufferData(GL_DRAW_INDIRECT_BUFFER, sizeof(DrawIndexedIndirectCommand) * commands.size(), commands.data(), GL_DYNAMIC_DRAW);
@@ -510,20 +493,16 @@ void BlitPlayerPresentTargetToDefaultFrameBuffer(GLFrameBuffer* src, GLFrameBuff
     GLint dstX1 = blitDstCoords.dstX1;
     GLint dstY1 = blitDstCoords.dstY1;
 
-
-
     glBindFramebuffer(GL_READ_FRAMEBUFFER, srcHandle);
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, dstHandle);
     glReadBuffer(srcSlot);
     glDrawBuffer(dstSlot);;
     glBlitFramebuffer(srcX0, srcY0, srcX1, srcY1, dstX0, dstY0, dstX1, dstY1, mask, filter);
-
 }
 
 
 
 void BlitFrameBuffer(GLFrameBuffer* src, GLFrameBuffer* dst, const char* srcName, const char* dstName, GLbitfield mask, GLenum filter) {
-
     GLint srcHandle = 0;
     GLint dstHandle = 0;
     GLint srcWidth = BackEnd::GetCurrentWindowWidth();
@@ -532,7 +511,6 @@ void BlitFrameBuffer(GLFrameBuffer* src, GLFrameBuffer* dst, const char* srcName
     GLint dstHeight = BackEnd::GetCurrentWindowHeight();
     GLenum srcSlot = GL_BACK;
     GLenum dstSlot = GL_BACK;
-
     if (src) {
         srcHandle = src->GetHandle();
         srcWidth = src->GetWidth();
@@ -545,7 +523,6 @@ void BlitFrameBuffer(GLFrameBuffer* src, GLFrameBuffer* dst, const char* srcName
         dstHeight = dst->GetHeight();
         dstSlot = dst->GetColorAttachmentSlotByName(dstName);
     }
-
     glBindFramebuffer(GL_READ_FRAMEBUFFER, srcHandle);
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, dstHandle);
     glReadBuffer(srcSlot);
@@ -652,7 +629,6 @@ void OpenGLRenderer::UploadSSBOsGPU(RenderData& renderData) {
 
     glNamedBufferSubData(g_ssbos.lights, 0, renderData.lights.size() * sizeof(GPULight), &renderData.lights[0]);
     glNamedBufferSubData(g_ssbos.glassRenderItems, 0, renderData.glassDrawInfo.renderItems.size() * sizeof(RenderItem3D), &renderData.glassDrawInfo.renderItems[0]);
-    //glNamedBufferSubData(g_ssbos.shadowMapGeometryRenderItems, 0, renderData.shadowMapGeometryDrawInfo.renderItems.size() * sizeof(RenderItem3D), &renderData.shadowMapGeometryDrawInfo.renderItems[0]);
     glNamedBufferSubData(g_ssbos.skinningTransforms, 0, renderData.skinningTransforms.size() * sizeof(glm::mat4), &renderData.skinningTransforms[0]);
     glNamedBufferSubData(g_ssbos.baseAnimatedTransformIndices, 0, renderData.baseAnimatedTransformIndices.size() * sizeof(uint32_t), &renderData.baseAnimatedTransformIndices[0]);
     glNamedBufferSubData(g_ssbos.cameraData, 0, 4 * sizeof(CameraData), &renderData.cameraData[0]);
@@ -674,8 +650,14 @@ void OpenGLRenderer::RenderFrame(RenderData& renderData) {
     GLFrameBuffer& present = g_frameBuffers.present;
 
     OpenGLRenderer::UploadSSBOsGPU(renderData);
-    UpdatePointCloud();
-    IndirectLightingPass();
+
+
+    static int frameNumber = 0;
+    frameNumber++;
+    if (frameNumber < 10) {
+        UpdatePointCloud();
+        IndirectLightingPass();
+    }
 
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, g_ssbos.samplers);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, g_ssbos.geometryRenderItems.GetHandle());
@@ -743,11 +725,7 @@ void OpenGLRenderer::RenderFrame(RenderData& renderData) {
 
 
 void ClearRenderTargets() {
-
-    // Clear GBuffer color attachments
     GLFrameBuffer& gBuffer = OpenGLRenderer::g_frameBuffers.gBuffer;
-    GLFrameBuffer& present = OpenGLRenderer::g_frameBuffers.present;
-
     gBuffer.Bind();
     gBuffer.SetViewport();
     unsigned int attachments[8] = {
@@ -762,9 +740,6 @@ void ClearRenderTargets() {
     glDrawBuffers(7, attachments);
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-
-
 }
 
 void SkyBoxPass(RenderData& renderData) {
@@ -777,7 +752,7 @@ void SkyBoxPass(RenderData& renderData) {
 
     Transform skyBoxTransform;
     skyBoxTransform.position = player->GetViewPos();
-    skyBoxTransform.scale = glm::vec3(250.0f);
+    skyBoxTransform.scale = glm::vec3(FAR_PLANE * 0.99);
 
     // Render target
     glEnable(GL_DEPTH_TEST);
@@ -807,15 +782,12 @@ void SkyBoxPass(RenderData& renderData) {
 }
 
 void EmissivePass(RenderData& renderData) {
-
     GLFrameBuffer& gBuffer = OpenGLRenderer::g_frameBuffers.gBuffer;
     Shader& horizontalBlurShader = OpenGLRenderer::g_shaders.horizontalBlur;
     Shader& verticalBlurShader = OpenGLRenderer::g_shaders.verticalBlur;
-
     std::vector<GLFrameBuffer>* blurBuffers = nullptr;
 
     for (int i = 0; i < renderData.playerCount; i++) {
-
         if (i == 0) {
             blurBuffers = &OpenGLRenderer::g_blurBuffers.p1;
         }
@@ -936,28 +908,22 @@ MultiDrawIndirectDrawInfo CreateMultiDrawIndirectDrawInfo2(std::vector<RenderIte
 
 void RenderShadowMapss(RenderData& renderData) {
 
-    if (0 != 0) {
-        return;
-    }
-
-    Shader& shader = OpenGLRenderer::g_shaders.shadowMap;
-
-    shader.Use();
     glDepthMask(true);
     glDisable(GL_BLEND);
     glDisable(GL_CULL_FACE);
     glEnable(GL_DEPTH_TEST);
     glViewport(0, 0, SHADOW_MAP_SIZE, SHADOW_MAP_SIZE);
+    glBindFramebuffer(GL_FRAMEBUFFER, OpenGLRenderer::g_shadowMapArray.m_ID);
     glBindVertexArray(OpenGLBackEnd::GetVertexDataVAO());
 
-    glBindFramebuffer(GL_FRAMEBUFFER, OpenGLRenderer::g_shadowMapArray.m_ID);
+    // Regular geometry
+    Shader& shader = OpenGLRenderer::g_shaders.shadowMap;
+    shader.Use();
 
     for (Light& light : Scene::g_lights) {
-
         if (!light.m_shadowCasting || !light.isDirty) {
             continue;
         }
-
         shader.SetFloat("farPlane", light.radius);
         shader.SetVec3("lightPosition", light.position);
         shader.SetMat4("shadowMatrices[0]", light.m_projectionTransforms[0]);
@@ -966,65 +932,46 @@ void RenderShadowMapss(RenderData& renderData) {
         shader.SetMat4("shadowMatrices[3]", light.m_projectionTransforms[3]);
         shader.SetMat4("shadowMatrices[4]", light.m_projectionTransforms[4]);
         shader.SetMat4("shadowMatrices[5]", light.m_projectionTransforms[5]);
-
-        //std::cout << "\nLight " << i << "\n";
         for (int face = 0; face < 6; ++face) {
-
             shader.SetInt("faceIndex", face);
-
             GLuint layer = light.m_shadowMapIndex * 6 + face;
-
-            std::cout << "\nLight.m_shadowMapIndex: " << light.m_shadowMapIndex << "\n";
-            std::cout << "Layer: " << layer << "\n";
-
             glFramebufferTextureLayer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, OpenGLRenderer::g_shadowMapArray.m_depthTexture, 0, layer);
-            glClear(GL_DEPTH_BUFFER_BIT);
-            
+            glClear(GL_DEPTH_BUFFER_BIT);            
             shader.SetInt("baseInstance", RendererData::g_shadowMapGeometryDrawInfo[light.m_shadowMapIndex][face].baseInstance);
             MultiDrawIndirect(RendererData::g_shadowMapGeometryDrawInfo[light.m_shadowMapIndex][face].commands, OpenGLBackEnd::GetVertexDataVAO());
-            //std::cout << "-face " << face << " " << RendererData::g_shadowMapGeometryDrawInfo[i][face].instanceCount << " / " << RendererData::g_sceneGeometryRenderItems.size() << "\n";
         }
     }
 
 
     // CSG Geometry
-    if (CSG::GeometryExists()) {
+    glBindVertexArray(OpenGLBackEnd::GetCSGVAO());
 
-        Shader& csgShadowMapShader = OpenGLRenderer::g_shaders.shadowMapCSG;
-        csgShadowMapShader.Use();
+    Shader& csgShadowMapShader = OpenGLRenderer::g_shaders.shadowMapCSG;
+    csgShadowMapShader.Use();
 
-        glBindVertexArray(OpenGLBackEnd::GetCSGVAO());
-
-        for (Light& light : Scene::g_lights) {
-
-            if (!light.m_shadowCasting || !light.isDirty) {
-                continue;
-            }
-
-            csgShadowMapShader.SetFloat("farPlane", light.radius);
-            csgShadowMapShader.SetVec3("lightPosition", light.position);
-            csgShadowMapShader.SetMat4("shadowMatrices[0]", light.m_projectionTransforms[0]);
-            csgShadowMapShader.SetMat4("shadowMatrices[1]", light.m_projectionTransforms[1]);
-            csgShadowMapShader.SetMat4("shadowMatrices[2]", light.m_projectionTransforms[2]);
-            csgShadowMapShader.SetMat4("shadowMatrices[3]", light.m_projectionTransforms[3]);
-            csgShadowMapShader.SetMat4("shadowMatrices[4]", light.m_projectionTransforms[4]);
-            csgShadowMapShader.SetMat4("shadowMatrices[5]", light.m_projectionTransforms[5]);
-            csgShadowMapShader.SetMat4("model", glm::mat4(1));
-
-            // Render the scene six times, once for each face
-            for (int face = 0; face < 6; ++face) {
-                csgShadowMapShader.SetInt("faceIndex", face);
-
-                GLuint layer = light.m_shadowMapIndex * 6 + face;
-                glFramebufferTextureLayer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, OpenGLRenderer::g_shadowMapArray.m_depthTexture, 0, layer);
-                
-                std::vector<CSGObject>& cubes = CSG::GetCSGObjects();
-                for (int j = 0; j < cubes.size(); j++) {
-                    if (cubes[j].m_disableRendering) {
-                        continue;
-                    }
-                    glDrawElementsInstancedBaseVertexBaseInstance(GL_TRIANGLES, cubes[j].m_vertexCount, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int) * cubes[j].m_baseIndex), 1, cubes[j].m_baseVertex, j);
+    for (Light& light : Scene::g_lights) {
+        if (!light.m_shadowCasting || !light.isDirty) {
+            continue;
+        }
+        csgShadowMapShader.SetFloat("farPlane", light.radius);
+        csgShadowMapShader.SetVec3("lightPosition", light.position);
+        csgShadowMapShader.SetMat4("shadowMatrices[0]", light.m_projectionTransforms[0]);
+        csgShadowMapShader.SetMat4("shadowMatrices[1]", light.m_projectionTransforms[1]);
+        csgShadowMapShader.SetMat4("shadowMatrices[2]", light.m_projectionTransforms[2]);
+        csgShadowMapShader.SetMat4("shadowMatrices[3]", light.m_projectionTransforms[3]);
+        csgShadowMapShader.SetMat4("shadowMatrices[4]", light.m_projectionTransforms[4]);
+        csgShadowMapShader.SetMat4("shadowMatrices[5]", light.m_projectionTransforms[5]);
+        csgShadowMapShader.SetMat4("model", glm::mat4(1));
+        for (int face = 0; face < 6; ++face) {
+            csgShadowMapShader.SetInt("faceIndex", face);
+            GLuint layer = light.m_shadowMapIndex * 6 + face;
+            glFramebufferTextureLayer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, OpenGLRenderer::g_shadowMapArray.m_depthTexture, 0, layer);
+            std::vector<CSGObject>& cubes = CSG::GetCSGObjects();
+            for (int j = 0; j < cubes.size(); j++) {
+                if (cubes[j].m_disableRendering) {
+                    continue;
                 }
+                glDrawElementsInstancedBaseVertexBaseInstance(GL_TRIANGLES, cubes[j].m_vertexCount, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int) * cubes[j].m_baseIndex), 1, cubes[j].m_baseVertex, j);
             }
         }
     }
@@ -1169,7 +1116,15 @@ void DebugPass(RenderData& renderData) {
             glDrawElements(GL_TRIANGLES, trianglesMesh.GetIndexCount(), GL_UNSIGNED_INT, 0);
         }
 
+        // 2D lines
         shader.SetBool("useUniformColor", false);
+        shader.SetMat4("projection", glm::mat4(1));
+        shader.SetMat4("view", glm::mat4(1));
+        if (linesMesh2D.GetIndexCount() > 0) {
+            glBindVertexArray(linesMesh2D.GetVAO());
+            glDrawElements(GL_LINES, linesMesh2D.GetIndexCount(), GL_UNSIGNED_INT, 0);
+        }
+
         // Point cloud
         if (renderData.renderMode == RenderMode::COMPOSITE_PLUS_POINT_CLOUD ||
             renderData.renderMode == RenderMode::POINT_CLOUD) {
@@ -1181,15 +1136,6 @@ void DebugPass(RenderData& renderData) {
             glPointSize(4);
             glDrawArrays(GL_POINTS, 0, GlobalIllumination::GetPointCloud().size());
         }
-
-        /*
-        // 2D lines
-        shader.SetMat4("projection", glm::mat4(1));
-        shader.SetMat4("view", glm::mat4(1));
-        if (linesMesh2D.GetIndexCount() > 0) {
-            glBindVertexArray(linesMesh2D.GetVAO());
-            glDrawElements(GL_LINES, linesMesh2D.GetIndexCount(), GL_UNSIGNED_INT, 0);
-        }*/
     }
 
     /*
@@ -1864,6 +1810,17 @@ void LightingPass(RenderData& renderData) {
 
 void LightVolumePrePass(RenderData& renderData) {
 
+    // First, set all non-dirty light volumes to the simple min and max based on their position/radius
+    ComputeShader& computeShader = OpenGLRenderer::g_shaders.lightVolumeFromUniforms;
+    computeShader.Use();
+    computeShader.SetInt("lightCount", Scene::g_lights.size());
+    int invocationCount = std::ceil(Scene::g_lights.size() / 64.0f);
+    glDispatchCompute(invocationCount, 1, 1);           
+
+
+
+
+
     glBindFramebuffer(GL_FRAMEBUFFER, OpenGLRenderer::g_lightVolumePrePassCubeMap.m_ID);
     
     Frustum frustum[6];
@@ -1873,84 +1830,71 @@ void LightVolumePrePass(RenderData& renderData) {
         int lightIndex = i;
         Light& light = Scene::g_lights[i];
 
-
         if (light.m_aaabbVolumeIsDirty) {
 
-            std::cout << "\nUpdating light: " << i << "\n";
-            std::cout << "radius: " << light.radius << "\n";
-            std::cout << "pos: " << Util::Vec3ToString(light.position) << "\n";
-
-            for (int j = 0; j < 6; j++) {
-                frustum[j].Update(light.m_projectionTransforms[j]);
-            }
-
-            CubeMap2& cubemap = OpenGLRenderer::g_lightVolumePrePassCubeMap;
-
-            glViewport(0, 0, cubemap.m_size, cubemap.m_size);
-            glBindFramebuffer(GL_FRAMEBUFFER, cubemap.m_ID);
-            glClear(GL_DEPTH_BUFFER_BIT);
-            glEnable(GL_DEPTH_TEST);
-            glDisable(GL_BLEND);
-            glDepthMask(true);
-            glEnable(GL_CULL_FACE);
-            glCullFace(GL_FRONT);
-
-            int width = OpenGLRenderer::g_lightVolumePrePassCubeMap.m_size;
-            int height = OpenGLRenderer::g_lightVolumePrePassCubeMap.m_size;
-            ComputeShader& clearShader = OpenGLRenderer::g_shaders.lightVolumeClear;
-            clearShader.Use();
-            clearShader.SetInt("lightIndex", i);
-            glBindImageTexture(0, OpenGLRenderer::g_lightVolumePrePassCubeMap.m_textureView, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
-            glDispatchCompute(width / 8, height / 8, 1);
-           // glFinish();
-
-
-
-            Shader& shader = OpenGLRenderer::g_shaders.lightVolumePrePassGeometry;
-            shader.Use();
-            shader.SetFloat("farPlane", light.radius);
-            shader.SetVec3("lightPosition", light.position);
-            shader.SetMat4("shadowMatrices[0]", light.m_projectionTransforms[0]);
-            shader.SetMat4("shadowMatrices[1]", light.m_projectionTransforms[1]);
-            shader.SetMat4("shadowMatrices[2]", light.m_projectionTransforms[2]);
-            shader.SetMat4("shadowMatrices[3]", light.m_projectionTransforms[3]);
-            shader.SetMat4("shadowMatrices[4]", light.m_projectionTransforms[4]);
-            shader.SetMat4("shadowMatrices[5]", light.m_projectionTransforms[5]);
-
-            // Render csg geometry
-            //glBindVertexArray(OpenGLBackEnd::GetVertexDataVAO());
-           // static Model* model = AssetManager::GetModelByIndex(AssetManager::GetModelIndexByName("Cube"));
-           // Mesh* cubeMesh = AssetManager::GetMeshByIndex(model->GetMeshIndices()[0]);
-            //glDrawElementsInstancedBaseVertex(GL_TRIANGLES, cubeMesh->indexCount, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int) * cubeMesh->baseIndex), 1, cubeMesh->baseVertex);
-
-
-            // Render csg geometry
-            glCullFace(GL_BACK);
-            glBindVertexArray(OpenGLBackEnd::GetCSGVAO());
-            shader.SetMat4("model", glm::mat4(1));
-            for (CSGObject& csgObject : CSG::GetCSGObjects()) {
-                bool found = false;
+            if (light.m_shadowCasting) {
+                
                 for (int j = 0; j < 6; j++) {
-                    if (frustum[j].IntersectsAABBFast(csgObject.m_aabb)) {
-                        found = true;
-                        break;
+                    frustum[j].Update(light.m_projectionTransforms[j]);
+                }
+
+                CubeMap2& cubemap = OpenGLRenderer::g_lightVolumePrePassCubeMap;
+
+                glViewport(0, 0, cubemap.m_size, cubemap.m_size);
+                glBindFramebuffer(GL_FRAMEBUFFER, cubemap.m_ID);
+                glClear(GL_DEPTH_BUFFER_BIT);
+                glEnable(GL_DEPTH_TEST);
+                glDisable(GL_BLEND);
+                glDepthMask(true);
+                glEnable(GL_CULL_FACE);
+                glCullFace(GL_FRONT);
+
+                int width = OpenGLRenderer::g_lightVolumePrePassCubeMap.m_size;
+                int height = OpenGLRenderer::g_lightVolumePrePassCubeMap.m_size;
+                ComputeShader& clearShader = OpenGLRenderer::g_shaders.lightVolumeClear;
+                clearShader.Use();
+                clearShader.SetInt("lightIndex", i);
+                glBindImageTexture(0, OpenGLRenderer::g_lightVolumePrePassCubeMap.m_textureView, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
+                glDispatchCompute(width / 8, height / 8, 1);
+
+                Shader& shader = OpenGLRenderer::g_shaders.lightVolumePrePassGeometry;
+                shader.Use();
+                shader.SetFloat("farPlane", light.radius);
+                shader.SetVec3("lightPosition", light.position);
+                shader.SetMat4("shadowMatrices[0]", light.m_projectionTransforms[0]);
+                shader.SetMat4("shadowMatrices[1]", light.m_projectionTransforms[1]);
+                shader.SetMat4("shadowMatrices[2]", light.m_projectionTransforms[2]);
+                shader.SetMat4("shadowMatrices[3]", light.m_projectionTransforms[3]);
+                shader.SetMat4("shadowMatrices[4]", light.m_projectionTransforms[4]);
+                shader.SetMat4("shadowMatrices[5]", light.m_projectionTransforms[5]);
+
+                // Render csg geometry
+                glCullFace(GL_BACK);
+                glBindVertexArray(OpenGLBackEnd::GetCSGVAO());
+                shader.SetMat4("model", glm::mat4(1));
+                for (CSGObject& csgObject : CSG::GetCSGObjects()) {
+                    bool found = false;
+                    for (int j = 0; j < 6; j++) {
+                        if (frustum[j].IntersectsAABBFast(csgObject.m_aabb)) {
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (found) {
+                        glDrawElementsInstancedBaseVertexBaseInstance(GL_TRIANGLES, csgObject.m_vertexCount, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int) * csgObject.m_baseIndex), 1, csgObject.m_baseVertex, 0);
                     }
                 }
-                if (found) {
-                    glDrawElementsInstancedBaseVertexBaseInstance(GL_TRIANGLES, csgObject.m_vertexCount, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int) * csgObject.m_baseIndex), 1, csgObject.m_baseVertex, 0);
-                }
+                // Compute the min and max worldspace bounds of the light source volume
+                ComputeShader& computeShader = OpenGLRenderer::g_shaders.lightVolumeFromCubeMap;
+                computeShader.Use();
+                computeShader.SetInt("lightIndex", i);
+                glActiveTexture(GL_TEXTURE0);
+                glBindTexture(GL_TEXTURE_2D_ARRAY, OpenGLRenderer::g_lightVolumePrePassCubeMap.m_textureView);
+
+                glDispatchCompute(1, 1, 1);
+
+                std::cout << "updating light " << i << "\n";
             }
-
-
-            // Compute the min and max worldspace bounds of the light source volume
-
-            ComputeShader& computeShader = OpenGLRenderer::g_shaders.lightVolumePrePassAABB;
-            computeShader.Use();
-            computeShader.SetInt("lightIndex", i);
-            glActiveTexture(GL_TEXTURE0);
-            glBindTexture(GL_TEXTURE_2D_ARRAY, OpenGLRenderer::g_lightVolumePrePassCubeMap.m_textureView);
-
-           glDispatchCompute(1, 1, 1);
 
             light.m_aaabbVolumeIsDirty = false;
         }
@@ -1971,6 +1915,7 @@ void LightCullingPass(RenderData& renderData) {
     computeShader.SetMat4("projectionMatrix", Game::GetPlayerByIndex(0)->GetProjectionMatrix());
     computeShader.SetMat4("viewMatrix", Game::GetPlayerByIndex(0)->GetViewMatrix());
     computeShader.SetVec3("viewPos", Game::GetPlayerByIndex(0)->GetViewPos());
+    computeShader.SetFloat("fov", Game::GetPlayerByIndex(0)->GetZoom());
     computeShader.SetFloat("viewportWidth", gBuffer.GetWidth());
     computeShader.SetFloat("viewportHeight", gBuffer.GetHeight());
     glBindImageTexture(0, gBuffer.GetColorAttachmentHandleByName("FinalLighting"), 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA8);

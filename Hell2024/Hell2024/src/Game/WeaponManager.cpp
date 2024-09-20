@@ -1,6 +1,8 @@
 #include "WeaponManager.h"
 #include <vector>
 #include <algorithm>
+#include "Core/AssetManager.h"
+#include "Physics/Physics.h"
 
 namespace WeaponManager {
 
@@ -610,12 +612,24 @@ namespace WeaponManager {
         p90.animationNames.adsFire.push_back("P90_ADS_Fire1");
         p90.animationNames.adsFire.push_back("P90_ADS_Fire2");
 
-
-
-
-
-
         SortList();
+    }
+
+    void PreLoadWeaponPickUpConvexHulls() {
+        for (WeaponInfo& weaponInfo : g_weapons) {
+            if (weaponInfo.pickupModelName != UNDEFINED_STRING) {
+                int pickUpModelIndex = AssetManager::GetModelIndexByName(weaponInfo.pickupModelName);
+                if (pickUpModelIndex != -1) {
+                    Physics::CreateTriangleMeshFromModelIndex(pickUpModelIndex);
+                }
+            }
+            if (weaponInfo.pickupConvexMeshModelName != UNDEFINED_STRING) {
+                int pickUpConvexModelIndex = AssetManager::GetModelIndexByName(weaponInfo.pickupConvexMeshModelName);
+                if (pickUpConvexModelIndex != -1) {
+                    Physics::CreateTriangleMeshFromModelIndex(pickUpConvexModelIndex);
+                }
+            }
+        }
     }
 
     void SortList() {

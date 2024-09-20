@@ -52,16 +52,13 @@ namespace RendererData {
         }
 
         // Shadow map render draw commands
-       // for (int i = 0; i < Scene::g_lights.size(); i++) {
-       //     Light& light = Scene::g_lights[i];
-
-
         for (Light& light : Scene::g_lights) {
             if (light.m_shadowCasting) {
                 int i = light.m_shadowMapIndex;
                 light.UpdateMatricesAndFrustum();
                 for (int face = 0; face < 6; face++) {
                     Frustum& frustum = light.m_frustum[face];
+
                     // Geometry
                     g_shadowMapGeometryDrawInfo[i][face].baseInstance = g_shadowMapGeometryRenderItems.size();
                     g_shadowMapGeometryDrawInfo[i][face].instanceCount = 0;

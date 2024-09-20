@@ -1,6 +1,6 @@
 #pragma once
 #include "HellCommon.h"
-#include "../Math/Frustum.hpp"
+#include "../Math/Frustum.h"
 
 #define DEFAULT_LIGHT_COLOR glm::vec3(1, 0.7799999713897705, 0.5289999842643738)
 #define SHADOW_MAP_SIZE 2048

@@ -9,14 +9,6 @@ Texture::Texture(std::string fullpath) {
 }
 
 void Texture::Load() {
-    if (m_loadingState == LoadingState::LOADING_FROM_DISK) {
-        for (int i = 0; i < 100; i++) {
-            //std::cout << "ATTENTION!!!! This happened and should never. Your async code is fucked! " << m_fullPath << "\n";
-            //
-        }
-        return;
-    }
-    m_loadingState = LoadingState::LOADING_FROM_DISK;
     if (BackEnd::GetAPI() == API::OPENGL) {
         glTexture.Load(m_fullPath);
     }
@@ -81,6 +73,10 @@ OpenGLTexture& Texture::GetGLTexture() {
 
 VulkanTexture& Texture::GetVKTexture() {
     return vkTexture;
+}
+
+void Texture::SetLoadingState(LoadingState loadingState) {
+    m_loadingState = loadingState;
 }
 
 const LoadingState Texture::GetLoadingState() {

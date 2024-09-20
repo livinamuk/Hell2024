@@ -7,7 +7,7 @@
 #include "../Pathfinding/Pathfinding2.h"
 #include "../Renderer/Raytracing/Raytracing.h"
 #include "../Renderer/RendererData.h"
-#include "../Math/Frustum.hpp"
+#include "../Math/Frustum.h"
 
 #include "../Math/BVH.h"
 #include "tinycsg/tinycsg.hpp"
@@ -47,69 +47,8 @@ void Renderer::UpdateDebugPointsMesh() {
         }
     }
 
-    /*
-    for (Light& light : Scene::g_lights) {
-        for (unsigned int index : light.visibleCloudPointIndices) {
-            CloudPoint& cloudPoint = GlobalIllumination::GetPointCloud()[index];
-            vertices.push_back(Vertex(cloudPoint.position, GREEN));
-        }
-    }*/
 
-
-    for (glm::vec3& position: Game::testPoints) {
-        vertices.push_back(Vertex(position, WHITE));
-       // std::cout << Util::Vec3ToString10(position) << "\n";
-
-    }
-
-
-    /*
-    for (BulletCasing& casing : Scene::g_bulletCasings) {
-
-
-        glm::vec3 extents = Util::PxVec3toGlmVec3(casing.m_rigidBody->getWorldBounds().getExtents());
-        glm::vec3 center = Util::PxVec3toGlmVec3(casing.m_rigidBody->getWorldBounds().getCenter());
-        glm::vec3 minBounds = center - extents;
-        glm::vec3 maxBounds = center + extents;
-
-
-        AABB aabb = AABB(minBounds, maxBounds);
-
-    glm::vec3 FrontTopLeft = glm::vec3(aabb.GetBoundsMin().x, aabb.GetBoundsMax().y, aabb.GetBoundsMax().z);
-    glm::vec3 FrontTopRight = glm::vec3(aabb.GetBoundsMax().x, aabb.GetBoundsMax().y, aabb.GetBoundsMax().z);
-    glm::vec3 FrontBottomLeft = glm::vec3(aabb.GetBoundsMin().x, aabb.GetBoundsMin().y, aabb.GetBoundsMax().z);
-    glm::vec3 FrontBottomRight = glm::vec3(aabb.GetBoundsMax().x, aabb.GetBoundsMin().y, aabb.GetBoundsMax().z);
-    glm::vec3 BackTopLeft = glm::vec3(aabb.GetBoundsMin().x, aabb.GetBoundsMax().y, aabb.GetBoundsMin().z);
-    glm::vec3 BackTopRight = glm::vec3(aabb.GetBoundsMax().x, aabb.GetBoundsMax().y, aabb.GetBoundsMin().z);
-    glm::vec3 BackBottomLeft = glm::vec3(aabb.GetBoundsMin().x, aabb.GetBoundsMin().y, aabb.GetBoundsMin().z);
-    glm::vec3 BackBottomRight = glm::vec3(aabb.GetBoundsMax().x, aabb.GetBoundsMin().y, aabb.GetBoundsMin().z);
-
-        //Player* player = Game::GetPlayerByIndex(0);
-    glm::mat4 mvp = player->GetProjectionMatrix() * player->GetViewMatrix();
-
-    glm::vec2 p0 = Util::CalculateScreenSpaceCoordinates(FrontTopLeft, mvp, PRESENT_WIDTH, PRESENT_HEIGHT);
-
-       // vertices.push_back(Vertex(cloudPoint.position, GREEN));
-
-
-        std::cout << p0.x << ", " << p0.y << "\n";
-
-    }
-
-    */
-
-
-
-
-
-    /*
-    Light& light = Scene::g_lights[0];
-    for (unsigned int index : light.visibleCloudPointIndices) {
-        CloudPoint& cloudPoint = GlobalIllumination::GetPointCloud()[index];
-        vertices.push_back(Vertex(cloudPoint.position, GREEN));
-    }*/
-
-
+    //vertices.push_back(Vertex(glm::vec3(0,1,0), WHITE));
 
 
     for (int i = 0; i < vertices.size(); i++) {
@@ -254,175 +193,11 @@ void Renderer::UpdateDebugLinesMesh() {
         }
 
 
-        /*
-        float screenWidth = PRESENT_WIDTH;
-        float screenHeight = PRESENT_HEIGHT;
-
-        // Convert pixel coordinates to normalized device coordinates (NDC)
-        auto ConvertToNDC = [screenWidth, screenHeight](glm::vec2 pixelCoord) -> glm::vec3 {
-            float ndcX = (2.0f * pixelCoord.x) / screenWidth - 1.0f;
-            float ndcY = 1.0f - (2.0f * pixelCoord.y) / screenHeight; // Invert Y for OpenGL's coordinate system
-            return glm::vec3(ndcX, ndcY, 0.0f); // z = 0 for 2D lines
-        };
-
-        glm::vec2 pixelStart = { 50, 50 };
-        glm::vec2 pixelEnd = { 100, 150 };
-
-        // Create two vertices (start and end)
-        Vertex startVertex;
-        startVertex.position = ConvertToNDC(pixelStart);
-        startVertex.normal = glm::vec3(0.0f, 0.0f, 1.0f); // Arbitrary normal, as it's not needed for lines
-
-        Vertex endVertex;
-        endVertex.position = ConvertToNDC(pixelEnd);
-        endVertex.normal = glm::vec3(0.0f, 0.0f, 1.0f);
-
-        // Add both vertices to the vector
-        vertices.push_back(startVertex);
-        vertices.push_back(endVertex);*/
-
-
-
-        /*
-
-        for (Dobermann& dobermann : Scene::g_dobermann) {
-
-            if (dobermann.m_aStar.m_finalPathPoints.size() >= 2) {
-                for (int i = 0; i < dobermann.m_aStar.m_finalPathPoints.size() - 1; i++) {
-
-                    glm::vec2 point = dobermann.m_aStar.m_finalPathPoints[i];
-                    float worldX = point.x * Pathfinding::GetGridSpacing() + Pathfinding::GetWorldSpaceOffsetX();
-                    float worldZ = point.y * Pathfinding::GetGridSpacing() + Pathfinding::GetWorldSpaceOffsetZ();
-                    vertices.push_back(Vertex(glm::vec3(worldX, 0, worldZ), WHITE));
-
-                    point = dobermann.m_aStar.m_finalPathPoints[i + 1];
-                    worldX = point.x * Pathfinding::GetGridSpacing() + Pathfinding::GetWorldSpaceOffsetX();
-                    worldZ = point.y * Pathfinding::GetGridSpacing() + Pathfinding::GetWorldSpaceOffsetZ();
-                    vertices.push_back(Vertex(glm::vec3(worldX, 0, worldZ), WHITE));
-
-                }
-            }
-        }*/
-
-
-
-        // THE GRID WORKS. U JUST DONT WANNA SEE IT RN.
-        // THE GRID WORKS. U JUST DONT WANNA SEE IT RN.
-        // THE GRID WORKS. U JUST DONT WANNA SEE IT RN.
-        // THE GRID WORKS. U JUST DONT WANNA SEE IT RN.
-
-        /*
-        else if (_debugLineRenderMode == DebugLineRenderMode::PATHFINDING) {
-            glm::vec3 gridColor = glm::vec3(0.25f);
-            for (float x = 0; x < Pathfinding::GetWorldSpaceWidth(); x += Pathfinding::GetGridSpacing()) {
-                for (float z = 0; z < Pathfinding::GetWorldSpaceDepth(); z += Pathfinding::GetGridSpacing()) {
-                    Vertex v0, v1;
-                    v0.position = glm::vec3(x + Pathfinding::GetWorldSpaceOffsetX(), 0, 0 + Pathfinding::GetWorldSpaceOffsetZ());
-                    v1.position = glm::vec3(x + Pathfinding::GetWorldSpaceOffsetX(), 0, Pathfinding::GetWorldSpaceDepth() + Pathfinding::GetWorldSpaceOffsetZ());
-                    v0.normal = gridColor;
-                    v1.normal = gridColor;
-                    vertices.push_back(v0);
-                    vertices.push_back(v1);
-                    v0.position = glm::vec3(0 + Pathfinding::GetWorldSpaceOffsetX(), 0, z + Pathfinding::GetWorldSpaceOffsetZ());
-                    v1.position = glm::vec3(Pathfinding::GetWorldSpaceWidth() + Pathfinding::GetWorldSpaceOffsetX(), 0, z + Pathfinding::GetWorldSpaceOffsetZ());
-                    v0.normal = gridColor;
-                    v1.normal = gridColor;
-                    vertices.push_back(v0);
-                    vertices.push_back(v1);
-                }
-            }
-        }*/
     }
 
-    // DRAW ALL BLAS
-    /*
-    for (int i = 0; i < Raytracing::GetBottomLevelAccelerationStructureCount(); i++) {
-        BLAS* blas = Raytracing::GetBLASByIndex(i);
-        if (blas) {
-            for (Triangle& triangle : blas->triangles) {
-                Vertex v0;
-                Vertex v1;
-                Vertex v2;
-                v0.normal = YELLOW;
-                v1.normal = YELLOW;
-                v2.normal = YELLOW;
-                v0.position = triangle.v0;
-                v1.position = triangle.v1;
-                v2.position = triangle.v2;
-                vertices.push_back(v0);
-                vertices.push_back(v1);
-                vertices.push_back(v1);
-                vertices.push_back(v2);
-                vertices.push_back(v2);
-                vertices.push_back(v0);
-            }
-        }
-    }*/
-
-
-
-    /*
-    glm::mat4 projection = Game::GetPlayerByIndex(0)->GetProjectionMatrix();
-    glm::mat4 view = Editor::GetViewMatrix();
-    glm::vec3 rayOrigin = Editor::GetViewPos();
-    glm::vec3 rayDir = Game::GetPlayerByIndex(0)->GetCameraForward();
-    glm::vec3 color = RED;
-    int viewportWidth = PRESENT_WIDTH;
-    int viewportHeight = PRESENT_HEIGHT;
-    float mouseX = Util::MapRange(Input::GetMouseX(), 0, BackEnd::GetCurrentWindowWidth(), 0, viewportWidth);
-    float mouseY = Util::MapRange(Input::GetMouseY(), 0, BackEnd::GetCurrentWindowHeight(), 0, viewportHeight);
-    rayDir = Math::GetMouseRay(projection, view, viewportWidth, viewportHeight, mouseX, mouseY);
-
-    IntersectionResult intersectionResult;
-    for (int i = 0; i < g_debugTriangleVertices.size(); i += 3) {
-        glm::vec3 v0 = g_debugTriangleVertices[i];
-        glm::vec3 v1 = g_debugTriangleVertices[i + 1];
-        glm::vec3 v2 = g_debugTriangleVertices[i + 2];
-        intersectionResult = Math::RayTriangleIntersectTest(rayOrigin, rayDir, v0, v1, v2);
-    }
-
-    std::vector<glm::vec3> closestTri = Math::ClosestTriangleRayIntersection(rayOrigin, rayDir, g_debugTriangleVertices);
-
-    for (int i = 0; i < g_debugTriangleVertices.size(); i += 3) {
-        Vertex v0;
-        Vertex v1;
-        Vertex v2;
-        v0.normal = RED;
-        v1.normal = RED;
-        v2.normal = RED;
-        v0.position = g_debugTriangleVertices[i];
-        v1.position = g_debugTriangleVertices[i + 1];
-        v2.position = g_debugTriangleVertices[i + 2];
-        vertices.push_back(v0);
-        vertices.push_back(v1);
-        vertices.push_back(v1);
-        vertices.push_back(v2);
-        vertices.push_back(v2);
-        vertices.push_back(v0);
-    }
-    for (int i = 0; i < closestTri.size(); i += 3) {
-        Vertex v0;
-        Vertex v1;
-        Vertex v2;
-        v0.normal = YELLOW;
-        v1.normal = YELLOW;
-        v2.normal = YELLOW;
-        v0.position = closestTri[i];
-        v1.position = closestTri[i + 1];
-        v2.position = closestTri[i + 2];
-        vertices.push_back(v0);
-        vertices.push_back(v1);
-        vertices.push_back(v1);
-        vertices.push_back(v2);
-        vertices.push_back(v2);
-        vertices.push_back(v0);
-    }*/
 
 
     //DrawAABB(g_testAABB, YELLOW);
-    
-    //std::cout << Util::Vec3ToString(g_testAABB.boundsMin) << " " << Util::Vec3ToString(g_testAABB.boundsMax) << "\n";
-
     //DrawSphere(g_testSphere, 12, YELLOW);
 
 
@@ -430,30 +205,64 @@ void Renderer::UpdateDebugLinesMesh() {
     Sphere sphere;
     sphere.origin = Scene::g_lights[3].position;
     sphere.radius = Scene::g_lights[3].radius;
-//    DrawSphere(sphere, 12, YELLOW);
+   // DrawSphere(sphere, 12, YELLOW);
 
 
-    for (BulletHoleDecal& bulletHoleDecal : Scene::g_bulletHoleDecals) {
-        Sphere sphere;
-        sphere.radius = 0.015;
-        sphere.origin = Util::GetTranslationFromMatrix(bulletHoleDecal.GetModelMatrix());
-       // DrawSphere(sphere, 12, YELLOW);
-    }
-    /*
-    for (auto& renderItem : Scene::CreateDecalRenderItems()) {
-        Mesh* mesh = AssetManager::GetMeshByIndex(renderItem.meshIndex);
 
-        Sphere sphere;
-        sphere.radius = mesh->boundingSphereRadius;
-        sphere.origin = Util::GetTranslationFromMatrix(renderItem.modelMatrix);
-        DrawSphere(sphere, 12, YELLOW);
-    }
 
-    if (Scene::CreateDecalRenderItems().size()) {
-        Mesh* mesh = AssetManager::GetMeshByIndex(Scene::CreateDecalRenderItems()[0].meshIndex);
-        std::cout << "\nmesh->boundingSphereRadius: " << mesh->boundingSphereRadius << "\n";
-        std::cout << "g_bulletDecalRenderItems[0]: " << Scene::CreateDecalRenderItems().size() << "\n";
-    }*/
+
+     // Tile boundaries (in screen space)
+    int x1 = static_cast<int>(PRESENT_WIDTH * 0.6);
+    int x2 = static_cast<int>(PRESENT_WIDTH * 0.75f);
+    int y1 = static_cast<int>(PRESENT_HEIGHT * 0.6);
+    int y2 = static_cast<int>(PRESENT_HEIGHT * 0.75f);
+
+    x2 = x1 + 12;
+    y2 = y1 + 12;
+
+    // x1 = static_cast<int>(PRESENT_WIDTH * 0.5f);
+    // x2 = static_cast<int>(PRESENT_WIDTH);
+    // y1 = static_cast<int>(0);
+    // y2 = static_cast<int>(PRESENT_HEIGHT);
+
+    Vertex x1y1, x2y1, x1y2, x2y2;
+   //x1y1.position = PixelToNDC(x1, y1, PRESENT_WIDTH, PRESENT_HEIGHT);
+   //x2y1.position = PixelToNDC(x2, y1, PRESENT_WIDTH, PRESENT_HEIGHT);
+   //x1y2.position = PixelToNDC(x1, y2, PRESENT_WIDTH, PRESENT_HEIGHT);
+   //x2y2.position = PixelToNDC(x2, y2, PRESENT_WIDTH, PRESENT_HEIGHT);
+    glm::vec3 color = RED;
+
+    y1 = PRESENT_HEIGHT - y1;
+    y2 = PRESENT_HEIGHT - y2;
+
+    std::string text;
+    text += "\n";
+
+
+
+
+    glm::mat4 projection = Game::GetPlayerByIndex(0)->GetProjectionMatrix();
+    glm::mat4 view = Game::GetPlayerByIndex(0)->GetViewMatrix();
+    float nearPlane = 0.1f;
+    float farPlane = 100.0f;
+    float fov = Game::GetPlayerByIndex(0)->GetZoom(); // Horizontal FOV
+
+    float screenWidth = static_cast<float>(PRESENT_WIDTH);
+    float screenHeight = static_cast<float>(PRESENT_HEIGHT);
+    float viewportWidth = static_cast<float>(PRESENT_WIDTH);
+    float viewportHeight = static_cast<float>(PRESENT_HEIGHT);
+
+    Frustum frustum;
+    frustum.UpdateFromTile(view, fov, nearPlane, farPlane, x1, y1, x2, y2, viewportWidth, viewportHeight);
+
+
+
+
+
+
+
+
+
 
     vertices.insert(std::end(vertices), std::begin(g_debugLines), std::end(g_debugLines));
     g_debugLines.clear();
@@ -480,69 +289,174 @@ glm::mat4 CreatePerspectiveProjectionMatrix(int x1, int x2, int y1, int y2, floa
     return projectionMatrix;
 }
 
+glm::vec4 NormalizePlane(const glm::vec4& plane) {
+    float length = glm::length(glm::vec3(plane));
+    return plane / length;
+}
+
+// Function to extract the left frustum plane from the view-projection matrix
+glm::vec4 ExtractLeftFrustumPlane(const glm::mat4& viewProj) {
+    // Left plane: viewProj[3] + viewProj[0]
+    glm::vec4 leftPlane = viewProj[3] + viewProj[0];
+    return NormalizePlane(leftPlane);
+}
+
+
 void Renderer::UpdateDebugLinesMesh2D() {
-
-    return;
-
 
     std::vector<Vertex> vertices;
     std::vector<uint32_t> indices;
 
-    int x1 = 50;
-    int x2 = 150;
-    int y1 = 150;
-    int y2 = 200;
+    // Tile boundaries (in screen space)
+    int x1 = static_cast<int>(PRESENT_WIDTH * 0.6);
+    int x2 = static_cast<int>(PRESENT_WIDTH * 0.75f);
+    int y1 = static_cast<int>(PRESENT_HEIGHT * 0.6);
+    int y2 = static_cast<int>(PRESENT_HEIGHT * 0.75f);
 
-   // x1 = PRESENT_WIDTH / 2 - 100;
-   // x2 = PRESENT_WIDTH / 2 + 100;
-   // y1 = PRESENT_HEIGHT / 2 - 50;
-   // y2 = PRESENT_HEIGHT / 2 + 50;
+    x2 = x1 + 12;
+    y2 = y1 + 12;
+
+   // x1 = static_cast<int>(PRESENT_WIDTH * 0.5f);
+   // x2 = static_cast<int>(PRESENT_WIDTH);
+   // y1 = static_cast<int>(0);
+   // y2 = static_cast<int>(PRESENT_HEIGHT);
 
     Vertex x1y1, x2y1, x1y2, x2y2;
     x1y1.position = PixelToNDC(x1, y1, PRESENT_WIDTH, PRESENT_HEIGHT);
     x2y1.position = PixelToNDC(x2, y1, PRESENT_WIDTH, PRESENT_HEIGHT);
     x1y2.position = PixelToNDC(x1, y2, PRESENT_WIDTH, PRESENT_HEIGHT);
     x2y2.position = PixelToNDC(x2, y2, PRESENT_WIDTH, PRESENT_HEIGHT);
-    x1y1.normal = WHITE;
-    x2y1.normal = WHITE;
-    x1y2.normal = WHITE;
-    x2y2.normal = WHITE;
+    glm::vec3 color = RED;
+
+    y1 = PRESENT_HEIGHT - y1;
+    y2 = PRESENT_HEIGHT - y2;
+
+    std::string text;
+    text += "\n";
+
+    glm::mat4 projection = Game::GetPlayerByIndex(0)->GetProjectionMatrix();
+    glm::mat4 view = Game::GetPlayerByIndex(0)->GetViewMatrix();
+    float nearPlane = 0.1f;
+    float farPlane = 1.0f;
+    float fov = Game::GetPlayerByIndex(0)->GetZoom(); // Horizontal FOV
+
+    float screenWidth = static_cast<float>(PRESENT_WIDTH);
+    float screenHeight = static_cast<float>(PRESENT_HEIGHT);
+    float viewportWidth = static_cast<float>(PRESENT_WIDTH);
+    float viewportHeight = static_cast<float>(PRESENT_HEIGHT);
 
 
-    // WARNING YOU REPlACED THE LINE BELOW WITH AN IDENTIY MATRIX!
-    // WARNING YOU REPlACED THE LINE BELOW WITH AN IDENTIY MATRIX!
-    // WARNING YOU REPlACED THE LINE BELOW WITH AN IDENTIY MATRIX!
-    // WARNING YOU REPlACED THE LINE BELOW WITH AN IDENTIY MATRIX!
-    // WARNING YOU REPlACED THE LINE BELOW WITH AN IDENTIY MATRIX!
-    // WARNING YOU REPlACED THE LINE BELOW WITH AN IDENTIY MATRIX!
-    // WARNING YOU REPlACED THE LINE BELOW WITH AN IDENTIY MATRIX!
-    // WARNING YOU REPlACED THE LINE BELOW WITH AN IDENTIY MATRIX!
+    // Define the test point (center of the sphere) in world space
+    glm::vec3 testPoint(0.0f, 1.0f, 0.0f);
 
-    glm::mat4 projectionMatrix = glm::mat4(1);// RapidHotload::TestMatrix();// CreatePerspectiveProjectionMatrix(x1, x2, y1, y2, 0.1f, 100, PRESENT_WIDTH, PRESENT_HEIGHT);
-    glm::mat4 viewProjectionMatrix = projectionMatrix * Game::GetPlayerByIndex(0)->GetViewMatrix();
+
+   // Game::GetPlayerByIndex(0)->m_frustum.Update(Game::GetPlayerByIndex(0)->GetProjectionMatrix() * Game::GetPlayerByIndex(0)->GetViewMatrix());
+//
+  //  bool  insideFrustum = Game::GetPlayerByIndex(0)->m_frustum.IntersectsSphere(g_testSphere);
+    /*
+    if (insideFrustum) {
+        text += "The Sphere is inside the player frustum.\n";
+        color = BLUE;
+    }
+    else {
+        text += "The Sphere is outside the player frustum.\n";
+    }
+    */
+
+
+
     Frustum frustum;
-    frustum.Update(viewProjectionMatrix);
+    frustum.UpdateFromTile(view, fov, nearPlane, farPlane, x1, y1, x2, y2, viewportWidth, viewportHeight);
+  //  frustum.UpdateFromTile(view, fov, nearPlane, farPlane, 0, 0, viewportWidth, viewportHeight, viewportWidth, viewportHeight);
+
+    color = RED;
 
     if (frustum.IntersectsAABB(g_testAABB)) {
-    //    if (frustum.IntersectsSphere(g_testSphere)) {
-        x1y1.normal = RED;
-        x2y1.normal = RED;
-        x1y2.normal = RED;
-        x2y2.normal = RED;
+        text += "The AABB is inside the frustum.\n";
+        color = GREEN;
+    }
+    else {
+        text += "The AABB is outside the frustum.\n";
+    }
+    /*if (frustum.IntersectsAABBFast(g_testAABB)) {
+        text += "The FAST AABB is inside the frustum.\n";
+        color = GREEN;
+    }
+    else {
+        text += "The FAST AABB is outside the frustum.\n";
+    }*/
+    if (frustum.IntersectsSphere(g_testSphere)) {
+        text += "The Sphere is inside the frustum.\n";
+        color = BLUE;
+    }
+    else {
+        text += "The Sphere is outside the frustum.\n";
+    }
+    if (frustum.IntersectsPoint(testPoint)) {
+        text += "White point in frustum\n";
+    }
+    else {
+        text += "White point is NOT frustum\n";
     }
 
 
-    vertices.push_back(x1y1);
-    vertices.push_back(x2y1);
 
-    vertices.push_back(x1y2);
-    vertices.push_back(x2y2);
+    Player* player = Game::GetPlayerByIndex(0);
+    Frustum playerFrustum;
+    playerFrustum.Update(player->GetProjectionMatrix() * player->GetViewMatrix());
+   if (playerFrustum.IntersectsAABB(g_testAABB)) {
+        text += "AABB in player frustum\n";
+    }
+    else {
+        text += "AABB is NOT player frustum\n";
+    }
+   /* if (playerFrustum.IntersectsAABBFast(g_testAABB)) {
+        text += "FAST AABB in player frustum\n";
+    }
+    else {
+        text += "FAST AABB is NOT player frustum\n";
+    }*/
+    if (playerFrustum.IntersectsSphere(g_testSphere)) {
+        text += "Sphere in player frustum\n";
+    }
+    else {
+        text += "Sphere is NOT player frustum\n";
+    }
+    if (playerFrustum.IntersectsPoint(testPoint)) {
+        text += "White point in frustum\n";
+    }
+    else {
+        text += "White point is NOT frustum\n";
+    }
+  /*  insideFrustum = playerFrustum.SatAABB(player->GetProjectionMatrix(), g_testAABB);
+    if (insideFrustum) {
+        text += "The SAT AABB is inside the frustum.\n";
+    }
+    else {
+        text += "The SAT AABB is outside the frustum.\n";
+    }*/
 
-    vertices.push_back(x1y1);
-    vertices.push_back(x1y2);
 
-    vertices.push_back(x2y1);
-    vertices.push_back(x2y2);
+   
+    Game::GetPlayerByIndex(0)->_playerName = text;
+
+
+    x1y1.normal = color;
+    x2y1.normal = color;
+    x1y2.normal = color;
+    x2y2.normal = color;
+
+   //vertices.push_back(x1y1);
+   //vertices.push_back(x2y1);
+   //
+   //vertices.push_back(x1y2);
+   //vertices.push_back(x2y2);
+   //
+   //vertices.push_back(x1y1);
+   //vertices.push_back(x1y2);
+   //
+   //vertices.push_back(x2y1);
+   //vertices.push_back(x2y2);
 
 
     Vertex a, b;
@@ -557,6 +471,9 @@ void Renderer::UpdateDebugLinesMesh2D() {
         indices.push_back(i);
     }
     g_debugLinesMesh2D.UpdateVertexBuffer(vertices, indices);
+
+
+
 }
 
 
@@ -674,12 +591,12 @@ std::string& Renderer::GetDebugText() {
 
     g_debugText += "Dog deaths: " + std::to_string(Game::g_dogDeaths) + "\n";
     g_debugText += "Dog kills: " + std::to_string(Game::g_playerDeaths) + "\n";
-    g_debugText += "Muzzle flash timer: " + std::to_string(Game::GetPlayerByIndex(0)->_muzzleFlashTimer) + "\n";
+ //   g_debugText += "Muzzle flash timer: " + std::to_string(Game::GetPlayerByIndex(0)->_muzzleFlashTimer) + "\n";
 
 
 
     g_debugText += "\n";
-    g_debugText += Game::GetPlayerByIndex(0)->_playerName;
+   // g_debugText += Game::GetPlayerByIndex(0)->_playerName;
 
 
     /*
@@ -709,25 +626,6 @@ std::string& Renderer::GetDebugText() {
         g_debugText += "Facing: ALIGNED\n";
     }*/
 
-    Player* player = Game::GetPlayerByIndex(0);
-
-    /*
-    Frustum frustum;
-    frustum.Update(player->GetProjectionMatrix(), player->GetViewMatrix());
-
-    glm::vec3 extent = glm::vec3(0.5f);
-    glm::vec3 center = glm::vec3(0.0f);
-
-    glm::vec3 aabbMin = glm::vec3(-0.25f, 0.75f, -0.25f);
-    glm::vec3 aabbMax = glm::vec3(0.25f, 1.25f, 0.25f);
-
-    if (frustum.IsAABBInsideFrustum(aabbMin, aabbMax)) {
-        g_debugText = "AABB in frustum\n";
-    }
-    else {
-        g_debugText = "AABB is NOT frustum\n";
-    }*/
-
 
     glm::vec3 rayTarget = Scene::g_lights[0].position;
 
@@ -739,13 +637,13 @@ std::string& Renderer::GetDebugText() {
             vertices.push_back(vertex.position);
         }
     }
-
+/*
     Ray ray;
     ray.origin = player->GetViewPos();
     ray.direction = glm::normalize(rayTarget - ray.origin);
     ray.minDist = 0;
     ray.maxDist = glm::distance(rayTarget, ray.origin);;
-
+    */
 
     /*
     static bool runOnce = true;
@@ -797,6 +695,8 @@ std::string& Renderer::GetDebugText() {
         g_debugText += "light " + std::to_string(i) + ": " + std::to_string(Scene::g_lights[i].m_shadowMapIndex) + '\n';
     }
 
+    g_debugText = Game::GetPlayerByIndex(0)->_playerName;
+
 
     return g_debugText;
 }
@@ -844,6 +744,22 @@ void Renderer::DrawSphere(const Sphere& sphere, int segments, const glm::vec3& c
             }
         }
     }
+}
+
+void Renderer::DrawFrustum(Frustum& frustum, glm::vec3 color) {
+    std::vector<glm::vec3>  corners = frustum.GetFrustumCorners();
+    DrawLine(corners[0], corners[1], color);  // Near bottom edge
+    DrawLine(corners[1], corners[3], color);  // Near right edge
+    DrawLine(corners[3], corners[2], color);  // Near top edge
+    DrawLine(corners[2], corners[0], color);  // Near left edge
+    DrawLine(corners[4], corners[5], color);  // Far bottom edge
+    DrawLine(corners[5], corners[7], color);  // Far right edge
+    DrawLine(corners[7], corners[6], color);  // Far top edge
+    DrawLine(corners[6], corners[4], color);  // Far left edge
+    DrawLine(corners[0], corners[4], color);  // Bottom-left edge
+    DrawLine(corners[1], corners[5], color);  // Bottom-right edge
+    DrawLine(corners[2], corners[6], color);  // Top-left edge
+    DrawLine(corners[3], corners[7], color);  // Top-right edge
 }
 
 void Renderer::DrawLine(glm::vec3 begin, glm::vec3 end, glm::vec3 color) {

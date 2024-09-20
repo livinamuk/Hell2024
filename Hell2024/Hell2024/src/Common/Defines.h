@@ -15,8 +15,7 @@
 #define INTERACT_DISTANCE 2.5f
 
 #define NEAR_PLANE 0.005f
-//#define FAR_PLANE 50.0f
-#define FAR_PLANE 500.0f
+#define FAR_PLANE 200.0f
 
 #define NOOSE_PI 3.14159265359f
 #define NOOSE_HALF_PI 1.57079632679f
@@ -38,16 +37,16 @@
 #define ToRadian(x) (float)(((x) * HELL_PI / 180.0f))
 #define ToDegree(x) (float)(((x) * 180.0f / HELL_PI))
 
-#define ORANGE   glm::vec3(1, 0.647f, 0)
-#define BLACK   glm::vec3(0,0,0)
-#define WHITE   glm::vec3(1,1,1)
-#define RED     glm::vec3(1,0,0)
-#define GREEN   glm::vec3(0,1,0)
-#define BLUE    glm::vec3(0,0,1)
-#define YELLOW  glm::vec3(1,1,0)
-#define PURPLE  glm::vec3(1,0,1)
+#define ORANGE  glm::vec3(1, 0.647f, 0)
+#define BLACK   glm::vec3(0, 0, 0)
+#define WHITE   glm::vec3(1, 1, 1)
+#define RED     glm::vec3(1, 0, 0)
+#define GREEN   glm::vec3(0, 1, 0)
+#define BLUE    glm::vec3(0, 0, 1)
+#define YELLOW  glm::vec3(1, 1, 0)
+#define PURPLE  glm::vec3(1, 0, 1)
 #define GREY    glm::vec3(0.25f)
-#define LIGHT_BLUE    glm::vec3(0,1,1)
+#define LIGHT_BLUE    glm::vec3(0, 1, 1)
 #define LIGHT_GREEN   glm::vec3(0.16f, 0.78f, 0.23f)
 #define LIGHT_RED     glm::vec3(0.8f, 0.05f, 0.05f)
 #define GRID_COLOR    glm::vec3(0.509, 0.333, 0.490) * 0.5f

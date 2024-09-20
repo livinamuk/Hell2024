@@ -21,6 +21,7 @@ public:
     OpenGLTexture& GetGLTexture();
     VulkanTexture& GetVKTexture();
 
+    void SetLoadingState(LoadingState loadingState);
     const LoadingState GetLoadingState();
     const BakingState GetBakingState();
 

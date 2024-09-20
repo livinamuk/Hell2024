@@ -13,6 +13,7 @@
 #include "../Config.hpp"
 #include "../Util.hpp"
 #include "../Timer.hpp"
+#include "RapidHotload.h"
 
 Player::Player(int playerIndex) {
 
@@ -1336,6 +1337,10 @@ void Player::CreateCharacterController(glm::vec3 position) {
 
 }
 
+float Player::GetZoom() {
+    return _zoom;
+}
+
 glm::mat4 Player::GetProjectionMatrix() {
     float width = (float)BackEnd::GetWindowedWidth();
     float height = (float)BackEnd::GetWindowedHeight();
@@ -1344,6 +1349,24 @@ glm::mat4 Player::GetProjectionMatrix() {
         height *= 0.5f;
     }
     return glm::perspective(_zoom, width / height, NEAR_PLANE, FAR_PLANE);
+
+    /*
+    float fovY = _zoom;
+    float aspectRatio = (PRESENT_WIDTH) / (PRESENT_HEIGHT);
+    float nearPlane = NEAR_PLANE;
+    float farPlane = FAR_PLANE;
+    int screenWidth = PRESENT_WIDTH * 2;
+    int screenHeight = PRESENT_HEIGHT * 2;
+    int tileX = 0;
+    int tileY = 0;
+    int tileWidth = PRESENT_WIDTH * 2;
+    int tileHeight = PRESENT_HEIGHT * 2;
+
+    aspectRatio = width / height;
+    tileWidth = width;
+    tileHeight = height;
+
+    return RapidHotload::computeTileProjectionMatrix(fovY, aspectRatio, nearPlane, farPlane, screenWidth, screenHeight, tileX, tileY, tileWidth, tileHeight);*/
 }
 
 

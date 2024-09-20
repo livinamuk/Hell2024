@@ -47,6 +47,7 @@ namespace Game {
         CreatePlayers(4);
 
         Scene::Init();
+        WeaponManager::PreLoadWeaponPickUpConvexHulls();
 
         g_gameSettings.takeDamageOutside = true;
         g_gameSettings.skyBoxTint = glm::vec3(0.3, 0.15, 0.03);

@@ -1,6 +1,7 @@
 #pragma once
 #include "RendererCommon.h"
 #include "Types/DetachedMesh.hpp"
+#include "Math/Frustum.h"
 
 namespace Renderer {
 
@@ -26,6 +27,7 @@ namespace Renderer {
     void DrawAABB(AABB& aabb, glm::vec3 color);
     void DrawAABB(AABB& aabb, glm::vec3 color, glm::mat4 worldTransform);
     void DrawSphere(const Sphere& sphere, int segments, const glm::vec3& color);
+    void DrawFrustum(Frustum& frustum, glm::vec3 color);
     std::string& GetDebugText();
     inline DetachedMesh g_debugLinesMesh;
     inline DetachedMesh g_debugLinesMesh2D;
