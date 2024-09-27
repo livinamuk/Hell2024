@@ -31,7 +31,9 @@ void main() {
 	mat3 tbn = mat3(normalize(attrTangent), normalize(attrBiTangent), normalize(attrNormal));
 	vec3 normal = normalize(tbn * (normalMap.rgb * 2.0 - 1.0));
     NormalsOut.rgb = vec3(normal);
+    //NormalsOut.rgb = mix(normal, attrNormal, 0.5);
 	NormalsOut.a = float(PlayerIndex) * 0.25;
+
 
     RMAOut.rgb = rma.rgb;
 	RMAOut.a = 1.0;

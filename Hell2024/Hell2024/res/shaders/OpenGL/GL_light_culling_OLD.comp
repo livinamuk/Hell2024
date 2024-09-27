@@ -1,0 +1,896 @@
+#version 430 core
+
+#define TILE_SIZE 12
+layout(local_size_x = TILE_SIZE, local_size_y = TILE_SIZE, local_size_z = 1) in;
+
+layout(rgba8, binding = 0) uniform image2D tex;
+layout(r16f, binding = 1) uniform imageCubeArray shadowMapArray;
+
+layout (binding = 1) uniform sampler2D depthTexture;
+layout (binding = 2) uniform sampler2DArray shadowMapArrayView;
+layout (binding = 3) uniform sampler2DArray lightVolumeShadowMapArray;
+layout (binding = 4) uniform sampler2D normalTexture;
+
+uniform mat4 projectionMatrix;
+uniform mat4 viewMatrix;
+uniform vec3 viewPos;
+uniform float viewportWidth;
+uniform float viewportHeight;
+uniform float fov;
+uniform int lightCount;
+uniform int tileXCount;
+uniform int tileYCount;
+
+// Shared values between all the threads in the group
+//shared uint minDepthInt;
+//shared uint maxDepthInt;
+
+shared uint minWorldSpaceXInt;
+shared uint maxWorldSpaceXInt;
+shared uint minWorldSpaceYInt;
+shared uint maxWorldSpaceYInt;
+shared uint minWorldSpaceZInt;
+shared uint maxWorldSpaceZInt;
+
+shared uint minDepthInt;
+shared uint maxDepthInt;
+shared mat4 viewProjection;
+shared mat4 projectionView;
+//shared vec4 frustumPlanes[6];
+shared vec3 debugColor;
+
+
+struct Plane {
+    vec3 normal;
+    float offset;
+};
+
+shared Plane frustumPlanes[6];
+
+shared uint debugTriggered;
+
+shared uint tileIndex;
+
+struct CameraData {
+    mat4 projection;
+    mat4 projectionInverse;
+    mat4 view;
+    mat4 viewInverse;
+	float viewportWidth;
+	float viewportHeight;
+    float viewportOffsetX;
+    float viewportOffsetY;
+	float clipSpaceXMin;
+    float clipSpaceXMax;
+    float clipSpaceYMin;
+    float clipSpaceYMax;
+	float finalImageColorContrast;
+    float finalImageColorR;
+    float finalImageColorG;
+    float finalImageColorB;
+};
+
+struct Light {
+    float posX;
+    float posY;
+    float posZ;
+    float colorR;
+    float colorG;
+    float colorB;
+    float strength;
+    float radius;
+    int shadowMapIndex;
+    int contributesToGI;
+    float padding0;
+    float padding1;
+};
+
+layout(std430, binding = 16) readonly buffer CameraDataArray {
+    CameraData cameraDataArray[];
+};
+
+struct LightVolumeData {
+	float aabbMinX;
+	float aabbMinY;
+	float aabbMinZ;
+	float padding;
+	float aabbMaxX;
+	float aabbMaxY;
+	float aabbMaxZ;
+	float padding2;
+};
+
+
+layout(std430, binding = 19) buffer Buffer {
+    LightVolumeData lightVolumeData[];
+};
+
+struct TileData {
+    uint lightCount;
+    uint lightIndices[31];
+};
+
+layout(std430, binding = 20) buffer Buffer2 {
+    TileData tileData[];
+};
+
+
+float map(float value, float min1, float max1, float min2, float max2) {
+	float perc = (value - min1) / (max1 - min1);
+	return perc * (max2 - min2) + min2;
+}
+
+
+bool SphereVsAABB_BROKEN(vec3 aabbMin, vec3 aabbMax, vec3 sphereOrigin, float sphereRadius) {
+    vec3 closestPoint = clamp(sphereOrigin, aabbMin, aabbMax);
+    float distanceSquared = dot(closestPoint - sphereOrigin, closestPoint - sphereOrigin);
+    return distanceSquared <= (sphereRadius * sphereRadius);
+}
+
+bool SphereVsAABB_ALSO_BROKEN(vec3 aabbMin, vec3 aabbMax, vec3 sphereOrigin, float sphereRadius) {
+    float dmin = 0.0;
+    for (int i = 0; i < 3; i++) {
+        if (sphereOrigin[i] < aabbMin[i]) {
+            dmin += (sphereOrigin[i] - aabbMin[i]) * (sphereOrigin[i] - aabbMin[i]);
+        } else if (sphereOrigin[i] > aabbMax[i]) {
+            dmin += (sphereOrigin[i] - aabbMax[i]) * (sphereOrigin[i] - aabbMax[i]);
+        }
+    }
+    return dmin <= (sphereRadius * sphereRadius);
+}
+
+bool SphereVsAABB(vec3 aabbMin, vec3 aabbMax, vec3 sphereOrigin, float sphereRadius) {
+    vec3 corners[8] = vec3[8](
+		aabbMin,
+        vec3(aabbMax.x, aabbMin.y, aabbMin.z),
+        vec3(aabbMin.x, aabbMax.y, aabbMin.z),
+        vec3(aabbMin.x, aabbMin.y, aabbMax.z),
+        vec3(aabbMax.x, aabbMax.y, aabbMin.z),
+        vec3(aabbMax.x, aabbMin.y, aabbMax.z),
+        vec3(aabbMin.x, aabbMax.y, aabbMax.z),
+        aabbMax 
+    );
+
+    float radiusSquared = sphereRadius * sphereRadius;
+    for (int i = 0; i < 8; i++) {   
+		vec3 corner = corners[i];
+        float distanceSquared = dot(corner - sphereOrigin, corner - sphereOrigin);
+        if (distanceSquared <= radiusSquared) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+layout(std430, binding = 2) readonly buffer Lights {
+    Light lights[];
+};
+
+bool AABBsIntersect(vec3 minA, vec3 maxA, vec3 minB, vec3 maxB) {
+    return !(minA.x > maxB.x || maxA.x < minB.x ||
+             minA.y > maxB.y || maxA.y < minB.y ||
+             minA.z > maxB.z || maxA.z < minB.z);
+}
+
+bool IsWithinLightRadius(vec3 position, vec3 lightPosition, float lightRadius) {
+    // Calculate the squared distance between the world-space position and the light's position
+    float distanceSquared = dot(position - lightPosition, position - lightPosition);
+
+    // Compare the squared distance with the squared radius
+    return distanceSquared <= (lightRadius * lightRadius);
+}
+
+// Check isnan(value) before use.
+uint order_preserving_float_map(float value)
+{
+    // For negative values, the mask becomes 0xffffffff.
+    // For positive values, the mask becomes 0x80000000.
+    uint uvalue = floatBitsToUint(value);
+    uint mask = -int(uvalue >> 31) | 0x80000000;
+    return uvalue ^ mask;
+}
+
+float inverse_order_preserving_float_map(uint value)
+{
+    // If the msb is set, the mask becomes 0x80000000.
+    // If the msb is unset, the mask becomes 0xffffffff.
+    uint mask = ((value >> 31) - 1) | 0x80000000;
+    return uintBitsToFloat(value ^ mask);
+}
+
+vec4 ComputePlane(vec3 a, vec3 b, vec3 c) {
+    vec3 normal = normalize(cross(b - a, c - a));
+    float d = -dot(normal, a);
+    return vec4(normal, d);
+}
+
+float SignedDistance(const vec3 point, const Plane plane) {
+    return dot(plane.normal, point) + plane.offset;
+}
+
+bool FrustumIntersectsSphere(const vec3 origin, const float radius) {
+    for (int i = 0; i < 6; ++i) {
+        float distance = SignedDistance(origin, frustumPlanes[i]);
+        if (distance + radius < 0) {
+            return false;
+        }
+    }
+    return true;
+}
+
+mat4 Frustum(float left, float right, float bottom, float top, float near, float far) {
+    mat4 result = mat4(0.0);
+    result[0][0] = (2.0 * near) / (right - left);
+    result[1][1] = (2.0 * near) / (top - bottom);
+    result[2][0] = (right + left) / (right - left);
+    result[2][1] = (top + bottom) / (top - bottom);
+    result[2][2] = -(far + near) / (far - near);
+    result[2][3] = -1.0;
+    result[3][2] = -(2.0 * far * near) / (far - near);
+    return result;
+}
+
+void CreateFrustumPlanes(mat4 projectionView) {
+	// Left clipping plane
+	frustumPlanes[0].normal.x = projectionView[0][3] + projectionView[0][0];
+	frustumPlanes[0].normal.y = projectionView[1][3] + projectionView[1][0];
+	frustumPlanes[0].normal.z = projectionView[2][3] + projectionView[2][0];
+	frustumPlanes[0].offset = projectionView[3][3] + projectionView[3][0];
+	// Right clipping plane
+	frustumPlanes[1].normal.x = projectionView[0][3] - projectionView[0][0];
+	frustumPlanes[1].normal.y = projectionView[1][3] - projectionView[1][0];
+	frustumPlanes[1].normal.z = projectionView[2][3] - projectionView[2][0];
+	frustumPlanes[1].offset = projectionView[3][3] - projectionView[3][0];
+	// Top clipping plane
+	frustumPlanes[2].normal.x = projectionView[0][3] - projectionView[0][1];
+	frustumPlanes[2].normal.y = projectionView[1][3] - projectionView[1][1];
+	frustumPlanes[2].normal.z = projectionView[2][3] - projectionView[2][1];
+	frustumPlanes[2].offset = projectionView[3][3] - projectionView[3][1];
+	// Bottom clipping plane
+	frustumPlanes[3].normal.x = projectionView[0][3] + projectionView[0][1];
+	frustumPlanes[3].normal.y = projectionView[1][3] + projectionView[1][1];
+	frustumPlanes[3].normal.z = projectionView[2][3] + projectionView[2][1];
+	frustumPlanes[3].offset = projectionView[3][3] + projectionView[3][1];
+	// Near clipping plane
+	frustumPlanes[4].normal.x = projectionView[0][3] + projectionView[0][2];
+	frustumPlanes[4].normal.y = projectionView[1][3] + projectionView[1][2];
+	frustumPlanes[4].normal.z = projectionView[2][3] + projectionView[2][2];
+	frustumPlanes[4].offset = projectionView[3][3] + projectionView[3][2];
+	// Far clipping plane
+	frustumPlanes[5].normal.x = projectionView[0][3] - projectionView[0][2];
+	frustumPlanes[5].normal.y = projectionView[1][3] - projectionView[1][2];
+	frustumPlanes[5].normal.z = projectionView[2][3] - projectionView[2][2];
+	frustumPlanes[5].offset = projectionView[3][3] - projectionView[3][2];
+	// Normalize planes
+	for (int i = 0; i < 6; i++) {
+		float magnitude = length(frustumPlanes[i].normal);
+		frustumPlanes[i].normal /= magnitude;
+		frustumPlanes[i].offset /= magnitude;
+	}
+}
+
+float LinearizeDepth(float depth, float near, float far) {
+//    return (projectionMatrix[3][2]) / (depth * projectionMatrix[2][3] + projectionMatrix[2][2]);
+
+	return (0.5 * projectionMatrix[3][2]) / (depth + 0.5 * projectionMatrix[2][2] - 0.5);
+    //return near * far / (far - depth * (far - near));
+    //return (2.0 * near) / (far + near - depth * (far - near));
+}
+
+void main() {
+
+	int i = 3;
+	int lightIndex = i;
+	vec3 lightPos = vec3(lights[i].posX, lights[i].posY, lights[i].posZ);
+	float lightRadius = lights[lightIndex].radius;
+
+	vec2 viewportSize = vec2(viewportWidth, viewportHeight);
+	ivec2 pixelCoords = ivec2(gl_GlobalInvocationID.xy);
+	vec2 uv = vec2(pixelCoords) / viewportSize;
+
+	vec3 color = imageLoad(tex, pixelCoords).rgb;
+
+	ivec2 itemID = ivec2(gl_LocalInvocationID.xy);
+	ivec2 tileID = ivec2(gl_WorkGroupID.xy);
+	ivec2 tileNumber = ivec2(gl_NumWorkGroups.xy);
+	uint index = tileID.y * tileNumber.x + tileID.x;
+
+
+	// Defaults
+	if (gl_LocalInvocationIndex == 0) {
+		minDepthInt = 0xFFFFFFFF;
+		maxDepthInt = 0;
+		projectionView = projectionMatrix * viewMatrix;
+		debugColor = vec3(1,1,1);
+	}
+	barrier();
+
+	// Compute min and max depth
+	float depth = texture(depthTexture, uv).r;
+	uint depthInt = floatBitsToUint(depth);
+	atomicMin(minDepthInt, depthInt);
+	atomicMax(maxDepthInt, depthInt);
+	barrier();
+
+	// Calculate the frustum planes to be used for this tile
+	if (gl_LocalInvocationIndex == 0) {
+		float minDepth = uintBitsToFloat(minDepthInt);
+		float maxDepth = uintBitsToFloat(maxDepthInt);	
+
+		
+		float nearPlane = 0.1;
+		float farPlane = 200;
+		
+		float linearMinDepth = LinearizeDepth(minDepth, nearPlane, farPlane);
+		float linearMaxDepth = LinearizeDepth(maxDepth, nearPlane, farPlane);
+
+		nearPlane = linearMinDepth;
+		farPlane = linearMaxDepth;
+
+		int tileSize = 12;	
+		int tileX = pixelCoords.x / tileSize;
+		int tileY = pixelCoords.y / tileSize;
+
+		int x1 = int(tileX * tileSize);
+		int y1 = int(tileY * tileSize);
+		int x2 = x1 + tileSize;
+		int y2 = y1 + tileSize;
+
+		//float aspectRatio = viewportWidth / viewportHeight;
+		float aspectRatio = tileSize / tileSize;
+		float nearHeight = 2.0f * tan(fov / 2.0f) * nearPlane;
+		float nearWidth = nearHeight * aspectRatio;
+		float leftNDC = float(x1) / viewportWidth;
+		float rightNDC = float(x2) / viewportWidth;
+		float bottomNDC = float(y1) / viewportHeight;
+		float topNDC = float(y2) / viewportHeight;
+		float left = (leftNDC - 0.5f) * nearWidth;
+		float right = (rightNDC - 0.5f) * nearWidth;
+		float bottom = (bottomNDC - 0.5f) * nearHeight;
+		float top = (topNDC - 0.5f) * nearHeight;
+		mat4 tileProj = Frustum(left, right, bottom, top, nearPlane, farPlane);
+		mat4 viewProj = tileProj * viewMatrix;
+				
+		// CreateFrustumPlanes(projectionView);
+		CreateFrustumPlanes(viewProj);
+
+		if (FrustumIntersectsSphere(lightPos, lightRadius)) {
+			debugColor = vec3(1,0,0);
+		}
+
+	}
+	barrier();
+
+	// Output the debug color to all pixels in the tile
+	if (gl_LocalInvocationIndex == 0) {
+	
+		//float minDepth = uintBitsToFloat(minDepthInt);
+		//debugColor = vec3(minDepth);
+		color *= debugColor;
+
+		ivec2 tileSize = ivec2(gl_WorkGroupSize.xy);
+		for (int y = 0; y < tileSize.y; ++y) {
+			for (int x = 0; x < tileSize.x; ++x) {
+				ivec2 localCoords = ivec2(x, y);
+				ivec2 globalCoords = tileID * tileSize + localCoords;
+		//		imageStore(tex, globalCoords, vec4(color, 1.0));
+			}
+		}
+	}
+	
+		color *= debugColor;
+		imageStore(tex, pixelCoords, vec4(color, 1.0));
+
+	// Lines
+	if (gl_LocalInvocationIndex.x < 12 || gl_LocalInvocationIndex.x % 12 == 0 || gl_LocalInvocationIndex.x < 12 || gl_LocalInvocationIndex.x % 12 == 1) {	
+		imageStore(tex, pixelCoords, vec4(0,0,0, 1));
+	}
+
+}
+
+void main3() {
+
+	int i = 3;
+	int lightIndex = i;
+	vec3 lightPos = vec3(lights[i].posX, lights[i].posY, lights[i].posZ);
+	float lightRadius = lights[lightIndex].radius;
+
+	vec2 viewportSize = vec2(viewportWidth, viewportHeight);
+	ivec2 pixelCoords = ivec2(gl_GlobalInvocationID.xy);
+	vec2 uv = vec2(pixelCoords) / viewportSize;
+
+	vec3 color = imageLoad(tex, pixelCoords).rgb;
+
+	ivec2 itemID = ivec2(gl_LocalInvocationID.xy);
+	ivec2 tileID = ivec2(gl_WorkGroupID.xy);
+	ivec2 tileNumber = ivec2(gl_NumWorkGroups.xy);
+	uint index = tileID.y * tileNumber.x + tileID.x;
+
+
+	// Defaults
+	if (gl_LocalInvocationIndex == 0) {
+		minDepthInt = 0xFFFFFFFF;
+		maxDepthInt = 0;
+		projectionView = projectionMatrix * viewMatrix;
+		debugColor = vec3(1,1,1);
+	}
+	barrier();
+
+	// Compute min and max depth
+	float depth = texture(depthTexture, uv).r;
+	uint depthInt = floatBitsToUint(depth);
+	atomicMin(minDepthInt, depthInt);
+	atomicMax(maxDepthInt, depthInt);
+	barrier();
+
+	// Calculate the frustum planes to be used for this tile
+	if (gl_LocalInvocationIndex == 0) {
+		float minDepth = uintBitsToFloat(minDepthInt);
+		float maxDepth = uintBitsToFloat(maxDepthInt);	
+
+		
+		float nearPlane = 0.1;
+		float farPlane = 200;
+		
+		float linearMinDepth = LinearizeDepth(minDepth, nearPlane, farPlane);
+		float linearMaxDepth = LinearizeDepth(maxDepth, nearPlane, farPlane);
+
+		nearPlane = linearMinDepth;
+		farPlane = linearMaxDepth;
+
+		int tileSize = 12;	
+		int tileX = pixelCoords.x / tileSize;
+		int tileY = pixelCoords.y / tileSize;
+
+		int x1 = int(tileX * tileSize);
+		int y1 = int(tileY * tileSize);
+		int x2 = x1 + tileSize;
+		int y2 = y1 + tileSize;
+
+		//float aspectRatio = viewportWidth / viewportHeight;
+		float aspectRatio = tileSize / tileSize;
+		float nearHeight = 2.0f * tan(fov / 2.0f) * nearPlane;
+		float nearWidth = nearHeight * aspectRatio;
+		float leftNDC = float(x1) / viewportWidth;
+		float rightNDC = float(x2) / viewportWidth;
+		float bottomNDC = float(y1) / viewportHeight;
+		float topNDC = float(y2) / viewportHeight;
+		float left = (leftNDC - 0.5f) * nearWidth;
+		float right = (rightNDC - 0.5f) * nearWidth;
+		float bottom = (bottomNDC - 0.5f) * nearHeight;
+		float top = (topNDC - 0.5f) * nearHeight;
+		mat4 tileProj = Frustum(left, right, bottom, top, nearPlane, farPlane);
+		mat4 viewProj = tileProj * viewMatrix;
+				
+		// CreateFrustumPlanes(projectionView);
+		CreateFrustumPlanes(viewProj);
+
+		if (FrustumIntersectsSphere(lightPos, lightRadius)) {
+			debugColor = vec3(1,0,0);
+		}
+
+	}
+	barrier();
+
+	// Output the debug color to all pixels in the tile
+	if (gl_LocalInvocationIndex == 0) {
+	
+		//float minDepth = uintBitsToFloat(minDepthInt);
+		//debugColor = vec3(minDepth);
+		color *= debugColor;
+
+		ivec2 tileSize = ivec2(gl_WorkGroupSize.xy);
+		for (int y = 0; y < tileSize.y; ++y) {
+			for (int x = 0; x < tileSize.x; ++x) {
+				ivec2 localCoords = ivec2(x, y);
+				ivec2 globalCoords = tileID * tileSize + localCoords;
+		//		imageStore(tex, globalCoords, vec4(color, 1.0));
+			}
+		}
+	}
+	
+		color *= debugColor;
+		imageStore(tex, pixelCoords, vec4(color, 1.0));
+
+	// Lines
+	if (gl_LocalInvocationIndex.x < 12 || gl_LocalInvocationIndex.x % 12 == 0 || gl_LocalInvocationIndex.x < 12 || gl_LocalInvocationIndex.x % 12 == 1) {	
+		imageStore(tex, pixelCoords, vec4(0,0,0, 1));
+	}
+
+	
+}
+
+/*
+	float m22 = projectionMatrix[2][2];
+	float m23 = projectionMatrix[3][2];
+	float near = -m23 / m22;
+	float far = -m23 / (m22 - 1.0);
+	float depth = texture(depthTexture, uv).r;
+	float z = near * far / (far - depth * (far - near));
+	*/
+
+void main2() {
+
+	vec2 viewportSize = vec2(viewportWidth, viewportHeight);
+	ivec2 pixelCoords = ivec2(gl_GlobalInvocationID.xy);
+	vec2 uv = vec2(pixelCoords) / viewportSize;
+
+	vec3 color = imageLoad(tex, pixelCoords).rgb;
+
+	if (gl_LocalInvocationIndex == 0) {
+		minDepthInt = 0xFFFFFFFF;
+		maxDepthInt = 0;
+		viewProjection = projectionMatrix * viewMatrix;
+	}
+	barrier();
+
+	float maxDepth, minDepth;
+	float depth = texture(depthTexture, uv).r;
+	// Linearize the depth value from depth buffer (must do this because we created it using projection)
+	depth = (0.5 * projectionMatrix[3][2]) / (depth + 0.5 * projectionMatrix[2][2] - 0.5);
+	uint depthInt = floatBitsToUint(depth);
+	atomicMin(minDepthInt, depthInt);
+	atomicMax(maxDepthInt, depthInt);	
+	barrier();
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	int tileSize = 12;	
+	int tileX = pixelCoords.x / tileSize;
+	int tileY = pixelCoords.y / tileSize;	
+	
+	int tileWidth = 12;
+	int tileHeight = 12;
+
+	float minX = float(tileX * tileWidth);
+	float maxX = minX + float(tileWidth);
+	float minY = float(tileY * tileHeight);
+	float maxY = minY + float(tileHeight);
+	
+	float ndcMinX = (minX / viewportSize.x) * 2.0 - 1.0;
+	float ndcMaxX = (maxX / viewportSize.x) * 2.0 - 1.0;
+
+	// Maybe need to flip Y based on my coordinate system...
+	float ndcMinY = 1.0 - (minY / viewportSize.y) * 2.0;
+	float ndcMaxY = 1.0 - (maxY / viewportSize.y) * 2.0;
+
+	// Near plane corners
+	vec4 corner00 = vec4(ndcMinX, ndcMinY, -1.0, 1.0);
+	vec4 corner10 = vec4(ndcMaxX, ndcMinY, -1.0, 1.0);
+	vec4 corner11 = vec4(ndcMaxX, ndcMaxY, -1.0, 1.0);
+	vec4 corner01 = vec4(ndcMinX, ndcMaxY, -1.0, 1.0);
+
+	// Far plane corners
+	vec4 corner00_far = vec4(ndcMinX, ndcMinY, 1.0, 1.0);
+	vec4 corner10_far = vec4(ndcMaxX, ndcMinY, 1.0, 1.0);
+	vec4 corner11_far = vec4(ndcMaxX, ndcMaxY, 1.0, 1.0);
+	vec4 corner01_far = vec4(ndcMinX, ndcMaxY, 1.0, 1.0);
+
+	mat4 invProjectionMatrix = inverse(projectionMatrix);
+
+	// Transform near plane corners
+	vec4 frustumCornerVS0 = invProjectionMatrix * corner00;
+	vec4 frustumCornerVS1 = invProjectionMatrix * corner10;
+	vec4 frustumCornerVS2 = invProjectionMatrix * corner11;
+	vec4 frustumCornerVS3 = invProjectionMatrix * corner01;
+
+	// Transform far plane corners
+	vec4 frustumCornerVS4 = invProjectionMatrix * corner00_far;
+	vec4 frustumCornerVS5 = invProjectionMatrix * corner10_far;
+	vec4 frustumCornerVS6 = invProjectionMatrix * corner11_far;
+	vec4 frustumCornerVS7 = invProjectionMatrix * corner01_far;
+
+	// Perspective divide to get 3D coordinates
+	frustumCornerVS0 /= frustumCornerVS0.w;
+	frustumCornerVS1 /= frustumCornerVS1.w;
+	frustumCornerVS2 /= frustumCornerVS2.w;
+	frustumCornerVS3 /= frustumCornerVS3.w;
+	frustumCornerVS4 /= frustumCornerVS4.w;
+	frustumCornerVS5 /= frustumCornerVS5.w;
+	frustumCornerVS6 /= frustumCornerVS6.w;
+	frustumCornerVS7 /= frustumCornerVS7.w;
+
+	vec3 A = frustumCornerVS3.xyz - frustumCornerVS0.xyz;
+	vec3 B = frustumCornerVS4.xyz - frustumCornerVS0.xyz;
+	vec3 normalLeft = normalize(cross(B, A));
+	float D_left = -dot(normalLeft, frustumCornerVS0.xyz);
+
+	A = frustumCornerVS5.xyz - frustumCornerVS1.xyz;
+	B = frustumCornerVS2.xyz - frustumCornerVS1.xyz;
+	vec3 normalRight = normalize(cross(B, A));
+	float D_right = -dot(normalRight, frustumCornerVS1.xyz);
+
+	A = frustumCornerVS2.xyz - frustumCornerVS3.xyz;
+	B = frustumCornerVS7.xyz - frustumCornerVS3.xyz;
+	vec3 normalTop = normalize(cross(B, A));
+	float D_top = -dot(normalTop, frustumCornerVS3.xyz);
+
+	A = frustumCornerVS5.xyz - frustumCornerVS0.xyz;
+	B = frustumCornerVS1.xyz - frustumCornerVS0.xyz;
+	vec3 normalBottom = normalize(cross(B, A));
+	float D_bottom = -dot(normalBottom, frustumCornerVS0.xyz);
+
+	A = frustumCornerVS1.xyz - frustumCornerVS0.xyz;
+	B = frustumCornerVS3.xyz - frustumCornerVS0.xyz;
+	vec3 normalNear = normalize(cross(B, A));
+	float D_near = -dot(normalNear, frustumCornerVS0.xyz);
+
+	A = frustumCornerVS6.xyz - frustumCornerVS5.xyz;
+	B = frustumCornerVS4.xyz - frustumCornerVS5.xyz;
+	vec3 normalFar = normalize(cross(B, A));
+	float D_far = -dot(normalFar, frustumCornerVS5.xyz);
+
+
+	
+	float offset = 10000;
+
+	//float maxDepth, minDepth;
+	
+	int playerIndex = int(texture(normalTexture, uv).a * 4 + 0.5);
+	vec3 fragmentNormal = texture(normalTexture, uv).rgb;
+	mat4 inverseProjection = cameraDataArray[playerIndex].projectionInverse;
+	mat4 inverseView = cameraDataArray[playerIndex].viewInverse;
+	vec3 viewPos = cameraDataArray[playerIndex].viewInverse[3].xyz;
+	float clipSpaceXMin = cameraDataArray[playerIndex].clipSpaceXMin;
+	float clipSpaceXMax = cameraDataArray[playerIndex].clipSpaceXMax;
+	float clipSpaceYMin = cameraDataArray[playerIndex].clipSpaceYMin;
+	float clipSpaceYMax = cameraDataArray[playerIndex].clipSpaceYMax;
+	
+	// Reconstruct mix/max world position from min/max depth
+	float z = texture(depthTexture, uv).r;
+    vec2 clipSpaceTexCoord = uv;
+	clipSpaceTexCoord.x = map(clipSpaceTexCoord.x, clipSpaceXMin, clipSpaceXMax, 0.0, 1.0);
+	clipSpaceTexCoord.y = map(clipSpaceTexCoord.y, clipSpaceYMin, clipSpaceYMax, 0.0, 1.0);
+	vec4 clipSpacePosition = vec4(clipSpaceTexCoord * 2.0 - 1.0, z, 1.0);
+    vec4 viewSpacePosition = inverseProjection * clipSpacePosition;
+    viewSpacePosition /= viewSpacePosition.w;
+    vec4 worldSpacePosition = inverseView * viewSpacePosition;
+	
+	worldSpacePosition.x += offset;
+	worldSpacePosition.y += offset;
+	worldSpacePosition.z += offset;
+
+	if (gl_LocalInvocationIndex == 0) {
+		minWorldSpaceXInt = 0xFFFFFFFF;
+		minWorldSpaceYInt = 0xFFFFFFFF;
+		minWorldSpaceZInt = 0xFFFFFFFF;
+		maxWorldSpaceXInt = 0;
+		maxWorldSpaceYInt = 0;
+		maxWorldSpaceZInt = 0;
+		tileIndex = (tileY * tileXCount) + tileX;
+	}
+	barrier();
+
+
+    uint worldSpaceXInt = floatBitsToUint(worldSpacePosition.x);
+    uint worldSpaceYInt = floatBitsToUint(worldSpacePosition.y);
+    uint worldSpaceZInt = floatBitsToUint(worldSpacePosition.z);
+	
+	worldSpaceXInt = order_preserving_float_map(worldSpacePosition.x);
+	worldSpaceYInt = order_preserving_float_map(worldSpacePosition.y);
+	worldSpaceZInt = order_preserving_float_map(worldSpacePosition.z);
+	
+	atomicMin(minWorldSpaceXInt, worldSpaceXInt);
+	atomicMin(minWorldSpaceYInt, worldSpaceYInt);
+	atomicMin(minWorldSpaceZInt, worldSpaceZInt);    
+	atomicMax(maxWorldSpaceXInt, worldSpaceXInt);
+	atomicMax(maxWorldSpaceYInt, worldSpaceYInt);
+	atomicMax(maxWorldSpaceZInt, worldSpaceZInt);
+
+    barrier();
+	
+	
+	
+    float worldSpaceXMin = uintBitsToFloat(minWorldSpaceXInt);
+    float worldSpaceYMin = uintBitsToFloat(minWorldSpaceYInt);
+    float worldSpaceZMin = uintBitsToFloat(minWorldSpaceZInt);
+    float worldSpaceXMax = uintBitsToFloat(maxWorldSpaceXInt);
+    float worldSpaceYMax = uintBitsToFloat(maxWorldSpaceYInt);
+    float worldSpaceZMax = uintBitsToFloat(maxWorldSpaceZInt);
+	worldSpaceXMin = inverse_order_preserving_float_map(minWorldSpaceXInt);
+	worldSpaceYMin = inverse_order_preserving_float_map(minWorldSpaceYInt);
+	worldSpaceZMin = inverse_order_preserving_float_map(minWorldSpaceZInt);
+	worldSpaceXMax = inverse_order_preserving_float_map(maxWorldSpaceXInt);
+	worldSpaceYMax = inverse_order_preserving_float_map(maxWorldSpaceYInt);
+	worldSpaceZMax = inverse_order_preserving_float_map(maxWorldSpaceZInt);
+	
+	vec3 worldSpaceMin = vec3(worldSpaceXMin, worldSpaceYMin, worldSpaceZMin);
+	vec3 worldSpaceMax = vec3(worldSpaceXMax, worldSpaceYMax, worldSpaceZMax);
+	
+	worldSpaceMin.x -= offset;
+	worldSpaceMax.x -= offset;
+	worldSpaceMin.y -= offset;
+	worldSpaceMax.y -= offset;
+	worldSpaceMin.z -= offset;
+	worldSpaceMax.z -= offset;
+
+
+	if (gl_LocalInvocationIndex == 0) {
+	
+		tileData[tileIndex].lightCount = 0;	
+		debugTriggered = 0;
+			
+		//for (int i = 0; i < lightCount; i++)
+		int i = 3;
+		{
+			//int i = 3;
+			vec3 lightPos = vec3(lights[i].posX, lights[i].posY, lights[i].posZ);
+			float lightRadius = lights[i].radius;
+			
+			vec3 lightAabbMin = vec3(lightVolumeData[i].aabbMinX, lightVolumeData[i].aabbMinY, lightVolumeData[i].aabbMinZ);
+			vec3 lightAabbMax = vec3(lightVolumeData[i].aabbMaxX, lightVolumeData[i].aabbMaxY, lightVolumeData[i].aabbMaxZ);
+			
+			if (AABBsIntersect(worldSpaceMin, worldSpaceMax, lightAabbMin, lightAabbMax) && SphereVsAABB(worldSpaceMin, worldSpaceMax, lightPos, lightRadius)) {
+
+				// increment light count
+				tileData[tileIndex].lightCount++;
+
+				// store light index
+				uint lightIndex = tileData[tileIndex].lightCount;
+				tileData[tileIndex].lightIndices[lightIndex] = i;
+
+				if (i == 0) {
+					debugTriggered = 1;
+				}
+
+			}
+			
+		}
+	}
+
+	barrier();
+
+	
+	//return;
+
+	uint contributingLightCount = tileData[tileIndex].lightCount;
+
+	float test = contributingLightCount / 1.0;
+
+	//test = float(contributingLightCount);
+	
+
+	
+	if (test < 0.5) {
+	    // color += mix(vec3(0,0,1), vec3(1, 1, 0), test * test* test);
+	} else {	
+		// color += mix(vec3(1,1,0), vec3(1, 0, 0), test * test* test);
+	}	
+	test = clamp(test, 0, 1);	
+    float level = test * 3.14159265/2;
+    vec3 col;
+    col.r = sin(level);
+    col.g = sin(level*2.);
+    col.b = cos(level);
+	color = color * 0.5  + col * col;
+    
+	//color += vec3(contributingLightCount * 0.125);
+
+	
+
+	//test = tileIndex / 14400.0;
+
+
+	//color = vec3(test,test,test);
+
+	//color = worldSpaceMin;
+
+//	color = vec3(worldSpaceYMax);
+	//color = worldSpaceMax;
+	
+//	color = vec3(worldSpaceMin);
+
+	if (worldSpaceMax.x < -1000) {
+		//color = vec3(1,0,0);	
+	}
+	//color = vec3(worldSpaceMin);
+
+	int i =3;
+	vec3 lightPos = vec3(lights[i].posX, lights[i].posY, lights[i].posZ);
+	float lightRadius = lights[i].radius;
+
+	
+	/*
+	worldSpacePosition.xyz -= vec3(offset);
+
+	if (IsWithinLightRadius(worldSpaceMin.xyz, lightPos, lightRadius)) {
+		color = vec3(1,0,0);	
+	}
+
+	if (SphereVsAABB(worldSpaceMin, worldSpaceMax, lightPos, lightRadius)) {
+		color = vec3(1,1,0);	
+	}
+	
+	vec3 testPos = vec3(worldSpaceMax.x, worldSpaceMin.y, worldSpaceMin.z);
+	if (IsWithinLightRadius(testPos, lightPos, lightRadius)) {
+		color = vec3(0,0,1);	
+	}
+	*/
+
+//	return;
+
+	vec3 testPos = vec3(worldSpaceMax.x, worldSpaceMin.y, worldSpaceMin.z);
+	if (distance(testPos, lightPos) < lightRadius) {
+		//color = vec3(0,0,1);	
+	}
+
+
+	// pink
+	if (debugTriggered == 1) {
+		//color = vec3(1,0,1);
+	}
+
+
+
+	imageStore(tex, pixelCoords, vec4(color, 1));
+	
+
+	// Lines
+	if (gl_LocalInvocationIndex.x < 12 || gl_LocalInvocationIndex.x % 12 == 0 ||
+		gl_LocalInvocationIndex.x < 12 || gl_LocalInvocationIndex.x % 12 == 1
+	) {	
+		//imageStore(tex, pixelCoords, vec4(0,0,0, 1));
+	}
+
+
+
+
+
+
+	//imageStore(tex, pixelCoords, vec4(color * vec3(1,0,0), 1));
+
+	/*
+	imageStore(tex, pixelCoords, vec4(worldSpaceMax, 1));
+	
+
+
+	if (
+	
+
+
+	
+	imageStore(tex, pixelCoords, vec4(worldSpaceMax, 1));
+
+
+	
+	float tileXMapped = float(tileX) / float(tileXCount);
+	float tileYMapped = float(tileY) / float(tileYCount);	
+	float test = tileIndex / 14400.0;
+	*/
+	
+	//imageStore(tex, pixelCoords, vec4(tileXMapped,tileYMapped,0, 1));
+
+	//tileData[tileIndex].lightCount = 0;	
+
+	//imageStore(tex, pixelCoords, vec4(worldSpaceMax.xyz, 1));
+
+
+	/*
+	color = worldSpacePosition.xyz;
+
+	imageStore(tex, pixelCoords, vec4(color.xyz, 1));
+
+	//maxZ
+	if (worldSpaceMax.z > maxZ) {
+	
+	imageStore(tex, pixelCoords, vec4(color.xyz * vec3(1,0,0), 1));
+	////imageStore(tex, pixelCoords, vec4(vec3(0,0,1), 1));
+	}*/
+}
+
+float linearDepth(float z, float nearPlane, float farPlane) {
+    return nearPlane * farPlane / (farPlane - z * (farPlane - nearPlane));
+}

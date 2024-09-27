@@ -10,6 +10,8 @@ struct DrawInfo {
 
 namespace RendererData {
 
+    inline std::vector<GPULight> g_gpuLights;
+
     inline std::vector<RenderItem3D> g_sceneGeometryRenderItems;
     inline std::vector<RenderItem3D> g_sceneBulletDecalRenderItems;
 
@@ -24,5 +26,5 @@ namespace RendererData {
     inline DrawInfo g_shadowMapGeometryDrawInfo[MAX_SHADOW_CASTING_LIGHTS][6];
     
     void CreateDrawCommands(int playerCount);
-
+    void UpdateGPULights();
 }

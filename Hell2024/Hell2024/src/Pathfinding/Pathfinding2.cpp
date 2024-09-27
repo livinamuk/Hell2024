@@ -9,6 +9,7 @@
 #include "../Editor/CSG.h"
 #include "../Input/Input.h"
 #include "../Game/Game.h"
+#include "../Core/AssetManager.h"
 
 class MyDebugDraw : public duDebugDraw {
 public:
@@ -167,14 +168,46 @@ namespace Pathfinding2 {
         //UpdateNavMesh(CSG::GetNavMeshVertices());
     }
 
-    void UpdateNavMesh(std::vector<glm::vec3>& vertices) {
+    void UpdateNavMesh() {
 
         Timer timer("Pathfinding::UpdateNavMesh()");
 
+        std::vector<glm::vec3> vertices = CSG::GetNavMeshVertices();
+
+        /*
+        // Add heightmap
+        HeightMap& heightMap = AssetManager::g_heightMap;
+        vertices.reserve(vertices.size() + heightMap.m_indices.size());
+        for (int i = 0; i < 66; i++) {
+        //for (int i = 0; i < heightMap.m_indices.size(); i++) {
+            int vertexIndex = heightMap.m_indices[i];           
+            Vertex& vertex = heightMap.m_vertices[vertexIndex];
+            glm::vec3 position = heightMap.m_transform.to_mat4() * glm::vec4(vertex.position, 1.0);
+            vertices.push_back(position);
+        }
+        */
+
+
+
+        float y = -1.75f;
+        float size = 50;
+
+        glm::vec3 cornerA = glm::vec3(-size, y, -size);
+        glm::vec3 cornerB = glm::vec3(size, y, size);
+        glm::vec3 cornerC = glm::vec3(-size, y, size);
+        glm::vec3 cornerD = glm::vec3(size, y, -size);
+
+        vertices.push_back(cornerC);
+        vertices.push_back(cornerB);
+        vertices.push_back(cornerA);
+
+        vertices.push_back(cornerB);
+        vertices.push_back(cornerD);
+        vertices.push_back(cornerA);
+
+
         g_navMesh.Create(g_ctx, vertices, NavMeshRegionMode::MONOTONE);
         DrawNavMesh(g_debugDraw, g_navMesh, g_debugVertices);
-
-        //DrawNavMesh(g_debugDraw, g_navMesh, g_navMesh.GetTileCache(), g_debugVertices);
     }
 
     Path FindPath(glm::vec3 startPos, glm::vec3 endPos) {

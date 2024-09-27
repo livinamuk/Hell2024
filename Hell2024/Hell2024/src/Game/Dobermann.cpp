@@ -30,9 +30,10 @@ void Dobermann::Init() {
     desc->radius = PLAYER_CAPSULE_RADIUS;
     desc->position = PxExtendedVec3(m_initialPosition.x, m_initialPosition.y + (PLAYER_CAPSULE_HEIGHT / 2) + (PLAYER_CAPSULE_RADIUS * 2), m_initialPosition.z);
     desc->material = material;
-    desc->stepOffset = 0.1f;
+    desc->stepOffset = 0.3f;
     desc->contactOffset = 0.001;
     desc->scaleCoeff = .99f;
+    desc->slopeLimit = cosf(glm::radians(89.0f));
     desc->reportCallback = &Physics::_cctHitCallback;
     m_characterController = Physics::_characterControllerManager->createController(*desc);
     m_characterController->getActor()->getShapes(&m_shape, 1);
@@ -109,6 +110,8 @@ void Dobermann::UpdateDead(float deltaTime) {
 
 void Dobermann::UpdateKamakazi(float deltaTime) {
 
+    m_speed = 4;
+
     AnimatedGameObject* animatedGameObject = GetAnimatedGameObject();
 
     // Find path
@@ -152,7 +155,7 @@ void Dobermann::UpdateKamakazi(float deltaTime) {
             glm::vec3 nextPosition = m_currentPosition + direction * glm::vec3(speed);
             Util::RotateYTowardsTarget(m_currentPosition, animatedGameObject->_transform.rotation.y, nextPosition, 0.1);
             // Move PhysX character controller
-            glm::vec3 movementVector = glm::normalize(direction * glm::vec3(1, 0, 1)) * glm::vec3(speed);
+            glm::vec3 movementVector = glm::normalize(direction * glm::vec3(1, 0, 1)) * glm::vec3(speed) * deltaTime;
             PxFilterData filterData;
             filterData.word0 = 0;
             filterData.word1 = CollisionGroup::ENVIROMENT_OBSTACLE;	// Things to collide with

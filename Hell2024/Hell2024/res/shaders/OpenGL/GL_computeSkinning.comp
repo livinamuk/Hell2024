@@ -97,4 +97,3 @@ void main() {
 	OutputVertexBuffer[index + baseOutputVertex].uv[0] = u;
 	OutputVertexBuffer[index + baseOutputVertex].uv[1] = v;
 }
-

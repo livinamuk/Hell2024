@@ -144,11 +144,13 @@ void AssetManager::FindAssetPaths() {
             allTexturePaths.push_back(info.fullpath.c_str());
         }
     }
-    auto vatTexturePaths = std::filesystem::directory_iterator("res/textures/exr/");
-    for (const auto& entry : vatTexturePaths) {
-        FileInfo info = Util::GetFileInfo(entry);
-        if (info.filetype == "exr") {
-            allTexturePaths.push_back(info.fullpath.c_str());
+    if (BackEnd::GetAPI() == API::OPENGL) {
+        auto vatTexturePaths = std::filesystem::directory_iterator("res/textures/exr/");
+        for (const auto& entry : vatTexturePaths) {
+            FileInfo info = Util::GetFileInfo(entry);
+            if (info.filetype == "exr") {
+                allTexturePaths.push_back(info.fullpath.c_str());
+            }
         }
     }
     for (auto& path : allTexturePaths) {
@@ -306,7 +308,7 @@ void AssetManager::LoadNextItem() {
         VulkanRenderer::CreatePipelines();
     }
 
-    g_heightMap.Load("res/textures/heightmaps/HeightMap.png", 0.05f, 2.5f);
+    g_heightMap.Load("res/textures/heightmaps/HeightMap.png", 0.05f, 1.0f);
     g_heightMap.UploadToGPU();
 
     // We're done
@@ -334,6 +336,7 @@ void AssetManager::LoadAnimation(Animation* animation) {
 
 void AssetManager::LoadFont() {
     auto texturePaths = std::filesystem::directory_iterator("res/textures/font/");
+
     for (const auto& entry : texturePaths) {
         FileInfo info = Util::GetFileInfo(entry);
         if (info.filetype == "png" || info.filetype == "jpg" || info.filetype == "tga") {
@@ -342,6 +345,7 @@ void AssetManager::LoadFont() {
             texture.Bake();
         }
     }
+
     if (BackEnd::GetAPI() == API::OPENGL) {
         OpenGLRenderer::BindBindlessTextures();
     }
@@ -792,6 +796,9 @@ int AssetManager::CreateSkinnedMesh(std::string name, std::vector<WeightedVertex
 
 void AssetManager::BuildMaterials() {
 
+
+    std::cout << "g_textureIndexMap.size(): " << g_textureIndexMap.size() << "\n";
+
     std::lock_guard<std::mutex> lock(_texturesMutex);
 
     for (int i = 0; i < AssetManager::GetTextureCount(); i++) {
@@ -805,6 +812,13 @@ void AssetManager::BuildMaterials() {
             int basecolorIndex = AssetManager::GetTextureIndexByName(material._name + "_ALB", true);
             int normalIndex = AssetManager::GetTextureIndexByName(material._name + "_NRM", true);
             int rmaIndex = AssetManager::GetTextureIndexByName(material._name + "_RMA", true);
+
+
+            std::cout << "Trying to build material: " << material._name << "\n";
+
+           // int basecolorIndex = AssetManager::GetTextureIndexByName("NumGrid_ALB", true);
+           // int normalIndex = AssetManager::GetTextureIndexByName("Empty_NRMRMA", true);
+           // int rmaIndex = AssetManager::GetTextureIndexByName("Empty_NRMRMA", true);
 
             if (basecolorIndex != -1) {
                 material._basecolor = basecolorIndex;

@@ -67,8 +67,8 @@ struct GPULight {
     float radius;
     int shadowMapIndex;
     int contributesToGI;
-    float padding0;
-    float padding1;
+    int lightVolumeMode; // 0 is via cubemap, 1 is via pos/radius
+    int lightVolumeAABBIsDirty;
 };
 
 struct RenderItem2D {
@@ -283,6 +283,9 @@ enum RenderMode {
     DIRECT_LIGHT,
     POINT_CLOUD,
     COMPOSITE_PLUS_POINT_CLOUD,
+    TILE_HEATMAP,
+    LIGHTS_PER_TILE,
+    LIGHTS_PER_PIXEL,
     RENDER_MODE_COUNT
 };
 

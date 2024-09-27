@@ -122,4 +122,23 @@ namespace RendererData {
         renderItem.aabbMin = worldCenter - worldExtent;
         renderItem.aabbMax = worldCenter + worldExtent;
     }
+
+    void UpdateGPULights() {
+        g_gpuLights.resize(Scene::g_lights.size());
+        for (int i = 0; i < Scene::g_lights.size(); i++) {
+            Light& light = Scene::g_lights[i];
+            g_gpuLights[i].posX = light.position.x;
+            g_gpuLights[i].posY = light.position.y;
+            g_gpuLights[i].posZ = light.position.z;
+            g_gpuLights[i].colorR = light.color.x;
+            g_gpuLights[i].colorG = light.color.y;
+            g_gpuLights[i].colorB = light.color.z;
+            g_gpuLights[i].strength = light.strength;
+            g_gpuLights[i].radius = light.radius;
+            g_gpuLights[i].shadowMapIndex = light.m_shadowMapIndex;
+            g_gpuLights[i].contributesToGI = light.m_contributesToGI ? 1 : 0;
+            g_gpuLights[i].lightVolumeAABBIsDirty = light.m_aaabbVolumeIsDirty ? 1 : 0;
+            g_gpuLights[i].lightVolumeMode = light.m_aabbLightVolumeMode == AABBLightVolumeMode::WORLDSPACE_CUBE_MAP ? 0 : 1;
+        }
+    }
 }

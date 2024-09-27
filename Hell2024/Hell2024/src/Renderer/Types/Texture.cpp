@@ -24,6 +24,9 @@ void Texture::Bake() {
         if (BackEnd::GetAPI() == API::OPENGL) {
             glTexture.Bake();
         }
+        if (BackEnd::GetAPI() == API::VULKAN) {
+           vkTexture.Bake();
+        }
     }
     m_bakingState = BakingState::BAKE_COMPLETE;
 }

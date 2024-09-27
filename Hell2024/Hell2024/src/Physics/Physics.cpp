@@ -270,16 +270,17 @@ void Physics::Init() {
 
 
 
-
-    _groundPlane = PxCreatePlane(*g_physics, PxPlane(0, 1, 0, 0.0f), *_defaultMaterial);
-    g_scene->addActor(*_groundPlane);
-    _groundPlane->getShapes(&_groundShape, 1);
-    PxFilterData filterData;
-    filterData.word0 = RaycastGroup::RAYCAST_DISABLED; // must be disabled or it causes crash in scene::update when it tries to retrieve rigid body flags from this actor
-    filterData.word1 = CollisionGroup::ENVIROMENT_OBSTACLE;
-    filterData.word2 = CollisionGroup::BULLET_CASING | CollisionGroup::GENERIC_BOUNCEABLE | CollisionGroup::PLAYER;
-    _groundShape->setQueryFilterData(filterData);
-    _groundShape->setSimulationFilterData(filterData); // sim is for ragz
+    if (false) {
+        _groundPlane = PxCreatePlane(*g_physics, PxPlane(0, 1, 0, 0.0f), *_defaultMaterial);
+        g_scene->addActor(*_groundPlane);
+        _groundPlane->getShapes(&_groundShape, 1);
+        PxFilterData filterData;
+        filterData.word0 = RaycastGroup::RAYCAST_DISABLED; // must be disabled or it causes crash in scene::update when it tries to retrieve rigid body flags from this actor
+        filterData.word1 = CollisionGroup::ENVIROMENT_OBSTACLE;
+        filterData.word2 = CollisionGroup::BULLET_CASING | CollisionGroup::GENERIC_BOUNCEABLE | CollisionGroup::PLAYER;
+        _groundShape->setQueryFilterData(filterData);
+        _groundShape->setSimulationFilterData(filterData); // sim is for ragz
+    }
 }
 
 void Physics::StepPhysics(float deltaTime) {
@@ -660,36 +661,36 @@ PxHeightField* createHeightField(PxPhysics* physics, const std::vector<Vertex>& 
 */
 
 PxHeightField* Physics::CreateHeightField( const std::vector<Vertex>& positions, int numRows, int numCols) {
-    // Validate input
-    if (positions.size() != numRows * numCols) {
-        return nullptr; // Incorrect dimensions
-    }
 
-    // Prepare height field samples
+    if (positions.size() != numRows * numCols) {
+        std::cout << "Physics::CreateHeightField() failed because positions.size() != numRows * numCols\n";
+        return nullptr;
+    }
+    const float heightScaleFactor = 32767.0f;  // Using the full PxI16 range
+
     std::vector<PxHeightFieldSample> samples(numRows * numCols);
-    for (int row = 0; row < numRows; ++row) {
-        for (int col = 0; col < numCols; ++col) {
-            int index = row * numCols + col;
-            samples[index].height = static_cast<PxI16>(positions[index].position.y); // Use the y-coordinate as height
-            samples[index].materialIndex0 = 0;
-            samples[index].materialIndex1 = 0;
-            samples[index].setTessFlag();
+
+    for (int z = 0; z < numCols; z++) { 
+        for (int x = 0; x < numRows; x++) {
+            int vertexIndex = (z * numRows + x);
+            int sampleIndex = (x * numCols + z);
+            samples[sampleIndex].height = static_cast<PxI16>(positions[vertexIndex].position.y * heightScaleFactor);
+            samples[sampleIndex].materialIndex0 = 0;
+            samples[sampleIndex].materialIndex1 = 0;
+            samples[sampleIndex].setTessFlag();
         }
     }
-
     // Height field description
     PxHeightFieldDesc heightFieldDesc;
+    heightFieldDesc.format = PxHeightFieldFormat::eS16_TM;
     heightFieldDesc.nbRows = numRows;
     heightFieldDesc.nbColumns = numCols;
     heightFieldDesc.samples.data = samples.data();
     heightFieldDesc.samples.stride = sizeof(PxHeightFieldSample);
-
-    // Ensure height field description is valid
     if (!heightFieldDesc.isValid()) {
         std::cout << "Failed to create PxHeightField\n";
         return nullptr; // Invalid height field description
     }
-
     PxHeightField* heightField = PxCreateHeightField(heightFieldDesc, g_physics->getPhysicsInsertionCallback());
     std::cout << "Created PxHeightField\n";
     return heightField;
@@ -699,7 +700,11 @@ PxShape* Physics::CreateShapeFromHeightField(PxHeightField* heightField, PxShape
     if (material == NULL) {
         material = _defaultMaterial;
     }
-    PxHeightFieldGeometry hfGeom(heightField, PxMeshGeometryFlags(), heightScale, rowScale, colScale);
+    // Scale back the height values to world units
+    float worldHeightScale = 1.0f / 32767.0f * heightScale;  // The inverse of the scale factor used during heightfield creation
+
+
+    PxHeightFieldGeometry hfGeom(heightField, PxMeshGeometryFlags(), worldHeightScale, rowScale, colScale);
     std::cout << "Created PxShape from PxHeightField\n";
     return g_physics->createShape(hfGeom, *material, shapeFlags);
 }

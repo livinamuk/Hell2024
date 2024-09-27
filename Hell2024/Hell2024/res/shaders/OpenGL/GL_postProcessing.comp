@@ -5,11 +5,9 @@ layout (local_size_x = 16, local_size_y = 4, local_size_z = 1) in;
 layout(rgba8, binding = 0) uniform image2D tex;
 layout(rgba16f, binding = 1) uniform image2D normalTexture;
 
-void contrastAdjust( inout vec3 color, in float c) {
-    float t = 0.5 - c * 0.5;
-    color.rgb = color.rgb * c + t;
-}
-
+uniform float time;
+uniform float viewportWidth;
+uniform float viewportHeight;
 
 struct CameraData {
     mat4 projection;
@@ -34,24 +32,104 @@ layout(std430, binding = 16) readonly buffer CameraDataArray {
     CameraData cameraDataArray[];
 };
 
+void contrastAdjust( inout vec3 color, in float c) {
+    float t = 0.5 - c * 0.5;
+    color.rgb = color.rgb * c + t;
+}
+
+vec3 filmic(vec3 x) {
+  vec3 X = max(vec3(0.0), x - 0.004);
+  vec3 result = (X * (6.2 * X + 0.5)) / (X * (6.2 * X + 1.7) + 0.06);
+  return pow(result, vec3(2.2));
+}
+
+float filmic(float x) {
+  float X = max(0.0, x - 0.004);
+  float result = (X * (6.2 * X + 0.5)) / (X * (6.2 * X + 1.7) + 0.06);
+  return pow(result, 2.2);
+}
+
+vec3 Tonemap_ACES(const vec3 x) { // Narkowicz 2015, "ACES Filmic Tone Mapping Curve"
+    const float a = 2.51;
+    const float b = 0.03;
+    const float c = 2.43;
+    const float d = 0.59;
+    const float e = 0.14;
+    return (x * (a * x + b)) / (x * (c * x + d) + e);
+}
+
+float rand(vec2 co){
+    return fract(sin(dot(co, vec2(12.9898, 78.233))) * 43758.5453);
+}
+
+vec3 filmPixel(vec2 uv) {
+    mat2x3 uvs = mat2x3(uv.xxx, uv.yyy) + mat2x3(vec3(0, 0.1, 0.2), vec3(0, 0.3, 0.4));
+    return fract(sin(uvs * vec2(12.9898, 78.233) * time) * 43758.5453);
+}
+
+
 
 void main() {
 
 	ivec2 texCoord = ivec2(gl_GlobalInvocationID.xy);
+	vec2 viewportSize = vec2(viewportWidth, viewportHeight);
+	ivec2 pixelCoords = ivec2(gl_GlobalInvocationID.xy);
+	vec2 uv = (vec2(pixelCoords) + vec2(0.5)) / viewportSize;
 
 	int playerIndex = int(imageLoad(normalTexture, texCoord).a * 4 + 0.5);
+		
+	vec3 finalColor = imageLoad(tex, texCoord).rgb;
 
+	/*
+	// Tone mapping
+	finalColor = mix(finalColor, Tonemap_ACES(finalColor), 1.0);
+	finalColor = pow(finalColor, vec3(1.0/2.2));
+	finalColor = mix(finalColor, Tonemap_ACES(finalColor), 0.1235);
 
+	// Vignette
+	uv *=  1.0 - uv.yx;
+	float vig = uv.x*uv.y * 15.0;	// multiply with sth for intensity
+	vig = pow(vig, 0.05);			// change pow for modifying the extend of the  vignette
+	finalColor *= vec3(vig);
+
+	// Noise
+	//vec2 uv = gl_FragCoord.xy / viewportSize;
+	vec2 filmRes = viewportSize;
+	vec2 coord = pixelCoords;
+	vec2 rest = modf(uv * filmRes, coord);
+	vec3 noise00 = filmPixel(coord / filmRes);
+	vec3 noise01 = filmPixel((coord + vec2(0, 1)) / filmRes);
+	vec3 noise10 = filmPixel((coord + vec2(1, 0)) / filmRes);
+	vec3 noise11 = filmPixel((coord + vec2(1, 1)) / filmRes);
+	vec3 noise = mix(mix(noise00, noise01, rest.y), mix(noise10, noise11, rest.y), rest.x) * vec3(0.7, 0.6, 0.8);
+	float noiseSpeed = 15.0;
+	float x = rand(uv + rand(vec2(int(time * noiseSpeed), int(-time * noiseSpeed))));
+	float noiseFactor = 0.05;
+	
+	// Some more YOLO tone mapping
+	finalColor = mix(finalColor, Tonemap_ACES(finalColor), 0.95);
+
+	// Add the noise
+	finalColor = finalColor + (x * -noiseFactor) + (noiseFactor / 2);
+
+	// Contrast
+	float contrast = 1.15;
+	finalColor *= contrast;
+
+	// Brightness
+	finalColor -= vec3(0.020);
+	*/
+	// Tint the screen color
 	float r = cameraDataArray[playerIndex].finalImageColorR;
 	float g = cameraDataArray[playerIndex].finalImageColorG;
 	float b = cameraDataArray[playerIndex].finalImageColorB;
 	vec3 finalImageColorTint = vec3(r, g, b);
 	float finalImageColorContrast = cameraDataArray[playerIndex].finalImageColorContrast;
+	finalColor *= finalImageColorTint;
 
-    vec3 color = imageLoad(tex, texCoord).rgb;
-	color *= finalImageColorTint;
-    contrastAdjust(color, finalImageColorContrast);
+	// Contrast
+    contrastAdjust(finalColor, finalImageColorContrast);
 
-    imageStore(tex, texCoord, vec4(color, 1));
+    imageStore(tex, texCoord, vec4(finalColor, 1));
 }
 

@@ -7,6 +7,7 @@ enum class BulletHoleDecalType { REGULAR, GLASS };
 enum class PickUpType { NONE, AMMO, GLOCK, GLOCK_AMMO, TOKAREV_AMMO, SHOTGUN, SHOTGUN_AMMO, AKS74U, AKS74U_AMMO, AKS74U_SCOPE };
 enum class DobermannState { LAY, PATROL, KAMAKAZI, DOG_SHAPED_PIECE_OF_MEAT };
 enum class FacingDirection { LEFT, RIGHT, ALIGNED };
+enum class AABBLightVolumeMode { WORLDSPACE_CUBE_MAP, POSITION_RADIUS };
 
 enum EngineMode { GAME = 0, FLOORPLAN, EDITOR };
 enum Weapon { KNIFE = 0, GLOCK, SHOTGUN, AKS74U, MP7, WEAPON_COUNT };
@@ -53,6 +54,7 @@ enum class PhysicsObjectType {
     CSG_OBJECT_ADDITIVE,
     CSG_OBJECT_SUBTRACTIVE,
     LIGHT,
+    HEIGHT_MAP,
 };
 
 enum CollisionGroup {

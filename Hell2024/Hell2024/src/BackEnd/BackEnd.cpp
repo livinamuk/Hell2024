@@ -90,7 +90,9 @@ namespace BackEnd {
         glfwSetFramebufferSizeCallback(_window, framebuffer_size_callback);
         glfwSetWindowFocusCallback(_window, window_focus_callback);
 
-        AssetManager::FindAssetPaths();
+        if (GetAPI() == API::OPENGL) {
+            AssetManager::FindAssetPaths();
+        }
 
         if (GetAPI() == API::OPENGL) {
             glfwMakeContextCurrent(_window);
@@ -104,6 +106,10 @@ namespace BackEnd {
             // VulkanRenderer minimum init is tangled in the above function
         }
         AssetManager::LoadFont();
+
+        if (GetAPI() == API::VULKAN) {
+            AssetManager::FindAssetPaths();
+        }
 
         // Init sub-systems
         Input::Init();

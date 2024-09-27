@@ -14,10 +14,11 @@ void Player::GiveDefaultLoadout() {
     GiveWeapon("Glock");
     GiveWeapon("GoldenGlock");
     GiveWeapon("Tokarev");
-    GiveWeapon("Smith & Wesson");
+   // GiveWeapon("Smith & Wesson");
     GiveWeapon("AKS74U");
-    GiveWeapon("P90");
+    //GiveWeapon("P90");
     GiveWeapon("Shotgun");
+    GiveWeapon("SPAS");
 
     GiveAmmo("Glock", 80000);
     GiveAmmo("Tokarev", 200);
@@ -428,7 +429,7 @@ void Player::UpdateViewWeaponLogic(float deltaTime) {
 
         // Melee
         if (PressedMelee() && CanMelee()) {
-            viewWeapon->PlayAnimation("Shotgun_Melee", 1.25f);
+            viewWeapon->PlayAnimation(weaponInfo->animationNames.melee, 1.25f);
             std::string audioName = "Shotgun_Melee_Hit3.wav";
             Audio::PlayAudio(audioName, 1.0f);
             _weaponAction = MELEE;
@@ -478,7 +479,7 @@ void Player::UpdateViewWeaponLogic(float deltaTime) {
         }
         // Reload
         if (PressedReload() && CanReload()) {
-            viewWeapon->PlayAnimation("Shotgun_ReloadWetstart", 1.0f);
+            viewWeapon->PlayAnimation(weaponInfo->animationNames.shotgunReloadStart, weaponInfo->animationSpeeds.shotgunReloadStart);
             _weaponAction = RELOAD_SHOTGUN_BEGIN;
         }
 
@@ -492,12 +493,12 @@ void Player::UpdateViewWeaponLogic(float deltaTime) {
 
             // Single shell
             if (singleShell) {
-                viewWeapon->PlayAnimation("Shotgun_Reload1Shell", 1.5f);
+                viewWeapon->PlayAnimation(weaponInfo->animationNames.shotgunReloadOneShell, weaponInfo->animationSpeeds.shotgunReloadOneShell);
                 _weaponAction = RELOAD_SHOTGUN_SINGLE_SHELL;
             }
             // Double shell
             else {
-                viewWeapon->PlayAnimation("Shotgun_Reload2Shells", 1.5f);
+                viewWeapon->PlayAnimation(weaponInfo->animationNames.shotgunReloadTwoShells, weaponInfo->animationSpeeds.shotgunReloadTwoShells);
                 _weaponAction = RELOAD_SHOTGUN_DOUBLE_SHELL;
             }
 
@@ -506,23 +507,23 @@ void Player::UpdateViewWeaponLogic(float deltaTime) {
         }
         // END RELOAD THING
         if (_weaponAction == RELOAD_SHOTGUN_SINGLE_SHELL && viewWeapon->IsAnimationComplete() && GetCurrentWeaponMagAmmo() == SHOTGUN_AMMO_SIZE) {
-            viewWeapon->PlayAnimation("Shotgun_ReloadEnd", 1.25f);
+            viewWeapon->PlayAnimation(weaponInfo->animationNames.shotgunReloadEnd, weaponInfo->animationSpeeds.shotgunReloadEnd);
             _weaponAction = RELOAD_SHOTGUN_END;
         }
         if (_weaponAction == RELOAD_SHOTGUN_DOUBLE_SHELL && viewWeapon->IsAnimationComplete() && GetCurrentWeaponMagAmmo() == SHOTGUN_AMMO_SIZE) {
-            viewWeapon->PlayAnimation("Shotgun_ReloadEnd", 1.25f);
+            viewWeapon->PlayAnimation(weaponInfo->animationNames.shotgunReloadEnd, weaponInfo->animationSpeeds.shotgunReloadEnd);
             _weaponAction = RELOAD_SHOTGUN_END;
         }
         // CONTINUE THE RELOAD THING
         if (_weaponAction == RELOAD_SHOTGUN_SINGLE_SHELL && viewWeapon->IsAnimationComplete()) {
             if (ammoState->ammoOnHand > 0) {
-                viewWeapon->PlayAnimation("Shotgun_Reload1Shell", 1.5f);
+                viewWeapon->PlayAnimation(weaponInfo->animationNames.shotgunReloadOneShell, weaponInfo->animationSpeeds.shotgunReloadOneShell);
                 _weaponAction = RELOAD_SHOTGUN_SINGLE_SHELL;
                 _needsShotgunFirstShellAdded = true;
                 _needsShotgunSecondShellAdded = true;
             }
             else {
-                viewWeapon->PlayAnimation("Shotgun_ReloadEnd", 1.25f);
+                viewWeapon->PlayAnimation(weaponInfo->animationNames.shotgunReloadEnd, weaponInfo->animationSpeeds.shotgunReloadEnd);
                 _weaponAction = RELOAD_SHOTGUN_END;
             }
         }
@@ -534,12 +535,12 @@ void Player::UpdateViewWeaponLogic(float deltaTime) {
             }
             // Single shell
             if (singleShell) {
-                viewWeapon->PlayAnimation("Shotgun_Reload1Shell", 1.5f);
+                viewWeapon->PlayAnimation(weaponInfo->animationNames.shotgunReloadOneShell, weaponInfo->animationSpeeds.shotgunReloadOneShell);
                 _weaponAction = RELOAD_SHOTGUN_SINGLE_SHELL;
             }
             // Double shell
             else {
-                viewWeapon->PlayAnimation("Shotgun_Reload2Shells", 1.5f);
+                viewWeapon->PlayAnimation(weaponInfo->animationNames.shotgunReloadTwoShells, weaponInfo->animationSpeeds.shotgunReloadTwoShells);
                 _weaponAction = RELOAD_SHOTGUN_DOUBLE_SHELL;
             }
             _needsShotgunFirstShellAdded = true;

@@ -746,7 +746,12 @@ namespace VulkanRenderer {
             textureImageInfo[i].sampler = nullptr;
             textureImageInfo[i].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
             textureImageInfo[i].imageView = (i < AssetManager::GetTextureCount()) ? AssetManager::GetTextureByIndex(i)->GetVKTexture().imageView : AssetManager::GetTextureByIndex(0)->GetVKTexture().imageView; // Fill with dummy if you exceed the amount of textures we loaded off disk. Can't have no junk data.
+            //std::cout << i << ": " << textureImageInfo[i].imageView << "\n";
         }
+
+
+
+
         _descriptorSets.allTextures.Update(device, 1, TEXTURE_ARRAY_SIZE, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, textureImageInfo);
 
         // Render targets

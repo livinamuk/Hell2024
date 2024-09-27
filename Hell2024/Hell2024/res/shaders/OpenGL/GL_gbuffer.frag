@@ -45,6 +45,4 @@ void main() {
 		EmssiveMask.rgb = vec3(rma.b) * emissiveColor;
 		EmssiveMask.a = 1.0;
 	}
-
-
 }

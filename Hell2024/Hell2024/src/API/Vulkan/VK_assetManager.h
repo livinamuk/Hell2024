@@ -3,12 +3,6 @@
 #include "HellCommon.h"
 #include <string>
 
-struct AssetFile {
-    char type[4];
-    int version;
-    std::string json;
-    std::vector<char> binaryBlob;
-};
 
 enum class TextureFormat : uint32_t {
     Unknown = 0,

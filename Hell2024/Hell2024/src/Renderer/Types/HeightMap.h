@@ -13,8 +13,10 @@ struct HeightMap {
     int m_depth = 0;
     float m_heightScale = 0;
     float m_vertexScale = 0;
+    float m_stepSize = 0;
     std::vector<Vertex> m_vertices;
     std::vector<unsigned int> m_indices;
+    Transform m_transform;
 
     void Load(const std::string& filepath, float vertexScale, float heightScale);
     void UploadToGPU();

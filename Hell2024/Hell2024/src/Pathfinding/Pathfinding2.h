@@ -14,7 +14,7 @@ struct Path {
 namespace Pathfinding2 {
     void Init();
     void Update(float deltaTime);
-    void UpdateNavMesh(std::vector<glm::vec3>& vertices);
+    void UpdateNavMesh();
     Path FindPath(glm::vec3 startPos, glm::vec3 endPos);
     std::vector<glm::vec3>& GetDebugVertices();
     rcContext* GetRecastContext();

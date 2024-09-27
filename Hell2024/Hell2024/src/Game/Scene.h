@@ -173,6 +173,7 @@ namespace Scene {
     inline std::vector<Dobermann> g_dobermann;
     inline std::vector<Staircase> g_staircases;
     inline std::vector<BulletHoleDecal> g_bulletHoleDecals;
+    inline std::vector<AABB> g_fogAABB;
 
     // Shadow map stuff
     inline std::vector<int> g_shadowMapLightIndices;

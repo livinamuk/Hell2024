@@ -52,6 +52,7 @@ void VulkanTexture::Load(std::string_view filepath) {
     std::string assetPath = "res/assets_vulkan/" + info.filename + ".tex";
     if (!std::filesystem::exists(assetPath)) {
         VulkanAssetManager::ConvertImage(info.fullpath, assetPath);
+        std::cout << "compressed " << assetPath << "\n";
     }
 
     // Image format
@@ -63,10 +64,13 @@ void VulkanTexture::Load(std::string_view filepath) {
     }
 
     // Load compressed file
-    AssetFile assetFile;
-    VulkanAssetManager::LoadBinaryFile(assetPath.c_str(), assetFile);
+    VulkanAssetManager::LoadBinaryFile(assetPath.c_str(), m_assetFile);
+    //std::cout << info.filename << " " << assetFile.binaryBlob.size() << " bytes\n";
 
+}
+
+void VulkanTexture::Bake() {
     // Feed data to Vulkan
     bool generateMips = false;
-    VulkanAssetManager::FeedTextureToGPU(this, &assetFile, generateMips);
+    VulkanAssetManager::FeedTextureToGPU(this, &m_assetFile, generateMips);
 }

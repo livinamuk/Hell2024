@@ -15,6 +15,13 @@
 #include "Defines.h"
 #include "Enums.h"
 
+struct AssetFile {
+    char type[4];
+    int version;
+    std::string json;
+    std::vector<char> binaryBlob;
+};
+
 struct Transform {
     glm::vec3 position = glm::vec3(0);
     glm::vec3 rotation = glm::vec3(0);
@@ -160,6 +167,7 @@ public: // make private later
     glm::vec3 center = glm::vec3(0);
     glm::vec3 boundsMin = glm::vec3(1e30f);
     glm::vec3 boundsMax = glm::vec3(-1e30f);
+    glm::vec3 padding = glm::vec3(0);
 
     void CalculateCenter() {
         center = { (boundsMin.x + boundsMax.x) / 2, (boundsMin.y + boundsMax.y) / 2, (boundsMin.z + boundsMax.z) / 2 };

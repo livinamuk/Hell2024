@@ -514,7 +514,10 @@ namespace Editor {
         Game::GiveControlToPlayer1();
         Gizmo::ResetHover();
         Input::DisableCursor();
-        Pathfinding2::UpdateNavMesh(CSG::GetNavMeshVertices());
+
+
+        // Navmesh
+        Pathfinding2::UpdateNavMesh();
 
         for (CSGShape& cubeVolume : Scene::g_csgSubtractiveShapes) {
             cubeVolume.DisableRaycast();
@@ -928,7 +931,9 @@ namespace Editor {
                 headingText += "-- SUBTRACTIVE CSG --";
             }
             else if (g_selectedObjectType == PhysicsObjectType::LIGHT) {
-                headingText += "------- LIGHT -------";
+                headingText += "------ LIGHT ";
+                headingText += std::to_string(g_selectedObjectIndex);
+                headingText += " ------";
             }
             else if (g_selectedObjectType == PhysicsObjectType::WINDOW || g_selectedObjectType == PhysicsObjectType::GLASS) {
                 headingText += "------ WINDOW ------";

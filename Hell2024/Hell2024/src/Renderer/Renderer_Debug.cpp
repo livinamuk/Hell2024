@@ -48,7 +48,21 @@ void Renderer::UpdateDebugPointsMesh() {
     }
 
 
-    //vertices.push_back(Vertex(glm::vec3(0,1,0), WHITE));
+
+    HeightMap& heightMap = AssetManager::g_heightMap;
+    /*
+    for (int i = 0; i < heightMap.m_vertices.size(); i++) {
+        Vertex& vertex = heightMap.m_vertices[i];
+
+        glm::vec3 position = heightMap.m_transform.to_mat4() * glm::vec4(vertex.position, 1.0);
+        vertices.push_back(Vertex(position, WHITE));
+    }
+    */
+    //float minX = heightMap.m_transform.position.x * heightMap.m_vertexScale * heightMap.m_transform.scale.x;
+    //float minY = -1.75;
+    //float minZ = heightMap.m_transform.position.z * heightMap.m_vertexScale * heightMap.m_transform.scale.z;
+   // glm::vec3 corner0 = glm::vec4(minX, minY, minZ, 1.0);
+   // vertices.push_back(Vertex(corner0, WHITE));
 
 
     for (int i = 0; i < vertices.size(); i++) {
@@ -197,6 +211,23 @@ void Renderer::UpdateDebugLinesMesh() {
 
 
 
+    /*
+    for (auto& csgObject : CSG::GetCSGObjects()) {
+        if (csgObject.m_materialIndex == AssetManager::GetMaterialIndex("FloorBoards")) {
+            AABB aabb;
+            float xMin = csgObject.m_transform.position.x - csgObject.m_transform.scale.x * 0.5f;
+            float yMin = csgObject.m_transform.position.y + csgObject.m_transform.scale.y * 0.5f;
+            float zMin = csgObject.m_transform.position.z - csgObject.m_transform.scale.z * 0.5f;
+            float xMax = csgObject.m_transform.position.x + csgObject.m_transform.scale.x * 0.5f;
+            float yMax = yMin + 2.6f;
+            float zMax = csgObject.m_transform.position.z + csgObject.m_transform.scale.z * 0.5f;
+            aabb.boundsMin = glm::vec3(xMin, yMin, zMin);
+            aabb.boundsMax = glm::vec3(xMax, yMax, zMax);
+            DrawAABB(aabb, YELLOW);
+        }
+    }*/
+
+
     //DrawAABB(g_testAABB, YELLOW);
     //DrawSphere(g_testSphere, 12, YELLOW);
 
@@ -307,6 +338,8 @@ void Renderer::UpdateDebugLinesMesh2D() {
     std::vector<Vertex> vertices;
     std::vector<uint32_t> indices;
 
+
+    /*
     // Tile boundaries (in screen space)
     int x1 = static_cast<int>(PRESENT_WIDTH * 0.6);
     int x2 = static_cast<int>(PRESENT_WIDTH * 0.75f);
@@ -350,21 +383,6 @@ void Renderer::UpdateDebugLinesMesh2D() {
     glm::vec3 testPoint(0.0f, 1.0f, 0.0f);
 
 
-   // Game::GetPlayerByIndex(0)->m_frustum.Update(Game::GetPlayerByIndex(0)->GetProjectionMatrix() * Game::GetPlayerByIndex(0)->GetViewMatrix());
-//
-  //  bool  insideFrustum = Game::GetPlayerByIndex(0)->m_frustum.IntersectsSphere(g_testSphere);
-    /*
-    if (insideFrustum) {
-        text += "The Sphere is inside the player frustum.\n";
-        color = BLUE;
-    }
-    else {
-        text += "The Sphere is outside the player frustum.\n";
-    }
-    */
-
-
-
     Frustum frustum;
     frustum.UpdateFromTile(view, fov, nearPlane, farPlane, x1, y1, x2, y2, viewportWidth, viewportHeight);
   //  frustum.UpdateFromTile(view, fov, nearPlane, farPlane, 0, 0, viewportWidth, viewportHeight, viewportWidth, viewportHeight);
@@ -378,13 +396,13 @@ void Renderer::UpdateDebugLinesMesh2D() {
     else {
         text += "The AABB is outside the frustum.\n";
     }
-    /*if (frustum.IntersectsAABBFast(g_testAABB)) {
+    if (frustum.IntersectsAABBFast(g_testAABB)) {
         text += "The FAST AABB is inside the frustum.\n";
         color = GREEN;
     }
     else {
         text += "The FAST AABB is outside the frustum.\n";
-    }*/
+    }
     if (frustum.IntersectsSphere(g_testSphere)) {
         text += "The Sphere is inside the frustum.\n";
         color = BLUE;
@@ -410,12 +428,6 @@ void Renderer::UpdateDebugLinesMesh2D() {
     else {
         text += "AABB is NOT player frustum\n";
     }
-   /* if (playerFrustum.IntersectsAABBFast(g_testAABB)) {
-        text += "FAST AABB in player frustum\n";
-    }
-    else {
-        text += "FAST AABB is NOT player frustum\n";
-    }*/
     if (playerFrustum.IntersectsSphere(g_testSphere)) {
         text += "Sphere in player frustum\n";
     }
@@ -428,14 +440,6 @@ void Renderer::UpdateDebugLinesMesh2D() {
     else {
         text += "White point is NOT frustum\n";
     }
-  /*  insideFrustum = playerFrustum.SatAABB(player->GetProjectionMatrix(), g_testAABB);
-    if (insideFrustum) {
-        text += "The SAT AABB is inside the frustum.\n";
-    }
-    else {
-        text += "The SAT AABB is outside the frustum.\n";
-    }*/
-
 
    
     Game::GetPlayerByIndex(0)->_playerName = text;
@@ -457,15 +461,8 @@ void Renderer::UpdateDebugLinesMesh2D() {
    //
    //vertices.push_back(x2y1);
    //vertices.push_back(x2y2);
+    */
 
-
-    Vertex a, b;
-    a.position = PixelToNDC(PRESENT_WIDTH * 0.5, PRESENT_HEIGHT * 0.5, PRESENT_WIDTH, PRESENT_HEIGHT);
-    b.position = PixelToNDC(PRESENT_WIDTH - 10, PRESENT_HEIGHT - 10, PRESENT_WIDTH, PRESENT_HEIGHT);
-    a.normal = WHITE;
-    b.normal = WHITE;
-   // vertices.push_back(a);
-   // vertices.push_back(b);
 
     for (int i = 0; i < vertices.size(); i++) {
         indices.push_back(i);
@@ -569,18 +566,8 @@ std::string& Renderer::GetDebugText() {
         text += "\n";
     }*/
 
-    if (Renderer::GetRenderMode() == COMPOSITE) {
-        g_debugText = "Direct + Indirect Light\n";
-    }
-    else if (Renderer::GetRenderMode() == DIRECT_LIGHT) {
-        g_debugText = "Direct Light\n";
-    }
-    else if (Renderer::GetRenderMode() == COMPOSITE_PLUS_POINT_CLOUD) {
-        g_debugText = "Direct + Indirect Light + Point cloud\n";
-    }
-    else if (Renderer::GetRenderMode() == POINT_CLOUD) {
-        g_debugText = "Point Cloud\n";
-    }
+    g_debugText = Util::RenderModeToString(Renderer::GetRenderMode()) + "\n";
+
     if (Renderer::GetDebugLineRenderMode() != SHOW_NO_LINES) {
         g_debugText += "Line mode: " + Util::DebugLineRenderModeToString(Renderer::GetDebugLineRenderMode()) + "\n";
     }
@@ -588,44 +575,9 @@ std::string& Renderer::GetDebugText() {
         g_debugText = Editor::GetDebugText();
     }
 
-
     g_debugText += "Dog deaths: " + std::to_string(Game::g_dogDeaths) + "\n";
     g_debugText += "Dog kills: " + std::to_string(Game::g_playerDeaths) + "\n";
- //   g_debugText += "Muzzle flash timer: " + std::to_string(Game::GetPlayerByIndex(0)->_muzzleFlashTimer) + "\n";
-
-
-
     g_debugText += "\n";
-   // g_debugText += Game::GetPlayerByIndex(0)->_playerName;
-
-
-    /*
-    Player* player = Game::GetPlayerByIndex(0);
-    glm::mat4 projectionMatrix = player->GetProjectionMatrix();
-    glm::mat4 viewMatrix = player->GetViewMatrix();
-    glm::vec3 viewPos = player->GetViewPos();
-    glm::vec3 viewRot = player->GetViewRotation();
-    g_debugText += Util::Mat4ToString(projectionMatrix) + "\n\n";
-    g_debugText += Util::Mat4ToString(viewMatrix) + "\n\n";
-    g_debugText += "View pos: " + Util::Vec3ToString(viewPos) + "\n";
-    g_debugText += "View rot: " + Util::Vec3ToString(viewRot) + "\n";
-    //g_debugText += player->_playerName + "\n";
-
-    glm::vec3 forward = Game::GetPlayerByIndex(0)->GetCameraForward();
-    glm::vec3 origin = Game::GetPlayerByIndex(0)->GetFeetPosition();
-    glm::vec3 point = Game::GetPlayerByIndex(1)->GetFeetPosition();
-
-    FacingDirection facingDirection = DetermineFacingDirection(forward, origin, point);
-    if (facingDirection == FacingDirection::LEFT) {
-        g_debugText += "Facing: LEFT\n";
-    }
-    if (facingDirection == FacingDirection::RIGHT) {
-        g_debugText += "Facing: RIGHT\n";
-    }
-    if (facingDirection == FacingDirection::ALIGNED) {
-        g_debugText += "Facing: ALIGNED\n";
-    }*/
-
 
     glm::vec3 rayTarget = Scene::g_lights[0].position;
 
@@ -689,13 +641,13 @@ std::string& Renderer::GetDebugText() {
         g_debugText += "Sphere not in frustum\n";
     }*/
 
-
+    /*
     for (int i = 0; i < Scene::g_lights.size(); i++) {
         g_debugText += "\n";
         g_debugText += "light " + std::to_string(i) + ": " + std::to_string(Scene::g_lights[i].m_shadowMapIndex) + '\n';
-    }
+    }*/
 
-    g_debugText = Game::GetPlayerByIndex(0)->_playerName;
+    //g_debugText = Game::GetPlayerByIndex(0)->_playerName;
 
 
     return g_debugText;

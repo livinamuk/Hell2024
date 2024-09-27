@@ -13,19 +13,24 @@ void HeightMap::Load(const std::string& filepath, float vertexScale, float heigh
     }
 
     // Adjust width and depth to reflect skipping every second value
-    int stepSize = 4;
-    int reducedWidth = m_width / stepSize;
-    int reducedDepth = m_depth / stepSize;
+    m_stepSize = 1;
+    int reducedWidth = m_width / m_stepSize;
+    int reducedDepth = m_depth / m_stepSize;
+
+    // Calculate offsets
+    float offsetX = 0;// m_width * -0.5;
+    float offsetY = 0;// -1.75;
+    float offsetZ = 0;// m_depth * -0.5;
 
     // Vertices
     m_vertices.reserve(reducedWidth * reducedDepth);
-    for (int z = 0; z < m_depth; z += stepSize) { // Step by 2 in z
-        for (int x = 0; x < m_width; x += stepSize) { // Step by 2 in x
+    for (int z = 0; z < m_depth; z += m_stepSize) { // Step by 2 in z
+        for (int x = 0; x < m_width; x += m_stepSize) { // Step by 2 in x
             int index = (z * m_width + x) * channels;
             unsigned char value = data[index];
-            float heightValue = static_cast<float>(value) / 255.0f * heightScale;
+            float heightValue = static_cast<float>(value) / 255.0f * heightScale + offsetY;
             Vertex& vertex = m_vertices.emplace_back();
-            vertex.position = glm::vec3(x * vertexScale, heightValue, z * vertexScale);
+            vertex.position = glm::vec3((x + offsetX) * vertexScale, heightValue, (z + offsetZ) * vertexScale);
 
             // Calculate texture coordinates that tile based on x and z positions
             float textureRepeat = 1000.0f;
@@ -50,27 +55,34 @@ void HeightMap::Load(const std::string& filepath, float vertexScale, float heigh
         }
     }
 
+    m_width = reducedWidth;
+    m_depth = reducedDepth;
+
     // Indices
-    m_indices.reserve((reducedWidth - 1) * (reducedDepth - 1) * 2 * 3); // Rough estimate of the size
-    for (int z = 0; z < reducedDepth - 1; ++z) {
-        for (int x = 0; x < reducedWidth; ++x) {
-            m_indices.push_back(z * reducedWidth + x);
-            m_indices.push_back((z + 1) * reducedWidth + x);
+    m_indices.reserve((m_width - 1) * (m_depth - 1) * 2 * 3); // Rough estimate of the size
+    for (int z = 0; z < m_depth - 1; ++z) {
+        for (int x = 0; x < m_width; ++x) {
+            m_indices.push_back(z * m_width + x);
+            m_indices.push_back((z + 1) * m_width + x);
         }
         // Degenerate triangles to connect rows
-        if (z < reducedDepth - 2) {
-            m_indices.push_back((z + 1) * reducedWidth + (reducedWidth - 1));
-            m_indices.push_back((z + 1) * reducedWidth);
+        if (z < m_depth - 2) {
+            m_indices.push_back((z + 1) * m_width + (m_width - 1));
+            m_indices.push_back((z + 1) * m_width);
         }
     }
     m_indexCount = m_indices.size();
     m_vertexScale = vertexScale;
     m_heightScale = heightScale;
 
-    m_width = reducedWidth;
-    m_depth = reducedDepth;
 
     std::cout << "Heightmap loaded: " << m_vertices.size() << " vertices\n";
+
+    m_transform.scale = glm::vec3(12.0f);
+    m_transform.scale.y = 6;
+    m_transform.position.x = m_width * vertexScale * -0.5f * m_transform.scale.x;
+    m_transform.position.y = -3.75f;
+    m_transform.position.z = m_depth * vertexScale * -0.5f * m_transform.scale.z;
 }
 
 void HeightMap::UploadToGPU() {
@@ -97,14 +109,19 @@ void HeightMap::CreatePhysicsObject() {
     PxShapeFlags shapeFlags(PxShapeFlag::eSCENE_QUERY_SHAPE | PxShapeFlag::eSIMULATION_SHAPE);
 
     PxHeightField* m_pxHeightField = Physics::CreateHeightField(m_vertices, m_width, m_depth);
-    PxShape* m_pxShape = Physics::CreateShapeFromHeightField(m_pxHeightField, shapeFlags, m_heightScale, m_vertexScale, m_vertexScale);
+
+    float heightScale = 1.0f * m_transform.scale.y;
+    float rowScale = m_vertexScale * m_transform.scale.x;
+    float colScale = m_vertexScale * m_transform.scale.z;
+
+    PxShape* m_pxShape = Physics::CreateShapeFromHeightField(m_pxHeightField, shapeFlags, heightScale, rowScale, colScale);
 
     PhysicsFilterData filterData;
     filterData.raycastGroup = RAYCAST_ENABLED;
     filterData.collisionGroup = ENVIROMENT_OBSTACLE;
     filterData.collidesWith = (CollisionGroup)(GENERIC_BOUNCEABLE | BULLET_CASING | PLAYER | RAGDOLL);
 
-    m_pxRigidStatic = Physics::CreateRigidStatic(Transform(), filterData, m_pxShape);
-    m_pxRigidStatic->userData = nullptr;// new PhysicsObjectData(PhysicsObjectType::CSG_OBJECT_ADDITIVE, this);
+    m_pxRigidStatic = Physics::CreateRigidStatic(m_transform, filterData, m_pxShape);
+    m_pxRigidStatic->userData = new PhysicsObjectData(PhysicsObjectType::HEIGHT_MAP, this);
 
 }

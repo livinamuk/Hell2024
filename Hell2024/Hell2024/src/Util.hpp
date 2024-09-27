@@ -53,6 +53,9 @@ namespace Util {
         else if (type == PhysicsObjectType::CSG_OBJECT_SUBTRACTIVE) {
             return "CSG_OBJECT_SUBTRACTIVE";
         }
+        else if (type == PhysicsObjectType::HEIGHT_MAP) {
+            return "HEIGHT_MAP";
+        }
         else if (type == PhysicsObjectType::UNDEFINED) {
             return "UNDEFINED";
         }
@@ -170,16 +173,25 @@ namespace Util {
 
     inline std::string RenderModeToString(RenderMode mode) {
         if (mode == RenderMode::COMPOSITE) {
-            return "COMPOSITE";
+            return "Direct + Indirect Light";
         }
         else if (mode == RenderMode::POINT_CLOUD) {
-            return "POINT_CLOUD";
+            return "Point Cloud";
         }
         else if (mode == RenderMode::DIRECT_LIGHT) {
-            return "DIRECT_LIGHT";
+            return "Direct Light";
         }
         else if (mode == RenderMode::COMPOSITE_PLUS_POINT_CLOUD) {
-            return "COMPOSITE_PLUS_POINT_CLOUD";
+            return "Direct + Indirect Light + Point cloud";
+        }
+        else if (mode == RenderMode::TILE_HEATMAP) {
+            return "Tile heat map";
+        }
+        else if (mode == RenderMode::LIGHTS_PER_PIXEL) {
+            return "Lights Per Pixel";
+        }
+        else if (mode == RenderMode::LIGHTS_PER_TILE) {
+            return "Lights Per Tile";
         }
         else {
             return "UNDEFINED";

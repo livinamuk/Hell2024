@@ -273,12 +273,12 @@ bool OpenGLTexture::Load(const std::string filepath) {
         m_compressed = true;
     }*/
 
-    if (!m_compressed) {
+   // if (!m_compressed) {
     //if (_CMP_texture == nullptr) {
         //For everything else just load the raw texture. Compression fucks up UI elements.
-        stbi_set_flip_vertically_on_load(false);
-        m_data = stbi_load(filepath.data(), &_width, &_height, &_NumOfChannels, 0);
-    }
+      //  stbi_set_flip_vertically_on_load(false);
+       // m_data = stbi_load(filepath.data(), &_width, &_height, &_NumOfChannels, 0);
+    //}
     return true;
 }
 
@@ -398,6 +398,9 @@ bool OpenGLTexture::Bake() {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
         //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
         //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    }
+    else {
+        glGenerateMipmap(GL_TEXTURE_2D);
     }
 
     bindlessID = glGetTextureHandleARB(ID);

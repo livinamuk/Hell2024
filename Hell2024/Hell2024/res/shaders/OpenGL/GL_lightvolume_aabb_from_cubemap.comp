@@ -15,6 +15,25 @@ struct LightVolumeData {
 	float padding2;
 };
 
+struct Light {
+    float posX;
+    float posY;
+    float posZ;
+    float colorR;
+    float colorG;
+    float colorB;
+    float strength;
+    float radius;
+    int shadowMapIndex;
+    int contributesToGI;
+    float padding0;
+    float padding1;
+};
+
+layout(std430, binding = 2) readonly buffer Lights {
+    Light lights[];
+};
+
 layout(std430, binding = 19) buffer Buffer {
     LightVolumeData lightVolumeData[];
 };
@@ -23,14 +42,16 @@ uniform int lightIndex;
 
 void main() {
 
-	const int SHADOW_MAP_SIZE = 512;
+	const int SHADOW_MAP_SIZE = 256;
 			
-	float minX = 0xFFFFFFFF;
-	float minY = 0xFFFFFFFF;
-	float minZ = 0xFFFFFFFF;
-	float maxX = 0;
-	float maxY = 0;
-	float maxZ = 0;
+	float minX = 10000;
+	float minY = 10000;
+	float minZ = 10000;
+	float maxX = -10000;
+	float maxY = -10000;
+	float maxZ = -10000;
+
+	Light light = lights[lightIndex];
 
 	for (int x = 0; x < SHADOW_MAP_SIZE; x++) {
 		for (int y = 0; y < SHADOW_MAP_SIZE; y++) {	
@@ -42,6 +63,25 @@ void main() {
 				maxX = max(maxX, worldPos.x); 
 				maxY = max(maxY, worldPos.y); 
 				maxZ = max(maxZ, worldPos.z); 
+				
+				if (f == 0 && worldPos.z == 0.0) {
+					minX = light.posX - light.radius;
+				}
+				if (f == 1 && worldPos.z == 0.0) {
+					maxX = light.posX + light.radius;
+				}
+				if (f == 2 && worldPos.z == 0.0) {
+					minY = light.posY - light.radius;
+				}
+				if (f == 3 && worldPos.z == 0.0) {
+					maxY = light.posY + light.radius;
+				}
+				if (f == 4 && worldPos.z == 0.0) {
+					minZ = light.posZ - light.radius;
+				}
+				if (f == 5 && worldPos.z == 0.0) {
+					maxZ = light.posZ + light.radius;
+				}
 			}	
 		}
 	}

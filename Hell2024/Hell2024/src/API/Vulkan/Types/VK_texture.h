@@ -1,6 +1,7 @@
 #pragma once
 #include <string>
 #include "VK_allocation.hpp"
+#include "Types.h"
 
 class VulkanTexture {
 
@@ -11,6 +12,7 @@ public:
     std::string& GetFiletype();
     void InsertImageBarrier(VkCommandBuffer cmdbuffer, VkImageLayout newImageLayout, VkAccessFlags dstAccessMask, VkPipelineStageFlags dstStageMask);
     void Load(std::string_view path);
+    void Bake();
 
     int width = 0;
     int height = 0;
@@ -21,6 +23,7 @@ public:
     VkFormat format;
     std::string filename;
     std::string filepath;
+    AssetFile m_assetFile;
 
 private:
     VkImageLayout currentLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;// VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;

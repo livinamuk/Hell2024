@@ -2,10 +2,6 @@
 #include "HellCommon.h"
 #include "../Math/Frustum.h"
 
-#define DEFAULT_LIGHT_COLOR glm::vec3(1, 0.7799999713897705, 0.5289999842643738)
-#define SHADOW_MAP_SIZE 2048
-#define SHADOW_NEAR_PLANE 0.01f
-#define SHADOW_FAR_PLANE 20.0f	// change this to be the lights radius
 
 struct Light {
 
@@ -41,6 +37,7 @@ struct Light {
     bool m_shadowCasting = false;
     bool m_contributesToGI = false;
     int m_shadowMapIndex = -1;
+    AABBLightVolumeMode m_aabbLightVolumeMode = AABBLightVolumeMode::WORLDSPACE_CUBE_MAP;
 
     void UpdateMatricesAndFrustum() {
         m_projectionMatrix = glm::perspective(glm::radians(90.0f), (float)SHADOW_MAP_SIZE / (float)SHADOW_MAP_SIZE, SHADOW_NEAR_PLANE, radius);

@@ -796,8 +796,12 @@ void VulkanAssetManager::FeedTextureToGPU(VulkanTexture* outTexture, AssetFile* 
         VkImageViewCreateInfo imageinfo = ImageViewCreateInfo(outTexture->format, outTexture->image._image, VK_IMAGE_ASPECT_COLOR_BIT);
         imageinfo.subresourceRange.levelCount = outTexture->mipLevels;
 
-        vkCreateImageView(device, &imageinfo, nullptr, &outTexture->imageView);
+        VK_CHECK(vkCreateImageView(device, &imageinfo, nullptr, &outTexture->imageView));
 
         jsonData.clear();
+        //std::cout << "loaded " << textureInfo.originalFile << " " << outTexture->imageView << "\n";
+    }
+    else {
+         std::cout << "INVALID HEADER!\n";
     }
 }

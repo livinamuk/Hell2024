@@ -1,0 +1,213 @@
+#version 430 core
+
+#define TILE_SIZE 24
+layout(local_size_x = TILE_SIZE, local_size_y = TILE_SIZE, local_size_z = 1) in;
+
+layout(rgba8, binding = 0) uniform image2D lightingTexture;
+layout(rgba16f, binding = 1) uniform image2D normalTexture;
+
+layout (binding = 0) uniform sampler2D depthTexture;
+layout (binding = 1) uniform samplerCubeArray shadowMapArray;
+
+uniform float viewportWidth;
+uniform float viewportHeight;
+uniform int tileXCount;
+uniform int tileYCount;
+uniform int mode;
+
+shared vec3 sharedDebugOutputColor;
+
+struct CameraData {
+    mat4 projection;
+    mat4 projectionInverse;
+    mat4 view;
+    mat4 viewInverse;
+	float viewportWidth;
+	float viewportHeight;
+    float viewportOffsetX;
+    float viewportOffsetY;
+	float clipSpaceXMin;
+    float clipSpaceXMax;
+    float clipSpaceYMin;
+    float clipSpaceYMax;
+	float finalImageColorContrast;
+    float finalImageColorR;
+    float finalImageColorG;
+    float finalImageColorB;
+};
+
+struct Light {
+    float posX;
+    float posY;
+    float posZ;
+    float colorR;
+    float colorG;
+    float colorB;
+    float strength;
+    float radius;
+    int shadowMapIndex;
+    int contributesToGI;
+    float padding0;
+    float padding1;
+};
+
+struct TileData {
+    uint lightCount;
+    uint lightIndices[127];
+};
+
+layout(std430, binding = 2) readonly buffer Lights {
+    Light lights[];
+};
+
+layout(std430, binding = 16) readonly buffer CameraDataArray {
+    CameraData cameraDataArray[];
+};
+
+layout(std430, binding = 20) buffer Buffer2 {
+    TileData tileData[];
+};
+
+vec3 gridSamplingDisk[20] = vec3[](
+   vec3(1, 1,  1), vec3( 1, -1,  1), vec3(-1, -1,  1), vec3(-1, 1,  1),
+   vec3(1, 1, -1), vec3( 1, -1, -1), vec3(-1, -1, -1), vec3(-1, 1, -1),
+   vec3(1, 1,  0), vec3( 1, -1,  0), vec3(-1, -1,  0), vec3(-1, 1,  0),
+   vec3(1, 0,  1), vec3(-1,  0,  1), vec3( 1,  0, -1), vec3(-1, 0, -1),
+   vec3(0, 1,  1), vec3( 0, -1,  1), vec3( 0, -1, -1), vec3( 0, 1, -1)
+);
+
+float ShadowCalculation(int lightIndex, vec3 lightPos, float lightRadius, vec3 fragPos, vec3 viewPos, vec3 Normal) {
+    vec3 fragToLight = fragPos - lightPos;
+    float currentDepth = length(fragToLight);
+    float far_plane = lightRadius; // far plane was hardcoded to 20, you can pass it as an argument if needed
+    float shadow = 0.0;
+    vec3 lightDir = fragPos - lightPos;
+    float bias = max(0.0125 * (1.0 - dot(Normal, normalize(lightDir))), 0.00125);  // Added normalize to lightDir
+    int samples = 20;
+    float viewDistance = length(viewPos - fragPos);
+    float diskRadius = (1.0 + (viewDistance / far_plane)) / 200.0;
+    // Sample the cubemap array for shadows
+    for (int i = 0; i < samples; ++i) {
+        // Sample the cubemap array with the light index and the current sampling offset
+        float closestDepth = texture(shadowMapArray, vec4(fragToLight + gridSamplingDisk[i] * diskRadius, lightIndex)).r;
+        closestDepth *= far_plane;  // Undo mapping [0;1]        
+        // Apply bias and check if the fragment is in shadow
+        if (currentDepth - bias > closestDepth) {
+            shadow += 1.0;
+        }
+    }
+    // Average the shadow results
+    shadow /= float(samples);    
+    // Return the final shadow factor (1 means fully lit, 0 means fully in shadow)
+    return 1.0 - shadow;
+}
+
+void main() {
+
+	const int tileSize = TILE_SIZE;	
+	vec2 viewportSize = vec2(viewportWidth, viewportHeight);
+	ivec2 pixelCoords = ivec2(gl_GlobalInvocationID.xy);
+	vec2 uv = (vec2(pixelCoords) + vec2(0.5)) / viewportSize;
+	vec3 lightingColor = imageLoad(lightingTexture, pixelCoords).rgb;
+
+	int playerIndex = int(imageLoad(normalTexture, pixelCoords).a * 4 + 0.5);
+	vec3 normal = imageLoad(normalTexture, pixelCoords).rgb;
+	mat4 inverseProjection = cameraDataArray[playerIndex].projectionInverse;
+	mat4 inverseView = cameraDataArray[playerIndex].viewInverse;
+	vec3 viewPos = cameraDataArray[playerIndex].viewInverse[3].xyz;
+	float clipSpaceXMin = cameraDataArray[playerIndex].clipSpaceXMin;
+	float clipSpaceXMax = cameraDataArray[playerIndex].clipSpaceXMax;
+	float clipSpaceYMin = cameraDataArray[playerIndex].clipSpaceYMin;
+	float clipSpaceYMax = cameraDataArray[playerIndex].clipSpaceYMax;
+
+	// move this to the camera struct
+	mat4 projection = cameraDataArray[playerIndex].projection;
+	mat4 view = cameraDataArray[playerIndex].view;
+	mat4 projectionView = projection * view;
+	
+	float z = texture(depthTexture, uv).r;
+    vec2 clipSpaceTexCoord = uv;
+	clipSpaceTexCoord.x = (clipSpaceTexCoord.x - clipSpaceXMin) / (clipSpaceXMax - clipSpaceXMin);
+	clipSpaceTexCoord.y = (clipSpaceTexCoord.y - clipSpaceYMin) / (clipSpaceYMax - clipSpaceYMin);
+	vec4 clipSpacePosition = vec4(clipSpaceTexCoord * 2.0 - 1.0, z, 1.0);
+    vec4 viewSpacePosition = inverseProjection * clipSpacePosition;
+    viewSpacePosition /= viewSpacePosition.w;
+    vec4 worldSpacePosition = inverseView * viewSpacePosition;
+
+	// Heatmap
+	if (mode == 0) {
+		if (gl_LocalInvocationID == 0) {
+			//color = vec3(1);
+			uint tileIndex = gl_WorkGroupID.y * tileXCount + gl_WorkGroupID.x;
+			uint lightCount = tileData[tileIndex].lightCount;
+			float value = tileData[tileIndex].lightCount / 16.0;
+			value = clamp(value, 0, 1);	
+			float level = value * 3.14159265/2;
+			vec3 col;
+			col.r = sin(level);
+			col.g = sin(level*2.);
+			col.b = cos(level);
+			sharedDebugOutputColor = lightingColor * 0.5  + col * col;   	
+			if (tileData[tileIndex].lightCount == 0) {
+				sharedDebugOutputColor = vec3(0,0,0);
+			}
+		}
+		barrier();
+		// Lines
+		imageStore(lightingTexture, pixelCoords, vec4(sharedDebugOutputColor, 1));	
+		if (gl_LocalInvocationIndex.x < TILE_SIZE || gl_LocalInvocationIndex.x % TILE_SIZE == 0 || gl_LocalInvocationIndex.x < TILE_SIZE || gl_LocalInvocationIndex.x % TILE_SIZE == 1) {	
+			imageStore(lightingTexture, pixelCoords, vec4(0, 0, 0, 1));	
+		}	
+	}	
+		
+	// Lights per tile
+	if (mode == 1) {	
+	    if (gl_LocalInvocationID == 0) {
+			sharedDebugOutputColor = vec3(0,0,0);						
+			uint tileIndex = gl_WorkGroupID.y * tileXCount + gl_WorkGroupID.x;
+			uint lightCount = tileData[tileIndex].lightCount;
+			for (int i = 0; i < lightCount; i++) {
+				uint lightIndex = tileData[tileIndex].lightIndices[i];
+				vec3 lightColor = vec3(lights[lightIndex].colorR, lights[lightIndex].colorG, lights[lightIndex].colorB);
+				vec3 lightPosition = vec3(lights[lightIndex].posX, lights[lightIndex].posY, lights[lightIndex].posZ);
+				float lightRadius = lights[lightIndex].radius;								
+				float att = smoothstep(lightRadius, 0.0, length(lightPosition - worldSpacePosition.xyz));
+				float shadow = 1;
+				if (lights[lightIndex].shadowMapIndex != -1) {
+					shadow = ShadowCalculation(lights[lightIndex].shadowMapIndex, lightPosition, lightRadius, worldSpacePosition.xyz, viewPos, normal);
+				}
+				sharedDebugOutputColor += lightColor * att * shadow;
+			}
+		}	
+		barrier();
+		imageStore(lightingTexture, pixelCoords, vec4(sharedDebugOutputColor, 1));		
+		// Lines
+		if (gl_LocalInvocationIndex.x < TILE_SIZE || gl_LocalInvocationIndex.x % TILE_SIZE == 0 || gl_LocalInvocationIndex.x < TILE_SIZE || gl_LocalInvocationIndex.x % TILE_SIZE == 1) {	
+			imageStore(lightingTexture, pixelCoords, vec4(0, 0, 0, 1));	
+		}	
+	}
+
+	// Lights per pixel
+	if (mode == 2) {	
+		vec3 debugOutputColor = vec3(0,0,0);						
+		uint tileIndex = gl_WorkGroupID.y * tileXCount + gl_WorkGroupID.x;
+		uint lightCount = tileData[tileIndex].lightCount;
+		for (int i = 0; i < lightCount; i++) {
+			uint lightIndex = tileData[tileIndex].lightIndices[i];
+			vec3 lightColor = vec3(lights[lightIndex].colorR, lights[lightIndex].colorG, lights[lightIndex].colorB);
+			vec3 lightPosition = vec3(lights[lightIndex].posX, lights[lightIndex].posY, lights[lightIndex].posZ);
+			float lightRadius = lights[lightIndex].radius;								
+			float att = smoothstep(lightRadius, 0.0, length(lightPosition - worldSpacePosition.xyz));			
+			float shadow = 1;
+			if (lights[lightIndex].shadowMapIndex != -1) {
+				shadow = ShadowCalculation(lights[lightIndex].shadowMapIndex, lightPosition, lightRadius, worldSpacePosition.xyz, viewPos, normal);
+			}
+			debugOutputColor += lightColor * att * shadow;
+		}
+		imageStore(lightingTexture, pixelCoords, vec4(debugOutputColor, 1));		
+		// Lines
+		if (gl_LocalInvocationIndex.x < TILE_SIZE || gl_LocalInvocationIndex.x % TILE_SIZE == 0 || gl_LocalInvocationIndex.x < TILE_SIZE || gl_LocalInvocationIndex.x % TILE_SIZE == 1) {	
+			imageStore(lightingTexture, pixelCoords, vec4(0, 0, 0, 1));	
+		}	
+	}
+}

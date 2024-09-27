@@ -1,0 +1,54 @@
+#version 430 core
+
+layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
+
+uniform int lightCount;
+
+struct LightVolumeData {
+	float aabbMinX;
+	float aabbMinY;
+	float aabbMinZ;
+	float padding;
+	float aabbMaxX;
+	float aabbMaxY;
+	float aabbMaxZ;
+	float padding2;
+};
+
+struct Light {
+    float posX;
+    float posY;
+    float posZ;
+    float colorR;
+    float colorG;
+    float colorB;
+    float strength;
+    float radius;
+    int shadowMapIndex;
+    int contributesToGI;
+    int lightVolumeMode; // 0 is via cubemap, 1 is via pos/radius
+    int lightVolumeAABBIsDirty;
+};
+
+layout(std430, binding = 2) readonly buffer Lights {
+    Light lights[];
+};
+
+layout(std430, binding = 19) buffer Buffer {
+    LightVolumeData lightVolumeData[];
+};
+
+void main() {
+	const uint lightIndex = gl_GlobalInvocationID.x;
+	if (lightIndex >= lightCount) {
+		return;
+	}
+	if (lights[lightIndex].lightVolumeMode == 1 && lights[lightIndex].lightVolumeAABBIsDirty == 1) {
+		lightVolumeData[lightIndex].aabbMinX = lights[lightIndex].posX - lights[lightIndex].radius;
+		lightVolumeData[lightIndex].aabbMinY = lights[lightIndex].posY - lights[lightIndex].radius;
+		lightVolumeData[lightIndex].aabbMinZ = lights[lightIndex].posZ - lights[lightIndex].radius;
+		lightVolumeData[lightIndex].aabbMaxX = lights[lightIndex].posX + lights[lightIndex].radius;
+		lightVolumeData[lightIndex].aabbMaxY = lights[lightIndex].posY + lights[lightIndex].radius;
+		lightVolumeData[lightIndex].aabbMaxZ = lights[lightIndex].posZ + lights[lightIndex].radius;
+	}
+}

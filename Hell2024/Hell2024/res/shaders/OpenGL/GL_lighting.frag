@@ -327,6 +327,17 @@ vec3 filmPixel(vec2 uv) {
     mat2x3 uvs = mat2x3(uv.xxx, uv.yyy) + mat2x3(vec3(0, 0.1, 0.2), vec3(0, 0.3, 0.4));
     return fract(sin(uvs * vec2(12.9898, 78.233) * time) * 43758.5453);
 }
+
+void main2() {
+
+	vec3 normal = texture(normalTexture, TexCoords).rgb;
+	FragColor.rgb = vec3( normal * 0.5);
+}
+
+bool IsPointInsideAABB(vec3 point, vec3 minExtent, vec3 maxExtent) {
+    return all(greaterThanEqual(point, minExtent)) && all(lessThanEqual(point, maxExtent));
+}
+
 void main() {
 
 	//int playerIndex = 1;
@@ -389,7 +400,6 @@ void main() {
 		const vec3 lightDirection = normalize(lightPosition - WorldPos);
 		vec3 ligthting = GetDirectLighting(lightPosition, lightColor, lightRadius, lightStrength, normal, WorldPos, baseColor.rgb, roughness, metallic, viewPos);
 		
-		//float shadow = ShadowCalculation(shadowMap[i], lightPosition, lightRadius, WorldPos, viewPos, normal);
 		float shadow = 1;
 		if (light.shadowMapIndex != -1) {
 			shadow = ShadowCalculation(light.shadowMapIndex, lightPosition, lightRadius, WorldPos, viewPos, normal);
@@ -479,7 +489,7 @@ void main() {
 	float NOISE =  (x * -noiseFactor) + (noiseFactor / 2);
 	//FragColor.rgb = vec3( NOISE);
 
-	//FragColor.rgb = vec3( normal);
+	//FragColor.rgb = vec3( TexCoords, 0);
 
 	
 	}

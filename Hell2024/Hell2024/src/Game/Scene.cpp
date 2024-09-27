@@ -241,6 +241,11 @@ int Scene::AssignNextFreeShadowMapIndex(int lightIndex) {
 
 void Scene::LoadDefaultScene() {
 
+    bool createTestLights = true;
+    bool createTestCubes = true;
+    int testLightCount = 50;
+    int testCubeCount = 50;
+
     std::cout << "Loading default scene\n";
 
     CleanUp();
@@ -252,11 +257,11 @@ void Scene::LoadDefaultScene() {
     int rows = heightMap.m_heightScale;
     int columns = heightMap.m_depth;
 
-    /*
+    
     if (heightMap.m_pxRigidStatic == NULL) {
         heightMap.CreatePhysicsObject();
         std::cout << "Created heightmap physics shit\n";
-    }*/
+    }
 
 
 
@@ -284,6 +289,7 @@ void Scene::LoadDefaultScene() {
     for (Light& light : g_lights) {
         light.isDirty = true;
     }
+
       
     // Reset all shadow map light indices
     g_shadowMapLightIndices.resize(MAX_SHADOW_CASTING_LIGHTS);
@@ -291,49 +297,64 @@ void Scene::LoadDefaultScene() {
         g_shadowMapLightIndices[i] = -1;
     }
 
-    // Create 100 test lights
-    float size = 30;
-    float xMin = 10;
-    float xMax = xMin + size * 2;
-    float yMin = -5;
-    float yMax = yMin + size;;
-    float zMin = -size * 0.5f;
-    float zMax = zMin + size * 2;
-    int cubeCount = 150;
-    for (int i = 0; i < cubeCount; i++) {
-        float x = Util::RandomFloat(xMin, xMax);
-        float y = Util::RandomFloat(yMin, yMax);
-        float z = Util::RandomFloat(zMin, zMax);
-        float r = Util::RandomFloat(0.0f, 1.0f);
-        float g = Util::RandomFloat(0.0f, 1.0f);
-        float b = Util::RandomFloat(0.0f, 1.0f);
-        LightCreateInfo createInfo;
-        createInfo.position = { x, y, z };
-        createInfo.color = { r, g, b };
-        createInfo.strength = 1;
-        createInfo.type = 1;
-        createInfo.radius = 10;
-        Scene::CreateLight(createInfo);
+    if (createTestLights) {
+        // Create 100 test lights
+        float size = 30;
+        float xMin = 10;
+        float xMax = xMin + size * 2;
+        float yMin = -15;
+        float yMax = yMin + size;;
+        float zMin = -size * 0.5f;
+        float zMax = zMin + size * 2;
+        int cubeCount = testLightCount;
+        for (int i = 0; i < cubeCount; i++) {
+            float x = Util::RandomFloat(xMin, xMax);
+            float y = Util::RandomFloat(yMin, yMax);
+            float z = Util::RandomFloat(zMin, zMax);
+            float r = Util::RandomFloat(0.0f, 1.0f);
+            float g = Util::RandomFloat(0.0f, 1.0f);
+            float b = Util::RandomFloat(0.0f, 1.0f);
+            LightCreateInfo createInfo;
+            createInfo.position = { x, y, z };
+            createInfo.color = { r, g, b };
+            createInfo.strength = 1;
+            createInfo.type = 1;
+            createInfo.radius = 10;
+            Scene::CreateLight(createInfo);
+        }
     }
-
 
 
 
 
     // Debug test init shit
     for (int i = 0; i < g_lights.size(); i++) {
-        Light& light = g_lights[i];
-        light.m_shadowCasting = true;
-        light.m_contributesToGI = true;
+        Light& light = g_lights[i];;
         if (i > 15) {
             light.m_shadowCasting = false;
             light.m_contributesToGI = false;
+            light.m_aabbLightVolumeMode = AABBLightVolumeMode::POSITION_RADIUS;
+        }
+        else {
+            light.m_shadowCasting = true;
+            light.m_contributesToGI = true;
+            light.m_aabbLightVolumeMode = AABBLightVolumeMode::WORLDSPACE_CUBE_MAP;
+        }
+        if (i == 10 ||
+            i == 11 ||
+            i == 8 ||
+            i == 7 ||
+            i == 9) {
+            light.m_shadowCasting = false;
+            light.m_contributesToGI = false;
+            light.m_aabbLightVolumeMode = AABBLightVolumeMode::POSITION_RADIUS;
         }
     }
 
     // Assign a shadow map to any shadow casting lights
     for (int i = 0; i < g_lights.size(); i++) {
         Light& light = g_lights[i];
+        light.m_aaabbVolumeIsDirty = true;
         if (light.m_shadowCasting) {
             light.m_shadowMapIndex = AssignNextFreeShadowMapIndex(i);
         }
@@ -669,7 +690,7 @@ void Scene::LoadDefaultScene() {
         }
     }
 
-    {
+    if (createTestCubes) {
         float size = 30;
         float xMin = 10;
         float xMax = xMin + size * 2;
@@ -821,12 +842,30 @@ void Scene::LoadDefaultScene() {
 
 
     CSG::Build();
+    
+    // FOG hack
+    g_fogAABB.clear();
+    for (auto& csgObject : CSG::GetCSGObjects()) {
+        if (csgObject.m_materialIndex == AssetManager::GetMaterialIndex("FloorBoards") ||
+            csgObject.m_materialIndex == AssetManager::GetMaterialIndex("BathroomFloor")) {
+            AABB& aabb = g_fogAABB.emplace_back();
+            float xMin = csgObject.m_transform.position.x - csgObject.m_transform.scale.x * 0.5f;
+            float yMin = csgObject.m_transform.position.y + csgObject.m_transform.scale.y * 0.5f;
+            float zMin = csgObject.m_transform.position.z - csgObject.m_transform.scale.z * 0.5f;
+            float xMax = csgObject.m_transform.position.x + csgObject.m_transform.scale.x * 0.5f;
+            float yMax = yMin + 2.6f;
+            float zMax = csgObject.m_transform.position.z + csgObject.m_transform.scale.z * 0.5f;
+            aabb.boundsMin = glm::vec3(xMin, yMin, zMin);
+            aabb.boundsMax = glm::vec3(xMax, yMax, zMax);
+        }
+    }
+
 
     RecreateAllPhysicsObjects();
     ResetGameObjectStates();
     CreateBottomLevelAccelerationStructures();
 
-    Pathfinding2::UpdateNavMesh(CSG::GetNavMeshVertices());
+    Pathfinding2::UpdateNavMesh();
 }
 
 AABB AABBFromVertices(std::span<Vertex> vertices, std::span<uint32_t> indices, glm::mat4 worldTransform) {

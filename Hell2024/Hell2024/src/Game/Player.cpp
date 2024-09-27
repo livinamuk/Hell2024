@@ -273,7 +273,8 @@ void Player::UpdateViewMatrix(float deltaTime) {
     if (model->_filename == "Knife" ||
         model->_filename == "Shotgun" ||
         model->_filename == "Smith" ||
-        model->_filename == "P90") {
+        model->_filename == "P90" ||
+        model->_filename == "SPAS") {
         cameraAnimation = inverse(cameraBindMatrix) * cameraMatrix;
     }
 
@@ -294,7 +295,8 @@ void Player::UpdateViewMatrix(float deltaTime) {
     if (model->_filename == "Knife" ||
         model->_filename == "Shotgun" ||
         model->_filename == "P90" ||
-        model->_filename == "Smith") {
+        model->_filename == "Smith" ||
+        model->_filename == "SPAS") {
 
         worldTransform.scale = glm::vec3(0.001);
         viewWeapon->m_cameraMatrix = worldTransform.to_mat4() * glm::inverse(cameraBindMatrix);
@@ -1324,7 +1326,8 @@ void Player::CreateCharacterController(glm::vec3 position) {
 	desc->stepOffset = 0.1f;
 	desc->contactOffset = 0.001;
 	desc->scaleCoeff = .99f;
-	desc->reportCallback = &Physics::_cctHitCallback;
+	desc->reportCallback = &Physics::_cctHitCallback; 
+    desc->slopeLimit = cosf(glm::radians(75.0f)); 
 	_characterController = Physics::_characterControllerManager->createController(*desc);
 
 	PxShape* shape;

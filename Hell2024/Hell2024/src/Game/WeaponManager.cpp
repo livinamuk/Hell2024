@@ -289,11 +289,6 @@ namespace WeaponManager {
         smith.revolverCockFrameNumber = 18;
         smith.relolverStyleReload = true;
 
-        WeaponInfo& spas12 = g_weapons.emplace_back();
-        spas12.name = "SPAS 12";
-        spas12.type = WeaponType::SHOTGUN;
-        spas12.damage = 5;
-
         WeaponInfo& tokarev = g_weapons.emplace_back();
         tokarev.name = "Tokarev";
         tokarev.modelName = "Tokarev";
@@ -446,10 +441,18 @@ namespace WeaponManager {
         shotgun.animationNames.walk = "Shotgun_Walk";
         shotgun.animationNames.melee = "Shotgun_Melee";
         shotgun.animationNames.reload = "Shotgun_Reload1Shell";
+        shotgun.animationNames.shotgunReloadStart = "Shotgun_ReloadWetstart";
+        shotgun.animationNames.shotgunReloadEnd = "Shotgun_ReloadEnd";
+        shotgun.animationNames.shotgunReloadOneShell = "Shotgun_Reload1Shell";
+        shotgun.animationNames.shotgunReloadTwoShells = "Shotgun_Reload2Shells";
         shotgun.animationNames.reloadempty.push_back("Glock_ReloadEmpty");
         shotgun.animationNames.fire.push_back("Shotgun_Fire");
         shotgun.animationNames.draw = "Shotgun_Draw";
         shotgun.animationSpeeds.fire = 1.5f;
+        shotgun.animationSpeeds.shotgunReloadStart = 1.0f;
+        shotgun.animationSpeeds.shotgunReloadEnd = 1.25f;
+        shotgun.animationSpeeds.shotgunReloadOneShell = 1.0f;
+        shotgun.animationSpeeds.shotgunReloadTwoShells = 1.0f;
         shotgun.audioFiles.fire.push_back("Glock_Fire0.wav");
         shotgun.audioFiles.fire.push_back("Glock_Fire1.wav");
         shotgun.audioFiles.fire.push_back("Glock_Fire2.wav");
@@ -470,6 +473,54 @@ namespace WeaponManager {
         shotgun.pickupModelName = "Shotgun_Isolated";
         shotgun.pickupConvexMeshModelName = "Shotgun_Isolated_ConvexMesh";
         shotgun.pickUpMeshMaterials["Shotgun_Mesh"] = "Shotgun";
+
+
+
+        WeaponInfo& spas = g_weapons.emplace_back();
+        spas.name = "SPAS";
+        spas.modelName = "SPAS";
+        spas.meshMaterials["ArmsMale"] = "Hands";
+        spas.meshMaterials["ArmsFemale"] = "FemaleArms";
+        spas.meshMaterials["Shells"] = "Shell";
+        spas.meshMaterials["SPAS12_Main"] = "SPAS_Main";
+        spas.meshMaterials["SPAS12_Moving"] = "SPAS_Moving";
+        spas.meshMaterials["SPAS12_Stamped"] = "SPAS_Stamped";
+        spas.animationNames.idle = "Shotgun_Idle";
+        spas.animationNames.walk = "SPAS_Walk";
+        spas.animationNames.melee = "SPAS_Melee";
+        spas.animationNames.reload = "SPAS_Fire";
+        spas.animationNames.reloadempty.push_back("SPAS_Fire");
+        spas.animationNames.fire.push_back("SPAS_Fire");
+        spas.animationNames.draw = "SPAS_Equip";
+        spas.animationNames.shotgunReloadStart = "SPAS_ReloadStart";
+        spas.animationNames.shotgunReloadEnd = "SPAS_ReloadEnd";
+        spas.animationSpeeds.fire = 1.5f;
+        spas.animationSpeeds.shotgunReloadStart = 1.0f;
+        spas.animationSpeeds.shotgunReloadEnd = 1.25f;
+        spas.animationSpeeds.shotgunReloadOneShell = 1.5f;
+        spas.animationSpeeds.shotgunReloadTwoShells = 1.5f;
+        spas.animationNames.shotgunReloadOneShell = "SPAS_Reload1Shell";
+        spas.animationNames.shotgunReloadTwoShells = "SPAS_Reload2Shells";
+        spas.audioFiles.fire.push_back("Glock_Fire0.wav");
+        spas.audioFiles.fire.push_back("Glock_Fire1.wav");
+        spas.audioFiles.fire.push_back("Glock_Fire2.wav");
+        spas.audioFiles.fire.push_back("Glock_Fire3.wav");
+        spas.audioFiles.reload = "Glock_Reload.wav";
+        spas.audioFiles.reloadEmpty = "Glock_ReloadEmpty.wav";
+        spas.type = WeaponType::SHOTGUN;
+        spas.muzzleFlashOffset = glm::vec3(0, 0.002, 0.005f);
+        spas.casingEjectionOffset = glm::vec3(-0.098, -0.033, 0.238);
+        spas.damage = 15;
+        spas.magSize = 8;
+        spas.ammoType = "Shotgun";
+        spas.hiddenMeshAtStart.push_back("ArmsFemale");
+        spas.muzzleFlashBoneName = "Muzzle";
+        spas.casingEjectionBoneName = "Shell_bone";
+        spas.casingEjectionForce = 13;
+        spas.animationCancelPercentages.fire = 50.0f;
+        spas.pickupModelName = "Shotgun_Isolated";
+        spas.pickupConvexMeshModelName = "Shotgun_Isolated_ConvexMesh";
+        spas.pickUpMeshMaterials["Shotgun_Mesh"] = "Shotgun";
 
 
 

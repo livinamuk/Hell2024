@@ -23,6 +23,10 @@ struct AnimationNames {
     std::string revolverReloadBegin;
     std::string revolverReloadLoop;
     std::string revolverReloadEnd;
+    std::string shotgunReloadStart;
+    std::string shotgunReloadEnd;
+    std::string shotgunReloadOneShell;
+    std::string shotgunReloadTwoShells;
 };
 
 struct AnimationCancelPercentages {
@@ -42,6 +46,10 @@ struct AnimationSpeeds {
     float draw = 1.0f;
     float spawn = 1.0f;
     float adsFire = 1.0f;
+    float shotgunReloadStart = 1.0f;
+    float shotgunReloadEnd = 1.0f;
+    float shotgunReloadOneShell = 1.0f;
+    float shotgunReloadTwoShells = 1.0f;
 };
 
 struct AudioFiles {

@@ -72,6 +72,7 @@ void Renderer::RenderFrame() {
     RenderData renderData = CreateRenderData();
 
     RendererData::CreateDrawCommands(renderData.playerCount);
+    RendererData::UpdateGPULights();
 
     if (BackEnd::GetAPI() == API::OPENGL) {
         OpenGLRenderer::RenderFrame(renderData);
@@ -1085,6 +1086,9 @@ inline static std::vector<RenderMode> _allowedRenderModes = {
     COMPOSITE_PLUS_POINT_CLOUD,
     POINT_CLOUD,
     DIRECT_LIGHT,
+    TILE_HEATMAP,
+    LIGHTS_PER_TILE,
+    LIGHTS_PER_PIXEL,
 };
 
 void Renderer::NextRenderMode() {

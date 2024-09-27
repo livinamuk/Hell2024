@@ -62,7 +62,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>src\;src\Common;vendor\bvh\include;vendor\nlohmann_json\include;vendor\lz4\include;vendor\VulkanMemoryAllocator\include;vendor\Vulkan\include;vendor\tinyexr;vendor\compressonator\include;vendor\tinycsg\include;vendor\tracy\public;vendor\tinyobj;vendor\GLFW\include;vendor\glm;vendor\glad\include;vendor\stb_image;vendor\fmod\include;vendor\assimp\include;vendor\rapidjson\include;vendor\physx\include;vendor\thread_pool\include;vendor\VkBootstrap</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>vendor\recast\include;vendor\gli\include;src\;src\Common;vendor\bvh\include;vendor\nlohmann_json\include;vendor\lz4\include;vendor\VulkanMemoryAllocator\include;vendor\Vulkan\include;vendor\tinyexr;vendor\compressonator\include;vendor\tinycsg\include;vendor\tracy\public;vendor\tinyobj;vendor\GLFW\include;vendor\glm;vendor\glad\include;vendor\stb_image;vendor\fmod\include;vendor\assimp\include;vendor\rapidjson\include;vendor\physx\include;vendor\thread_pool\include;vendor\VkBootstrap</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
@@ -420,6 +420,7 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <None Include="res\shaders\OpenGL\GL_compute_test.comp" />
     <None Include="res\shaders\OpenGL\GL_debug_light_volume_aabb.frag" />
     <None Include="res\shaders\OpenGL\GL_debug_light_volume_aabb.vert" />
+    <None Include="res\shaders\OpenGL\GL_debug_tile_view.comp" />
     <None Include="res\shaders\OpenGL\GL_decals_blood.frag" />
     <None Include="res\shaders\OpenGL\GL_decals_blood.vert" />
     <None Include="res\shaders\OpenGL\GL_bloodVAT.frag" />
@@ -445,7 +446,8 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <None Include="res\shaders\OpenGL\GL_glassComposite.comp" />
     <None Include="res\shaders\OpenGL\GL_heightmap.frag" />
     <None Include="res\shaders\OpenGL\GL_heightmap.vert" />
-    <None Include="res\shaders\OpenGL\GL_lightvolume_aabb_from_uniforms.comp" />
+    <None Include="res\shaders\OpenGL\GL_lighting_tiled.comp" />
+    <None Include="res\shaders\OpenGL\GL_lightvolume_aabb_from_pos_radius.comp" />
     <None Include="res\shaders\OpenGL\GL_lightvolume_prepass.frag" />
     <None Include="res\shaders\OpenGL\GL_lightvolume_prepass.geom" />
     <None Include="res\shaders\OpenGL\GL_lightvolume_prepass.vert" />
@@ -453,6 +455,7 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <None Include="res\shaders\OpenGL\GL_lighting.vert" />
     <None Include="res\shaders\OpenGL\GL_lightvolume_aabb_from_cubemap.comp" />
     <None Include="res\shaders\OpenGL\GL_light_culling.comp" />
+    <None Include="res\shaders\OpenGL\GL_light_culling_OLD.comp" />
     <None Include="res\shaders\OpenGL\GL_light_volume_clear.comp" />
     <None Include="res\shaders\OpenGL\GL_outline.frag" />
     <None Include="res\shaders\OpenGL\GL_outline.vert" />
