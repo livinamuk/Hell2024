@@ -495,8 +495,8 @@ namespace WeaponManager {
         spas.animationNames.shotgunReloadStart = "SPAS_ReloadStart";
         spas.animationNames.shotgunReloadEnd = "SPAS_ReloadEnd";
         spas.animationSpeeds.fire = 1.5f;
-        spas.animationSpeeds.shotgunReloadStart = 1.0f;
-        spas.animationSpeeds.shotgunReloadEnd = 1.25f;
+        spas.animationSpeeds.shotgunReloadStart = 1.5f;
+        spas.animationSpeeds.shotgunReloadEnd = 1.5f;
         spas.animationSpeeds.shotgunReloadOneShell = 1.5f;
         spas.animationSpeeds.shotgunReloadTwoShells = 1.5f;
         spas.animationNames.shotgunReloadOneShell = "SPAS_Reload1Shell";

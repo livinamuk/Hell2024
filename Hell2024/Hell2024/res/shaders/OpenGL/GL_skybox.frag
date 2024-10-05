@@ -36,4 +36,5 @@ void main() {
 // 	FinalLighting.rgb *= vec3(0, 0, 0);
 	FinalLighting.rgb *= vec3(0.5);
 	FinalLighting.rgb *= vec3(0.5);
+	FinalLighting.rgb *= vec3(0.0);
 }

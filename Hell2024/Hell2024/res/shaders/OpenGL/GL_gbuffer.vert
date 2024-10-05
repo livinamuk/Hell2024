@@ -1,11 +1,11 @@
 #version 460 core
 
-layout (location = 0) in vec3 aPos;
-layout (location = 1) in vec3 aNormal;
-layout (location = 2) in vec2 aTexCoord;
-layout (location = 3) in vec3 aTangent;
-layout (location = 4) in ivec4 aBoneID;
-layout (location = 5) in vec4 aBoneWeight;
+layout (location = 0) in vec3 vPos;
+layout (location = 1) in vec3 vNormal;
+layout (location = 2) in vec2 vTexCoord;
+layout (location = 3) in vec3 vTangent;
+layout (location = 4) in ivec4 vBoneID;
+layout (location = 5) in vec4 vBoneWeight;
 
 uniform mat4 projection;
 uniform mat4 view;
@@ -20,9 +20,9 @@ out flat int NormalTextureIndex;
 out flat int RMATextureIndex;
 out flat int useEmissiveMask;
 out flat int PlayerIndex;
-out vec3 attrNormal;
-out vec3 attrTangent;
-out vec3 attrBiTangent;
+out vec3 Normal;
+out vec3 Tangent;
+out vec3 BiTangent;
 out vec3 emissiveColor;
 
 struct RenderItem3D {
@@ -66,7 +66,7 @@ void main() {
 	int index = gl_InstanceID + gl_BaseInstance + instanceDataOffset;
 
     // Set the texture coordinates
-    TexCoord = aTexCoord;
+    TexCoord = vTexCoord;
 
     // Load render item and material data
     RenderItem3D renderItem = RenderItems[index];
@@ -91,12 +91,12 @@ void main() {
     mat4 modelMatrix = renderItem.modelMatrix;
     mat4 normalMatrix = transpose(renderItem.inverseModelMatrix);
 
-    attrNormal = normalize((normalMatrix * vec4(aNormal, 0)).xyz);
-    attrTangent = (modelMatrix * vec4(aTangent, 0.0)).xyz;
-    attrBiTangent = normalize(cross(attrNormal, attrTangent));
+    Normal = normalize((normalMatrix * vec4(vNormal, 0)).xyz);
+    Tangent = (modelMatrix * vec4(vTangent, 0.0)).xyz;
+    BiTangent = normalize(cross(vNormal, Tangent));
 
     // Compute the final position of the vertex in screen space
-    gl_Position = projection * view * modelMatrix * vec4(aPos, 1.0);
+    gl_Position = projection * view * modelMatrix * vec4(vPos, 1.0);
 
     // Pass the player index to the fragment shader
     PlayerIndex = playerIndex;

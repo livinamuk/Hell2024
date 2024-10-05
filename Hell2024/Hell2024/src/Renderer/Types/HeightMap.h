@@ -8,17 +8,13 @@ struct HeightMap {
     unsigned int m_VAO = 0;
     unsigned int m_VBO = 0;
     unsigned int m_EBO = 0;
-    int m_indexCount = 0;
     int m_width = 0;
     int m_depth = 0;
-    float m_heightScale = 0;
-    float m_vertexScale = 0;
-    float m_stepSize = 0;
     std::vector<Vertex> m_vertices;
     std::vector<unsigned int> m_indices;
     Transform m_transform;
 
-    void Load(const std::string& filepath, float vertexScale, float heightScale);
+    void Load(const std::string& filepath, float textureRepeat);
     void UploadToGPU();
     void CreatePhysicsObject();
 

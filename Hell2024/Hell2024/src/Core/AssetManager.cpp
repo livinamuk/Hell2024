@@ -308,7 +308,7 @@ void AssetManager::LoadNextItem() {
         VulkanRenderer::CreatePipelines();
     }
 
-    g_heightMap.Load("res/textures/heightmaps/HeightMap.png", 0.05f, 1.0f);
+    g_heightMap.Load("res/textures/heightmaps/HeightMap.png", 1000.0f);
     g_heightMap.UploadToGPU();
 
     // We're done

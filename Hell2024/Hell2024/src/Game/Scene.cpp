@@ -254,17 +254,16 @@ void Scene::LoadDefaultScene() {
 
 
     HeightMap& heightMap = AssetManager::g_heightMap;
-    int rows = heightMap.m_heightScale;
-    int columns = heightMap.m_depth;
+    heightMap.m_transform.scale = glm::vec3(0.5f);
+    heightMap.m_transform.scale.y = 5;
+    heightMap.m_transform.position.x = heightMap.m_width * -0.5f * heightMap.m_transform.scale.x;
+    heightMap.m_transform.position.y = -3.75f;
+    heightMap.m_transform.position.z = heightMap.m_depth * -0.5f * heightMap.m_transform.scale.z;
 
-    
     if (heightMap.m_pxRigidStatic == NULL) {
         heightMap.CreatePhysicsObject();
         std::cout << "Created heightmap physics shit\n";
     }
-
-
-
 
     g_doors.clear();
     g_doors.reserve(sizeof(Door) * 1000);

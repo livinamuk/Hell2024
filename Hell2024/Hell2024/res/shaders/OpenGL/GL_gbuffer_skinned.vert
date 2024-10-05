@@ -64,6 +64,7 @@ void main() {
 	mat4 normalMatrix = transpose(invereseModel);
 	attrNormal = normalize((normalMatrix * vec4(aNormal, 0)).xyz);
 	attrTangent = normalize((normalMatrix * vec4(aTangent, 0)).xyz);;
+	//attrTangent = normalize(attrTangent - dot(attrTangent, attrNormal) * attrNormal);
 	attrBiTangent = normalize(cross(attrNormal,attrTangent));
 
 	gl_Position = projection * view * model * vec4(aPos, 1.0);

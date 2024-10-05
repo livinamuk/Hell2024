@@ -2582,7 +2582,7 @@ void OpenGLRenderer::IndirectLightingPass() {
         ComputeShader& computeShader = OpenGLRenderer::g_shaders.probeLighting;
 
         computeShader.Use();
-        computeShader.SetInt("frameNumber", frameNumber);
+        computeShader.SetInt("frameNumber", frameNumber); 
         computeShader.SetInt("probeSpaceWidth", lightVolume->GetProbeSpaceWidth());
         computeShader.SetInt("probeSpaceHeight", lightVolume->GetProbeSpaceHeight());
         computeShader.SetInt("probeSpaceDepth", lightVolume->GetProbeSpaceDepth());
@@ -2703,7 +2703,7 @@ void OpenGLRenderer::HeightMapPass(RenderData& renderData) {
         shader.SetInt("playerIndex", i);
 
         glBindVertexArray(heightMap.m_VAO);
-        glDrawElements(GL_TRIANGLE_STRIP, heightMap.m_indexCount, GL_UNSIGNED_INT, 0);
+        glDrawElements(GL_TRIANGLE_STRIP, heightMap.m_indices.size(), GL_UNSIGNED_INT, 0);
         glBindVertexArray(0);
     }
 }

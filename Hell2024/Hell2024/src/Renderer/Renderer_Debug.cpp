@@ -649,6 +649,16 @@ std::string& Renderer::GetDebugText() {
 
     //g_debugText = Game::GetPlayerByIndex(0)->_playerName;
 
+    g_debugText = "You always on my mind\n";
+    g_debugText += "yeh in my header #defined\n";
+    g_debugText += "wanna see you\n";
+    g_debugText += "yeh when I see you\n";
+    g_debugText += "fuck a 9 to 5\n";
+    g_debugText += "I'm heading to the seaside\n";
+    g_debugText += "wanna see you\n";
+    g_debugText += "I see c++ in my dreams too\n";
+    g_debugText += "(when I, when I, when I)\n";
+           
 
     return g_debugText;
 }

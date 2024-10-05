@@ -98,7 +98,7 @@ copy /Y "$(ProjectDir)vendor\dll_debug\PVDRuntime_64.dll" "$(TargetDir)PVDRuntim
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;TRACY_ENABLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>src\;src\Common;vendor\bvh\include;vendor\gli\include;vendor\recast\include;vendor\nlohmann_json\include;vendor\lz4\include;vendor\VkBootstrap;vendor\VulkanMemoryAllocator\include;vendor\Vulkan\include;vendor\tinyexr;vendor\compressonator\include;vendor\tracy\public;vendor\tinyobj;vendor\GLFW\include;vendor\glm;vendor\glad\include;vendor\stb_image;vendor\fmod\include;vendor\assimp\include;vendor\rapidjson\include;vendor\physx\include;vendor\thread_pool\include;vendor\tinycsg\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>vendor\gli\include;src\;src\Common;vendor\bvh\include;vendor\recast\include;vendor\nlohmann_json\include;vendor\lz4\include;vendor\VkBootstrap;vendor\VulkanMemoryAllocator\include;vendor\Vulkan\include;vendor\tinyexr;vendor\compressonator\include;vendor\tracy\public;vendor\tinyobj;vendor\GLFW\include;vendor\glm;vendor\glad\include;vendor\stb_image;vendor\fmod\include;vendor\assimp\include;vendor\rapidjson\include;vendor\physx\include;vendor\thread_pool\include;vendor\tinycsg\include</AdditionalIncludeDirectories>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
