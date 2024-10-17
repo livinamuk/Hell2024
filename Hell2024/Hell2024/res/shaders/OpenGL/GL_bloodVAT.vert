@@ -23,12 +23,13 @@ struct RenderItem3D {
     mat4 modelMatrix;
     mat4 inverseModelMatrix;
     int meshIndex;
-    int materialIndex;
+    int baseColorTextureIndex;
+    int normalMapTextureIndex;
+    int rmaTextureIndex;
     int vertexOffset;
     int indexOffset;
     int castShadow;
     int useEmissiveMask;
-    int isGold;
     float emissiveColorR;
     float emissiveColorG;
     float emissiveColorB;
@@ -38,6 +39,9 @@ struct RenderItem3D {
     float aabbMaxX;
     float aabbMaxY;
     float aabbMaxZ;
+    float padding0;
+    float padding1;
+    float padding2;
 };
 
 
@@ -96,8 +100,9 @@ void main() {
 
 	mat4 model = RenderItems[gl_InstanceID + gl_BaseInstance].modelMatrix;
 	mat4 invereseModel = RenderItems[gl_InstanceID + gl_BaseInstance].inverseModelMatrix;
-	int positionTextureIndex =  RenderItems[gl_InstanceID+ gl_BaseInstance].materialIndex;  // sketchy
-	int normalTextureIndex =  RenderItems[gl_InstanceID+ gl_BaseInstance].isGold;			// sketchy
+	int positionTextureIndex =  RenderItems[gl_InstanceID + gl_BaseInstance].baseColorTextureIndex;
+	int normalTextureIndex =  RenderItems[gl_InstanceID + gl_BaseInstance].normalMapTextureIndex;
+		
 	float u_Time = RenderItems[gl_InstanceID+ gl_BaseInstance].emissiveColorR;
 
     int u_NumOfFrames = 81;

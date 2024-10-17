@@ -70,6 +70,9 @@ void DrawNavMesh(MyDebugDraw& dd, NavMesh& navMesh, dtTileCache* tileCache, std:
 
 
 void DrawNavMesh(MyDebugDraw& dd, NavMesh& navMesh, std::vector<glm::vec3>& vector) {
+
+    Timer timer("DrawNavMesh()");
+
     if (!navMesh.GetDtNaveMesh()) {
         return;
     }
@@ -168,13 +171,14 @@ namespace Pathfinding2 {
         //UpdateNavMesh(CSG::GetNavMeshVertices());
     }
 
-    void UpdateNavMesh() {
+    void CalculateNavMesh() {
 
         Timer timer("Pathfinding::UpdateNavMesh()");
 
         std::vector<glm::vec3> vertices = CSG::GetNavMeshVertices();
+        std::cout << "CSG vertices: " << vertices.size() << "\n";
 
-        /*
+        /*      
         // Add heightmap
         HeightMap& heightMap = AssetManager::g_heightMap;
         vertices.reserve(vertices.size() + heightMap.m_indices.size());
@@ -186,8 +190,6 @@ namespace Pathfinding2 {
             vertices.push_back(position);
         }
         */
-
-
 
         float y = -1.75f;
         float size = 50;
@@ -204,7 +206,6 @@ namespace Pathfinding2 {
         vertices.push_back(cornerB);
         vertices.push_back(cornerD);
         vertices.push_back(cornerA);
-
 
         g_navMesh.Create(g_ctx, vertices, NavMeshRegionMode::MONOTONE);
         DrawNavMesh(g_debugDraw, g_navMesh, g_debugVertices);

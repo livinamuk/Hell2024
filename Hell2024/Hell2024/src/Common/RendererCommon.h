@@ -22,7 +22,7 @@
 #define MAX_TLAS_OBJECT_COUNT 4096
 #define FRAME_OVERLAP 2
 #define MAX_LIGHTS 300
-#define MAX_SHADOW_CASTING_LIGHTS 32
+#define MAX_SHADOW_CASTING_LIGHTS 16
 #define MAX_ANIMATED_TRANSFORMS 2048
 #define MAX_INSTANCES 4096
 #define MAX_INDIRECT_COMMANDS 4096
@@ -85,18 +85,23 @@ struct RenderItem3D {
     glm::mat4 inverseModelMatrix = glm::mat4(1);
 
     int meshIndex;
-    int materialIndex;
+    int baseColorTextureIndex;
+    int normalMapTextureIndex;
+    int rmaTextureIndex;
+
     int vertexOffset;
     int indexOffset;
-
     int castShadow = 1;             // if 0 then currently also it is not included in the TLAS
     int useEmissiveMask = 0;
-    int isGold = 0;
-
+    
     glm::vec3 emissiveColor = glm::vec3(0);
     glm::vec3 aabbMin = glm::vec3(0);
     glm::vec3 aabbMax = glm::vec3(0);
-    
+
+    float padding0;
+    float padding1;
+    float padding2;
+
     // Overloading < operator for sorting with std::sort
     bool operator<(const RenderItem3D& obj) const {
         return meshIndex < obj.meshIndex;
@@ -192,10 +197,10 @@ struct Vertex {
         position = pos;
         normal = norm;
     }
-    glm::vec3 position = glm::vec3(0);
-    glm::vec3 normal = glm::vec3(0);
-    glm::vec2 uv = glm::vec2(0);
-    glm::vec3 tangent = glm::vec3(0);
+   glm::vec3 position = glm::vec3(0);
+   glm::vec3 normal = glm::vec3(0);
+   glm::vec2 uv = glm::vec2(0);
+   glm::vec3 tangent = glm::vec3(0);
     bool operator==(const Vertex& other) const {
         return position == other.position && normal == other.normal && uv == other.uv;
     }

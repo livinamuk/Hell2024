@@ -15,12 +15,13 @@ struct RenderItem3D {
     mat4 modelMatrix;
     mat4 inverseModelMatrix;
     int meshIndex;
-    int materialIndex;
+    int baseColorTextureIndex;
+    int normalMapTextureIndex;
+    int rmaTextureIndex;
     int vertexOffset;
     int indexOffset;
     int castShadow;
     int useEmissiveMask;
-    int isGold;
     float emissiveColorR;
     float emissiveColorG;
     float emissiveColorB;
@@ -30,6 +31,9 @@ struct RenderItem3D {
     float aabbMaxX;
     float aabbMaxY;
     float aabbMaxZ;
+    float padding0;
+    float padding1;
+    float padding2;
 };
 
 struct Material {
@@ -75,10 +79,7 @@ void main() {
 	mat4 projection = cameraDataArray[playerIndex].projection;
 	mat4 view = cameraDataArray[playerIndex].view;
 
-	//Material material = Materials[RenderItems[gl_InstanceID+ gl_BaseInstance].materialIndex];
-	//BaseColorTextureIndex =  material.baseColorTextureIndex;
-
-	BaseColorTextureIndex = RenderItems[ gl_InstanceID+ gl_BaseInstance].materialIndex;
+	BaseColorTextureIndex =  RenderItems[gl_InstanceID + gl_BaseInstance].baseColorTextureIndex;
 
 	TexCoord = aTexCoord;
 	mat4 model = RenderItems[gl_InstanceID + gl_BaseInstance].modelMatrix;

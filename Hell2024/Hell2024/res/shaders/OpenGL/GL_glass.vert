@@ -24,12 +24,13 @@ struct RenderItem3D {
     mat4 modelMatrix;
     mat4 inverseModelMatrix;
     int meshIndex;
-    int materialIndex;
+    int baseColorTextureIndex;
+    int normalMapTextureIndex;
+    int rmaTextureIndex;
     int vertexOffset;
     int indexOffset;
     int castShadow;
     int useEmissiveMask;
-    int isGold;
     float emissiveColorR;
     float emissiveColorG;
     float emissiveColorB;
@@ -39,6 +40,9 @@ struct RenderItem3D {
     float aabbMaxX;
     float aabbMaxY;
     float aabbMaxZ;
+    float padding0;
+    float padding1;
+    float padding2;
 };
 
 struct Material {
@@ -96,10 +100,9 @@ void main() {
 	mat4 model = RenderItems[gl_InstanceID + gl_BaseInstance].modelMatrix;
 	mat4 invereseModel = RenderItems[gl_InstanceID + gl_BaseInstance].inverseModelMatrix;
 
-	Material material = Materials[RenderItems[gl_InstanceID+ gl_BaseInstance].materialIndex];
-	BaseColorTextureIndex =  material.baseColorTextureIndex;
-	NormalTextureIndex =  material.normalTextureIndex;
-	RMATextureIndex =  material.rmaTextureIndex;
+	BaseColorTextureIndex =  RenderItems[gl_InstanceID + gl_BaseInstance].baseColorTextureIndex;
+	NormalTextureIndex =  RenderItems[gl_InstanceID + gl_BaseInstance].normalMapTextureIndex;
+	RMATextureIndex =  RenderItems[gl_InstanceID + gl_BaseInstance].rmaTextureIndex;
 
 	mat4 normalMatrix = transpose(invereseModel);
 	attrNormal = normalize((normalMatrix * vec4(aNormal, 0)).xyz);

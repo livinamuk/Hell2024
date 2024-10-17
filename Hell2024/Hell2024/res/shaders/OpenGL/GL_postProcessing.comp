@@ -4,6 +4,7 @@ layout (local_size_x = 16, local_size_y = 4, local_size_z = 1) in;
 
 layout(rgba8, binding = 0) uniform image2D tex;
 layout(rgba16f, binding = 1) uniform image2D normalTexture;
+layout(r32f, binding = 2) uniform image2D ssaoTexture;
 
 uniform float time;
 uniform float viewportWidth;
@@ -129,6 +130,12 @@ void main() {
 
 	// Contrast
     contrastAdjust(finalColor, finalImageColorContrast);
+	
+	// Apply SSAO
+    float ssao = imageLoad(ssaoTexture, texCoord).r;
+	ssao = 1;
+	finalColor = finalColor * ssao;
+	//finalColor = vec3(ssao);
 
     imageStore(tex, texCoord, vec4(finalColor, 1));
 }

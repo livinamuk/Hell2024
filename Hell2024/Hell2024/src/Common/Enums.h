@@ -5,9 +5,11 @@ enum class WindowedMode { WINDOWED, FULLSCREEN };
 enum class SplitscreenMode { NONE, TWO_PLAYER, FOUR_PLAYER, SPLITSCREEN_MODE_COUNT };
 enum class BulletHoleDecalType { REGULAR, GLASS };
 enum class PickUpType { NONE, AMMO, GLOCK, GLOCK_AMMO, TOKAREV_AMMO, SHOTGUN, SHOTGUN_AMMO, AKS74U, AKS74U_AMMO, AKS74U_SCOPE };
-enum class DobermannState { LAY, PATROL, KAMAKAZI, DOG_SHAPED_PIECE_OF_MEAT };
+enum class DobermannState { LAY, PATROL, KAMAKAZI, DOG_SHAPED_PIECE_OF_MEAT, RETURN_TO_ORIGIN, WALK_TO_TARGET };
+//enum class Gait { WALK, RUN, JUMP };
 enum class FacingDirection { LEFT, RIGHT, ALIGNED };
 enum class AABBLightVolumeMode { WORLDSPACE_CUBE_MAP, POSITION_RADIUS };
+enum class MenuType { NONE, FILE, INSERT, SELECTED_OBJECT, MISC };
 
 enum EngineMode { GAME = 0, FLOORPLAN, EDITOR };
 enum Weapon { KNIFE = 0, GLOCK, SHOTGUN, AKS74U, MP7, WEAPON_COUNT };

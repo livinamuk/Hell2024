@@ -485,11 +485,11 @@ void main() {
 
 	FragColor.a = 1;
 
-	//FragColor.rgb = vec3( normal);
 	float NOISE =  (x * -noiseFactor) + (noiseFactor / 2);
 	//FragColor.rgb = vec3( NOISE);
 
 	//FragColor.rgb = vec3( TexCoords, 0);
-
+	
+	//FragColor.rgb = vec3( normal);
 	
 	}

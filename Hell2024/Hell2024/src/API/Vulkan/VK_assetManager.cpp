@@ -615,6 +615,8 @@ uint32_t VulkanAssetManager::GetIndex(int offset) {
 
 void VulkanAssetManager::FeedTextureToGPU(VulkanTexture* outTexture, AssetFile* assetFile, bool generateMips) {
 
+    //std::cout << "FeedTextureToGPU(): " << outTexture->GetFilename() << "\n";
+
     VkDevice device = VulkanBackEnd::GetDevice();
     VmaAllocator allocator = VulkanBackEnd::GetAllocator();
 

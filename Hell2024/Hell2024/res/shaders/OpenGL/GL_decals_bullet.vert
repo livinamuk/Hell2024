@@ -18,12 +18,13 @@ struct RenderItem3D {
     mat4 modelMatrix;
     mat4 inverseModelMatrix;
     int meshIndex;
-    int materialIndex;
+    int baseColorTextureIndex;
+    int normalMapTextureIndex;
+    int rmaTextureIndex;
     int vertexOffset;
     int indexOffset;
     int castShadow;
     int useEmissiveMask;
-    int isGold;
     float emissiveColorR;
     float emissiveColorG;
     float emissiveColorB;
@@ -33,13 +34,9 @@ struct RenderItem3D {
     float aabbMaxX;
     float aabbMaxY;
     float aabbMaxZ;
-};
-
-struct Material {
-	int baseColorTextureIndex;
-	int normalTextureIndex;
-	int rmaTextureIndex;
-	int emissiveTextureIndex;
+    float padding0;
+    float padding1;
+    float padding2;
 };
 
 layout(std430, binding = 13) readonly buffer renderItems {
@@ -71,10 +68,6 @@ layout(std430, binding = 16) readonly buffer CameraDataArray {
     CameraData cameraDataArray[];
 };
 
-layout(std430, binding = 3) readonly buffer materials {
-    Material Materials[];
-};
-
 void main() {
 
 	TexCoord = aTexCoord;
@@ -86,10 +79,9 @@ void main() {
 	mat4 model = RenderItems[index].modelMatrix;
 	mat4 invereseModel = RenderItems[index].inverseModelMatrix;
 
-	Material material = Materials[RenderItems[index].materialIndex];
-	BaseColorTextureIndex =  material.baseColorTextureIndex;
-	NormalTextureIndex =  material.normalTextureIndex;
-	RMATextureIndex =  material.rmaTextureIndex;
+	BaseColorTextureIndex =  RenderItems[index].baseColorTextureIndex;
+	NormalTextureIndex =  RenderItems[index].normalMapTextureIndex;
+	RMATextureIndex =  RenderItems[index].rmaTextureIndex;
 
 	mat4 normalMatrix = transpose(invereseModel);
 	Normal = normalize((normalMatrix * vec4(aNormal, 0)).xyz);

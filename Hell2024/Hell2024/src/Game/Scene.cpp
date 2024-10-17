@@ -10,6 +10,7 @@
 #include "../Editor/CSG.h"
 #include "../Game/Game.h"
 #include "../Input/Input.h"
+#include "../Renderer/GlobalIllumination.h"
 #include "../Renderer/TextBlitter.h"
 #include "../Renderer/Raytracing/Raytracing.h"
 #include "../Timer.hpp"
@@ -29,7 +30,6 @@ namespace Scene {
     void EvaluateDebugKeyPresses();
     void ProcessBullets();
     void CreateDefaultSpawnPoints();
-    void CreateDefaultLight();
     void LoadMapData(const std::string& fileName);
     void AllocateStorageSpace();
     void AddDobermann(DobermannCreateInfo& createInfo);
@@ -201,20 +201,30 @@ void Scene::LoadMapData(const std::string& fileName) {
 void Scene::LoadEmptyScene() {
 
     std::cout << "New map\n";
-    CleanUp();
-    CreateDefaultSpawnPoints();
-    CreateDefaultLight();
-    for (Light& light : g_lights) {
-        light.isDirty = true;
+    {
+        Timer timer("CleanUp()");
+        CleanUp();
     }
-    g_doors.clear();
-    g_csgAdditiveShapes.clear();
-    g_csgSubtractiveShapes.clear();
-    g_windows.clear();
-    CSG::Build();
-    RecreateAllPhysicsObjects();
-    ResetGameObjectStates();
-    CreateBottomLevelAccelerationStructures();
+    {
+        Timer timer("CSG::Build()");
+        CSG::Build();
+    }
+    {
+        Timer timer("CreateDefaultSpawnPoints()");
+        CreateDefaultSpawnPoints();
+    }
+    {
+        Timer timer("RecreateAllPhysicsObjects()");
+        RecreateAllPhysicsObjects();
+    }
+    {
+        Timer timer("ResetGameObjectStatesd()");
+        ResetGameObjectStates();
+    }
+    {
+        //Timer timer("CreateBottomLevelAccelerationStructures()");
+        CreateBottomLevelAccelerationStructures();
+    }
 }
 
 void Scene::AddDobermann(DobermannCreateInfo& createInfo) {
@@ -241,8 +251,8 @@ int Scene::AssignNextFreeShadowMapIndex(int lightIndex) {
 
 void Scene::LoadDefaultScene() {
 
-    bool createTestLights = true;
-    bool createTestCubes = true;
+    bool createTestLights = false;// true;
+    bool createTestCubes = false;// true;
     int testLightCount = 50;
     int testCubeCount = 50;
 
@@ -250,19 +260,20 @@ void Scene::LoadDefaultScene() {
 
     CleanUp();
     CreateDefaultSpawnPoints();
-    //CreateDefaultLight();
-
 
     HeightMap& heightMap = AssetManager::g_heightMap;
-    heightMap.m_transform.scale = glm::vec3(0.5f);
-    heightMap.m_transform.scale.y = 5;
+    heightMap.m_transform.scale = glm::vec3(0.40f);
+    heightMap.m_transform.scale.y = 15;
     heightMap.m_transform.position.x = heightMap.m_width * -0.5f * heightMap.m_transform.scale.x;
-    heightMap.m_transform.position.y = -3.75f;
+    heightMap.m_transform.position.y = -2.75f;
     heightMap.m_transform.position.z = heightMap.m_depth * -0.5f * heightMap.m_transform.scale.z;
 
-    if (heightMap.m_pxRigidStatic == NULL) {
-        heightMap.CreatePhysicsObject();
-        std::cout << "Created heightmap physics shit\n";
+    // Heightmap (OPEN GL ONLY ATM)
+    if (BackEnd::GetAPI() == API::OPENGL) {
+        if (heightMap.m_pxRigidStatic == NULL) {
+            heightMap.CreatePhysicsObject();
+            std::cout << "Created heightmap physics shit\n";
+        }
     }
 
     g_doors.clear();
@@ -286,7 +297,7 @@ void Scene::LoadDefaultScene() {
 
     LoadMapData("mappp.txt");
     for (Light& light : g_lights) {
-        light.isDirty = true;
+        light.m_shadowMapIsDirty = true;
     }
 
       
@@ -500,28 +511,6 @@ void Scene::LoadDefaultScene() {
     */
 
 
-
-
-
-
-
-
-    /*
-    CreateGameObject();
-    GameObject* lilMan = GetGameObjectByIndex(GetGameObjectCount() - 1);
-    lilMan->SetPosition(0.0f, 0.0f, -2.0f);
-    lilMan->SetScale(0.01f);
-    lilMan->SetModel("LilMan");
-    lilMan->SetName("LilMan");
-    lilMan->SetMeshMaterialByMeshName("Torso", "LilManTorso");
-    lilMan->SetMeshMaterialByMeshName("Brows", "PresentB");
-    lilMan->SetMeshMaterialByMeshName("Lashes", "PresentC");
-    lilMan->SetMeshMaterialByMeshName("Arms", "LilManArms");
-    lilMan->SetMeshMaterialByMeshName("Face", "LilManFace");
-    lilMan->SetMeshMaterialByMeshName("Pants", "PresentA");
-    lilMan->PrintMeshNames();*/
-
-
     CreateGameObject();
     GameObject* pictureFrame = GetGameObjectByIndex(GetGameObjectCount() - 1);
     pictureFrame->SetPosition(1.1f, 1.5f, -2.35f);
@@ -714,132 +703,6 @@ void Scene::LoadDefaultScene() {
         }
     }
 
-
-
-
-
-    /*
-    // Walls
-    {
-        CubeVolume& cube = g_cubeVolumesAdditive.emplace_back();
-        cube.m_transform.position = glm::vec3(0.0f, 1.3f, -2.95f);
-        cube.m_transform.scale = glm::vec3(6.0f, 2.6f, 0.1f);
-        cube.materialIndex = AssetManager::GetMaterialIndex("Ceiling2");
-    }
-    {
-        CubeVolume& cube = g_cubeVolumesAdditive.emplace_back();
-        cube.m_transform.position = glm::vec3(0.0f, 1.3f, 2.95f);
-        cube.m_transform.scale = glm::vec3(6.0f, 2.6f, 0.1f);
-        cube.materialIndex = AssetManager::GetMaterialIndex("Ceiling2");
-    }
-    {
-        CubeVolume& cube = g_cubeVolumesAdditive.emplace_back();
-        cube.m_transform.position = glm::vec3(2.95f, 1.3f, 0.0f);
-        cube.m_transform.scale = glm::vec3(0.1f, 2.6f, 6.0f);
-        cube.materialIndex = AssetManager::GetMaterialIndex("Ceiling2");
-    }
-    {
-        CubeVolume& cube = g_cubeVolumesAdditive.emplace_back();
-        cube.m_transform.position = glm::vec3(-2.95f, 1.3f, 0.0f);
-        cube.m_transform.scale = glm::vec3(0.1f, 2.6f, 6.0f);
-        cube.materialIndex = AssetManager::GetMaterialIndex("Ceiling2");
-    }
-    {
-        CubeVolume& cube = g_cubeVolumesAdditive.emplace_back();
-        cube.m_transform.position = glm::vec3(0.0f, 1.3f, -2.95f - 10.0f);
-        cube.m_transform.scale = glm::vec3(6.0f, 2.6f, 0.1f);
-        cube.materialIndex = AssetManager::GetMaterialIndex("Ceiling2");
-    }
-    {
-        CubeVolume& cube = g_cubeVolumesAdditive.emplace_back();
-        cube.m_transform.position = glm::vec3(0.0f, 1.3f, 2.95f - 10.0f);
-        cube.m_transform.scale = glm::vec3(6.0f, 2.6f, 0.1f);
-        cube.materialIndex = AssetManager::GetMaterialIndex("Ceiling2");
-    }
-    {
-        CubeVolume& cube = g_cubeVolumesAdditive.emplace_back();
-        cube.m_transform.position = glm::vec3(2.95f, 1.3f, 0.0f - 10.0f);
-        cube.m_transform.scale = glm::vec3(0.1f, 2.6f, 6.0f);
-        cube.materialIndex = AssetManager::GetMaterialIndex("Ceiling2");
-    }
-    {
-        CubeVolume& cube = g_cubeVolumesAdditive.emplace_back();
-        cube.m_transform.position = glm::vec3(-2.95f, 1.3f, 0.0f - 10.0f);
-        cube.m_transform.scale = glm::vec3(0.1f, 2.6f, 6.0f);
-        cube.materialIndex = AssetManager::GetMaterialIndex("Ceiling2");
-    }
-    // Floor
-    {
-        CubeVolume& cube = g_cubeVolumesAdditive.emplace_back();
-        cube.m_transform.position = glm::vec3(0.0f, -0.05, 0.0f);
-        cube.m_transform.scale = glm::vec3(6.0f, 0.1, 6.0f);
-        cube.materialIndex = AssetManager::GetMaterialIndex("FloorBoards");
-        cube.textureScale = 0.5f;
-    }
-    {
-        CubeVolume& cube = g_cubeVolumesAdditive.emplace_back();
-        cube.m_transform.position = glm::vec3(0.0f, -0.05, -10.0f);
-        cube.m_transform.scale = glm::vec3(6.0f, 0.1, 6.0f);
-        cube.materialIndex = AssetManager::GetMaterialIndex("FloorBoards");
-        cube.textureScale = 0.5f;
-    }
-    {
-        CubeVolume& cube = g_cubeVolumesAdditive.emplace_back();
-        cube.m_transform.position = glm::vec3(0.0f, -0.05, -5.0f);
-        cube.m_transform.scale = glm::vec3(1.2f, 0.1, 4.0f);
-        cube.materialIndex = AssetManager::GetMaterialIndex("FloorBoards");
-        cube.textureScale = 0.5f;
-    }
-    // Ceiling
-    {
-        CubeVolume& cube = g_cubeVolumesAdditive.emplace_back();
-        cube.m_transform.position = glm::vec3(0.0f, 2.55, 0.0f);
-        cube.m_transform.scale = glm::vec3(6.0f, 0.1, 6.0f);
-        cube.materialIndex = AssetManager::GetMaterialIndex("Ceiling2");
-    }
-    {
-        CubeVolume& cube = g_cubeVolumesAdditive.emplace_back();
-        cube.m_transform.position = glm::vec3(0.0f, 2.55, -10.0f);
-        cube.m_transform.scale = glm::vec3(6.0f, 0.1, 6.0f);
-        cube.materialIndex = AssetManager::GetMaterialIndex("Ceiling2");
-    }
-
-
-
-
-    // Little holes
-    float size = 0.2f;
-    {
-        CubeVolume& cube = g_cubeVolumesSubtractive.emplace_back();
-        cube.m_transform.position = glm::vec3(-1.2f - 0.2f, 1.0f, -2.90f);
-        cube.m_transform.scale = glm::vec3(size);
-        cube.materialIndex = AssetManager::GetMaterialIndex("Ceiling2");
-        cube.CreateCubePhysicsObject();
-    }
-    {
-        CubeVolume& cube = g_cubeVolumesSubtractive.emplace_back();
-        cube.m_transform.position = glm::vec3(-1.8f - 0.2f, 1.2f, -2.90f);
-        cube.m_transform.scale = glm::vec3(size);
-        cube.materialIndex = AssetManager::GetMaterialIndex("Ceiling2");
-        cube.CreateCubePhysicsObject();
-    }
-    {
-        CubeVolume& cube = g_cubeVolumesSubtractive.emplace_back();
-        cube.m_transform.position = glm::vec3(-1.5f - 0.2f, 1.8f, -2.90f);
-        cube.m_transform.scale = glm::vec3(size);
-        cube.materialIndex = AssetManager::GetMaterialIndex("Ceiling2");
-        cube.CreateCubePhysicsObject();
-    }
-
-    {
-        CubeVolume& cube = g_cubeVolumesAdditive.emplace_back();
-        cube.m_transform.position = glm::vec3(-2.2, 1.10, 1.55);
-        cube.m_transform.scale = glm::vec3(1.6, 3.08, 0.135);
-        cube.materialIndex = AssetManager::GetMaterialIndex("Ceiling2");
-    }
-    */
-
-
     CSG::Build();
     
     // FOG hack
@@ -864,7 +727,7 @@ void Scene::LoadDefaultScene() {
     ResetGameObjectStates();
     CreateBottomLevelAccelerationStructures();
 
-    Pathfinding2::UpdateNavMesh();
+    Pathfinding2::CalculateNavMesh();
 }
 
 AABB AABBFromVertices(std::span<Vertex> vertices, std::span<uint32_t> indices, glm::mat4 worldTransform) {
@@ -902,7 +765,6 @@ void Scene::CreateBottomLevelAccelerationStructures() {
             csgObject.m_blasIndex = -1;
         }
     }
-
 }
 
 
@@ -959,23 +821,6 @@ void Scene::CreateDefaultSpawnPoints() {
     }
 }
 
-void Scene::CreateDefaultLight() {
-    g_lights.clear();
-
-    Light light;
-    light.position = glm::vec3(0.0f, 2.2f, 0.0f);
-    light.isDirty = true;
-    g_lights.push_back(light);
-
-    light.position = glm::vec3(0.0f, 2.2f, -10.0f);
-    light.color = glm::vec3(1.0f, 0.0f, 0.0f);
-    light.strength = 3.0f;
-    light.isDirty = true;
-    g_lights.push_back(light);
-}
-
-
-
 void Scene::Update(float deltaTime) {
 
     /*
@@ -986,6 +831,13 @@ void Scene::Update(float deltaTime) {
     }
     */
 
+    if (Input::KeyPressed(HELL_KEY_9)) {
+        Dobermann& dobermann = Scene::g_dobermann[2];
+        dobermann.m_targetPosition = Game::GetPlayerByIndex(0)->GetFeetPosition();
+        dobermann.m_currentState = DobermannState::WALK_TO_TARGET;
+        dobermann.m_health = DOG_MAX_HEALTH;
+        dobermann.m_characterController->setFootPosition({ dobermann.m_currentPosition.x, dobermann.m_currentPosition.y, dobermann.m_currentPosition.z });
+    }
 
     if (Input::KeyPressed(HELL_KEY_L)) {
         Light& light = g_lights[0];
@@ -1038,7 +890,7 @@ void Scene::Update(float deltaTime) {
 
     if (Input::KeyPressed(HELL_KEY_5)) {
         g_dobermann[0].m_currentState = DobermannState::KAMAKAZI;
-        g_dobermann[0].m_heatlh = 100;
+        g_dobermann[0].m_health = 100;
     }
     if (Input::KeyPressed(HELL_KEY_6)) {
         for (Dobermann& dobermann : g_dobermann) {
@@ -1401,44 +1253,140 @@ void Scene::Init() {
     LoadDefaultScene();
 }
 
-std::vector<RenderItem3D> Scene::GetAllRenderItems() {
+//glm::vec2 Hash2(glm::vec2 p) {
+//    return glm::fract(sin(glm::vec2(dot(p, glm::vec2(127.1, 311.7)), dot(p, glm::vec2(269.5, 183.3)))) * 43758.5453);
+//}
+
+std::vector<RenderItem3D> GetTreeRenderItems() {
+
+    // Cache a bunch of shit
+    static Model* model = AssetManager::GetModelByIndex(AssetManager::GetModelIndexByName("Tree_0"));
+    static int barkMaterialIndex = AssetManager::GetMaterialIndex("TreeBark");
+    static int leavesMaterialIndex = AssetManager::GetMaterialIndex("TreeLeaves");
+    static int barkMeshIndex = 0;
+    static int leavesMeshIndex = 0;
+    if (barkMeshIndex == 0) {
+        for (int i = 0; i < model->GetMeshIndices().size(); i++) {
+            uint32_t& meshIndex = model->GetMeshIndices()[i];
+            Mesh* mesh = AssetManager::GetMeshByIndex(meshIndex);
+            if (mesh->name == "Bark") {
+                barkMeshIndex = meshIndex;
+            }
+            if (mesh->name == "Leaves") {
+                leavesMeshIndex = meshIndex;
+            }
+        }
+    }
+
+    static std::vector<Transform> g_treeTransforms;
+    if (g_treeTransforms.empty()) {
+
+        Timer timer("PLANT SAMPLINGS");
+
+        int iterationMax = 10000;
+        int desiredTreeCount = 500;
+
+        HeightMap& heightMap = AssetManager::g_heightMap;
+        TreeMap& treeMap = AssetManager::g_treeMap;
+
+        g_treeTransforms.reserve(desiredTreeCount);
+
+        float offsetX = heightMap.m_width * heightMap.m_transform.scale.x * -0.5f;
+        float offsetZ = heightMap.m_depth * heightMap.m_transform.scale.z * -0.5f;
+
+        for (int i = 0; i < iterationMax; i++) {                       
+
+            float x = Util::RandomFloat(0, treeMap.m_width);
+            float z = Util::RandomFloat(0, treeMap.m_depth);
+
+            if (treeMap.m_array[x][z] == 1) {              
+                Transform spawn;
+                spawn.position.x = x * heightMap.m_transform.scale.x + offsetX;
+                spawn.position.z = z * heightMap.m_transform.scale.z + offsetZ;
+                spawn.rotation.y = Util::RandomFloat(0, 1);
+                spawn.scale.y = Util::RandomFloat(1, 1.75f);
+
+               PxU32 raycastFlags = RaycastGroup::RAYCAST_ENABLED;
+               PhysXRayResult rayResult = Util::CastPhysXRay(spawn.position + glm::vec3(0, 50, 0), glm::vec3(0, -1, 0), 100, raycastFlags);
+               
+               if (rayResult.hitFound) {
+                   spawn.position.y = rayResult.hitPosition.y - 0.25f;
+               }
+               g_treeTransforms.push_back(spawn);
+            }
+
+            if (g_treeTransforms.size() == desiredTreeCount) {
+                break;
+            }            
+        }
+
+    }
+
 
     std::vector<RenderItem3D> renderItems;
 
+    for (Transform& transform : g_treeTransforms) {
+
+        for (int i = 0; i < model->GetMeshIndices().size(); i++) {
+            uint32_t& meshIndex = model->GetMeshIndices()[i];
+            Mesh* mesh = AssetManager::GetMeshByIndex(meshIndex);
+            Material* material = nullptr;
+
+            if (meshIndex == barkMeshIndex) {
+                material = AssetManager::GetMaterialByIndex(barkMaterialIndex);
+            }
+            else if (meshIndex == leavesMeshIndex) {
+                material = AssetManager::GetMaterialByIndex(leavesMaterialIndex);
+            }
+            else {
+                continue;
+            }
+            RenderItem3D& renderItem = renderItems.emplace_back();
+            renderItem.vertexOffset = mesh->baseVertex;
+            renderItem.indexOffset = mesh->baseIndex;
+            renderItem.modelMatrix = transform.to_mat4();
+            renderItem.inverseModelMatrix = inverse(renderItem.modelMatrix);
+            renderItem.meshIndex = meshIndex;
+            renderItem.baseColorTextureIndex = material->_basecolor;
+            renderItem.rmaTextureIndex = material->_rma;
+            renderItem.normalMapTextureIndex = material->_normal;
+            renderItem.castShadow = true;;
+        }
+    }
+
+    return renderItems;
+}
+
+std::vector<RenderItem3D> Scene::GetGeometryRenderItems() {
+
+    std::vector<RenderItem3D> renderItems;
+
+    // Trees
+    std::vector<RenderItem3D> treeRenderItems = GetTreeRenderItems();
+    renderItems.reserve(renderItems.size() + treeRenderItems.size());
+    renderItems.insert(std::end(renderItems), std::begin(treeRenderItems), std::end(treeRenderItems));
 
     // Staircase
     static Model* model = AssetManager::GetModelByIndex(AssetManager::GetModelIndexByName("Staircase"));
     static int materialIndex = AssetManager::GetMaterialIndex("Stairs01");
-
     for (Staircase& staircase: Scene::g_staircases) {
-
         Transform segmentOffset;
-
         for (int i = 0; i < staircase.m_stepCount / 3; i++) {
-
             for (auto& meshIndex : model->GetMeshIndices()) {
                 RenderItem3D renderItem;
                 renderItem.meshIndex = meshIndex;
                 renderItem.modelMatrix = staircase.GetModelMatrix() * segmentOffset.to_mat4();
                 renderItem.inverseModelMatrix = glm::inverse(staircase.GetModelMatrix());
-                renderItem.materialIndex = materialIndex;
+                Material* material = AssetManager::GetMaterialByIndex(materialIndex);
+                renderItem.baseColorTextureIndex = material->_basecolor;
+                renderItem.rmaTextureIndex = material->_rma;
+                renderItem.normalMapTextureIndex = material->_normal;
                 renderItems.push_back(renderItem);
             }
-            //segmentOffset.position.y += 0.411;
-            //segmentOffset.position.z += 0.44f;
-
             segmentOffset.position.y += 0.432;
             segmentOffset.position.z += 0.45f;
-
-
         }
     }
-
-
-
-
-
-
 
     for (GameObject& gameObject : Scene::g_gameObjects) {
         renderItems.reserve(renderItems.size() + gameObject.GetRenderItems().size());
@@ -1473,7 +1421,11 @@ std::vector<RenderItem3D> Scene::GetAllRenderItems() {
         renderItem.castShadow = false;
         int meshIndex = AssetManager::GetModelByIndex(casing.m_modelIndex)->GetMeshIndices()[0];
         if (meshIndex != -1) {
-            renderItem.materialIndex = casing.m_materialIndex;
+            Material* material = AssetManager::GetMaterialByIndex(casing.m_materialIndex);
+            renderItem.baseColorTextureIndex = material->_basecolor;
+            renderItem.rmaTextureIndex = material->_rma;
+            renderItem.normalMapTextureIndex = material->_normal;
+
         }
         renderItem.meshIndex = meshIndex;
     }
@@ -1498,7 +1450,10 @@ std::vector<RenderItem3D> Scene::GetAllRenderItems() {
             renderItem.meshIndex = lightBulb0MeshIndex;
             renderItem.modelMatrix = lightBulbWorldMatrix;
             renderItem.inverseModelMatrix = inverse(renderItem.modelMatrix);
-            renderItem.materialIndex = light0MaterialIndex;
+            Material* material = AssetManager::GetMaterialByIndex(light0MaterialIndex);
+            renderItem.baseColorTextureIndex = material->_basecolor;
+            renderItem.rmaTextureIndex = material->_rma;
+            renderItem.normalMapTextureIndex = material->_normal;
             renderItem.castShadow = false;
             renderItem.useEmissiveMask = 1.0f;
             renderItem.emissiveColor = light.color;
@@ -1516,9 +1471,11 @@ std::vector<RenderItem3D> Scene::GetAllRenderItems() {
                 renderItemMount.meshIndex = lightMount0MeshIndex;
                 renderItemMount.modelMatrix = mountTransform.to_mat4();
                 renderItemMount.inverseModelMatrix = inverse(renderItem.modelMatrix);
-                renderItemMount.materialIndex = light0MaterialIndex;
+                Material* material = AssetManager::GetMaterialByIndex(light0MaterialIndex);
+                renderItem.baseColorTextureIndex = material->_basecolor;
+                renderItem.rmaTextureIndex = material->_rma;
+                renderItem.normalMapTextureIndex = material->_normal;
                 renderItemMount.castShadow = false;
-
                 Transform cordTransform;
                 cordTransform.position = light.position;
                 cordTransform.scale.y = abs(rayResult.hitPosition.y - light.position.y);
@@ -1527,7 +1484,9 @@ std::vector<RenderItem3D> Scene::GetAllRenderItems() {
                 renderItemCord.meshIndex = lightCord0MeshIndex;
                 renderItemCord.modelMatrix = cordTransform.to_mat4();
                 renderItemCord.inverseModelMatrix = inverse(renderItem.modelMatrix);
-                renderItemCord.materialIndex = light0MaterialIndex;
+                renderItem.baseColorTextureIndex = material->_basecolor;
+                renderItem.rmaTextureIndex = material->_rma;
+                renderItem.normalMapTextureIndex = material->_normal;
                 renderItemCord.castShadow = false;
             }
 
@@ -1539,50 +1498,16 @@ std::vector<RenderItem3D> Scene::GetAllRenderItems() {
                 renderItem.meshIndex = wallMountedLightmodel->GetMeshIndices()[j];
                 renderItem.modelMatrix = lightBulbWorldMatrix;
                 renderItem.inverseModelMatrix = inverse(renderItem.modelMatrix);
-                renderItem.materialIndex = wallMountedLightMaterialIndex;
+                Material* material = AssetManager::GetMaterialByIndex(wallMountedLightMaterialIndex);
+                renderItem.baseColorTextureIndex = material->_basecolor;
+                renderItem.rmaTextureIndex = material->_rma;
+                renderItem.normalMapTextureIndex = material->_normal;
                 renderItem.castShadow = false;
                 renderItem.useEmissiveMask = 1.0f;
                 renderItem.emissiveColor = light.color;
             }
         }
-
-        /*
-        Transform transform;
-        transform.position = light.position;
-        shader.SetVec3("lightColor", light.color);
-        shader.SetMat4("model", transform.to_mat4());
-
-        if (light.type == 0) {
-            AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("Light"));
-
-            DrawModel(AssetManager::GetModelByIndex(AssetManager::GetModelIndexByName("Light0_Bulb")));
-
-            // Find mount position
-            PxU32 raycastFlags = RaycastGroup::RAYCAST_ENABLED;
-            PhysXRayResult rayResult = Util::CastPhysXRay(light.position, glm::vec3(0, 1, 0), 2, raycastFlags);
-            if (rayResult.hitFound) {
-                Transform mountTransform;
-                mountTransform.position = rayResult.hitPosition;
-                shader.SetMat4("model", mountTransform.to_mat4());
-
-                DrawModel(AssetManager::GetModelByIndex(AssetManager::GetModelIndexByName("Light0_Mount")));
-
-                // Stretch the cord
-                Transform cordTransform;
-                cordTransform.position = light.position;
-                cordTransform.scale.y = abs(rayResult.hitPosition.y - light.position.y);
-                shader.SetMat4("model", cordTransform.to_mat4());
-                DrawModel(AssetManager::GetModelByIndex(AssetManager::GetModelIndexByName("Light0_Cord")));
-
-            }
-        }
-        else if (light.type == 1) {
-            AssetManager::BindMaterialByIndex(AssetManager::GetMaterialIndex("LightWall"));
-            DrawModel(AssetManager::GetModelByIndex(AssetManager::GetModelIndexByName("LightWallMounted")));
-        }*/
     }
-
-
 
     return renderItems;
 }
@@ -1599,7 +1524,10 @@ std::vector<RenderItem3D> Scene::CreateDecalRenderItems() {
             RenderItem3D& renderItem = renderItems.emplace_back();
             renderItem.modelMatrix = decal.GetModelMatrix();
             renderItem.inverseModelMatrix = inverse(renderItem.modelMatrix);
-            renderItem.materialIndex = bulletHolePlasterMaterialIndex;
+            Material* material = AssetManager::GetMaterialByIndex(bulletHolePlasterMaterialIndex);
+            renderItem.baseColorTextureIndex = material->_basecolor;
+            renderItem.rmaTextureIndex = material->_rma;
+            renderItem.normalMapTextureIndex = material->_normal;
             renderItem.meshIndex = AssetManager::GetQuadMeshIndex();
         }
     }
@@ -1609,7 +1537,10 @@ std::vector<RenderItem3D> Scene::CreateDecalRenderItems() {
             RenderItem3D& renderItem = renderItems.emplace_back();
             renderItem.modelMatrix = decal.GetModelMatrix();
             renderItem.inverseModelMatrix = inverse(renderItem.modelMatrix);
-            renderItem.materialIndex = bulletHoleGlassMaterialIndex;
+            Material* material = AssetManager::GetMaterialByIndex(bulletHoleGlassMaterialIndex);
+            renderItem.baseColorTextureIndex = material->_basecolor;
+            renderItem.rmaTextureIndex = material->_rma;
+            renderItem.normalMapTextureIndex = material->_normal;
             renderItem.meshIndex = AssetManager::GetQuadMeshIndex();
         }
     }
@@ -1740,7 +1671,7 @@ void Scene::Update_OLD(float deltaTime) {
 
     if (Input::KeyPressed(HELL_KEY_T)) {
         for (Light& light : Scene::g_lights) {
-            light.isDirty = true;
+            light.m_shadowMapIsDirty = true;
         }
     }
 
@@ -1761,35 +1692,35 @@ void Scene::Update_OLD(float deltaTime) {
     ProcessPhysicsCollisions();
 }
 
-
-void Scene::DirtyAllLights() {
-    for (Light& light : Scene::g_lights) {
-        light.extraDirty = true;
-        light.m_aaabbVolumeIsDirty = true;
-    }
-}
+//
+//void Scene::DirtyAllLights() {
+//    for (Light& light : Scene::g_lights) {
+//        light.extraDirty = true;
+//        light.m_aaabbVolumeIsDirty = true;
+//    }
+//}
 
 
 void Scene::CheckForDirtyLights() {
     for (Light& light : Scene::g_lights) {
         if (!light.extraDirty) {
-            light.isDirty = false;
+            light.m_shadowMapIsDirty = false;
         }
         for (GameObject& gameObject : Scene::g_gameObjects) {
             if (gameObject.HasMovedSinceLastFrame() && gameObject.m_castShadows) {
                 if (Util::AABBInSphere(gameObject._aabb, light.position, light.radius)) {
-                    light.isDirty = true;
+                    light.m_shadowMapIsDirty = true;
                     break;
                 }
                 //std::cout << gameObject.GetName() << " has moved apparently\n";
             }
         }
 
-        if (!light.isDirty) {
+        if (!light.m_shadowMapIsDirty) {
             for (Door& door : Scene::g_doors) {
                 if (door.HasMovedSinceLastFrame()) {
                     if (Util::AABBInSphere(door._aabb, light.position, light.radius)) {
-                        light.isDirty = true;
+                        light.m_shadowMapIsDirty = true;
                         break;
                     }
                 }
@@ -1854,8 +1785,31 @@ void Scene::ProcessBullets() {
                         transform.rotation.y = bullet.parentPlayersViewRotation.y + HELL_PI;
 
                         static int typeCounter = 0;
-                        Scene::_bloodDecals.push_back(BloodDecal(transform, typeCounter));
-                        BloodDecal* decal = &Scene::_bloodDecals.back();
+
+
+                        glm::vec3 origin = glm::vec3(transform.position) + glm::vec3(0, 0.1f, 0);
+                        PxU32 raycastFlags = RaycastGroup::RAYCAST_ENABLED;
+                        PhysXRayResult rayResult = Util::CastPhysXRay(origin, glm::vec3(0, -1, 0), 3, raycastFlags);
+
+                        if (rayResult.hitFound && rayResult.physicsObjectType == PhysicsObjectType::HEIGHT_MAP) {
+                            Scene::g_bloodDecalsForMegaTexture.push_back(BloodDecal(transform, typeCounter));
+                        }
+                        else {
+                            Scene::g_bloodDecals.push_back(BloodDecal(transform, typeCounter));
+                            BloodDecal* decal = &Scene::g_bloodDecals.back();
+                        }
+
+
+
+                        // FIX THIS LATER
+
+
+
+
+
+
+
+
 
                         typeCounter++;
                         if (typeCounter == 4) {
@@ -1874,7 +1828,7 @@ void Scene::ProcessBullets() {
                             for (RigidComponent& rigidComponent : animatedGameObject->_ragdoll._rigidComponents) {
                                 if (rigidComponent.pxRigidBody == actor) {
                                     if (animatedGameObject->_animationMode == AnimatedGameObject::ANIMATION) {
-                                        dobermann.GiveDamage(bullet.damage);
+                                        dobermann.GiveDamage(bullet.damage, bullet.parentPlayerIndex);
                                     }
                                 }
                             }
@@ -3000,16 +2954,20 @@ void Scene::CleanUp() {
     }
 
     _toilets.clear();
-    _bloodDecals.clear();
+    g_bloodDecals.clear();
     g_spawnPoints.clear();
     g_bulletCasings.clear();
     g_bulletHoleDecals.clear();
 	g_doors.clear();
     g_windows.clear();
-	g_gameObjects.clear();
+    g_gameObjects.clear();
+    g_dobermann.clear();
+    g_staircases.clear();
     _pickUps.clear();
     g_lights.clear();
-
+    g_csgAdditiveShapes.clear();
+    g_csgSubtractiveShapes.clear();
+     
 	if (_sceneTriangleMesh) {
 		_sceneTriangleMesh->release();
 		_sceneShape->release();
@@ -3025,6 +2983,8 @@ void Scene::CleanUp() {
             ++i;
         }
     }
+    
+    GlobalIllumination::ClearData();
 }
 
 void Scene::CreateLight(LightCreateInfo createInfo) {
@@ -3034,7 +2994,7 @@ void Scene::CreateLight(LightCreateInfo createInfo) {
     light.radius = createInfo.radius;
     light.strength = createInfo.strength;
     light.type = createInfo.type;
-    light.isDirty = true;
+    light.m_shadowMapIsDirty = true;
     light.extraDirty = true;
 }
 

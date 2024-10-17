@@ -25,7 +25,7 @@ in vec2 TexCoord;
 void main() {
 
     vec4 baseColor = texture(sampler2D(textureSamplers[BaseColorTextureIndex]), TexCoord);
-    vec4 normalMap = texture(sampler2D(textureSamplers[NormalTextureIndex]), TexCoord);
+	vec3 normalMap = texture(sampler2D(textureSamplers[NormalTextureIndex]), TexCoord).rgb;
     vec4 rma = texture(sampler2D(textureSamplers[RMATextureIndex]), TexCoord);
 
 	mat3 tbn = mat3(Tangent, BiTangent, Normal);
@@ -35,7 +35,7 @@ void main() {
 	// It's only for the transparent leaves on the Christmas tree and 
 	// is slowing down the rendering of ALL other geometry
 	if (baseColor.a < 0.05) {
-		discard;
+		//discard;
 	}
 
     BaseColorOut = baseColor;

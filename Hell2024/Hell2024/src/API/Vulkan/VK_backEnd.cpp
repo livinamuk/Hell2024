@@ -1050,6 +1050,8 @@ void VulkanBackEnd::InitRayTracing() {
 
     VulkanRenderer::GetRaytracer().CreateRaytracingPipeline(_device, rtDescriptorSetLayouts, 1);
     VulkanRenderer::GetRaytracer().CreateShaderBindingTable(_device, _allocator, _rayTracingPipelineProperties);
+    
+    std::cout << "init raytracing\n";
 }
 
 VkTransformMatrixKHR GlmMat4ToVkTransformMatrix(glm::mat4 matrix) {
@@ -1225,7 +1227,9 @@ void VulkanBackEnd::CreateTopLevelAccelerationStructure(std::vector<VkAccelerati
 //                       //
 
 void VulkanBackEnd::CreatePointCloudVertexBuffer(std::vector<CloudPoint>& pointCloud) {
-
+    if (pointCloud.empty()) {
+        return;
+    }
     const size_t bufferSize = sizeof(CloudPoint) * pointCloud.size();
     _pointCloudBuffer.Create(_allocator, bufferSize, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 

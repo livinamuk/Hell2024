@@ -36,6 +36,7 @@ public:
 public:
 
 
+    //bool blendEnabled = false;
 
     //OpenGLModel* _model_OLD = nullptr;
     Model* model = nullptr;

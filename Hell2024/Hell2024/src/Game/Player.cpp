@@ -36,6 +36,12 @@ void Player::Update(float deltaTime) {
     AnimatedGameObject* characterModel = Scene::GetAnimatedGameObjectByIndex(m_characterModelAnimatedGameObjectIndex);
     AnimatedGameObject* viewWeaponGameObject = Scene::GetAnimatedGameObjectByIndex(m_viewWeaponAnimatedGameObjectIndex);
 
+    glm::vec3 origin = GetFeetPosition() + glm::vec3(0, 0.1f, 0);
+    PxU32 raycastFlags = RaycastGroup::RAYCAST_ENABLED;
+    PhysXRayResult rayResult = Util::CastPhysXRay(origin, glm::vec3(0, -1, 0), 3, raycastFlags);
+    m_isOutside = (rayResult.hitFound && rayResult.physicsObjectType == PhysicsObjectType::HEIGHT_MAP);
+
+
     UpdateRagdoll(); // updates pointers to rigids
 
     CheckForItemPickOverlaps();
@@ -425,7 +431,7 @@ void Player::UpdateTimers(float deltaTime) {
     _damageColorTimer = std::min(1.0f, _damageColorTimer);
 
     // Muzzle flash timer
-    _muzzleFlashCounter -= deltaTime;
+    _muzzleFlashCounter -= deltaTime * 5.0f;
     _muzzleFlashCounter = std::max(_muzzleFlashCounter, 0.0f);
     if (_muzzleFlashTimer >= 0) {
         _muzzleFlashTimer += deltaTime * 5000;                            // maybe you only use one of these?
@@ -594,6 +600,20 @@ void Player::UpdateHeadBob(float deltaTime) {
 
 
 void Player::UpdateAudio(float deltaTime) {
+
+    const std::vector<const char*> indoorFootstepFilenames = {
+                    "player_step_1.wav",
+                    "player_step_2.wav",
+                    "player_step_3.wav",
+                    "player_step_4.wav",
+    }; 
+    const std::vector<const char*> outdoorFootstepFilenames = {
+                    "player_step_grass_1.wav",
+                    "player_step_grass_2.wav",
+                    "player_step_grass_3.wav",
+                    "player_step_grass_4.wav",
+    };
+
     // Footstep audio
     if (HasControl()) {
         if (!IsMoving())
@@ -601,14 +621,14 @@ void Player::UpdateAudio(float deltaTime) {
         else {
             if (IsMoving() && _footstepAudioTimer == 0) {
                 // Audio
-                const std::vector<const char*> footstepFilenames = {
-                    "player_step_1.wav",
-                    "player_step_2.wav",
-                    "player_step_3.wav",
-                    "player_step_4.wav",
-                };
+                
                 int random = rand() % 4;
-                Audio::PlayAudio(footstepFilenames[random], 0.5f);
+                if (m_isOutside) {
+                    Audio::PlayAudio(outdoorFootstepFilenames[random], 0.5f);
+                }
+                else {
+                    Audio::PlayAudio(indoorFootstepFilenames[random], 0.5f);
+                }
             }
             float timerIncrement = m_crouching ? deltaTime * 0.75f : deltaTime;
             _footstepAudioTimer += timerIncrement;
@@ -1113,27 +1133,22 @@ glm::vec3 Player::GetGlockBarrelPosition() {
 */
 
 void Player::SpawnCasing(AmmoInfo* ammoInfo) {
-
     AnimatedGameObject* viewWeaponGameObject = Scene::GetAnimatedGameObjectByIndex(m_viewWeaponAnimatedGameObjectIndex);
     WeaponInfo* weaponInfo = GetCurrentWeaponInfo();
-
     if (!weaponInfo) {
         return;
     }
-
     if (!Util::StrCmp(ammoInfo->casingModelName, UNDEFINED_STRING)) {
-
         int modelIndex = AssetManager::GetModelIndexByName(ammoInfo->casingModelName);
         int meshIndex = AssetManager::GetModelByIndex(modelIndex)->GetMeshIndices()[0];
         int materialIndex = AssetManager::GetMaterialIndex(ammoInfo->casingMaterialName);
 
-        Mesh* casingMesh = AssetManager::GetMeshByIndex(meshIndex);
-        Model* casingModel = AssetManager::GetModelByIndex(modelIndex);
+        static Mesh* casingMesh = AssetManager::GetMeshByIndex(meshIndex);
+        static Model* casingModel = AssetManager::GetModelByIndex(modelIndex);
 
         float width = std::abs(casingMesh->aabbMax.x - casingMesh->aabbMin.x);
         float height = std::abs(casingMesh->aabbMax.y - casingMesh->aabbMin.y);
         float depth = std::abs(casingMesh->aabbMax.z - casingMesh->aabbMin.z);
-
         glm::vec3 size = glm::vec3(width, height, depth);
 
         Transform transform;
@@ -1155,12 +1170,11 @@ void Player::SpawnCasing(AmmoInfo* ammoInfo) {
         body->userData = nullptr;
         body->setName("BulletCasing");
 
-
         BulletCasing bulletCasing;
         bulletCasing.m_modelIndex = modelIndex;
         bulletCasing.m_materialIndex = materialIndex;
-        bulletCasing.m_rigidBody = body;
-        bulletCasing.m_shape = shape;
+        bulletCasing.m_pxRigidBody = body;
+        bulletCasing.m_pxShape = shape;
         Scene::g_bulletCasings.push_back(bulletCasing);
     }
     else {
@@ -1183,12 +1197,12 @@ void Player::SpawnAKS74UCasing() {
 
 void Player::SpawnBullet(float variance, Weapon type) {
     _muzzleFlashCounter = 0.0005f;
-
     Bullet bullet;
     bullet.spawnPosition = GetViewPos();
     bullet.type = type;
     bullet.raycastFlags = _bulletFlags;// RaycastGroup::RAYCAST_ENABLED;
     bullet.parentPlayersViewRotation = GetCameraRotation();
+    bullet.parentPlayerIndex = m_playerIndex;
 
     WeaponInfo* weaponInfo = GetCurrentWeaponInfo();
     if (weaponInfo) {

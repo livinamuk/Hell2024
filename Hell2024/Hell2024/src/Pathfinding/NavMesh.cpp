@@ -163,9 +163,9 @@ int calcLayerBufferSize(const int gridWidth, const int gridHeight) {
     return headerSize + gridSize * 4;
 }
 
-void NavMesh::Create2(rcContext* context, std::vector<glm::vec3>& vertices, NavMeshRegionMode regionMode) {
+/*void NavMesh::Create2(rcContext* context, std::vector<glm::vec3>& vertices, NavMeshRegionMode regionMode) {
 
-    CleanUp();
+    //CleanUp();
 
     m_heightField = rcAllocHeightfield();
     m_compactHeightField = rcAllocCompactHeightfield();
@@ -370,49 +370,73 @@ void NavMesh::Create2(rcContext* context, std::vector<glm::vec3>& vertices, NavM
 
     //return true;
 
-    /*
-    const dtNavMesh* mesh = GetDtNaveMesh();
-    for (int i = 0; i < mesh->getMaxTiles(); ++i) {
-        const dtMeshTile* tile = mesh->getTile(i);
-        if (!tile || !tile->header) {
-            std::cout << "Tile " << i << " is invalid or has no header." << std::endl;
-            continue;
-        }
-        std::cout << "Tile " << i << " is valid with " << tile->header->polyCount << " polygons." << std::endl;
+    
+   // const dtNavMesh* mesh = GetDtNaveMesh();
+   // for (int i = 0; i < mesh->getMaxTiles(); ++i) {
+   //     const dtMeshTile* tile = mesh->getTile(i);
+   //     if (!tile || !tile->header) {
+   //         std::cout << "Tile " << i << " is invalid or has no header." << std::endl;
+   //         continue;
+   //     }
+   //     std::cout << "Tile " << i << " is valid with " << tile->header->polyCount << " polygons." << std::endl;
+   //
+   //
+   //     for (int j = 0; j < tile->header->polyCount; ++j) {
+   //         const dtPoly* poly = &tile->polys[j];
+   //         std::cout << "Poly " << j << " has " << poly->vertCount << " vertices." << std::endl;
+   //         for (int k = 0; k < poly->vertCount; ++k) {
+   //             const float* v = &tile->verts[poly->verts[k] * 3];
+   //             std::cout << "Vertex " << k << ": (" << v[0] << ", " << v[1] << ", " << v[2] << ")" << std::endl;
+   //         }
+   //     }
+   // }
+   //
+   // for (int i = 0; i < GetTileCache()->getTileCount(); ++i) {
+   //     const dtCompressedTile* tile = GetTileCache()->getTile(i);
+   //     if (tile && tile->header) {
+   //         std::cout << "TileCache Tile " << i << " is valid." << std::endl;
+   //     }
+   //     else {
+   //         std::cout << "TileCache Tile " << i << " is invalid." << std::endl;
+   //     }
+   // }
+    
+}*/
+#include "Timer.hpp"
 
-
-        for (int j = 0; j < tile->header->polyCount; ++j) {
-            const dtPoly* poly = &tile->polys[j];
-            std::cout << "Poly " << j << " has " << poly->vertCount << " vertices." << std::endl;
-            for (int k = 0; k < poly->vertCount; ++k) {
-                const float* v = &tile->verts[poly->verts[k] * 3];
-                std::cout << "Vertex " << k << ": (" << v[0] << ", " << v[1] << ", " << v[2] << ")" << std::endl;
-            }
-        }
-    }
-
-    for (int i = 0; i < GetTileCache()->getTileCount(); ++i) {
-        const dtCompressedTile* tile = GetTileCache()->getTile(i);
-        if (tile && tile->header) {
-            std::cout << "TileCache Tile " << i << " is valid." << std::endl;
-        }
-        else {
-            std::cout << "TileCache Tile " << i << " is invalid." << std::endl;
-        }
-    }
-    */
-}
-
-void NavMesh::Create(rcContext* context, std::vector<glm::vec3>& vertices, NavMeshRegionMode regionMode) {
-
-    CleanUp();
+void NavMesh::AllocateMemory() {
 
     m_talloc = new LinearAllocator(32000);
     m_tcomp = new FastLZCompressor;
     m_tmproc = new MeshProcess;
 
+    m_heightField = rcAllocHeightfield();
+    m_compactHeightField = rcAllocCompactHeightfield();
+    m_polyMesh = rcAllocPolyMesh();
+    m_contourSet = rcAllocContourSet();
+    m_polyMesh = rcAllocPolyMesh();
+    m_polyMeshDetail = rcAllocPolyMeshDetail();
+    m_navMesh = dtAllocNavMesh();
+    m_navQuery = dtAllocNavMeshQuery();
+    m_tileCache = dtAllocTileCache();
+
+    m_memoryAllocated = true;
+    std::cout << "Navmesh memory allocated\n";
+}
+
+void NavMesh::Create(rcContext* context, std::vector<glm::vec3>& vertices, NavMeshRegionMode regionMode) {
+
+    Timer timer("NavMesh::Create");
+
+    //CleanUp();
+
+    if (!m_memoryAllocated) {
+        AllocateMemory();
+    }
+
     m_vertices = vertices;
     m_indices.clear();
+    m_indices.reserve(vertices.size());
 
     for (size_t i = 0; i < vertices.size(); i++) {
         m_indices.push_back(i);
@@ -454,16 +478,6 @@ void NavMesh::Create(rcContext* context, std::vector<glm::vec3>& vertices, NavMe
     cfg.bmax[1] = GetBoundsMaxY();
     cfg.bmax[2] = GetBoundsMaxZ();
     rcCalcGridSize(cfg.bmin, cfg.bmax, cfg.cs, &cfg.width, &cfg.height);
-
-    m_heightField = rcAllocHeightfield();
-    m_compactHeightField = rcAllocCompactHeightfield();
-    m_polyMesh = rcAllocPolyMesh();
-    m_contourSet = rcAllocContourSet();
-    m_polyMesh = rcAllocPolyMesh();
-    m_polyMeshDetail = rcAllocPolyMeshDetail();
-    m_navMesh = dtAllocNavMesh();
-    m_navQuery = dtAllocNavMeshQuery();
-    m_tileCache = dtAllocTileCache();
 
     unsigned char* triareas = new unsigned char[GetTriCount()];
     memset(triareas, 0, GetTriCount() * sizeof(unsigned char));

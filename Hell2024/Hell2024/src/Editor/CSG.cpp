@@ -176,7 +176,7 @@ namespace CSG {
                 CSGObject& csg = g_objects.emplace_back();
                 csg.m_transform.position = door.m_position + glm::vec3(0, DOOR_HEIGHT / 2, 0);
                 csg.m_transform.rotation = glm::vec3(0, door.m_rotation, 0);
-                csg.m_transform.scale = glm::vec3(0.2f, DOOR_HEIGHT, 0.8f);
+                csg.m_transform.scale = glm::vec3(0.2f, DOOR_HEIGHT, 0.81f);
                 csg.m_type = CSGType::DOOR;
                 csg.m_materialIndex = AssetManager::GetMaterialIndex("FloorBoards"); // add this to the door object somehow
                 csg.m_textureScale = 0.5f;                                           // add this to the door object somehow
@@ -489,7 +489,7 @@ namespace CSG {
                 g_sceneDirty = false;
             }
             for (Light& light : Scene::g_lights) {
-                light.isDirty = true;
+                light.m_shadowMapIsDirty = true;
             }
         }
 

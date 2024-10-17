@@ -29,12 +29,13 @@ struct RenderItem3D {
     mat4 modelMatrix;
     mat4 inverseModelMatrix;
     int meshIndex;
-    int materialIndex;
+    int baseColorTextureIndex;
+    int normalMapTextureIndex;
+    int rmaTextureIndex;
     int vertexOffset;
     int indexOffset;
     int castShadow;
     int useEmissiveMask;
-    int isGold;
     float emissiveColorR;
     float emissiveColorG;
     float emissiveColorB;
@@ -44,21 +45,13 @@ struct RenderItem3D {
     float aabbMaxX;
     float aabbMaxY;
     float aabbMaxZ;
-};
-
-struct Material {
-	int baseColorTextureIndex;
-	int normalTextureIndex;
-	int rmaTextureIndex;
-	int emissiveTextureIndex;
+    float padding0;
+    float padding1;
+    float padding2;
 };
 
 layout(std430, binding = 1) readonly buffer renderItems {
     RenderItem3D RenderItems[];
-};
-
-layout(std430, binding = 3) readonly buffer materials {
-    Material Materials[];
 };
 
 void main() {
@@ -69,19 +62,10 @@ void main() {
     TexCoord = vTexCoord;
 
     // Load render item and material data
-    RenderItem3D renderItem = RenderItems[index];
-    Material material = Materials[renderItem.materialIndex];
-
-    // Base textures
-    BaseColorTextureIndex = material.baseColorTextureIndex;
-    NormalTextureIndex = material.normalTextureIndex;
-    RMATextureIndex = material.rmaTextureIndex;
-
-    // Check if the item is gold early on
-    if (renderItem.isGold == 1) {
-        BaseColorTextureIndex = goldBaseColorTextureIndex;
-        RMATextureIndex = goldRMATextureIndex;
-    }
+    RenderItem3D renderItem = RenderItems[index];	
+	BaseColorTextureIndex =  RenderItems[index].baseColorTextureIndex;
+	NormalTextureIndex =  RenderItems[index].normalMapTextureIndex;
+	RMATextureIndex =  RenderItems[index].rmaTextureIndex;
 
     // Emissive mask and color
     useEmissiveMask = renderItem.useEmissiveMask;
@@ -89,11 +73,11 @@ void main() {
 
     // Compute model-space and normal-space transformations
     mat4 modelMatrix = renderItem.modelMatrix;
-    mat4 normalMatrix = transpose(renderItem.inverseModelMatrix);
+	mat4 normalMatrix = transpose(renderItem.inverseModelMatrix);
 
-    Normal = normalize((normalMatrix * vec4(vNormal, 0)).xyz);
-    Tangent = (modelMatrix * vec4(vTangent, 0.0)).xyz;
-    BiTangent = normalize(cross(vNormal, Tangent));
+	Normal = normalize(normalMatrix * vec4(vNormal, 0)).xyz;
+	Tangent = normalize(normalMatrix * vec4(vTangent, 0)).xyz;
+	BiTangent = normalize(cross(Normal, Tangent));
 
     // Compute the final position of the vertex in screen space
     gl_Position = projection * view * modelMatrix * vec4(vPos, 1.0);

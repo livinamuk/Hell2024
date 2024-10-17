@@ -27,6 +27,49 @@ namespace Util {
    //     return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
    // }
 
+    inline std::string MenuTypeToString(MenuType menuType) {
+        if (menuType == MenuType::NONE) {
+            return "NONE";
+        }
+        else if (menuType == MenuType::INSERT) {
+            return "INSERT";
+        }
+        else if (menuType == MenuType::FILE) {
+            return "FILE";
+        }
+        else if (menuType == MenuType::SELECTED_OBJECT) {
+            return "SELECTED_OBJECT";
+        }
+        else if (menuType == MenuType::MISC) {
+            return "MISC";
+        }
+        else {
+            return "UNDEFINED";
+        }
+    }
+    
+
+    inline std::string DobermannStateToString(DobermannState& state) {
+        if (state == DobermannState::LAY) {
+            return "LAY";
+        }
+        else if (state == DobermannState::PATROL) {
+            return "PATROL";
+        }
+        else if (state == DobermannState::KAMAKAZI) {
+            return "KAMAKAZI";
+        }
+        else if (state == DobermannState::DOG_SHAPED_PIECE_OF_MEAT) {
+            return "DOG_SHAPED_PIECE_OF_MEAT";
+        }
+        else if (state == DobermannState::RETURN_TO_ORIGIN) {
+            return "RETURN_TO_ORIGIN";
+        }
+        else {
+            return "UNDEFINED";
+        }
+    }
+
     inline std::string PhysicsObjectTypeToString(PhysicsObjectType& type) {
 
         if (type == PhysicsObjectType::GAME_OBJECT) {
@@ -1231,6 +1274,23 @@ namespace Util {
         }
     }
 
+    inline FacingDirection DetermineFacingDirection(const glm::vec3& forwardVector, const glm::vec3& point, const glm::vec3& origin) {
+        glm::vec3 pointVector = point - origin;
+        glm::vec3 forwardNormalized = glm::normalize(forwardVector);
+        glm::vec3 pointNormalized = glm::normalize(pointVector);
+        glm::vec3 rightVector = glm::vec3(forwardNormalized.z, 0.0f, -forwardNormalized.x);
+        float dotProduct = glm::dot(pointNormalized, rightVector);
+        if (dotProduct > 0) {
+            return FacingDirection::LEFT;
+        }
+        else if (dotProduct < 0) {
+            return FacingDirection::RIGHT;
+        }
+        // The point is directly in front or behind
+        return FacingDirection::ALIGNED;
+    }
+
+    /*
     inline FacingDirection DetermineFacingDirection(glm::vec3& forwardA, const glm::vec3& forwardB) {
         glm::vec3 xzForwardA = glm::normalize(glm::vec3(forwardA.x, 0, forwardA.z));
         glm::vec3 xzForwardB = glm::normalize(glm::vec3(forwardB.x, 0, forwardB.z));
@@ -1243,7 +1303,7 @@ namespace Util {
             return FacingDirection::LEFT;
         }
         return FacingDirection::ALIGNED;
-    }
+    }*/
 
     inline int RoundDownToMultiple(int inputValue, int roundingValue) {
         if (roundingValue == 0) {
@@ -1282,4 +1342,65 @@ namespace Util {
         glm::vec3 aabbMax = worldCenter + worldExtent;
         return AABB(aabbMin, aabbMax);
     }*/
+
+    inline void CreateSolidSphereVerticsAndIndices(std::vector<Vertex>& vertices, std::vector<uint32_t>& indices, float radius, int segments) {
+        segments = std::max(segments, 4);
+        float theta_step = glm::two_pi<float>() / segments;
+        float phi_step = glm::pi<float>() / segments;
+        for (int i = 0; i <= segments; ++i) {
+            float phi = i * phi_step;
+            for (int j = 0; j <= segments; ++j) {
+                float theta = j * theta_step;
+                glm::vec3 point_on_sphere(
+                    radius * sin(phi) * cos(theta),
+                    radius * cos(phi),
+                    radius * sin(phi) * sin(theta)
+                );
+                glm::vec3 current_point = point_on_sphere;
+                glm::vec3 normal = glm::normalize(point_on_sphere);
+                glm::vec2 uv(theta / glm::two_pi<float>(), phi / glm::pi<float>());
+                glm::vec3 tangent = glm::normalize(glm::vec3(-radius * sin(phi) * sin(theta), 0, radius * sin(phi) * cos(theta)));
+                vertices.emplace_back(current_point, normal);
+                vertices.back().uv = uv;
+                vertices.back().tangent = tangent;
+            }
+        }
+        for (int i = 0; i < segments; ++i) {
+            for (int j = 0; j < segments; ++j) {
+                int current = i * (segments + 1) + j;
+                int next = current + segments + 1;
+                indices.push_back(current);
+                indices.push_back(next);
+                indices.push_back(current + 1);
+                indices.push_back(current + 1);
+                indices.push_back(next);
+                indices.push_back(next + 1);
+            }
+        }
+    }
+
+    inline glm::vec3 GetEulerAnglesFromForwardVector(const glm::vec3& forward) {
+        glm::vec3 eulerAngles;
+        // Calculate the yaw (rotation around the y-axis)
+        eulerAngles.y = glm::atan(forward.x, forward.z);
+        // Calculate the pitch (rotation around the x-axis)
+        eulerAngles.x = glm::atan(-forward.y, glm::length(glm::vec2(forward.x, forward.z)));
+        // Roll is typically not necessary unless you're dealing with banking/tilting, so set it to 0.
+        eulerAngles.z = 0.0f;
+        return eulerAngles;
+    }
+
+    inline float CalculateAngleDifference(float angle1, float angle2) {
+        angle1 = fmod(angle1, 2 * HELL_PI);
+        angle2 = fmod(angle2, 2 * HELL_PI);
+        float difference = angle1 - angle2;
+        if (difference > HELL_PI) {
+            difference -= 2 * HELL_PI;
+        }
+        else if (difference < -HELL_PI) {
+            difference += 2 * HELL_PI;
+        }
+        return difference;
+    }
 }
+

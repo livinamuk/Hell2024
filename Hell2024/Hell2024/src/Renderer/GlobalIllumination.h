@@ -11,4 +11,8 @@ namespace GlobalIllumination {
     LightVolume* GetLightVolumeByIndex(int index);
     void RecalculateAll();
     void DestroyAllLightVolumes();
+    void ClearData();
+
+    bool GPUDataAwaitingClear();
+    void MarkGPUDataCleared();
 }

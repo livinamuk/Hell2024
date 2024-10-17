@@ -920,9 +920,17 @@ void GameObject::UpdateRenderItems() {
         renderItem.modelMatrix = GetModelMatrix();
         renderItem.inverseModelMatrix = inverse(renderItem.modelMatrix);
         renderItem.meshIndex = meshIndex;
-        renderItem.isGold = m_isGold;
+        Material* material = AssetManager::GetMaterialByIndex(_meshMaterialIndices[i]);
+        if (m_isGold) {
+            renderItem.baseColorTextureIndex = AssetManager::GetGoldBaseColorTextureIndex();
+            renderItem.rmaTextureIndex = AssetManager::GetGoldRMATextureIndex();
+        }
+        else {
+            renderItem.baseColorTextureIndex = material->_basecolor;
+            renderItem.rmaTextureIndex = material->_rma;
+        }
+        renderItem.normalMapTextureIndex = material->_normal;
         renderItem.castShadow = m_castShadows;
-        renderItem.materialIndex = _meshMaterialIndices[i];
         renderItem.aabbMin = _aabb.boundsMin;
         renderItem.aabbMax = _aabb.boundsMax;
     }

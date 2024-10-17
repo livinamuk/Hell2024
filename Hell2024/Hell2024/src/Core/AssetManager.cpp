@@ -8,7 +8,8 @@
 #include "../BackEnd/BackEnd.h"
 #include "../Util.hpp"
 #include "../Types/Enums.h"
-#include "../DDS/DDS_Helpers.h"
+#include "../Tools/DDSHelpers.h"
+#include "../Tools/ImageTools.h"
 #include <future>
 #include <thread>
 #include <numeric>
@@ -19,6 +20,16 @@
 #include <stb_image.h>
 #include "tiny_obj_loader.h"
 
+struct CMPTextureData {
+    CMP_Texture m_cmpTexture;
+    std::string m_textureName;
+    std::string m_sourceFilePath;
+    std::string m_compressedFilePath;
+    std::string m_suffix;    
+    LoadingState m_loadingState = LoadingState::AWAITING_LOADING_FROM_DISK;
+    BakingState m_bakingState = BakingState::AWAITING_BAKE;
+};
+
 namespace AssetManager {
 
     struct CompletedLoadingTasks {
@@ -26,6 +37,7 @@ namespace AssetManager {
         bool g_materials = false;
         bool g_texturesBaked = false;
         bool g_cubemapTexturesBaked = false;
+        bool g_cmpTexturesBaked = false;
         bool g_all = false;
     } g_completedLoadingTasks;
 
@@ -77,7 +89,12 @@ namespace AssetManager {
     std::mutex _consoleMutex;
     std::vector<std::future<void>> _futures;
 
+    std::vector<CMPTextureData> g_cmpTextureData;
+
     void GrabSkeleton(SkinnedModel& skinnedModel, const aiNode* pNode, int parentIndex);
+    TextureData LoadTextureData(std::string filepath);
+
+    void LoadCMPTextureData(CMPTextureData* cmpTextureData);
 }
 
 
@@ -91,6 +108,17 @@ namespace AssetManager {
 ███▌    ▄ ███    ███   ███    ███ ███   ▄███ ███  ███   ███   ███    ███
 █████▄▄██  ▀██████▀    ███    █▀  ████████▀  █▀    ▀█   █▀    ████████▀  */
 
+
+TextureData AssetManager::LoadTextureData(std::string filepath) {
+    stbi_set_flip_vertically_on_load(false);
+    TextureData textureData;
+    textureData.m_data = stbi_load(filepath.data(), &textureData.m_width, &textureData.m_height, &textureData.m_numChannels, 0);
+    return textureData;
+}
+
+void AssetManager::LoadCMPTextureData(CMPTextureData* cmpTextureData) {
+    LoadDDSFile(cmpTextureData->m_compressedFilePath.c_str(), cmpTextureData->m_cmpTexture);
+}
 
 void AssetManager::FindAssetPaths() {
     // Cubemap Textures
@@ -128,20 +156,60 @@ void AssetManager::FindAssetPaths() {
             g_skinnedModels.emplace_back(info.fullpath.c_str());
         }
     }
+
+    // Load compressed DDS textures if OpenGL
+    if (BackEnd::GetAPI() == API::OPENGL) {
+        // Textures
+        auto compressedTexturePaths = std::filesystem::directory_iterator("res/textures/");
+        for (const auto& entry : compressedTexturePaths) {
+            FileInfo info = Util::GetFileInfo(entry);
+            if (info.filetype == "png" || info.filetype == "jpg" || info.filetype == "tga") {
+                std::string compressedPath = "res/textures/dds/" + info.filename + ".dds";
+                std::string suffix = info.filename.substr(info.filename.length() - 3);
+                CMPTextureData& cmpTextureData = g_cmpTextureData.emplace_back();
+                cmpTextureData.m_compressedFilePath = compressedPath;
+                cmpTextureData.m_sourceFilePath = info.fullpath;
+                cmpTextureData.m_suffix = suffix;
+                cmpTextureData.m_textureName = Util::GetFilename(info.fullpath);
+            }
+        }
+
+        // Compress any textures that don't have dds files yet
+        std::vector<std::future<void>> futures;
+        for (int i = 0; i < g_cmpTextureData.size(); i++) {
+            CMPTextureData* cmpTextureData = &g_cmpTextureData[i];
+            futures.push_back(std::async(std::launch::async, [cmpTextureData]() {
+                if (!Util::FileExists(cmpTextureData->m_compressedFilePath)) {
+                    TextureData textureData = LoadTextureData(cmpTextureData->m_sourceFilePath);
+                    ImageTools::CompresssDXT3(cmpTextureData->m_compressedFilePath.c_str(), static_cast<unsigned char*>(textureData.m_data), textureData.m_width, textureData.m_height, textureData.m_numChannels);
+                    stbi_image_free(textureData.m_data);
+                }
+            }));
+        }
+        for (auto& future : futures) {
+            future.get();
+        }
+        futures.clear();
+    }
+    // And for Vulkan do nothing, because they are picked up below
+    else if (BackEnd::GetAPI() == API::VULKAN) {
+        // Do nothing
+    }
+
+
     // Textures
-    std::vector<std::string> allTexturePaths;
     auto texturePaths = std::filesystem::directory_iterator("res/textures/");
     for (const auto& entry : texturePaths) {
         FileInfo info = Util::GetFileInfo(entry);
         if (info.filetype == "png" || info.filetype == "jpg" || info.filetype == "tga") {
-            allTexturePaths.push_back(info.fullpath.c_str());
+            g_textures.emplace_back(Texture(info.fullpath, true));
         }
     }
     auto uiTexturePaths = std::filesystem::directory_iterator("res/textures/ui/");
     for (const auto& entry : uiTexturePaths) {
         FileInfo info = Util::GetFileInfo(entry);
         if (info.filetype == "png" || info.filetype == "jpg" || info.filetype == "tga") {
-            allTexturePaths.push_back(info.fullpath.c_str());
+            g_textures.emplace_back(Texture(info.fullpath, false));
         }
     }
     if (BackEnd::GetAPI() == API::OPENGL) {
@@ -149,12 +217,9 @@ void AssetManager::FindAssetPaths() {
         for (const auto& entry : vatTexturePaths) {
             FileInfo info = Util::GetFileInfo(entry);
             if (info.filetype == "exr") {
-                allTexturePaths.push_back(info.fullpath.c_str());
+                g_textures.emplace_back(Texture(info.fullpath, false));
             }
         }
-    }
-    for (auto& path : allTexturePaths) {
-        g_textures.emplace_back(Texture(path));
     }
 }
 
@@ -182,13 +247,21 @@ void AssetManager::LoadNextItem() {
         g_completedLoadingTasks.g_hardcodedModels = true;
         return;
     }
+    // CMP Textures
+    for (CMPTextureData& cmpTextureData : g_cmpTextureData) {
+        if (cmpTextureData.m_loadingState == LoadingState::AWAITING_LOADING_FROM_DISK) {
+            cmpTextureData.m_loadingState = LoadingState::LOADING_FROM_DISK;
+            _futures.push_back(std::async(std::launch::async, LoadCMPTextureData, &cmpTextureData));
+            AddItemToLoadLog(cmpTextureData.m_compressedFilePath);
+            return;
+        }
+    }
     // Cubemap Textures
     for (CubemapTexture& cubemapTexture : g_cubemapTextures) {
         if (cubemapTexture.m_awaitingLoadingFromDisk) {
             cubemapTexture.m_awaitingLoadingFromDisk = false;
             AddItemToLoadLog(cubemapTexture.m_fullPath);
             _futures.push_back(std::async(std::launch::async, LoadCubemapTexture, &cubemapTexture));
-            // TODO: get baking out of here
             return;
         }
     }
@@ -201,11 +274,11 @@ void AssetManager::LoadNextItem() {
             return;
         }
     }
-    for (Animation& animation : g_animations) {
-        if (!animation.m_loadedFromDisk) {
-            return;
-        }
-    }
+  // for (Animation& animation : g_animations) {
+  //     if (!animation.m_loadedFromDisk) {
+  //         return;
+  //     }
+  // }
     // Skinned Models
     for (SkinnedModel& skinnedModel : g_skinnedModels) {
         if (skinnedModel.m_awaitingLoadingFromDisk) {
@@ -215,11 +288,11 @@ void AssetManager::LoadNextItem() {
             return;
         }
     }
-    for (SkinnedModel& skinnedModel : g_skinnedModels) {
-        if (!skinnedModel.m_loadedFromDisk) {
-            return;
-        }
-    }
+   // for (SkinnedModel& skinnedModel : g_skinnedModels) {
+   //     if (!skinnedModel.m_loadedFromDisk) {
+   //         return;
+   //     }
+   // }
     // Models
     for (Model& model : g_models) {
         if (model.m_awaitingLoadingFromDisk) {
@@ -229,13 +302,19 @@ void AssetManager::LoadNextItem() {
             return;
         }
     }
-    for (Model& model : g_models) {
-        if (!model.m_loadedFromDisk) {
-            return;
-        }
-    }
+   //for (Model& model : g_models) {
+   //    if (!model.m_loadedFromDisk) {
+   //        return;
+   //    }
+   //}
     // Textures
     for (Texture& texture : g_textures) {
+
+        // Skip this texture if OpenGL marked it as compressed
+        if (BackEnd::GetAPI() == API::OPENGL && texture.m_compressed) {
+            continue;
+        }
+        // Vulkan currently is WIP and takes these ones
         if (texture.GetLoadingState() == LoadingState::AWAITING_LOADING_FROM_DISK) {
             texture.SetLoadingState(LoadingState::LOADING_FROM_DISK);
             _futures.push_back(std::async(std::launch::async, LoadTexture, &texture));
@@ -244,16 +323,36 @@ void AssetManager::LoadNextItem() {
         }
     }
     // Await async loading
-    for (Texture& texture : g_textures) {
-        if (texture.GetLoadingState() != LoadingState::LOADING_COMPLETE) {
-            return;
-        }
+    //for (Texture& texture : g_textures) {
+    //    if (texture.GetLoadingState() != LoadingState::LOADING_COMPLETE) {
+    //        return;
+    //    }
+    //}
+
+    // This may not be necessary, but probably is 
+    bool allFuturesCompleted = std::all_of(_futures.begin(), _futures.end(), [](std::future<void>& f) {
+        return f.wait_for(std::chrono::seconds(0)) == std::future_status::ready;
+    });
+    if (allFuturesCompleted) {
+        _futures.clear();
     }
-    // Build materials
-    if (!g_completedLoadingTasks.g_materials) {
-        BuildMaterials();
-        AddItemToLoadLog("Building Materials");
-        g_completedLoadingTasks.g_materials = true;
+    else {
+        return;
+    }
+
+    // Bake CMPTextures
+    if (!g_completedLoadingTasks.g_cmpTexturesBaked) {
+        for (CMPTextureData& cmpTextureData: g_cmpTextureData) {
+            Texture* texture = GetTextureByName(cmpTextureData.m_textureName);
+            if (texture) {
+                texture->BakeCMPData(&cmpTextureData.m_cmpTexture);
+            }
+            else {
+                std::cout << cmpTextureData.m_textureName << " not found \n";
+            }
+        }
+        AddItemToLoadLog("Uploading CMPTextures to GPU");
+        g_completedLoadingTasks.g_cmpTexturesBaked = true;
         return;
     }
     // Bake textures
@@ -276,10 +375,8 @@ void AssetManager::LoadNextItem() {
         g_completedLoadingTasks.g_cubemapTexturesBaked = true;
         return;
     }
+    
     // Build index maps
-    for (int i = 0; i < g_materials.size(); i++) {
-        g_materialIndexMap[g_materials[i]._name] = i;
-    }
     for (int i = 0; i < g_textures.size(); i++) {
         g_textureIndexMap[g_textures[i].GetFilename()] = i;
     }
@@ -308,8 +405,27 @@ void AssetManager::LoadNextItem() {
         VulkanRenderer::CreatePipelines();
     }
 
-    g_heightMap.Load("res/textures/heightmaps/HeightMap.png", 1000.0f);
-    g_heightMap.UploadToGPU();
+
+    // Build materials
+    if (!g_completedLoadingTasks.g_materials) {
+        BuildMaterials();
+        AddItemToLoadLog("Building Materials");
+        g_completedLoadingTasks.g_materials = true;
+        return;
+    }
+    for (int i = 0; i < g_materials.size(); i++) {
+        g_materialIndexMap[g_materials[i]._name] = i;
+    }
+
+    // Heightmap
+    if (BackEnd::GetAPI() == API::OPENGL) {
+        g_treeMap.Load("res/textures/heightmaps/TreeMap.png");
+        g_heightMap.Load("res/textures/heightmaps/HeightMap.png", 20.0f);
+        g_heightMap.UploadToGPU();
+    }
+    else if (BackEnd::GetAPI() == API::VULKAN) {
+        // TODO
+    }
 
     // We're done
     g_completedLoadingTasks.g_all = true;
@@ -340,7 +456,7 @@ void AssetManager::LoadFont() {
     for (const auto& entry : texturePaths) {
         FileInfo info = Util::GetFileInfo(entry);
         if (info.filetype == "png" || info.filetype == "jpg" || info.filetype == "tga") {
-            Texture& texture = g_textures.emplace_back(Texture(info.fullpath.c_str()));
+            Texture& texture = g_textures.emplace_back(Texture(info.fullpath.c_str(), false));
             LoadTexture(&texture);
             texture.Bake();
         }
@@ -796,7 +912,6 @@ int AssetManager::CreateSkinnedMesh(std::string name, std::vector<WeightedVertex
 
 void AssetManager::BuildMaterials() {
 
-
     std::cout << "g_textureIndexMap.size(): " << g_textureIndexMap.size() << "\n";
 
     std::lock_guard<std::mutex> lock(_texturesMutex);
@@ -814,7 +929,7 @@ void AssetManager::BuildMaterials() {
             int rmaIndex = AssetManager::GetTextureIndexByName(material._name + "_RMA", true);
 
 
-            std::cout << "Trying to build material: " << material._name << "\n";
+//            std::cout << "Trying to build material: " << material._name << "\n";
 
            // int basecolorIndex = AssetManager::GetTextureIndexByName("NumGrid_ALB", true);
            // int normalIndex = AssetManager::GetTextureIndexByName("Empty_NRMRMA", true);
@@ -1140,6 +1255,7 @@ int AssetManager::GetTextureIndexByName(const std::string& name, bool ignoreWarn
         }*/
         if (!ignoreWarning) {
             std::cout << "AssetManager::GetTextureIndexByName() failed because '" << name << "' does not exist\n";
+
         }
         return -1;
     }

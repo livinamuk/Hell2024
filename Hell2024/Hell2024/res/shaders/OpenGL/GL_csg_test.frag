@@ -23,7 +23,8 @@ in vec2 TexCoord;
 void main() {
 
     vec4 baseColor = texture(sampler2D(textureSamplers[BaseColorTextureIndex]), TexCoord);
-    vec4 normalMap = texture(sampler2D(textureSamplers[NormalTextureIndex]), TexCoord);
+	vec3 compressedNormal = texture(sampler2D(textureSamplers[NormalTextureIndex]), TexCoord).rgb;   
+	vec3 normalMap = texture(sampler2D(textureSamplers[NormalTextureIndex]), TexCoord).rgb;
     vec4 rma = texture(sampler2D(textureSamplers[RMATextureIndex]), TexCoord);
 
 	mat3 tbn = mat3(normalize(attrTangent), normalize(attrBiTangent), normalize(attrNormal));

@@ -1,0 +1,93 @@
+#version 430 core
+
+layout (local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+
+layout(r32f, binding = 0) uniform image2D outputTexture;
+layout(rgba8, binding = 1) uniform image2D lightingTexture;
+layout (binding = 0) uniform sampler2D normalTexture;
+layout (binding = 1) uniform sampler2D noiseTexture;
+layout (binding = 2) uniform sampler2D positionTexture;
+layout (binding = 3) uniform sampler2D depthTexture;
+
+struct CameraData {
+    mat4 projection;
+    mat4 projectionInverse;
+    mat4 view;
+    mat4 viewInverse;
+	float viewportWidth;
+	float viewportHeight;
+    float viewportOffsetX;
+    float viewportOffsetY;
+	float clipSpaceXMin;
+    float clipSpaceXMax;
+    float clipSpaceYMin;
+    float clipSpaceYMax;
+	float finalImageColorContrast;
+    float finalImageColorR;
+    float finalImageColorG;
+    float finalImageColorB;
+};
+
+layout(std430, binding = 16) readonly buffer CameraDataArray {
+    CameraData cameraDataArray[];
+};
+
+uniform vec3 samples[64];
+
+// Tweeking variables
+int kernelSize = 8;
+float radius = 0.25;
+float bias = 0.025;
+float strength = 1.0;
+
+void main() {
+
+	vec2 viewportSize = imageSize(outputTexture);
+	ivec2 pixelCoords = ivec2(gl_GlobalInvocationID.xy);
+    //const vec2 pixelCenter = vec2(gl_GlobalInvocationID.xy) + vec2(0.5);	// check here to resolve pixel bug
+	vec2 uv = (vec2(pixelCoords) + vec2(0.5)) / viewportSize;
+	int playerIndex = int(texture(normalTexture, uv).a * 4 + 0.5);
+	mat4 projection = cameraDataArray[playerIndex].projection;
+	mat4 view = cameraDataArray[playerIndex].view;
+	vec3 viewPos = cameraDataArray[playerIndex].viewInverse[3].xyz;
+
+    const uvec2 screenResolution = uvec2(viewportSize.x, viewportSize.y);
+    //const vec2 viewportRatio = vec2(viewportData.viewportWidth, viewportData.viewportHeight) / vec2(textureSize(positionTexture, 0));
+    const vec2 noiseScale = vec2(viewportSize.x / 4, viewportSize.y/ 4); 
+    // Skip out-of-bounds threads
+    if (pixelCoords.x >= viewportSize.x || pixelCoords.y >= viewportSize.y) {
+        return;
+    }	
+    // Skip if we have no geometry at this pixel.
+    if (texture(normalTexture, uv).rgb == vec3(0.0, 0.0, 0.0)) {        
+        imageStore(outputTexture, pixelCoords, vec4(1, 0, 0, 0));;
+    }
+    vec3 fragPos = (view * vec4(texture(positionTexture, uv).rgb, 1.0)).xyz;
+    vec3 normal = (view * vec4(normalize(texture(normalTexture, uv).rgb), 0.0)).xyz;
+    vec3 randomVec = normalize(texture(noiseTexture, uv * noiseScale).xyz);
+    vec3 tangent = normalize(randomVec - normal * dot(randomVec, normal));
+    vec3 bitangent = cross(normal, tangent);
+    mat3 TBN = mat3(tangent, bitangent, normal);
+    float occlusion = 0.0;
+
+    for(int i = 0; i < kernelSize; ++i) {
+        vec3 samplePos = TBN * samples[i];
+        samplePos = fragPos + samplePos * radius; 
+        vec4 offset = vec4(samplePos, 1.0);
+        offset = projection * offset; 
+        offset.xyz /= offset.w;
+        offset.xyz = offset.xyz * 0.5 + 0.5;			
+        vec3 sampleNormal = texture(normalTexture, offset.xy).rgb;
+        if (sampleNormal == vec3(0.0, 0.0, 0.0)) {
+            continue;
+        }
+        vec3 sampleDepthWorldPos = (view * vec4(texture(positionTexture, offset.xy).rgb, 1.0)).xyz;
+        float sampleDepth = sampleDepthWorldPos.z;
+        float rangeCheck = smoothstep(0.0, 1.0, radius / abs(fragPos.z - sampleDepth));
+        occlusion += (sampleDepth >= samplePos.z + bias ? 1.0 : 0.0) * rangeCheck;           
+    }
+    occlusion = 1.0 - (occlusion / kernelSize);
+    occlusion = mix(1.0, occlusion, strength);
+		
+    imageStore(outputTexture, pixelCoords, vec4(occlusion, 0 , 0, 0));	
+}

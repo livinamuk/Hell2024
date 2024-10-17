@@ -1,0 +1,56 @@
+#version 460 core
+
+layout (local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+layout(rgba8, binding = 0) uniform image2D outputTexture;
+layout (binding = 0) uniform sampler2D depthTexture;
+layout (binding = 1) uniform sampler2D normalTexture;
+
+struct CameraData {
+    mat4 projection;
+    mat4 projectionInverse;
+    mat4 view;
+    mat4 viewInverse;
+	float viewportWidth;
+	float viewportHeight;
+    float viewportOffsetX;
+    float viewportOffsetY;
+	float clipSpaceXMin;
+    float clipSpaceXMax;
+    float clipSpaceYMin;
+    float clipSpaceYMax;
+	float finalImageColorContrast;
+    float finalImageColorR;
+    float finalImageColorG;
+    float finalImageColorB;
+};
+
+layout(std430, binding = 16) readonly buffer CameraDataArray {
+    CameraData cameraDataArray[];
+};
+
+void main() {
+	vec2 viewportSize = imageSize(outputTexture);
+	ivec2 pixelCoords = ivec2(gl_GlobalInvocationID.xy);
+	vec2 uv = (vec2(pixelCoords) + vec2(0.5)) / viewportSize;
+	int playerIndex = int(texture(normalTexture, uv).a * 4 + 0.5);
+	vec3 normal = texture(normalTexture, uv).rgb;
+	mat4 inverseProjection = cameraDataArray[playerIndex].projectionInverse;
+	mat4 inverseView = cameraDataArray[playerIndex].viewInverse;
+	vec3 viewPos = cameraDataArray[playerIndex].viewInverse[3].xyz;
+	float clipSpaceXMin = cameraDataArray[playerIndex].clipSpaceXMin;
+	float clipSpaceXMax = cameraDataArray[playerIndex].clipSpaceXMax;
+	float clipSpaceYMin = cameraDataArray[playerIndex].clipSpaceYMin;
+	float clipSpaceYMax = cameraDataArray[playerIndex].clipSpaceYMax;
+	mat4 projection = cameraDataArray[playerIndex].projection;
+	mat4 view = cameraDataArray[playerIndex].view;
+	mat4 projectionView = projection * view;	
+	float z = texture(depthTexture, uv).r;
+    vec2 clipSpaceTexCoord = uv;
+	clipSpaceTexCoord.x = (clipSpaceTexCoord.x - clipSpaceXMin) / (clipSpaceXMax - clipSpaceXMin);
+	clipSpaceTexCoord.y = (clipSpaceTexCoord.y - clipSpaceYMin) / (clipSpaceYMax - clipSpaceYMin);
+	vec4 clipSpacePosition = vec4(clipSpaceTexCoord * 2.0 - 1.0, z, 1.0);
+    vec4 viewSpacePosition = inverseProjection * clipSpacePosition;
+    viewSpacePosition /= viewSpacePosition.w;
+    vec4 worldSpacePosition = inverseView * viewSpacePosition;
+	imageStore(outputTexture, pixelCoords, vec4(worldSpacePosition.xyz, 1));
+}

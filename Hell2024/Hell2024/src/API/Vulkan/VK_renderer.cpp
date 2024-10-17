@@ -20,6 +20,7 @@
 #include "../../Renderer/GlobalIllumination.h"
 #include "../../Renderer/Renderer.h"
 #include "../../Renderer/TextBlitter.h"
+#include "../../Renderer/RendererData.h"
 
 namespace VulkanRenderer {
 
@@ -178,16 +179,11 @@ namespace VulkanRenderer {
     }
 
     void VulkanRenderer::HotloadShaders() {
-
         std::cout << "Hotloading shaders...\n";
-
         VkDevice device = VulkanBackEnd::GetDevice();
         VmaAllocator allocator = VulkanBackEnd::GetAllocator();
-
         vkDeviceWaitIdle(device);
         CreateShaders();
-
-
         if (_raytracer.LoadShaders(device, "path_raygen.rgen", "path_miss.rmiss", "path_shadow.rmiss", "path_closesthit.rchit")) {
             _raytracer.Cleanup(device, allocator);
             CreatePipelines();
@@ -627,6 +623,7 @@ namespace VulkanRenderer {
         vkCreateDescriptorPool(device, &pool_info, nullptr, &descriptorPool);
 
         // Dynamic
+        _descriptorSets.dynamic.SetDebugName("Dynamic Descriptor Set");
         _descriptorSets.dynamic.AddBinding(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 0, 1, VK_SHADER_STAGE_COMPUTE_BIT | VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR);	// camera data
         _descriptorSets.dynamic.AddBinding(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, 1, VK_SHADER_STAGE_VERTEX_BIT); // 2D Render items
         _descriptorSets.dynamic.AddBinding(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 2, 1, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR); // 3D Render items
@@ -644,6 +641,7 @@ namespace VulkanRenderer {
         VulkanBackEnd::AddDebugName(_descriptorSets.dynamic.layout, "Dynamic Descriptor Set Layout");
 
         // UI Hires
+        _descriptorSets.uiHiRes.SetDebugName("uiHiRes Descriptor Set");
         _descriptorSets.uiHiRes.AddBinding(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 0, 1, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR);	// camera data
         _descriptorSets.uiHiRes.AddBinding(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, 1, VK_SHADER_STAGE_VERTEX_BIT); // 2D Render items
         _descriptorSets.uiHiRes.AddBinding(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 2, 1, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR); // 3D Render items
@@ -654,6 +652,7 @@ namespace VulkanRenderer {
         VulkanBackEnd::AddDebugName(_descriptorSets.uiHiRes.layout, "UI HI Res Descriptor Set Layout");
 
         // All Textures
+        _descriptorSets.allTextures.SetDebugName("All Textures Descriptor Set");
         _descriptorSets.allTextures.AddBinding(VK_DESCRIPTOR_TYPE_SAMPLER, 0, 1, VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR | VK_SHADER_STAGE_FRAGMENT_BIT);							// sampler
         _descriptorSets.allTextures.AddBinding(VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1, TEXTURE_ARRAY_SIZE, VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR | VK_SHADER_STAGE_FRAGMENT_BIT);	// all textures
         _descriptorSets.allTextures.BuildSetLayout(device);
@@ -661,6 +660,7 @@ namespace VulkanRenderer {
         VulkanBackEnd::AddDebugName(_descriptorSets.allTextures.layout, "All Textures Descriptor Set Layout");
 
         // Render Targets
+        _descriptorSets.renderTargets.SetDebugName("Render Targets Descriptor Set");
         _descriptorSets.renderTargets.AddBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 0, 1, VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_FRAGMENT_BIT); // Base color
         _descriptorSets.renderTargets.AddBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, 1, VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT); // Normals
         _descriptorSets.renderTargets.AddBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 2, 1, VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_FRAGMENT_BIT); // RMA
@@ -675,6 +675,7 @@ namespace VulkanRenderer {
         VulkanBackEnd::AddDebugName(_descriptorSets.renderTargets.layout, "Render Targets Descriptor Set Layout");
 
         // Raytracing
+        _descriptorSets.raytracing.SetDebugName("Raytracing Descriptor Set");
         _descriptorSets.raytracing.AddBinding(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 0, 1, VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR); // All vertices
         _descriptorSets.raytracing.AddBinding(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, 1, VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR); // All indices
         _descriptorSets.raytracing.AddBinding(VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 2, 1, VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR); // Raytracing output
@@ -683,6 +684,7 @@ namespace VulkanRenderer {
         _descriptorSets.raytracing.AllocateSet(device, descriptorPool);
         VulkanBackEnd::AddDebugName(_descriptorSets.raytracing.layout, "Raytracing Descriptor Set Layout");
 
+        _descriptorSets.computeSkinning.SetDebugName("Compute Skinning Descriptor Set");
         _descriptorSets.computeSkinning.AddBinding(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 0, 1, VK_SHADER_STAGE_COMPUTE_BIT); // Input vertex buffer
         _descriptorSets.computeSkinning.AddBinding(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, 1, VK_SHADER_STAGE_COMPUTE_BIT); // Output vertex buffer
         _descriptorSets.computeSkinning.AddBinding(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 2, 1, VK_SHADER_STAGE_COMPUTE_BIT); // Transforms
@@ -692,12 +694,14 @@ namespace VulkanRenderer {
         VulkanBackEnd::AddDebugName(_descriptorSets.computeSkinning.layout, "Compute Skinning Descriptor Set Layout");
 
         // Global illumination
+        _descriptorSets.globalIllumination.SetDebugName("Global Illumination Descriptor Set");
         _descriptorSets.globalIllumination.AddBinding(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 0, 1, VK_SHADER_STAGE_VERTEX_BIT); // Point cloud
         _descriptorSets.globalIllumination.BuildSetLayout(device);
         _descriptorSets.globalIllumination.AllocateSet(device, descriptorPool);
         VulkanBackEnd::AddDebugName(_descriptorSets.globalIllumination.layout, "Global Illumination Descriptor Set Layout");
 
         // Player 1 blur targets
+        _descriptorSets.blurTargetsP1.SetDebugName("Blur Target P1 Descriptor Set");
         _descriptorSets.blurTargetsP1.AddBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 0, 1, VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT);
         _descriptorSets.blurTargetsP1.AddBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, 1, VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT);
         _descriptorSets.blurTargetsP1.AddBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 2, 1, VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT);
@@ -717,6 +721,7 @@ namespace VulkanRenderer {
         VkDescriptorImageInfo samplerImageInfo = {};
         samplerImageInfo.sampler = sampler;
         _descriptorSets.allTextures.Update(device, 0, 1, VK_DESCRIPTOR_TYPE_SAMPLER, &samplerImageInfo);
+        VulkanBackEnd::AddDebugName(_descriptorSets.allTextures.layout, "AllTextures Descriptor Set Layout");
     }
 
     DescriptorSet& VulkanRenderer::GetDynamicDescriptorSet() {
@@ -843,10 +848,6 @@ namespace VulkanRenderer {
             frame.buffers.glassRenderItems.Create(allocator, MAX_GLASS_MESH_COUNT * sizeof(RenderItem3D), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
             frame.buffers.muzzleFlashData.Create(allocator, 4 * sizeof(MuzzleFlashData), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
-
-
-
-
             Buffer skinnedMeshTransforms;
             Buffer skinnedMeshTransformBaseIndices;
 
@@ -865,6 +866,10 @@ namespace VulkanRenderer {
     }
 
     void UpdateStorageBuffer(DescriptorSet& descriptorSet, uint32_t bindngIndex, Buffer& buffer, void* data, size_t size) {
+        if (size == 0) {
+            //std::cout << "UpdateStorageBuffer() called but size was 0\n";
+            return;
+        }
         VkDevice device = VulkanBackEnd::GetDevice();
         VmaAllocator allocator = VulkanBackEnd::GetAllocator();
         FrameData& currentFrame = VulkanBackEnd::GetCurrentFrame();
@@ -1090,7 +1095,8 @@ namespace VulkanRenderer {
         blitDstCoords.dstX1 = BackEnd::GetCurrentWindowWidth();
         blitDstCoords.dstY1 = BackEnd::GetCurrentWindowHeight();
 
-        BlitRenderTargetIntoSwapChain(commandBuffer, _renderTargets.present, swapchainImageIndex, blitDstCoords);
+        //BlitRenderTargetIntoSwapChain(commandBuffer, _renderTargets.present, swapchainImageIndex, blitDstCoords);
+        BlitRenderTargetIntoSwapChain(commandBuffer, _renderTargets.gBufferBasecolor, swapchainImageIndex, blitDstCoords);
 
         // CHANGE BACK WHEN YOURE DONE WITH GLASS STUFF
         // CHANGE BACK WHEN YOURE DONE WITH GLASS STUFF
@@ -1206,6 +1212,7 @@ namespace VulkanRenderer {
     void UpdateIndirectCommandBuffer(VkBuffer commandsBuffer, std::vector<DrawIndexedIndirectCommand>& commands) {
 
         if (commands.empty()) {
+            //std::cout << "UpdateIndirectCommandBuffer() ERROR, commands was size 0\n";
             return;
         }
 
@@ -1348,71 +1355,53 @@ namespace VulkanRenderer {
         }
         FrameData& currentFrame = VulkanBackEnd::GetCurrentFrame();
 
+        // One time only update the compute skinning descriptor set with the weighted vertex buffer 
         static bool runOnce = true;
         if (runOnce) {
             VulkanRenderer::UpdateRayTracingDecriptorSet();
-
             _descriptorSets.computeSkinning.Update(VulkanBackEnd::GetDevice(), 0, 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VulkanBackEnd::_mainWeightedVertexBuffer._buffer);
-
-
             runOnce = false;
         }
 
         // Feed data to GPU
         WaitForFence();
 
-
-        // YOU COMMENTED OUT BELOW WHEN IMPLEMENTING FRUSTUM CULLING IN THE GL RENDERER. THE VK RENDERER IS FUCKED NOW COZ OF IT
-        // YOU COMMENTED OUT BELOW WHEN IMPLEMENTING FRUSTUM CULLING IN THE GL RENDERER. THE VK RENDERER IS FUCKED NOW COZ OF IT
-        // YOU COMMENTED OUT BELOW WHEN IMPLEMENTING FRUSTUM CULLING IN THE GL RENDERER. THE VK RENDERER IS FUCKED NOW COZ OF IT
-        // YOU COMMENTED OUT BELOW WHEN IMPLEMENTING FRUSTUM CULLING IN THE GL RENDERER. THE VK RENDERER IS FUCKED NOW COZ OF IT
-        // YOU COMMENTED OUT BELOW WHEN IMPLEMENTING FRUSTUM CULLING IN THE GL RENDERER. THE VK RENDERER IS FUCKED NOW COZ OF IT
-        // YOU COMMENTED OUT BELOW WHEN IMPLEMENTING FRUSTUM CULLING IN THE GL RENDERER. THE VK RENDERER IS FUCKED NOW COZ OF IT
-        // YOU COMMENTED OUT BELOW WHEN IMPLEMENTING FRUSTUM CULLING IN THE GL RENDERER. THE VK RENDERER IS FUCKED NOW COZ OF IT
-
-        //UpdateTLAS(renderData.geometryDrawInfo.renderItems);
-
-        // YOU COMMENTED OUT ABOVE WHEN IMPLEMENTING FRUSTUM CULLING IN THE GL RENDERER. THE VK RENDERER IS FUCKED NOW COZ OF IT
-        // YOU COMMENTED OUT ABOVE WHEN IMPLEMENTING FRUSTUM CULLING IN THE GL RENDERER. THE VK RENDERER IS FUCKED NOW COZ OF IT
-        // YOU COMMENTED OUT ABOVE WHEN IMPLEMENTING FRUSTUM CULLING IN THE GL RENDERER. THE VK RENDERER IS FUCKED NOW COZ OF IT
-        // YOU COMMENTED OUT ABOVE WHEN IMPLEMENTING FRUSTUM CULLING IN THE GL RENDERER. THE VK RENDERER IS FUCKED NOW COZ OF IT
-        // YOU COMMENTED OUT ABOVE WHEN IMPLEMENTING FRUSTUM CULLING IN THE GL RENDERER. THE VK RENDERER IS FUCKED NOW COZ OF IT
-        // YOU COMMENTED OUT ABOVE WHEN IMPLEMENTING FRUSTUM CULLING IN THE GL RENDERER. THE VK RENDERER IS FUCKED NOW COZ OF IT
-        // YOU COMMENTED OUT ABOVE WHEN IMPLEMENTING FRUSTUM CULLING IN THE GL RENDERER. THE VK RENDERER IS FUCKED NOW COZ OF IT
-
+        UpdateTLAS(RendererData::g_sceneGeometryRenderItems);
 
         UpdateStorageBuffer(_descriptorSets.dynamic, 4, currentFrame.buffers.lights, renderData.lights.data(), sizeof(GPULight) * renderData.lights.size());
 
 
         // Commands
         for (int i = 0; i < renderData.playerCount; i++) {
-            UpdateIndirectCommandBuffer(currentFrame.buffers.drawCommandBuffers[i].geometry.buffer, renderData.geometryIndirectDrawInfo.playerDrawCommands[i]);
-            UpdateIndirectCommandBuffer(currentFrame.buffers.drawCommandBuffers[i].bulletHoleDecals.buffer, renderData.bulletHoleDecalIndirectDrawInfo.playerDrawCommands[i]);
+            UpdateIndirectCommandBuffer(currentFrame.buffers.drawCommandBuffers[i].geometry.buffer, RendererData::g_geometryDrawInfo[i].commands);
+            UpdateIndirectCommandBuffer(currentFrame.buffers.drawCommandBuffers[i].bulletHoleDecals.buffer, RendererData::g_bulletDecalDrawInfo[i].commands);
             UpdateIndirectCommandBuffer(currentFrame.buffers.drawCommandBuffers[i].glass.buffer, renderData.glassDrawInfo.commands);
         }
 
         // Shader storage objects
-        UpdateStorageBuffer(_descriptorSets.dynamic, 2, currentFrame.buffers.renderItems3D, renderData.geometryIndirectDrawInfo.instanceData.data(), sizeof(RenderItem3D) * renderData.geometryIndirectDrawInfo.instanceData.size());
-        UpdateStorageBuffer(_descriptorSets.dynamic, 8, currentFrame.buffers.bulletDecalInstanceData, renderData.bulletHoleDecalIndirectDrawInfo.instanceData.data(), sizeof(RenderItem3D) * renderData.bulletHoleDecalIndirectDrawInfo.instanceData.size());
+        UpdateStorageBuffer(_descriptorSets.dynamic, 2, currentFrame.buffers.renderItems3D, &RendererData::g_geometryRenderItems[0], sizeof(RenderItem3D) * RendererData::g_geometryRenderItems.size());
+        UpdateStorageBuffer(_descriptorSets.dynamic, 8, currentFrame.buffers.bulletDecalInstanceData, &RendererData::g_bulletDecalRenderItems[0], sizeof(RenderItem3D) * RendererData::g_bulletDecalRenderItems.size());
 
 
         UpdateStorageBuffer(_descriptorSets.dynamic, 0, currentFrame.buffers.cameraData, &renderData.cameraData, sizeof(CameraData) * PLAYER_COUNT);
      //   UpdateStorageBuffer(_descriptorSets.dynamic, 2, currentFrame.buffers.renderItems3D, renderData.geometryDrawInfo.renderItems.data(), sizeof(RenderItem3D) * renderData.geometryDrawInfo.renderItems.size());
+
         UpdateStorageBuffer(_descriptorSets.uiHiRes, 1, currentFrame.buffers.renderItems2DHiRes, renderData.renderItems2DHiRes.data(), sizeof(RenderItem2D) * renderData.renderItems2DHiRes.size());
+
         UpdateStorageBuffer(_descriptorSets.dynamic, 1, currentFrame.buffers.renderItems2D, renderData.renderItems2D.data(), sizeof(RenderItem2D) * renderData.renderItems2D.size());
         //UpdateStorageBuffer(_descriptorSets.dynamic, 5, currentFrame.buffers.geometryInstanceData, renderData.geometryInstanceData.data(), sizeof(RenderItem3D) * renderData.geometryInstanceData.size());
 
         UpdateStorageBuffer(_descriptorSets.dynamic, 6, currentFrame.buffers.animatedRenderItems3D, renderData.allSkinnedRenderItems.data(), sizeof(SkinnedRenderItem) * renderData.allSkinnedRenderItems.size());
 
 
+        // You can most likely delete this, because compute skinning uses a different helicopter set
+       // You can most likely delete this, because compute skinning uses a different helicopter set
+       // You can most likely delete this, because compute skinning uses a different helicopter set
+        //UpdateStorageBuffer(_descriptorSets.dynamic, 7, currentFrame.buffers.animatedTransforms, (*renderData.animatedTransforms).data(), sizeof(glm::mat4) * (*renderData.animatedTransforms).size());
 
-        UpdateStorageBuffer(_descriptorSets.dynamic, 7, currentFrame.buffers.animatedTransforms, (*renderData.animatedTransforms).data(), sizeof(glm::mat4) * (*renderData.animatedTransforms).size());
         UpdateStorageBuffer(_descriptorSets.dynamic, 9, currentFrame.buffers.tlasRenderItems, renderData.shadowMapGeometryDrawInfo.renderItems.data(), sizeof(RenderItem3D) * renderData.shadowMapGeometryDrawInfo.renderItems.size());
-
-
         UpdateStorageBuffer(_descriptorSets.dynamic, 10, currentFrame.buffers.glassRenderItems, renderData.glassDrawInfo.renderItems.data(), sizeof(RenderItem3D) * renderData.glassDrawInfo.renderItems.size());
         UpdateStorageBuffer(_descriptorSets.dynamic, 11, currentFrame.buffers.muzzleFlashData, &renderData.muzzleFlashData[0], sizeof(MuzzleFlashData) * 4);
-
 
         // Skinning stuff
         // Calculate total amount of vertices to skin and allocate space
@@ -1431,26 +1420,25 @@ namespace VulkanRenderer {
         UpdateStorageBuffer(_descriptorSets.computeSkinning, 2, currentFrame.buffers.skinningTransforms, renderData.skinningTransforms.data(), sizeof(glm::mat4) * renderData.skinningTransforms.size());
         UpdateStorageBuffer(_descriptorSets.computeSkinning, 3, currentFrame.buffers.skinningTransformBaseIndices, renderData.baseAnimatedTransformIndices.data(), sizeof(glm::uint32_t) * renderData.baseAnimatedTransformIndices.size());
 
-
         ResetFence();
 
         // Render passes
 
-        BeginRendering();
-        ComputeSkin(renderData);
-        GeometryPass(renderData);
-        DrawBulletDecals(renderData);
-        RaytracingPass();
-        GlassPass(renderData);
-        LightingPass();
-        EmissivePass(renderData);
-        MuzzleFlashPass(renderData);
-        DebugPassProbePass(renderData);
-        PostProcessingPass(renderData);
-        RenderUI(renderData.renderItems2DHiRes, _renderTargets.lighting, _pipelines.uiHiRes, _descriptorSets.uiHiRes, false);
-        DownScaleGBuffer();
-        DebugPass(renderData);
-        RenderUI(renderData.renderItems2D, _renderTargets.present, _pipelines.ui, _descriptorSets.dynamic, false);
+       BeginRendering();
+       ComputeSkin(renderData);
+       GeometryPass(renderData);
+       //DrawBulletDecals(renderData);
+       RaytracingPass();
+       //GlassPass(renderData);
+       //LightingPass();
+       //EmissivePass(renderData);
+       //MuzzleFlashPass(renderData);
+       //DebugPassProbePass(renderData);
+       //PostProcessingPass(renderData);
+       //RenderUI(renderData.renderItems2DHiRes, _renderTargets.lighting, _pipelines.uiHiRes, _descriptorSets.uiHiRes, false);
+       //DownScaleGBuffer();
+       //DebugPass(renderData);
+       //RenderUI(renderData.renderItems2D, _renderTargets.present, _pipelines.ui, _descriptorSets.dynamic, false);
         EndRendering(_renderTargets.present, renderData);
     }
 
@@ -1716,7 +1704,6 @@ namespace VulkanRenderer {
 
         vkCmdBeginRendering(commandBuffer, &renderingInfo);
 
-
         // Non skinned mesh
         VkDeviceSize offset = 0;
         BindPipeline(commandBuffer, _pipelines.gBuffer);
@@ -1735,14 +1722,15 @@ namespace VulkanRenderer {
 
             PushConstants pushConstants;
             pushConstants.playerIndex = i;
-            pushConstants.instanceOffset = renderData.geometryIndirectDrawInfo.instanceDataOffests[i];
+            pushConstants.instanceOffset = RendererData::g_geometryDrawInfo[i].baseInstance;
             vkCmdPushConstants(commandBuffer, _pipelines.gBuffer._layout, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(PushConstants), &pushConstants);
 
             VkBuffer indirectBuffer = frame.buffers.drawCommandBuffers[i].geometry.buffer;
-            uint32_t indirectDrawCount = renderData.geometryIndirectDrawInfo.playerDrawCommands[i].size();
+            uint32_t indirectDrawCount = RendererData::g_geometryDrawInfo[i].commands.size();
             vkCmdDrawIndexedIndirect(commandBuffer, indirectBuffer, 0, indirectDrawCount, sizeof(VkDrawIndexedIndirectCommand));
         }
 
+        vkCmdEndRendering(commandBuffer);
 
 
         // Skinned mesh
@@ -1951,8 +1939,6 @@ namespace VulkanRenderer {
 
     void MuzzleFlashPass(RenderData& renderData) {
 
-
-
         SplitscreenMode splitscreenMode = Game::GetSplitscreenMode();
         unsigned int renderTargetWidth = _renderTargets.lighting.GetWidth();
         unsigned int renderTargetHeight = _renderTargets.lighting.GetHeight();
@@ -1987,7 +1973,6 @@ namespace VulkanRenderer {
         renderingInfo.pStencilAttachment = nullptr;
 
         vkCmdBeginRendering(commandBuffer, &renderingInfo);
-
 
         VkDeviceSize offset = 0;
         BindPipeline(commandBuffer, _pipelines.flipbook);
@@ -2162,11 +2147,8 @@ namespace VulkanRenderer {
     █  █ ▀  ▀ ▀▀▀▀   ▀   ▀ ▀▀ ▀  ▀ ▀▀▀ ▀ ▀  ▀ ▀▀▀▀    ▀    ▀  ▀ ▀▀▀ ▀▀▀ */
 
     void RaytracingPass() {
-
+        Vulkan::RenderTarget& renderTarget = _renderTargets.raytracing;
         VkCommandBuffer commandBuffer = VulkanBackEnd::GetCurrentFrame()._commandBuffer;
-
-        int width = _renderTargets.raytracing.GetWidth();
-        int height = _renderTargets.raytracing.GetHeight();
 
         BindRayTracingPipeline(commandBuffer, _raytracer.pipeline);
         BindRayTracingDescriptorSet(commandBuffer, _raytracer.pipelineLayout, 0, _descriptorSets.dynamic);
@@ -2174,14 +2156,16 @@ namespace VulkanRenderer {
         BindRayTracingDescriptorSet(commandBuffer, _raytracer.pipelineLayout, 2, _descriptorSets.renderTargets);
         BindRayTracingDescriptorSet(commandBuffer, _raytracer.pipelineLayout, 3, _descriptorSets.raytracing);
 
-        // Trace rays
         _renderTargets.gBufferBasecolor.insertImageBarrier(commandBuffer, VK_IMAGE_LAYOUT_GENERAL, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT);
         _renderTargets.gBufferNormal.insertImageBarrier(commandBuffer, VK_IMAGE_LAYOUT_GENERAL, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT);
         _renderTargets.gBufferRMA.insertImageBarrier(commandBuffer, VK_IMAGE_LAYOUT_GENERAL, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT);
         _renderTargets.gbufferDepth.InsertImageBarrier(commandBuffer, VK_IMAGE_LAYOUT_GENERAL, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT);
         _renderTargets.raytracing.insertImageBarrier(commandBuffer, VK_IMAGE_LAYOUT_GENERAL, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT);
 
-        vkCmdTraceRaysKHR(commandBuffer, &_raytracer.raygenShaderSbtEntry, &_raytracer.missShaderSbtEntry, &_raytracer.hitShaderSbtEntry, &_raytracer.callableShaderSbtEntry, width, height, 1);
+
+
+        vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, _raytracer.pipeline);
+        vkCmdTraceRaysKHR(commandBuffer, &_raytracer.raygenShaderSbtEntry, &_raytracer.missShaderSbtEntry, &_raytracer.hitShaderSbtEntry, &_raytracer.callableShaderSbtEntry, renderTarget.GetWidth(), renderTarget.GetHeight(), 1);
     }
 }
 

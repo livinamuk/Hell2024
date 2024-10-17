@@ -101,6 +101,7 @@ private:
     int m_mouseIndex = -1;
     int m_keyboardIndex = -1;
     float m_capsuleRadius = 0.1f;
+    bool m_isOutside = false;
     ShellEjectionState m_shellEjectionState;
 
     glm::mat4 m_casingSpawnMatrix = glm::mat4(1);

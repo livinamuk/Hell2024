@@ -53,7 +53,9 @@ std::vector<RenderItem2D> Player::GetHudRenderItems(hell::ivec2 presentSize) {
         }*/
 
         RendererUtil::AddRenderItems(renderItems, TextBlitter::CreateText(text, debugTextLocation, presentSize, Alignment::TOP_LEFT, BitmapFontType::STANDARD));
+    
     }
+
 
     // Press Start
     if (RespawnAllowed()) {
@@ -252,8 +254,15 @@ void Player::UpdateAttachmentRenderItems() {
         renderItem.inverseModelMatrix = inverse(renderItem.modelMatrix);
         renderItem.meshIndex = meshIndex;
         renderItem.castShadow = false;
-        renderItem.isGold = viewWeaponAnimatedGameObject->IsGold();
-        renderItem.materialIndex = materialIndex;
+        Material* material = AssetManager::GetMaterialByIndex(materialIndex);
+        if (viewWeaponAnimatedGameObject->IsGold()) {
+            renderItem.baseColorTextureIndex = AssetManager::GetGoldBaseColorTextureIndex();
+            renderItem.rmaTextureIndex = AssetManager::GetGoldRMATextureIndex();
+        }
+        else {
+            renderItem.baseColorTextureIndex = material->_basecolor;
+            renderItem.rmaTextureIndex = material->_rma;
+        }
     }
 
     // Silencer
@@ -271,8 +280,15 @@ void Player::UpdateAttachmentRenderItems() {
         renderItem.inverseModelMatrix = inverse(renderItem.modelMatrix);
         renderItem.meshIndex = meshIndex;
         renderItem.castShadow = false;
-        renderItem.isGold = viewWeaponAnimatedGameObject->IsGold();
-        renderItem.materialIndex = materialIndex;
+        Material* material = AssetManager::GetMaterialByIndex(materialIndex);
+        if (viewWeaponAnimatedGameObject->IsGold()) {
+            renderItem.baseColorTextureIndex = AssetManager::GetGoldBaseColorTextureIndex();
+            renderItem.rmaTextureIndex = AssetManager::GetGoldRMATextureIndex();
+        }
+        else {
+            renderItem.baseColorTextureIndex = material->_basecolor;
+            renderItem.rmaTextureIndex = material->_rma;
+        }
     }
 
     if (weaponInfo->name == "GoldenGlock" && false) {
@@ -291,8 +307,15 @@ void Player::UpdateAttachmentRenderItems() {
             renderItem.inverseModelMatrix = inverse(renderItem.modelMatrix);
             renderItem.meshIndex = meshIndex;
             renderItem.castShadow = false;
-            renderItem.isGold = viewWeaponAnimatedGameObject->IsGold();
-            renderItem.materialIndex = materialIndex;
+            Material* material = AssetManager::GetMaterialByIndex(materialIndex);
+            if (viewWeaponAnimatedGameObject->IsGold()) {
+                renderItem.baseColorTextureIndex = AssetManager::GetGoldBaseColorTextureIndex();
+                renderItem.rmaTextureIndex = AssetManager::GetGoldRMATextureIndex();
+            }
+            else {
+                renderItem.baseColorTextureIndex = material->_basecolor;
+                renderItem.rmaTextureIndex = material->_rma;
+            }
         }
 
         // Actual Lazer
@@ -322,7 +345,15 @@ void Player::UpdateAttachmentRenderItems() {
             renderItem.emissiveColor = RED;
             renderItem.useEmissiveMask = true;
             renderItem.castShadow = false;
-            renderItem.materialIndex = materialIndex;
+            Material* material = AssetManager::GetMaterialByIndex(materialIndex);
+            if (viewWeaponAnimatedGameObject->IsGold()) {
+                renderItem.baseColorTextureIndex = AssetManager::GetGoldBaseColorTextureIndex();
+                renderItem.rmaTextureIndex = AssetManager::GetGoldRMATextureIndex();
+            }
+            else {
+                renderItem.baseColorTextureIndex = material->_basecolor;
+                renderItem.rmaTextureIndex = material->_rma;
+            }
         }
     }
 }
@@ -354,8 +385,10 @@ void Player::UpdateAttachmentGlassRenderItems() {
         renderItem.inverseModelMatrix = inverse(renderItem.modelMatrix);
         renderItem.meshIndex = meshIndex;
         renderItem.castShadow = false;
-        renderItem.isGold = viewWeaponAnimatedGameObject->IsGold();
-        renderItem.materialIndex = materialIndex;
+        Material* material = AssetManager::GetMaterialByIndex(materialIndex);
+        renderItem.baseColorTextureIndex = material->_basecolor;
+        renderItem.rmaTextureIndex = material->_rma;
+        renderItem.normalMapTextureIndex = material->_normal;
     }
 }
 

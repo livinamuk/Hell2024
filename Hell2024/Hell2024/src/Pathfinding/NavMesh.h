@@ -131,7 +131,7 @@ public:
 struct NavMesh {
 
     void Create(rcContext* context, std::vector<glm::vec3>& vertices, NavMeshRegionMode regionMode);
-    void Create2(rcContext* context, std::vector<glm::vec3>& vertices, NavMeshRegionMode regionMode);
+    //void Create2(rcContext* context, std::vector<glm::vec3>& vertices, NavMeshRegionMode regionMode);
     std::vector<glm::vec3> FindPath(glm::vec3 startPos, glm::vec3 endPos);
     rcPolyMesh* GetPolyMesh();
     dtNavMesh* GetDtNaveMesh();
@@ -154,10 +154,13 @@ private:
     int* GetTriangles();
     int GetVertexCount();
     int GetTriCount();
+    void AllocateMemory();
 
     struct LinearAllocator* m_talloc;
     struct FastLZCompressor* m_tcomp;
     struct MeshProcess* m_tmproc;
+
+    bool m_memoryAllocated = false;
 
     //LinearAllocator* m_talloc;
     //FastLZCompressor* m_tcomp;

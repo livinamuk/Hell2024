@@ -20,6 +20,7 @@
 #include "../Types/Modular/Window.h"
 #include "../Util.hpp"
 
+#include "../Editor/CSGPlane.hpp"
 
 inline float RandFloat(float min, float max) {
     return min + static_cast <float> (rand()) / (static_cast <float> (RAND_MAX / (max - min)));
@@ -89,6 +90,7 @@ struct Bullet {
     PxU32 raycastFlags;
     glm::vec3 parentPlayersViewRotation;
     int damage = 0;
+    int parentPlayerIndex = -1;
 };
 
 struct PickUp {
@@ -164,7 +166,7 @@ namespace Scene {
     CSGShape* GetCubeVolumeSubtractiveByIndex(int32_t index);
     const size_t GetCubeVolumeAdditiveCount();
 
-    // Containers
+    // Cuntainers
     inline std::vector<Light> g_lights;
     inline std::vector<SpawnPoint> g_spawnPoints;
     inline std::vector<BulletCasing> g_bulletCasings;
@@ -174,6 +176,8 @@ namespace Scene {
     inline std::vector<Staircase> g_staircases;
     inline std::vector<BulletHoleDecal> g_bulletHoleDecals;
     inline std::vector<AABB> g_fogAABB;
+    inline std::vector<BloodDecal> g_bloodDecals;
+    inline std::vector<BloodDecal> g_bloodDecalsForMegaTexture;
 
     // Shadow map stuff
     inline std::vector<int> g_shadowMapLightIndices;
@@ -202,7 +206,6 @@ namespace Scene {
     inline PxShape* _sceneShape = NULL;
 
     inline std::vector<Toilet> _toilets;
-    inline std::vector<BloodDecal> _bloodDecals;
     inline std::vector<VolumetricBloodSplatter> _volumetricBloodSplatters;
     inline std::vector<PickUp> _pickUps;
     inline std::vector<Bullet> _bullets;
@@ -212,10 +215,9 @@ namespace Scene {
     inline std::vector<RTMesh> _rtMesh;
     inline std::vector<RTInstance> _rtInstances;
 
-
     // New shit
     void Init();
-    std::vector<RenderItem3D> GetAllRenderItems();
+    std::vector<RenderItem3D> GetGeometryRenderItems();
     std::vector<RenderItem3D> CreateDecalRenderItems();
 
     // Old shit
@@ -239,7 +241,7 @@ namespace Scene {
     void CalculateLightBoundingVolumes();
     void CheckForDirtyLights();
     void ResetGameObjectStates();
-    void DirtyAllLights();
+    //void DirtyAllLights();
 
     void CreateVolumetricBlood(glm::vec3 position, glm::vec3 rotation, glm::vec3 front);
 

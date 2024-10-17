@@ -22,6 +22,7 @@
 #include "../../Renderer/RendererData.h"
 #include "../../Renderer/RendererUtil.hpp"
 #include "../../Renderer/Raytracing/Raytracing.h"
+#include "../../Renderer/SSAO.hpp"
 #include "Timer.hpp"
 
 #include "RapidHotload.h"
@@ -47,7 +48,8 @@ namespace OpenGLRenderer {
         GLFrameBuffer gBuffer;
         GLFrameBuffer lighting;
         GLFrameBuffer finalFullSizeImage;
-        GLFrameBuffer depthCopy;
+        GLFrameBuffer genericRenderTargets;
+        GLFrameBuffer megaTexture;
     } g_frameBuffers;
 
     struct BlurFrameBuffers {
@@ -82,8 +84,17 @@ namespace OpenGLRenderer {
         Shader triangles2D;
         Shader heightMap;
         Shader debugLightVolumeAabb;
+        Shader winston;
+        Shader megaTextureBloodDecals;
+
+        
+
+
         ComputeShader debugTileView;
         ComputeShader lightingTiled;
+        ComputeShader ssao;
+        ComputeShader ssaoBlur;
+        ComputeShader worldPosition;
 
         Shader lightVolumePrePassGeometry;
         ComputeShader lightVolumeFromCubeMap;
@@ -145,6 +156,8 @@ namespace OpenGLRenderer {
     CubeMap2 g_lightVolumePrePassCubeMap;
 
     OpenGLDetachedMesh gLightVolumeSphereMesh;
+    OpenGLDetachedMesh g_sphereMesh;
+
 
     //std::vector<ShadowMap> _shadowMaps;
 
@@ -184,16 +197,25 @@ void OutlinePass(RenderData& renderData);
 void P90MagPass(RenderData& renderData);
 void CSGSubtractivePass();
 void LightVolumePrePass(RenderData& renderData);
-void LightCullingPass(RenderData& renderData); 
+void LightCullingPass(RenderData& renderData);
 void DebugTileViewPass(RenderData& renderData);
+void SSAOPass();
+void WinstonPass(RenderData& renderData);
+
 
 void OpenGLRenderer::HotloadShaders() {
 
-    std::cout << "Hotloading shaders...\n";        
-        
+    std::cout << "Hotloading shaders...\n";
+    
+    g_shaders.worldPosition.Load("res/shaders/OpenGL/GL_world_position.comp");
+    g_shaders.ssaoBlur.Load("res/shaders/OpenGL/GL_ssaoBlur.comp");
+    g_shaders.ssao.Load("res/shaders/OpenGL/GL_ssao.comp");
     g_shaders.lightingTiled.Load("res/shaders/OpenGL/GL_lighting_tiled.comp");
     g_shaders.debugTileView.Load("res/shaders/OpenGL/GL_debug_tile_view.comp");
     g_shaders.lightVolumeClear.Load("res/shaders/OpenGL/GL_light_volume_clear.comp");
+    g_shaders.winston.Load("GL_winston.vert", "GL_winston.frag");
+    g_shaders.megaTextureBloodDecals.Load("GL_mega_texture_blood_decals.vert", "GL_mega_texture_blood_decals.frag");
+
     g_shaders.debugLightVolumeAabb.Load("GL_debug_light_volume_aabb.vert", "GL_debug_light_volume_aabb.frag");
     g_shaders.lightCulling.Load("res/shaders/OpenGL/GL_light_culling.comp");
     g_shaders.lightVolumeFromCubeMap.Load("res/shaders/OpenGL/GL_lightvolume_aabb_from_cubemap.comp");
@@ -259,13 +281,15 @@ void OpenGLRenderer::CreatePlayerRenderTargets(int presentWidth, int presentHeig
     g_frameBuffers.gBuffer.CreateAttachment("FinalLighting", GL_RGBA8);
     g_frameBuffers.gBuffer.CreateAttachment("Glass", GL_RGBA8);
     g_frameBuffers.gBuffer.CreateAttachment("EmissiveMask", GL_RGBA8);
-    //g_frameBuffers.gBuffer.CreateAttachment("BloomPrePass", GL_RGBA8);
     g_frameBuffers.gBuffer.CreateAttachment("P90MagDirectLighting", GL_RGBA8);
     g_frameBuffers.gBuffer.CreateAttachment("P90MagSpecular", GL_RGBA8);
     g_frameBuffers.gBuffer.CreateDepthAttachment(GL_DEPTH32F_STENCIL8);
 
-    g_frameBuffers.depthCopy.Create("DepthCopy", presentWidth * 2, presentHeight * 2);
-    g_frameBuffers.depthCopy.CreateAttachment("Position", GL_RGBA16F);
+    g_frameBuffers.genericRenderTargets.Create("GenericRenderTargets", presentWidth * 2, presentHeight * 2);
+    g_frameBuffers.genericRenderTargets.CreateAttachment("WorldSpacePosition", GL_RGBA16F);
+    g_frameBuffers.genericRenderTargets.CreateAttachment("SSAO", GL_R32F);
+    g_frameBuffers.genericRenderTargets.CreateAttachment("SSAOBlur", GL_R32F);
+
 }
 
 void OpenGLRenderer::RecreateBlurBuffers() {
@@ -332,7 +356,7 @@ void OpenGLRenderer::RecreateBlurBuffers() {
 
 void OpenGLRenderer::InitMinimum() {
 
-    QueryAvaliability();
+    //QueryAvaliability();
     HotloadShaders();
 
     int desiredTotalLines = 40;
@@ -347,6 +371,7 @@ void OpenGLRenderer::InitMinimum() {
 
     g_frameBuffers.finalFullSizeImage.Create("FinalFullSizeImage", PRESENT_WIDTH, PRESENT_HEIGHT);
     g_frameBuffers.finalFullSizeImage.CreateAttachment("Color", GL_RGBA8);
+
 
     CreatePlayerRenderTargets(PRESENT_WIDTH, PRESENT_HEIGHT);
     RecreateBlurBuffers();
@@ -401,6 +426,7 @@ void OpenGLRenderer::InitMinimum() {
     int tileCount = tileXCount * tileYCount;
     std::cout << "Tile count: " << tileCount << "\n";
     g_ssbos.tileData.PreAllocate(tileCount * sizeof(TileData));   
+
 }
 
 void OpenGLRenderer::BindBindlessTextures() {
@@ -658,12 +684,139 @@ void OpenGLRenderer::UploadSSBOsGPU(RenderData& renderData) {
 
 }
 
+void MegaTextureTestPass() {
+
+    glClipControl(GL_LOWER_LEFT, GL_NEGATIVE_ONE_TO_ONE);
+
+    GLFrameBuffer& megaTextureFBO = OpenGLRenderer::g_frameBuffers.megaTexture;
+    HeightMap& heightMap = AssetManager::g_heightMap;
+
+    // Create FBO and render target
+    if (megaTextureFBO.GetHandle() == 0) {
+        int width = heightMap.m_width * 100;
+        int height = heightMap.m_depth * 100;
+        megaTextureFBO.Create("MegaTextureFBO", width, height);
+        megaTextureFBO.CreateAttachment("Color", GL_R8);
+        megaTextureFBO.Bind();
+        megaTextureFBO.SetViewport();
+        glDrawBuffer(megaTextureFBO.GetColorAttachmentSlotByName("Color"));
+        glClearColor(0.0, 0.0, 0.0, 0.0);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    }
+
+    megaTextureFBO.Bind();
+    megaTextureFBO.SetViewport(); 
+    glDrawBuffer(megaTextureFBO.GetColorAttachmentSlotByName("Color"));
+    //glClearColor(0.25, 0.25, 0.25, 1);
+    //glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    //glEnable(GL_DEPTH_TEST);
+    glDisable(GL_CULL_FACE);
+    
+
+    glm::vec3 centerPoint = heightMap.GetWorldSpaceCenter();
+    float width = heightMap.m_width * heightMap.m_transform.scale.x;
+    float height = heightMap.m_depth * heightMap.m_transform.scale.z;
+    float nearPlane = 0.1f;
+    float farPlane = 5000.0f;
+    float left = centerPoint.x - width / 2.0f;
+    float right = centerPoint.x + width / 2.0f;
+    float bottom = centerPoint.z + height / 2.0f;
+    float top = centerPoint.z - height / 2.0f;
+    glm::vec3 cameraPosition = centerPoint + glm::vec3(0.0f, 50.0f, 0.0f);
+    glm::vec3 cameraTarget = centerPoint;
+    glm::vec3 upVector = glm::vec3(0.0f, 0.0f, -1.0f);
+
+    glm::mat4 projection = glm::ortho(left, right, bottom, top, nearPlane, farPlane);
+    glm::mat4 view = glm::lookAt(cameraPosition, cameraTarget, upVector);
+  
+    // Render decals
+    
+    
+    
+    
+    glm::mat4 model = heightMap.m_transform.to_mat4();
+    Shader& shader = OpenGLRenderer::g_shaders.megaTextureBloodDecals;
+    shader.Use();
+    shader.SetMat4("projection", projection);
+    shader.SetMat4("view", view);
+    shader.SetMat4("model", model);
+    shader.SetFloat("heightMapWidth", heightMap.m_width);
+    shader.SetFloat("heightMapDepth", heightMap.m_depth);
+    shader.SetBool("useUniformColor", true);
+    shader.SetVec3("uniformColor", RED);
+
+    glBindVertexArray(heightMap.m_VAO);
+    //glDrawElements(GL_TRIANGLE_STRIP, heightMap.m_indices.size(), GL_UNSIGNED_INT, 0);
+    glBindVertexArray(0);
+
+    static int textureIndexType0 = AssetManager::GetTextureIndexByName("blood_decal_4");
+    static int textureIndexType1 = AssetManager::GetTextureIndexByName("blood_decal_6");
+    static int textureIndexType2 = AssetManager::GetTextureIndexByName("blood_decal_7");
+    static int textureIndexType3 = AssetManager::GetTextureIndexByName("blood_decal_9");
+
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_ONE, GL_ONE);
+
+    for (BloodDecal& bloodDecal : Scene::g_bloodDecalsForMegaTexture) {
+        shader.SetMat4("model", bloodDecal.modelMatrix);
+        shader.SetMat4("normalMatrix", glm::transpose(glm::inverse(heightMap.m_transform.to_mat4())));
+        if (bloodDecal.type == 0) {
+            shader.SetInt("textureIndex", textureIndexType0);
+        }
+        else if (bloodDecal.type == 1) {
+            shader.SetInt("textureIndex", textureIndexType1);
+        }
+        else if (bloodDecal.type == 2) {
+            shader.SetInt("textureIndex", textureIndexType2);
+        }
+        else if (bloodDecal.type == 3) {
+            shader.SetInt("textureIndex", textureIndexType3);
+        }
+
+
+        Mesh* mesh = AssetManager::GetMeshByIndex(AssetManager::GetUpFacingPlaneMeshIndex());
+        glBindVertexArray(OpenGLBackEnd::GetVertexDataVAO());
+        glDrawElementsInstancedBaseVertex(GL_TRIANGLES, mesh->indexCount, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int) * mesh->baseIndex), 1, mesh->baseVertex);      
+    }
+
+
+    Scene::g_bloodDecalsForMegaTexture.clear()
+
+
+;
+
+
+
+
+/*
+    Player* player = Game::GetPlayerByIndex(0);
+
+    if (Input::KeyPressed(HELL_KEY_SPACE)) {
+
+        Transform transform;
+        transform.position = player->GetFeetPosition();
+        transform.scale = glm::vec3(1);
+        model = transform.to_mat4();
+        shader.SetMat4("model", model);
+        shader.SetMat4("normalMatrix", glm::transpose(glm::inverse(heightMap.m_transform.to_mat4())));
+
+        static int cubeMeshIndex = AssetManager::GetModelByIndex(AssetManager::GetModelIndexByName("Cube"))->GetMeshIndices()[0];
+        Mesh* mesh = AssetManager::GetMeshByIndex(cubeMeshIndex);
+        glBindVertexArray(OpenGLBackEnd::GetVertexDataVAO());
+        glDrawElementsInstancedBaseVertex(GL_TRIANGLES, mesh->indexCount, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int) * mesh->baseIndex), 1, mesh->baseVertex);
+    }*/
+
+    glClipControl(GL_LOWER_LEFT, GL_ZERO_TO_ONE);
+}
+
 void OpenGLRenderer::RenderFrame(RenderData& renderData) {
 
     GLFrameBuffer& gBuffer = g_frameBuffers.gBuffer;
     GLFrameBuffer& present = g_frameBuffers.present;
 
     OpenGLRenderer::UploadSSBOsGPU(renderData);
+
+
 
 
     static int frameNumber = 0;
@@ -699,7 +852,8 @@ void OpenGLRenderer::RenderFrame(RenderData& renderData) {
     LightVolumePrePass(renderData);
     ComputeSkin(renderData);
 
-   
+    MegaTextureTestPass();
+
     GeometryPass(renderData);
     HeightMapPass(renderData);
     DrawVATBlood(renderData);
@@ -708,6 +862,7 @@ void OpenGLRenderer::RenderFrame(RenderData& renderData) {
 
     LightCullingPass(renderData);
     LightingPass(renderData);
+    SSAOPass();
     SkyBoxPass(renderData);
     DebugTileViewPass(renderData);
 
@@ -716,6 +871,7 @@ void OpenGLRenderer::RenderFrame(RenderData& renderData) {
     MuzzleFlashPass(renderData);
     GlassPass(renderData);
     EmissivePass(renderData);
+    //WinstonPass(renderData);
     MuzzleFlashPass(renderData);
     PostProcessingPass(renderData);
 
@@ -940,7 +1096,7 @@ void RenderShadowMapss(RenderData& renderData) {
     shader.Use();
 
     for (Light& light : Scene::g_lights) {
-        if (!light.m_shadowCasting || !light.isDirty) {
+        if (!light.m_shadowCasting || !light.m_shadowMapIsDirty) {
             continue;
         }
         shader.SetFloat("farPlane", light.radius);
@@ -969,7 +1125,7 @@ void RenderShadowMapss(RenderData& renderData) {
     csgShadowMapShader.Use();
 
     for (Light& light : Scene::g_lights) {
-        if (!light.m_shadowCasting || !light.isDirty) {
+        if (!light.m_shadowCasting || !light.m_shadowMapIsDirty) {
             continue;
         }
         csgShadowMapShader.SetFloat("farPlane", light.radius);
@@ -1792,6 +1948,84 @@ void LightingPass(RenderData& renderData) {
     glDispatchCompute(gBuffer.GetWidth() / TILE_SIZE, gBuffer.GetHeight() / TILE_SIZE, 1);
 }
 
+float RandomFloat(float min, float max) {
+    return min + static_cast<float>(rand()) / static_cast<float>(RAND_MAX) * (max - min);
+}
+
+float Lerp(float a, float b, float f) {
+    return a + f * (b - a);
+}
+
+void SSAOPass() {
+
+    GLFrameBuffer& gBuffer = OpenGLRenderer::g_frameBuffers.gBuffer;
+    GLFrameBuffer& genericRenderTargets = OpenGLRenderer::g_frameBuffers.genericRenderTargets;
+    ComputeShader& shader = OpenGLRenderer::g_shaders.ssao;
+    ComputeShader& blurShader = OpenGLRenderer::g_shaders.ssaoBlur;
+    ComputeShader& worldPosShader = OpenGLRenderer::g_shaders.worldPosition;
+
+    // World Space Pos Hack
+    worldPosShader.Use();
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, gBuffer.GetDepthAttachmentHandle());
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, gBuffer.GetColorAttachmentHandleByName("Normal"));
+    glBindImageTexture(0, genericRenderTargets.GetColorAttachmentHandleByName("WorldSpacePosition"), 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA16F);
+    glDispatchCompute((genericRenderTargets.GetWidth() + 7) / 8, (genericRenderTargets.GetHeight() + 7) / 8, 1);
+   
+    // Create SSAO noise texture and kernel
+    static std::vector<glm::vec3> ssaoKernel;
+    static GLuint noiseTexture = 0;
+    int kernelSize = 8;
+    if (noiseTexture == 0) {
+        for (unsigned int i = 0; i < kernelSize; ++i) {
+            glm::vec3 sample = glm::normalize(glm::vec3(RandomFloat(-1, 1), RandomFloat(-1, 1), RandomFloat(0, 1)));
+            float scale = float(i) / float(kernelSize);
+            scale = Lerp(0.1f, 1.0f, scale * scale);
+            sample *= scale;
+            ssaoKernel.push_back(sample);
+        }
+        std::vector<glm::vec3> ssaoNoise;
+        for (unsigned int i = 0; i < 16; i++) {
+            glm::vec3 noise = glm::vec3(RandomFloat(-1, 1), RandomFloat(-1, 1), 0);
+            ssaoNoise.push_back(noise);
+        }
+        glGenTextures(1, &noiseTexture);
+        glBindTexture(GL_TEXTURE_2D, noiseTexture);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, 4, 4, 0, GL_RGB, GL_FLOAT, &ssaoNoise[0]);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    }
+    // Calculate SSAO
+    shader.Use();
+    for (unsigned int i = 0; i < kernelSize; ++i) {
+        std::string name = "samples[" + std::to_string(i) + "]";
+        shader.SetVec3(name.c_str(), ssaoKernel[i]);
+    }
+    glBindImageTexture(0, genericRenderTargets.GetColorAttachmentHandleByName("SSAO"), 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_R32F);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, gBuffer.GetColorAttachmentHandleByName("Normal"));
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, noiseTexture);
+    glActiveTexture(GL_TEXTURE2);
+    glBindTexture(GL_TEXTURE_2D, genericRenderTargets.GetColorAttachmentHandleByName("WorldSpacePosition"));
+    glActiveTexture(GL_TEXTURE3);
+    glBindTexture(GL_TEXTURE_2D, gBuffer.GetDepthAttachmentHandle());
+    glDispatchCompute((gBuffer.GetWidth() + 7) / 8, (gBuffer.GetHeight() + 7) / 8, 1);
+
+    // Blur the result
+    blurShader.Use();
+    glBindImageTexture(0, genericRenderTargets.GetColorAttachmentHandleByName("SSAOBlur"), 0, GL_FALSE, 0, GL_READ_WRITE, GL_R32F);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, genericRenderTargets.GetColorAttachmentHandleByName("SSAO"));
+    glDispatchCompute((gBuffer.GetWidth() + 7) / 8, (gBuffer.GetHeight() + 7) / 8, 1);
+}
+
+
+
+
 void LightVolumePrePass(RenderData& renderData) {
 
     // Light volume from positon/radius
@@ -2376,8 +2610,8 @@ void OpenGLRenderer::RaytracingTestPass(RenderData& renderData) {
 
 
 void PostProcessingPass(RenderData& renderData) {
-
     GLFrameBuffer& gBuffer = OpenGLRenderer::g_frameBuffers.gBuffer;
+    GLFrameBuffer& genericRenderTargets = OpenGLRenderer::g_frameBuffers.genericRenderTargets;
     ComputeShader& computeShader = OpenGLRenderer::g_shaders.postProcessing;
     computeShader.Use();
     computeShader.SetFloat("viewportWidth", gBuffer.GetWidth());
@@ -2385,6 +2619,7 @@ void PostProcessingPass(RenderData& renderData) {
     computeShader.SetFloat("time", Game::GetTime());
     glBindImageTexture(0, gBuffer.GetColorAttachmentHandleByName("FinalLighting"), 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA8);
     glBindImageTexture(1, gBuffer.GetColorAttachmentHandleByName("Normal"), 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA16F);
+    glBindImageTexture(2, genericRenderTargets.GetColorAttachmentHandleByName("SSAOBlur"), 0, GL_FALSE, 0, GL_READ_WRITE, GL_R32F);
     glDispatchCompute(gBuffer.GetWidth() / 16, gBuffer.GetHeight() / 4, 1);
 }
 
@@ -2524,12 +2759,6 @@ void OpenGLRenderer::Triangle2DPass() {
                         if (Input::KeyPressed(HELL_KEY_E)) {
                             Scene::RemoveGameObjectByIndex(j);
                             Audio::PlayAudio("ItemPickUp.wav", 1.0f);
-                          //  player->AddPickUpText("item", 1);
-
-                            for (Light& light : Scene::g_lights) {
-                                light.isDirty = true;
-                            }
-
                         }
                         player->m_pickUpInteractable = true;
                     }
@@ -2565,6 +2794,15 @@ void OpenGLRenderer::PresentFinalImage() {
     blitDstCoords.dstX1 = BackEnd::GetCurrentWindowWidth();
     blitDstCoords.dstY1 = BackEnd::GetCurrentWindowHeight();
     BlitPlayerPresentTargetToDefaultFrameBuffer(&g_frameBuffers.present, 0, "Color", "", GL_COLOR_BUFFER_BIT, GL_NEAREST, blitDstCoords);
+
+
+   // if (g_frameBuffers.megaTexture.GetHandle() != 0) {
+   //     blitDstCoords.dstX0 = 0;
+   //     blitDstCoords.dstY0 = 0;
+   //     blitDstCoords.dstX1 = BackEnd::GetCurrentWindowWidth() * 0.25;
+   //     blitDstCoords.dstY1 = BackEnd::GetCurrentWindowHeight() * 0.25;
+   //     BlitPlayerPresentTargetToDefaultFrameBuffer(&g_frameBuffers.megaTexture, 0, "Color", "", GL_COLOR_BUFFER_BIT, GL_NEAREST, blitDstCoords);
+   // }
 }
 
 void OpenGLRenderer::IndirectLightingPass() {
@@ -2668,6 +2906,7 @@ void OpenGLRenderer::HeightMapPass(RenderData& renderData) {
 
     HeightMap& heightMap = AssetManager::g_heightMap;
     GLFrameBuffer& gBuffer = OpenGLRenderer::g_frameBuffers.gBuffer;
+    GLFrameBuffer& megaTextureFBO = OpenGLRenderer::g_frameBuffers.megaTexture;
 
     gBuffer.Bind();
 
@@ -2683,25 +2922,23 @@ void OpenGLRenderer::HeightMapPass(RenderData& renderData) {
     glBindTexture(GL_TEXTURE_2D, AssetManager::GetTextureByName("Ground_MudVeg_NRM")->GetGLTexture().GetID());
     glActiveTexture(GL_TEXTURE2);
     glBindTexture(GL_TEXTURE_2D, AssetManager::GetTextureByName("Ground_MudVeg_RMA")->GetGLTexture().GetID());
+    glActiveTexture(GL_TEXTURE3);
+    glBindTexture(GL_TEXTURE_2D, megaTextureFBO.GetColorAttachmentHandleByName("Color"));
+    glActiveTexture(GL_TEXTURE4);
+    glBindTexture(GL_TEXTURE_2D, AssetManager::GetTextureByName("TreeMap")->GetGLTexture().GetID());
        
     for (int i = 0; i < renderData.playerCount; i++) {
         Player* player = Game::GetPlayerByIndex(i);
-
         ViewportInfo viewportInfo = RendererUtil::CreateViewportInfo(i, Game::GetSplitscreenMode(), gBuffer.GetWidth(), gBuffer.GetHeight());
         SetViewport(viewportInfo);
         glViewport(viewportInfo.xOffset, viewportInfo.yOffset, viewportInfo.width, viewportInfo.height);
-
-        //heightMapTransform.position.x = heightMap.m_width * -0.5 * heightMap.m_vertexScale;
-        //heightMapTransform.position.y = heightMap.m_heightScale * -0.5f;
-        //heightMapTransform.position.z = heightMap.m_depth * -0.5 * heightMap.m_vertexScale;
-
         Shader& shader = OpenGLRenderer::g_shaders.heightMap;
         shader.Use();
-        shader.SetMat4("projection", player->GetProjectionMatrix());
-        shader.SetMat4("view", player->GetViewMatrix());
-        shader.SetMat4("model", heightMap.m_transform.to_mat4());
+        shader.SetMat4("mvp", player->GetProjectionMatrix() * player->GetViewMatrix() * heightMap.m_transform.to_mat4());
+        shader.SetMat4("normalMatrix", glm::transpose(glm::inverse(heightMap.m_transform.to_mat4())));
         shader.SetInt("playerIndex", i);
-
+        shader.SetFloat("heightMapWidth", heightMap.m_width);
+        shader.SetFloat("heightMapDepth", heightMap.m_depth);
         glBindVertexArray(heightMap.m_VAO);
         glDrawElements(GL_TRIANGLE_STRIP, heightMap.m_indices.size(), GL_UNSIGNED_INT, 0);
         glBindVertexArray(0);
@@ -2730,4 +2967,58 @@ void OpenGLRenderer::QueryAvaliability() {
     GLint maxInvocations;
     glGetIntegerv(GL_MAX_COMPUTE_WORK_GROUP_INVOCATIONS, &maxInvocations);
     printf("Max Workgroup Invocations: %d\n", maxInvocations);
+}
+
+
+
+void WinstonPass(RenderData& renderData) {
+
+    if (OpenGLRenderer::g_sphereMesh.GetVAO() == 0) {
+        std::vector<Vertex> vertices;
+        std::vector<uint32_t> indices;
+        Util::CreateSolidSphereVerticsAndIndices(vertices, indices, 1.0, 12);
+        OpenGLRenderer::g_sphereMesh.UpdateVertexBuffer(vertices, indices);
+    }
+
+    GLFrameBuffer& gBuffer = OpenGLRenderer::g_frameBuffers.gBuffer;
+    BindFrameBuffer(gBuffer);
+    glDrawBuffer(gBuffer.GetColorAttachmentSlotByName("FinalLighting"));
+
+    glBindVertexArray(OpenGLBackEnd::GetVertexDataVAO());
+
+    for (int i = 0; i < renderData.playerCount; i++) {
+        ViewportInfo viewportInfo = RendererUtil::CreateViewportInfo(i, Game::GetSplitscreenMode(), gBuffer.GetWidth(), gBuffer.GetHeight());
+        SetViewport(viewportInfo);
+        glViewport(viewportInfo.xOffset, viewportInfo.yOffset, viewportInfo.width, viewportInfo.height);
+
+        Shader& shader = OpenGLRenderer::g_shaders.winston;
+        shader.Use();
+        shader.SetMat4("projection", renderData.cameraData[i].projection);
+        shader.SetMat4("view", renderData.cameraData[i].view);
+        shader.SetVec3("color", { 0, 0.9f, 1 });
+        shader.SetFloat("alpha", 0.01f);
+        shader.SetVec2("screensize", glm::vec2(viewportInfo.width, viewportInfo.height));
+        shader.SetFloat("near", NEAR_PLANE);
+        shader.SetFloat("far", FAR_PLANE);
+
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, gBuffer.GetDepthAttachmentHandle());
+        glDisable(GL_DEPTH_TEST);
+        glEnable(GL_BLEND);
+
+        for (GameObject& gameObject : Scene::GetGamesObjects()) {
+            if (true) {
+                for (RenderItem3D& renderItem : gameObject.GetRenderItems()) {
+                    shader.SetMat4("model", renderItem.modelMatrix);
+                    Mesh* mesh = AssetManager::GetMeshByIndex(renderItem.meshIndex);
+                    glDrawElementsBaseVertex(GL_TRIANGLES, mesh->indexCount, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int) * mesh->baseIndex), mesh->baseVertex);
+
+                };
+            }
+        }
+        //if (OpenGLRenderer::g_sphereMesh.GetIndexCount() > 0) {
+        //    glBindVertexArray(OpenGLRenderer::g_sphereMesh.GetVAO());
+        //    glDrawElements(GL_TRIANGLES, OpenGLRenderer::g_sphereMesh.GetIndexCount(), GL_UNSIGNED_INT, 0);
+        //}
+    }
 }

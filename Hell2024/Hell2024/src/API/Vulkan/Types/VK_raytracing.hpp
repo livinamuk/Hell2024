@@ -219,6 +219,21 @@ struct Raytracer {
         rayTracingPipelineCI.maxPipelineRayRecursionDepth = maxRecursionDepth;
         rayTracingPipelineCI.layout = pipelineLayout;
         vkCreateRayTracingPipelinesKHR(device, VK_NULL_HANDLE, VK_NULL_HANDLE, 1, &rayTracingPipelineCI, nullptr, &pipeline);
+
+        // This wasn't a problem before, but is now apparently.
+        // A validation error showed up at some point complaining that the ray tracing pipeline didn't support dynamic state,
+        // yet there were dynamic state commands in the command buffer.
+        //VkPipelineDynamicStateCreateInfo dynamicStateInfo = {};
+        //VkDynamicState dynamicStates[] = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
+        //dynamicStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+        //dynamicStateInfo.dynamicStateCount = 2;
+        //dynamicStateInfo.pDynamicStates = dynamicStates;
+        //rayTracingPipelineCI.pDynamicState = &dynamicStateInfo;
+        // actrually was my fault.... maybe...
+
+        std::cout << "Created raytracing pipeline\n";
+        std::cout << "pipeline: " << pipeline << "\n";
+        std::cout << "pipelineLayout: " << pipelineLayout << "\n";        
     }
 
     uint64_t get_buffer_device_address(VkDevice device, VkBuffer buffer)

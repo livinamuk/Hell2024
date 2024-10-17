@@ -1,0 +1,19 @@
+#version 430 core
+layout (local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+layout(r32f, binding = 0) uniform image2D outputTexture;
+layout (binding = 0) uniform sampler2D ssaoInput;
+
+void main() {
+    ivec2 pixelCoords = ivec2(gl_GlobalInvocationID.xy);
+    vec2 TexCoords = vec2(pixelCoords + vec2(0.5)) / vec2(textureSize(ssaoInput, 0));
+    vec2 texelSize = 1.0 / vec2(textureSize(ssaoInput, 0));
+    float result = 0.0;
+    for (int x = -2; x < 2; ++x)  {
+        for (int y = -2; y < 2; ++y) {
+            vec2 offset = vec2(float(x), float(y)) * texelSize;
+            result += texture(ssaoInput, TexCoords + offset).r;
+        }
+    }
+    result = result / (4.0 * 4.0);
+    imageStore(outputTexture, pixelCoords, vec4(result, result, result, 1.0));
+}

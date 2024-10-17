@@ -12,6 +12,7 @@ namespace GlobalIllumination {
 
     std::vector<LightVolume> _lightVolumes;
     std::vector<CloudPoint> g_pointCloud;
+    bool g_gpuDataAwaitingClear = false;
 }
 
 void GlobalIllumination::DestroyAllLightVolumes() {
@@ -125,12 +126,14 @@ void GlobalIllumination::CreatePointCloud() {
         }
     }
 
-    if (BackEnd::GetAPI() == API::OPENGL) {
-        OpenGLBackEnd::CreatePointCloudVertexBuffer(g_pointCloud);
-    }
-    else if (BackEnd::GetAPI() == API::VULKAN) {
-        VulkanBackEnd::CreatePointCloudVertexBuffer(g_pointCloud);
-        VulkanRenderer::UpdateGlobalIlluminationDescriptorSet();
+    if (g_pointCloud.size()) {
+        if (BackEnd::GetAPI() == API::OPENGL) {
+            OpenGLBackEnd::CreatePointCloudVertexBuffer(g_pointCloud);
+        }
+        else if (BackEnd::GetAPI() == API::VULKAN) {
+            VulkanBackEnd::CreatePointCloudVertexBuffer(g_pointCloud);
+            VulkanRenderer::UpdateGlobalIlluminationDescriptorSet();
+        }
     }
 }
 
@@ -150,4 +153,17 @@ LightVolume* GlobalIllumination::GetLightVolumeByIndex(int index) {
 
 void GlobalIllumination::RecalculateAll() {
     CreatePointCloud();
+}
+
+
+void GlobalIllumination::ClearData() {
+    g_gpuDataAwaitingClear = true;
+}
+
+bool GlobalIllumination::GPUDataAwaitingClear() {
+    return g_gpuDataAwaitingClear;
+}
+
+void GlobalIllumination::MarkGPUDataCleared() {
+    g_gpuDataAwaitingClear = false;
 }

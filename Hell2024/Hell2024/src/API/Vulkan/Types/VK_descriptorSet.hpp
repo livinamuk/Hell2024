@@ -2,12 +2,18 @@
 #include <vulkan/vulkan.h>
 #include <vector>
 #include <iostream>
+#include <string>
 
 struct DescriptorSet {
 
     std::vector<VkDescriptorSetLayoutBinding> bindings;
     VkDescriptorSetLayout layout;
     VkDescriptorSet handle;
+    std::string debugName;
+
+    void SetDebugName(const std::string& name) {
+        debugName = name;
+    }
 
     void AddBinding(VkDescriptorType type, uint32_t binding, uint32_t descriptorCount, VkShaderStageFlags stageFlags) {
         VkDescriptorSetLayoutBinding setbind = {};
@@ -43,6 +49,9 @@ struct DescriptorSet {
     }
 
     void Update(VkDevice device, uint32_t binding, uint32_t descriptorCount, VkDescriptorType type, VkBuffer buffer) {
+        if (buffer == VK_NULL_HANDLE) {
+            std::cout << "WARNING!!! PROBABLY ERROR! You called Update on a descriptor set but passed in a null buffer, name: '" << debugName << "'\n";
+        }
         VkDescriptorBufferInfo bufferInfo = {};
         bufferInfo.buffer = buffer;
         bufferInfo.range = VK_WHOLE_SIZE;

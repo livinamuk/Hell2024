@@ -18,6 +18,8 @@ struct HeightMap {
     void UploadToGPU();
     void CreatePhysicsObject();
 
+    glm::vec3 GetWorldSpaceCenter();
+
     PxHeightField* m_pxHeightField = NULL;
     PxShape* m_pxShape = NULL;
     PxRigidStatic* m_pxRigidStatic = NULL;

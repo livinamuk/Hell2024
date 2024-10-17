@@ -45,6 +45,8 @@ void main() {
 //	emissiveOut = vec4(emissiveColor,0);
 
 	if (baseColor.a < 0.05) {
-		discard;
+		//discard;
 	}
+
+	//baseColorOut.rgb = WorldPos;
 }

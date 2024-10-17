@@ -15,19 +15,27 @@ struct RayPayload {
 
 struct RenderItem3D {
     mat4 modelMatrix;
-    mat4 inverseModelMatrix; 
+    mat4 inverseModelMatrix;
     int meshIndex;
     int baseColorTextureIndex;
-    int normalTextureIndex;
+    int normalMapTextureIndex;
     int rmaTextureIndex;
     int vertexOffset;
     int indexOffset;
-    int animatedTransformsOffset; 
     int castShadow;
     int useEmissiveMask;
     float emissiveColorR;
     float emissiveColorG;
     float emissiveColorB;
+    float aabbMinX;
+    float aabbMinY;
+    float aabbMinZ;
+    float aabbMaxX;
+    float aabbMaxY;
+    float aabbMaxZ;
+    float padding0;
+    float padding1;
+    float padding2;
 };
 
 struct Vertex {
@@ -206,14 +214,13 @@ vec3 Tonemap_ACES(const vec3 x) { // Narkowicz 2015, "ACES Filmic Tone Mapping C
 
 void main() {
 
-
 // Get vertex data from hit
 	RenderItem3D renderItem = tlasInstances.data[gl_InstanceID]; // was gl_InstanceID
 	mat4 modelMatrix = renderItem.modelMatrix;
 	int vertexOffset = renderItem.vertexOffset;
 	int indexOffset = renderItem.indexOffset;
 	int baseColorTextureIndex = renderItem.baseColorTextureIndex;
-	int normalTextureIndex = renderItem.normalTextureIndex;
+	int normalTextureIndex = renderItem.normalMapTextureIndex;
 	int rmaTextureIndex = renderItem.rmaTextureIndex;
     uint index0 = indices.i[3 * gl_PrimitiveID + indexOffset];
     uint index1 = indices.i[3 * gl_PrimitiveID + 1 + indexOffset];

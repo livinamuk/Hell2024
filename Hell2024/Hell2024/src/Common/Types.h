@@ -32,6 +32,10 @@ struct Transform {
         m = glm::scale(m, scale);
         return m;
     };
+    glm::vec3 to_forward_vector() {
+        glm::quat q = glm::quat(rotation);
+        return glm::normalize(q * glm::vec3(0.0f, 0.0f, 1.0f));
+    }
 };
 
 struct Point {
@@ -199,6 +203,7 @@ struct BVHNode {
 };
 
 struct TextureData {
+    std::string m_filepath;
     int m_width = 0;
     int m_height = 0;
     int m_numChannels = 0;

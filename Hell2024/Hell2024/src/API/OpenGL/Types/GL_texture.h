@@ -9,12 +9,13 @@
 struct OpenGLTexture {
 
     OpenGLTexture() = default;
-    explicit OpenGLTexture(const std::string filepath);
+    //explicit OpenGLTexture(const std::string filepath);
     GLuint GetID();
     GLuint64 GetBindlessID();
     void Bind(unsigned int slot);
-    bool Load(const std::string filepath);
+    bool Load(const std::string filepath, bool compressed);
     bool Bake();
+    void BakeCMPData(CMP_Texture* cmpTexture);
     //void UploadToGPU(void* data, CMP_Texture* cmpTexture, int width, int height, int channelCount);
     bool IsBaked();
     int GetWidth();
@@ -25,10 +26,11 @@ struct OpenGLTexture {
 private:
     GLuint ID;
     GLuint64 bindlessID;
-    std::string _filename;
-    std::string _filetype;
-
+    std::string m_fullPath;
+    std::string m_filename;
+    std::string m_filetype;
     bool m_compressed = false;
+
     //unsigned char* _data = nullptr;
     //float* _floatData = nullptr;
 

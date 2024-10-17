@@ -11,9 +11,10 @@ class Texture {
 public:
 
     Texture() = default;
-    Texture(std::string fullpath);
+    Texture(std::string fullpath, bool compressed);
 	void Load();
     void Bake();
+    void BakeCMPData(CMP_Texture* cmpTexture);
 	int GetWidth();
 	int GetHeight();
 	std::string& GetFilename();
@@ -26,6 +27,7 @@ public:
     const BakingState GetBakingState();
 
     std::string m_fullPath = "";
+    bool m_compressed = false;
 
 private:
     OpenGLTexture glTexture;

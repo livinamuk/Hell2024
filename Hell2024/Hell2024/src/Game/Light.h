@@ -25,7 +25,7 @@ struct Light {
     glm::vec3 color = glm::vec3(1, 0.7799999713897705, 0.5289999842643738);
     float radius = 6.0f;
     int type = 0;
-    bool isDirty = false;
+    bool m_shadowMapIsDirty = false;
     bool extraDirty = false;
 
     Frustum m_frustum[6];
@@ -38,6 +38,16 @@ struct Light {
     bool m_contributesToGI = false;
     int m_shadowMapIndex = -1;
     AABBLightVolumeMode m_aabbLightVolumeMode = AABBLightVolumeMode::WORLDSPACE_CUBE_MAP;
+
+    void MarkShadowMapDirty() {
+        m_shadowMapIsDirty = true;
+    }
+    
+    void MarkAllDirtyFlags() {
+        m_shadowMapIsDirty = true;
+        m_aaabbVolumeIsDirty = true;
+        extraDirty = true;
+    }
 
     void UpdateMatricesAndFrustum() {
         m_projectionMatrix = glm::perspective(glm::radians(90.0f), (float)SHADOW_MAP_SIZE / (float)SHADOW_MAP_SIZE, SHADOW_NEAR_PLANE, radius);

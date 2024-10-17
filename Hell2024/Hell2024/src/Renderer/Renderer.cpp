@@ -26,7 +26,6 @@ IndirectDrawInfo CreateIndirectDrawInfo(std::vector<RenderItem3D>& potentialRend
 MultiDrawIndirectDrawInfo CreateMultiDrawIndirectDrawInfo(std::vector<RenderItem3D>& renderItems);
 std::vector<RenderItem2D> CreateRenderItems2D(hell::ivec2 presentSize, int playerCount);
 std::vector<RenderItem2D> CreateRenderItems2DHiRes(hell::ivec2 gBufferSize, int playerCount);
-std::vector<RenderItem3D> CreateRenderItems3D();
 std::vector<RenderItem3D> CreateGlassRenderItems();
 std::vector<RenderItem3D> CreateBloodDecalRenderItems();
 std::vector<RenderItem3D> CreateBloodVATRenderItems();
@@ -112,8 +111,8 @@ RenderData CreateRenderData() {
 
     hell::ivec2 presentSize = { PRESENT_WIDTH, PRESENT_HEIGHT };
     hell::ivec2 gbufferSize = { PRESENT_WIDTH, PRESENT_HEIGHT };
-
-    std::vector<RenderItem3D> geometryRenderItems = CreateRenderItems3D();
+      
+    std::vector<RenderItem3D> geometryRenderItems = Scene::GetGeometryRenderItems();
     std::vector<RenderItem3D> glassRenderItems = CreateGlassRenderItems();
     std::vector<RenderItem3D> bloodDecalRenderItems = CreateBloodDecalRenderItems();
     std::vector<RenderItem3D> bloodVATRenderItems = CreateBloodVATRenderItems();
@@ -140,7 +139,7 @@ RenderData CreateRenderData() {
     }
 
     // Create render items
-    renderData.renderItems.geometry = CreateRenderItems3D();
+    renderData.renderItems.geometry = Scene::GetGeometryRenderItems();
 
 
     /*
@@ -148,7 +147,7 @@ RenderData CreateRenderData() {
      █ █ █▀▀ █ █ █ █ █▀▀  █  █▀▄  █
      ▀▀▀ ▀▀▀ ▀▀▀ ▀ ▀ ▀▀▀  ▀  ▀ ▀  ▀  */
 
-    std::vector<RenderItem3D> sceneGeometryRenderItems = Scene::GetAllRenderItems();
+    std::vector<RenderItem3D> sceneGeometryRenderItems = Scene::GetGeometryRenderItems();
     for (int i = 0; i < renderData.playerCount; i++) {
         Player* player = Game::GetPlayerByIndex(i);
         Frustum& frustum = player->m_frustum;        
@@ -476,19 +475,6 @@ std::vector<RenderItem2D> CreateRenderItems2DHiRes(hell::ivec2 gbufferSize, int 
     return renderItems;
 }
 
-std::vector<RenderItem3D> CreateRenderItems3D() {
-    std::vector<RenderItem3D> renderItems = Scene::GetAllRenderItems();
-    return renderItems;
-
-    // REMOVE ME
-    // REMOVE ME
-    // REMOVE ME
-    // REMOVE ME
-    // REMOVE ME
-    // REMOVE ME
-    // REMOVE ME
-}
-
 std::vector<GPULight> CreateGPULights() {
 
     std::vector<GPULight> gpuLights;
@@ -694,10 +680,16 @@ std::vector<RenderItem3D> CreateDecalRenderItems() {
         renderItem.modelMatrix = decal->GetModelMatrix();
         renderItem.meshIndex = AssetManager::GetQuadMeshIndex();
         if (decal->GetType() == BulletHoleDecalType::REGULAR) {
-            renderItem.materialIndex = bulletHolePlasterMaterialIndex;
+            Material* material = AssetManager::GetMaterialByIndex(bulletHolePlasterMaterialIndex);
+            renderItem.baseColorTextureIndex = material->_basecolor;
+            renderItem.rmaTextureIndex = material->_rma;
+            renderItem.normalMapTextureIndex = material->_normal;
         }
         else if (decal->GetType() == BulletHoleDecalType::GLASS) {
-            renderItem.materialIndex = bulletHoleGlassMaterialIndex;
+            Material* material = AssetManager::GetMaterialByIndex(bulletHoleGlassMaterialIndex);
+            renderItem.baseColorTextureIndex = material->_basecolor;
+            renderItem.rmaTextureIndex = material->_rma;
+            renderItem.normalMapTextureIndex = material->_normal;
         }
     }
     return renderItems;
@@ -711,9 +703,9 @@ std::vector<RenderItem3D> CreateBloodDecalRenderItems() {
     static int textureIndexType3 = AssetManager::GetTextureIndexByName("blood_decal_9");
 
     std::vector<RenderItem3D> renderItems;
-    renderItems.reserve(Scene::_bloodDecals.size());
+    renderItems.reserve(Scene::g_bloodDecals.size());
 
-    for (BloodDecal& decal : Scene::_bloodDecals) {
+    for (BloodDecal& decal : Scene::g_bloodDecals) {
 
         RenderItem3D& renderItem = renderItems.emplace_back();
         renderItem.meshIndex = AssetManager::GetUpFacingPlaneMeshIndex();
@@ -721,16 +713,16 @@ std::vector<RenderItem3D> CreateBloodDecalRenderItems() {
         renderItem.inverseModelMatrix = glm::inverse(renderItem.modelMatrix);
 
         if (decal.type == 0) {
-            renderItem.materialIndex = textureIndexType0;
+            renderItem.baseColorTextureIndex = textureIndexType0;
         }
         else if (decal.type == 1) {
-            renderItem.materialIndex = textureIndexType1;
+            renderItem.baseColorTextureIndex = textureIndexType1;
         }
         else if (decal.type == 2) {
-            renderItem.materialIndex = textureIndexType2;
+            renderItem.baseColorTextureIndex = textureIndexType2;
         }
         else if (decal.type == 3) {
-            renderItem.materialIndex = textureIndexType3;
+            renderItem.baseColorTextureIndex = textureIndexType3;
         }
     }
 
@@ -764,23 +756,23 @@ std::vector<RenderItem3D> CreateBloodVATRenderItems() {
         renderItem.emissiveColor.r = bloodVAT.m_CurrentTime;
 
         if (bloodVAT.m_type == 4) {
-            renderItem.materialIndex = textureIndexBloodPos4;
-            renderItem.isGold = textureIndexBloodNorm4; // sketchy
+            renderItem.baseColorTextureIndex = textureIndexBloodPos4;
+            renderItem.normalMapTextureIndex = textureIndexBloodNorm4;
             renderItem.meshIndex = meshIndex4;
         }
         else if (bloodVAT.m_type == 6) {
-            renderItem.materialIndex = textureIndexBloodPos6;
-            renderItem.isGold = textureIndexBloodNorm6; // sketchy
+            renderItem.baseColorTextureIndex = textureIndexBloodPos6;
+            renderItem.normalMapTextureIndex = textureIndexBloodNorm6;
             renderItem.meshIndex = meshIndex6;
         }
         else if (bloodVAT.m_type == 7) {
-            renderItem.materialIndex = textureIndexBloodPos7;
-            renderItem.isGold = textureIndexBloodNorm7; // sketchy
+            renderItem.baseColorTextureIndex = textureIndexBloodPos7;
+            renderItem.normalMapTextureIndex = textureIndexBloodNorm7;
             renderItem.meshIndex = meshIndex7;
         }
         else if (bloodVAT.m_type == 9) {
-            renderItem.materialIndex = textureIndexBloodPos9;
-            renderItem.isGold = textureIndexBloodNorm9; // sketchy
+            renderItem.baseColorTextureIndex = textureIndexBloodPos9;
+            renderItem.normalMapTextureIndex = textureIndexBloodNorm9;
             renderItem.meshIndex = meshIndex9;
         }
         /*
@@ -950,7 +942,10 @@ std::vector<RenderItem3D> CreateGlassRenderItems() {
             Mesh* mesh = AssetManager::GetMeshByIndex(meshIndex);
             RenderItem3D& renderItem = renderItems.emplace_back();
             renderItem.meshIndex = meshIndex;
-            renderItem.materialIndex = materialIndex;
+            Material* material = AssetManager::GetMaterialByIndex(materialIndex);
+            renderItem.baseColorTextureIndex = material->_basecolor;
+            renderItem.rmaTextureIndex = material->_rma;
+            renderItem.normalMapTextureIndex = material->_normal;
             renderItem.indexOffset = mesh->baseIndex;
             renderItem.vertexOffset = mesh->baseVertex;
             renderItem.modelMatrix = window.GetModelMatrix();

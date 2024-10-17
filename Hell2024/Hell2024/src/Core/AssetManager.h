@@ -4,6 +4,7 @@
 #include "../Renderer/Types/CubemapTexture.h"
 #include "../Renderer/Types/ExrTexture.h"
 #include "../Renderer/Types/HeightMap.h"
+#include "../Renderer/Types/TreeMap.h"
 #include "../Renderer/Types/Mesh.hpp"
 #include "../Renderer/Types/Model.hpp"
 #include "../Renderer/Types/SkinnedMesh.hpp"
@@ -85,6 +86,7 @@ namespace AssetManager {
 
     // Heightmap 
     inline HeightMap g_heightMap;
+    inline TreeMap g_treeMap;
 
     // Raytracing
     void CreateMeshBLAS();

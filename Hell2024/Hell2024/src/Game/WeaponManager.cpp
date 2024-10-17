@@ -394,42 +394,6 @@ namespace WeaponManager {
         glock.pickupConvexMeshModelName = "Glock_Isolated_ConvexMesh";
         glock.pickUpMeshMaterials["Glock"] = "Glock";
 
-        WeaponInfo& autoShotgun = g_weapons.emplace_back();
-        autoShotgun.name = "AutomaticShotgun";
-        autoShotgun.modelName = "Shotgun";
-        autoShotgun.meshMaterials["ArmsMale"] = "Hands";
-        autoShotgun.meshMaterials["ArmsFemale"] = "FemaleArms";
-        autoShotgun.meshMaterials["Shells"] = "Shell";
-        autoShotgun.meshMaterials["Shotgun"] = "Shotgun";
-        autoShotgun.animationNames.idle = "Shotgun_Idle";
-        autoShotgun.animationNames.walk = "Shotgun_Walk";
-        autoShotgun.animationNames.reload = "Shotgun_Reload1Shell";
-        autoShotgun.animationNames.reloadempty.push_back("Glock_ReloadEmpty");
-        autoShotgun.animationNames.fire.push_back("Shotgun_Fire");
-        autoShotgun.animationNames.draw = "Shotgun_Draw";
-        autoShotgun.animationSpeeds.fire = 1.75f;
-        autoShotgun.audioFiles.fire.push_back("Glock_Fire0.wav");
-        autoShotgun.audioFiles.fire.push_back("Glock_Fire1.wav");
-        autoShotgun.audioFiles.fire.push_back("Glock_Fire2.wav");
-        autoShotgun.audioFiles.fire.push_back("Glock_Fire3.wav");
-        autoShotgun.audioFiles.reload = "Glock_Reload.wav";
-        autoShotgun.audioFiles.reloadEmpty = "Glock_ReloadEmpty.wav";
-        autoShotgun.type = WeaponType::SHOTGUN;
-        autoShotgun.muzzleFlashOffset = glm::vec3(0, 0.002, 0.005f);
-        autoShotgun.casingEjectionOffset = glm::vec3(-0.098, -0.033, 0.238);
-        autoShotgun.damage = 15;
-        autoShotgun.magSize = 8;
-        autoShotgun.ammoType = "Shotgun";
-        autoShotgun.hiddenMeshAtStart.push_back("ArmsFemale");
-        autoShotgun.muzzleFlashBoneName = "Muzzle";
-        autoShotgun.casingEjectionBoneName = "Shell_bone";
-        autoShotgun.casingEjectionForce = 13;
-        autoShotgun.auomaticOverride = true;
-        autoShotgun.isGold = true;
-        autoShotgun.animationCancelPercentages.fire = 40.0f;
-
-
-
         WeaponInfo& shotgun = g_weapons.emplace_back();
         shotgun.name = "Shotgun";
         shotgun.modelName = "Shotgun";
@@ -449,10 +413,10 @@ namespace WeaponManager {
         shotgun.animationNames.fire.push_back("Shotgun_Fire");
         shotgun.animationNames.draw = "Shotgun_Draw";
         shotgun.animationSpeeds.fire = 1.5f;
-        shotgun.animationSpeeds.shotgunReloadStart = 1.0f;
+        shotgun.animationSpeeds.shotgunReloadStart = 1.25f;
         shotgun.animationSpeeds.shotgunReloadEnd = 1.25f;
-        shotgun.animationSpeeds.shotgunReloadOneShell = 1.0f;
-        shotgun.animationSpeeds.shotgunReloadTwoShells = 1.0f;
+        shotgun.animationSpeeds.shotgunReloadOneShell = 1.5f;
+        shotgun.animationSpeeds.shotgunReloadTwoShells = 1.5f;
         shotgun.audioFiles.fire.push_back("Glock_Fire0.wav");
         shotgun.audioFiles.fire.push_back("Glock_Fire1.wav");
         shotgun.audioFiles.fire.push_back("Glock_Fire2.wav");
@@ -518,9 +482,14 @@ namespace WeaponManager {
         spas.casingEjectionBoneName = "Shell_bone";
         spas.casingEjectionForce = 13;
         spas.animationCancelPercentages.fire = 50.0f;
-        spas.pickupModelName = "Shotgun_Isolated";
-        spas.pickupConvexMeshModelName = "Shotgun_Isolated_ConvexMesh";
-        spas.pickUpMeshMaterials["Shotgun_Mesh"] = "Shotgun";
+        spas.pickupModelName = "SPAS_Isolated";
+        spas.pickupConvexMeshModelName = "SPAS_ConvexMesh";
+      // spas.pickUpMeshMaterials["SPAS12_Main"] = "SPAS_Main";
+      // spas.pickUpMeshMaterials["SPAS12_Moving"] = "SPAS_Moving";
+      // spas.pickUpMeshMaterials["SPAS12_Stamped"] = "SPAS_Stamped";
+        spas.pickUpMeshMaterials["SPAS12_Main"] = "Gold";
+        spas.pickUpMeshMaterials["SPAS12_Moving"] = "Gold";
+        spas.pickUpMeshMaterials["SPAS12_Stamped"] = "Gold";
 
 
 

@@ -69,11 +69,11 @@ namespace Physics {
 	void ClearCollisionLists();
 	OverlapReport OverlapTest(const PxGeometry& overlapShape, const PxTransform& shapePose, PxU32 collisionGroup);
 
-    void Destroy(PxRigidDynamic* rigidDynamic);
-    void Destroy(PxRigidStatic* rigidStatic);
-    void Destroy(PxShape* shape);
-    void Destroy(PxRigidBody* rigidBody);
-    void Destroy(PxTriangleMesh* triangleMesh);
+    void Destroy(PxRigidDynamic*& rigidDynamic);
+    void Destroy(PxRigidStatic*& rigidStatic);
+    void Destroy(PxShape*& shape);
+    void Destroy(PxRigidBody*& rigidBody);
+    void Destroy(PxTriangleMesh*& triangleMesh);
 
 	inline std::vector<CollisionReport> _collisionReports;
 	inline std::vector<CharacterCollisionReport> _characterCollisionReports;

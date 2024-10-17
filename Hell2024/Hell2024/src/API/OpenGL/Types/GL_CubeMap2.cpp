@@ -75,7 +75,7 @@ void CubeMap2::CheckStatus() {
 }
 
 void CubeMap2::Clear() {
-    glViewport(0, 0, SHADOW_MAP_SIZE, SHADOW_MAP_SIZE);
+    glViewport(0, 0, m_size, m_size);
     glBindFramebuffer(GL_FRAMEBUFFER, m_ID);
     glEnable(GL_DEPTH_TEST);
     glClear(GL_DEPTH_BUFFER_BIT);

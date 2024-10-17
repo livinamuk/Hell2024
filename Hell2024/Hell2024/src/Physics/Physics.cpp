@@ -617,49 +617,6 @@ void Physics::DisableRaycast(PxShape* shape) {
     shape->setQueryFilterData(filterData);
 }
 
-
-/*
-PxHeightField* createHeightField(PxPhysics* physics, const std::vector<Vertex>& positions, int numRows, int numCols) {
-    // Validate input
-    if (positions.size() != numRows * numCols) {
-        return nullptr; // Incorrect dimensions
-    }
-
-    // Prepare height field samples
-    std::vector<PxHeightFieldSample> samples(numRows * numCols);
-    for (int row = 0; row < numRows; ++row) {
-        for (int col = 0; col < numCols; ++col) {
-            int index = row * numCols + col;
-            samples[index].height = static_cast<PxI16>(positions[index].position.y); // Use the y-coordinate as height
-            samples[index].materialIndex0 = 0;
-            samples[index].materialIndex1 = 0;
-            samples[index].setTessFlag();
-        }
-    }
-
-    // Height field description
-    PxHeightFieldDesc heightFieldDesc;
-    heightFieldDesc.format = PxHeightFieldFormat::eS16_TM;
-    heightFieldDesc.nbRows = numRows;
-    heightFieldDesc.nbColumns = numCols;
-    heightFieldDesc.samples.data = samples.data();
-    heightFieldDesc.samples.stride = sizeof(PxHeightFieldSample);
-
-    // Ensure height field description is valid
-    if (!heightFieldDesc.isValid()) {
-        return nullptr; // Invalid height field description
-    }
-
-    // Use PxCreateHeightField with the descriptor and insertion callback
-    PxHeightField* heightField = PxCreateHeightField(heightFieldDesc, physics->getPhysicsInsertionCallback());
-    if (!heightField) {
-        return nullptr; // Failed to create height field
-    }
-
-    return heightField;
-}
-*/
-
 PxHeightField* Physics::CreateHeightField( const std::vector<Vertex>& positions, int numRows, int numCols) {
 
     if (positions.size() != numRows * numCols) {
@@ -692,7 +649,6 @@ PxHeightField* Physics::CreateHeightField( const std::vector<Vertex>& positions,
         return nullptr; // Invalid height field description
     }
     PxHeightField* heightField = PxCreateHeightField(heightFieldDesc, g_physics->getPhysicsInsertionCallback());
-    std::cout << "Created PxHeightField\n";
     return heightField;
 }
 
@@ -700,29 +656,14 @@ PxShape* Physics::CreateShapeFromHeightField(PxHeightField* heightField, PxShape
     if (material == NULL) {
         material = _defaultMaterial;
     }
-    // Scale back the height values to world units
-    float worldHeightScale = 1.0f / 32767.0f * heightScale;  // The inverse of the scale factor used during heightfield creation
-
-
+    float worldHeightScale = 1.0f / 32767.0f * heightScale;
     PxHeightFieldGeometry hfGeom(heightField, PxMeshGeometryFlags(), worldHeightScale, rowScale, colScale);
-    std::cout << "Created PxShape from PxHeightField\n";
-    return g_physics->createShape(hfGeom, *material, shapeFlags);
+    PxShape* shape = g_physics->createShape(hfGeom, *material, shapeFlags);
+    shape->setFlag(PxShapeFlag::eVISUALIZATION, false);
+    return shape;
 }
 
-/*
-PxShape* Physics::CreateShapeFromTriangleMesh(PxTriangleMesh* triangleMesh, PxShapeFlags shapeFlags2, PxMaterial* material, glm::vec3 scale) {
-    if (material == NULL) {
-        material = _defaultMaterial;
-    }
-    PxMeshGeometryFlags flags(~PxMeshGeometryFlag::eDOUBLE_SIDED);
-    PxTriangleMeshGeometry geometry(triangleMesh, PxMeshScale(PxVec3(scale.x, scale.y, scale.z)), flags);
-
-    PxShapeFlags shapeFlags(PxShapeFlag::eSCENE_QUERY_SHAPE); // Most importantly NOT eSIMULATION_SHAPE. PhysX does not allow for tri mesh.
-    return g_physics->createShape(geometry, *material, shapeFlags);
-}
-
-*/
-void Physics::Destroy(PxRigidDynamic* rigidDynamic) {
+void Physics::Destroy(PxRigidDynamic*& rigidDynamic) {
     if (rigidDynamic) {
         if (rigidDynamic->userData) {
             delete static_cast<PhysicsObjectData*>(rigidDynamic->userData);
@@ -734,7 +675,7 @@ void Physics::Destroy(PxRigidDynamic* rigidDynamic) {
     }
 }
 
-void Physics::Destroy(PxRigidStatic* rigidStatic) {
+void Physics::Destroy(PxRigidStatic*& rigidStatic) {
     if (rigidStatic) {
         if (rigidStatic->userData) {
             delete static_cast<PhysicsObjectData*>(rigidStatic->userData);
@@ -746,7 +687,7 @@ void Physics::Destroy(PxRigidStatic* rigidStatic) {
     }
 }
 
-void Physics::Destroy(PxShape* shape) {
+void Physics::Destroy(PxShape*& shape) {
     if (shape) {
         if (shape->userData) {
             delete static_cast<PhysicsObjectData*>(shape->userData);
@@ -757,7 +698,7 @@ void Physics::Destroy(PxShape* shape) {
     }
 }
 
-void Physics::Destroy(PxRigidBody* rigidBody) {
+void Physics::Destroy(PxRigidBody*& rigidBody) {
     if (rigidBody) {
         if (rigidBody->userData) {
             delete static_cast<PhysicsObjectData*>(rigidBody->userData);
@@ -769,7 +710,7 @@ void Physics::Destroy(PxRigidBody* rigidBody) {
     }
 }
 
-void Physics::Destroy(PxTriangleMesh* triangleMesh) {
+void Physics::Destroy(PxTriangleMesh*& triangleMesh) {
     if (triangleMesh) {
         triangleMesh = nullptr;
     }

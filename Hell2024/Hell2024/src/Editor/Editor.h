@@ -1,5 +1,6 @@
 #pragma once
 #include "HellCommon.h"
+#include "Enums.h"
 
 namespace Editor {
 
@@ -16,6 +17,9 @@ namespace Editor {
     uint32_t GetHoveredObjectIndex();
     glm::mat4& GetViewMatrix();
     glm::vec3 GetViewPos();
+
+    MenuType GetCurrentMenuType();
+    void SetCurrentMenuType(MenuType type);
 
     // Rendering
     void UpdateRenderItems();

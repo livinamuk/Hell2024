@@ -4,13 +4,14 @@ layout (location = 0) out vec4 outFragColor;
 
 
 //in vec2 blurTextureCoords[9];
-layout (binding = 0) uniform sampler2D image;
+//layout (binding = 0) uniform sampler2D image;
 
 layout (location = 1) in vec2 texCoord[9];
 
 void main(void){
 
-	outFragColor =  vec4(texCoord, 0, 1);
+	//outFragColor =  vec4(texCoord, 0, 1);
+
 	outFragColor =  vec4(1, 0, 0, 1);
 //	discard;
 

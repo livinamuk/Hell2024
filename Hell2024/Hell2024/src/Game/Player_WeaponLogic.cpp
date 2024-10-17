@@ -103,17 +103,19 @@ void Player::UpdateViewWeaponLogic(float deltaTime) {
     ▀   ▀▀▀ ▀▀▀  ▀  ▀▀▀ ▀▀▀ ▀▀▀   ▀     ▀ ▀ ▀▀▀  ▀  ▀▀▀ ▀ ▀ ▀ ▀  ▀  ▀▀▀ ▀▀▀ ▀▀▀ */
 
     if (weaponInfo->type == WeaponType::PISTOL || weaponInfo->type == WeaponType::AUTOMATIC) {
-
         if (!weaponState) {
             return;
         }
-
         if (HasControl()) {
-
             static float current = 0;
             constexpr float max = 0.0018f;
             constexpr float speed = 20.0f;
             float zoomSpeed = 0.075f;
+
+            // Empty
+            if (CanFire() && PressedFire() && weaponState->ammoInMag == 0) {
+                Audio::PlayAudio("Dry_Fire.wav", 0.8f);
+            }
 
             if (_weaponAction == ADS_IN ||
                 _weaponAction == ADS_IDLE ||
@@ -198,10 +200,6 @@ void Player::UpdateViewWeaponLogic(float deltaTime) {
                 SpawnCasing(ammoInfo);
                 weaponState->ammoInMag--;
             }
-            // Has no ammo
-            else {
-                Audio::PlayAudio("Dry_Fire.wav", 0.8f);
-            }
         }
         // Finished ADS Fire
         if (_weaponAction == ADS_FIRE && viewWeapon->IsAnimationComplete()) {
@@ -222,7 +220,6 @@ void Player::UpdateViewWeaponLogic(float deltaTime) {
                 viewWeapon->PlayAndLoopAnimation(weaponInfo->animationNames.adsIdle, 1.0f);
             }
         }
-
         // Give reload ammo
         if (_weaponAction == RELOAD || _weaponAction == RELOAD_FROM_EMPTY) {
 
@@ -241,9 +238,6 @@ void Player::UpdateViewWeaponLogic(float deltaTime) {
                 _needsAmmoReloaded = false;
             }
         }
-
-
-
         // Revolver cocks
         if (weaponInfo->revolverCockFrameNumber != 0 &&
             m_revolverNeedsCocking &&
@@ -252,7 +246,6 @@ void Player::UpdateViewWeaponLogic(float deltaTime) {
             Audio::PlayAudio(weaponInfo->audioFiles.revolverCocks[rand], 1.0f);
             m_revolverNeedsCocking = false;
         }
-
 
         // Fire (has ammo)
         if (triggeredFire && CanFire() && weaponState->ammoInMag > 0) {
@@ -281,10 +274,6 @@ void Player::UpdateViewWeaponLogic(float deltaTime) {
                 int rand = std::rand() % weaponInfo->animationNames.fire.size();
                 viewWeapon->PlayAnimation(weaponInfo->animationNames.fire[rand], weaponInfo->animationSpeeds.fire);
             }
-        }
-        // Fire (no ammo)
-        if (PressedFire() && CanFire() && weaponState->ammoInMag == 0) {
-            Audio::PlayAudio("Dry_Fire.wav", 0.8f);
         }
         // Reload
         if (PressedReload() && CanReload()) {
@@ -349,13 +338,6 @@ void Player::UpdateViewWeaponLogic(float deltaTime) {
         if (_weaponAction == RELOAD_REVOLVER_END && viewWeapon->IsAnimationComplete()) {
             _weaponAction = IDLE;
         }
-
-
-        if (Input::KeyPressed(HELL_KEY_9)) {
-            weaponState->ammoInMag = 0;
-        }
-
-
         // Return to idle
         if (_weaponAction == RELOAD && viewWeapon->IsAnimationComplete() ||
             _weaponAction == RELOAD_FROM_EMPTY && viewWeapon->IsAnimationComplete() ||
@@ -366,12 +348,6 @@ void Player::UpdateViewWeaponLogic(float deltaTime) {
             _weaponAction = IDLE;
         }
         //Idle
-        bool p90Draw = false;
-
-        if (viewWeapon->GetName() == "P90" && _weaponAction == DRAWING) {
-        //    _weaponAction = IDLE;
-        }
-
         if (_weaponAction == IDLE) {
             if (Player::IsMoving()) {
                 viewWeapon->PlayAndLoopAnimation(weaponInfo->animationNames.walk, 1.0f);
@@ -403,6 +379,10 @@ void Player::UpdateViewWeaponLogic(float deltaTime) {
 
     if (weaponInfo->type == WeaponType::SHOTGUN) {
 
+        // Empty
+        if (CanFire() && PressedFire() && weaponState->ammoInMag == 0) {
+            Audio::PlayAudio("Dry_Fire.wav", 0.8f);
+        }
         // Idle
         if (_weaponAction == IDLE) {
             if (Player::IsMoving()) {
@@ -465,11 +445,6 @@ void Player::UpdateViewWeaponLogic(float deltaTime) {
 
                 // SpawnShotgunShell();
                 weaponState->ammoInMag--;
-            }
-            // Is empty
-            else {
-                std::cout << "Shotgun can't fire. It's empty\n";
-                Audio::PlayAudio("Dry_Fire.wav", 0.8f);
             }
         }
 

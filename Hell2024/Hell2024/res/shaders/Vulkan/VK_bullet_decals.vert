@@ -37,19 +37,27 @@ layout(set = 0, binding = 0) readonly buffer CAMERA_DATA_BUFFER {
 
 struct RenderItem3D {
     mat4 modelMatrix;
-    mat4 inverseModelMatrix; 
+    mat4 inverseModelMatrix;
     int meshIndex;
     int baseColorTextureIndex;
-    int normalTextureIndex;
+    int normalMapTextureIndex;
     int rmaTextureIndex;
     int vertexOffset;
     int indexOffset;
-    int animatedTransformsOffset; 
     int castShadow;
     int useEmissiveMask;
     float emissiveColorR;
     float emissiveColorG;
     float emissiveColorB;
+    float aabbMinX;
+    float aabbMinY;
+    float aabbMinZ;
+    float aabbMaxX;
+    float aabbMaxY;
+    float aabbMaxZ;
+    float padding0;
+    float padding1;
+    float padding2;
 };
 
 layout(set = 0, binding = 8) readonly buffer A {RenderItem3D data[];} renderItems;
@@ -72,7 +80,7 @@ void main() {
 	mat4 model = renderItems.data[index].modelMatrix;
 	mat4 inverseModel = renderItems.data[index].inverseModelMatrix;
 	BaseColorTextureIndex =  renderItems.data[index].baseColorTextureIndex;
-	NormalTextureIndex =  renderItems.data[index].normalTextureIndex;
+	NormalTextureIndex =  renderItems.data[index].normalMapTextureIndex;
 	RMATextureIndex =  renderItems.data[index].rmaTextureIndex;
 
 	mat4 normalMatrix = transpose(inverseModel);

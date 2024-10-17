@@ -1,6 +1,7 @@
 #include "RendererData.h"
 #include "../Game/Game.h"
 #include "../Game/Scene.h"
+#include "Timer.hpp"
 
 namespace RendererData {
 
@@ -10,11 +11,14 @@ namespace RendererData {
 
     void CreateDrawCommands(int playerCount) {
 
+        //Timer timer("CreateDrawCommands");
+
         g_geometryRenderItems.clear();
+        g_blendGeometryRenderItems.clear();
         g_bulletDecalRenderItems.clear();
         g_shadowMapGeometryRenderItems.clear();
 
-        g_sceneGeometryRenderItems = Scene::GetAllRenderItems();
+        g_sceneGeometryRenderItems = Scene::GetGeometryRenderItems();
         g_sceneBulletDecalRenderItems = Scene::CreateDecalRenderItems();
 
         std::sort(g_sceneGeometryRenderItems.begin(), g_sceneGeometryRenderItems.end());
@@ -53,12 +57,11 @@ namespace RendererData {
 
         // Shadow map render draw commands
         for (Light& light : Scene::g_lights) {
-            if (light.m_shadowCasting) {
+            if (light.m_shadowCasting && light.m_shadowMapIsDirty) {
                 int i = light.m_shadowMapIndex;
                 light.UpdateMatricesAndFrustum();
                 for (int face = 0; face < 6; face++) {
                     Frustum& frustum = light.m_frustum[face];
-
                     // Geometry
                     g_shadowMapGeometryDrawInfo[i][face].baseInstance = g_shadowMapGeometryRenderItems.size();
                     g_shadowMapGeometryDrawInfo[i][face].instanceCount = 0;

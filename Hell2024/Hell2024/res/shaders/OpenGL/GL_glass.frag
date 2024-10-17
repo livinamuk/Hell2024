@@ -145,7 +145,9 @@ void main() {
 
     vec4 baseColor = texture(sampler2D(textureSamplers[BaseColorTextureIndex]), TexCoords);
 	baseColor.rgb = pow(baseColor.rgb, vec3(2.2));
-    vec4 normalMap = texture(sampler2D(textureSamplers[NormalTextureIndex]), TexCoords);
+	vec2 compressedNormal = texture(sampler2D(textureSamplers[NormalTextureIndex]), TexCoords).rg;
+    float z = 1.0 - 0.5 * (compressedNormal.r * compressedNormal.r + compressedNormal.g * compressedNormal.g);
+    vec3 normalMap = vec3(compressedNormal.r, compressedNormal.g, z);
     vec4 rma = texture(sampler2D(textureSamplers[RMATextureIndex]), TexCoords);
 	float roughness = rma.r;
     float metallic = 0;

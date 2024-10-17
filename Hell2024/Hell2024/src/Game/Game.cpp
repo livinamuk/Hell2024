@@ -41,12 +41,35 @@ namespace Game {
 
         GlobalIllumination::DestroyAllLightVolumes();
         GlobalIllumination::CreatePointCloud();
-        GlobalIllumination::CreateLightVolume(10.0f, 5.5f, 11.0f, -6.5f, 0.0f, -8.0f);
+        //GlobalIllumination::CreateLightVolume(11.0f, 5.5f, 11.0f, -6.6f, 0.0f, -8.0f);
+        GlobalIllumination::CreateLightVolume(15.0f, 7.5f, 11.0f, -8.6f, -2.0f, -8.0f);
 
         //CreatePlayers(2);
         CreatePlayers(4);
 
         Scene::Init();
+
+
+       // Scene::LoadEmptyScene();
+       // LightCreateInfo createInfo;
+       // createInfo.position = glm::vec3(0, 2, 0);
+       // createInfo.color = DEFAULT_LIGHT_COLOR;
+       // createInfo.radius = 4;
+       // createInfo.strength = 0.6;
+       // createInfo.type = 2;
+       // Scene::CreateLight(createInfo);
+
+
+        Model* model = AssetManager::GetModelByName("SPAS_Isolated");
+        for (auto& idx : model->GetMeshIndices()) {
+
+            Mesh* mesh = AssetManager::GetMeshByIndex(idx);
+            std:cout << mesh->name << "\n";
+
+        }
+        
+        std::cout << "\n";
+
         WeaponManager::PreLoadWeaponPickUpConvexHulls();
 
         g_gameSettings.takeDamageOutside = true;
@@ -54,6 +77,8 @@ namespace Game {
 
         g_gameSettings.takeDamageOutside = false;
         g_gameSettings.skyBoxTint = glm::vec3(1);
+
+        std::cout << "Game::Create() succeeded\n";
     }
 
     bool IsLoaded() {
@@ -84,7 +109,7 @@ namespace Game {
         Pathfinding2::Update(deltaTime);
 
         // Editor
-        if (Input::KeyPressed(HELL_KEY_F1) || Input::KeyPressed(HELL_KEY_F2)) {
+        if (Input::KeyPressed(HELL_KEY_F1) || Input::KeyPressed(HELL_KEY_F2) || Input::KeyPressed(HELL_KEY_F3)) {
             Audio::PlayAudio(AUDIO_SELECT, 1.00f);
             Editor::EnterEditor();
         }
@@ -206,7 +231,7 @@ namespace Game {
             return &_players[index];
         }
         else {
-            std::cout << "Game::GetPlayerByIndex() failed because index was out of range. Size of Game::_players is " << GetPlayerCount() << "\n";
+            //std::cout << "Game::GetPlayerByIndex() failed because index was out of range. Size of Game::_players is " << GetPlayerCount() << "\n";
             return nullptr;
         }
     }

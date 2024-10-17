@@ -162,6 +162,7 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <ClCompile Include="src\Renderer\Renderer_Debug.cpp" />
     <ClCompile Include="src\Renderer\RendererData.cpp" />
     <ClCompile Include="src\Renderer\Types\HeightMap.cpp" />
+    <ClCompile Include="src\Renderer\Types\TreeMap.cpp" />
     <ClCompile Include="src\Renderer\Types\VertexBuffer.cpp" />
     <ClCompile Include="src\Renderer\GlobalIllumination.cpp" />
     <ClCompile Include="src\Renderer\Types\CubemapTexutre.cpp" />
@@ -170,6 +171,8 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <ClCompile Include="src\Renderer\Types\SkinnedModel.cpp" />
     <ClCompile Include="src\Renderer\Types\Texture.cpp" />
     <ClCompile Include="src\Renderer\Types\Texture3D.cpp" />
+    <ClCompile Include="src\Tools\DDSHelpers.cpp" />
+    <ClCompile Include="src\Tools\ImageTools.cpp" />
     <ClCompile Include="src\Types\Animation.cpp" />
     <ClCompile Include="src\Types\Modular\Door.cpp" />
     <ClCompile Include="src\Renderer\Renderer.cpp" />
@@ -197,7 +200,6 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <ClCompile Include="src\Effects\MuzzleFlash.cpp" />
     <ClCompile Include="src\Engine.cpp" />
     <ClCompile Include="src\Main.cpp" />
-    <ClCompile Include="vendor\DDS\DDS_Helpers.cpp" />
     <ClCompile Include="src\API\OpenGL\Types\GL_gBuffer.cpp" />
     <ClCompile Include="src\Renderer\NumberBlitter.cpp" />
     <ClCompile Include="src\API\OpenGL\GL_renderer.cpp" />
@@ -279,12 +281,17 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <ClInclude Include="src\Core\JSON.hpp" />
     <ClInclude Include="src\Core\CreateInfo.hpp" />
     <ClInclude Include="src\Editor\Brush.h" />
+    <ClInclude Include="src\Editor\CSGPlane.hpp" />
     <ClInclude Include="src\Editor\CSGShape.h" />
     <ClInclude Include="src\Editor\Editor.h" />
     <ClInclude Include="src\Common\HellCommon.h" />
     <ClInclude Include="src\Math\Frustum.h" />
     <ClInclude Include="src\Renderer\RendererData.h" />
+    <ClInclude Include="src\Renderer\SSAO.hpp" />
     <ClInclude Include="src\Renderer\Types\HeightMap.h" />
+    <ClInclude Include="src\Renderer\Types\TreeMap.h" />
+    <ClInclude Include="src\Tools\DDSHelpers.h" />
+    <ClInclude Include="src\Tools\ImageTools.h" />
     <ClInclude Include="src\Types\Enums.h" />
     <ClInclude Include="src\Game\Dobermann.h" />
     <ClInclude Include="src\Pathfinding\Pathfinding2.h" />
@@ -353,7 +360,6 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <ClInclude Include="src\Math\Types.h" />
     <ClInclude Include="src\Physics\RigidBody.hpp" />
     <ClInclude Include="src\Physics\RigidStatic.hpp" />
-    <ClInclude Include="vendor\DDS\DDS_Helpers.h" />
     <ClInclude Include="src\API\OpenGL\Types\GL_gBuffer.h" />
     <ClInclude Include="src\Renderer\NumberBlitter.h" />
     <ClInclude Include="src\API\OpenGL\GL_renderer.h" />
@@ -457,6 +463,8 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <None Include="res\shaders\OpenGL\GL_light_culling.comp" />
     <None Include="res\shaders\OpenGL\GL_light_culling_OLD.comp" />
     <None Include="res\shaders\OpenGL\GL_light_volume_clear.comp" />
+    <None Include="res\shaders\OpenGL\GL_mega_texture_blood_decals.frag" />
+    <None Include="res\shaders\OpenGL\GL_mega_texture_blood_decals.vert" />
     <None Include="res\shaders\OpenGL\GL_outline.frag" />
     <None Include="res\shaders\OpenGL\GL_outline.vert" />
     <None Include="res\shaders\OpenGL\GL_p90_mag_backface_composite.comp" />
@@ -475,8 +483,11 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <None Include="res\shaders\OpenGL\GL_shadowMap_csg.vert" />
     <None Include="res\shaders\OpenGL\GL_debug_solid_color_2D.frag" />
     <None Include="res\shaders\OpenGL\GL_debug_solid_color_2D.vert" />
+    <None Include="res\shaders\OpenGL\GL_ssao.comp" />
     <None Include="res\shaders\OpenGL\GL_triangles_3D.frag" />
     <None Include="res\shaders\OpenGL\GL_triangles_3D.vert" />
+    <None Include="res\shaders\OpenGL\GL_winston.frag" />
+    <None Include="res\shaders\OpenGL\GL_winston.vert" />
     <None Include="res\shaders\OpenGL_OLD\animated_quad.frag" />
     <None Include="res\shaders\OpenGL_OLD\animated_quad.vert" />
     <None Include="res\shaders\OpenGL_OLD\blood_decals.frag" />

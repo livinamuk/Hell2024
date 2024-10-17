@@ -89,7 +89,6 @@ struct WeaponInfo {
     float reloadEmptyMagInFrameNumber = 0;
     int revolverCockFrameNumber = 0;
     bool relolverStyleReload = false;
-
     const char* pickupModelName = UNDEFINED_STRING;
     const char* pickupConvexMeshModelName = UNDEFINED_STRING;
 };

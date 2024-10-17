@@ -47,9 +47,71 @@ void Renderer::UpdateDebugPointsMesh() {
         }
     }
 
-
-
+    /*
     HeightMap& heightMap = AssetManager::g_heightMap;
+    TreeMap& treeMap = AssetManager::g_treeMap;
+
+    float offsetX = heightMap.m_width * heightMap.m_transform.scale.x * -0.5f;
+    float offsetZ = heightMap.m_depth * heightMap.m_transform.scale.z * -0.5f;
+
+    std::cout << "\offsetX: " << offsetX << "\n";
+    std::cout << "offsetZ: " << offsetZ << "\n";
+
+    static std::vector<Vertex> treeMapVertices;
+    if (treeMapVertices.empty()) {
+        for (int x = 0; x < treeMap.m_width; x++) {
+            for (int z = 0; z < treeMap.m_depth; z++) {
+                if (treeMap.m_array[x][z] == 1) {
+                    Vertex& vertex = treeMapVertices.emplace_back();
+                    vertex.position.x = x * heightMap.m_transform.scale.x + offsetX;
+                    vertex.position.z = z * heightMap.m_transform.scale.z + offsetZ;
+                    vertex.normal = RED;
+                }
+            }
+        }
+    }
+
+
+    vertices = treeMapVertices;*/
+
+
+
+    /*
+    if (true) {
+        static std::vector<Vertex> g_saplings;
+        if (g_saplings.empty()) {
+            int iterationMax = 10000;
+            int desiredSapplingCount = 500;
+            TreeMap& treeMap = AssetManager::g_treeMap;
+            g_saplings.reserve(desiredSapplingCount);
+            for (int i = 0; i < iterationMax; i++) {
+                float x = Util::RandomFloat(0, treeMap.m_width);
+                float z = Util::RandomFloat(0, treeMap.m_depth);
+
+                if (treeMap.m_array[x][z] == 1) {
+                    Vertex& vertex = g_saplings.emplace_back();
+                    vertex.position.x = x * heightMap.m_transform.scale.x + offsetX;
+                    vertex.position.y = 0.1f;
+                    vertex.position.z = z * heightMap.m_transform.scale.z + offsetZ;
+                    vertex.normal = WHITE;
+                    std::cout << x << ", " << z << " ACCE\n";
+                }
+                else {
+                    std::cout << x << ", " << z << " was rejected\n";
+                }
+                if (g_saplings.size() == desiredSapplingCount) {
+                    break;
+                }
+            }
+
+        }
+        vertices.reserve(vertices.size() + g_saplings.size());
+        vertices.insert(std::end(vertices), std::begin(g_saplings), std::end(g_saplings));
+    }*/
+
+
+
+
     /*
     for (int i = 0; i < heightMap.m_vertices.size(); i++) {
         Vertex& vertex = heightMap.m_vertices[i];
@@ -648,7 +710,7 @@ std::string& Renderer::GetDebugText() {
     }*/
 
     //g_debugText = Game::GetPlayerByIndex(0)->_playerName;
-
+    /*
     g_debugText = "You always on my mind\n";
     g_debugText += "yeh in my header #defined\n";
     g_debugText += "wanna see you\n";
@@ -658,7 +720,43 @@ std::string& Renderer::GetDebugText() {
     g_debugText += "wanna see you\n";
     g_debugText += "I see c++ in my dreams too\n";
     g_debugText += "(when I, when I, when I)\n";
-           
+           */
+
+
+
+    g_debugText = Util::MenuTypeToString(Editor::GetCurrentMenuType());
+
+
+
+    glm::vec3 origin = Game::GetPlayerByIndex(0)->GetFeetPosition() + glm::vec3(0, 1, 0);
+
+    PxU32 raycastFlags = RaycastGroup::RAYCAST_ENABLED;
+    PhysXRayResult rayResult = Util::CastPhysXRay(origin, glm::vec3(0, -1, 0), 3, raycastFlags);
+
+    if (rayResult.hitFound) {
+        g_debugText = Util::PhysicsObjectTypeToString(rayResult.physicsObjectType);
+
+    }
+    else {
+        g_debugText = "NO HIT";
+    }
+
+
+
+
+
+  //int i = 0;
+  //for (Dobermann& dobermann : Scene::g_dobermann) {
+  //            
+  //    g_debugText += std::to_string(i);
+  //    g_debugText += " Health: " + std::to_string(dobermann.m_health) + "\n";
+  //    g_debugText += " State: " + Util::DobermannStateToString(dobermann.m_currentState) + "\n";
+  //    g_debugText += " Player: " + std::to_string(dobermann.m_targetPlayerIndex) + "\n";
+  //    g_debugText += " Speed: " + std::to_string(dobermann.m_currentSpeed) + "\n";
+  //    g_debugText += " Animation: " + std::string(dobermann.GetAnimatedGameObject()->GetCurrentAnimationName()) + "\n";
+  //    g_debugText += "\n\n";
+  //    i++;
+  //}
 
     return g_debugText;
 }

@@ -3,23 +3,49 @@
 #include "../../../Util.hpp"
 #include "../../vendor/DDS/DDS_Helpers.h"
 #include <stb_image.h>
+#include "Tools/ImageTools.h"
+
+bool dontDoBindless = false;
 
 GLuint64 OpenGLTexture::GetBindlessID() {
     return bindlessID;
 }
 
-uint32_t cmpToOpenGlFormat(CMP_FORMAT format) {
-    if (format == CMP_FORMAT_DXT1) {
+uint32_t CmpToOpenGlFormat(CMP_FORMAT format) {
+    //std::cout << "FORMAT IS: " << format << "\n";
+    switch (format) {
+    case CMP_FORMAT_DXT1:
         return GL_COMPRESSED_RGB_S3TC_DXT1_EXT;
-    }
-    else if (format == CMP_FORMAT_DXT3) {
+    case CMP_FORMAT_DXT3:
         return GL_COMPRESSED_RGBA_S3TC_DXT3_EXT;
-    }
-    else if (format == CMP_FORMAT_DXT5) {
+    case CMP_FORMAT_DXT5:
         return GL_COMPRESSED_RGBA_S3TC_DXT5_EXT;
-    }
-    else {
-        return 0xFFFFFFFF;
+    case CMP_FORMAT_BC4:
+        return GL_COMPRESSED_RED_RGTC1; // Single-channel compressed format
+    case CMP_FORMAT_BC5:
+        return GL_COMPRESSED_RG_RGTC2;  // Two-channel compressed format
+    case CMP_FORMAT_ATI2N_XY:
+        return GL_COMPRESSED_RG_RGTC2;  // Two-channel compressed format
+    case CMP_FORMAT_BC6H:
+        return GL_COMPRESSED_RGB_BPTC_UNSIGNED_FLOAT; // HDR format
+    case CMP_FORMAT_BC7:
+        return GL_COMPRESSED_RGBA_BPTC_UNORM;         // High-quality RGBA
+    case CMP_FORMAT_ETC2_RGB:
+        return GL_COMPRESSED_RGB8_ETC2;
+    case CMP_FORMAT_ETC2_SRGB:
+        return GL_COMPRESSED_SRGB8_ETC2;
+    case CMP_FORMAT_ETC2_RGBA:
+        return GL_COMPRESSED_RGBA8_ETC2_EAC;
+    case CMP_FORMAT_ETC2_SRGBA:
+        return GL_COMPRESSED_SRGB8_ALPHA8_ETC2_EAC;
+    case CMP_FORMAT_ASTC:
+        return GL_COMPRESSED_RGBA_ASTC_4x4_KHR; // Assuming ASTC 4x4 block size
+    case CMP_FORMAT_BC1:
+        return GL_COMPRESSED_RGB_S3TC_DXT1_EXT;
+    case CMP_FORMAT_BC2:
+        return GL_COMPRESSED_RGBA_S3TC_DXT3_EXT;
+    default:
+        return 0xFFFFFFFF; // Invalid format
     }
 }
 
@@ -27,18 +53,11 @@ void freeCMPTexture(CMP_Texture* t) {
     free(t->pData);
 }
 
-OpenGLTexture::OpenGLTexture(const std::string filepath) {
-    Load(filepath);
-}
-
 #include "tinyexr.h"
-
-
 
 TextureData LoadEXRData(std::string filepath);
 TextureData LoadTextureData(std::string filepath);
 TextureData LoadDDSTextureData(std::string filepath);
-
 
 CompressedTextureData LoadCompressedDDSFromDisk(const char* filepath);
 
@@ -100,7 +119,6 @@ TextureData LoadTextureData(std::string filepath) {
     TextureData textureData;
     textureData.m_data = stbi_load(filepath.data(), &textureData.m_width, &textureData.m_height, &textureData.m_numChannels, 0);
     return textureData;
-
 }
 
 TextureData LoadDDSTextureData(std::string filepath) {
@@ -108,143 +126,17 @@ TextureData LoadDDSTextureData(std::string filepath) {
     return textureData;
 }
 
-void SaveDDSFile(std::string filename, void* data, int width, int height, int numChannels) {
-    /*
-    std::string suffix = filename.substr(filename.length() - 3);
-
-    if (suffix == "NRM" || suffix == "ALB" || suffix == "RMA") {
-        uint8_t* imageData = static_cast<uint8_t*>(data);
-        if (numChannels == 3) {
-            const uint64_t pitch = static_cast<uint64_t>(width) * 3UL;
-            for (auto r = 0; r < height; ++r) {
-                uint8_t* row = imageData + r * pitch;
-                for (auto c = 0UL; c < static_cast<uint64_t>(width); ++c) {
-                    uint8_t* pixel = row + c * 3UL;
-                    uint8_t  p = pixel[0];
-                    pixel[0] = pixel[2];
-                    pixel[2] = p;
-                }
-            }
-        }
-
-        CMP_Texture cmpTexture;
-
-        if (suffix == "NRM") {
-            //swizzle
-            CMP_Texture srcTexture = { 0 };
-            srcTexture.dwSize = sizeof(CMP_Texture);
-            srcTexture.dwWidth = width;
-            srcTexture.dwHeight = height;
-            srcTexture.dwPitch = numChannels == 4 ? width * 4 : width * 3;
-            srcTexture.format = numChannels == 4 ? CMP_FORMAT_RGBA_8888 : CMP_FORMAT_RGB_888;
-            srcTexture.dwDataSize = srcTexture.dwHeight * srcTexture.dwPitch;
-            srcTexture.pData = imageData;
-
-            _CMP_texture = std::make_unique<CMP_Texture>(0);
-            CMP_Texture destTexture = { *_CMP_texture };
-            destTexture.dwSize = sizeof(destTexture);
-            destTexture.dwWidth = _width;
-            destTexture.dwHeight = _height;
-            destTexture.dwPitch = _width;
-            destTexture.format = CMP_FORMAT_DXT3;
-            destTexture.dwDataSize = CMP_CalculateBufferSize(&destTexture);
-            destTexture.pData = (CMP_BYTE*)malloc(destTexture.dwDataSize);
-            CMP_CompressOptions options = { 0 };
-            options.dwSize = sizeof(options);
-            options.fquality = 0.88f;
-            CMP_ERROR   cmp_status;
-            cmp_status = CMP_ConvertTexture(&srcTexture, &destTexture, &options, nullptr);
-            if (cmp_status != CMP_OK) {
-                free(destTexture.pData);
-                _CMP_texture.reset();
-                std::printf("Compression returned an error %d\n", cmp_status);
-                return false;
-            }
-            else {
-                std::cout << "saving compressed texture: " << compressedPath.c_str() << "\n";
-                SaveDDSFile(compressedPath.c_str(), destTexture);
-            }
-        }
-        else if (suffix == "RMA") {
-            CMP_Texture srcTexture = { 0 };
-            srcTexture.dwSize = sizeof(CMP_Texture);
-            srcTexture.dwWidth = _width;
-            srcTexture.dwHeight = _height;
-            srcTexture.dwPitch = _NumOfChannels == 4 ? _width * 4 : _width * 3;
-            srcTexture.format = _NumOfChannels == 4 ? CMP_FORMAT_RGBA_8888 : CMP_FORMAT_BGR_888;
-            srcTexture.dwDataSize = srcTexture.dwHeight * srcTexture.dwPitch;
-            srcTexture.pData = imageData;
-            _CMP_texture = std::make_unique<CMP_Texture>(0);
-            CMP_Texture destTexture = { *_CMP_texture };
-            destTexture.dwSize = sizeof(destTexture);
-            destTexture.dwWidth = _width;
-            destTexture.dwHeight = _height;
-            destTexture.dwPitch = _width;
-            destTexture.format = CMP_FORMAT_DXT3;
-            destTexture.dwDataSize = CMP_CalculateBufferSize(&destTexture);
-            destTexture.pData = (CMP_BYTE*)malloc(destTexture.dwDataSize);
-            CMP_CompressOptions options = { 0 };
-            options.dwSize = sizeof(options);
-            options.fquality = 0.88f;
-            CMP_ERROR   cmp_status;
-            cmp_status = CMP_ConvertTexture(&srcTexture, &destTexture, &options, nullptr);
-            if (cmp_status != CMP_OK) {
-                free(destTexture.pData);
-                _CMP_texture.reset();
-                std::printf("Compression returned an error %d\n", cmp_status);
-                return false;
-            }
-            else {
-                SaveDDSFile(compressedPath.c_str(), destTexture);
-            }
-        }
-        else if (suffix == "ALB") {
-            CMP_Texture srcTexture = { 0 };
-            srcTexture.dwSize = sizeof(CMP_Texture);
-            srcTexture.dwWidth = _width;
-            srcTexture.dwHeight = _height;
-            srcTexture.dwPitch = _NumOfChannels == 4 ? _width * 4 : _width * 3;
-            srcTexture.format = _NumOfChannels == 4 ? CMP_FORMAT_RGBA_8888 : CMP_FORMAT_RGB_888;
-            srcTexture.dwDataSize = srcTexture.dwHeight * srcTexture.dwPitch;
-            srcTexture.pData = imageData;
-            _CMP_texture = std::make_unique<CMP_Texture>(0);
-            CMP_Texture destTexture = { *_CMP_texture };
-            destTexture.dwSize = sizeof(destTexture);
-            destTexture.dwWidth = _width;
-            destTexture.dwHeight = _height;
-            destTexture.dwPitch = _width;
-            destTexture.format = CMP_FORMAT_DXT3;
-            destTexture.dwDataSize = CMP_CalculateBufferSize(&destTexture);
-            destTexture.pData = (CMP_BYTE*)malloc(destTexture.dwDataSize);
-            CMP_CompressOptions options = { 0 };
-            options.dwSize = sizeof(options);
-            options.fquality = 0.88f;
-            CMP_ERROR   cmp_status;
-            cmp_status = CMP_ConvertTexture(&srcTexture, &destTexture, &options, nullptr);
-            if (cmp_status != CMP_OK) {
-                free(destTexture.pData);
-                _CMP_texture.reset();
-                std::printf("Compression returned an error %d\n", cmp_status);
-                return false;
-            }
-            else {
-                SaveDDSFile(compressedPath.c_str(), destTexture);
-            }
-        }
-    }*/
-}
-
-bool OpenGLTexture::Load(const std::string filepath) {
+bool OpenGLTexture::Load(const std::string filepath, bool compressed) {
 
     if (!Util::FileExists(filepath)) {
         std::cout << filepath << " does not exist.\n";
         return false;
     }
-    _filename = Util::GetFilename(filepath);
-    _filetype = Util::GetFileInfo(filepath).filetype;
+    m_filename = Util::GetFilename(filepath);
+    m_filetype = Util::GetFileInfo(filepath).filetype;
 
     // Is it a VAT texture?
-    if (_filetype == "exr") {
+    if (m_filetype == "exr") {
         TextureData textureData = LoadEXRData(filepath);
         this->m_data = textureData.m_data;
         this->_width = textureData.m_width;
@@ -252,54 +144,15 @@ bool OpenGLTexture::Load(const std::string filepath) {
         return true;
     }
 
-    // Check if compressed version exists. If not, create one.
-    std::string suffix = _filename.substr(_filename.length() - 3);
-    std::string compressedPath = "res/assets/" + _filename + ".dds";
+    TextureData textureData = LoadTextureData(filepath);
+    this->m_data = textureData.m_data;
+    this->_width = textureData.m_width;
+    this->_height = textureData.m_height;
+    this->_NumOfChannels = textureData.m_numChannels;
 
-    if (!Util::FileExists(compressedPath)) {
-
-        TextureData textureData = LoadTextureData(filepath);
-        this->m_data = textureData.m_data;
-        this->_width = textureData.m_width;
-        this->_height = textureData.m_height;
-        this->_NumOfChannels = textureData.m_numChannels;
-    }
-
-    /*
-    if (Util::FileExists(compressedPath)) {
-        std::cout << compressedPath << "\n";
-        //LoadDDSFile(compressedPath.c_str(), m_cmpTexture);
-        m_compressedTextureData = LoadCompressedDDSFromDisk(compressedPath.c_str());
-        m_compressed = true;
-    }*/
-
-   // if (!m_compressed) {
-    //if (_CMP_texture == nullptr) {
-        //For everything else just load the raw texture. Compression fucks up UI elements.
-      //  stbi_set_flip_vertically_on_load(false);
-       // m_data = stbi_load(filepath.data(), &_width, &_height, &_NumOfChannels, 0);
-    //}
     return true;
 }
 
-
-GLenum MapGliFormatToOpenGL(gli::format format) {
-    switch (format) {
-    case gli::FORMAT_RGBA_DXT1_UNORM_BLOCK8:
-    case gli::FORMAT_RGBA_DXT1_SRGB_BLOCK8:
-        return GL_COMPRESSED_RGBA_S3TC_DXT1_EXT;
-    case gli::FORMAT_RGBA_DXT3_UNORM_BLOCK16:
-    case gli::FORMAT_RGBA_DXT3_SRGB_BLOCK16:
-        return GL_COMPRESSED_RGBA_S3TC_DXT3_EXT;
-    case gli::FORMAT_RGBA_DXT5_UNORM_BLOCK16:
-    case gli::FORMAT_RGBA_DXT5_SRGB_BLOCK16:
-        return GL_COMPRESSED_RGBA_S3TC_DXT5_EXT;
-        // Add more cases for other formats if needed
-    default:
-        std::cerr << "Unsupported format!" << std::endl;
-        return 0;
-    }
-}
 
 const char* GetGLFormatString(GLenum format) {
     switch (format) {
@@ -341,7 +194,7 @@ bool OpenGLTexture::Bake() {
 
     if (m_compressed) {
 
-        std::cout << _filename << ": " << GetGLFormatString(m_compressedTextureData.format) << "\n";
+        std::cout << m_filename << ": " << GetGLFormatString(m_compressedTextureData.format) << "\n";
         std::cout << " -width: " << std::to_string(m_compressedTextureData.width) << "\n";
         std::cout << " -height: " << std::to_string(m_compressedTextureData.height) << "\n";
         std::cout << " -size: " << std::to_string(m_compressedTextureData.size) << "\n";
@@ -355,13 +208,16 @@ bool OpenGLTexture::Bake() {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         glCompressedTexImage2D(GL_TEXTURE_2D, 0, m_compressedTextureData.format, m_compressedTextureData.width, m_compressedTextureData.height, 0, m_compressedTextureData.size, m_compressedTextureData.data);
         glGenerateMipmap(GL_TEXTURE_2D);
-        bindlessID = glGetTextureHandleARB(ID);
-        glMakeTextureHandleResidentARB(bindlessID);
+        if (!dontDoBindless) {
+            bindlessID = glGetTextureHandleARB(ID);
+            glMakeTextureHandleResidentARB(bindlessID);
+        }
+
         return true;
     }
 
     if (m_data == nullptr) {
-        std::cout << "ATTENTION! OpenGLTexture::Bake() called but m_data was nullptr:" << _filename << "\n";
+        std::cout << "ATTENTION! OpenGLTexture::Bake() called but m_data was nullptr:" << m_filename << "\n";
         return false;
     }
 
@@ -375,7 +231,7 @@ bool OpenGLTexture::Bake() {
         format = GL_RED;
 
 
-    if (_filetype == "exr") {
+    if (m_filetype == "exr") {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16, _width, _height, 0, GL_RGBA, GL_FLOAT, m_data);
@@ -385,8 +241,10 @@ bool OpenGLTexture::Bake() {
     }
     else {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+       // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, _width, _height, 0, format, GL_UNSIGNED_BYTE, m_data);
+        glGenerateMipmap(GL_TEXTURE_2D);
         stbi_image_free(m_data);
         m_data = nullptr;
     }
@@ -403,12 +261,39 @@ bool OpenGLTexture::Bake() {
         glGenerateMipmap(GL_TEXTURE_2D);
     }
 
-    bindlessID = glGetTextureHandleARB(ID);
-    glMakeTextureHandleResidentARB(bindlessID);
+    if (!dontDoBindless) {
+        bindlessID = glGetTextureHandleARB(ID);
+        glMakeTextureHandleResidentARB(bindlessID);
+    }
     //glMakeTextureHandleNonResidentARB(bindlessID); to unbind
 
     m_data = nullptr;
     return true;
+}
+
+
+void OpenGLTexture::BakeCMPData(CMP_Texture* cmpTexture) {
+    uint32_t glFormat = CmpToOpenGlFormat(cmpTexture->format);
+    if (glFormat == 0xFFFFFFFF) {
+        std::cout << "Invalid format! Failed to load compressed texture: " << m_filename << "\n";
+        return;
+    }
+    glGenTextures(1, &ID);
+    glBindTexture(GL_TEXTURE_2D, ID);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    uint32_t width = cmpTexture->dwWidth;
+    uint32_t height = cmpTexture->dwHeight;
+    uint32_t size = cmpTexture->dwDataSize;
+    glCompressedTexImage2D(GL_TEXTURE_2D, 0, glFormat, cmpTexture->dwWidth, cmpTexture->dwHeight, 0, size, cmpTexture->pData);
+    glGenerateMipmap(GL_TEXTURE_2D);
+    freeCMPTexture(cmpTexture);
+    if (!dontDoBindless) {
+        bindlessID = glGetTextureHandleARB(ID);
+        glMakeTextureHandleResidentARB(bindlessID);
+    }
 }
 
 unsigned int OpenGLTexture::GetID() {
@@ -429,11 +314,11 @@ int OpenGLTexture::GetHeight() {
 }
 
 std::string& OpenGLTexture::GetFilename() {
-    return _filename;
+    return m_filename;
 }
 
 std::string& OpenGLTexture::GetFiletype() {
-    return _filetype;
+    return m_filetype;
 }
 
 /*

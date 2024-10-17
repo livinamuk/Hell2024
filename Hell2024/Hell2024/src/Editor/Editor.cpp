@@ -37,7 +37,9 @@ namespace Editor {
             CLOSE_MENU,
             FILE_NEW_MAP,
             FILE_LOAD_MAP,
-            FILE_SAVE_MAP
+            FILE_SAVE_MAP,
+            RECALCULATE_NAV_MESH,
+            RECALCULATE_GI
         } type;
         void* ptr;
         float increment = 1.0f;
@@ -69,13 +71,23 @@ namespace Editor {
     std::string g_debugText = "";
     std::vector<MenuItem> g_menuItems;
     int g_menuSelectionIndex = 0;
-    bool g_insertMenuOpen = false;
-    bool g_fileMenuOpen = false;
+    //bool g_insertMenuOpen = false;
+    //bool g_fileMenuOpen = false;
+    MenuType g_currentMenuType = MenuType::NONE;
     bool g_isDraggingMenu = false;
     hell::ivec2 g_menuLocation = hell::ivec2(76, 460);
     hell::ivec2 g_backgroundLocation = hell::ivec2(0, 0);
     hell::ivec2 g_backgroundSize = hell::ivec2(0, 0);
     hell::ivec2 g_dragOffset = hell::ivec2(0, 0);
+
+    MenuType GetCurrentMenuType() {
+        return g_currentMenuType;
+    }
+
+    void SetCurrentMenuType(MenuType type) {
+        g_currentMenuType = type;
+        std::cout << "Set current menu type to " << Util::MenuTypeToString(type) << "\n";
+    }
 
     // Forward declarations
     glm::dvec3 Rot3D(glm::dvec3 v, glm::dvec2 rot);
@@ -272,6 +284,7 @@ namespace Editor {
                         g_selectedObjectType = PhysicsObjectType::LIGHT;
                         std::cout << "selected light " << i << "\n";
                         uiWasSelectedThisFrame = true;
+                        SetCurrentMenuType(MenuType::SELECTED_OBJECT);
                     }
                 }
             }
@@ -285,8 +298,7 @@ namespace Editor {
                     g_menuSelectionIndex = 0;
                     Audio::PlayAudio(MENU_SELECT_AUDIO, MENU_SELECT_VOLUME);
                     std::cout << "Selected an editor object\n";
-                    g_fileMenuOpen = false;
-                    g_insertMenuOpen = false;
+                    SetCurrentMenuType(MenuType::SELECTED_OBJECT);
                 }
 
                 // Clicked on nothing, so unselect any selected object
@@ -296,6 +308,7 @@ namespace Editor {
                     gizmoTransform.position.y = -1000.0f;
                     gizmoMatrix = gizmoTransform.to_mat4();
                     g_selectedObjectType = PhysicsObjectType::UNDEFINED;
+                    SetCurrentMenuType(MenuType::NONE);
                     std::cout << "Unelected an editor object\n";
                 }
             }
@@ -416,19 +429,20 @@ namespace Editor {
 
 
 
-        // Open file menu
+        // Function keys input
         if (Input::KeyPressed(HELL_KEY_F1)) {
             Audio::PlayAudio(MENU_SELECT_AUDIO, MENU_SELECT_VOLUME);
-            g_fileMenuOpen = true;
-            g_insertMenuOpen = false;
+            SetCurrentMenuType(MenuType::FILE);
             g_menuSelectionIndex = 0;
         }
-
-        // Open insert menu
         if (Input::KeyPressed(HELL_KEY_F2)) {
             Audio::PlayAudio(MENU_SELECT_AUDIO, MENU_SELECT_VOLUME);
-            g_insertMenuOpen = true;
-            g_fileMenuOpen = false;
+            SetCurrentMenuType(MenuType::INSERT);
+            g_menuSelectionIndex = 0;
+        }
+        if (Input::KeyPressed(HELL_KEY_F3)) {
+            Audio::PlayAudio(MENU_SELECT_AUDIO, MENU_SELECT_VOLUME);
+            SetCurrentMenuType(MenuType::MISC);
             g_menuSelectionIndex = 0;
         }
 
@@ -438,8 +452,9 @@ namespace Editor {
 
 
     bool MenuHasHover() {
-        if (!g_insertMenuOpen && !g_fileMenuOpen && g_selectedObjectType == PhysicsObjectType::UNDEFINED) {
-           return false;
+        //if (!g_insertMenuOpen && !g_fileMenuOpen && g_selectedObjectType == PhysicsObjectType::UNDEFINED) {
+        if (GetCurrentMenuType() == MenuType::NONE && g_selectedObjectType == PhysicsObjectType::UNDEFINED) {
+            return false;
         }
         int mouseX = Input::GetViewportMappedMouseX(PRESENT_WIDTH);
         int mouseY = Input::GetViewportMappedMouseY(PRESENT_HEIGHT);
@@ -504,8 +519,9 @@ namespace Editor {
 
     void LeaveEditor() {
         g_editorOpen = false;
-        g_insertMenuOpen = false;
-        g_fileMenuOpen = false;
+        SetCurrentMenuType(MenuType::NONE);
+        //g_insertMenuOpen = false;
+        //g_fileMenuOpen = false;
         g_menuSelectionIndex = 0;
         g_selectedObjectType = PhysicsObjectType::UNDEFINED;
         g_hoveredObjectType = PhysicsObjectType::UNDEFINED;
@@ -514,10 +530,6 @@ namespace Editor {
         Game::GiveControlToPlayer1();
         Gizmo::ResetHover();
         Input::DisableCursor();
-
-
-        // Navmesh
-        Pathfinding2::UpdateNavMesh();
 
         for (CSGShape& cubeVolume : Scene::g_csgSubtractiveShapes) {
             cubeVolume.DisableRaycast();
@@ -627,7 +639,7 @@ namespace Editor {
     void RebuildEverything() {
 
         for (Light& light : Scene::g_lights) {
-            light.isDirty = true;
+            light.m_shadowMapIsDirty = true;
         }
 
         CSG::Build();
@@ -641,20 +653,26 @@ namespace Editor {
         bool lightMode = true;
 
         // Create file menu
-        if (g_fileMenuOpen) {
+        if (GetCurrentMenuType() == MenuType::FILE) {
             g_menuItems.push_back({ "New map", MenuItem::Type::FILE_NEW_MAP });
             g_menuItems.push_back({ "Load map", MenuItem::Type::FILE_LOAD_MAP });
             g_menuItems.push_back({ "Save map\n", MenuItem::Type::FILE_SAVE_MAP });
             g_menuItems.push_back({ "Close", MenuItem::Type::CLOSE_MENU });
         }
         // Create insert menu
-        else if (g_insertMenuOpen) {
+        else if (GetCurrentMenuType() == MenuType::INSERT) {
             g_menuItems.push_back({ "CSG Additive Cube", MenuItem::Type::INSERT_CSG_ADDITIVE });
             g_menuItems.push_back({ "CSG Additive Plane", MenuItem::Type::INSERT_CSG_ADDITIVE_PLANE });
             g_menuItems.push_back({ "CSG Subtractive Cube", MenuItem::Type::INSERT_CSG_SUBTRACTIVE });
             g_menuItems.push_back({ "Light", MenuItem::Type::INSERT_LIGHT });
             g_menuItems.push_back({ "Door", MenuItem::Type::INSERT_DOOR });
             g_menuItems.push_back({ "Window\n", MenuItem::Type::INSERT_WINDOW });
+            g_menuItems.push_back({ "Close", MenuItem::Type::CLOSE_MENU });
+        }
+        // Create misc menu
+        else if (GetCurrentMenuType() == MenuType::MISC) {
+            g_menuItems.push_back({ "Recalculate nav mesh", MenuItem::Type::RECALCULATE_NAV_MESH });
+            g_menuItems.push_back({ "Recalculate GI\n", MenuItem::Type::RECALCULATE_GI });
             g_menuItems.push_back({ "Close", MenuItem::Type::CLOSE_MENU });
         }
         // Create object menus
@@ -786,13 +804,11 @@ namespace Editor {
                     modified = false;
                 }
                 if (g_selectedObjectType == PhysicsObjectType::LIGHT) {
-                    Scene::DirtyAllLights();
+                    Light& light = Scene::g_lights[g_selectedObjectIndex];
+                    light.MarkAllDirtyFlags();
                 }
             }
-
         }
-
-
 
 
         // Interact with menu
@@ -815,10 +831,10 @@ namespace Editor {
 
                 g_selectedObjectIndex = Scene::g_csgAdditiveShapes.size() - 1;
                 g_selectedObjectType = PhysicsObjectType::CSG_OBJECT_ADDITIVE;
-
+                SetCurrentMenuType(MenuType::SELECTED_OBJECT);
                 RebuildEverything();
             }
-            if (type == MenuItem::Type::INSERT_CSG_ADDITIVE_PLANE) {
+            else if (type == MenuItem::Type::INSERT_CSG_ADDITIVE_PLANE) {
                 Transform transform;
                 transform.position = spawnPos;
                 transform.scale = glm::vec3(1.0f);
@@ -830,10 +846,10 @@ namespace Editor {
 
                 g_selectedObjectIndex = Scene::g_csgAdditiveShapes.size() - 1;
                 g_selectedObjectType = PhysicsObjectType::CSG_OBJECT_ADDITIVE;
-
+                SetCurrentMenuType(MenuType::SELECTED_OBJECT);
                 RebuildEverything();
             }
-            if (type == MenuItem::Type::INSERT_CSG_SUBTRACTIVE) {
+            else if (type == MenuItem::Type::INSERT_CSG_SUBTRACTIVE) {
                 Transform transform;
                 transform.position = spawnPos;
                 transform.scale = glm::vec3(1.0f);
@@ -846,9 +862,10 @@ namespace Editor {
 
                 g_selectedObjectIndex = Scene::g_csgSubtractiveShapes.size() - 1;
                 g_selectedObjectType = PhysicsObjectType::CSG_OBJECT_SUBTRACTIVE;
+                SetCurrentMenuType(MenuType::SELECTED_OBJECT);
                 RebuildEverything();
             }
-            if (type == MenuItem::Type::INSERT_DOOR) {
+            else if (type == MenuItem::Type::INSERT_DOOR) {
                 DoorCreateInfo createInfo;
                 createInfo.position = spawnPos * glm::vec3(1, 0, 1);
                 createInfo.rotation = HELL_PI * 0.5f;
@@ -856,18 +873,20 @@ namespace Editor {
                 Scene::CreateDoor(createInfo);
                 g_selectedObjectIndex = Scene::GetDoorCount() - 1;
                 g_selectedObjectType = PhysicsObjectType::DOOR;
+                SetCurrentMenuType(MenuType::SELECTED_OBJECT);
                 RebuildEverything();
             }
-            if (type == MenuItem::Type::INSERT_WINDOW) {
+            else if (type == MenuItem::Type::INSERT_WINDOW) {
                 WindowCreateInfo createInfo;
                 createInfo.position = spawnPos * glm::vec3(1, 0, 1);
                 createInfo.rotation = 0.0f;
                 Scene::CreateWindow(createInfo);
                 g_selectedObjectIndex = Scene::GetWindowCount() - 1;
                 g_selectedObjectType = PhysicsObjectType::GLASS;
+                SetCurrentMenuType(MenuType::SELECTED_OBJECT);
                 RebuildEverything();
             }
-            if (type == MenuItem::Type::INSERT_LIGHT) {
+            else if (type == MenuItem::Type::INSERT_LIGHT) {
                 LightCreateInfo createInfo;
                 createInfo.radius = 6.0;
                 createInfo.strength = 1.0f;
@@ -875,23 +894,37 @@ namespace Editor {
                 createInfo.position = spawnPos;
                 createInfo.color = DEFAULT_LIGHT_COLOR;
                 Scene::CreateLight(createInfo);
+                g_selectedObjectIndex = Scene::g_lights.size() - 1;
+                g_selectedObjectType = PhysicsObjectType::LIGHT;
+                SetCurrentMenuType(MenuType::SELECTED_OBJECT);
             }
-            if (type == MenuItem::Type::FILE_NEW_MAP) {
+            else if (type == MenuItem::Type::FILE_NEW_MAP) {
                 Physics::ClearCollisionLists();
                 Scene::LoadEmptyScene();
+                SetCurrentMenuType(MenuType::NONE);
             }
-            if (type == MenuItem::Type::FILE_LOAD_MAP) {
+            else if (type == MenuItem::Type::FILE_LOAD_MAP) {
                 Physics::ClearCollisionLists();
                 Scene::LoadDefaultScene();
-                g_fileMenuOpen = false;
+                SetCurrentMenuType(MenuType::NONE);
             }
-            if (type == MenuItem::Type::FILE_SAVE_MAP) {
+            else if (type == MenuItem::Type::FILE_SAVE_MAP) {
                 Scene::SaveMapData("mappp.txt");
-                g_fileMenuOpen = false;
+                SetCurrentMenuType(MenuType::NONE);
+            }
+            else if (type == MenuItem::Type::RECALCULATE_NAV_MESH) {
+                Pathfinding2::CalculateNavMesh();
+                SetCurrentMenuType(MenuType::NONE);
+            }
+            else {
+                SetCurrentMenuType(MenuType::NONE);
             }
 
-            g_insertMenuOpen = false;
-            g_fileMenuOpen = false;
+            
+
+            //
+            // g_insertMenuOpen = false;
+            //g_fileMenuOpen = false;
         }
     }
 
@@ -902,6 +935,10 @@ namespace Editor {
         gEditorUIRenderItems.clear();
         gMenuRenderItems.clear();
 
+        //if (GetCurrentMenuType() == MenuType::NONE) {
+        //    return;
+        //}
+
         if (Input::KeyPressed(HELL_KEY_M)) {
             return;
         }
@@ -910,33 +947,38 @@ namespace Editor {
         UpdateRenderItems(gSelectedRenderItems, InteractionType::SELECTED, g_selectedObjectIndex);
 
         // Bail if there is no menu to generate
-        if (g_selectedObjectType != PhysicsObjectType::UNDEFINED || g_insertMenuOpen || g_fileMenuOpen)
+        if (g_selectedObjectType != PhysicsObjectType::UNDEFINED || GetCurrentMenuType() != MenuType::NONE)
 
         {
 
             std::string headingText = "\n";
-            if (g_fileMenuOpen) {
+            if (GetCurrentMenuType() == MenuType::FILE) {
                 headingText += "------- FILE -------";
             }
-            else if (g_insertMenuOpen) {
+            else if (GetCurrentMenuType() == MenuType::INSERT) {
                 headingText += "------ INSERT ------";
             }
-            else if (g_selectedObjectType == PhysicsObjectType::DOOR) {
-                headingText += "------- DOOR -------";
+            else if (GetCurrentMenuType() == MenuType::MISC) {
+                headingText += "------- MISC -------";
             }
-            else if (g_selectedObjectType == PhysicsObjectType::CSG_OBJECT_ADDITIVE) {
-                headingText += "--- ADDITIVE CSG ---";
-            }
-            else if (g_selectedObjectType == PhysicsObjectType::CSG_OBJECT_SUBTRACTIVE) {
-                headingText += "-- SUBTRACTIVE CSG --";
-            }
-            else if (g_selectedObjectType == PhysicsObjectType::LIGHT) {
-                headingText += "------ LIGHT ";
-                headingText += std::to_string(g_selectedObjectIndex);
-                headingText += " ------";
-            }
-            else if (g_selectedObjectType == PhysicsObjectType::WINDOW || g_selectedObjectType == PhysicsObjectType::GLASS) {
-                headingText += "------ WINDOW ------";
+            else if (GetCurrentMenuType() == MenuType::SELECTED_OBJECT) {
+                if (g_selectedObjectType == PhysicsObjectType::DOOR) {
+                    headingText += "------- DOOR -------";
+                }
+                else if (g_selectedObjectType == PhysicsObjectType::CSG_OBJECT_ADDITIVE) {
+                    headingText += "--- ADDITIVE CSG ---";
+                }
+                else if (g_selectedObjectType == PhysicsObjectType::CSG_OBJECT_SUBTRACTIVE) {
+                    headingText += "-- SUBTRACTIVE CSG --";
+                }
+                else if (g_selectedObjectType == PhysicsObjectType::LIGHT) {
+                    headingText += "------ LIGHT ";
+                    headingText += std::to_string(g_selectedObjectIndex);
+                    headingText += " ------";
+                }
+                else if (g_selectedObjectType == PhysicsObjectType::WINDOW || g_selectedObjectType == PhysicsObjectType::GLASS) {
+                    headingText += "------ WINDOW ------";
+                }
             }
 
             std::string menuText = "\n\n";
@@ -947,7 +989,8 @@ namespace Editor {
                 int percision = g_menuItems[i].percision;
                 menuText += (i == g_menuSelectionIndex) ? "  " : "  ";
                 std::string valueText = "";
-                if (!g_insertMenuOpen && !g_fileMenuOpen) {
+                //if (!g_insertMenuOpen && !g_fileMenuOpen) {
+                if (GetCurrentMenuType() == MenuType::SELECTED_OBJECT) {
                     menuText += name + ": ";
                     if (type == MenuItem::Type::VALUE_FLOAT) {
                         valueText = Util::FloatToString(*static_cast<float*>(ptr), percision);
@@ -1040,6 +1083,8 @@ namespace Editor {
                 glm::mat4 mvp = player->GetProjectionMatrix() * g_editorViewMatrix;
                 glm::ivec2 res = Util::CalculateScreenSpaceCoordinates(light.position, mvp, PRESENT_WIDTH, PRESENT_HEIGHT, true);
 
+                // Update camera frustum
+                player->m_frustum.Update(mvp);
 
                 static Texture* texture = AssetManager::GetTextureByName("Icon_Light");
 
