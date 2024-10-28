@@ -45,19 +45,19 @@ namespace Game {
         GlobalIllumination::CreateLightVolume(15.0f, 7.5f, 11.0f, -8.6f, -2.0f, -8.0f);
 
         //CreatePlayers(2);
-        CreatePlayers(4);
+        CreatePlayers(2);
 
         Scene::Init();
 
 
-       // Scene::LoadEmptyScene();
-       // LightCreateInfo createInfo;
-       // createInfo.position = glm::vec3(0, 2, 0);
-       // createInfo.color = DEFAULT_LIGHT_COLOR;
-       // createInfo.radius = 4;
-       // createInfo.strength = 0.6;
-       // createInfo.type = 2;
-       // Scene::CreateLight(createInfo);
+       //Scene::LoadEmptyScene();
+       //LightCreateInfo createInfo;
+       //createInfo.position = glm::vec3(0, 2, 0);
+       //createInfo.color = DEFAULT_LIGHT_COLOR;
+       //createInfo.radius = 4;
+       //createInfo.strength = 0.6;
+       //createInfo.type = 2;
+       //Scene::CreateLight(createInfo);
 
 
         Model* model = AssetManager::GetModelByName("SPAS_Isolated");

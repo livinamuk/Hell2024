@@ -4,6 +4,7 @@
 #include <iostream>
 #include "DDSHelpers.h"
 #include <filesystem>
+#include <mutex>
 
 namespace ImageTools {
     std::mutex g_consoleMutex;

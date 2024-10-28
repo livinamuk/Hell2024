@@ -26,6 +26,10 @@ float LinearizeDepth(float depth) {
 
 void main() {
 
+}
+
+void main2() {
+
 	// - Rim lighting -
 	vec3 viewAngle = normalize(-viewDir);
 
@@ -45,6 +49,7 @@ void main() {
 	float distance = abs(bubbleDepth - sceneDepth); // linear difference in depth 
 
 	float threshold = 0.001;	
+	threshold = 0.5;
 	float normalizedDistance = clamp(distance / threshold, 0.0, 1.0); // [0, threshold] -> [0, 1]
 
 	vec4 intersection = mix(vec4(1), vec4(0), normalizedDistance); // white to transparent gradient

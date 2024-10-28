@@ -141,6 +141,8 @@ void Scene::LoadMapData(const std::string& fileName) {
     std::string fullPath = "res/maps/" + fileName;
     std::cout << "Loading map '" << fullPath << "'\n";
 
+    Scene::g_needToPlantTrees = true;
+
     std::ifstream file(fullPath);
     std::stringstream buffer;
     buffer << file.rdbuf();
@@ -1279,12 +1281,17 @@ std::vector<RenderItem3D> GetTreeRenderItems() {
     }
 
     static std::vector<Transform> g_treeTransforms;
-    if (g_treeTransforms.empty()) {
+
+
+    //if (g_treeTransforms.empty()) {
+
+    if (Scene::g_needToPlantTrees) {
+        Scene::g_needToPlantTrees = false;
 
         Timer timer("PLANT SAMPLINGS");
 
-        int iterationMax = 10000;
-        int desiredTreeCount = 500;
+        int iterationMax = 600;
+        int desiredTreeCount = 600;
 
         HeightMap& heightMap = AssetManager::g_heightMap;
         TreeMap& treeMap = AssetManager::g_treeMap;
@@ -1309,10 +1316,33 @@ std::vector<RenderItem3D> GetTreeRenderItems() {
                PxU32 raycastFlags = RaycastGroup::RAYCAST_ENABLED;
                PhysXRayResult rayResult = Util::CastPhysXRay(spawn.position + glm::vec3(0, 50, 0), glm::vec3(0, -1, 0), 100, raycastFlags);
                
+               
+
                if (rayResult.hitFound) {
                    spawn.position.y = rayResult.hitPosition.y - 0.25f;
                }
-               g_treeTransforms.push_back(spawn);
+
+
+
+
+
+            Scene::CreateGameObject();
+            GameObject* tree = Scene::GetGameObjectByIndex(Scene::GetGameObjectCount() - 1);
+            tree->SetPosition(spawn.position);
+            tree->SetName("Tree");
+            tree->SetModel("Tree_0");
+            tree->SetMeshMaterial("TreeBark");
+            tree->SetKinematic(true);
+            tree->SetRaycastShapeFromModelIndex(AssetManager::GetModelIndexByName("Tree_0_ConvexHull"));
+            //tree->AddCollisionShape(sofaShapeBigCube, sofaFilterData);
+            tree->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("Tree_0_ConvexHull"));
+            tree->SetModelMatrixMode(ModelMatrixMode::GAME_TRANSFORM);
+            tree->SetCollisionType(CollisionType::STATIC_ENVIROMENT);
+
+
+
+
+               //g_treeTransforms.push_back(spawn);
             }
 
             if (g_treeTransforms.size() == desiredTreeCount) {
@@ -1780,21 +1810,22 @@ void Scene::ProcessBullets() {
                         int type = counter;
                         Transform transform;
                         transform.position.x = rayResult.hitPosition.x;
-                        transform.position.y = 0.005f;
+                        transform.position.y = rayResult.hitPosition.y;
                         transform.position.z = rayResult.hitPosition.z;
                         transform.rotation.y = bullet.parentPlayersViewRotation.y + HELL_PI;
 
                         static int typeCounter = 0;
 
 
-                        glm::vec3 origin = glm::vec3(transform.position) + glm::vec3(0, 0.1f, 0);
+                        glm::vec3 origin = glm::vec3(transform.position) + glm::vec3(0, 0.5f, 0);
                         PxU32 raycastFlags = RaycastGroup::RAYCAST_ENABLED;
-                        PhysXRayResult rayResult = Util::CastPhysXRay(origin, glm::vec3(0, -1, 0), 3, raycastFlags);
+                        PhysXRayResult rayResult = Util::CastPhysXRay(origin, glm::vec3(0, -1, 0), 6, raycastFlags);
 
                         if (rayResult.hitFound && rayResult.physicsObjectType == PhysicsObjectType::HEIGHT_MAP) {
                             Scene::g_bloodDecalsForMegaTexture.push_back(BloodDecal(transform, typeCounter));
                         }
                         else {
+                            transform.position.y = 0.005f;                           
                             Scene::g_bloodDecals.push_back(BloodDecal(transform, typeCounter));
                             BloodDecal* decal = &Scene::g_bloodDecals.back();
                         }

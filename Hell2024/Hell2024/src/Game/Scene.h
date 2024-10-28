@@ -126,7 +126,7 @@ struct PickUp {
 
 namespace Scene {
 
-
+    inline bool g_needToPlantTrees = true;
     void Update(float deltaTime);
     void SaveMapData(const std::string& fileName);
     void RemoveGameObjectByIndex(int index);

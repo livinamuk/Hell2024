@@ -32,17 +32,20 @@ void main() {
     RMAOut = vec4(rma, 1.0);
 
 	//BaseColorOut.rgb = vec3(MegaTextureCoords, 0);
-
-
+	
+	//RMAOut.r = 0.0;
+	//RMAOut.g = 0.0;
+	//RMAOut.b = 0.0;
 	
 	float megaTextureValue = texture(MegaTexture, MegaTextureCoords).r;
 	float treeValue = texture(TreeMap, MegaTextureCoords).r;
 
 	if (megaTextureValue > 0) {
-		BaseColorOut.r = 0.5;
+		BaseColorOut.r = 0.45;
 		BaseColorOut.g = 0;
 		BaseColorOut.b = 0;
 		RMAOut.rgb = vec3(0.015 , 0.6, 1);
+		RMAOut.rgb = vec3(0.034 , 0.6, 1);
 	}
 
 

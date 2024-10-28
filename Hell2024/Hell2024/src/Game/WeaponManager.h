@@ -9,7 +9,6 @@ struct AnimationNames {
     std::string idle;
     std::string walk;
     std::string reload;
-    //std::string reloadempty;
     std::string draw;
     std::string spawn;
     std::vector<std::string> fire;

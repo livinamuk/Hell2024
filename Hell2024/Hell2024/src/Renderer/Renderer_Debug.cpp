@@ -726,20 +726,19 @@ std::string& Renderer::GetDebugText() {
 
     g_debugText = Util::MenuTypeToString(Editor::GetCurrentMenuType());
 
+    g_debugText = "";
 
-
-    glm::vec3 origin = Game::GetPlayerByIndex(0)->GetFeetPosition() + glm::vec3(0, 1, 0);
-
-    PxU32 raycastFlags = RaycastGroup::RAYCAST_ENABLED;
-    PhysXRayResult rayResult = Util::CastPhysXRay(origin, glm::vec3(0, -1, 0), 3, raycastFlags);
-
-    if (rayResult.hitFound) {
-        g_debugText = Util::PhysicsObjectTypeToString(rayResult.physicsObjectType);
-
-    }
-    else {
-        g_debugText = "NO HIT";
-    }
+    //glm::vec3 origin = Game::GetPlayerByIndex(0)->GetFeetPosition() + glm::vec3(0, 1, 0);
+    //PxU32 raycastFlags = RaycastGroup::RAYCAST_ENABLED;
+    //PhysXRayResult rayResult = Util::CastPhysXRay(origin, glm::vec3(0, -1, 0), 3, raycastFlags);
+    //
+    //if (rayResult.hitFound) {
+    //    g_debugText = Util::PhysicsObjectTypeToString(rayResult.physicsObjectType);
+    //
+    //}
+    //else {
+    //    g_debugText = "NO HIT";
+    //}
 
 
 

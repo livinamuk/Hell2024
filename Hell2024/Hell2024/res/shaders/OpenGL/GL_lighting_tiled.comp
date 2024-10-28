@@ -444,35 +444,6 @@ void main() {
 	vec3 finalLighting = directLighting + finalIndirectLighting;
 
 
-	
-	float fogR = 40.0 / 255.0;
-	float fogG = 20.0 / 255.0;
-	float fogB = 12.0 / 255.0;
-
-
-	/*
-	// fog
-	bool outside = true;
-	for (int i = 0; i < fogAABBCount; i++) {	
-		vec3 aabbMin = vec3(fogAABB[i].boundsMinX, fogAABB[i].boundsMinY, fogAABB[i].boundsMinZ);
-		vec3 aabbMax = vec3(fogAABB[i].boundsMaxX, fogAABB[i].boundsMaxY, fogAABB[i].boundsMaxZ);
-		float padding = 0.01;		
-		aabbMin += vec3(padding);
-		aabbMax -= vec3(padding);
-		aabbMin.y -= 0.1;
-		if (IsPointInsideAABB(worldSpacePosition.xyz, aabbMin, aabbMax)) {
-			outside = false;
-			break;
-		}
-	}
-	if (outside) {			
-		float d = distance(viewPos, worldSpacePosition.xyz) * 5.5;
-		float alpha = FogFactor(d);
-		vec3 FogColor = vec3(0.09, 0.09, 0.09);	
-		finalLighting = mix(finalLighting, FogColor, alpha);
-	}
-	*/
-
 
 	// Inside outside scale factor
 	float insideOutsideScaleFactor = MapRange(length(indirectLighting), 0, 0.01, 0, 1);
@@ -484,7 +455,7 @@ void main() {
 	float moonlightStrength = 0.2;
 	vec3 moonlightDir = normalize(vec3(0.5, 1, 0.1));
 	vec3 outsideDirectLighting = GetOutdoorDirectLighting(worldSpacePosition.xyz, normal, baseColor, roughness, metallic, viewPos, moonlightDir, moonlightColor, moonlightStrength);
-	
+
 	// Outside indirect light
 	vec3 outsideIndirectLighting = defaultLightColor * vec3(0.025);
 	float outfactor2 = min(1, 1 - metallic * 1.0);
@@ -494,15 +465,28 @@ void main() {
 
 	// Inside/outside composite light
 	vec3 outsideLighting = outsideDirectLighting + outsideIndirectLighting;	
+
+	// Outside lighting falloff
+	float k1 = 0.0;
+	float k2 = 0.5;
+	float distToCamera = distance(viewPos, worldSpacePosition.xyz);
+	float maxDistance = 10.0;
+	float lightStrength = 1.0 / ((distToCamera * k1) + (distToCamera * distToCamera * k2));
+	lightStrength = clamp(lightStrength * 1.5, 0.0, 1.0);
+	outsideLighting += outsideLighting * lightStrength;
+
+
 	finalLighting = mix(finalLighting + outsideLighting, finalLighting, insideOutsideScaleFactor);
 		
+	//finalLighting = vec3(outsideDirectLighting);
+
 	//	finalLighting  = outsideLighting;
 
 
 	// Fog
-	vec3 fogColor = vec3(0.09, 0.09, 0.09) * vec3(0.0);	
+	vec3 fogColor = vec3(0.09, 0.09, 0.09) * vec3(0.075);	
 	float fogStart = 1;
-	float fogEnd = 100;	
+	float fogEnd = 50;	
     float dist = length(worldSpacePosition.xyz - viewPos);
 	vec3 fogLighting = ApplyFog(finalLighting, dist , fogColor, fogStart, fogEnd);
 	finalLighting = mix(fogLighting, finalLighting, insideOutsideScaleFactor);
@@ -559,5 +543,5 @@ void main() {
 	
 	imageStore(lightingTexture, pixelCoords, vec4(finalLighting, 1));	
 
-	//imageStore(lightingTexture, pixelCoords, vec4(normal, 1));	
+	//imageStore(lightingTexture, pixelCoords, vec4(rma, 1));	
 }

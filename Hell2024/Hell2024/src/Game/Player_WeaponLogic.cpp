@@ -16,7 +16,7 @@ void Player::GiveDefaultLoadout() {
     GiveWeapon("Tokarev");
    // GiveWeapon("Smith & Wesson");
     GiveWeapon("AKS74U");
-    //GiveWeapon("P90");
+    GiveWeapon("P90");
     GiveWeapon("Shotgun");
     GiveWeapon("SPAS");
 

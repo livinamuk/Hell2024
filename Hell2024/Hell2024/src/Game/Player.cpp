@@ -624,7 +624,7 @@ void Player::UpdateAudio(float deltaTime) {
                 
                 int random = rand() % 4;
                 if (m_isOutside) {
-                    Audio::PlayAudio(outdoorFootstepFilenames[random], 0.5f);
+                    Audio::PlayAudio(outdoorFootstepFilenames[random], 0.125f);
                 }
                 else {
                     Audio::PlayAudio(indoorFootstepFilenames[random], 0.5f);

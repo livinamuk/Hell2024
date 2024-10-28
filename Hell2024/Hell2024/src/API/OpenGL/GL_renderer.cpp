@@ -871,7 +871,7 @@ void OpenGLRenderer::RenderFrame(RenderData& renderData) {
     MuzzleFlashPass(renderData);
     GlassPass(renderData);
     EmissivePass(renderData);
-    //WinstonPass(renderData);
+    WinstonPass(renderData);
     MuzzleFlashPass(renderData);
     PostProcessingPass(renderData);
 
@@ -910,7 +910,7 @@ void ClearRenderTargets() {
         gBuffer.GetColorAttachmentSlotByName("EmissiveMask"),
         gBuffer.GetColorAttachmentSlotByName("P90MagSpecular") };
     glDrawBuffers(7, attachments);
-    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+    glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }
 
@@ -3004,6 +3004,7 @@ void WinstonPass(RenderData& renderData) {
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, gBuffer.GetDepthAttachmentHandle());
         glDisable(GL_DEPTH_TEST);
+        glDisable(GL_CULL_FACE);
         glEnable(GL_BLEND);
 
         for (GameObject& gameObject : Scene::GetGamesObjects()) {
@@ -3012,7 +3013,6 @@ void WinstonPass(RenderData& renderData) {
                     shader.SetMat4("model", renderItem.modelMatrix);
                     Mesh* mesh = AssetManager::GetMeshByIndex(renderItem.meshIndex);
                     glDrawElementsBaseVertex(GL_TRIANGLES, mesh->indexCount, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int) * mesh->baseIndex), mesh->baseVertex);
-
                 };
             }
         }

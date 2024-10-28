@@ -40,8 +40,9 @@ std::vector<RenderItem2D> Player::GetHudRenderItems(hell::ivec2 presentSize) {
     if (!Game::DebugTextIsEnabled() && IsAlive() && !Editor::IsOpen()) {
         std::string text;
         text += "Health: " + std::to_string(_health) + "\n";
-        text += "" + std::to_string(m_killCount) + "\n";
-        text += "Pos: " + Util::Vec3ToString(GetViewPos()) + "\n";
+        text += "Kills: " + std::to_string(m_killCount) + "\n";
+        //text += "" + std::to_string(m_killCount) + "\n";
+        //text += "Pos: " + Util::Vec3ToString(GetViewPos()) + "\n";
 
         /*
         AnimatedGameObject* viewWeapon = GetViewWeaponAnimatedGameObject();
