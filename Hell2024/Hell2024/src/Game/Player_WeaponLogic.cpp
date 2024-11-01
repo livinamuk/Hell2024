@@ -1094,16 +1094,16 @@ void Player::CheckForMeleeHits() {
         }
     }
 
-
+    /*
     if (overlapReport.hits.size()) {
         for (auto* hit : overlapReport.hits) {
             if (hit->userData) {
 
                 PhysicsObjectData* physicsObjectData = (PhysicsObjectData*)hit->userData;
-                PhysicsObjectType physicsObjectType = physicsObjectData->type;
+                ObjectType physicsObjectType = physicsObjectData->type;
                 GameObject* parent = (GameObject*)physicsObjectData->parent;
 
-                if (physicsObjectType == PhysicsObjectType::GAME_OBJECT) {
+                if (physicsObjectType == ObjectType::GAME_OBJECT) {
                     // get direction to hit object
                     glm::vec3 hitCenter = Util::GetTranslationFromMatrix(parent->GetModelMatrix());
                     glm::vec3 viewPos = GetViewPos();
@@ -1120,5 +1120,5 @@ void Player::CheckForMeleeHits() {
     }
     else {
         // std::cout << "no overlap bro\n";
-    }
+    }*/
 }

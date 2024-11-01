@@ -12,6 +12,7 @@ public:
         this->depth = depth;
     }
     void Load(const std::string filepath);
+    void CleanUp();
     int GetWidth();
     int GetHeight();
     int GetDepth();

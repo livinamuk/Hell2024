@@ -39,7 +39,7 @@ void Player::Update(float deltaTime) {
     glm::vec3 origin = GetFeetPosition() + glm::vec3(0, 0.1f, 0);
     PxU32 raycastFlags = RaycastGroup::RAYCAST_ENABLED;
     PhysXRayResult rayResult = Util::CastPhysXRay(origin, glm::vec3(0, -1, 0), 3, raycastFlags);
-    m_isOutside = (rayResult.hitFound && rayResult.physicsObjectType == PhysicsObjectType::HEIGHT_MAP);
+    m_isOutside = (rayResult.hitFound && rayResult.objectType == ObjectType::HEIGHT_MAP);
 
 
     UpdateRagdoll(); // updates pointers to rigids
@@ -51,9 +51,9 @@ void Player::Update(float deltaTime) {
     CheckForAndEvaluateRespawnPress();
     CheckForAndEvaluateNextWeaponPress();
     CheckForAndEvaluateInteract();
+    CheckForSuicide();
 
     UpdateHeadBob(deltaTime);
-
     UpdateTimers(deltaTime);
     UpdateAudio(deltaTime);
     UpdatePickupText(deltaTime);
@@ -894,7 +894,7 @@ void Player::PickUpGlockAmmo() {
 
 
 void Player::CheckForItemPickOverlaps() {
-
+/*
 	if (!HasControl()) {
 		return;
 	}
@@ -909,40 +909,40 @@ void Player::CheckForItemPickOverlaps() {
 			if (hit->userData) {
 
 				PhysicsObjectData* physicsObjectData = (PhysicsObjectData*)hit->userData;
-				PhysicsObjectType physicsObjectType = physicsObjectData->type;
+				ObjectType physicsObjectType = physicsObjectData->type;
 				GameObject* parent = (GameObject*)physicsObjectData->parent;
 
-				if (physicsObjectType == PhysicsObjectType::GAME_OBJECT) {
+				if (physicsObjectType == ObjectType::GAME_OBJECT) {
                     // Weapon pickups
-                    /*if (!parent->IsCollected() && parent->GetPickUpType() == PickUpType::AKS74U) {
-                        PickUpAKS74U();
-                        parent->PickUp();
-                    }
-                    if (!parent->IsCollected() && parent->GetPickUpType() == PickUpType::GLOCK) {
-                        PickUpGlock();
-                        parent->PickUp();
-                    }
-                    if (!parent->IsCollected() && parent->GetPickUpType() == PickUpType::SHOTGUN) {
-                        PickUpShotgun();
-                        parent->PickUp();
-                        // Think about this brother. Next time you see it of course. Not now.
-                        // Think about this brother. Next time you see it of course. Not now.
-                        // Think about this brother. Next time you see it of course. Not now.
-                        if (parent->_respawns) {
-                            parent->PutRigidBodyToSleep();
-                        }
-                    }*/
-                    /*
-                    if (!parent->IsCollected() && parent->GetPickUpType() == PickUpType::AKS74U_SCOPE) {
-                        GiveAKS74UScope();
-                        parent->PickUp();
-                        // Think about this brother. Next time you see it of course. Not now.
-                        // Think about this brother. Next time you see it of course. Not now.
-                        // Think about this brother. Next time you see it of course. Not now.
-                        if (parent->_respawns) {
-                            parent->PutRigidBodyToSleep();
-                        }
-                    }*/
+                  // if (!parent->IsCollected() && parent->GetPickUpType() == PickUpType::AKS74U) {
+                  //     PickUpAKS74U();
+                  //     parent->PickUp();
+                  // }
+                  // if (!parent->IsCollected() && parent->GetPickUpType() == PickUpType::GLOCK) {
+                  //     PickUpGlock();
+                  //     parent->PickUp();
+                  // }
+                  // if (!parent->IsCollected() && parent->GetPickUpType() == PickUpType::SHOTGUN) {
+                  //     PickUpShotgun();
+                  //     parent->PickUp();
+                  //     // Think about this brother. Next time you see it of course. Not now.
+                  //     // Think about this brother. Next time you see it of course. Not now.
+                  //     // Think about this brother. Next time you see it of course. Not now.
+                  //     if (parent->_respawns) {
+                  //         parent->PutRigidBodyToSleep();
+                  //     }
+                  // }
+                    
+                    // if (!parent->IsCollected() && parent->GetPickUpType() == PickUpType::AKS74U_SCOPE) {
+                    //     GiveAKS74UScope();
+                    //     parent->PickUp();
+                    //     // Think about this brother. Next time you see it of course. Not now.
+                    //     // Think about this brother. Next time you see it of course. Not now.
+                    //     // Think about this brother. Next time you see it of course. Not now.
+                    //     if (parent->_respawns) {
+                    //         parent->PutRigidBodyToSleep();
+                    //     }
+                    // }
 
                     if (!parent->IsCollected() && parent->GetPickUpType() == PickUpType::AMMO) {
                         AmmoInfo* ammoInfo = WeaponManager::GetAmmoInfoByName(parent->_name);
@@ -964,7 +964,7 @@ void Player::CheckForItemPickOverlaps() {
 	}
 	else {
 		// std::cout << "no overlap bro\n";
-	}
+	}*/
 }
 
 void Player::UpdateRagdoll() {
@@ -1068,27 +1068,106 @@ bool Player::IsMoving() {
 
 void Player::CheckForAndEvaluateInteract() {
 
-    _cameraRayResult = Util::CastPhysXRay(GetViewPos(), GetCameraForward() * glm::vec3(-1), 100, _interactFlags);
+    m_interactbleGameObjectIndex = -1;
 
-	if (HasControl() && PressedInteract()) {
-		if (_cameraRayResult.physicsObjectType == PhysicsObjectType::DOOR) {
-			//std::cout << "you pressed interact on a door \n";
-			Door* door = (Door*)(_cameraRayResult.parent);
-			if (!door->IsInteractable(GetFeetPosition())) {
-				return;
-			}
-			door->Interact();
-		}
-		if (_cameraRayResult.physicsObjectType == PhysicsObjectType::GAME_OBJECT) {
-			GameObject* gameObject = (GameObject*)(_cameraRayResult.parent);
-			if (gameObject && !gameObject->IsInteractable()) {
-				return;
-			}
-            if (gameObject) {
-                gameObject->Interact();
+    // Get camera hit data
+    m_cameraRayResult = Util::CastPhysXRay(GetViewPos(), GetCameraForward() * glm::vec3(-1), 100, _interactFlags);
+    glm::vec3 hitPos = m_cameraRayResult.hitPosition;
+
+    // Get overlap report
+    const PxGeometry& overlapShape = m_interactSphere->getGeometry();
+    const PxTransform shapePose(PxVec3(hitPos.x, hitPos.y, hitPos.z));
+    m_interactOverlapReport = Physics::OverlapTest(overlapShape, shapePose, CollisionGroup(GENERIC_BOUNCEABLE | GENERTIC_INTERACTBLE));
+
+    // Sort by distance to player
+    sort(m_interactOverlapReport.hits.begin(), m_interactOverlapReport.hits.end(), [this, hitPos](OverlapResult& lhs, OverlapResult& rhs) {
+        float distanceA = glm::distance(hitPos, lhs.position);
+        float distanceB = glm::distance(hitPos, rhs.position);
+        return distanceA < distanceB;
+    });
+
+
+    overlapList = "Overlaps: " + std::to_string(m_interactOverlapReport.hits.size()) + "\n";
+
+    for (OverlapResult& overlapResult : m_interactOverlapReport.hits) {
+                overlapList += Util::PhysicsObjectTypeToString(overlapResult.objectType);
+                overlapList += " ";
+                overlapList += Util::Vec3ToString(overlapResult.position);
+                overlapList += "\n";
+
+        //if (overlapResult.objectType == ObjectType::GAME_OBJECT) {
+        //    GameObject* parent = (GameObject*)overlapResult.parent;
+        //    overlapList += parent->model->GetName();
+        //    overlapList += " ";
+        //    overlapList += Util::Vec3ToString(overlapResult.position);
+        //    overlapList += "\n";
+        //}
+    }
+
+
+    // Store index of gameobject if the first hit is one Clean this up
+    if (m_interactOverlapReport.hits.size()) {
+        OverlapResult& overlapResult = m_interactOverlapReport.hits[0];
+        if (overlapResult   .objectType == ObjectType::GAME_OBJECT) {
+            GameObject* gameObject = (GameObject*)(overlapResult.parent);
+            if (gameObject->GetName() == "PickUp") {
+                for (int i = 0; Scene::GetGamesObjects().size(); i++) {
+                    if (gameObject == &Scene::GetGamesObjects()[i]) {
+                        m_interactbleGameObjectIndex = i;
+                        goto label;
+                    }
+                }
             }
-		}
-	}
+        }
+    }
+label:
+
+    overlapList += "\n" + std::to_string(m_interactbleGameObjectIndex);
+
+    if (m_interactOverlapReport.hits.size()) {
+
+        OverlapResult& overlapResult = m_interactOverlapReport.hits[0];
+
+        if (HasControl() && PressedInteract()) {
+
+            // Doors
+            if (overlapResult.objectType == ObjectType::DOOR) {
+                Door* door = (Door*)(overlapResult.parent);
+                if (!door->IsInteractable(GetFeetPosition())) {
+                    return;
+                }
+                door->Interact();
+            }
+
+            // Weapon pickups
+            if (overlapResult.objectType == ObjectType::GAME_OBJECT) {
+
+                GameObject* gameObject = (GameObject*)(overlapResult.parent);
+
+                if (gameObject->GetName() == "PickUp") {
+
+                    std::cout << "picked up " << gameObject->model->GetName() << "\n";
+
+
+                    for (int i = 0; Scene::GetGamesObjects().size(); i++) {
+                        if (gameObject == &Scene::GetGamesObjects()[i]) {
+                            Scene::RemoveGameObjectByIndex(i);
+                            Audio::PlayAudio("ItemPickUp.wav", 1.0f);
+                            return;
+                        }
+                    }
+                }
+
+                // if (gameObject && !gameObject->IsInteractable()) {
+                //     return;
+                // }
+                // if (gameObject) {
+                //     gameObject->Interact();
+                // }
+            }
+        }
+    }
+
 }
 
 void Player::SetPosition(glm::vec3 position) {
@@ -1306,6 +1385,15 @@ PxRigidDynamic* Player::GetCharacterControllerActor() {
 }
 
 void Player::CreateItemPickupOverlapShape() {
+
+    // Put this somewhere else 
+    Physics::Destroy(m_interactSphere);
+    float sphereRadius = 0.25f;
+    m_interactSphere = Physics::GetPhysics()->createShape(PxCapsuleGeometry(sphereRadius, 0), *Physics::GetDefaultMaterial(), true);
+    // and delete evertying below
+    // and delete evertying below
+    // and delete evertying below
+
 
     // pickup shape
 	if (_itemPickupOverlapShape) {
@@ -1759,14 +1847,14 @@ CrosshairType Player::GetCrosshairType() {
     }
 
     // Interact
-    else if (_cameraRayResult.physicsObjectType == PhysicsObjectType::DOOR) {
-        Door* door = (Door*)(_cameraRayResult.parent);
+    else if (m_cameraRayResult.objectType == ObjectType::DOOR) {
+        Door* door = (Door*)(m_cameraRayResult.parent);
         if (door && door->IsInteractable(GetFeetPosition())) {
             return CrosshairType::INTERACT;
         }
     }
-    else if (_cameraRayResult.physicsObjectType == PhysicsObjectType::GAME_OBJECT && _cameraRayResult.parent) {
-        GameObject* gameObject = (GameObject*)(_cameraRayResult.parent);
+    else if (m_cameraRayResult.objectType == ObjectType::GAME_OBJECT && m_cameraRayResult.parent) {
+        GameObject* gameObject = (GameObject*)(m_cameraRayResult.parent);
         return CrosshairType::INTERACT;
     }
 

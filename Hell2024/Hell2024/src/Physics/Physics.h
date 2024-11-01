@@ -31,7 +31,7 @@ struct CharacterCollisionReport {
 };
 
 struct OverlapReport {
-	std::vector<PxActor*> hits;
+	std::vector<OverlapResult> hits;
 	bool HitsFound() {
 		return hits.size();
 	}

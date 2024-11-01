@@ -41,20 +41,8 @@ std::vector<RenderItem2D> Player::GetHudRenderItems(hell::ivec2 presentSize) {
         std::string text;
         text += "Health: " + std::to_string(_health) + "\n";
         text += "Kills: " + std::to_string(m_killCount) + "\n";
-        //text += "" + std::to_string(m_killCount) + "\n";
-        //text += "Pos: " + Util::Vec3ToString(GetViewPos()) + "\n";
-
-        /*
-        AnimatedGameObject* viewWeapon = GetViewWeaponAnimatedGameObject();
-        int frameNumber = viewWeapon->GetAnimationFrameNumber();
-        text += "Anim frame number: " + std::to_string(frameNumber) + "\n";
-
-        if (viewWeapon->AnimationIsPastFrameNumber(10)) {
-            text += "Passed frame 10!\n";
-        }*/
-
         RendererUtil::AddRenderItems(renderItems, TextBlitter::CreateText(text, debugTextLocation, presentSize, Alignment::TOP_LEFT, BitmapFontType::STANDARD));
-    
+
     }
 
 
@@ -81,16 +69,12 @@ std::vector<RenderItem2D> Player::GetHudRenderItems(hell::ivec2 presentSize) {
 
     if (IsAlive()) {
 
-        // Crosshair
-        switch (GetCrosshairType()) {
-        case CrosshairType::REGULAR:
-            renderItems.push_back(RendererUtil::CreateRenderItem2D("CrosshairDot", viewportCenter, presentSize, Alignment::CENTERED));
-            break;
-        case CrosshairType::INTERACT:
-            renderItems.push_back(RendererUtil::CreateRenderItem2D("CrosshairSquare", viewportCenter, presentSize, Alignment::CENTERED));
-            break;
-        default:
-            break;
+        hell::ivec2 crosshairPos = viewportCenter;
+        if (GetCrosshairType() == CrosshairType::REGULAR) {
+            renderItems.push_back(RendererUtil::CreateRenderItem2D("CrosshairDot", crosshairPos, presentSize, Alignment::CENTERED));
+        }
+        else if (GetCrosshairType() == CrosshairType::INTERACT) {
+            renderItems.push_back(RendererUtil::CreateRenderItem2D("CrosshairSquare", crosshairPos, presentSize, Alignment::CENTERED));
         }
 
         static int texHeight = AssetManager::GetTextureByName("inventory_mockup")->GetHeight();
@@ -325,7 +309,7 @@ void Player::UpdateAttachmentRenderItems() {
             glm::mat4 modelMatrix = viewWeaponAnimatedGameObject->GetModelMatrix() * m_weaponSwayMatrix * viewWeaponAnimatedGameObject->GetAnimatedTransformByBoneName("Laser");
 
             glm::vec3 start = Util::GetTranslationFromMatrix(modelMatrix);
-            glm::vec3 end = _cameraRayResult.hitPosition;
+            glm::vec3 end = m_cameraRayResult.hitPosition;
             float laserLength = glm::distance(start, end);
 
             Transform laserScaleTransform;

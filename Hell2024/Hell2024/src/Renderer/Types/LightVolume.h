@@ -16,6 +16,7 @@ public:
     const int GetProbeSpaceDepth();
     const int GetProbeCount();
     const glm::vec3 GetPosition();
+    const void CleanUp();
     Texture3D texutre3D;
 
 private:

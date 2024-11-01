@@ -39,13 +39,15 @@ namespace Game {
         _isLoaded = true;
         g_firstFrame = true;
 
-        GlobalIllumination::DestroyAllLightVolumes();
-        GlobalIllumination::CreatePointCloud();
-        //GlobalIllumination::CreateLightVolume(11.0f, 5.5f, 11.0f, -6.6f, 0.0f, -8.0f);
-        GlobalIllumination::CreateLightVolume(15.0f, 7.5f, 11.0f, -8.6f, -2.0f, -8.0f);
+        GlobalIllumination::RecalculateGI();
+
+       //GlobalIllumination::DestroyAllLightVolumes();
+       //GlobalIllumination::CreatePointCloud();
+       ////GlobalIllumination::CreateLightVolume(11.0f, 5.5f, 11.0f, -6.6f, 0.0f, -8.0f);
+       //GlobalIllumination::CreateLightVolume(15.0f, 7.5f, 11.0f, -8.6f, -2.0f, -8.0f);
 
         //CreatePlayers(2);
-        CreatePlayers(2);
+        CreatePlayers(4);
 
         Scene::Init();
 

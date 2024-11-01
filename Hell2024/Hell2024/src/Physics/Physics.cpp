@@ -449,24 +449,39 @@ OverlapReport Physics::OverlapTest(const PxGeometry& overlapShape, const PxTrans
 	const PxU32 bufferSize = 256;
 	PxOverlapHit hitBuffer[bufferSize];
 	PxOverlapBuffer buf(hitBuffer, bufferSize);
-    OverlapReport result;
+    std::vector<PxActor*> hitActors;
 	if (Physics::GetScene()->overlap(overlapShape, shapePose, buf, overlapFilterData)) {
 		for (int i = 0; i < buf.getNbTouches(); i++) {
 			PxActor* hit = buf.getTouch(i).actor;
 			// Check for duplicates
 			bool found = false;
-			for (const PxActor* foundHit : result.hits) {
+			for (const PxActor* foundHit : hitActors) {
 				if (foundHit == hit) {
 					found = true;
 					break;
 				}
 			}
 			if (!found) {
-				result.hits.push_back(hit);
+                hitActors.push_back(hit);
 			}
 		}
 	}
-	return result;
+
+    // Fill out the shit you need
+    OverlapReport overlapReport;
+    for (PxActor* hitActor : hitActors) {
+        PhysicsObjectData* physicsObjectData = (PhysicsObjectData*)hitActor->userData;
+        if (physicsObjectData) {
+            PxRigidBody* rigid = (PxRigidBody*)hitActor;
+            OverlapResult& overlapResult = overlapReport.hits.emplace_back();
+            overlapResult.objectType = physicsObjectData->type;
+            overlapResult.parent = physicsObjectData->parent;
+            overlapResult.position.x = rigid->getGlobalPose().p.x;
+            overlapResult.position.y = rigid->getGlobalPose().p.y;
+            overlapResult.position.z = rigid->getGlobalPose().p.z;
+        }
+    }
+	return overlapReport;
 }
 
 PxConvexMesh* Physics::CreateConvexMeshFromModelIndex(int modelIndex) {

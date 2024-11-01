@@ -68,7 +68,13 @@ vec3 filmPixel(vec2 uv) {
     return fract(sin(uvs * vec2(12.9898, 78.233) * time) * 43758.5453);
 }
 
+//float MapRange(float value, float oldMin, float oldMax, float newMin, float newMax) {
+//    return newMin + (value - oldMin) * (newMax - newMin) / (oldMax - oldMin);
+//}
 
+int MapRange(int value, int oldMin, int oldMax, int newMin, int newMax) {
+    return newMin + (value - oldMin) * (newMax - newMin) / (oldMax - oldMin);
+}
 
 void main() {
 
@@ -80,6 +86,55 @@ void main() {
 	int playerIndex = int(imageLoad(normalTexture, texCoord).a * 4 + 0.5);
 		
 	vec3 finalColor = imageLoad(tex, texCoord).rgb;
+
+
+
+
+
+	
+	
+	// Chromatic Abz
+//   vec2 destCoord = uv;
+//	int sampleCount = 25;
+//   float blur = 0.25; 
+//   float falloff = 05.0; 
+//   vec2 direction = normalize(uv - 0.5);
+//   vec2 velocity = direction * blur * pow(length(uv - 0.5), falloff);
+//	float inverseSampleCount = 1.0 / float(sampleCount);     
+//   mat3x2 increments = mat3x2(velocity * 1.0 * inverseSampleCount,
+//                              velocity * 2.0 * inverseSampleCount,
+//                              velocity * 4.0 * inverseSampleCount);
+//   vec3 accumulator = vec3(0);
+//   mat3x2 offsets = mat3x2(0); 
+//
+//
+//	vec3 test = vec3(velocity, 0);
+//
+//   for (int i = 0; i < sampleCount; i++) {
+//		
+//		vec2 uvR = destCoord + offsets[0];
+//		vec2 uvG = destCoord + offsets[1];
+//		vec2 uvB = destCoord + offsets[2];
+//		
+//		ivec2 pixelCoordsR;
+//		ivec2 pixelCoordsG;
+//		ivec2 pixelCoordsB;
+//		
+//		pixelCoordsR.x = MapRange(int(uvR.x), 0, 1, 0, int(viewportWidth));
+//		pixelCoordsR.y = MapRange(int(uvR.y), 0, 1, 0, int(viewportHeight));
+//		pixelCoordsG.x = MapRange(int(uvG.x), 0, 1, 0, int(viewportWidth));
+//		pixelCoordsG.y = MapRange(int(uvG.y), 0, 1, 0, int(viewportHeight));
+//		pixelCoordsB.x = MapRange(int(uvB.x), 0, 1, 0, int(viewportWidth));
+//		pixelCoordsB.y = MapRange(int(uvB.y), 0, 1, 0, int(viewportHeight));
+//		
+//       accumulator.r += imageLoad(tex, pixelCoords).r; 
+//       accumulator.g += imageLoad(tex, pixelCoords).g; 
+//       accumulator.b += imageLoad(tex, pixelCoords).b; 
+//		        
+//       offsets -= increments;
+//   }
+//	vec3 chromo_ABZ_color = vec3(accumulator / float(sampleCount));
+
 
 	/*
 	// Tone mapping
@@ -131,11 +186,11 @@ void main() {
 	// Contrast
     contrastAdjust(finalColor, finalImageColorContrast);
 	
+
 	// Apply SSAO
     float ssao = imageLoad(ssaoTexture, texCoord).r;
 	ssao = 1;
-	finalColor = finalColor * ssao;
-	//finalColor = vec3(ssao);
+	finalColor = finalColor * ssao;	
 
     imageStore(tex, texCoord, vec4(finalColor, 1));
 }

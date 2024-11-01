@@ -24,11 +24,11 @@ float LinearizeDepth(float depth) {
 	return linearDepth;
 }
 
-void main() {
+void main666() {
 
 }
 
-void main2() {
+void main() {
 
 	// - Rim lighting -
 	vec3 viewAngle = normalize(-viewDir);

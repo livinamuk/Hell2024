@@ -70,36 +70,45 @@ namespace Util {
         }
     }
 
-    inline std::string PhysicsObjectTypeToString(PhysicsObjectType& type) {
+    inline std::string PhysicsObjectTypeToString(ObjectType& type) {
 
-        if (type == PhysicsObjectType::GAME_OBJECT) {
+        if (type == ObjectType::GAME_OBJECT) {
             return "GAME_OBJECT";
         }
-        else if (type == PhysicsObjectType::GLASS) {
+        else if (type == ObjectType::GLASS) {
             return "GLASS";
         }
-        else if (type == PhysicsObjectType::DOOR) {
+        else if (type == ObjectType::DOOR) {
             return "DOOR";
         }
-        else if (type == PhysicsObjectType::WINDOW) {
+        else if (type == ObjectType::WINDOW) {
             return "WINDOW";
         }
-        else if (type == PhysicsObjectType::SCENE_MESH) {
+        else if (type == ObjectType::SCENE_MESH) {
             return "SCENE_MESH";
         }
-        else if (type == PhysicsObjectType::RAGDOLL_RIGID) {
+        else if (type == ObjectType::RAGDOLL_RIGID) {
             return "RAGDOLL_RIGID";
         }
-        else if (type == PhysicsObjectType::CSG_OBJECT_ADDITIVE) {
-            return "CSG_OBJECT_ADDITIVE";
+        else if (type == ObjectType::CSG_OBJECT_ADDITIVE_CUBE) {
+            return "CSG_OBJECT_ADDITIVE_CUBE";
         }
-        else if (type == PhysicsObjectType::CSG_OBJECT_SUBTRACTIVE) {
+        else if (type == ObjectType::CSG_OBJECT_ADDITIVE_WALL_PLANE) {
+            return "CSG_OBJECT_ADDITIVE_WALL_PLANE";
+        }
+        else if (type == ObjectType::CSG_OBJECT_ADDITIVE_FLOOR_PLANE) {
+            return "CSG_OBJECT_ADDITIVE_FLOOR_PLANE";
+        }
+        else if (type == ObjectType::CSG_OBJECT_ADDITIVE_CEILING_PLANE) {
+            return "CSG_OBJECT_ADDITIVE_CEILING_PLANE";
+        }
+        else if (type == ObjectType::CSG_OBJECT_SUBTRACTIVE) {
             return "CSG_OBJECT_SUBTRACTIVE";
         }
-        else if (type == PhysicsObjectType::HEIGHT_MAP) {
+        else if (type == ObjectType::HEIGHT_MAP) {
             return "HEIGHT_MAP";
         }
-        else if (type == PhysicsObjectType::UNDEFINED) {
+        else if (type == ObjectType::UNDEFINED) {
             return "UNDEFINED";
         }
 
@@ -443,11 +452,11 @@ namespace Util {
 
             if (hit.block.actor->userData) {
                 PhysicsObjectData* physicsObjectData = (PhysicsObjectData*)hit.block.actor->userData;
-                result.physicsObjectType = physicsObjectData->type;
+                result.objectType = physicsObjectData->type;
                 result.parent = physicsObjectData->parent;
             }
             else {
-                result.physicsObjectType = PhysicsObjectType::UNDEFINED;
+                result.objectType = ObjectType::UNDEFINED;
                 result.hitFound = false;
                 std::cout << "no user data found on ray hit\n";
             }
@@ -898,6 +907,27 @@ namespace Util {
 
     inline glm::vec3 GetTranslationFromMatrix(glm::mat4 matrix) {
         return glm::vec3(matrix[3][0], matrix[3][1], matrix[3][2]);
+    }
+
+    inline glm::vec3 GetRotationFromMatrix(glm::mat4 matrix) {
+        glm::mat3 rotationMatrix(
+            glm::normalize(glm::vec3(matrix[0])),
+            glm::normalize(glm::vec3(matrix[1])),
+            glm::normalize(glm::vec3(matrix[2]))
+        );
+        return glm::eulerAngles(glm::quat_cast(rotationMatrix));
+    }
+
+    inline glm::vec3 GetScaleFromMatrix(glm::mat4 matrix) {
+        return glm::vec3(
+            glm::length(glm::vec3(matrix[0])),
+            glm::length(glm::vec3(matrix[1])),
+            glm::length(glm::vec3(matrix[2]))
+        );
+    }
+
+    inline glm::vec3 GetForwardVectorFromMatrix(const glm::mat4& matrix) {
+        return glm::normalize(glm::vec3(matrix[2]));
     }
 
 	inline void RemoveScaleFromMatrix(glm::mat4& matrix) {
@@ -1401,6 +1431,16 @@ namespace Util {
             difference += 2 * HELL_PI;
         }
         return difference;
+    }
+
+    inline glm::vec2 GetVogelDiskSample(int sampleIndex, int sampleCount, float spacingFactor, float phi) {
+        const float goldenAngle = glm::pi<float>() * (3.0f - std::sqrt(5.0f));
+        float sampleIndexF = static_cast<float>(sampleIndex);
+        float sampleCountF = static_cast<float>(sampleCount);
+        //float r = std::sqrt((sampleIndexF + 0.5f) / sampleCountF);
+        float r = spacingFactor * std::sqrt((sampleIndexF + 0.5f) / sampleCountF);
+        float theta = sampleIndexF * goldenAngle + phi;
+        return glm::vec2(std::cos(theta), std::sin(theta)) * r;
     }
 }
 

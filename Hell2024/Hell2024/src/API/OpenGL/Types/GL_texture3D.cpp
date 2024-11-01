@@ -7,36 +7,43 @@
 OpenGLTexture3D::OpenGLTexture3D() {}
 
 void OpenGLTexture3D::Create(int width, int height, int depth){
-	_width = width;
-	_height = height;
-	_depth = depth;
-	glGenTextures(1, &_ID);
-	glBindTexture(GL_TEXTURE_3D, _ID);
+	m_width = width;
+	m_height = height;
+	m_depth = depth;
+	glGenTextures(1, &m_ID);
+	glBindTexture(GL_TEXTURE_3D, m_ID);
 	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexImage3D(GL_TEXTURE_3D, 0, GL_RGBA32F, _width, _height, _depth, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+	glTexImage3D(GL_TEXTURE_3D, 0, GL_RGBA32F, m_width, m_height, m_depth, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
 }
 
 unsigned int OpenGLTexture3D::GetID() {
-	return _ID;
+	return m_ID;
 }
 
 unsigned int OpenGLTexture3D::GetWidth() {
-	return _width;
+	return m_width;
 }
 
 unsigned int OpenGLTexture3D::GetHeight() {
-	return _height;
+	return m_height;
 }
 
 unsigned int OpenGLTexture3D::GetDepth() {
-	return _depth;
+	return m_depth;
 }
 
 void OpenGLTexture3D::Bind(unsigned int slot) {
 	glActiveTexture(GL_TEXTURE0 + slot);
-	glBindTexture(GL_TEXTURE_3D, _ID);
+	glBindTexture(GL_TEXTURE_3D, m_ID);
+}
+
+void OpenGLTexture3D::CleanUp() {
+    if (m_ID != 0) {
+        glDeleteTextures(1, &m_ID);
+        m_ID = 0;
+    }
 }

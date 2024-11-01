@@ -1,12 +1,40 @@
 #include "Brush.h"
+#include "Defines.h"
+#include "Util.hpp"
 
 static float signed_distance(const glm::vec3& point, const csg::plane_t& plane);
 static glm::vec3 project_point(const glm::vec3& point, const csg::plane_t& plane);
 static csg::plane_t make_plane(const glm::vec3& point, const glm::vec3& normal);
 static csg::plane_t transformed(const csg::plane_t& plane, const glm::mat4& transform);
 
-Brush::Brush(csg::brush_t* brush) {
-    m_brush_t = brush;
+Brush::Brush() {
+    m_brush_t = nullptr;
+}
+
+void Brush::AddToWorld(csg::world_t& world) {
+    m_brush_t = world.add();
+    // Set type
+    if (m_brushType == AIR_BRUSH) {
+        m_brush_t->set_volume_operation(csg::make_fill_operation(AIR_BRUSH));
+    }
+    else if (m_brushType == SOLID_BRUSH) {
+        m_brush_t->set_volume_operation(csg::make_fill_operation(SOLID_BRUSH));
+    }
+    // Create planes
+    static std::vector<csg::plane_t> planes = {
+        make_plane(glm::vec3(+1,0,0), glm::vec3(+1,0,0)),
+        make_plane(glm::vec3(-1,0,0), glm::vec3(-1,0,0)),
+        make_plane(glm::vec3(0,+1,0), glm::vec3(0,+1,0)),
+        make_plane(glm::vec3(0,-1,0), glm::vec3(0,-1,0)),
+        make_plane(glm::vec3(0,0,+1), glm::vec3(0,0,+1)),
+        make_plane(glm::vec3(0,0,-1), glm::vec3(0,0,-1))
+    };
+    // Transform planes
+    std::vector<csg::plane_t> transformed_planes;
+    for (const csg::plane_t& plane : planes) {
+        transformed_planes.push_back(transformed(plane, m_transform));
+    }
+    m_brush_t->set_planes(transformed_planes);
 }
 
 void Brush::SetBrushShape(BrushShape shape) {
@@ -14,43 +42,11 @@ void Brush::SetBrushShape(BrushShape shape) {
 }
 
 void Brush::SetBrushType(BrushType type) {
-    if (type == AIR_BRUSH) {
-        m_brush_t->set_volume_operation(csg::make_fill_operation(AIR_BRUSH));
-    }
-    else if (type == SOLID_BRUSH) {
-        m_brush_t->set_volume_operation(csg::make_fill_operation(SOLID_BRUSH));
-    }
     this->m_brushType = type;
 }
 
 void Brush::SetTransform(const glm::mat4& transform) {
     m_transform = transform;
-    static std::vector<csg::plane_t> planes;
-    if (m_brushShape == BrushShape::CUBE) {
-        planes = {
-            make_plane(glm::vec3(+1,0,0), glm::vec3(+1,0,0)),
-            make_plane(glm::vec3(-1,0,0), glm::vec3(-1,0,0)),
-            make_plane(glm::vec3(0,+1,0), glm::vec3(0,+1,0)),
-            make_plane(glm::vec3(0,-1,0), glm::vec3(0,-1,0)),
-            make_plane(glm::vec3(0,0,+1), glm::vec3(0,0,+1)),
-            make_plane(glm::vec3(0,0,-1), glm::vec3(0,0,-1))
-        };
-    }
-    else if (m_brushShape == BrushShape::PLANE) {
-        planes = {
-            make_plane(glm::vec3(+1,0,0), glm::vec3(+1,0,0)),
-            make_plane(glm::vec3(-1,0,0), glm::vec3(-1,0,0)),
-            make_plane(glm::vec3(0,+1,0), glm::vec3(0,+1,0)),
-            make_plane(glm::vec3(0,-1,0), glm::vec3(0,-1,0)),
-            make_plane(glm::vec3(0,0,+1), glm::vec3(0,0,+1)),
-            make_plane(glm::vec3(0,0,-1), glm::vec3(0,0,-1))
-        };
-    }
-    std::vector<csg::plane_t> transformed_planes;
-    for (const csg::plane_t& plane : planes) {
-        transformed_planes.push_back(transformed(plane, transform));
-    }
-    m_brush_t->set_planes(transformed_planes);
 }
 
 const glm::mat4& Brush::GetTransform() {
@@ -60,13 +56,14 @@ const glm::mat4& Brush::GetTransform() {
 const BrushShape& Brush::GetBrushShape() {
     return m_brushShape;
 }
+
 const BrushType& Brush::GetBrushType() {
     return m_brushType;
 }
 
-void Brush::update_display_list() {
+void Brush::update_display_list() { // RENAME TO GET VERTICES AND ADD CHECK TO SEE IF m_brush_t is nullptr
     m_vertices.clear();
-    m_vertices.reserve(512);
+    m_vertices.reserve(80);
     auto faces = m_brush_t->get_faces();
     for (csg::face_t& face : faces) {
         for (csg::fragment_t& fragment : face.fragments) {
@@ -79,6 +76,17 @@ void Brush::update_display_list() {
                 normal = -normal;
             }
             std::vector<csg::triangle_t> tris = triangulate(fragment);
+
+            // If it's a plane, remove the excess cube face vertices
+            if (GetBrushShape() == BrushShape::PLANE) {
+                glm::vec3 forward = Util::GetForwardVectorFromMatrix(m_transform);
+                float angle = glm::acos(glm::dot(normal, forward)); 
+                const float angleThreshold = glm::radians(5.0f);
+                if (angle > angleThreshold) {
+                    continue;
+                }
+            }
+            // Otherwise get the vertices
             for (csg::triangle_t& tri : tris) {
                 if (flip_face) {
                     m_vertices.push_back(CSGVertex(fragment.vertices[tri.i].position, normal));

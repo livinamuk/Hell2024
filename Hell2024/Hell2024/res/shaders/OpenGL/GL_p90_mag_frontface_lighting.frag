@@ -11,6 +11,13 @@ in vec3 WorldPos;
 uniform bool useUniformColor;
 uniform vec3 uniformColor;
 uniform vec3 viewPos;
+uniform int playerIndex;
+
+uniform mat4 projection;
+uniform mat4 view;
+uniform mat4 model;
+uniform mat4 inverseView;
+uniform vec3 cameraForward;
 
 in flat int BaseColorTextureIndex;
 in flat int NormalTextureIndex;
@@ -171,6 +178,17 @@ vec3 GetSpecularOnly(vec3 lightPos, vec3 lightColor, float radius, float strengt
 }
 
 
+vec3 GetDirectionalSpecularOnly(vec3 lightDir, vec3 lightPos, vec3 lightColor, float radius, float strength, vec3 Normal, vec3 WorldPos, vec3 baseColor, float roughness, float metallic, vec3 viewPos) {
+	float fresnelReflect = 1.0;
+	vec3 viewDir = normalize(viewPos - WorldPos);
+	float lightRadiance = strength;
+	float lightAttenuation = smoothstep(radius, 0, length(lightPos - WorldPos));
+	float irradiance = max(dot(lightDir, Normal), 0.0) ;
+	irradiance *= lightAttenuation * lightRadiance;
+	vec3 brdf = microfacetBRDFSpecularOnly(lightDir, viewDir, Normal, baseColor, metallic, fresnelReflect, roughness, WorldPos);
+	return brdf * irradiance * clamp(lightColor, 0, 1);
+}
+
 
 //////////////////////
 //                  //
@@ -196,6 +214,43 @@ vec3 Tonemap_ACES(const vec3 x) { // Narkowicz 2015, "ACES Filmic Tone Mapping C
     const float e = 0.14;
     return (x * (a * x + b)) / (x * (c * x + d) + e);
 }
+
+
+
+
+
+
+vec3 GetSpotLighting(vec3 fragPos, vec3 normal, vec3 viewPos, vec3 spotLightDirection) {
+    vec3 position = viewPos;
+    vec3 direction = spotLightDirection;
+	float cutoff = cos(radians(10.5));
+    float outerCutoff = cos(radians(47.5));
+    float constant = 0.25;
+    float linear = 0.09;
+    float quadratic = 0.042;
+    vec3 ambient = vec3(0.2);
+    vec3 diffuse = vec3(0.8);
+    vec3 specular = vec3(1.0);
+
+    vec3 ambientLight = ambient;
+    vec3 lightDir = normalize(position - fragPos);
+    float diff = max(dot(normal, lightDir), 0.0);
+    vec3 diffuseLight = diffuse * diff;
+    vec3 viewDir = normalize(viewPos - fragPos);
+    vec3 reflectDir = reflect(-lightDir, normal);
+    float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32); // Shininess factor
+    vec3 specularLight = specular * spec;
+    float theta = dot(lightDir, -direction);
+    float epsilon = cutoff - outerCutoff;
+    float intensity = clamp((theta - outerCutoff) / epsilon, 0.0, 1.0);
+    float distance = length(position - fragPos);
+    float attenuation = 1.0 / (constant + linear * distance + quadratic * (distance * distance));
+    vec3 result = (ambientLight + intensity * (diffuseLight + specularLight)) * attenuation;
+
+    return result;
+}
+
+
 
 
 void main() {
@@ -266,6 +321,40 @@ void main() {
 	specularLighting = mix(specularLighting, Tonemap_ACES(specularLighting), 0.95);
 
 	SpecularColorOut.rgb = specularLighting;
+
+
+
+
+
+	SpecularColorOut.rgb = vec3(0);
+
+	// player flashlights
+	for (int i = 0; i < 2; i++) {	
+		vec3 spotLightPos = viewPos;
+		if (playerIndex != i) {
+			spotLightPos += (cameraForward * 0.125);
+		}		
+		spotLightPos -= vec3(0, 0.0, 0);
+		vec3 dir = normalize(spotLightPos - (viewPos - cameraForward));
+		vec3 spotLightingFactor = GetSpotLighting(WorldPos, normalize(normal), spotLightPos, dir);	
+		vec3 spotLightColor = vec3(1, 0.8799999713897705, 0.6289999842643738);
+
+
+		
+		//vec3 spotLightColor = vec3(1, 0.8799999713897705, 0.6289999842643738);
+		//-vec3 spotLighting = GetDirectLighting(spotLightPos, spotLightColor, 100, 1.0, normal, worldSpacePosition.xyz, baseColor, roughness, metallic, camPos);
+		
+		vec3 spotLighting = GetDirectionalSpecularOnly(viewPos, cameraForward, spotLightColor, 100, 1.0, normal, WorldPos, baseColor.rgb, roughness, metallic, viewPos);		
+		SpecularColorOut.rgb += spotLighting;
+		
+		spotLighting = GetDirectionalSpecularOnly(viewPos, -cameraForward, spotLightColor, 100, 1.0, -normal, WorldPos, baseColor.rgb, roughness, metallic, viewPos);	
+		SpecularColorOut.rgb += spotLighting;
+
+	}
+
+
+
+
 	SpecularColorOut.a = 1.0;
 
   // FragOut.rgb = vec3(1, 0, 0);

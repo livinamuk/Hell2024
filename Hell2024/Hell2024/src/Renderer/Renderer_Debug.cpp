@@ -47,6 +47,13 @@ void Renderer::UpdateDebugPointsMesh() {
         }
     }
 
+    for (CSGPlane& csgPlane : Scene::g_csgAdditiveWallPlanes) {
+        vertices.push_back(Vertex(csgPlane.m_veritces[0], ORANGE));
+        vertices.push_back(Vertex(csgPlane.m_veritces[1], ORANGE));
+        vertices.push_back(Vertex(csgPlane.m_veritces[2], ORANGE));
+        vertices.push_back(Vertex(csgPlane.m_veritces[3], ORANGE));
+    }
+
     /*
     HeightMap& heightMap = AssetManager::g_heightMap;
     TreeMap& treeMap = AssetManager::g_treeMap;
@@ -756,6 +763,8 @@ std::string& Renderer::GetDebugText() {
   //    g_debugText += "\n\n";
   //    i++;
   //}
+
+    //g_debugText = "OpenGL/Vulkan c++\nSecond quarter medley";
 
     return g_debugText;
 }

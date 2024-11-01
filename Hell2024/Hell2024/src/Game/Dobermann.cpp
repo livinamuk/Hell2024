@@ -21,6 +21,7 @@ void Dobermann::Init() {
     PxU32 collisionGroupFlags = RaycastGroup::DOBERMAN;
     animatedGameObject->LoadRagdoll("dobermann.rag", collisionGroupFlags);
     m_health = DOG_MAX_HEALTH;
+    m_currentRotation = m_initialRotation;
 
     // Create character controller
     PxMaterial* material = Physics::GetDefaultMaterial();
@@ -43,6 +44,7 @@ void Dobermann::Init() {
     filterData.word2 = CollisionGroup(ENVIROMENT_OBSTACLE);
     m_shape->setQueryFilterData(filterData);
     m_targetPlayerIndex = -1;
+
 }
 
 void Dobermann::GiveDamage(int amount, int targetPlayerIndex) {
@@ -81,6 +83,10 @@ void Dobermann::Kill() {
 
 void Dobermann::Update(float deltaTime) {
 
+    if (Input::KeyPressed(HELL_KEY_7)) {
+        m_currentState = DobermannState::RETURN_TO_ORIGIN;
+    }
+
     Player* targetPlayer = Game::GetPlayerByIndex(m_targetPlayerIndex);
     AnimatedGameObject* animatedGameObject = GetAnimatedGameObject();
 
@@ -103,9 +109,44 @@ void Dobermann::Update(float deltaTime) {
     UpdateAnimation();
     UpdateAudio(deltaTime);
 
+    // Is dog in kamakazi but another player is closer (maybe scrap this if it sucks)
+    if (m_currentState == DobermannState::KAMAKAZI) {
+        m_targetPlayerIndex = -1;
+        float closestDistance = 99999;
+        for (int i = 0; i < Game::GetPlayerCount(); i++) {
+            Player* player = Game::GetPlayerByIndex(i);
+            if (player->IsAlive()) {
+                glm::vec3 playerFeetPosiition = player->GetFeetPosition();
+                glm::vec3 dobermannFeetPosition = Util::PxVec3toGlmVec3(m_characterController->getFootPosition());
+                float distToPlayer = glm::distance(playerFeetPosiition, dobermannFeetPosition);
+                if (distToPlayer < closestDistance) {
+                    m_targetPlayerIndex = i;
+                    closestDistance = distToPlayer;
+                }
+            }
+        }
+    }
+
     // Target is dead? then lay
-    if (targetPlayer && targetPlayer->IsDead()) {
-        m_currentState = DobermannState::RETURN_TO_ORIGIN;
+    if (m_currentState == DobermannState::KAMAKAZI && targetPlayer && targetPlayer->IsDead()) {
+        // Pick a random action
+        int rand = Util::RandomInt(0, 1);
+        if (rand == 0) {
+            m_currentState = DobermannState::RETURN_TO_ORIGIN;
+        }
+        if (rand == 1) {
+            m_currentState = DobermannState::LAY;
+        }
+        // Heal to full health
+        m_health = DOG_MAX_HEALTH;
+
+    }
+    // Lay when reached home?
+    if (GetDistanceToTarget() < 0.1f) {
+       if (m_currentState == DobermannState::RETURN_TO_ORIGIN ||
+           m_currentState == DobermannState::WALK_TO_TARGET) {
+           m_currentState = DobermannState::LAY;
+       }
     }
 }
 
@@ -136,8 +177,8 @@ void Dobermann::UpdateMovement(float deltaTime) {
         }
         else if (m_currentState == DobermannState::RETURN_TO_ORIGIN ||
             m_currentState == DobermannState::WALK_TO_TARGET) {
-            m_currentSpeed = 0.06;
-            m_currentRotationSpeed = m_walkRotationSpeed;
+            m_currentSpeed = 0.5f;
+            m_currentRotationSpeed = 0.1;
         }
         // Deliver damage
         if (GetDistanceToTarget() < 1.0f && m_currentState == DobermannState::KAMAKAZI) {            
@@ -163,21 +204,18 @@ void Dobermann::UpdateMovement(float deltaTime) {
             }
         }
 
-        // Lay when reached home?
-        if (GetDistanceToTarget() < 0.1f) {
-            if (m_currentState == DobermannState::RETURN_TO_ORIGIN ||
-                m_currentState == DobermannState::WALK_TO_TARGET) {
-                m_currentState = DobermannState::LAY;
-            }
-        }
+
+        Transform test;
+        test.position = m_currentPosition;
+        test.rotation.y = m_currentRotation;
 
         AnimatedGameObject* animatedGameObject = GetAnimatedGameObject();
         // Move
-        if (m_health > 0) {
+        if (m_health > 0 && m_currentState != DobermannState::LAY) {
 
             glm::vec3 target = m_pathToTarget.points[1] * glm::vec3(1, 0, 1); // this might need to be points[1]
             glm::vec3 dogPosition = animatedGameObject->_transform.position * glm::vec3(1, 0, 1);
-            float maxAllowedDirChange = 0.4f;
+            float maxAllowedDirChange = 0.6f;
 
             glm::vec3 dirToNextPointOnPath = glm::normalize(m_targetPosition - dogPosition);
             glm::vec3 eulerToPlayer = Util::GetEulerAnglesFromForwardVector(dirToNextPointOnPath);
@@ -186,28 +224,15 @@ void Dobermann::UpdateMovement(float deltaTime) {
             //    animatedGameObject->_transform.rotation.y = eulerToPlayer.y;
             //}
             //else {
-                glm::vec3 enemyForward = animatedGameObject->_transform.to_forward_vector();
-                FacingDirection facingDirection = Util::DetermineFacingDirection(enemyForward, target, animatedGameObject->_transform.position);
-                if (facingDirection == FacingDirection::LEFT) {
-                    animatedGameObject->_transform.rotation.y += maxAllowedDirChange * m_currentRotationSpeed;
-                    //   animatedGameObject->PlayAndLoopAnimation("Dobermann_RunLeft", 1.0f, 0.25f);
-                }
-                else {
-                    animatedGameObject->_transform.rotation.y -= maxAllowedDirChange * m_currentRotationSpeed;
-                    //  animatedGameObject->PlayAndLoopAnimation("Dobermann_RunRight", 1.0f, 0.25f);
-                }
-           // }
-
-
-            
-            /*
-            glm::vec3 direction = glm::normalize(m_pathToTarget.points[1] - m_currentPosition);
-            // Compute the new rotation
-            glm::vec3 nextPosition = m_currentPosition + direction * glm::vec3(m_currentSpeed);
-            Util::RotateYTowardsTarget(m_currentPosition, animatedGameObject->_transform.rotation.y, nextPosition, 0.1);
-            // Move PhysX character controller
-            glm::vec3 movementVector = glm::normalize(direction * glm::vec3(1, 0, 1)) * glm::vec3(m_currentSpeed) * deltaTime;
-            */
+            //glm::vec3 enemyForward = animatedGameObject->_transform.to_forward_vector();
+            glm::vec3 enemyForward = test.to_forward_vector();
+            FacingDirection facingDirection = Util::DetermineFacingDirection(enemyForward, target, test.position);
+            if (facingDirection == FacingDirection::LEFT) {
+                m_currentRotation += maxAllowedDirChange * m_currentRotationSpeed;
+            }
+            else {
+                m_currentRotation -= maxAllowedDirChange * m_currentRotationSpeed;
+            }
 
             PxFilterData filterData;
             filterData.word0 = 0;
@@ -228,6 +253,19 @@ void Dobermann::UpdateMovement(float deltaTime) {
             m_currentPosition = Util::PxVec3toGlmVec3(m_characterController->getFootPosition());
             // Update render position*/
             animatedGameObject->SetPosition(m_currentPosition);
+
+
+
+            // Rotation
+            float newRotation = Util::FInterpTo(animatedGameObject->_transform.rotation.y, m_currentRotation, deltaTime, 15.1f);
+            animatedGameObject->SetRotationY(newRotation);
+
+           //std::cout << animatedGameObject->_transform.rotation.y;
+           //std::cout << " ";
+           //std::cout << m_currentRotation;
+           //std::cout << " ";
+           //std::cout << newRotation;
+           //std::cout << "\n";
         }
     }
 }
@@ -238,7 +276,7 @@ void Dobermann::UpdateAnimation() {
         if (m_health > 0) {
             if (m_currentState == DobermannState::RETURN_TO_ORIGIN ||
                 m_currentState == DobermannState::WALK_TO_TARGET) {
-                animatedGameObject->PlayAndLoopAnimation("Dobermann_Walk", 1.0f);
+                animatedGameObject->PlayAndLoopAnimation("Dobermann_Walk", 1.3f);
             }
             if (m_currentState == DobermannState::KAMAKAZI) {
                 if (GetDistanceToTarget() < 1.0) {

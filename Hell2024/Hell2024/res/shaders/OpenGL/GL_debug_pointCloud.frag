@@ -10,4 +10,9 @@ void main() {
 	}
     FragOut.rgb = Color;
 	FragOut.a = 1.0;
+
+	
+	//if (Color == vec3(0 ,0, 0)) {
+	//	FragOut.rgb = vec3(1, 1, 1);
+	//}
 }

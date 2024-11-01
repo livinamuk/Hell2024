@@ -9,10 +9,11 @@ namespace GlobalIllumination {
     void CreateLightVolume(float width, float height, float depth, float offsetX, float offsetY, float offsetZ);
     std::vector<CloudPoint>& GetPointCloud();
     LightVolume* GetLightVolumeByIndex(int index);
-    void RecalculateAll();
+    void RecalculateGI();
     void DestroyAllLightVolumes();
     void ClearData();
-
     bool GPUDataAwaitingClear();
     void MarkGPUDataCleared();
+    void IncrementFrameCounter();
+    int GetFrameCounter();
 }

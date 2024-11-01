@@ -208,7 +208,7 @@ void Ragdoll::LoadFromJSON(std::string filename, PxU32 collisionGroup) {
         shape->setQueryFilterData(filterData);
         shape->setSimulationFilterData(filterData);
 
-        rigid.pxRigidBody->userData = new PhysicsObjectData(PhysicsObjectType::RAGDOLL_RIGID, nullptr);
+        rigid.pxRigidBody->userData = new PhysicsObjectData(ObjectType::RAGDOLL_RIGID, nullptr);
 
         // PUT TO SLEEP AT START UP!
         rigid.pxRigidBody->putToSleep();

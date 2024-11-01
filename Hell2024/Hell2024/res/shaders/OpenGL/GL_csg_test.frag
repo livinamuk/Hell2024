@@ -29,6 +29,7 @@ void main() {
 
 	mat3 tbn = mat3(normalize(attrTangent), normalize(attrBiTangent), normalize(attrNormal));
 	vec3 normal = normalize(tbn * (normalMap.rgb * 2.0 - 1.0));
+	normal = attrNormal;
 
     BaseColorOut = baseColor;
     NormalsOut.rgb = normal;

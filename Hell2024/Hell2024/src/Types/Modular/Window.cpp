@@ -43,7 +43,7 @@ void Window::CreatePhysicsObjects() {
 		raycastShape = Physics::CreateShapeFromTriangleMesh(triangleMesh, shapeFlags);
 		raycastBody = Physics::CreateRigidStatic(Transform(), filterData2, raycastShape);
 
-		PhysicsObjectData* physicsObjectData = new PhysicsObjectData(PhysicsObjectType::GLASS, this);
+		PhysicsObjectData* physicsObjectData = new PhysicsObjectData(ObjectType::GLASS, this);
 		raycastBody->userData = physicsObjectData;
 
 		PxMat44 m2 = Util::GlmMat4ToPxMat44(GetModelMatrix());

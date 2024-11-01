@@ -111,11 +111,11 @@ struct GPUMaterial {
 };
 
 struct PhysicsObjectData {
-    PhysicsObjectData(PhysicsObjectType type, void* parent) {
+    PhysicsObjectData(ObjectType type, void* parent) {
         this->type = type;
         this->parent = parent;
     }
-    PhysicsObjectType type;
+    ObjectType type;
     void* parent;
 };
 
@@ -127,7 +127,19 @@ struct PhysXRayResult {
     bool hitFound;
     void* hitActor;
     void* parent;
-    PhysicsObjectType physicsObjectType;
+    ObjectType objectType;
+};
+
+struct OverlapResult {
+    ObjectType objectType;
+    glm::vec3 position;
+    void* parent;
+};
+
+struct EditorVertex {
+    glm::vec3 position;
+    void* parent;
+    ObjectType objectType;
 };
 
 struct Sphere {

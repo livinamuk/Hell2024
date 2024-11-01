@@ -162,16 +162,18 @@ namespace Scene {
     const size_t GetAnimatedGameObjectCount();
 
     // Map stuff
-    CSGShape* GetCubeVolumeAdditiveByIndex(int32_t index);
-    CSGShape* GetCubeVolumeSubtractiveByIndex(int32_t index);
+    CSGCube* GetCubeVolumeAdditiveByIndex(int32_t index);
+    CSGCube* GetCubeVolumeSubtractiveByIndex(int32_t index);
     const size_t GetCubeVolumeAdditiveCount();
 
     // Cuntainers
     inline std::vector<Light> g_lights;
     inline std::vector<SpawnPoint> g_spawnPoints;
     inline std::vector<BulletCasing> g_bulletCasings;
-    inline std::vector<CSGShape> g_csgAdditiveShapes;
-    inline std::vector<CSGShape> g_csgSubtractiveShapes;
+    inline std::vector<CSGCube> g_csgAdditiveCubes;
+    inline std::vector<CSGCube> g_csgSubtractiveCubes;
+    inline std::vector<CSGPlane> g_csgAdditiveWallPlanes;
+    inline std::vector<CSGPlane> g_csgAdditiveFloorPlanes;
     inline std::vector<Dobermann> g_dobermann;
     inline std::vector<Staircase> g_staircases;
     inline std::vector<BulletHoleDecal> g_bulletHoleDecals;
@@ -199,6 +201,10 @@ namespace Scene {
 
     // Lights
     void CreateLight(LightCreateInfo createInfo);
+
+    // CSG Objects
+    void AddCSGWallPlane(CSGPlaneCreateInfo& createInfo);
+    void AddCSGFloorPlane(CSGPlaneCreateInfo& createInfo);
 
     // OLD SHIT BELOW
     inline PxTriangleMesh* _sceneTriangleMesh = NULL;

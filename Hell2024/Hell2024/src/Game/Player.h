@@ -98,23 +98,28 @@ private:
     float m_breatheBobTimer = 0;
     bool m_ignoreControl = false;
     int m_killCount = 0;
+    int m_suicideCount = 0;
     int m_mouseIndex = -1;
     int m_keyboardIndex = -1;
     float m_capsuleRadius = 0.1f;
     bool m_isOutside = false;
     ShellEjectionState m_shellEjectionState;
-
+    PxShape* m_interactSphere = NULL;
     glm::mat4 m_casingSpawnMatrix = glm::mat4(1);
     glm::mat4 m_muzzleFlashMatrix = glm::mat4(1);
+    OverlapReport m_interactOverlapReport;
+    std::string overlapList;
 
 
 public:
     glm::mat4 m_weaponSwayMatrix = glm::mat4(1);
     bool m_pickUpInteractable = false;
     bool g_awaitingRespawn = true;
+    int m_interactbleGameObjectIndex = -1;
 
     Player() = default;
     Player(int playerIndex);
+    PhysXRayResult m_cameraRayResult;
 
     // Updates
     void Update(float deltaTime);
@@ -135,6 +140,7 @@ public:
     void CheckForEnviromentalDamage(float deltaTime);
     void CheckForDeath();
     void CheckForDebugKeyPresses();
+    void CheckForSuicide();
 
     // State queries
     bool IsMoving();
@@ -229,10 +235,12 @@ public:
     InputType _inputType = KEYBOARD_AND_MOUSE;
     PlayerControls _controls;
 
-	PhysXRayResult _cameraRayResult;
 
 	//RayCastResult _cameraRayData;
 	PxController* _characterController = NULL;
+
+
+    
 
     PxShape* _itemPickupOverlapShape = NULL;
     PxShape* _meleeHitCheckOverlapShape = NULL;

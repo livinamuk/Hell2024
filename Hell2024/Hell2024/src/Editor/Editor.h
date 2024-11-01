@@ -11,8 +11,8 @@ namespace Editor {
     bool ObjectIsSelected();
     bool ObjectIsHoverered();
     std::string& GetDebugText();
-    PhysicsObjectType& GetHoveredObjectType();
-    PhysicsObjectType& GetSelectedObjectType();
+    ObjectType& GetHoveredObjectType();
+    ObjectType& GetSelectedObjectType();
     uint32_t GetSelectedObjectIndex();
     uint32_t GetHoveredObjectIndex();
     glm::mat4& GetViewMatrix();

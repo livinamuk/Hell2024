@@ -45,7 +45,7 @@ enum RaycastGroup {
     DOBERMAN = 32
 };
 
-enum class PhysicsObjectType {
+enum class ObjectType {
     UNDEFINED,
     GAME_OBJECT,
     GLASS,
@@ -53,7 +53,10 @@ enum class PhysicsObjectType {
     WINDOW,
     SCENE_MESH,
     RAGDOLL_RIGID,
-    CSG_OBJECT_ADDITIVE,
+    CSG_OBJECT_ADDITIVE_CUBE,
+    CSG_OBJECT_ADDITIVE_WALL_PLANE,
+    CSG_OBJECT_ADDITIVE_FLOOR_PLANE,
+    CSG_OBJECT_ADDITIVE_CEILING_PLANE,
     CSG_OBJECT_SUBTRACTIVE,
     LIGHT,
     HEIGHT_MAP,
@@ -68,4 +71,5 @@ enum CollisionGroup {
     ITEM_PICK_UP = 16,
     RAGDOLL = 32,
     DOG_CHARACTER_CONTROLLER = 64,
+    GENERTIC_INTERACTBLE = 128,
 };

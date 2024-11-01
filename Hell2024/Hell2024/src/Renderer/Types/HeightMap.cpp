@@ -122,7 +122,7 @@ void HeightMap::CreatePhysicsObject() {
     filterData.collidesWith = (CollisionGroup)(GENERIC_BOUNCEABLE | BULLET_CASING | PLAYER | RAGDOLL);
 
     m_pxRigidStatic = Physics::CreateRigidStatic(m_transform, filterData, m_pxShape);
-    m_pxRigidStatic->userData = new PhysicsObjectData(PhysicsObjectType::HEIGHT_MAP, this);
+    m_pxRigidStatic->userData = new PhysicsObjectData(ObjectType::HEIGHT_MAP, this);
 
 }
 

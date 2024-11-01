@@ -16,7 +16,7 @@ struct RigidStatic {
         filterData.collidesWith = CollisionGroup::NO_COLLISION;
         PxShapeFlags shapeFlags(PxShapeFlag::eSCENE_QUERY_SHAPE);
         pxRigidStatic = Physics::CreateRigidStatic(Transform(), filterData, pxShape);
-        pxRigidStatic->userData = new PhysicsObjectData(PhysicsObjectType::GAME_OBJECT, parent);
+        pxRigidStatic->userData = new PhysicsObjectData(ObjectType::GAME_OBJECT, parent);
     }
 
     void Destroy() {

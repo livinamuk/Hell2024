@@ -28,6 +28,16 @@ int Texture3D::GetDepth() {
     }
 }
 
+void Texture3D::CleanUp() {
+
+    if (BackEnd::GetAPI() == API::OPENGL) {
+        glTexture3D.CleanUp();
+    }
+    else if (BackEnd::GetAPI() == API::VULKAN) {
+        // TO DO
+    }
+}
+
 OpenGLTexture3D& Texture3D::GetGLTexture3D() {
     return glTexture3D;
 }

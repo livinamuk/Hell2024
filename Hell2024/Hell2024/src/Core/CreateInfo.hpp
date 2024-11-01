@@ -25,3 +25,10 @@ struct DobermannCreateInfo {
     float rotation;
     DobermannState initalState;
 };
+
+struct CSGPlaneCreateInfo {
+    glm::vec3 vertexTL;
+    glm::vec3 vertexTR;
+    glm::vec3 vertexBL;
+    glm::vec3 vertexBR;
+};

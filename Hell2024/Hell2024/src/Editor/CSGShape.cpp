@@ -1,18 +1,24 @@
 #pragma once
 #include "CSGShape.h"
 
-glm::mat4 CSGShape::GetModelMatrix() {
+glm::mat4 CSGCube::GetModelMatrix() {
     return m_transform.to_mat4();
 }
 
-glm::mat4 CSGShape::GetNormalMatrix() {
+glm::mat4 CSGCube::GetCSGMatrix() {
+    Transform transform = m_transform;
+    transform.scale *= glm::vec3(0.5f);
+    return transform.to_mat4();
+}
+
+glm::mat4 CSGCube::GetNormalMatrix() {
     Transform transform;
     transform.position = m_transform.position;
     transform.rotation = m_transform.rotation;
     return transform.to_mat4();
 }
 
-void CSGShape::SetTransform(Transform transform) {
+void CSGCube::SetTransform(Transform transform) {
     m_transform = transform;
     if (pxRigidStatic) {
         PxMat44 matrix = Util::GlmMat4ToPxMat44(GetModelMatrix());
@@ -21,16 +27,16 @@ void CSGShape::SetTransform(Transform transform) {
     }
 }
 
-Transform& CSGShape::GetTransform() {
+Transform& CSGCube::GetTransform() {
     return m_transform;
 }
 
-void CSGShape::CleanUp() {
+void CSGCube::CleanUp() {
     Physics::Destroy(pxRigidStatic);
     Physics::Destroy(m_pxShape);
 }
 
-void CSGShape::CreateCubePhysicsObject() {
+void CSGCube::CreateCubePhysicsObject() {
 
     PhysicsFilterData filterData2;
     filterData2.raycastGroup = RaycastGroup::RAYCAST_ENABLED;
@@ -45,7 +51,7 @@ void CSGShape::CreateCubePhysicsObject() {
     m_pxShape = Physics::CreateBoxShape(width, height, depth);
     pxRigidStatic = Physics::CreateRigidStatic(Transform(), filterData2, m_pxShape);
 
-    PhysicsObjectData* physicsObjectData = new PhysicsObjectData(PhysicsObjectType::CSG_OBJECT_SUBTRACTIVE, this);
+    PhysicsObjectData* physicsObjectData = new PhysicsObjectData(ObjectType::CSG_OBJECT_SUBTRACTIVE, this);
     pxRigidStatic->userData = physicsObjectData;
 
     PxMat44 m2 = Util::GlmMat4ToPxMat44(GetModelMatrix());
@@ -54,10 +60,10 @@ void CSGShape::CreateCubePhysicsObject() {
     Physics::DisableRaycast(m_pxShape);
 }
 
-void CSGShape::DisableRaycast() {
+void CSGCube::DisableRaycast() {
     Physics::DisableRaycast(m_pxShape);
 }
 
-void CSGShape::EnableRaycast() {
+void CSGCube::EnableRaycast() {
     Physics::EnableRaycast(m_pxShape);
 }

@@ -283,7 +283,7 @@ vec3 filmPixel(vec2 uv) {
 //                       //
 //   Indirect Lighting   //
 
-vec3 GetProbe(vec3 fragWorldPos, ivec3 offset, out float weight, vec3 Normal) {
+vec3 GetProbe3(vec3 fragWorldPos, ivec3 offset, out float weight, vec3 Normal) {
 
 	/*
 	float probeWorldX = (x * probeSpacing) + lightVolumePosition.x;
@@ -292,23 +292,87 @@ vec3 GetProbe(vec3 fragWorldPos, ivec3 offset, out float weight, vec3 Normal) {
 	vec3 probePosition = vec3(probeWorldX, probeWorldY, probeWorldZ);
 	*/
 
-	fragWorldPos.x -= lightVolumePosition.x;
-	fragWorldPos.y -= lightVolumePosition.y;
-	fragWorldPos.z -= lightVolumePosition.z;
+	//offset = ivec3(0,0,0);
 
-    vec3 gridCoords = fragWorldPos / probeSpacing;
+	vec3 fragPosProbeSpace = fragWorldPos;
+	fragPosProbeSpace.x -= lightVolumePosition.x;
+	fragPosProbeSpace.y -= lightVolumePosition.y;
+	fragPosProbeSpace.z -= lightVolumePosition.z;
+
+    vec3 gridCoords = fragPosProbeSpace / probeSpacing;
+	ivec3 texelCoords = ivec3(floor(gridCoords)) + offset;
+
     ivec3 base = ivec3(floor(gridCoords));
     vec3 a = gridCoords - base;
-    vec3 probe_color = texelFetch(probeGridTexture, base + offset, 0).rgb;
-    vec3 probe_worldPos = (base + offset) * probeSpacing;
+    vec3 probe_color = texelFetch(probeGridTexture, texelCoords, 0).rgb;
+   // vec3 probe_worldPos = (base + offset) * probeSpacing;
+
+	
+	// Does fragment point away from probe
+	vec3 probe_worldPos = gridCoords * probeSpacing + lightVolumePosition;
+	
+	if(probe_color == vec3(0)) {
+		probe_color = vec3(0,0,0);
+	}
+	
+	vec3 texelCoordsWorldPos = texelCoords * probeSpacing + lightVolumePosition;
+
     //vec3 v = normalize(probe_worldPos - fragWorldPos); // TODO: no need to normalize if only checking sign
-    vec3 v = (probe_worldPos - fragWorldPos);
+    vec3 v = normalize(texelCoordsWorldPos - fragWorldPos);
     float vdotn = dot(v, Normal);
     vec3 weights = mix(1. - a, a, offset);
-    if(vdotn > 0 && probe_color != vec3(0))
+    if(vdotn > 0)
         weight = weights.x * weights.y * weights.z;
     else
         weight = 0.;
+
+		
+	//return probe_worldPos;
+	//return texelCoordsWorldPos;
+
+	//weight = 1;
+	//return v;
+
+	//weight = 1;
+	//return vec3(vdotn);
+		
+      //  weight = weights.x * weights.y * weights.z;
+
+	float dist = length(texelCoordsWorldPos - probe_worldPos);
+	float maxDist = 1.0;
+
+    // Calculate the weight based on the distance, clamped between 0 and 1
+   // weight = clamp(dist / maxDist, 0.0, 1.0);
+
+    //    weight = weights.x * weights.y * weights.z;
+
+	//float dist = length(fragPos1 - probe_worldPos);
+
+    // Calculate the weight based on the distance, clamped between 0 and 1
+   // float weight = clamp(distance / maxDistance, 0.0, 1.0);
+		
+   //  weight = weights.x * weights.y * weights.z;
+    if(probe_color == vec3(0)) {
+        weight = 0.;
+	}
+    return probe_color;
+}
+
+vec3 GetProbe(vec3 fragWorldPos, ivec3 offset, out float weight, vec3 Normal) {
+	vec3 fragProbePos = fragWorldPos - lightVolumePosition;
+    vec3 gridCoords = fragProbePos / probeSpacing;
+    ivec3 base = ivec3(floor(gridCoords));
+    vec3 a = gridCoords - base;
+    vec3 probe_color = texelFetch(probeGridTexture, base + offset, 0).rgb;
+	vec3 probe_worldPos = ivec3(floor(gridCoords) + offset) * probeSpacing + lightVolumePosition;
+    vec3 v = (probe_worldPos - fragWorldPos); // no need to normalize if only checking sign
+    float vdotn = dot(v, Normal);
+	vec3 weights = vec3(1.0) - abs(vec3(offset) - a);
+    if (vdotn > -0.0 && probe_color != vec3(0)) {
+        weight = weights.x * weights.y * weights.z;
+    } else {
+        weight = 0.0;
+    }
     return probe_color;
 }
 
@@ -369,6 +433,52 @@ float MapRange(float inValue, float minInRange, float maxInRange, float minOutRa
     return minOutRange + (maxOutRange - minOutRange) * x;
 }
 
+vec3 GetSpotLighting(vec3 fragPos, vec3 normal, vec3 viewPos, vec3 spotLightDirection) {
+    vec3 position = viewPos;
+    vec3 direction = spotLightDirection;
+	float cutoff = cos(radians(10.5));
+    float outerCutoff = cos(radians(47.5));
+    float constant = 0.25;
+    float linear = 0.09;
+    float quadratic = 0.042;
+    vec3 ambient = vec3(0.2);
+    vec3 diffuse = vec3(0.8);
+    vec3 specular = vec3(1.0);
+
+    vec3 ambientLight = ambient;
+    vec3 lightDir = normalize(position - fragPos);
+    float diff = max(dot(normal, lightDir), 0.0);
+    vec3 diffuseLight = diffuse * diff;
+    vec3 viewDir = normalize(viewPos - fragPos);
+    vec3 reflectDir = reflect(-lightDir, normal);
+    float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32); // Shininess factor
+    vec3 specularLight = specular * spec;
+    float theta = dot(lightDir, -direction);
+    float epsilon = cutoff - outerCutoff;
+    float intensity = clamp((theta - outerCutoff) / epsilon, 0.0, 1.0);
+    float distance = length(position - fragPos);
+    float attenuation = 1.0 / (constant + linear * distance + quadratic * (distance * distance));
+    vec3 result = (ambientLight + intensity * (diffuseLight + specularLight)) * attenuation;
+
+	
+	if (distance > 0.1) {
+	distance = distance * distance * distance;
+	cutoff = cos(radians(10.5));
+    outerCutoff = cos(radians(25.5));
+    constant = 0.025;
+    linear = 0.000;
+    quadratic = 1.0;
+    intensity = clamp((theta - outerCutoff) / epsilon, 0.0, 1.0) * 10;
+    attenuation = 1.0 / (constant + linear * distance + quadratic * (distance * distance));
+  //  result += (ambientLight + intensity * (diffuseLight + specularLight)) * attenuation;
+	}
+
+    return result;
+}
+
+
+
+
 void main() {
 
 	const int tileSize = TILE_SIZE;	
@@ -422,7 +532,7 @@ void main() {
 		}	
 		directLighting += GetDirectLighting(lightPosition, lightColor, lightRadius, strength, normal, worldSpacePosition.xyz, baseColor, roughness, metallic, viewPos) * shadow;
 	}		
-
+	
 	
 	// Indirect lighting
 	vec3 baseColor2 = texture(baseColorTexture, uv).rgb;
@@ -436,54 +546,54 @@ void main() {
 	adjustedIndirectLighting *= (0.35) * vec3(factor2);
 	adjustedIndirectLighting = max(adjustedIndirectLighting, vec3(0));
 	adjustedIndirectLighting *= baseColor2.rgb * 1.0;
-	vec3 finalIndirectLighting = adjustedIndirectLighting * 0.1;
+	vec3 finalIndirectLighting = adjustedIndirectLighting * 0.15;
+
+	
+
+	
+	vec3 finalLighting = directLighting;
+	finalLighting += finalIndirectLighting;
+
+	//finalLighting = indirectLighting;
+
+	
+	//finalLighting = worldSpacePosition.xyz;
+
+	//finalLighting = mix(finalLighting + outsideLighting, finalLighting, insideOutsideScaleFactor);
+
+
+	
+	// Spotlights
+	for (int i = 0; i < 2; i++) {
+	
+		mat4 inverseViewMatrix = cameraDataArray[i].viewInverse;
+		vec3 forward = -normalize(vec3(inverseViewMatrix[2].xyz));
+		vec3 camPos = cameraDataArray[i].viewInverse[3].xyz;
+				
+
+		vec3 spotLightPos = camPos;
+		if (playerIndex != i) {
+			spotLightPos += (forward * 0.125);
+		}
 		
+		spotLightPos -= vec3(0, 0.0, 0);
+		vec3 dir = normalize(spotLightPos - (camPos - forward));
 
-
-
-	vec3 finalLighting = directLighting + finalIndirectLighting;
-
-
-
+		vec3 spotLightingFactor = GetSpotLighting(worldSpacePosition.xyz, normalize(normal), spotLightPos, dir);
+	
+		vec3 spotLightColor = vec3(1, 0.8799999713897705, 0.6289999842643738);
+		vec3 spotLighting = GetDirectLighting(spotLightPos, spotLightColor, 100, 1.0, normal, worldSpacePosition.xyz, baseColor, roughness, metallic, camPos);
+		spotLighting = max(spotLighting, vec3(0));
+		spotLighting *= spotLightingFactor;
+	
+		finalLighting += spotLighting;		
+		//finalLighting += spotLightingFactor;
+	}
+	
+	// Fog
 	// Inside outside scale factor
 	float insideOutsideScaleFactor = MapRange(length(indirectLighting), 0, 0.01, 0, 1);
 	insideOutsideScaleFactor = clamp(insideOutsideScaleFactor, 0, 1);
-
-	// Outside direct light
-	vec3 defaultLightColor = vec3(1, 0.7799999713897705, 0.5289999842643738);
-	vec3 moonlightColor = mix(defaultLightColor, vec3(0.85, 0.82, 0.9), 0.15);
-	float moonlightStrength = 0.2;
-	vec3 moonlightDir = normalize(vec3(0.5, 1, 0.1));
-	vec3 outsideDirectLighting = GetOutdoorDirectLighting(worldSpacePosition.xyz, normal, baseColor, roughness, metallic, viewPos, moonlightDir, moonlightColor, moonlightStrength);
-
-	// Outside indirect light
-	vec3 outsideIndirectLighting = defaultLightColor * vec3(0.025);
-	float outfactor2 = min(1, 1 - metallic * 1.0);
-	outsideIndirectLighting *= (0.35) * vec3(outfactor2);
-	outsideIndirectLighting = max(outsideIndirectLighting, vec3(0));
-	outsideIndirectLighting *= baseColor2.rgb * 1.0;
-
-	// Inside/outside composite light
-	vec3 outsideLighting = outsideDirectLighting + outsideIndirectLighting;	
-
-	// Outside lighting falloff
-	float k1 = 0.0;
-	float k2 = 0.5;
-	float distToCamera = distance(viewPos, worldSpacePosition.xyz);
-	float maxDistance = 10.0;
-	float lightStrength = 1.0 / ((distToCamera * k1) + (distToCamera * distToCamera * k2));
-	lightStrength = clamp(lightStrength * 1.5, 0.0, 1.0);
-	outsideLighting += outsideLighting * lightStrength;
-
-
-	finalLighting = mix(finalLighting + outsideLighting, finalLighting, insideOutsideScaleFactor);
-		
-	//finalLighting = vec3(outsideDirectLighting);
-
-	//	finalLighting  = outsideLighting;
-
-
-	// Fog
 	vec3 fogColor = vec3(0.09, 0.09, 0.09) * vec3(0.075);	
 	float fogStart = 1;
 	float fogEnd = 50;	
@@ -491,14 +601,17 @@ void main() {
 	vec3 fogLighting = ApplyFog(finalLighting, dist , fogColor, fogStart, fogEnd);
 	finalLighting = mix(fogLighting, finalLighting, insideOutsideScaleFactor);
 
+	// Foreground fog
+	float fogIntensity = 0.1;
+	float fogFalloff = 0.05;
+	float fogStart2 = 0.5;
+    float fogFactor = clamp(1.0 - (dist - fogStart2) * fogFalloff, 0.0, 1.0);
 
-	//finalLighting =outsideIndirectLighting + outsideDirectLighting;
-
-
+	// Tone mapping
 	finalLighting = mix(finalLighting, Tonemap_ACES(finalLighting), 1.0);
 	finalLighting = pow(finalLighting, vec3(1.0/2.2));
-
 	finalLighting = mix(finalLighting, Tonemap_ACES(finalLighting), 0.1235);
+
 	// Vignette
 	uv *=  1.0 - uv.yx;
 	float vig = uv.x*uv.y * 15.0;	// multiply with sth for intensity
@@ -506,7 +619,6 @@ void main() {
 	finalLighting *= vec3(vig);
 
 	// Noise
-	//vec2 uv = gl_FragCoord.xy / viewportSize;
 	vec2 filmRes = viewportSize;
 	vec2 coord = pixelCoords;
 	vec2 rest = modf(uv * filmRes, coord);
@@ -519,10 +631,8 @@ void main() {
 	float x = rand(uv + rand(vec2(int(time * noiseSpeed), int(-time * noiseSpeed))));
 	float noiseFactor = 0.035;
 
-
-
 	// Some more YOLO tone mapping
-	finalLighting = mix(finalLighting, Tonemap_ACES(finalLighting), 0.95);
+	finalLighting = mix(finalLighting, Tonemap_ACES(finalLighting), 0.75);
 
 	// Add the noise
 	finalLighting = finalLighting + (x * -noiseFactor) + (noiseFactor / 2);
@@ -534,14 +644,7 @@ void main() {
 
 	// Brightness
 	finalLighting -= vec3(0.020);
-
-//vec3 lightDir = vec3(0, 0, 1);
-//float NdotL = max(dot(normalize(normal), normalize(lightDir)), 0.0);
-//vec3 test = vec3(1,1,1) * NdotL;
-//
-//	finalLighting = (normal + 1) * 0.5;
-	
+		
 	imageStore(lightingTexture, pixelCoords, vec4(finalLighting, 1));	
-
-	//imageStore(lightingTexture, pixelCoords, vec4(rma, 1));	
+	//imageStore(lightingTexture, pixelCoords, vec4(normal, 1));	
 }

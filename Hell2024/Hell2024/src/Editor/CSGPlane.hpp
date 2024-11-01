@@ -10,15 +10,6 @@ struct CSGPlane {
 
     glm::vec3 m_veritces[4];
 
-    bool m_init = false;
-
-    void Init() {
-        m_veritces[TL] = glm::vec3(0, 2, 1);
-        m_veritces[TR] = glm::vec3(1, 2, 1);
-        m_veritces[BL] = glm::vec3(0, 1, 1.5f);
-        m_veritces[BR] = glm::vec3(1, 1, 1.5);
-    }
-
     glm::vec3 GetCenter() {
         return glm::vec3(m_veritces[TL] + m_veritces[TR] + m_veritces[BL] + m_veritces[BR]) / 4.0f;
     }
@@ -41,6 +32,27 @@ struct CSGPlane {
         float scaleY = glm::distance(m_veritces[TL], m_veritces[BL]);
         glm::mat4 scale = glm::scale(glm::mat4(1.0f), glm::vec3(scaleX, scaleY, 1.0f));
         glm::mat4 modelMatrix = translation * rotation * scale;
+        return modelMatrix;
+    }
+
+    glm::mat4 GetCSGMatrix() {
+        // Rotation
+        glm::vec3 normal = GetNormal();
+        glm::vec3 defaultNormal = glm::vec3(0, 0, 1);
+        glm::quat rotationQuat = glm::quat(defaultNormal, normal);
+        glm::mat4 rotation = glm::mat4_cast(rotationQuat); 
+        // Scale
+        glm::vec3 scale;
+        scale.x = glm::distance(m_veritces[TL], m_veritces[TR]) * 0.5f;
+        scale.y = glm::distance(m_veritces[TL], m_veritces[BL]) * 0.5f;
+        scale.z = CSG_PLANE_CUBE_HACKY_OFFSET * 0.5f;
+        // Translation
+        glm::vec3 forwardVector = glm::vec3(rotation[2]);
+        glm::vec3 center = GetCenter() - forwardVector * glm::vec3(CSG_PLANE_CUBE_HACKY_OFFSET * 0.5f);
+        glm::mat4 translation = glm::translate(glm::mat4(1.0f), center);
+        // Composite
+        glm::mat4 scaleMatrix = glm::scale(glm::mat4(1.0f), scale);
+        glm::mat4 modelMatrix = translation * rotation * scaleMatrix;
         return modelMatrix;
     }
 

@@ -484,12 +484,9 @@ namespace WeaponManager {
         spas.animationCancelPercentages.fire = 50.0f;
         spas.pickupModelName = "SPAS_Isolated";
         spas.pickupConvexMeshModelName = "SPAS_ConvexMesh";
-      // spas.pickUpMeshMaterials["SPAS12_Main"] = "SPAS_Main";
-      // spas.pickUpMeshMaterials["SPAS12_Moving"] = "SPAS_Moving";
-      // spas.pickUpMeshMaterials["SPAS12_Stamped"] = "SPAS_Stamped";
-        spas.pickUpMeshMaterials["SPAS12_Main"] = "Gold";
-        spas.pickUpMeshMaterials["SPAS12_Moving"] = "Gold";
-        spas.pickUpMeshMaterials["SPAS12_Stamped"] = "Gold";
+        spas.pickUpMeshMaterials["SPAS12_Main"] = "SPAS_Main";
+        spas.pickUpMeshMaterials["SPAS12_Moving"] = "SPAS_Moving";
+        spas.pickUpMeshMaterials["SPAS12_Stamped"] = "SPAS_Stamped";
 
 
 

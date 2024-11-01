@@ -78,3 +78,7 @@ const int LightVolume::GetProbeCount() {
 const glm::vec3 LightVolume::GetPosition() {
     return glm::vec3(posX, posY, posZ);
 }
+
+const void LightVolume::CleanUp() {
+    texutre3D.CleanUp();
+}

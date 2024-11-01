@@ -4,7 +4,7 @@
 #include "../Physics/Physics.h"
 #include "../Util.hpp"
 
-struct CSGShape {
+struct CSGCube {
 
 public:
     PxRigidStatic* pxRigidStatic = nullptr;
@@ -19,6 +19,7 @@ public:
     float textureOffsetY = 0.0f;
 
     glm::mat4 GetModelMatrix();
+    glm::mat4 GetCSGMatrix();
     glm::mat4 GetNormalMatrix();
     void SetTransform(Transform transform);
     Transform& GetTransform();

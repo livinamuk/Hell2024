@@ -6,7 +6,8 @@
 
 struct Brush {
 public:
-    Brush(csg::brush_t* brush);
+    Brush();
+    void AddToWorld(csg::world_t& world);
     void SetBrushShape(BrushShape type);
     void SetBrushType(BrushType type);
     void SetTransform(const glm::mat4& transform);
@@ -18,6 +19,6 @@ public:
 private:
     glm::mat4 m_transform;
     csg::brush_t* m_brush_t;
-    BrushType m_brushType;
+    BrushType m_brushType = BrushType::SOLID_BRUSH;
     BrushShape m_brushShape = BrushShape::CUBE;
 };

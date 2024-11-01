@@ -147,6 +147,16 @@ std::string GameObject::GetParentName() {
 }
 
 bool GameObject::IsInteractable() {
+
+    // bullshit from the past
+    // bullshit from the past
+    // bullshit from the past
+    // bullshit from the past
+    // bullshit from the past
+    // bullshit from the past
+    // bullshit from the past
+
+
 	if (_openState == OpenState::CLOSED ||
 		_openState == OpenState::OPEN ||
  		_openState == OpenState::CLOSING ||
@@ -199,23 +209,23 @@ void GameObject::Update(float deltaTime) {
             const PxTransform shapePose = m_collisionRigidBody.GetGlobalPoseAsPxTransform();
             OverlapReport overlapReport = Physics::OverlapTest(overlapGeometry, shapePose, CollisionGroup::GENERIC_BOUNCEABLE);
 
-            if (overlapReport.HitsFound()) {
-                for (auto& hit : overlapReport.hits) {
-
-                    if (hit == topDraw->m_collisionRigidBody.pxRigidBody) {
-                        float speed = 3.0f;
-                        Transform displacement;
-
-                        if (topDraw->_openState == OpenState::OPENING) {
-                            displacement.position.z += deltaTime * speed;
-                        }
-                        else if (topDraw->_openState == OpenState::CLOSING) {
-                            displacement.position.z -= deltaTime * speed;
-                        }
-                        m_collisionRigidBody.SetGlobalPose(globalPose* displacement.to_mat4());
-                    }
-                }
-            }
+            //if (overlapReport.HitsFound()) {
+            //    for (auto& hit : overlapReport.hits) {
+            //
+            //        if (hit == topDraw->m_collisionRigidBody.pxRigidBody) {
+            //            float speed = 3.0f;
+            //            Transform displacement;
+            //
+            //            if (topDraw->_openState == OpenState::OPENING) {
+            //                displacement.position.z += deltaTime * speed;
+            //            }
+            //            else if (topDraw->_openState == OpenState::CLOSING) {
+            //                displacement.position.z -= deltaTime * speed;
+            //            }
+            //            m_collisionRigidBody.SetGlobalPose(globalPose* displacement.to_mat4());
+            //        }
+            //    }
+            //}
         }
     }
 
@@ -344,14 +354,14 @@ void GameObject::Update(float deltaTime) {
         if (m_raycastRigidStatic.pxRigidStatic->userData) {
             delete static_cast<PhysicsObjectData*>(m_raycastRigidStatic.pxRigidStatic->userData);
 		}
-        m_raycastRigidStatic.pxRigidStatic->userData = new PhysicsObjectData(PhysicsObjectType::GAME_OBJECT, this);
+        m_raycastRigidStatic.pxRigidStatic->userData = new PhysicsObjectData(ObjectType::GAME_OBJECT, this);
 	}
 	// Update collision object PhysX pointer
 	if (m_collisionRigidBody.Exists()) {
         if (m_collisionRigidBody.pxRigidBody->userData) {
             delete static_cast<PhysicsObjectData*>(m_collisionRigidBody.pxRigidBody->userData);
 		}
-        m_collisionRigidBody.pxRigidBody->userData = new PhysicsObjectData(PhysicsObjectType::GAME_OBJECT, this);
+        m_collisionRigidBody.pxRigidBody->userData = new PhysicsObjectData(ObjectType::GAME_OBJECT, this);
 	}
 
     // AABB
@@ -695,7 +705,7 @@ void GameObject::SetRaycastShape(PxShape* shape) {
 	filterData.collidesWith = CollisionGroup::NO_COLLISION;
     m_raycastRigidStatic.pxShape = shape;
     m_raycastRigidStatic.pxRigidStatic = Physics::CreateRigidStatic(Transform(), filterData, shape);
-    m_raycastRigidStatic.pxRigidStatic->userData = new PhysicsObjectData(PhysicsObjectType::GAME_OBJECT, this);
+    m_raycastRigidStatic.pxRigidStatic->userData = new PhysicsObjectData(ObjectType::GAME_OBJECT, this);
 
 }
 

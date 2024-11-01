@@ -181,13 +181,13 @@ void Door::CreatePhysicsObject() {
 	PxShapeFlags shapeFlags(PxShapeFlag::eSCENE_QUERY_SHAPE); // Most importantly NOT eSIMULATION_SHAPE. PhysX does not allow for tri mesh.
     PhysicsFilterData filterData2;
     filterData2.raycastGroup = RaycastGroup::RAYCAST_ENABLED;
-    filterData2.collisionGroup = NO_COLLISION;
+    filterData2.collisionGroup = GENERTIC_INTERACTBLE;
     filterData2.collidesWith = NO_COLLISION;
     PxTriangleMesh* triangleMesh = Physics::CreateTriangleMeshFromModelIndex(AssetManager::GetModelIndexByName("Door"));
     raycastShape = Physics::CreateShapeFromTriangleMesh(triangleMesh, shapeFlags);
     raycastBody = Physics::CreateRigidStatic(Transform(), filterData2, raycastShape);
 
-    PhysicsObjectData* physicsObjectData = new PhysicsObjectData(PhysicsObjectType::DOOR, this);
+    PhysicsObjectData* physicsObjectData = new PhysicsObjectData(ObjectType::DOOR, this);
     raycastBody->userData = physicsObjectData;
 
     /*

@@ -71,6 +71,7 @@ std::vector<RenderItem2D> TextBlitter::CreateText(std::string text, hell::ivec2 
         location.x -= GetTextSizeInPixels(text, viewportSize, fontType, scale).x / 2;
     }
 
+
     glm::vec3 color = WHITE;
     int xcursor = location.x;
     int ycursor = location.y;

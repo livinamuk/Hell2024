@@ -432,7 +432,7 @@ void main() {
 
 			vec3 rayResult = IntersectTLAS(ray, 0);
 			if (rayResult == vec3(1, 1, 1)) {
-				//color = vec3(0, 0, 0);
+				color = vec3(0, 0, 0);
 			}
 			else {
 				color += radiance;

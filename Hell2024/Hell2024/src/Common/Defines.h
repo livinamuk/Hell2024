@@ -19,6 +19,7 @@
 #define NOOSE_PI 3.14159265359f
 #define NOOSE_HALF_PI 1.57079632679f
 #define HELL_PI 3.141592653589793f
+#define HELL_PHI 1.6180f
 
 #define DOOR_WIDTH 0.8f
 #define DOOR_HEIGHT 2.0f
@@ -29,6 +30,8 @@
 
 #define PLAYER_CAPSULE_HEIGHT 0.4f
 #define PLAYER_CAPSULE_RADIUS 0.15f
+
+#define CSG_PLANE_CUBE_HACKY_OFFSET 0.1f
 
 #define ZERO_MEM(a) memset(a, 0, sizeof(a))
 #define ARRAY_SIZE_IN_ELEMENTS(a) (sizeof(a)/sizeof(a[0]))

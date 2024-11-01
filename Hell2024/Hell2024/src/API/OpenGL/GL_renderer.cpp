@@ -816,14 +816,14 @@ void OpenGLRenderer::RenderFrame(RenderData& renderData) {
 
     OpenGLRenderer::UploadSSBOsGPU(renderData);
 
-
-
-
-    static int frameNumber = 0;
-    frameNumber++;
-    if (frameNumber < 10) {
-        UpdatePointCloud();
+    // Update GI 
+    if (GlobalIllumination::GetFrameCounter() < 20) {
+        if (GlobalIllumination::GetFrameCounter() < 20) {
+            UpdatePointCloud();
+        }
         IndirectLightingPass();
+        GlobalIllumination::IncrementFrameCounter();
+        std::cout << "Updating GI\n";
     }
 
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, g_ssbos.samplers);
@@ -862,7 +862,7 @@ void OpenGLRenderer::RenderFrame(RenderData& renderData) {
 
     LightCullingPass(renderData);
     LightingPass(renderData);
-    SSAOPass();
+    //SSAOPass();
     SkyBoxPass(renderData);
     DebugTileViewPass(renderData);
 
@@ -1359,7 +1359,7 @@ void DebugPass(RenderData& renderData) {
     //std::cout << Editor::GetHoveredObjectType() << '\n';
 
     // Render selected light AABB
-    if (Editor::GetSelectedObjectType() == PhysicsObjectType::LIGHT) {
+    if (Editor::GetSelectedObjectType() == ObjectType::LIGHT) {
         int lightIndex = Editor::GetSelectedObjectIndex();
         Sphere sphere;
         sphere.origin = Scene::g_lights[lightIndex].position;
@@ -1680,6 +1680,8 @@ void P90MagPass(RenderData& renderData) {
         SetViewport(viewportInfo);
         backFaceShader.SetMat4("projection", player->GetProjectionMatrix());
         backFaceShader.SetMat4("view", player->GetViewMatrix());
+        backFaceShader.SetMat4("inverseView", player->GetViewMatrix());
+        backFaceShader.SetVec3("cameraForward", player->GetCameraForward());
         backFaceShader.SetVec3("viewPos", player->GetViewPos());
         backFaceShader.SetInt("playerIndex", i);
        
@@ -1743,6 +1745,8 @@ void P90MagPass(RenderData& renderData) {
         frontFaceShader.SetMat4("view", player->GetViewMatrix());
         frontFaceShader.SetVec3("viewPos", player->GetViewPos());
         frontFaceShader.SetInt("playerIndex", i);
+        frontFaceShader.SetMat4("inverseView", player->GetViewMatrix());
+        frontFaceShader.SetVec3("cameraForward", player->GetCameraForward());
         for (SkinnedRenderItem& skinnedRenderItem : renderData.skinnedRenderItems[i]) {
             SkinnedMesh* mesh = AssetManager::GetSkinnedMeshByIndex(skinnedRenderItem.originalMeshIndex);
             if (mesh->name == "Magazine_low" || mesh->name == "Magazine_low2") {
@@ -1945,6 +1949,10 @@ void LightingPass(RenderData& renderData) {
     glBindTexture(GL_TEXTURE_3D, lightVolume->texutre3D.GetGLTexture3D().GetID());
 
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 19, OpenGLRenderer::g_ssbos.lightVolumeData.GetHandle());
+
+    glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+    glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+
     glDispatchCompute(gBuffer.GetWidth() / TILE_SIZE, gBuffer.GetHeight() / TILE_SIZE, 1);
 }
 
@@ -2260,8 +2268,10 @@ void OutlinePass(RenderData& renderData) {
         glStencilOp(GL_REPLACE, GL_REPLACE, GL_REPLACE);
         glStencilFunc(GL_ALWAYS, 1, 1);
         glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
-
-        if (Editor::GetHoveredObjectType() == PhysicsObjectType::CSG_OBJECT_ADDITIVE) {
+        if (Editor::GetHoveredObjectType() == ObjectType::CSG_OBJECT_ADDITIVE_CUBE ||
+            Editor::GetHoveredObjectType() == ObjectType::CSG_OBJECT_ADDITIVE_WALL_PLANE ||
+            Editor::GetHoveredObjectType() == ObjectType::CSG_OBJECT_ADDITIVE_FLOOR_PLANE ||
+            Editor::GetHoveredObjectType() == ObjectType::CSG_OBJECT_ADDITIVE_CEILING_PLANE) {
             CSGObject& cube = CSG::GetCSGObjects()[Editor::GetHoveredObjectIndex()];
             shader.SetMat4("model", glm::mat4(1));
             glBindVertexArray(OpenGLBackEnd::GetCSGVAO());
@@ -2283,7 +2293,10 @@ void OutlinePass(RenderData& renderData) {
         glDisable(GL_DEPTH_TEST);
         shader.SetVec3("Color", glm::vec3(0.5));
 
-        if (Editor::GetHoveredObjectType() == PhysicsObjectType::CSG_OBJECT_ADDITIVE) {
+        if (Editor::GetHoveredObjectType() == ObjectType::CSG_OBJECT_ADDITIVE_CUBE ||
+            Editor::GetHoveredObjectType() == ObjectType::CSG_OBJECT_ADDITIVE_WALL_PLANE ||
+            Editor::GetHoveredObjectType() == ObjectType::CSG_OBJECT_ADDITIVE_FLOOR_PLANE ||
+            Editor::GetHoveredObjectType() == ObjectType::CSG_OBJECT_ADDITIVE_CEILING_PLANE) {
             CSGObject& cube = CSG::GetCSGObjects()[Editor::GetHoveredObjectIndex()];
             shader.SetMat4("model", glm::mat4(1));
             glBindVertexArray(OpenGLBackEnd::GetCSGVAO());
@@ -2309,11 +2322,14 @@ void OutlinePass(RenderData& renderData) {
         glStencilFunc(GL_ALWAYS, 1, 1);
         glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
 
-        if (Editor::GetSelectedObjectType() == PhysicsObjectType::CSG_OBJECT_ADDITIVE) {
-            CSGObject& cube = CSG::GetCSGObjects()[Editor::GetSelectedObjectIndex()];
+        if (Editor::GetHoveredObjectType() == ObjectType::CSG_OBJECT_ADDITIVE_CUBE ||
+            Editor::GetHoveredObjectType() == ObjectType::CSG_OBJECT_ADDITIVE_WALL_PLANE ||
+            Editor::GetHoveredObjectType() == ObjectType::CSG_OBJECT_ADDITIVE_FLOOR_PLANE ||
+            Editor::GetHoveredObjectType() == ObjectType::CSG_OBJECT_ADDITIVE_CEILING_PLANE) {
+            CSGObject& csgObject = CSG::GetCSGObjects()[Editor::GetSelectedObjectIndex()];
             shader.SetMat4("model", glm::mat4(1));
             glBindVertexArray(OpenGLBackEnd::GetCSGVAO());
-            glDrawElementsInstancedBaseVertex(GL_TRIANGLES, cube.m_vertexCount, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int) * cube.m_baseIndex), 1, cube.m_baseVertex);
+            glDrawElementsInstancedBaseVertex(GL_TRIANGLES, csgObject.m_vertexCount, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int) * csgObject.m_baseIndex), 1, csgObject.m_baseVertex);
         }
         else {
             for (RenderItem3D& renderItem : selectionRenderItems) {
@@ -2331,7 +2347,10 @@ void OutlinePass(RenderData& renderData) {
         glDisable(GL_DEPTH_TEST);
         shader.SetVec3("Color", YELLOW);
 
-        if (Editor::GetSelectedObjectType() == PhysicsObjectType::CSG_OBJECT_ADDITIVE) {
+        if (Editor::GetHoveredObjectType() == ObjectType::CSG_OBJECT_ADDITIVE_CUBE ||
+            Editor::GetHoveredObjectType() == ObjectType::CSG_OBJECT_ADDITIVE_WALL_PLANE ||
+            Editor::GetHoveredObjectType() == ObjectType::CSG_OBJECT_ADDITIVE_FLOOR_PLANE ||
+            Editor::GetHoveredObjectType() == ObjectType::CSG_OBJECT_ADDITIVE_CEILING_PLANE) {
             CSGObject& cube = CSG::GetCSGObjects()[Editor::GetSelectedObjectIndex()];
             shader.SetMat4("model", glm::mat4(1));
             glBindVertexArray(OpenGLBackEnd::GetCSGVAO());
@@ -2354,12 +2373,12 @@ void OutlinePass(RenderData& renderData) {
 
     // Draw CSG vertices
     if (Editor::ObjectIsSelected()) {
-        CSGShape* cubeVolume = nullptr;
-        if (Editor::GetSelectedObjectType() == PhysicsObjectType::CSG_OBJECT_ADDITIVE) {
-            cubeVolume = &Scene::g_csgAdditiveShapes[Editor::GetSelectedObjectIndex()];
+        CSGCube* cubeVolume = nullptr;
+        if (Editor::GetSelectedObjectType() == ObjectType::CSG_OBJECT_ADDITIVE_CUBE) {
+            cubeVolume = &Scene::g_csgAdditiveCubes[Editor::GetSelectedObjectIndex()];
         }
-        if (Editor::GetSelectedObjectType() == PhysicsObjectType::CSG_OBJECT_SUBTRACTIVE) {
-            cubeVolume = &Scene::g_csgSubtractiveShapes[Editor::GetSelectedObjectIndex()];
+        if (Editor::GetSelectedObjectType() == ObjectType::CSG_OBJECT_SUBTRACTIVE) {
+            cubeVolume = &Scene::g_csgSubtractiveCubes[Editor::GetSelectedObjectIndex()];
         }
         if (cubeVolume) {
             static int meshIndex = AssetManager::GetModelByIndex(AssetManager::GetModelIndexByName("Cube"))->GetMeshIndices()[0];
@@ -2396,7 +2415,7 @@ void CSGSubtractivePass() {
 
     std::vector<glm::mat4> planeTransforms;
 
-    for (CSGShape& cubeVolume : Scene::g_csgSubtractiveShapes) {
+    for (CSGCube& cubeVolume : Scene::g_csgSubtractiveCubes) {
 
         // cube test
         /*
@@ -2450,11 +2469,15 @@ void CSGSubtractivePass() {
         return distanceA > distanceB;
     });
 
+    Transform transform;
+    transform.scale = glm::vec3(0.5f);
+    glm::mat4 scale = transform.to_mat4();
+
     glBindVertexArray(OpenGLBackEnd::GetVertexDataVAO());
     for (glm::mat4& matrix : planeTransforms) {
         int planeMeshIndex = AssetManager::GetHalfSizeQuadMeshIndex();
         shader.SetVec3("color", ORANGE);
-        shader.SetMat4("model", matrix);
+        shader.SetMat4("model", matrix * scale);
         Mesh* mesh = AssetManager::GetMeshByIndex(planeMeshIndex);
         glDrawElementsBaseVertex(GL_TRIANGLES, mesh->indexCount, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int) * mesh->baseIndex), mesh->baseVertex);
     }
@@ -2528,7 +2551,7 @@ void CSGSubtractivePass() {
 
 
 
-    for (CSGShape& cubeVolume : Scene::g_csgSubtractiveShapes) {
+    for (CSGCube& cubeVolume : Scene::g_csgSubtractiveCubes) {
 
         std::vector<Vertex> vertices;
 
@@ -2669,6 +2692,10 @@ void OpenGLRenderer::UpdatePointCloud() {
 
 void OpenGLRenderer::Triangle2DPass() {
 
+    return;
+
+
+
     std::vector<glm::vec2> pixelCoords = {
      /* glm::vec2(100.0f, 100.0f),
       glm::vec2(300.0f, 100.0f),
@@ -2806,11 +2833,6 @@ void OpenGLRenderer::PresentFinalImage() {
 }
 
 void OpenGLRenderer::IndirectLightingPass() {
-    static int frameNumber = 0;
-    frameNumber++;
-    if (frameNumber > 10) {
-        return;
-    }
     if (Renderer::GetRenderMode() == RenderMode::COMPOSITE ||
         Renderer::GetRenderMode() == RenderMode::COMPOSITE_PLUS_POINT_CLOUD) {
 
@@ -2820,7 +2842,7 @@ void OpenGLRenderer::IndirectLightingPass() {
         ComputeShader& computeShader = OpenGLRenderer::g_shaders.probeLighting;
 
         computeShader.Use();
-        computeShader.SetInt("frameNumber", frameNumber); 
+        computeShader.SetInt("frameNumber", GlobalIllumination::GetFrameCounter()); 
         computeShader.SetInt("probeSpaceWidth", lightVolume->GetProbeSpaceWidth());
         computeShader.SetInt("probeSpaceHeight", lightVolume->GetProbeSpaceHeight());
         computeShader.SetInt("probeSpaceDepth", lightVolume->GetProbeSpaceDepth());
@@ -3007,15 +3029,27 @@ void WinstonPass(RenderData& renderData) {
         glDisable(GL_CULL_FACE);
         glEnable(GL_BLEND);
 
-        for (GameObject& gameObject : Scene::GetGamesObjects()) {
-            if (true) {
-                for (RenderItem3D& renderItem : gameObject.GetRenderItems()) {
-                    shader.SetMat4("model", renderItem.modelMatrix);
-                    Mesh* mesh = AssetManager::GetMeshByIndex(renderItem.meshIndex);
-                    glDrawElementsBaseVertex(GL_TRIANGLES, mesh->indexCount, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int) * mesh->baseIndex), mesh->baseVertex);
-                };
-            }
+        Player* player = Game::GetPlayerByIndex(i);
+        if (player->m_interactbleGameObjectIndex != -1) {
+            GameObject& gameObject = Scene::GetGamesObjects()[player->m_interactbleGameObjectIndex];
+            for (RenderItem3D& renderItem : gameObject.GetRenderItems()) {
+                shader.SetMat4("model", renderItem.modelMatrix);
+                Mesh* mesh = AssetManager::GetMeshByIndex(renderItem.meshIndex);
+                glDrawElementsBaseVertex(GL_TRIANGLES, mesh->indexCount, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int) * mesh->baseIndex), mesh->baseVertex);
+            };
         }
+
+       //for (GameObject& gameObject : Scene::GetGamesObjects()) {
+       //    if (true) {
+       //        for (RenderItem3D& renderItem : gameObject.GetRenderItems()) {
+       //            shader.SetMat4("model", renderItem.modelMatrix);
+       //            Mesh* mesh = AssetManager::GetMeshByIndex(renderItem.meshIndex);
+       //            glDrawElementsBaseVertex(GL_TRIANGLES, mesh->indexCount, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int) * mesh->baseIndex), mesh->baseVertex);
+       //        };
+       //    }
+       //}
+
+
         //if (OpenGLRenderer::g_sphereMesh.GetIndexCount() > 0) {
         //    glBindVertexArray(OpenGLRenderer::g_sphereMesh.GetVAO());
         //    glDrawElements(GL_TRIANGLES, OpenGLRenderer::g_sphereMesh.GetIndexCount(), GL_UNSIGNED_INT, 0);

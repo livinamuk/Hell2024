@@ -41,11 +41,12 @@ void main() {
 	float treeValue = texture(TreeMap, MegaTextureCoords).r;
 
 	if (megaTextureValue > 0) {
-		BaseColorOut.r = 0.45;
+		BaseColorOut.r = 0.5;
 		BaseColorOut.g = 0;
 		BaseColorOut.b = 0;
-		RMAOut.rgb = vec3(0.015 , 0.6, 1);
-		RMAOut.rgb = vec3(0.034 , 0.6, 1);
+		//RMAOut.rgb = vec3(0.015 , 0.6, 1);
+		RMAOut.rgb = vec3(0.015 , 0.65, 1);
+		//RMAOut.rgb = vec3(0.034 , 0.6, 1);
 	}
 
 

@@ -8,6 +8,14 @@ enum class CSGType {
     ADDITIVE_PLANE
 };
 
+enum class CSGContainerType {
+    UNDEFINED,
+    ADDITIVE_CUBE,
+    WALL_PLANE,
+    FLOOR_PLANE,
+    CEILING_PLANE,
+};
+
 enum class BrushShape {
     CUBE,
     PLANE

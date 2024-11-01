@@ -11,6 +11,7 @@ static constexpr csg::volume_t SOLID = 1;
 struct CSGObject {
 
     Transform m_transform;;
+    ObjectType m_parentObjectType;
     CSGType m_type;
     uint32_t m_baseVertex = 0;
     uint32_t m_indexCount = 0;
@@ -18,6 +19,7 @@ struct CSGObject {
     uint32_t m_baseIndex = 0;
     uint32_t m_materialIndex = 0;
     uint32_t m_parentIndex = 0;
+    uint32_t m_localIndex = 0;
     uint32_t m_blasIndex = 0;
     float m_textureScale = 1.0f;
     float m_textureOffsetX = 0.0f;
