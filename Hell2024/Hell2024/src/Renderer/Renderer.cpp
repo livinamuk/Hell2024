@@ -63,7 +63,7 @@ void Renderer::RenderFrame() {
     UpdateDebugTrianglesMesh();
     Editor::UpdateRenderItems();
 
-    if (Input::KeyPressed(HELL_KEY_V)) {
+    if (Input::KeyPressed(HELL_KEY_C) && !Editor::IsOpen()) {
         Game::NextSplitScreenMode();
         Renderer::RecreateBlurBuffers();
     }

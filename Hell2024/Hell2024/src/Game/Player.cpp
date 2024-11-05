@@ -36,10 +36,17 @@ void Player::Update(float deltaTime) {
     AnimatedGameObject* characterModel = Scene::GetAnimatedGameObjectByIndex(m_characterModelAnimatedGameObjectIndex);
     AnimatedGameObject* viewWeaponGameObject = Scene::GetAnimatedGameObjectByIndex(m_viewWeaponAnimatedGameObjectIndex);
 
+    // Update outside
     glm::vec3 origin = GetFeetPosition() + glm::vec3(0, 0.1f, 0);
     PxU32 raycastFlags = RaycastGroup::RAYCAST_ENABLED;
-    PhysXRayResult rayResult = Util::CastPhysXRay(origin, glm::vec3(0, -1, 0), 3, raycastFlags);
-    m_isOutside = (rayResult.hitFound && rayResult.objectType == ObjectType::HEIGHT_MAP);
+    PhysXRayResult rayResult = Util::CastPhysXRay(origin, glm::vec3(0, -1, 0), 10, raycastFlags);
+    if (rayResult.hitFound && rayResult.objectType == ObjectType::HEIGHT_MAP) {
+        m_isOutside = true;
+    }
+    if (rayResult.hitFound && rayResult.objectType == ObjectType::CSG_OBJECT_ADDITIVE_CUBE ||
+        rayResult.hitFound && rayResult.objectType == ObjectType::CSG_OBJECT_ADDITIVE_FLOOR_PLANE) {
+        m_isOutside = false;
+    }
 
 
     UpdateRagdoll(); // updates pointers to rigids
@@ -52,7 +59,8 @@ void Player::Update(float deltaTime) {
     CheckForAndEvaluateNextWeaponPress();
     CheckForAndEvaluateInteract();
     CheckForSuicide();
-
+    
+    CheckForAndEvaluateFlashlight(deltaTime);
     UpdateHeadBob(deltaTime);
     UpdateTimers(deltaTime);
     UpdateAudio(deltaTime);
@@ -1153,6 +1161,7 @@ label:
                         if (gameObject == &Scene::GetGamesObjects()[i]) {
                             Scene::RemoveGameObjectByIndex(i);
                             Audio::PlayAudio("ItemPickUp.wav", 1.0f);
+                            Physics::ClearCollisionLists();
                             return;
                         }
                     }
@@ -1282,6 +1291,7 @@ void Player::SpawnBullet(float variance, Weapon type) {
     bullet.raycastFlags = _bulletFlags;// RaycastGroup::RAYCAST_ENABLED;
     bullet.parentPlayersViewRotation = GetCameraRotation();
     bullet.parentPlayerIndex = m_playerIndex;
+    m_firedThisFrame = true;
 
     WeaponInfo* weaponInfo = GetCurrentWeaponInfo();
     if (weaponInfo) {
@@ -1589,6 +1599,16 @@ bool Player::PressedReload() {
 bool Player::PressedFire() {
     if (_inputType == InputType::KEYBOARD_AND_MOUSE) {
         return InputMulti::KeyPressed(m_keyboardIndex, m_mouseIndex, _controls.FIRE);
+    }
+    else {
+        //return InputMulti::ButtonPressed(_controllerIndex, _controls.FIRE);
+        return false;
+    }
+}
+
+bool Player::PressedFlashlight() {
+    if (_inputType == InputType::KEYBOARD_AND_MOUSE) {
+        return InputMulti::KeyPressed(m_keyboardIndex, m_mouseIndex, _controls.FLASHLIGHT);
     }
     else {
         //return InputMulti::ButtonPressed(_controllerIndex, _controls.FIRE);

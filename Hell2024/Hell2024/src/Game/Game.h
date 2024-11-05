@@ -37,5 +37,6 @@ namespace Game {
     inline int g_dogDeaths = -1;
     inline int g_playerDeaths = -1;
     inline std::vector<glm::vec3> testPoints;
+    inline std::vector<PlayerData> g_playerData;
 
 }

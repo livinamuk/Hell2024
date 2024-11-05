@@ -1,6 +1,11 @@
 #pragma once
 #include <glm/glm.hpp>
 
+#define TL 0
+#define TR 1
+#define BL 2
+#define BR 3
+
 #define _propogationGridSpacing 0.375f
 #define _pointCloudSpacing 0.4f
 #define _maxPropogationDistance 2.6f

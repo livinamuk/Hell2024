@@ -4,6 +4,7 @@
 #include "../Physics/RigidStatic.hpp"
 #include <span>
 #include "CSGCommon.h"
+#include "brush.h"
 
 static constexpr csg::volume_t AIR = 0;
 static constexpr csg::volume_t SOLID = 1;
@@ -51,4 +52,6 @@ namespace CSG {
     std::span<CSGVertex> GetRangedVerticesSpan(uint32_t baseVertex, uint32_t vertexCount);
     std::span<uint32_t> GetRangedIndicesSpan(uint32_t baseIndex, uint32_t indexCount);
     uint32_t GetBaseCSGVertex();
+    inline std::vector<Brush> g_subtractiveBrushes;
+
 }

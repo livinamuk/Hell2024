@@ -47,12 +47,54 @@ void Renderer::UpdateDebugPointsMesh() {
         }
     }
 
-    for (CSGPlane& csgPlane : Scene::g_csgAdditiveWallPlanes) {
-        vertices.push_back(Vertex(csgPlane.m_veritces[0], ORANGE));
-        vertices.push_back(Vertex(csgPlane.m_veritces[1], ORANGE));
-        vertices.push_back(Vertex(csgPlane.m_veritces[2], ORANGE));
-        vertices.push_back(Vertex(csgPlane.m_veritces[3], ORANGE));
+    if (Editor::GetSelectedObjectType() == ObjectType::CSG_OBJECT_ADDITIVE_WALL_PLANE) {       
+        if (Editor::GetSelectedObjectIndex() != -1) {
+            CSGPlane* csgPlane = Scene::GetWallPlaneByIndex(Editor::GetSelectedObjectIndex());
+            vertices.push_back(Vertex(csgPlane->m_veritces[0], ORANGE));
+            vertices.push_back(Vertex(csgPlane->m_veritces[1], ORANGE));
+            vertices.push_back(Vertex(csgPlane->m_veritces[2], ORANGE));
+            vertices.push_back(Vertex(csgPlane->m_veritces[3], ORANGE));
+        }
     }
+    // BROKEN BELOW
+    // BROKEN BELOW
+    // BROKEN BELOW
+    // BROKEN BELOW
+    // BROKEN BELOW
+    // BROKEN BELOW
+    // BROKEN BELOW
+    // BROKEN BELOW
+    //if (Editor::GetSelectedObjectType() == ObjectType::CSG_OBJECT_ADDITIVE_FLOOR_PLANE) {
+    //    CSGPlane& csgPlane = Scene::g_csgAdditiveFloorPlanes[Editor::GetSelectedObjectIndex()];
+    //    vertices.push_back(Vertex(csgPlane.m_veritces[0], ORANGE));
+    //    vertices.push_back(Vertex(csgPlane.m_veritces[1], ORANGE));
+    //    vertices.push_back(Vertex(csgPlane.m_veritces[2], ORANGE));
+    //    vertices.push_back(Vertex(csgPlane.m_veritces[3], ORANGE));
+    //}
+    //if (Editor::GetSelectedObjectType() == ObjectType::CSG_OBJECT_ADDITIVE_CEILING_PLANE) {
+    //    CSGPlane& csgPlane = Scene::g_csgAdditiveCeilingPlanes[Editor::GetSelectedObjectIndex()];
+    //    vertices.push_back(Vertex(csgPlane.m_veritces[0], ORANGE));
+    //    vertices.push_back(Vertex(csgPlane.m_veritces[1], ORANGE));
+    //    vertices.push_back(Vertex(csgPlane.m_veritces[2], ORANGE));
+    //    vertices.push_back(Vertex(csgPlane.m_veritces[3], ORANGE));
+    //}
+
+
+    // BROKEN ABOVE
+    // BROKEN ABOVE
+    // BROKEN ABOVE
+    // BROKEN ABOVE
+    // BROKEN ABOVE
+    // BROKEN ABOVE
+    // BROKEN ABOVE
+    // BROKEN ABOVE
+    if (Editor::GetHoveredVertexIndex() != -1) {
+        vertices.push_back(Vertex(Editor::GetHoveredVertexPosition(), WHITE));
+    }
+    if (Editor::GetSelectedVertexIndex() != -1) {
+        vertices.push_back(Vertex(Editor::GetSelectedVertexPosition(), WHITE));
+    }
+
 
     /*
     HeightMap& heightMap = AssetManager::g_heightMap;
@@ -164,6 +206,25 @@ void Renderer::UpdateDebugLinesMesh() {
     for (auto r : characterModel->_ragdoll._rigidComponents) {
         ignoreList.push_back(r.pxRigidBody);
     }
+
+ // for (Brush& brush : CSG::g_subtractiveBrushes) {        
+ //     auto& brushVertices = brush.GetCubeTriangles();
+ //     for (int i = 0; i < brushVertices.size(); i+=3) {
+ //         vertices.push_back(Vertex(brushVertices[i]));
+ //         vertices.push_back(Vertex(brushVertices[i + 1]));
+ //
+ //         vertices.push_back(Vertex(brushVertices[i + 1]));
+ //         vertices.push_back(Vertex(brushVertices[i + 2]));
+ //
+ //         vertices.push_back(Vertex(brushVertices[i]));
+ //         vertices.push_back(Vertex(brushVertices[i + 2]));
+ //     }
+ // }
+
+
+
+
+
 
     if (Editor::IsOpen() && false) {
         std::vector<CSGObject> cubes = CSG::GetCSGObjects();
@@ -645,8 +706,11 @@ std::string& Renderer::GetDebugText() {
     }
 
     g_debugText += "Dog deaths: " + std::to_string(Game::g_dogDeaths) + "\n";
-    g_debugText += "Dog kills: " + std::to_string(Game::g_playerDeaths) + "\n";
+    g_debugText += "Dog kills: " + std::to_string(Game::g_playerDeaths) + "\n"; 
+    g_debugText += "Cam pos: " + Util::Vec3ToString(Game::GetPlayerByIndex(0)->GetViewPos()) + "\n";
     g_debugText += "\n";
+
+
 
     glm::vec3 rayTarget = Scene::g_lights[0].position;
 
@@ -716,55 +780,16 @@ std::string& Renderer::GetDebugText() {
         g_debugText += "light " + std::to_string(i) + ": " + std::to_string(Scene::g_lights[i].m_shadowMapIndex) + '\n';
     }*/
 
-    //g_debugText = Game::GetPlayerByIndex(0)->_playerName;
-    /*
-    g_debugText = "You always on my mind\n";
-    g_debugText += "yeh in my header #defined\n";
-    g_debugText += "wanna see you\n";
-    g_debugText += "yeh when I see you\n";
-    g_debugText += "fuck a 9 to 5\n";
-    g_debugText += "I'm heading to the seaside\n";
-    g_debugText += "wanna see you\n";
-    g_debugText += "I see c++ in my dreams too\n";
-    g_debugText += "(when I, when I, when I)\n";
-           */
 
-
-
-    g_debugText = Util::MenuTypeToString(Editor::GetCurrentMenuType());
-
-    g_debugText = "";
-
-    //glm::vec3 origin = Game::GetPlayerByIndex(0)->GetFeetPosition() + glm::vec3(0, 1, 0);
-    //PxU32 raycastFlags = RaycastGroup::RAYCAST_ENABLED;
-    //PhysXRayResult rayResult = Util::CastPhysXRay(origin, glm::vec3(0, -1, 0), 3, raycastFlags);
-    //
-    //if (rayResult.hitFound) {
-    //    g_debugText = Util::PhysicsObjectTypeToString(rayResult.physicsObjectType);
-    //
-    //}
-    //else {
-    //    g_debugText = "NO HIT";
-    //}
-
-
-
-
-
-  //int i = 0;
-  //for (Dobermann& dobermann : Scene::g_dobermann) {
-  //            
-  //    g_debugText += std::to_string(i);
-  //    g_debugText += " Health: " + std::to_string(dobermann.m_health) + "\n";
-  //    g_debugText += " State: " + Util::DobermannStateToString(dobermann.m_currentState) + "\n";
-  //    g_debugText += " Player: " + std::to_string(dobermann.m_targetPlayerIndex) + "\n";
-  //    g_debugText += " Speed: " + std::to_string(dobermann.m_currentSpeed) + "\n";
-  //    g_debugText += " Animation: " + std::string(dobermann.GetAnimatedGameObject()->GetCurrentAnimationName()) + "\n";
-  //    g_debugText += "\n\n";
-  //    i++;
-  //}
-
-    //g_debugText = "OpenGL/Vulkan c++\nSecond quarter medley";
+   //g_debugText = Util::MenuTypeToString(Editor::GetCurrentMenuType());
+   //g_debugText = "";
+   //g_debugText += "Hovered object index: " + std::to_string(Editor::g_hoveredObjectIndex) + "\n";
+   //g_debugText += "Selected object index: " + std::to_string(Editor::g_selectedObjectIndex) + "\n";
+   //g_debugText += "Hovered vertex index: " + std::to_string(Editor::g_hoveredVertexIndex) + "\n";
+   //g_debugText += "Selected vertex index: " + std::to_string(Editor::g_selectedVertexIndex) + "\n";
+   //g_debugText += "Selected vertex position: " + Util::Vec3ToString(Editor::g_selectedVertexPosition) + "\n";
+   //g_debugText += "\n";
+   //g_debugText += Util::Mat4ToString(Editor::g_gizmoMatrix);
 
     return g_debugText;
 }

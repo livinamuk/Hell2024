@@ -1,14 +1,13 @@
 #pragma once
 #include "glm/glm.hpp"
 
-#define TL 0
-#define TR 1
-#define BL 2
-#define BR 3
-
 struct CSGPlane {
 
     glm::vec3 m_veritces[4];
+    int materialIndex = -1;
+    float textureScale = 0;
+    float textureOffsetX = 0;
+    float textureOffsetY = 0;
 
     glm::vec3 GetCenter() {
         return glm::vec3(m_veritces[TL] + m_veritces[TR] + m_veritces[BL] + m_veritces[BR]) / 4.0f;

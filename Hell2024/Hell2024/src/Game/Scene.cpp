@@ -95,6 +95,23 @@ void Scene::SaveMapData(const std::string& fileName) {
     }
     data["VolumesAdditive"] = jsonCubeVolumesAdditive;
 
+    // save wall planes
+    nlohmann::json jsonWallPLanes = nlohmann::json::array();
+    for (CSGPlane& plane : g_csgAdditiveWallPlanes) {
+        nlohmann::json jsonObject;
+        jsonObject["TL"] = { {"x", plane.m_veritces[TL].x}, {"y", plane.m_veritces[TL].y}, {"z", plane.m_veritces[TL].z} };
+        jsonObject["TR"] = { {"x", plane.m_veritces[TR].x}, {"y", plane.m_veritces[TR].y}, {"z", plane.m_veritces[TR].z} };
+        jsonObject["BL"] = { {"x", plane.m_veritces[BL].x}, {"y", plane.m_veritces[BL].y}, {"z", plane.m_veritces[BL].z} };
+        jsonObject["BR"] = { {"x", plane.m_veritces[BR].x}, {"y", plane.m_veritces[BR].y}, {"z", plane.m_veritces[BR].z} };
+        jsonObject["materialName"] = AssetManager::GetMaterialByIndex(plane.materialIndex)->_name;
+        jsonObject["texOffsetX"] = plane.textureOffsetX;
+        jsonObject["texOffsetY"] = plane.textureOffsetY;
+        jsonObject["texScale"] = plane.textureScale;
+        jsonWallPLanes.push_back(jsonObject);
+    }
+    data["WallPlanes"] = jsonWallPLanes;
+
+
     // save subtractive cube volumes
     nlohmann::json jsonCubeVolumesSubtractive = nlohmann::json::array();
     for (CSGCube& cubeVolume : g_csgSubtractiveCubes) {
@@ -176,6 +193,18 @@ void Scene::LoadMapData(const std::string& fileName) {
         cube.textureOffsetY = jsonObject["texOffsetY"];
         cube.textureScale = jsonObject["texScale"];
     }
+    // Load Wall Planes
+    for (const auto& jsonObject : data["WallPlanes"]) {
+        CSGPlane& plane = g_csgAdditiveWallPlanes.emplace_back();
+        plane.m_veritces[TL] = { jsonObject["TL"]["x"], jsonObject["TL"]["y"], jsonObject["TL"]["z"] };
+        plane.m_veritces[TR] = { jsonObject["TR"]["x"], jsonObject["TR"]["y"], jsonObject["TR"]["z"] };
+        plane.m_veritces[BL] = { jsonObject["BL"]["x"], jsonObject["BL"]["y"], jsonObject["BL"]["z"] };
+        plane.m_veritces[BR] = { jsonObject["BR"]["x"], jsonObject["BR"]["y"], jsonObject["BR"]["z"] };
+        plane.materialIndex = AssetManager::GetMaterialIndex(jsonObject["materialName"].get<std::string>().c_str());
+        plane.textureOffsetX = jsonObject["texOffsetX"];
+        plane.textureOffsetY = jsonObject["texOffsetY"];
+        plane.textureScale = jsonObject["texScale"];
+    }
     // Load Volumes Subtractive
     for (const auto& jsonObject : data["VolumesSubtractive"]) {
         CSGCube& cube = g_csgSubtractiveCubes.emplace_back();
@@ -244,6 +273,10 @@ void Scene::AddCSGWallPlane(CSGPlaneCreateInfo& createInfo) {
     plane.m_veritces[1] = createInfo.vertexTR;
     plane.m_veritces[2] = createInfo.vertexBL;
     plane.m_veritces[3] = createInfo.vertexBR;
+    plane.materialIndex = createInfo.materialIndex;
+    plane.textureOffsetX = createInfo.textureOffsetX;
+    plane.textureOffsetY = createInfo.textureOffsetY;
+    plane.textureScale = createInfo.textureScale;
 }
 
 void Scene::AddCSGFloorPlane(CSGPlaneCreateInfo& createInfo) {
@@ -252,6 +285,22 @@ void Scene::AddCSGFloorPlane(CSGPlaneCreateInfo& createInfo) {
     plane.m_veritces[1] = createInfo.vertexTR;
     plane.m_veritces[2] = createInfo.vertexBL;
     plane.m_veritces[3] = createInfo.vertexBR;
+    plane.materialIndex = createInfo.materialIndex;
+    plane.textureOffsetX = createInfo.textureOffsetX;
+    plane.textureOffsetY = createInfo.textureOffsetY;
+    plane.textureScale = createInfo.textureScale;
+}
+
+void Scene::AddCSGCeilingPlane(CSGPlaneCreateInfo& createInfo) {
+    CSGPlane& plane = g_csgAdditiveCeilingPlanes.emplace_back();
+    plane.m_veritces[0] = createInfo.vertexTL;
+    plane.m_veritces[1] = createInfo.vertexTR;
+    plane.m_veritces[2] = createInfo.vertexBL;
+    plane.m_veritces[3] = createInfo.vertexBR;
+    plane.materialIndex = createInfo.materialIndex;
+    plane.textureOffsetX = createInfo.textureOffsetX;
+    plane.textureOffsetY = createInfo.textureOffsetY;
+    plane.textureScale = createInfo.textureScale;
 }
 
 int Scene::AssignNextFreeShadowMapIndex(int lightIndex) {
@@ -268,6 +317,8 @@ int Scene::AssignNextFreeShadowMapIndex(int lightIndex) {
 }
 
 void Scene::LoadDefaultScene() {
+
+    bool hardcoded = false;
 
     bool createTestLights = false;// true;
     bool createTestCubes = false;// true;
@@ -310,25 +361,36 @@ void Scene::LoadDefaultScene() {
 
     // CSG PLANE TEST
 
-    CSGPlaneCreateInfo planeCreateInfo;
-    planeCreateInfo.vertexTL = glm::vec3(3, 2, 5);
-    planeCreateInfo.vertexTR = glm::vec3(3, 2, 7);
-    planeCreateInfo.vertexBL = glm::vec3(3, 0, 5);
-    planeCreateInfo.vertexBR = glm::vec3(3, 0, 7);
-    AddCSGWallPlane(planeCreateInfo);
-    
-    planeCreateInfo.vertexTL = glm::vec3(5, 2, 5);
-    planeCreateInfo.vertexTR = glm::vec3(5, 2, 7);
-    planeCreateInfo.vertexBL = glm::vec3(5, 0, 5);
-    planeCreateInfo.vertexBR = glm::vec3(5, 0, 7);
-    AddCSGWallPlane(planeCreateInfo);
+ //CSGPlaneCreateInfo planeCreateInfo;
+ //planeCreateInfo.vertexTL = glm::vec3(3, 2, 5);
+ //planeCreateInfo.vertexTR = glm::vec3(3, 2, 7);
+ //planeCreateInfo.vertexBL = glm::vec3(3, 0, 5);
+ //planeCreateInfo.vertexBR = glm::vec3(3, 0, 7);
+ //planeCreateInfo.materialIndex = AssetManager::GetMaterialIndex("Ceiling2");
+ //AddCSGWallPlane(planeCreateInfo);
+ //
+ //planeCreateInfo.vertexTL = glm::vec3(5, 2, 5);
+ //planeCreateInfo.vertexTR = glm::vec3(5, 2, 7);
+ //planeCreateInfo.vertexBL = glm::vec3(5, 0, 5);
+ //planeCreateInfo.vertexBR = glm::vec3(5, 0, 7);
+ //planeCreateInfo.materialIndex = AssetManager::GetMaterialIndex("Ceiling2");
+ //AddCSGWallPlane(planeCreateInfo);
 
-    CSGPlaneCreateInfo planeCreateInfo2;
-    planeCreateInfo2.vertexTL = glm::vec3(0, 2, 1);
-    planeCreateInfo2.vertexTR = glm::vec3(1, 2, 1);
-    planeCreateInfo2.vertexBL = glm::vec3(0, 1, 1.5f);
-    planeCreateInfo2.vertexBR = glm::vec3(1, 1, 1.5);
-    AddCSGFloorPlane(planeCreateInfo2);
+   // CSGPlaneCreateInfo planeCreateInfo2;
+   // planeCreateInfo2.vertexTL = glm::vec3(0, 2, 1);
+   // planeCreateInfo2.vertexTR = glm::vec3(1, 2, 1);
+   // planeCreateInfo2.vertexBL = glm::vec3(0, 1, 1.5f);
+   // planeCreateInfo2.vertexBR = glm::vec3(1, 1, 1.5);
+   // planeCreateInfo2.materialIndex = AssetManager::GetMaterialIndex("FloorBoards");
+   // AddCSGFloorPlane(planeCreateInfo2);
+   //
+   // CSGPlaneCreateInfo planeCreateInfo3;
+   // planeCreateInfo3.vertexTL = glm::vec3(1, 2.6, 1);
+   // planeCreateInfo3.vertexTR = glm::vec3(1, 2.6, 2);
+   // planeCreateInfo3.vertexBL = glm::vec3(2, 1.6, 1);
+   // planeCreateInfo3.vertexBR = glm::vec3(2, 1.6, 2);
+   // planeCreateInfo3.materialIndex = AssetManager::GetMaterialIndex("BathroomFloor");
+   // AddCSGCeilingPlane(planeCreateInfo3);
 
 
 
@@ -336,10 +398,12 @@ void Scene::LoadDefaultScene() {
 
     g_staircases.clear();
 
-    Staircase& stairCase3 = g_staircases.emplace_back();
-    stairCase3.m_position = glm::vec3(-3.0f, 0, -3.1f);
-    stairCase3.m_rotation = -HELL_PI * 0.5f;
-    stairCase3.m_stepCount = 18;
+    if (hardcoded) {
+        Staircase& stairCase3 = g_staircases.emplace_back();
+        stairCase3.m_position = glm::vec3(-3.0f, 0, -3.1f);
+        stairCase3.m_rotation = -HELL_PI * 0.5f;
+        stairCase3.m_stepCount = 18;
+    }
 
 
     LoadMapData("mappp.txt");
@@ -435,17 +499,17 @@ void Scene::LoadDefaultScene() {
         g_dobermann.clear();
 
         DobermannCreateInfo createInfo;
-        createInfo.position = glm::vec3(-1.7f, 0, -1.2f);
+        createInfo.position = glm::vec3(-1.7f, 0.4f, -1.2f);
         createInfo.rotation = 0.7f;
         createInfo.initalState = DobermannState::LAY;
         AddDobermann(createInfo);
 
-        createInfo.position = glm::vec3(-2.46f, 0.0f, -3.08f);
+        createInfo.position = glm::vec3(-2.46f, 0.4f, -3.08f);
         createInfo.rotation = HELL_PI * 0.5f;
         createInfo.initalState = DobermannState::LAY;
         AddDobermann(createInfo);
 
-        createInfo.position = glm::vec3(-1.77f, 0, -5.66f);
+        createInfo.position = glm::vec3(-1.77f, 0.4f, -5.66f);
         createInfo.rotation = (1.3f);
         createInfo.initalState = DobermannState::LAY;
         AddDobermann(createInfo);
@@ -558,173 +622,211 @@ void Scene::LoadDefaultScene() {
     */
 
 
+
+
+
+    if (true) {
+        CreateGameObject();
+        GameObject* pictureFrame = GetGameObjectByIndex(GetGameObjectCount() - 1);
+        pictureFrame->SetPosition(1.1f, 1.9f, -0.85f);
+        pictureFrame->SetScale(0.01f);
+        //pictureFrame->SetRotationY(HELL_PI / 2);
+        pictureFrame->SetModel("PictureFrame_1");
+        pictureFrame->SetMeshMaterial("LongFrame");
+        pictureFrame->SetName("PictureFrame");
+
+        float cushionHeight = 0.555f;
+        Transform shapeOffset;
+        shapeOffset.position.y = cushionHeight * 0.5f;
+        shapeOffset.position.z = 0.5f;
+        PxShape* sofaShapeBigCube = Physics::CreateBoxShape(1, cushionHeight * 0.5f, 0.4f, shapeOffset);
+        PhysicsFilterData sofaFilterData;
+        sofaFilterData.raycastGroup = RAYCAST_DISABLED;
+        sofaFilterData.collisionGroup = CollisionGroup::ENVIROMENT_OBSTACLE;
+        sofaFilterData.collidesWith = (CollisionGroup)(GENERIC_BOUNCEABLE | BULLET_CASING | PLAYER | RAGDOLL);
+
+        float sofaX = 6.3f;
+        CreateGameObject();
+        GameObject* sofa = GetGameObjectByIndex(GetGameObjectCount() - 1);
+        sofa->SetPosition(sofaX, 0.4f, 1.89f);
+        sofa->SetRotationY(HELL_PI * -0.5f);
+        sofa->SetName("Sofa");
+        sofa->SetModel("Sofa_Cushionless");
+        sofa->SetMeshMaterial("Sofa");
+        sofa->SetKinematic(true);
+        sofa->SetRaycastShapeFromModelIndex(AssetManager::GetModelIndexByName("Sofa_Cushionless"));
+        sofa->AddCollisionShape(sofaShapeBigCube, sofaFilterData);
+        sofa->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("SofaBack_ConvexMesh"));
+        sofa->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("SofaLeftArm_ConvexMesh"));
+        sofa->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("SofaRightArm_ConvexMesh"));
+        sofa->SetModelMatrixMode(ModelMatrixMode::GAME_TRANSFORM);
+        sofa->SetCollisionType(CollisionType::STATIC_ENVIROMENT);
+        //sofa->MakeGold();
+
+        PhysicsFilterData cushionFilterData;
+        cushionFilterData.raycastGroup = RAYCAST_DISABLED;
+        cushionFilterData.collisionGroup = CollisionGroup::GENERIC_BOUNCEABLE;
+        cushionFilterData.collidesWith = CollisionGroup(ENVIROMENT_OBSTACLE | GENERIC_BOUNCEABLE);
+        float cushionDensity = 20.0f;
+
+        CreateGameObject();
+        GameObject* cushion0 = GetGameObjectByIndex(GetGameObjectCount() - 1);
+        cushion0->SetPosition(sofaX, 0.4f, 1.89f);
+        cushion0->SetRotationY(HELL_PI * -0.5f);
+        cushion0->SetModel("SofaCushion0");
+        cushion0->SetMeshMaterial("Sofa");
+        cushion0->SetName("SofaCushion0");
+        cushion0->SetKinematic(false);
+        cushion0->SetRaycastShapeFromModelIndex(AssetManager::GetModelIndexByName("SofaCushion0"));
+        cushion0->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("SofaCushion0_ConvexMesh"));
+        cushion0->SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
+        cushion0->UpdateRigidBodyMassAndInertia(cushionDensity);
+        cushion0->SetCollisionType(CollisionType::BOUNCEABLE);
+
+        CreateGameObject();
+        GameObject* cushion1 = GetGameObjectByIndex(GetGameObjectCount() - 1);
+        cushion1->SetPosition(sofaX, 0.4f, 1.89f);
+        cushion1->SetModel("SofaCushion1");
+        cushion1->SetName("SofaCushion1");
+        cushion1->SetMeshMaterial("Sofa");
+        cushion1->SetKinematic(false);
+        cushion1->SetRaycastShapeFromModelIndex(AssetManager::GetModelIndexByName("SofaCushion0"));
+        cushion1->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("SofaCushion1_ConvexMesh"));
+        cushion1->SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
+        cushion1->UpdateRigidBodyMassAndInertia(cushionDensity);
+        cushion1->SetCollisionType(CollisionType::BOUNCEABLE);
+        cushion1->SetRotationY(HELL_PI * -0.5f);
+
+        CreateGameObject();
+        GameObject* cushion2 = GetGameObjectByIndex(GetGameObjectCount() - 1);
+        cushion2->SetPosition(sofaX, 0.4f, 1.89f);
+        cushion2->SetModel("SofaCushion2");
+        cushion2->SetName("SofaCushion2");
+        cushion2->SetMeshMaterial("Sofa");
+        cushion2->SetKinematic(false);
+        cushion2->SetRaycastShapeFromModelIndex(AssetManager::GetModelIndexByName("SofaCushion2"));
+        cushion2->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("SofaCushion2_ConvexMesh"));
+        cushion2->SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
+        cushion2->UpdateRigidBodyMassAndInertia(cushionDensity);
+        cushion2->SetCollisionType(CollisionType::BOUNCEABLE);
+        cushion2->SetRotationY(HELL_PI * -0.5f);
+
+        CreateGameObject();
+        GameObject* cushion3 = GetGameObjectByIndex(GetGameObjectCount() - 1);
+        cushion3->SetPosition(sofaX, 0.4f, 1.89f);
+        cushion3->SetModel("SofaCushion3");
+        cushion3->SetName("SofaCushion3");
+        cushion3->SetMeshMaterial("Sofa");
+        cushion3->SetKinematic(false);
+        cushion3->SetRaycastShapeFromModelIndex(AssetManager::GetModelIndexByName("SofaCushion3"));
+        cushion3->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("SofaCushion3_ConvexMesh"));
+        cushion3->SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
+        cushion3->UpdateRigidBodyMassAndInertia(cushionDensity);
+        cushion3->SetCollisionType(CollisionType::BOUNCEABLE);
+        cushion3->SetRotationY(HELL_PI * -0.5f);
+
+        CreateGameObject();
+        GameObject* cushion4 = GetGameObjectByIndex(GetGameObjectCount() - 1);
+        cushion4->SetPosition(sofaX, 0.4f, 1.89f);
+        cushion4->SetModel("SofaCushion4");
+        cushion4->SetName("SofaCushion4");
+        cushion4->SetMeshMaterial("Sofa");
+        cushion4->SetKinematic(false);
+        cushion4->SetRaycastShapeFromModelIndex(AssetManager::GetModelIndexByName("SofaCushion4"));
+        cushion4->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("SofaCushion4_ConvexMesh"));
+        cushion4->SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
+        cushion4->UpdateRigidBodyMassAndInertia(15.0f);
+        cushion4->SetCollisionType(CollisionType::BOUNCEABLE);
+        cushion4->SetRotationY(HELL_PI * -0.5f);
+
+        CreateGameObject();
+        GameObject* tree = GetGameObjectByIndex(GetGameObjectCount() - 1);
+        tree->SetPosition(-0.1f, 0.5f, 3.8f);
+        tree->SetModel("ChristmasTree");
+        tree->SetName("ChristmasTree");
+        tree->SetMeshMaterial("Tree");
+        tree->SetMeshMaterialByMeshName("Balls", "Gold");
+    }
+
+    glm::vec3 houseOrigin = glm::vec3(2, 0.5, 0);
+
     CreateGameObject();
-    GameObject* pictureFrame = GetGameObjectByIndex(GetGameObjectCount() - 1);
-    pictureFrame->SetPosition(1.1f, 1.5f, -2.35f);
-    pictureFrame->SetScale(0.01f);
-    //pictureFrame->SetRotationY(HELL_PI / 2);
-    pictureFrame->SetModel("PictureFrame_1");
-    pictureFrame->SetMeshMaterial("LongFrame");
-    pictureFrame->SetName("PictureFrame");
-
-    float cushionHeight = 0.555f;
-    Transform shapeOffset;
-    shapeOffset.position.y = cushionHeight * 0.5f;
-    shapeOffset.position.z = 0.5f;
-    PxShape* sofaShapeBigCube = Physics::CreateBoxShape(1, cushionHeight * 0.5f, 0.4f, shapeOffset);
-    PhysicsFilterData sofaFilterData;
-    sofaFilterData.raycastGroup = RAYCAST_DISABLED;
-    sofaFilterData.collisionGroup = CollisionGroup::ENVIROMENT_OBSTACLE;
-    sofaFilterData.collidesWith = (CollisionGroup)(GENERIC_BOUNCEABLE | BULLET_CASING | PLAYER | RAGDOLL);
-
-    float sofaX = 2.6f;
-    CreateGameObject();
-    GameObject* sofa = GetGameObjectByIndex(GetGameObjectCount() - 1);
-    sofa->SetPosition(sofaX, 0.1f, 0.1f);
-    sofa->SetRotationY(HELL_PI * -0.5f);
-    sofa->SetName("Sofa");
-    sofa->SetModel("Sofa_Cushionless");
-    sofa->SetMeshMaterial("Sofa");
-    sofa->SetKinematic(true);
-    sofa->SetRaycastShapeFromModelIndex(AssetManager::GetModelIndexByName("Sofa_Cushionless"));
-    sofa->AddCollisionShape(sofaShapeBigCube, sofaFilterData);
-    sofa->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("SofaBack_ConvexMesh"));
-    sofa->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("SofaLeftArm_ConvexMesh"));
-    sofa->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("SofaRightArm_ConvexMesh"));
-    sofa->SetModelMatrixMode(ModelMatrixMode::GAME_TRANSFORM);
-    sofa->SetCollisionType(CollisionType::STATIC_ENVIROMENT);
-    //sofa->MakeGold();
-
-    PhysicsFilterData cushionFilterData;
-    cushionFilterData.raycastGroup = RAYCAST_DISABLED;
-    cushionFilterData.collisionGroup = CollisionGroup::GENERIC_BOUNCEABLE;
-    cushionFilterData.collidesWith = CollisionGroup(ENVIROMENT_OBSTACLE | GENERIC_BOUNCEABLE);
-    float cushionDensity = 20.0f;
+    GameObject* houseRailings = GetGameObjectByIndex(GetGameObjectCount() - 1);
+    houseRailings->SetPosition(houseOrigin);
+    houseRailings->SetModel("House_Railings");
+    houseRailings->SetName("BlenderHouse");
+    houseRailings->SetMeshMaterial("Ceiling2");
 
     CreateGameObject();
-    GameObject* cushion0 = GetGameObjectByIndex(GetGameObjectCount() - 1);
-    cushion0->SetPosition(sofaX, 0.1f, 0.1f);
-    cushion0->SetRotationY(HELL_PI * -0.5f);
-    cushion0->SetModel("SofaCushion0");
-    cushion0->SetMeshMaterial("Sofa");
-    cushion0->SetName("SofaCushion0");
-    cushion0->SetKinematic(false);
-    cushion0->SetRaycastShapeFromModelIndex(AssetManager::GetModelIndexByName("SofaCushion0"));
-    cushion0->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("SofaCushion0_ConvexMesh"));
-    cushion0->SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
-    cushion0->UpdateRigidBodyMassAndInertia(cushionDensity);
-    cushion0->SetCollisionType(CollisionType::BOUNCEABLE);
+    GameObject* houseWalls = GetGameObjectByIndex(GetGameObjectCount() - 1);
+    houseWalls->SetPosition(houseOrigin);
+    houseWalls->SetModel("House_Walls2");
+    houseWalls->SetName("BlenderHouse");
+    houseWalls->SetMeshMaterial("Ceiling2");
 
     CreateGameObject();
-    GameObject* cushion1 = GetGameObjectByIndex(GetGameObjectCount() - 1);
-    cushion1->SetPosition(sofaX, 0.1f, 0.1f);
-    cushion1->SetModel("SofaCushion1");
-    cushion1->SetName("SofaCushion1");
-    cushion1->SetMeshMaterial("Sofa");
-    cushion1->SetKinematic(false);
-    cushion1->SetRaycastShapeFromModelIndex(AssetManager::GetModelIndexByName("SofaCushion0"));
-    cushion1->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("SofaCushion1_ConvexMesh"));
-    cushion1->SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
-    cushion1->UpdateRigidBodyMassAndInertia(cushionDensity);
-    cushion1->SetCollisionType(CollisionType::BOUNCEABLE);
-    cushion1->SetRotationY(HELL_PI * -0.5f);
+    GameObject* houseRoof = GetGameObjectByIndex(GetGameObjectCount() - 1);
+    houseRoof->SetPosition(houseOrigin);
+    houseRoof->SetModel("House_RoofA");
+    houseRoof->SetName("BlenderHouse");
+    houseRoof->SetMeshMaterial("Ceiling2");
 
     CreateGameObject();
-    GameObject* cushion2 = GetGameObjectByIndex(GetGameObjectCount() - 1);
-    cushion2->SetPosition(sofaX, 0.1f, 0.1f);
-    cushion2->SetModel("SofaCushion2");
-    cushion2->SetName("SofaCushion2");
-    cushion2->SetMeshMaterial("Sofa");
-    cushion2->SetKinematic(false);
-    cushion2->SetRaycastShapeFromModelIndex(AssetManager::GetModelIndexByName("SofaCushion2"));
-    cushion2->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("SofaCushion2_ConvexMesh"));
-    cushion2->SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
-    cushion2->UpdateRigidBodyMassAndInertia(cushionDensity);
-    cushion2->SetCollisionType(CollisionType::BOUNCEABLE);
-    cushion2->SetRotationY(HELL_PI * -0.5f);
+    GameObject* houseRoofB = GetGameObjectByIndex(GetGameObjectCount() - 1);
+    houseRoofB->SetPosition(houseOrigin);
+    houseRoofB->SetModel("House_RoofB");
+    houseRoofB->SetName("BlenderHouse");
+    houseRoofB->SetMeshMaterial("Ceiling2");
 
-    CreateGameObject();
-    GameObject* cushion3 = GetGameObjectByIndex(GetGameObjectCount() - 1);
-    cushion3->SetPosition(sofaX, 0.1f, 0.1f);
-    cushion3->SetModel("SofaCushion3");
-    cushion3->SetName("SofaCushion3");
-    cushion3->SetMeshMaterial("Sofa");
-    cushion3->SetKinematic(false);
-    cushion3->SetRaycastShapeFromModelIndex(AssetManager::GetModelIndexByName("SofaCushion3"));
-    cushion3->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("SofaCushion3_ConvexMesh"));
-    cushion3->SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
-    cushion3->UpdateRigidBodyMassAndInertia(cushionDensity);
-    cushion3->SetCollisionType(CollisionType::BOUNCEABLE);
-    cushion3->SetRotationY(HELL_PI * -0.5f);
 
-    CreateGameObject();
-    GameObject* cushion4 = GetGameObjectByIndex(GetGameObjectCount() - 1);
-    cushion4->SetPosition(sofaX, 0.1f, 0.1f);
-    cushion4->SetModel("SofaCushion4");
-    cushion4->SetName("SofaCushion4");
-    cushion4->SetMeshMaterial("Sofa");
-    cushion4->SetKinematic(false);
-    cushion4->SetRaycastShapeFromModelIndex(AssetManager::GetModelIndexByName("SofaCushion4"));
-    cushion4->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("SofaCushion4_ConvexMesh"));
-    cushion4->SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
-    cushion4->UpdateRigidBodyMassAndInertia(15.0f);
-    cushion4->SetCollisionType(CollisionType::BOUNCEABLE);
-    cushion4->SetRotationY(HELL_PI * -0.5f);
 
-    CreateGameObject();
-    GameObject* tree = GetGameObjectByIndex(GetGameObjectCount() - 1);
-    tree->SetPosition(2.4f, 0.1f, 2.1f);
-    tree->SetModel("ChristmasTree");
-    tree->SetName("ChristmasTree");
-    tree->SetMeshMaterial("Tree");
-    tree->SetMeshMaterialByMeshName("Balls", "Gold");
-
-    float spacing = 0.3f;
-    for (int x = -3; x < 1; x++) {
-        for (int y = -1; y < 5; y++) {
-            for (int z = -1; z < 2; z++) {
-                CreateGameObject();
-                GameObject* cube = GetGameObjectByIndex(GetGameObjectCount() - 1);
-                float halfExtent = 0.1f;
-                cube->SetPosition(2.6f + x * spacing, 1.5f + y * spacing * 1.25f, 2.1f + z * spacing);
-                cube->SetRotationX(Util::RandomFloat(0, HELL_PI * 2));
-                cube->SetRotationY(Util::RandomFloat(0, HELL_PI * 2));
-                cube->SetRotationZ(Util::RandomFloat(0, HELL_PI * 2));
-                cube->SetWakeOnStart(true);
-                cube->SetModel("ChristmasPresent");
-                cube->SetName("Present");
-                int rand = Util::RandomInt(0, 3);
-                if (rand == 0) {
-                    cube->SetMeshMaterial("PresentA");
+    if (hardcoded) {
+        float spacing = 0.3f;
+        for (int x = -3; x < 1; x++) {
+            for (int y = -1; y < 5; y++) {
+                for (int z = -1; z < 2; z++) {
+                    CreateGameObject();
+                    GameObject* cube = GetGameObjectByIndex(GetGameObjectCount() - 1);
+                    float halfExtent = 0.1f;
+                    cube->SetPosition(2.6f + x * spacing, 1.5f + y * spacing * 1.25f, 2.1f + z * spacing);
+                    cube->SetRotationX(Util::RandomFloat(0, HELL_PI * 2));
+                    cube->SetRotationY(Util::RandomFloat(0, HELL_PI * 2));
+                    cube->SetRotationZ(Util::RandomFloat(0, HELL_PI * 2));
+                    cube->SetWakeOnStart(true);
+                    cube->SetModel("ChristmasPresent");
+                    cube->SetName("Present");
+                    int rand = Util::RandomInt(0, 3);
+                    if (rand == 0) {
+                        cube->SetMeshMaterial("PresentA");
+                    }
+                    else if (rand == 1) {
+                        cube->SetMeshMaterial("PresentB");
+                    }
+                    else if (rand == 2) {
+                        cube->SetMeshMaterial("PresentC");
+                    }
+                    else if (rand == 3) {
+                        cube->SetMeshMaterial("PresentD");
+                    }
+                    cube->SetMeshMaterialByMeshName("Bow", "Gold");
+                    Transform transform;
+                    transform.position = glm::vec3(2.0f, y * halfExtent * 2 + 0.2f, 3.5f);
+                    PxShape* collisionShape = Physics::CreateBoxShape(halfExtent, halfExtent, halfExtent);
+                    PxShape* raycastShape = Physics::CreateBoxShape(halfExtent, halfExtent, halfExtent);
+                    PhysicsFilterData filterData;
+                    filterData.raycastGroup = RAYCAST_DISABLED;
+                    filterData.collisionGroup = CollisionGroup::GENERIC_BOUNCEABLE;
+                    filterData.collidesWith = (CollisionGroup)(ENVIROMENT_OBSTACLE | GENERIC_BOUNCEABLE | RAGDOLL);
+                    cube->SetKinematic(false);
+                    cube->AddCollisionShape(collisionShape, filterData);
+                    cube->SetRaycastShape(raycastShape);
+                    cube->SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
+                    cube->UpdateRigidBodyMassAndInertia(20.0f);
+                    cube->SetCollisionType(CollisionType::BOUNCEABLE);
                 }
-                else if (rand == 1) {
-                    cube->SetMeshMaterial("PresentB");
-            }
-                else if (rand == 2) {
-                    cube->SetMeshMaterial("PresentC");
-            }
-                else if (rand == 3) {
-                    cube->SetMeshMaterial("PresentD");
-            }
-            cube->SetMeshMaterialByMeshName("Bow", "Gold");
-            Transform transform;
-            transform.position = glm::vec3(2.0f, y * halfExtent * 2 + 0.2f, 3.5f);
-            PxShape* collisionShape = Physics::CreateBoxShape(halfExtent, halfExtent, halfExtent);
-            PxShape* raycastShape = Physics::CreateBoxShape(halfExtent, halfExtent, halfExtent);
-            PhysicsFilterData filterData;
-            filterData.raycastGroup = RAYCAST_DISABLED;
-            filterData.collisionGroup = CollisionGroup::GENERIC_BOUNCEABLE;
-            filterData.collidesWith = (CollisionGroup)(ENVIROMENT_OBSTACLE | GENERIC_BOUNCEABLE | RAGDOLL);
-            cube->SetKinematic(false);
-            cube->AddCollisionShape(collisionShape, filterData);
-            cube->SetRaycastShape(raycastShape);
-            cube->SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
-            cube->UpdateRigidBodyMassAndInertia(20.0f);
-            cube->SetCollisionType(CollisionType::BOUNCEABLE);
             }
         }
     }
-
     if (createTestCubes) {
         float size = 30;
         float xMin = 10;
@@ -751,6 +853,8 @@ void Scene::LoadDefaultScene() {
     }
 
     CSG::Build();
+    RecreateFloorTrims();
+    RecreateCeilingTrims();
     
     // FOG hack
     g_fogAABB.clear();
@@ -842,28 +946,113 @@ void Scene::CreateTopLevelAccelerationStructures() {
     tlas->BuildBVH();
 }
 
+void Scene::RecreateCeilingTrims() {
+    g_ceilingTrims.clear();
+    for (CSGPlane& plane : g_csgAdditiveWallPlanes) {
+        glm::vec3 planeDir = glm::normalize(plane.m_veritces[BR] - plane.m_veritces[BL]);
+        Transform transform;
+        transform.position = plane.m_veritces[TL];
+        transform.rotation.y = Util::YRotationBetweenTwoPoints(plane.m_veritces[TR], plane.m_veritces[TL]) + HELL_PI;
+        transform.scale = glm::vec3(1.0f);
+        transform.scale.x = glm::distance(plane.m_veritces[TR], plane.m_veritces[TL]);
+        g_ceilingTrims.push_back(transform.to_mat4());
+    }
+}
+
+void Scene::RecreateFloorTrims() {
+    return;
+    return;
+    return;
+    return;
+    return;
+    return;
+    return;
+    return;
+    return;
+    return;
+    return;
+    return;
+    return;
+    return;
+    return;
+    return;
+    g_floorTrims.clear();
+    for (CSGPlane& plane : g_csgAdditiveWallPlanes) {
+
+        glm::vec3 planeDir = glm::normalize(plane.m_veritces[BR] - plane.m_veritces[BL]);
+
+        float closestSegmentLength = 9999;
+        glm::vec3 searchBegin = plane.m_veritces[BL];
+        bool anyHitWasFound = false;
+        float planeWidth = glm::distance(plane.m_veritces[BL], plane.m_veritces[BR]);
+        float searchedDistance = 0;
+
+        while (searchedDistance < planeWidth) {
+            for (Brush& brush : CSG::g_subtractiveBrushes) {
+
+                auto& brushVertices = brush.GetCubeTriangles();
+
+                for (int i = 0; i < brushVertices.size(); i += 3) {
+
+                    const glm::vec3& v0 = brushVertices[i].position;
+                    const glm::vec3& v1 = brushVertices[i + 1].position;
+                    const glm::vec3& v2 = brushVertices[i + 2].position;
+                    TriangleIntersectionResult result = Util::IntersectLineTriangle(searchBegin, planeDir, v0, v1, v2);
+
+                    if (result.hitFound) {
+                        float segmentLength = glm::distance(result.hitPosition, searchBegin);
+
+                        if (segmentLength < closestSegmentLength) {
+                            closestSegmentLength = segmentLength;
+                            anyHitWasFound = true;
+                        }
+                    }
+                }
+            }
+            if (anyHitWasFound) {
+                Transform transform;
+                transform.position = searchBegin;
+                transform.rotation.y = Util::YRotationBetweenTwoPoints(plane.m_veritces[BR], plane.m_veritces[BL]) + HELL_PI;
+                transform.scale = glm::vec3(1.0f);
+                transform.scale.x = closestSegmentLength;
+                g_floorTrims.push_back(transform.to_mat4());
+                searchBegin += glm::vec3(planeDir * (DOOR_WIDTH + 0.001f));
+                searchedDistance += closestSegmentLength;
+            }
+            else {
+                break;
+            }
+        }        
+        Transform transform;
+        transform.position = searchBegin;
+        transform.rotation.y = Util::YRotationBetweenTwoPoints(plane.m_veritces[BR], plane.m_veritces[BL]) + HELL_PI;
+        transform.scale = glm::vec3(1.0f);
+        transform.scale.x = glm::distance(searchBegin, plane.m_veritces[BR]);;
+        g_floorTrims.push_back(transform.to_mat4());         
+    }
+}
 
 void Scene::CreateDefaultSpawnPoints() {
 
     g_spawnPoints.clear();
     {
         SpawnPoint& spawnPoint = g_spawnPoints.emplace_back();
-        spawnPoint.position = glm::vec3(0);
+        spawnPoint.position = glm::vec3(0, 2, 0);
         spawnPoint.rotation = glm::vec3(0);
     }
     {
         SpawnPoint& spawnPoint = g_spawnPoints.emplace_back();
-        spawnPoint.position = glm::vec3(0, 0.00, -1);
+        spawnPoint.position = glm::vec3(0, 2.00, -1);
         spawnPoint.rotation = glm::vec3(-0.0, HELL_PI, 0);
     }
     {
         SpawnPoint& spawnPoint = g_spawnPoints.emplace_back();
-        spawnPoint.position = glm::vec3(1.40, -0.00, -6.68);
+        spawnPoint.position = glm::vec3(1.40, 2.00, -6.68);
         spawnPoint.rotation = glm::vec3(-0.35, -3.77, 0.00);
     }
     {
         SpawnPoint& spawnPoint = g_spawnPoints.emplace_back();
-        spawnPoint.position = glm::vec3(1.78, -0.00, -7.80);
+        spawnPoint.position = glm::vec3(1.78, 2.00, -7.80);
         spawnPoint.rotation = glm::vec3(-0.34, -5.61, 0.00);
     }
 }
@@ -1438,6 +1627,39 @@ std::vector<RenderItem3D> Scene::GetGeometryRenderItems() {
 
     std::vector<RenderItem3D> renderItems;
 
+    // Ceiling trims
+    static int ceilingTrimMeshIndex = AssetManager::GetModelByName("TrimCeiling")->GetMeshIndices()[0];
+    static int floorTrimMeshIndex = AssetManager::GetModelByName("TrimFloor")->GetMeshIndices()[0];
+    static int ceilingTrimMaterialIndex = AssetManager::GetMaterialIndex("Trims");
+    int index = 0;
+    for (glm::mat4& matrix : g_ceilingTrims) {
+        RenderItem3D renderItem;
+        renderItem.meshIndex = ceilingTrimMeshIndex;
+        renderItem.modelMatrix = matrix;
+        renderItem.inverseModelMatrix = glm::inverse(matrix);
+        Material* material = AssetManager::GetMaterialByIndex(ceilingTrimMaterialIndex);
+        renderItem.baseColorTextureIndex = material->_basecolor;
+        renderItem.rmaTextureIndex = material->_rma;
+        renderItem.normalMapTextureIndex = material->_normal;
+        renderItems.push_back(renderItem);
+    }
+    for (glm::mat4& matrix : g_floorTrims) {
+        RenderItem3D renderItem;
+        renderItem.meshIndex = floorTrimMeshIndex;
+        renderItem.modelMatrix = matrix;
+        renderItem.inverseModelMatrix = glm::inverse(matrix);
+        Material* material = AssetManager::GetMaterialByIndex(ceilingTrimMaterialIndex);
+        renderItem.baseColorTextureIndex = material->_basecolor;
+        renderItem.rmaTextureIndex = material->_rma;
+        renderItem.normalMapTextureIndex = material->_normal;
+        renderItems.push_back(renderItem);
+    }
+    //std::cout << "g_ceilingTrims.size(): " << g_ceilingTrims.size() << "\n";
+    //std::cout << "ceilingTrimMaterialIndex: " << ceilingTrimMaterialIndex << "\n";
+    //std::cout << "ceilingTrimMeshIndex: " << ceilingTrimMeshIndex << "\n\n";
+
+
+
     //for (CSGPlane& plane : g_csgAdditiveFloorPlanes) {
     //    RenderItem3D renderItem;
     //    renderItem.meshIndex = AssetManager::GetHalfSizeQuadMeshIndex();
@@ -1897,7 +2119,7 @@ void Scene::ProcessBullets() {
                             Scene::g_bloodDecalsForMegaTexture.push_back(BloodDecal(transform, typeCounter));
                         }
                         else {
-                            transform.position.y = 0.005f;                           
+                            transform.position.y = rayResult.hitPosition.y + 0.005f;
                             Scene::g_bloodDecals.push_back(BloodDecal(transform, typeCounter));
                             BloodDecal* decal = &Scene::g_bloodDecals.back();
                         }
@@ -3227,6 +3449,10 @@ void Scene::ProcessPhysicsCollisions() {
             continue;
         }
 
+        // IF you crash here again, try clearing all collisions the second you allow weapon pickup
+        // IF you crash here again, try clearing all collisions the second you allow weapon pickup
+        // IF you crash here again, try clearing all collisions the second you allow weapon pickup
+
         const char* nameA = report.rigidA->getName();
         const char* nameB = report.rigidB->getName();
         if (nameA == "BulletCasing" ||
@@ -3448,7 +3674,37 @@ CSGCube* Scene::GetCubeVolumeAdditiveByIndex(int32_t index) {
         return &g_csgAdditiveCubes[index];
     }
     else {
-        std::cout << "Scene::GetCubeVolumeAdditiveByIndex() failed coz " << index << " out of range of size " << g_csgAdditiveCubes.size() << "\n";
+            std::cout << "Scene::GetCubeVolumeAdditiveByIndex() failed coz " << index << " out of range of size " << g_csgAdditiveCubes.size() << "\n";
+        return nullptr;
+    }
+}
+
+CSGPlane* Scene::GetWallPlaneByIndex(int32_t index) {
+    if (index >= 0 && index < g_csgAdditiveWallPlanes.size()) {
+        return &g_csgAdditiveWallPlanes[index];
+    }
+    else {
+        std::cout << "Scene::GetWallPlaneByIndex() failed coz " << index << " out of range of size " << g_csgAdditiveCubes.size() << "\n";
+        return nullptr;
+    }
+}
+
+CSGPlane* Scene::GetFloorPlaneByIndex(int32_t index) {
+    if (index >= 0 && index < g_csgAdditiveFloorPlanes.size()) {
+        return &g_csgAdditiveFloorPlanes[index];
+    }
+    else {
+        std::cout << "Scene::GetFloorPlaneByIndex() failed coz " << index << " out of range of size " << g_csgAdditiveCubes.size() << "\n";
+        return nullptr;
+    }
+}
+
+CSGPlane* Scene::GetCeilingPlaneByIndex(int32_t index) {
+    if (index >= 0 && index < g_csgAdditiveCeilingPlanes.size()) {
+        return &g_csgAdditiveCeilingPlanes[index];
+    }
+    else {
+        std::cout << "Scene::GetCeilingPlaneByIndex() failed coz " << index << " out of range of size " << g_csgAdditiveCubes.size() << "\n";
         return nullptr;
     }
 }

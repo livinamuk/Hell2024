@@ -15,6 +15,19 @@
 #include "Defines.h"
 #include "Enums.h"
 
+
+struct TriangleIntersectionResult {
+    bool hitFound = false;
+    glm::vec3 hitPosition = glm::vec3(0);
+};
+
+struct PlayerData {
+    int flashlightOn = 0;
+    int padding0 = 0;
+    int padding1 = 0;
+    int padding2 = 0;
+};
+
 struct AssetFile {
     char type[4];
     int version;
@@ -35,6 +48,10 @@ struct Transform {
     glm::vec3 to_forward_vector() {
         glm::quat q = glm::quat(rotation);
         return glm::normalize(q * glm::vec3(0.0f, 0.0f, 1.0f));
+    }
+    glm::vec3 to_right_vector() {
+        glm::quat q = glm::quat(rotation);
+        return glm::normalize(q * glm::vec3(1.0f, 0.0f, 0.0f));
     }
 };
 

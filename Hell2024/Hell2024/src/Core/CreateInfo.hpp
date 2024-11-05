@@ -31,4 +31,8 @@ struct CSGPlaneCreateInfo {
     glm::vec3 vertexTR;
     glm::vec3 vertexBL;
     glm::vec3 vertexBR;
+    int materialIndex = -1;
+    float textureScale = 1;
+    float textureOffsetX = 0;
+    float textureOffsetY = 0;
 };

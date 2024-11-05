@@ -134,7 +134,7 @@ namespace OpenGLRenderer {
         SSBO shadowMapGeometryRenderItems;
         SSBO lightVolumeData;
         SSBO tileData;
-        SSBO fogAABB;
+        SSBO playerData;
 
         GLuint samplers = 0;
         GLuint renderItems2D = 0;
@@ -680,8 +680,7 @@ void OpenGLRenderer::UploadSSBOsGPU(RenderData& renderData) {
     g_ssbos.bulletHoleDecalRenderItems.Update(RendererData::g_bulletDecalRenderItems.size() * sizeof(RenderItem3D), &RendererData::g_bulletDecalRenderItems[0]);    
     
     g_ssbos.shadowMapGeometryRenderItems.Update(RendererData::g_shadowMapGeometryRenderItems.size() * sizeof(RenderItem3D), &RendererData::g_shadowMapGeometryRenderItems[0]);
-    g_ssbos.fogAABB.Update(Scene::g_fogAABB.size() * sizeof(AABB), &Scene::g_fogAABB[0]);
-
+    g_ssbos.playerData.Update(Game::g_playerData.size() * sizeof(PlayerData), &Game::g_playerData[0]);
 }
 
 void MegaTextureTestPass() {
@@ -845,7 +844,7 @@ void OpenGLRenderer::RenderFrame(RenderData& renderData) {
 
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 19, g_ssbos.lightVolumeData.GetHandle());
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 20, g_ssbos.tileData.GetHandle());
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 21, g_ssbos.fogAABB.GetHandle());
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 21, g_ssbos.playerData.GetHandle());
 
     ClearRenderTargets();    
     RenderShadowMapss(renderData);
@@ -880,9 +879,9 @@ void OpenGLRenderer::RenderFrame(RenderData& renderData) {
 
     RenderUI(renderData.renderItems2DHiRes, g_frameBuffers.gBuffer, false);
     DownScaleGBuffer();
-    DebugPass(renderData);
     CSGSubtractivePass();
     OutlinePass(renderData);
+    DebugPass(renderData);
     if (Editor::ObjectIsSelected()) {
         Gizmo::Draw(renderData.cameraData[0].projection, renderData.cameraData[0].view, g_frameBuffers.present.GetWidth(), g_frameBuffers.present.GetHeight());
     }
@@ -2252,6 +2251,10 @@ void OutlinePass(RenderData& renderData) {
         return;
     }
 
+    GLFrameBuffer& presentBuffer = OpenGLRenderer::g_frameBuffers.present;
+    BindFrameBuffer(presentBuffer);
+    presentBuffer.SetViewport();
+
     Shader& shader = OpenGLRenderer::g_shaders.outline;
     shader.Use();
 
@@ -2322,10 +2325,10 @@ void OutlinePass(RenderData& renderData) {
         glStencilFunc(GL_ALWAYS, 1, 1);
         glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
 
-        if (Editor::GetHoveredObjectType() == ObjectType::CSG_OBJECT_ADDITIVE_CUBE ||
-            Editor::GetHoveredObjectType() == ObjectType::CSG_OBJECT_ADDITIVE_WALL_PLANE ||
-            Editor::GetHoveredObjectType() == ObjectType::CSG_OBJECT_ADDITIVE_FLOOR_PLANE ||
-            Editor::GetHoveredObjectType() == ObjectType::CSG_OBJECT_ADDITIVE_CEILING_PLANE) {
+        if (Editor::GetSelectedObjectType() == ObjectType::CSG_OBJECT_ADDITIVE_CUBE ||
+            Editor::GetSelectedObjectType() == ObjectType::CSG_OBJECT_ADDITIVE_WALL_PLANE ||
+            Editor::GetSelectedObjectType() == ObjectType::CSG_OBJECT_ADDITIVE_FLOOR_PLANE ||
+            Editor::GetSelectedObjectType() == ObjectType::CSG_OBJECT_ADDITIVE_CEILING_PLANE) {
             CSGObject& csgObject = CSG::GetCSGObjects()[Editor::GetSelectedObjectIndex()];
             shader.SetMat4("model", glm::mat4(1));
             glBindVertexArray(OpenGLBackEnd::GetCSGVAO());
@@ -2347,10 +2350,10 @@ void OutlinePass(RenderData& renderData) {
         glDisable(GL_DEPTH_TEST);
         shader.SetVec3("Color", YELLOW);
 
-        if (Editor::GetHoveredObjectType() == ObjectType::CSG_OBJECT_ADDITIVE_CUBE ||
-            Editor::GetHoveredObjectType() == ObjectType::CSG_OBJECT_ADDITIVE_WALL_PLANE ||
-            Editor::GetHoveredObjectType() == ObjectType::CSG_OBJECT_ADDITIVE_FLOOR_PLANE ||
-            Editor::GetHoveredObjectType() == ObjectType::CSG_OBJECT_ADDITIVE_CEILING_PLANE) {
+        if (Editor::GetSelectedObjectType() == ObjectType::CSG_OBJECT_ADDITIVE_CUBE ||
+            Editor::GetSelectedObjectType() == ObjectType::CSG_OBJECT_ADDITIVE_WALL_PLANE ||
+            Editor::GetSelectedObjectType() == ObjectType::CSG_OBJECT_ADDITIVE_FLOOR_PLANE ||
+            Editor::GetSelectedObjectType() == ObjectType::CSG_OBJECT_ADDITIVE_CEILING_PLANE) {
             CSGObject& cube = CSG::GetCSGObjects()[Editor::GetSelectedObjectIndex()];
             shader.SetMat4("model", glm::mat4(1));
             glBindVertexArray(OpenGLBackEnd::GetCSGVAO());
@@ -2403,6 +2406,10 @@ void CSGSubtractivePass() {
 
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_BLEND);
+
+    GLFrameBuffer& presentBuffer = OpenGLRenderer::g_frameBuffers.present;
+    BindFrameBuffer(presentBuffer);
+    presentBuffer.SetViewport();
 
     Player* player = Game::GetPlayerByIndex(0);
 

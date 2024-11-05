@@ -41,6 +41,8 @@ std::vector<RenderItem2D> Player::GetHudRenderItems(hell::ivec2 presentSize) {
         std::string text;
         text += "Health: " + std::to_string(_health) + "\n";
         text += "Kills: " + std::to_string(m_killCount) + "\n";
+        //text += "Crosshair size: " + std::to_string(m_crosshairCrossSize) + "\n";
+        //text += "Accuracy Modifier: " + std::to_string(m_accuracyModifer) + "\n";
         RendererUtil::AddRenderItems(renderItems, TextBlitter::CreateText(text, debugTextLocation, presentSize, Alignment::TOP_LEFT, BitmapFontType::STANDARD));
 
     }
@@ -70,12 +72,28 @@ std::vector<RenderItem2D> Player::GetHudRenderItems(hell::ivec2 presentSize) {
     if (IsAlive()) {
 
         hell::ivec2 crosshairPos = viewportCenter;
-        if (GetCrosshairType() == CrosshairType::REGULAR) {
-            renderItems.push_back(RendererUtil::CreateRenderItem2D("CrosshairDot", crosshairPos, presentSize, Alignment::CENTERED));
-        }
-        else if (GetCrosshairType() == CrosshairType::INTERACT) {
-            renderItems.push_back(RendererUtil::CreateRenderItem2D("CrosshairSquare", crosshairPos, presentSize, Alignment::CENTERED));
-        }
+       // if (GetCrosshairType() == CrosshairType::REGULAR) {
+       //     renderItems.push_back(RendererUtil::CreateRenderItem2D("CrosshairDot", crosshairPos, presentSize, Alignment::CENTERED));
+       // }
+       // else if (GetCrosshairType() == CrosshairType::INTERACT) {
+       //     renderItems.push_back(RendererUtil::CreateRenderItem2D("CrosshairSquare", crosshairPos, presentSize, Alignment::CENTERED));
+       // }
+
+
+
+
+      //  if (m_crosshairCrossSize > 5) {
+      //      renderItems.push_back(RendererUtil::CreateRenderItem2D("CrosshairCrossLeft", crosshairPos + hell::ivec2{-int(m_crosshairCrossSize), 0}, presentSize, Alignment::CENTERED));
+      //      renderItems.push_back(RendererUtil::CreateRenderItem2D("CrosshairCrossRight", crosshairPos + hell::ivec2{int(m_crosshairCrossSize), 0}, presentSize, Alignment::CENTERED));
+      //      renderItems.push_back(RendererUtil::CreateRenderItem2D("CrosshairCrossTop", crosshairPos + hell::ivec2{0, int(m_crosshairCrossSize)}, presentSize, Alignment::CENTERED));
+      //      renderItems.push_back(RendererUtil::CreateRenderItem2D("CrosshairCrossBottom", crosshairPos + hell::ivec2{0, -int(m_crosshairCrossSize)}, presentSize, Alignment::CENTERED));
+      //  }
+      //  else{
+      //       renderItems.push_back(RendererUtil::CreateRenderItem2D("CrosshairDot", crosshairPos, presentSize, Alignment::CENTERED));
+      //  }
+
+
+        renderItems.push_back(RendererUtil::CreateRenderItem2D("CrosshairDot", crosshairPos, presentSize, Alignment::CENTERED));
 
         static int texHeight = AssetManager::GetTextureByName("inventory_mockup")->GetHeight();
         static int height = (presentSize.y - texHeight) / 2;

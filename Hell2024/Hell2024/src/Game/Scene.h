@@ -135,6 +135,8 @@ namespace Scene {
     void LoadDefaultScene();
     void CreateBottomLevelAccelerationStructures();
     void CreateTopLevelAccelerationStructures();
+    void RecreateFloorTrims();
+    void RecreateCeilingTrims();
 
     // Bullet Hole Decals
     void CreateBulletDecal(glm::vec3 localPosition, glm::vec3 localNormal, PxRigidBody* parent, BulletHoleDecalType type);
@@ -162,6 +164,9 @@ namespace Scene {
     const size_t GetAnimatedGameObjectCount();
 
     // Map stuff
+    CSGPlane* GetWallPlaneByIndex(int32_t index);
+    CSGPlane* GetFloorPlaneByIndex(int32_t index);
+    CSGPlane* GetCeilingPlaneByIndex(int32_t index);
     CSGCube* GetCubeVolumeAdditiveByIndex(int32_t index);
     CSGCube* GetCubeVolumeSubtractiveByIndex(int32_t index);
     const size_t GetCubeVolumeAdditiveCount();
@@ -174,13 +179,16 @@ namespace Scene {
     inline std::vector<CSGCube> g_csgSubtractiveCubes;
     inline std::vector<CSGPlane> g_csgAdditiveWallPlanes;
     inline std::vector<CSGPlane> g_csgAdditiveFloorPlanes;
+    inline std::vector<CSGPlane> g_csgAdditiveCeilingPlanes;
     inline std::vector<Dobermann> g_dobermann;
     inline std::vector<Staircase> g_staircases;
     inline std::vector<BulletHoleDecal> g_bulletHoleDecals;
     inline std::vector<AABB> g_fogAABB;
     inline std::vector<BloodDecal> g_bloodDecals;
     inline std::vector<BloodDecal> g_bloodDecalsForMegaTexture;
-
+    inline std::vector<glm::mat4> g_ceilingTrims;
+    inline std::vector<glm::mat4> g_floorTrims;
+    
     // Shadow map stuff
     inline std::vector<int> g_shadowMapLightIndices;
     int AssignNextFreeShadowMapIndex(int lightIndex);
@@ -205,6 +213,7 @@ namespace Scene {
     // CSG Objects
     void AddCSGWallPlane(CSGPlaneCreateInfo& createInfo);
     void AddCSGFloorPlane(CSGPlaneCreateInfo& createInfo);
+    void AddCSGCeilingPlane(CSGPlaneCreateInfo& createInfo);
 
     // OLD SHIT BELOW
     inline PxTriangleMesh* _sceneTriangleMesh = NULL;

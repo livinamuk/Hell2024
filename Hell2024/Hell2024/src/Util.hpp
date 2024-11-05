@@ -1442,5 +1442,39 @@ namespace Util {
         float theta = sampleIndexF * goldenAngle + phi;
         return glm::vec2(std::cos(theta), std::sin(theta)) * r;
     }
+
+
+    inline TriangleIntersectionResult IntersectLineTriangle(const glm::vec3& orig, const glm::vec3& dir, const glm::vec3& v0, const glm::vec3& v1, const glm::vec3& v2) {
+        TriangleIntersectionResult result;
+        const float EPSILON = 1e-6f;
+        glm::vec3 edge1 = v1 - v0;
+        glm::vec3 edge2 = v2 - v0;
+        glm::vec3 h = glm::cross(dir, edge2);
+        float a = glm::dot(edge1, h);
+        if (a > -EPSILON && a < EPSILON) {
+            return result; // The line is parallel to the triangle
+        }
+        float f = 1.0f / a;
+        glm::vec3 s = orig - v0;
+        float u = f * glm::dot(s, h);
+        if (u < 0.0f || u > 1.0f) {
+            return result; // not sure what this is
+        }
+        glm::vec3 q = glm::cross(s, edge1);
+        float v = f * glm::dot(dir, q);
+        if (v < 0.0f || u + v > 1.0f) {
+            return result; // not sure what this is
+        }
+        // At this stage, we can compute t to find out where the intersection point is on the line.
+        float t = f * glm::dot(edge2, q);
+        if (t > EPSILON) {
+            result.hitFound = true;
+            result.hitPosition = orig + dir * t;
+            return result;
+        }
+        else {            
+            return result;// This means that there is a line intersection, but not a ray intersection. 
+        }
+    }
 }
 

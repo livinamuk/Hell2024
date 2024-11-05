@@ -100,7 +100,36 @@ namespace Gizmo {
         return _degrees * (HELL_PI / 180.0f);
     }
 
-    inline Im3d::Mat4 Update(glm::vec3 viewPos, glm::vec3 viewDir, float mouseX, float mouseY, glm::mat4 projection, glm::mat4 view, bool leftMouseDown, float viewportWidth, float viewportHeight, glm::mat4 matrix) {
+
+#define if_likely(e)   if(!!(e))
+    constexpr float Pi = 3.14159265359f;
+    constexpr float TwoPi = 2.0f * Pi;
+    constexpr float HalfPi = 0.5f * Pi;
+
+    inline Im3d::Vec3 ToEulerXYZ(const Im3d::Mat3& _m) {
+        // http://www.staff.city.ac.uk/~sbbh653/publications/euler.pdf
+        Im3d::Vec3 ret;
+        if_likely(fabs(_m(2, 0)) < 1.0f) {
+            ret.y = -asinf(_m(2, 0));
+            float c = 1.0f / cosf(ret.y);
+            ret.x = atan2f(_m(2, 1) * c, _m(2, 2) * c);
+            ret.z = atan2f(_m(1, 0) * c, _m(0, 0) * c);
+        }
+        else {
+            ret.z = 0.0f;
+            if (!(_m(2, 0) > -1.0f)) {
+                ret.x = ret.z + atan2f(_m(0, 1), _m(0, 2));
+                ret.y = HalfPi;
+            }
+            else {
+                ret.x = -ret.z + atan2f(-_m(0, 1), -_m(0, 2));
+                ret.y = -HalfPi;
+            }
+            }
+            return ret;
+    }
+
+    inline Transform Update(glm::vec3 viewPos, glm::vec3 viewDir, float mouseX, float mouseY, glm::mat4 projection, glm::mat4 view, bool leftMouseDown, float viewportWidth, float viewportHeight, glm::mat4 matrix) {
 
         Im3d::Context& ctx = Im3d::GetContext();
         ctx.m_gizmoHeightPixels = 50;
@@ -148,7 +177,17 @@ namespace Gizmo {
         g_transform = GlmMat4ToIm3dMat4(matrix);
         _inUse = Im3d::Gizmo("GizmoUnified", g_transform);
         Im3d::EndFrame();
-        return g_transform;
+
+        Im3d::Mat4 resultMatrix = Gizmo::GetTransform();
+        Im3d::Vec3 pos = resultMatrix.getTranslation();
+        Im3d::Vec3 euler = ToEulerXYZ(resultMatrix.getRotation());
+        Im3d::Vec3 scale = resultMatrix.getScale();
+
+        Transform gizmoTransform;
+        gizmoTransform.position = glm::vec3(pos.x, pos.y, pos.z);
+        gizmoTransform.rotation = glm::vec3(euler.x, euler.y, euler.z);
+        gizmoTransform.scale = glm::vec3(scale.x, scale.y, scale.z);
+        return gizmoTransform;
     }
 
     inline void Draw(glm::mat4 projection, glm::mat4 view, float viewportWidth, float viewportHeight) {

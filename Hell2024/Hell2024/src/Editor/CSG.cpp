@@ -1,5 +1,4 @@
 #include "csg.h"
-#include "brush.h"
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -24,7 +23,6 @@ namespace CSG {
     uint32_t g_baseCSGVertex = 0;
     std::vector<glm::vec3> g_navMeshVertices;
 
-    std::vector<Brush> g_subtractiveBrushes;
 
     //std::vector<CSGObject> g_subtractiveObjects; // used for plane world
 
@@ -207,31 +205,22 @@ namespace CSG {
 
         for (int i = 0; i < Scene::g_csgAdditiveWallPlanes.size(); i++) {
             CSGPlane& csgPlane = Scene::g_csgAdditiveWallPlanes[i];
-            int materialIndex = AssetManager::GetMaterialIndex("Ceiling2");
             Brush brush;
             brush.SetBrushType(SOLID_BRUSH);
             brush.SetBrushShape(BrushShape::PLANE);
             brush.SetTransform(csgPlane.GetCSGMatrix());
-            float textureScale = 0.5f;
-            float textureOffsetX = 0;
-            float textureOffsetY = 0;
-            CreateCSGObjectFromBrush(brush, CSGObjecType::WALL_PLANE, i, materialIndex, textureScale, textureOffsetX, textureOffsetY);
+            CreateCSGObjectFromBrush(brush, CSGObjecType::WALL_PLANE, i, csgPlane.materialIndex, csgPlane.textureScale, csgPlane.textureOffsetX, csgPlane.textureOffsetY);
         }
         for (int i = 0; i < Scene::g_csgAdditiveFloorPlanes.size(); i++) {
             CSGPlane& csgPlane = Scene::g_csgAdditiveFloorPlanes[i];
-            int materialIndex = AssetManager::GetMaterialIndex("Ceiling2");
             Brush brush;
             brush.SetBrushType(SOLID_BRUSH);
             brush.SetBrushShape(BrushShape::PLANE);
             brush.SetTransform(csgPlane.GetCSGMatrix());
-            float textureScale = 0.5f;
-            float textureOffsetX = 0;
-            float textureOffsetY = 0;
-            CreateCSGObjectFromBrush(brush, CSGObjecType::FLOOR_PLANE, i, materialIndex, textureScale, textureOffsetX, textureOffsetY);
+            CreateCSGObjectFromBrush(brush, CSGObjecType::FLOOR_PLANE, i, csgPlane.materialIndex, csgPlane.textureScale, csgPlane.textureOffsetX, csgPlane.textureOffsetY);
         }
         for (int i = 0; i < Scene::g_csgAdditiveCubes.size(); i++) {
             CSGCube& csgCube = Scene::g_csgAdditiveCubes[i];
-            int materialIndex = AssetManager::GetMaterialIndex("Ceiling2");
             Brush brush;
             brush.SetBrushType(SOLID_BRUSH);
             brush.SetBrushShape(BrushShape::CUBE);
@@ -287,14 +276,11 @@ namespace CSG {
         g_objects.clear();
 
 
-       
-
         for (CSGNew& csgNew : g_csgNewObjects) {
 
             CSGObject& csgObject = g_objects.emplace_back();
             csgObject.m_materialIndex = csgNew.m_materialIndex;
             csgObject.m_parentIndex = csgNew.m_parentIndex;
-
             if (csgNew.m_type == CSGObjecType::CUBE) {
                 csgObject.m_parentObjectType = ObjectType::CSG_OBJECT_ADDITIVE_CUBE;
             }

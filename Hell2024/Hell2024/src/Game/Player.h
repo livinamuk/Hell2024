@@ -65,7 +65,8 @@ struct PlayerControls {
     unsigned int DEBUG_TWO = HELL_KEY_2;
     unsigned int DEBUG_THREE = HELL_KEY_3;
     unsigned int DEBUG_FOUR = HELL_KEY_4;
-    unsigned int MELEE = HELL_KEY_F;
+    unsigned int MELEE = HELL_KEY_V;
+    unsigned int FLASHLIGHT = HELL_KEY_F;
 };
 
 struct WeaponState {
@@ -109,6 +110,9 @@ private:
     glm::mat4 m_muzzleFlashMatrix = glm::mat4(1);
     OverlapReport m_interactOverlapReport;
     std::string overlapList;
+    float m_crosshairCrossSize = 0;
+    float m_accuracyModifer = 0;
+    bool m_firedThisFrame = false;
 
 
 public:
@@ -116,6 +120,7 @@ public:
     bool m_pickUpInteractable = false;
     bool g_awaitingRespawn = true;
     int m_interactbleGameObjectIndex = -1;
+    bool m_flashlightOn = false;
 
     Player() = default;
     Player(int playerIndex);
@@ -134,6 +139,7 @@ public:
     void UpdateAudio(float deltaTime);
 
     // Checks
+    void CheckForAndEvaluateFlashlight(float deltaTime);
     void CheckForAndEvaluateInteract();
     void CheckForAndEvaluateRespawnPress();
     void CheckForAndEvaluateNextWeaponPress();
@@ -206,6 +212,7 @@ public:
     bool PressedADS();
     bool PressedEscape();
     bool PressedMelee();
+    bool PressedFlashlight();
 
     // Misc gameplay shit
     int32_t GetKillCount();

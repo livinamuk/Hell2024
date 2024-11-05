@@ -30,7 +30,9 @@ namespace Editor {
             VALUE_STRING,
             VALUE_BOOL,
             INSERT_CSG_ADDITIVE,
-            INSERT_CSG_ADDITIVE_PLANE,
+            INSERT_WALL_PLANE,
+            INSERT_CEILING_PLANE,
+            INSERT_FLOOR_PLANE,
             INSERT_CSG_SUBTRACTIVE,
             INSERT_DOOR,
             INSERT_WINDOW,
@@ -53,6 +55,13 @@ namespace Editor {
     constexpr double g_zoomSpeed = 0.5f;
     constexpr double g_panSpeed = 0.004f;
 
+    struct ClipBoard {
+        int materialIndex = -1;
+        float textureScale = 0;
+        float textureOffsetX = 0;
+        float textureOffsetY = 0;
+    } g_clipBoard;
+
     // Editor globals
     glm::mat4 g_editorViewMatrix;
     glm::dvec3 g_viewTarget;
@@ -63,8 +72,6 @@ namespace Editor {
     //bool g_objectIsSelected = false;
     ObjectType g_hoveredObjectType = ObjectType::UNDEFINED;
     ObjectType g_selectedObjectType = ObjectType::UNDEFINED;
-    int g_hoveredObjectIndex = 0;
-    int g_selectedObjectIndex = 0;
     std::vector<RenderItem3D> gHoveredRenderItems;
     std::vector<RenderItem3D> gSelectedRenderItems;
     std::vector<RenderItem2D> gMenuRenderItems;
@@ -79,7 +86,7 @@ namespace Editor {
     hell::ivec2 g_menuLocation = hell::ivec2(76, 460);
     hell::ivec2 g_backgroundLocation = hell::ivec2(0, 0);
     hell::ivec2 g_backgroundSize = hell::ivec2(0, 0);
-    hell::ivec2 g_dragOffset = hell::ivec2(0, 0);
+    hell::ivec2 g_dragOffset = hell::ivec2(0, 0);     
 
     MenuType GetCurrentMenuType() {
         return g_currentMenuType;
@@ -102,37 +109,364 @@ namespace Editor {
         return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
     }
 
-    #define if_likely(e)   if(!!(e))
-    constexpr float Pi = 3.14159265359f;
-    constexpr float TwoPi = 2.0f * Pi;
-    constexpr float HalfPi = 0.5f * Pi;
+    void HideGizmo() {
+        Transform gizmoTransform;
+        gizmoTransform.position.y = -1000.0f;
+        g_gizmoMatrix = gizmoTransform.to_mat4();
+    }
 
-    Im3d::Vec3 ToEulerXYZ(const Im3d::Mat3& _m) {
-        // http://www.staff.city.ac.uk/~sbbh653/publications/euler.pdf
-        Im3d::Vec3 ret;
-        if_likely(fabs(_m(2, 0)) < 1.0f) {
-            ret.y = -asinf(_m(2, 0));
-            float c = 1.0f / cosf(ret.y);
-            ret.x = atan2f(_m(2, 1) * c, _m(2, 2) * c);
-            ret.z = atan2f(_m(1, 0) * c, _m(0, 0) * c);
+    void CheckVertexHover(glm::mat4 mvp) {
+        int threshold = 4;
+        int mouseX = Input::GetViewportMappedMouseX(PRESENT_WIDTH);
+        int mouseY = PRESENT_HEIGHT - Input::GetViewportMappedMouseY(PRESENT_HEIGHT);
+        g_hoveredVertexIndex = -1;
+        if (g_selectedObjectType == ObjectType::CSG_OBJECT_ADDITIVE_WALL_PLANE) {
+            CSGPlane& csgPlane = Scene::g_csgAdditiveWallPlanes[g_selectedObjectIndex];
+            for (int i = 0; i < 4; i++) {
+                glm::vec3 worldPos = csgPlane.m_veritces[i];
+                glm::ivec2 screenPos = Util::CalculateScreenSpaceCoordinates(worldPos, mvp, PRESENT_WIDTH, PRESENT_HEIGHT, true);
+                if (mouseX < screenPos.x + threshold &&
+                    mouseX > screenPos.x - threshold &&
+                    mouseY < screenPos.y + threshold &&
+                    mouseY > screenPos.y - threshold) {
+                    g_hoveredVertexIndex = i;
+                    g_hoveredVertexPosition = worldPos;
+                }
+            }
         }
-        else {
-            ret.z = 0.0f;
-            if (!(_m(2, 0) > -1.0f)) {
-                ret.x = ret.z + atan2f(_m(0, 1), _m(0, 2));
-                ret.y = HalfPi;
+    }
+
+    void CheckForVertexSelection() {
+        if (g_selectedObjectType != ObjectType::CSG_OBJECT_ADDITIVE_WALL_PLANE &&
+            g_selectedObjectType != ObjectType::CSG_OBJECT_ADDITIVE_FLOOR_PLANE && 
+            g_selectedObjectType != ObjectType::CSG_OBJECT_ADDITIVE_CEILING_PLANE) {
+            g_selectedVertexIndex = -1;
+        }
+        if (g_hoveredVertexIndex != -1 && Input::LeftMousePressed()) {
+            g_selectedVertexIndex = g_hoveredVertexIndex;
+            std::cout << "Selected vertex " << g_selectedVertexIndex << "\n";
+        }
+    }
+
+    void UpdateSelectedObjectGizmo() {
+               
+        glm::mat4 projection = Game::GetPlayerByIndex(0)->GetProjectionMatrix();
+
+        // Update gizmo with correct matrix if required
+        if (ObjectIsSelected()) {
+
+            // Moved gizmo
+            if (Input::LeftMousePressed()) {
+                if (g_selectedObjectType == ObjectType::CSG_OBJECT_ADDITIVE_CUBE) {
+                    CSGObject& csgObject = CSG::GetCSGObjects()[g_selectedObjectIndex];
+                    CSGCube* cubeVolume = Scene::GetCubeVolumeAdditiveByIndex(csgObject.m_parentIndex);
+                    if (cubeVolume) {
+                        g_gizmoMatrix = cubeVolume->GetModelMatrix();
+                    }
+                }
+                if (g_selectedObjectType == ObjectType::CSG_OBJECT_SUBTRACTIVE) {
+                    CSGCube* cubeVolume = Scene::GetCubeVolumeSubtractiveByIndex(g_selectedObjectIndex);
+                    if (cubeVolume) {
+                        g_gizmoMatrix = cubeVolume->GetModelMatrix();
+                    }
+                }
+                if (g_selectedObjectType == ObjectType::DOOR) {
+                    Door* door = Scene::GetDoorByIndex(g_selectedObjectIndex);
+                    if (door) {
+                        g_gizmoMatrix = door->GetGizmoMatrix();
+                    }
+                }
+                if (g_selectedObjectType == ObjectType::GLASS) {
+                    Window* window = Scene::GetWindowByIndex(g_selectedObjectIndex);
+                    if (window) {
+                        g_gizmoMatrix = window->GetGizmoMatrix();
+                    }
+                }
+            }
+
+            // Update the gizmo
+
+            glm::vec3 viewPos = glm::inverse(g_editorViewMatrix)[3];
+            glm::vec3 viewDir = glm::vec3(glm::inverse(g_editorViewMatrix)[2]) * glm::vec3(-1);
+            glm::mat4 view = g_editorViewMatrix;
+            int viewportWidth = PRESENT_WIDTH;
+            int viewportHeight = PRESENT_HEIGHT;
+            float mouseX = MapRange(Input::GetMouseX(), 0, BackEnd::GetCurrentWindowWidth(), 0, viewportWidth);
+            float mouseY = MapRange(Input::GetMouseY(), 0, BackEnd::GetCurrentWindowHeight(), 0, viewportHeight);
+            Transform gizmoTransform = Gizmo::Update(viewPos, viewDir, mouseX, mouseY, projection, view, Input::LeftMouseDown(), viewportWidth, viewportHeight, g_gizmoMatrix);
+            glm::vec3 pos = gizmoTransform.position;
+
+            // Update moved object
+            if (Input::LeftMouseDown() && Gizmo::HasHover()) {
+
+                if (g_selectedObjectType == ObjectType::CSG_OBJECT_ADDITIVE_CUBE) {
+                    CSGObject& csgObject = CSG::GetCSGObjects()[g_selectedObjectIndex];
+                    CSGCube* cubeVolume = Scene::GetCubeVolumeAdditiveByIndex(csgObject.m_parentIndex);
+                    if (cubeVolume) {
+                        cubeVolume->SetTransform(gizmoTransform);
+                        g_gizmoMatrix = cubeVolume->GetModelMatrix();
+                    }
+                }
+                if (g_selectedObjectType == ObjectType::CSG_OBJECT_SUBTRACTIVE) {
+                    CSGCube* cubeVolume = Scene::GetCubeVolumeSubtractiveByIndex(g_selectedObjectIndex);
+                    if (cubeVolume) {
+                        cubeVolume->SetTransform(gizmoTransform);
+                        g_gizmoMatrix = cubeVolume->GetModelMatrix();
+                    }
+                }
+                if (g_selectedObjectType == ObjectType::DOOR) {
+                    Door* door = Scene::GetDoorByIndex(g_selectedObjectIndex);
+                    if (door) {
+                        door->SetPosition(glm::vec3(pos.x, pos.y - DOOR_HEIGHT / 2.0f, pos.z));
+                        g_gizmoMatrix = door->GetGizmoMatrix();
+                    }
+                }
+                if (g_selectedObjectType == ObjectType::GLASS) {
+                    Window* window = Scene::GetWindowByIndex(g_selectedObjectIndex);
+                    if (window) {
+                        window->SetPosition(glm::vec3(pos.x, pos.y - 1.5f, pos.z));
+                        g_gizmoMatrix = window->GetGizmoMatrix();
+                    }
+                }
+                RebuildEverything();
+            }
+        }
+        // Rotate selected door or window
+        if (ObjectIsSelected()) {
+            if (Input::KeyPressed(HELL_KEY_Y)) {
+                if (g_selectedObjectType == ObjectType::DOOR) {
+                    Door* door = Scene::GetDoorByIndex(g_selectedObjectIndex);
+                    if (door) {
+                        door->Rotate90();
+                        g_gizmoMatrix = door->GetGizmoMatrix();
+                    }
+                }
+                if (g_selectedObjectType == ObjectType::GLASS) {
+                    Window* window = Scene::GetWindowByIndex(g_selectedObjectIndex);
+                    if (window) {
+                        window->Rotate90();
+                        g_gizmoMatrix = window->GetGizmoMatrix();
+                    }
+                }
+            }
+        }
+    }
+
+    void UpdateSelectedVertexPosition() {
+        if (g_selectedObjectType == ObjectType::CSG_OBJECT_ADDITIVE_WALL_PLANE) {
+            CSGPlane* csgPlane = Scene::GetWallPlaneByIndex(g_selectedObjectIndex);
+            if (csgPlane) {
+                g_selectedVertexPosition = csgPlane->m_veritces[g_selectedVertexIndex];
+                Scene::RecreateFloorTrims();
+                Scene::RecreateCeilingTrims();
+            }
+        }
+        else if (g_selectedObjectType == ObjectType::CSG_OBJECT_ADDITIVE_FLOOR_PLANE) {
+            CSGPlane* csgPlane = Scene::GetFloorPlaneByIndex(g_selectedObjectIndex);
+            if (csgPlane) {
+                g_selectedVertexPosition = csgPlane->m_veritces[g_selectedVertexIndex];
+            }
+        }
+        else if (g_selectedObjectType == ObjectType::CSG_OBJECT_ADDITIVE_CEILING_PLANE) {
+            CSGPlane* csgPlane = Scene::GetCeilingPlaneByIndex(g_selectedObjectIndex);
+            if (csgPlane) {
+                g_selectedVertexPosition = csgPlane->m_veritces[g_selectedVertexIndex];
+            }
+        }
+    }
+
+    bool FloatWithinRange(float a, float b, float threshold) {
+        return (a < b + threshold && a > b - threshold);
+    }
+
+    void UpdateVertexObjectGizmo() {
+
+        if (g_selectedVertexIndex != -1) {
+
+            // Always translation gizmo
+            Im3d::GetContext().m_gizmoMode = Im3d::GizmoMode::GizmoMode_Translation;
+
+            UpdateSelectedVertexPosition();
+
+            // Set gizmo to vertex position
+            Transform gizmoTransform;
+            gizmoTransform.position = g_selectedVertexPosition;
+            g_gizmoMatrix = gizmoTransform.to_mat4();
+
+            // Update the gizmo
+            glm::mat4 projection = Game::GetPlayerByIndex(0)->GetProjectionMatrix();
+            glm::vec3 viewPos = glm::inverse(g_editorViewMatrix)[3];
+            glm::vec3 viewDir = glm::vec3(glm::inverse(g_editorViewMatrix)[2]) * glm::vec3(-1);
+            glm::mat4 view = g_editorViewMatrix;
+            int viewportWidth = PRESENT_WIDTH;
+            int viewportHeight = PRESENT_HEIGHT;
+            float mouseX = MapRange(Input::GetMouseX(), 0, BackEnd::GetCurrentWindowWidth(), 0, viewportWidth);
+            float mouseY = MapRange(Input::GetMouseY(), 0, BackEnd::GetCurrentWindowHeight(), 0, viewportHeight);
+            Transform updateGizmoTransform = Gizmo::Update(viewPos, viewDir, mouseX, mouseY, projection, view, Input::LeftMouseDown(), viewportWidth, viewportHeight, g_gizmoMatrix);
+            g_gizmoMatrix = updateGizmoTransform.to_mat4();
+            glm::vec3 updatedGizmoPosition = updateGizmoTransform.position;
+
+            // Figure out how much the gizmo moved in world space
+            //glm::vec3 translationOffset;
+
+
+            enum Axis { X, Y, Z, NONE };
+            Axis moveAxis = Axis::NONE;
+
+            if (gizmoTransform.position.x != updatedGizmoPosition.x &&
+                gizmoTransform.position.y == updatedGizmoPosition.y &&
+                gizmoTransform.position.z == updatedGizmoPosition.z) {
+                std::cout << "moving on X\n";
+                moveAxis = Axis::X;
+            }
+            if (gizmoTransform.position.x == updatedGizmoPosition.x &&
+                gizmoTransform.position.y != updatedGizmoPosition.y &&
+                gizmoTransform.position.z == updatedGizmoPosition.z) {
+                std::cout << "moving on Y\n";
+                moveAxis = Axis::Y;
+            }
+            if (gizmoTransform.position.x == updatedGizmoPosition.x &&
+                gizmoTransform.position.y == updatedGizmoPosition.y &&
+                gizmoTransform.position.z != updatedGizmoPosition.z) {
+                std::cout << "moving on Z\n";
+                moveAxis = Axis::Z;
+            }
+
+
+            glm::vec3 oldPos = gizmoTransform.position;
+            glm::vec3 newPos = updatedGizmoPosition;
+
+            CSGPlane* csgPlane = Scene::GetWallPlaneByIndex(g_selectedObjectIndex);
+            if (csgPlane) {
+
+                // Snapping
+                if (Input::KeyDown(HELL_KEY_LEFT_SHIFT_GLFW)) {
+                    float snapThreshold = 0.5;
+                    if (moveAxis == Axis::X && FloatWithinRange(oldPos.x, newPos.x, snapThreshold)) {
+                        if (g_selectedVertexIndex == TR || g_selectedVertexIndex == BR) {
+                            csgPlane->m_veritces[TR].x = csgPlane->m_veritces[TL].x;
+                            csgPlane->m_veritces[BR].x = csgPlane->m_veritces[TL].x;
+                        }
+                        if (g_selectedVertexIndex == TL || g_selectedVertexIndex == BL) {
+                            csgPlane->m_veritces[TL].x = csgPlane->m_veritces[TR].x;
+                            csgPlane->m_veritces[BL].x = csgPlane->m_veritces[TR].x;
+                        }
+                    }
+                    if (moveAxis == Axis::Z && FloatWithinRange(oldPos.z, newPos.z, snapThreshold)) {
+                        if (g_selectedVertexIndex == TL || g_selectedVertexIndex == BL) {
+                            csgPlane->m_veritces[TL].z = csgPlane->m_veritces[TR].z;
+                            csgPlane->m_veritces[BL].z = csgPlane->m_veritces[BR].z;
+                        }
+                        if (g_selectedVertexIndex == TR || g_selectedVertexIndex == BR) {
+                            csgPlane->m_veritces[TR].z = csgPlane->m_veritces[TL].z;
+                            csgPlane->m_veritces[BR].z = csgPlane->m_veritces[BL].z;
+                        }
+                    }
+                }
+                // Non snapping logic
+                else {
+                    if (g_selectedVertexIndex == TR) {
+                        csgPlane->m_veritces[TR] = updatedGizmoPosition;
+                        csgPlane->m_veritces[BR].x = updatedGizmoPosition.x;
+                        csgPlane->m_veritces[BR].z = updatedGizmoPosition.z;
+                        csgPlane->m_veritces[TL].y = updatedGizmoPosition.y;
+                    }
+                    if (g_selectedVertexIndex == TL) {
+                        csgPlane->m_veritces[TL] = updatedGizmoPosition;
+                        csgPlane->m_veritces[BL].x = updatedGizmoPosition.x;
+                        csgPlane->m_veritces[BL].z = updatedGizmoPosition.z;
+                        csgPlane->m_veritces[TR].y = updatedGizmoPosition.y;
+                    }
+                    if (g_selectedVertexIndex == BL) {
+                        csgPlane->m_veritces[BL] = updatedGizmoPosition;
+                        csgPlane->m_veritces[TL].x = updatedGizmoPosition.x;
+                        csgPlane->m_veritces[TL].z = updatedGizmoPosition.z;
+                        csgPlane->m_veritces[BR].y = updatedGizmoPosition.y;
+                    }
+                    if (g_selectedVertexIndex == BR) {
+                        csgPlane->m_veritces[BR] = updatedGizmoPosition;
+                        csgPlane->m_veritces[TR].x = updatedGizmoPosition.x;
+                        csgPlane->m_veritces[TR].z = updatedGizmoPosition.z;
+                        csgPlane->m_veritces[BL].y = updatedGizmoPosition.y;
+                    }
+                }
+
+                
+
+                if (moveAxis != Axis::NONE) {
+                    RebuildEverything();
+                }
+            }
+
+        }
+
+    }
+
+    void EvaluateCopyAndPaste() {
+        // Copy
+        if (Input::KeyDown(HELL_KEY_LEFT_CONTROL_GLFW) && Input::KeyPressed(HELL_KEY_C)) {
+            CSGPlane* csgPlane = Scene::GetWallPlaneByIndex(g_selectedObjectIndex);
+            CSGCube* csgCube = Scene::GetCubeVolumeAdditiveByIndex(g_selectedObjectIndex);
+            if (csgPlane) {
+                g_clipBoard = ClipBoard();
+                g_clipBoard.materialIndex = csgPlane->materialIndex;
+                g_clipBoard.textureScale = csgPlane->textureScale;
+                g_clipBoard.textureOffsetX = csgPlane->textureOffsetX;
+                g_clipBoard.textureOffsetY = csgPlane->textureOffsetY;
+                std::cout << "copied plane: " << g_selectedObjectIndex << "\n";
+            }
+            else if (csgCube) {
+                g_clipBoard = ClipBoard();
+                g_clipBoard.materialIndex = csgCube->materialIndex;
+                g_clipBoard.textureScale = csgCube->textureScale;
+                g_clipBoard.textureOffsetX = csgCube->textureOffsetX;
+                g_clipBoard.textureOffsetY = csgCube->textureOffsetY;
+                std::cout << "copied cube: " << g_selectedObjectIndex << "\n";
             }
             else {
-                ret.x = -ret.z + atan2f(-_m(0, 1), -_m(0, 2));
-                ret.y = -HalfPi;
+                std::cout << "copied nothing\n";
             }
         }
-        return ret;
+        // Paste
+        if (Input::KeyDown(HELL_KEY_LEFT_CONTROL_GLFW) && Input::KeyPressed(HELL_KEY_V)) {
+            CSGPlane* csgPlane = Scene::GetWallPlaneByIndex(g_selectedObjectIndex);
+            CSGCube* csgCube = Scene::GetCubeVolumeAdditiveByIndex(g_selectedObjectIndex);
+            if (csgPlane) {
+                csgPlane->materialIndex = g_clipBoard.materialIndex;
+                csgPlane->textureScale = g_clipBoard.textureScale;
+                csgPlane->textureOffsetX = g_clipBoard.textureOffsetX;
+                csgPlane->textureOffsetY = g_clipBoard.textureOffsetY;
+                std::cout << "pasted plane: " << g_selectedObjectIndex << "\n";
+            }
+            else if (csgCube) {
+                csgCube->materialIndex = g_clipBoard.materialIndex;
+                csgCube->textureScale = g_clipBoard.textureScale;
+                csgCube->textureOffsetX = g_clipBoard.textureOffsetX;
+                csgCube->textureOffsetY = g_clipBoard.textureOffsetY;
+                std::cout << "pasted cube: " << g_selectedObjectIndex << "\n";
+            }
+            else {
+                std::cout << "pasted nothing\n";
+            }
+
+            RebuildEverything();
+        }
     }
+
 
     void Update(float deltaTime) {
 
         Player* player = Game::GetPlayerByIndex(0);
+        glm::mat4 mvp = player->GetProjectionMatrix() * g_editorViewMatrix;
+
+        CheckVertexHover(mvp);
+        CheckForVertexSelection();
+        EvaluateCopyAndPaste();
+
+        if (Input::KeyDown(HELL_KEY_LEFT_CONTROL_GLFW) && Input::KeyPressed(HELL_KEY_S)) {
+            Scene::SaveMapData("mappp.txt");
+            std::cout << "SAVED MAP!\n";
+        }
 
         // Camera orbit
         if (Input::LeftMouseDown() && Input::KeyDown(HELL_KEY_LEFT_ALT)) {
@@ -170,10 +504,6 @@ namespace Editor {
         player->ForceSetViewMatrix(g_editorViewMatrix);
 
 
-        // Start the gizmo out of view
-        Transform gizmoTransform;
-        gizmoTransform.position.y = -1000.0f;
-        static glm::mat4 gizmoMatrix = gizmoTransform.to_mat4();
 
         // Check for hover
         g_hoveredObjectType == ObjectType::UNDEFINED;
@@ -234,16 +564,6 @@ namespace Editor {
                     }
                 }
             }
-
-
-
-            if (g_hoveredObjectIndex != -1) {
-
-                std::cout << "hovered: " << g_hoveredObjectIndex << " " << Util::PhysicsObjectTypeToString(hitResult.objectType) << "\n";
-            }
-            else {
-                std::cout << "no hover\n";
-            }
         }
 
 
@@ -273,11 +593,8 @@ namespace Editor {
 
         if (!Input::KeyDown(HELL_KEY_LEFT_CONTROL_GLFW) && !Input::KeyDown(HELL_KEY_LEFT_ALT) && !MenuHasHover() && !Gizmo::HasHover()) {
 
-
             // Check for UI select
             bool uiWasSelectedThisFrame = false;
-            Player* player = Game::GetPlayerByIndex(0);
-            glm::mat4 mvp = player->GetProjectionMatrix() * g_editorViewMatrix;
             static Texture* texture = AssetManager::GetTextureByName("Icon_Light");
 
             for (int i = 0; i < Scene::g_lights.size(); i++) {
@@ -308,22 +625,23 @@ namespace Editor {
             if (!uiWasSelectedThisFrame) {
 
                 // Clicked to select hovered object
-                if (Input::LeftMousePressed() && ObjectIsHoverered()) {
+                if (Input::LeftMousePressed() && ObjectIsHoverered() && g_hoveredVertexIndex == -1) {
                     g_selectedObjectIndex = g_hoveredObjectIndex;
                     g_selectedObjectType = g_hoveredObjectType;
                     g_menuSelectionIndex = 0;
                     Audio::PlayAudio(MENU_SELECT_AUDIO, MENU_SELECT_VOLUME);
                     std::cout << "Selected an editor object\n";
                     SetCurrentMenuType(MenuType::SELECTED_OBJECT);
+                    HideGizmo();
                 }
 
                 // Clicked on nothing, so unselect any selected object
-                else if (Input::LeftMousePressed() && !ObjectIsHoverered()) {
+                else if (Input::LeftMousePressed() && !ObjectIsHoverered() && g_hoveredVertexIndex == -1) {
                     g_selectedObjectIndex = -1;
-                    Transform gizmoTransform;
-                    gizmoTransform.position.y = -1000.0f;
-                    gizmoMatrix = gizmoTransform.to_mat4();
-                    g_selectedObjectType = ObjectType::UNDEFINED;
+                    //Transform gizmoTransform;
+                    //gizmoTransform.position.y = -1000.0f;
+                    //gizmoMatrix = gizmoTransform.to_mat4();
+                    //g_selectedObjectType = ObjectType::UNDEFINED;
                     SetCurrentMenuType(MenuType::NONE);
                     std::cout << "Unelected an editor object\n";
                 }
@@ -331,112 +649,8 @@ namespace Editor {
         }
 
 
-        // Update gizmo with correct matrix if required
-        if (ObjectIsSelected()) {
-
-            // Moved gizmo
-            if (Input::LeftMousePressed()) {
-
-                if (g_selectedObjectType == ObjectType::CSG_OBJECT_ADDITIVE_CUBE) {
-                    CSGCube* cubeVolume = Scene::GetCubeVolumeAdditiveByIndex(g_selectedObjectIndex);
-                    if (cubeVolume) {
-                        gizmoMatrix = cubeVolume->GetModelMatrix();
-                    }
-                }
-                if (g_selectedObjectType == ObjectType::CSG_OBJECT_SUBTRACTIVE) {
-                    CSGCube* cubeVolume = Scene::GetCubeVolumeSubtractiveByIndex(g_selectedObjectIndex);
-                    if (cubeVolume) {
-                        gizmoMatrix = cubeVolume->GetModelMatrix();
-                    }
-                }
-                if (g_selectedObjectType == ObjectType::DOOR) {
-                    Door* door = Scene::GetDoorByIndex(g_selectedObjectIndex);
-                    if (door) {
-                        gizmoMatrix = door->GetGizmoMatrix();
-                    }
-                }
-                if (g_selectedObjectType == ObjectType::GLASS) {
-                    Window* window = Scene::GetWindowByIndex(g_selectedObjectIndex);
-                    if (window) {
-                        gizmoMatrix = window->GetGizmoMatrix();
-                    }
-                }
-            }
-
-            // Update the gizmo
-
-            glm::vec3 viewPos = glm::inverse(g_editorViewMatrix)[3];
-            glm::vec3 viewDir = glm::vec3(glm::inverse(g_editorViewMatrix)[2]) * glm::vec3(-1);
-            glm::mat4 view = g_editorViewMatrix;
-            int viewportWidth = PRESENT_WIDTH;
-            int viewportHeight = PRESENT_HEIGHT;
-            float mouseX = MapRange(Input::GetMouseX(), 0, BackEnd::GetCurrentWindowWidth(), 0, viewportWidth);
-            float mouseY = MapRange(Input::GetMouseY(), 0, BackEnd::GetCurrentWindowHeight(), 0, viewportHeight);
-            Gizmo::Update(viewPos, viewDir, mouseX, mouseY, projection, view, Input::LeftMouseDown(), viewportWidth, viewportHeight, gizmoMatrix);
-            Im3d::Mat4 resultMatrix = Gizmo::GetTransform();
-            Im3d::Vec3 pos = resultMatrix.getTranslation();
-            Im3d::Vec3 euler = ToEulerXYZ(resultMatrix.getRotation());
-            Im3d::Vec3 scale = resultMatrix.getScale();
-
-            Transform gizmoTransform;
-            gizmoTransform.position = glm::vec3(pos.x, pos.y, pos.z);
-            gizmoTransform.rotation = glm::vec3(euler.x, euler.y, euler.z);
-            gizmoTransform.scale = glm::vec3(scale.x, scale.y, scale.z);
-
-            // Update moved object
-            if (Input::LeftMouseDown() && Gizmo::HasHover()) {
-
-                if (g_selectedObjectType == ObjectType::CSG_OBJECT_ADDITIVE_CUBE) {
-                    CSGCube* cubeVolume = Scene::GetCubeVolumeAdditiveByIndex(g_selectedObjectIndex);
-                    if (cubeVolume) {
-                        cubeVolume->SetTransform(gizmoTransform);
-                        gizmoMatrix = cubeVolume->GetModelMatrix();
-                    }
-                }
-                if (g_selectedObjectType == ObjectType::CSG_OBJECT_SUBTRACTIVE) {
-                    CSGCube* cubeVolume = Scene::GetCubeVolumeSubtractiveByIndex(g_selectedObjectIndex);
-                    if (cubeVolume) {
-                        cubeVolume->SetTransform(gizmoTransform);
-                        gizmoMatrix = cubeVolume->GetModelMatrix();
-                    }
-                }
-                if (g_selectedObjectType == ObjectType::DOOR) {
-                    Door* door = Scene::GetDoorByIndex(g_selectedObjectIndex);
-                    if (door) {
-                        door->SetPosition(glm::vec3(pos.x, pos.y - DOOR_HEIGHT / 2.0f, pos.z));
-                        gizmoMatrix = door->GetGizmoMatrix();
-                    }
-                }
-                if (g_selectedObjectType == ObjectType::GLASS) {
-                    Window* window = Scene::GetWindowByIndex(g_selectedObjectIndex);
-                    if (window) {
-                        window->SetPosition(glm::vec3(pos.x, pos.y - 1.5f, pos.z));
-                        gizmoMatrix = window->GetGizmoMatrix();
-                    }
-                }
-                RebuildEverything();
-            }
-        }
-
-        // Rotate selected door or window
-        if (ObjectIsSelected()) {
-            if (Input::KeyPressed(HELL_KEY_Y)) {
-                if (g_selectedObjectType == ObjectType::DOOR) {
-                    Door* door = Scene::GetDoorByIndex(g_selectedObjectIndex);
-                    if (door) {
-                        door->Rotate90();
-                        gizmoMatrix = door->GetGizmoMatrix();
-                    }
-                }
-                if (g_selectedObjectType == ObjectType::GLASS) {
-                    Window* window = Scene::GetWindowByIndex(g_selectedObjectIndex);
-                    if (window) {
-                        window->Rotate90();
-                        gizmoMatrix = window->GetGizmoMatrix();
-                    }
-                }
-            }
-        }
+        UpdateSelectedObjectGizmo();
+        UpdateVertexObjectGizmo();
 
         // Delete selected object
         if (Input::KeyPressed(HELL_KEY_BACKSPACE) && g_hoveredObjectIndex != -1) {
@@ -572,6 +786,22 @@ namespace Editor {
         return glm::inverse(g_editorViewMatrix)[3];
     }
 
+    glm::vec3 GetSelectedVertexPosition() {
+        return g_selectedVertexPosition;
+    }
+
+    glm::vec3 GetHoveredVertexPosition() {
+        return g_hoveredVertexPosition;
+    }
+
+    int GetHoveredVertexIndex() {
+        return g_hoveredVertexIndex;
+    }
+
+    int GetSelectedVertexIndex() {
+        return g_selectedVertexIndex;
+    }
+
     std::string& GetDebugText() {
         return g_debugText;
     }
@@ -678,8 +908,10 @@ namespace Editor {
         // Create insert menu
         else if (GetCurrentMenuType() == MenuType::INSERT) {
             g_menuItems.push_back({ "CSG Additive Cube", MenuItem::Type::INSERT_CSG_ADDITIVE });
-            g_menuItems.push_back({ "CSG Additive Plane", MenuItem::Type::INSERT_CSG_ADDITIVE_PLANE });
             g_menuItems.push_back({ "CSG Subtractive Cube", MenuItem::Type::INSERT_CSG_SUBTRACTIVE });
+            g_menuItems.push_back({ "CSG Wall Plane", MenuItem::Type::INSERT_WALL_PLANE });
+            g_menuItems.push_back({ "CSG Floor Plane", MenuItem::Type::INSERT_FLOOR_PLANE });
+            g_menuItems.push_back({ "CSG Ceiling Plane", MenuItem::Type::INSERT_CEILING_PLANE });
             g_menuItems.push_back({ "Light", MenuItem::Type::INSERT_LIGHT });
             g_menuItems.push_back({ "Door", MenuItem::Type::INSERT_DOOR });
             g_menuItems.push_back({ "Window\n", MenuItem::Type::INSERT_WINDOW });
@@ -715,7 +947,8 @@ namespace Editor {
             else if (g_selectedObjectType == ObjectType::CSG_OBJECT_ADDITIVE_CUBE || g_selectedObjectType == ObjectType::CSG_OBJECT_SUBTRACTIVE && g_selectedObjectIndex != -1) {
                 CSGCube* cubeVolume = nullptr;
                 if (g_selectedObjectType == ObjectType::CSG_OBJECT_ADDITIVE_CUBE) {
-                    cubeVolume = Scene::GetCubeVolumeAdditiveByIndex(g_selectedObjectIndex);
+                    CSGObject& csgObject = CSG::GetCSGObjects()[g_selectedObjectIndex];
+                    cubeVolume = Scene::GetCubeVolumeAdditiveByIndex(csgObject.m_parentIndex);
                 }
                 if (g_selectedObjectType == ObjectType::CSG_OBJECT_SUBTRACTIVE) {
                     cubeVolume = Scene::GetCubeVolumeSubtractiveByIndex(g_selectedObjectIndex);
@@ -734,6 +967,17 @@ namespace Editor {
                     g_menuItems.push_back({ "Tex Scale", MenuItem::Type::VALUE_FLOAT, &cubeVolume->textureScale, 0.1f, 1 });
                     g_menuItems.push_back({ "Tex Offset X", MenuItem::Type::VALUE_FLOAT, &cubeVolume->textureOffsetX, 0.1f, 1 });
                     g_menuItems.push_back({ "Tex Offset Y", MenuItem::Type::VALUE_FLOAT, &cubeVolume->textureOffsetY, 0.1f, 1 });
+                }
+            }
+
+            else if (g_selectedObjectType == ObjectType::CSG_OBJECT_ADDITIVE_WALL_PLANE) {
+                CSGObject& csgObject = CSG::GetCSGObjects()[g_selectedObjectIndex];
+                CSGPlane* csgPlane = Scene::GetWallPlaneByIndex(csgObject.m_parentIndex);
+                if (csgPlane) {
+                    g_menuItems.push_back({ "Material", MenuItem::Type::VALUE_INT, &csgPlane->materialIndex, 1, 1 });
+                    g_menuItems.push_back({ "Tex Scale", MenuItem::Type::VALUE_FLOAT, &csgPlane->textureScale, 0.1f, 1 });
+                    g_menuItems.push_back({ "Tex Offset X", MenuItem::Type::VALUE_FLOAT, &csgPlane->textureOffsetX, 0.1f, 1 });
+                    g_menuItems.push_back({ "Tex Offset Y", MenuItem::Type::VALUE_FLOAT, &csgPlane->textureOffsetY, 0.1f, 1 });
                 }
             }
             else if (g_selectedObjectType == ObjectType::LIGHT && g_selectedObjectIndex != -1) {
@@ -813,6 +1057,9 @@ namespace Editor {
             if (modified) {
                 if (g_selectedObjectType == ObjectType::DOOR ||
                     g_selectedObjectType == ObjectType::CSG_OBJECT_ADDITIVE_CUBE ||
+                    g_selectedObjectType == ObjectType::CSG_OBJECT_ADDITIVE_FLOOR_PLANE ||
+                    g_selectedObjectType == ObjectType::CSG_OBJECT_ADDITIVE_WALL_PLANE ||
+                    g_selectedObjectType == ObjectType::CSG_OBJECT_ADDITIVE_CEILING_PLANE ||
                     g_selectedObjectType == ObjectType::CSG_OBJECT_SUBTRACTIVE ||
                     g_selectedObjectType == ObjectType::GLASS ||
                     g_selectedObjectType == ObjectType::WINDOW) {
@@ -850,20 +1097,31 @@ namespace Editor {
                 SetCurrentMenuType(MenuType::SELECTED_OBJECT);
                 RebuildEverything();
             }
-            else if (type == MenuItem::Type::INSERT_CSG_ADDITIVE_PLANE) {
+            else if (type == MenuItem::Type::INSERT_WALL_PLANE) {
                 Transform transform;
                 transform.position = spawnPos;
                 transform.scale = glm::vec3(1.0f);
-
-                CSGCube& csgShape = Scene::g_csgAdditiveCubes.emplace_back();
-                csgShape.SetTransform(transform);
-                csgShape.materialIndex = AssetManager::GetMaterialIndex("GlockAmmoBox");
-                csgShape.m_brushShape = BrushShape::PLANE;
-
-                g_selectedObjectIndex = Scene::g_csgAdditiveCubes.size() - 1;
-                g_selectedObjectType = ObjectType::CSG_OBJECT_ADDITIVE_CUBE;
+                CSGPlane& plane = Scene::g_csgAdditiveWallPlanes.emplace_back();
+                plane.m_veritces[TL] = spawnPos;
+                plane.m_veritces[TR] = spawnPos;
+                plane.m_veritces[BL] = spawnPos;
+                plane.m_veritces[BR] = spawnPos;
+                plane.m_veritces[TL].y += 0.5f;
+                plane.m_veritces[BL].y -= 0.5f;
+                plane.m_veritces[TR].y += 0.5f;
+                plane.m_veritces[BR].y -= 0.5f;
+                plane.m_veritces[TR] += Game::GetPlayerByIndex(0)->GetCameraRight() * 0.5f;
+                plane.m_veritces[BR] += Game::GetPlayerByIndex(0)->GetCameraRight() * 0.5f;
+                plane.m_veritces[TL] += Game::GetPlayerByIndex(0)->GetCameraRight() * -0.5f;
+                plane.m_veritces[BL] += Game::GetPlayerByIndex(0)->GetCameraRight() * -0.5f;
+                plane.textureScale = 1.0f;
+                plane.materialIndex = AssetManager::GetMaterialIndex("GlockAmmoBox");
+                g_selectedObjectIndex = Scene::g_csgAdditiveWallPlanes.size() - 1;
+                g_selectedObjectType = ObjectType::CSG_OBJECT_ADDITIVE_WALL_PLANE;
                 SetCurrentMenuType(MenuType::SELECTED_OBJECT);
                 RebuildEverything();
+                Scene::RecreateCeilingTrims();
+                Scene::RecreateFloorTrims();
             }
             else if (type == MenuItem::Type::INSERT_CSG_SUBTRACTIVE) {
                 Transform transform;
@@ -986,7 +1244,16 @@ namespace Editor {
                     headingText += "------- DOOR -------";
                 }
                 else if (g_selectedObjectType == ObjectType::CSG_OBJECT_ADDITIVE_CUBE) {
-                    headingText += "--- ADDITIVE CSG ---";
+                    headingText += "-- ADDITIVE CSG " + std::to_string(g_selectedObjectIndex) + " -- ";
+                }
+                else if (g_selectedObjectType == ObjectType::CSG_OBJECT_ADDITIVE_CEILING_PLANE) {
+                    headingText += "--- CEILING PLANE ---";
+                }
+                else if (g_selectedObjectType == ObjectType::CSG_OBJECT_ADDITIVE_WALL_PLANE) {
+                    headingText += "---- WALL CSG " + std::to_string(g_selectedObjectIndex) + " ---- ";
+                }
+                else if (g_selectedObjectType == ObjectType::CSG_OBJECT_ADDITIVE_FLOOR_PLANE) {
+                    headingText += "--- FLOOR PLANE ---";
                 }
                 else if (g_selectedObjectType == ObjectType::CSG_OBJECT_SUBTRACTIVE) {
                     headingText += "-- SUBTRACTIVE CSG --";

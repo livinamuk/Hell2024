@@ -46,6 +46,13 @@ struct CameraData {
     float finalImageColorB;
 };
 
+struct PlayerData {
+    int flashlightOn;
+    int padding0;
+    int padding1;
+    int padding2;
+};
+
 struct Light {
     float posX;
     float posY;
@@ -92,9 +99,11 @@ layout(std430, binding = 16) readonly buffer CameraDataArray {
 layout(std430, binding = 20) buffer Buffer2 {
     TileData tileData[];
 };
-layout(std430, binding = 21) buffer FogAABB {
-    AABB fogAABB[];
+
+layout(std430, binding = 21) buffer PlayerDataBuffer {
+    PlayerData playerData[];
 };
+
 
 vec3 gridSamplingDisk[20] = vec3[](
    vec3(1, 1,  1), vec3( 1, -1,  1), vec3(-1, -1,  1), vec3(-1, 1,  1),
@@ -586,8 +595,11 @@ void main() {
 		spotLighting = max(spotLighting, vec3(0));
 		spotLighting *= spotLightingFactor;
 	
-		finalLighting += spotLighting;		
-		//finalLighting += spotLightingFactor;
+
+		if (playerData[i].flashlightOn == 1) {
+			finalLighting += spotLighting;
+		}
+		
 	}
 	
 	// Fog
@@ -645,6 +657,6 @@ void main() {
 	// Brightness
 	finalLighting -= vec3(0.020);
 		
-	imageStore(lightingTexture, pixelCoords, vec4(finalLighting, 1));	
-	//imageStore(lightingTexture, pixelCoords, vec4(normal, 1));	
+	imageStore(lightingTexture, pixelCoords, vec4(finalLighting, 1));
+	//imageStore(lightingTexture, pixelCoords, vec4(normal, 1));
 }

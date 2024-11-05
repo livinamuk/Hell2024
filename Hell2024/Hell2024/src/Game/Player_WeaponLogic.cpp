@@ -48,6 +48,8 @@ void Player::UpdateViewWeaponLogic(float deltaTime) {
     AmmoInfo* ammoInfo = WeaponManager::GetAmmoInfoByName(weaponInfo->ammoType);
     AmmoState* ammoState = GetAmmoStateByName(weaponInfo->ammoType);
 
+    m_firedThisFrame = false;
+
     /*
      █▀▄▀█ █▀▀ █   █▀▀ █▀▀
      █ ▀ █ █▀▀ █   █▀▀ █▀▀
@@ -185,6 +187,7 @@ void Player::UpdateViewWeaponLogic(float deltaTime) {
                 if (weaponInfo->animationNames.adsFire.size()) {
                     int rand = std::rand() % weaponInfo->animationNames.adsFire.size();
                     viewWeapon->PlayAnimation(weaponInfo->animationNames.adsFire[rand], weaponInfo->animationSpeeds.adsFire);
+                    m_crosshairCrossSize = 40;
                 }
                 if (!weaponState->hasSilencer) {
                     if (weaponInfo->audioFiles.fire.size()) {
@@ -196,7 +199,7 @@ void Player::UpdateViewWeaponLogic(float deltaTime) {
                     Audio::PlayAudio("Silenced.wav", 1.0f);
                 }
                 SpawnMuzzleFlash();
-                SpawnBullet(0.05f, Weapon::AKS74U);
+                SpawnBullet(0.05f * m_accuracyModifer, Weapon::AKS74U);
                 SpawnCasing(ammoInfo);
                 weaponState->ammoInMag--;
             }
@@ -250,6 +253,7 @@ void Player::UpdateViewWeaponLogic(float deltaTime) {
         // Fire (has ammo)
         if (triggeredFire && CanFire() && weaponState->ammoInMag > 0) {
             _weaponAction = FIRE;
+            m_crosshairCrossSize = 40;
 
             // Await cock
             if (weaponInfo->revolverCockFrameNumber != 0) {
@@ -257,7 +261,7 @@ void Player::UpdateViewWeaponLogic(float deltaTime) {
             }
 
             SpawnMuzzleFlash();
-            SpawnBullet(0.05f, Weapon::AKS74U);
+            SpawnBullet(0.05f * m_accuracyModifer, Weapon::AKS74U);
             SpawnCasing(ammoInfo);
             weaponState->ammoInMag--;
 
@@ -635,10 +639,18 @@ void Player::UpdateViewWeaponLogic(float deltaTime) {
     }
 
 
+    if (m_firedThisFrame) {
+        m_accuracyModifer = 1;
+    }
 
-
+    m_accuracyModifer = Util::FInterpTo(m_accuracyModifer, 0, deltaTime, 5.0);
 
     viewWeapon->Update(deltaTime);
+
+
+    if (!PressingFire()) {
+        m_crosshairCrossSize = Util::FInterpTo(m_crosshairCrossSize, 0, deltaTime, 10.0);
+    }
 }
 
 /*

@@ -10,6 +10,7 @@
 #include "../Renderer/GlobalIllumination.h"
 #include "../Renderer/Renderer.h"
 #include "../Pathfinding/Pathfinding2.h"
+#include "RapidHotload.h"
 
 namespace Game {
 
@@ -20,7 +21,7 @@ namespace Game {
     bool _isLoaded = false;
     double _deltaTimeAccumulator = 0.0;
     double _fixedDeltaTime = 1.0 / 60.0;
-    std::vector<Player> _players;
+    std::vector<Player> g_players;
     bool _showDebugText = true;
 
     bool g_firstFrame = true;
@@ -41,25 +42,11 @@ namespace Game {
 
         GlobalIllumination::RecalculateGI();
 
-       //GlobalIllumination::DestroyAllLightVolumes();
-       //GlobalIllumination::CreatePointCloud();
-       ////GlobalIllumination::CreateLightVolume(11.0f, 5.5f, 11.0f, -6.6f, 0.0f, -8.0f);
-       //GlobalIllumination::CreateLightVolume(15.0f, 7.5f, 11.0f, -8.6f, -2.0f, -8.0f);
-
-        //CreatePlayers(2);
-        CreatePlayers(4);
+        CreatePlayers(2);
 
         Scene::Init();
 
 
-       //Scene::LoadEmptyScene();
-       //LightCreateInfo createInfo;
-       //createInfo.position = glm::vec3(0, 2, 0);
-       //createInfo.color = DEFAULT_LIGHT_COLOR;
-       //createInfo.radius = 4;
-       //createInfo.strength = 0.6;
-       //createInfo.type = 2;
-       //Scene::CreateLight(createInfo);
 
 
         Model* model = AssetManager::GetModelByName("SPAS_Isolated");
@@ -93,6 +80,8 @@ namespace Game {
             g_thisFrame = glfwGetTime();
             g_firstFrame = false;
         }
+
+        RapidHotload::Update();
 
         // Delta time
         g_lastFrame = g_thisFrame;
@@ -139,7 +128,7 @@ namespace Game {
 
         // Player update
         InputMulti::Update();
-        for (Player& player : _players) {
+        for (Player& player : g_players) {
             player.Update(deltaTime);
         }
         InputMulti::ResetMouseOffsets();
@@ -156,21 +145,26 @@ namespace Game {
             g_dogDeaths = std::stoi(buffer.str());
         }
 
-
         if (g_playerDeaths == -1) {
             std::ifstream file("PlayerDeaths.txt");
             std::stringstream buffer;
             buffer << file.rdbuf();
             g_playerDeaths = std::stoi(buffer.str());
         }
+
+        // Populate Player data
+        for (int i = 0; i < g_players.size(); i++) {
+            g_playerData[i].flashlightOn = g_players[i].m_flashlightOn;
+        }
     }
 
     void CreatePlayers(unsigned int playerCount) {
 
-        _players.clear();
+        g_players.clear();
+        g_playerData.resize(4);
 
         for (int i = 0; i < playerCount; i++) {
-            Game::_players.push_back(Player(i));
+            Game::g_players.push_back(Player(i));
         }
 
         SetPlayerKeyboardAndMouseIndex(0, 0, 0);
@@ -183,33 +177,33 @@ namespace Game {
         PxU32 p3RagdollCollisionGroupFlags = RaycastGroup::PLAYER_3_RAGDOLL;
         PxU32 p4RagdollCollisionGroupFlags = RaycastGroup::PLAYER_4_RAGDOLL;
 
-        AnimatedGameObject* p1characterModel = Scene::GetAnimatedGameObjectByIndex(Game::_players[0].GetCharacterModelAnimatedGameObjectIndex());
-        AnimatedGameObject* p2characterModel = Scene::GetAnimatedGameObjectByIndex(Game::_players[1].GetCharacterModelAnimatedGameObjectIndex());
-        AnimatedGameObject* p3characterModel = Scene::GetAnimatedGameObjectByIndex(Game::_players[2].GetCharacterModelAnimatedGameObjectIndex());
-        AnimatedGameObject* p4characterModel = Scene::GetAnimatedGameObjectByIndex(Game::_players[3].GetCharacterModelAnimatedGameObjectIndex());
+        AnimatedGameObject* p1characterModel = Scene::GetAnimatedGameObjectByIndex(Game::g_players[0].GetCharacterModelAnimatedGameObjectIndex());
+        AnimatedGameObject* p2characterModel = Scene::GetAnimatedGameObjectByIndex(Game::g_players[1].GetCharacterModelAnimatedGameObjectIndex());
+        AnimatedGameObject* p3characterModel = Scene::GetAnimatedGameObjectByIndex(Game::g_players[2].GetCharacterModelAnimatedGameObjectIndex());
+        AnimatedGameObject* p4characterModel = Scene::GetAnimatedGameObjectByIndex(Game::g_players[3].GetCharacterModelAnimatedGameObjectIndex());
 
         p1characterModel->LoadRagdoll("UnisexGuy3.rag", p1RagdollCollisionGroupFlags);
         p2characterModel->LoadRagdoll("UnisexGuy3.rag", p2RagdollCollisionGroupFlags);
-        Game::_players[0]._interactFlags = RaycastGroup::RAYCAST_ENABLED;
-        Game::_players[0]._interactFlags &= ~RaycastGroup::PLAYER_1_RAGDOLL;
-        Game::_players[1]._interactFlags = RaycastGroup::RAYCAST_ENABLED;
-        Game::_players[1]._interactFlags &= ~RaycastGroup::PLAYER_2_RAGDOLL;
-        Game::_players[0]._bulletFlags = RaycastGroup::RAYCAST_ENABLED | RaycastGroup::PLAYER_2_RAGDOLL | RaycastGroup::PLAYER_3_RAGDOLL | RaycastGroup::PLAYER_4_RAGDOLL | RaycastGroup::DOBERMAN;
-        Game::_players[1]._bulletFlags = RaycastGroup::RAYCAST_ENABLED | RaycastGroup::PLAYER_1_RAGDOLL | RaycastGroup::PLAYER_3_RAGDOLL | RaycastGroup::PLAYER_4_RAGDOLL | RaycastGroup::DOBERMAN;
-        Game::_players[0]._playerName = "Orion";
-        Game::_players[1]._playerName = "CrustyAssCracker";
+        Game::g_players[0]._interactFlags = RaycastGroup::RAYCAST_ENABLED;
+        Game::g_players[0]._interactFlags &= ~RaycastGroup::PLAYER_1_RAGDOLL;
+        Game::g_players[1]._interactFlags = RaycastGroup::RAYCAST_ENABLED;
+        Game::g_players[1]._interactFlags &= ~RaycastGroup::PLAYER_2_RAGDOLL;
+        Game::g_players[0]._bulletFlags = RaycastGroup::RAYCAST_ENABLED | RaycastGroup::PLAYER_2_RAGDOLL | RaycastGroup::PLAYER_3_RAGDOLL | RaycastGroup::PLAYER_4_RAGDOLL | RaycastGroup::DOBERMAN;
+        Game::g_players[1]._bulletFlags = RaycastGroup::RAYCAST_ENABLED | RaycastGroup::PLAYER_1_RAGDOLL | RaycastGroup::PLAYER_3_RAGDOLL | RaycastGroup::PLAYER_4_RAGDOLL | RaycastGroup::DOBERMAN;
+        Game::g_players[0]._playerName = "Orion";
+        Game::g_players[1]._playerName = "CrustyAssCracker";
 
-        if (_players.size() == 4) {
+        if (g_players.size() == 4) {
             p3characterModel->LoadRagdoll("UnisexGuy3.rag", p3RagdollCollisionGroupFlags);
             p4characterModel->LoadRagdoll("UnisexGuy3.rag", p4RagdollCollisionGroupFlags);
-            Game::_players[2]._interactFlags = RaycastGroup::RAYCAST_ENABLED;
-            Game::_players[2]._interactFlags &= ~RaycastGroup::PLAYER_3_RAGDOLL;
-            Game::_players[3]._interactFlags = RaycastGroup::RAYCAST_ENABLED;
-            Game::_players[3]._interactFlags &= ~RaycastGroup::PLAYER_4_RAGDOLL;
-            Game::_players[2]._bulletFlags = RaycastGroup::RAYCAST_ENABLED | RaycastGroup::PLAYER_1_RAGDOLL | RaycastGroup::PLAYER_2_RAGDOLL | RaycastGroup::PLAYER_4_RAGDOLL | RaycastGroup::DOBERMAN;
-            Game::_players[3]._bulletFlags = RaycastGroup::RAYCAST_ENABLED | RaycastGroup::PLAYER_1_RAGDOLL | RaycastGroup::PLAYER_2_RAGDOLL | RaycastGroup::PLAYER_3_RAGDOLL | RaycastGroup::DOBERMAN;
-            Game::_players[2]._playerName = "P3";
-            Game::_players[3]._playerName = "P4";
+            Game::g_players[2]._interactFlags = RaycastGroup::RAYCAST_ENABLED;
+            Game::g_players[2]._interactFlags &= ~RaycastGroup::PLAYER_3_RAGDOLL;
+            Game::g_players[3]._interactFlags = RaycastGroup::RAYCAST_ENABLED;
+            Game::g_players[3]._interactFlags &= ~RaycastGroup::PLAYER_4_RAGDOLL;
+            Game::g_players[2]._bulletFlags = RaycastGroup::RAYCAST_ENABLED | RaycastGroup::PLAYER_1_RAGDOLL | RaycastGroup::PLAYER_2_RAGDOLL | RaycastGroup::PLAYER_4_RAGDOLL | RaycastGroup::DOBERMAN;
+            Game::g_players[3]._bulletFlags = RaycastGroup::RAYCAST_ENABLED | RaycastGroup::PLAYER_1_RAGDOLL | RaycastGroup::PLAYER_2_RAGDOLL | RaycastGroup::PLAYER_3_RAGDOLL | RaycastGroup::DOBERMAN;
+            Game::g_players[2]._playerName = "P3";
+            Game::g_players[3]._playerName = "P4";
         }
 
 
@@ -221,7 +215,7 @@ namespace Game {
     }
 
     const int GetPlayerCount() {
-        return _players.size();
+        return g_players.size();
     }
 
     const GameMode& GetGameMode() {
@@ -229,8 +223,8 @@ namespace Game {
     }
 
     Player* GetPlayerByIndex(unsigned int index) {
-        if (index >= 0 && index < _players.size()) {
-            return &_players[index];
+        if (index >= 0 && index < g_players.size()) {
+            return &g_players[index];
         }
         else {
             //std::cout << "Game::GetPlayerByIndex() failed because index was out of range. Size of Game::_players is " << GetPlayerCount() << "\n";
@@ -240,13 +234,13 @@ namespace Game {
 
     void SetPlayerKeyboardAndMouseIndex(int playerIndex, int keyboardIndex, int mouseIndex) {
         if (playerIndex >= 0 && playerIndex < Game::GetPlayerCount()) {
-            _players[playerIndex].SetKeyboardIndex(keyboardIndex);
-            _players[playerIndex].SetMouseIndex(mouseIndex);
+            g_players[playerIndex].SetKeyboardIndex(keyboardIndex);
+            g_players[playerIndex].SetMouseIndex(mouseIndex);
         }
     }
 
     void SetPlayerGroundedStates() {
-        for (Player& player : _players) {
+        for (Player& player : g_players) {
             player._isGrounded = false;
             for (auto& report : Physics::_characterCollisionReports) {
                 if (report.characterController == player._characterController && report.hitNormal.y > 0.5f) {
@@ -261,15 +255,15 @@ namespace Game {
         SetPlayerKeyboardAndMouseIndex(1, 1, 1);
         SetPlayerKeyboardAndMouseIndex(2, 1, 1);
         SetPlayerKeyboardAndMouseIndex(3, 1, 1);
-        for (Player& player : _players) {
-            _players[0].DisableControl();
+        for (Player& player : g_players) {
+            g_players[0].DisableControl();
         }
-        _players[0].EnableControl();
+        g_players[0].EnableControl();
     }
 
     const int GetPlayerIndexFromPlayerPointer(Player* player) {
-        for (int i = 0; i < _players.size(); i++) {
-            if (&_players[i] == player) {
+        for (int i = 0; i < g_players.size(); i++) {
+            if (&g_players[i] == player) {
                 return i;
             }
         }
@@ -300,21 +294,21 @@ namespace Game {
 
     void PrintPlayerControlIndices() {
         std::cout << "\n";
-        for (int i = 0; i < _players.size(); i++) {
+        for (int i = 0; i < g_players.size(); i++) {
             std::cout << "Player " << i << ": keyboard[";
-            std::cout << _players[i].GetKeyboardIndex() << "] mouse[";
-            std::cout << _players[i].GetMouseIndex() << "]\n";
+            std::cout << g_players[i].GetKeyboardIndex() << "] mouse[";
+            std::cout << g_players[i].GetMouseIndex() << "]\n";
         }
     }
 
     void RespawnAllPlayers() {
-        for (Player& player : _players) {
+        for (Player& player : g_players) {
             player.Respawn();
         }
     }
 
     void RespawnAllDeadPlayers() {
-        for (Player& player : _players) {
+        for (Player& player : g_players) {
             if (player.IsDead()) {
                 player.Respawn();
             }

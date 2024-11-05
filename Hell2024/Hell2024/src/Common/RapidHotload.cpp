@@ -1,5 +1,21 @@
 #include "RapidHotload.h"
 #include "../Game/Game.h"
+#include "../Game/Scene.h"
+
+
+void RapidHotload::Update() {
+        
+    //for (GameObject& gameObject : Scene::GetGamesObjects()) {
+    //
+    //    glm::vec3 origin = glm::vec3(2, 0.5, 0);
+    //    if (gameObject.GetName() == "BlenderHouse") {
+    //        gameObject.SetPosition(origin);
+    //        std::cout << "moved house\n";
+    //    }
+    //}
+    
+
+}
 
 /*
 glm::mat4 RapidHotload::TestMatrix() {

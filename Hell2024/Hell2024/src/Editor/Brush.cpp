@@ -47,6 +47,7 @@ void Brush::SetBrushType(BrushType type) {
 
 void Brush::SetTransform(const glm::mat4& transform) {
     m_transform = transform;
+    CreateCubeTriangles(RED);
 }
 
 const glm::mat4& Brush::GetTransform() {
@@ -81,7 +82,7 @@ void Brush::update_display_list() { // RENAME TO GET VERTICES AND ADD CHECK TO S
             if (GetBrushShape() == BrushShape::PLANE) {
                 glm::vec3 forward = Util::GetForwardVectorFromMatrix(m_transform);
                 float angle = glm::acos(glm::dot(normal, forward)); 
-                const float angleThreshold = glm::radians(5.0f);
+                const float angleThreshold = glm::radians(1.0f);
                 if (angle > angleThreshold) {
                     continue;
                 }
@@ -101,6 +102,40 @@ void Brush::update_display_list() { // RENAME TO GET VERTICES AND ADD CHECK TO S
             }
         }
     }
+}
+
+void Brush::CreateCubeTriangles(glm::vec3 color) {
+    g_cubeTriVertices.clear();
+    float size = 1.0f;
+    glm::vec3 FTL = m_transform * glm::vec4(-size, size, size, 1.0f);
+    glm::vec3 FTR = m_transform * glm::vec4(size, size, size, 1.0f);
+    glm::vec3 FBL = m_transform * glm::vec4(-size, -size, size, 1.0f);
+    glm::vec3 FBR = m_transform * glm::vec4(size, -size, size, 1.0f);
+
+    glm::vec3 BTL = m_transform * glm::vec4(-size, size, -size, 1.0f);
+    glm::vec3 BTR = m_transform * glm::vec4(size, size, -size, 1.0f);
+    glm::vec3 BBL = m_transform * glm::vec4(-size, -size, -size, 1.0f);
+    glm::vec3 BBR = m_transform * glm::vec4(size, -size, -size, 1.0f);
+
+    g_cubeTriVertices.push_back(Vertex(FTL, color));
+    g_cubeTriVertices.push_back(Vertex(FTR, color));
+    g_cubeTriVertices.push_back(Vertex(FBL, color));
+
+    g_cubeTriVertices.push_back(Vertex(FBL, color));
+    g_cubeTriVertices.push_back(Vertex(FTR, color));
+    g_cubeTriVertices.push_back(Vertex(FBR, color));
+
+    g_cubeTriVertices.push_back(Vertex(BTL, color));
+    g_cubeTriVertices.push_back(Vertex(BTR, color));
+    g_cubeTriVertices.push_back(Vertex(BBL, color));
+
+    g_cubeTriVertices.push_back(Vertex(BBL, color));
+    g_cubeTriVertices.push_back(Vertex(BTR, color));
+    g_cubeTriVertices.push_back(Vertex(BBR, color));
+}
+
+std::vector<Vertex>& Brush::GetCubeTriangles() {
+    return g_cubeTriVertices;
 }
 
 static float signed_distance(const glm::vec3& point, const csg::plane_t& plane) {
