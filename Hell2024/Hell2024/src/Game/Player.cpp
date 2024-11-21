@@ -564,10 +564,10 @@ void Player::UpdateMovement(float deltaTime) {
     // Gravity
     if (_isGrounded) {
         _yVelocity = -0.1f; // can't be 0, or the _isGrounded check next frame will fail
-        _yVelocity = -3.5f;
+        _yVelocity = -2.5f;
     }
     else {
-        float gravity = 15.75f; // 9.8 feels like the moon
+        float gravity = 21.75f; // 9.8 feels like the moon
         _yVelocity -= gravity * deltaTime;
     }
     float yDisplacement = _yVelocity * deltaTime;
@@ -716,7 +716,7 @@ void Player::CheckForDebugKeyPresses() {
 }
 
 bool Player::HasControl() {
-    return !m_ignoreControl;
+    return !m_ignoreControl && BackEnd::WindowHasFocus(); // Let's avoid having control when we are tabbed out coding and stuff...
 }
 
 AnimatedGameObject* Player::GetCharacterAnimatedGameObject() {

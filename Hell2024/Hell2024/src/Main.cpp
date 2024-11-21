@@ -24,8 +24,5 @@ extern "C" {
 // check out ​​nuklear ui library
 
 int main() {
-
-    std::cout << "We are all alone on life's journey, held captive by the limitations of human consciousness.\n";
     Engine::Run();
-    return 0;
 }

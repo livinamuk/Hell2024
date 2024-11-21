@@ -92,7 +92,6 @@ bool RegisterDeviceOfType(USHORT type, HWND eventWindow) {
 }
 
 void InputMulti::Init() {
-
     HINSTANCE hInstance = GetModuleHandle(NULL);
     WNDCLASS windowClass = {};
     windowClass.lpfnWndProc = targetWindowProc;
