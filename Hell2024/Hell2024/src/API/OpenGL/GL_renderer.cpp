@@ -822,7 +822,7 @@ void OpenGLRenderer::RenderFrame(RenderData& renderData) {
         }
         IndirectLightingPass();
         GlobalIllumination::IncrementFrameCounter();
-        std::cout << "Updating GI\n";
+        //std::cout << "Updating GI\n";
     }
 
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, g_ssbos.samplers);
@@ -2120,7 +2120,7 @@ void LightVolumePrePass(RenderData& renderData) {
             glActiveTexture(GL_TEXTURE0);
             glBindTexture(GL_TEXTURE_2D_ARRAY, OpenGLRenderer::g_lightVolumePrePassCubeMap.m_textureView);
             glDispatchCompute(1, 1, 1);
-            std::cout << "updating light " << i << "\n";
+            //std::cout << "updating light " << i << "\n";
         }
     }
 }

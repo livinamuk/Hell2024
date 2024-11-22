@@ -31,6 +31,7 @@ void Player::Update(float deltaTime) {
 
     if (g_awaitingRespawn) {
         Respawn();
+        std::cout << "Respawned Player: " << Player::_playerName << std::endl;
     }
 
     AnimatedGameObject* characterModel = Scene::GetAnimatedGameObjectByIndex(m_characterModelAnimatedGameObjectIndex);

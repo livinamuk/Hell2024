@@ -1522,7 +1522,7 @@ std::vector<RenderItem3D> GetTreeRenderItems() {
     if (Scene::g_needToPlantTrees) {
         Scene::g_needToPlantTrees = false;
 
-        Timer timer("PLANT SAMPLINGS");
+        //Timer timer("PLANT SAMPLINGS");
 
         int iterationMax = 800;
         int desiredTreeCount = 800;
