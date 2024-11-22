@@ -189,7 +189,7 @@ void Player::Respawn() {
     }
 
     GiveDefaultLoadout();
-    SwitchWeapon("Glock", SPAWNING);
+    SwitchWeapon("SPAS", SPAWNING);
 //    SwitchWeapon("GoldenGlock", SPAWNING);
 
     if (_characterController) {

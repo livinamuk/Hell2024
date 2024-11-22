@@ -157,6 +157,11 @@ public:
 
     // Weapon shit
     void UpdateViewWeaponLogic(float deltaTime);
+    void HandleMelee(AnimatedGameObject* viewWeapon, WeaponInfo* weaponInfo);
+    void HandlePistols(AnimatedGameObject* viewWeapon, WeaponInfo* weaponInfo, WeaponState* weaponState, AmmoState* ammoState, AmmoInfo* ammoInfo, float deltaTime);
+    void HandleShotguns(AnimatedGameObject* viewWeapon, WeaponInfo* weaponInfo, WeaponState* weaponState, AmmoState* ammoState, AmmoInfo* ammoInfo, float deltaTime);
+    bool WeaponMagIsEmpty(WeaponState* weaponState);
+
     void GiveDefaultLoadout();
     WeaponInfo* GetCurrentWeaponInfo();
     WeaponState* GetWeaponStateByName(std::string name);

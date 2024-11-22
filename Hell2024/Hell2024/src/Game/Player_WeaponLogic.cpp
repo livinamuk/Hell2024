@@ -39,22 +39,17 @@ void Player::GiveDefaultLoadout() {
 ███▌    ▄ ███    ███   ███    ███ ███  ███    ███
 █████▄▄██  ▀██████▀    ████████▀  █▀   ████████▀  */
 
+bool Player::WeaponMagIsEmpty(WeaponState* weaponState)
+{
+    return weaponState->ammoInMag <= 0;
+}
 
-void Player::UpdateViewWeaponLogic(float deltaTime) {
-
-    AnimatedGameObject* viewWeapon = GetViewWeaponAnimatedGameObject();
-    WeaponInfo* weaponInfo = GetCurrentWeaponInfo();
-    WeaponState* weaponState = GetWeaponStateByName(weaponInfo->name);
-    AmmoInfo* ammoInfo = WeaponManager::GetAmmoInfoByName(weaponInfo->ammoType);
-    AmmoState* ammoState = GetAmmoStateByName(weaponInfo->ammoType);
-
-    m_firedThisFrame = false;
-
+void Player::HandleMelee(AnimatedGameObject* viewWeapon, WeaponInfo* weaponInfo)
+{
     /*
-     █▀▄▀█ █▀▀ █   █▀▀ █▀▀
-     █ ▀ █ █▀▀ █   █▀▀ █▀▀
-     ▀   ▀ ▀▀▀ ▀▀▀ ▀▀▀ ▀▀▀ */
-
+    █▀▄▀█ █▀▀ █   █▀▀ █▀▀
+    █ ▀ █ █▀▀ █   █▀▀ █▀▀
+    ▀   ▀ ▀▀▀ ▀▀▀ ▀▀▀ ▀▀▀ */
     if (weaponInfo->type == WeaponType::MELEE) {
 
         // Idle
@@ -98,12 +93,11 @@ void Player::UpdateViewWeaponLogic(float deltaTime) {
             _weaponAction = IDLE;
         }
     }
+};
 
-    /*
-    █▀█ ▀█▀ █▀▀ ▀█▀ █▀█ █   █▀▀     █   █▀█ █ █ ▀█▀ █▀█ █▄█ █▀█ ▀█▀ ▀█▀ █▀▀ █▀▀
-    █▀▀  █  ▀▀█  █  █ █ █   ▀▀█   ▄▀    █▀█ █ █  █  █ █ █ █ █▀█  █   █  █   ▀▀█
-    ▀   ▀▀▀ ▀▀▀  ▀  ▀▀▀ ▀▀▀ ▀▀▀   ▀     ▀ ▀ ▀▀▀  ▀  ▀▀▀ ▀ ▀ ▀ ▀  ▀  ▀▀▀ ▀▀▀ ▀▀▀ */
 
+void Player::HandlePistols(AnimatedGameObject* viewWeapon, WeaponInfo* weaponInfo, WeaponState* weaponState, AmmoState* ammoState, AmmoInfo* ammoInfo, float deltaTime) // And automatic weapons for now. Make more modular
+{
     if (weaponInfo->type == WeaponType::PISTOL || weaponInfo->type == WeaponType::AUTOMATIC) {
         if (!weaponState) {
             return;
@@ -114,8 +108,8 @@ void Player::UpdateViewWeaponLogic(float deltaTime) {
             constexpr float speed = 20.0f;
             float zoomSpeed = 0.075f;
 
-            // Empty
-            if (CanFire() && PressedFire() && weaponState->ammoInMag == 0) {
+            // Empty mag on pistol and automatic weapons
+            if (CanFire() && PressedFire() && WeaponMagIsEmpty(weaponState)) {
                 Audio::PlayAudio("Dry_Fire.wav", 0.8f);
             }
 
@@ -180,9 +174,10 @@ void Player::UpdateViewWeaponLogic(float deltaTime) {
             PressingFire() && weaponInfo->type == WeaponType::PISTOL && weaponInfo->auomaticOverride ||
             PressingFire() && weaponInfo->type == WeaponType::AUTOMATIC
             );
+
         if (triggeredFire && CanFire() && InADS()) {
             // Has ammo
-            if (weaponState->ammoInMag > 0) {
+            if (!WeaponMagIsEmpty(weaponState)) {
                 _weaponAction = ADS_FIRE;
                 if (weaponInfo->animationNames.adsFire.size()) {
                     int rand = std::rand() % weaponInfo->animationNames.adsFire.size();
@@ -231,7 +226,7 @@ void Player::UpdateViewWeaponLogic(float deltaTime) {
             if (_weaponAction == RELOAD) {
                 frameNumber = weaponInfo->reloadMagInFrameNumber;
             }
-            if(_weaponAction == RELOAD_FROM_EMPTY) {
+            if (_weaponAction == RELOAD_FROM_EMPTY) {
                 frameNumber = weaponInfo->reloadEmptyMagInFrameNumber;
             }
             if (_needsAmmoReloaded && viewWeapon->AnimationIsPastFrameNumber(frameNumber)) {
@@ -375,18 +370,20 @@ void Player::UpdateViewWeaponLogic(float deltaTime) {
     if (weaponInfo->type == WeaponType::PISTOL && _weaponAction != RELOAD_FROM_EMPTY && weaponState->ammoInMag == 0) {
         weaponState->useSlideOffset = true;
     }
+}
 
-    /*
-    █▀▀ █ █ █▀█ ▀█▀ █▀▀ █ █ █▀█ █▀▀
-    ▀▀█ █▀█ █ █  █  █ █ █ █ █ █ ▀▀█
-    ▀▀▀ ▀ ▀ ▀▀▀  ▀  ▀▀▀ ▀▀▀ ▀ ▀ ▀▀▀ */
 
+
+void Player::HandleShotguns(AnimatedGameObject* viewWeapon, WeaponInfo* weaponInfo, WeaponState* weaponState, AmmoState* ammoState, AmmoInfo* ammoInfo, float deltaTime)
+{
     if (weaponInfo->type == WeaponType::SHOTGUN) {
+        //std::cout << "Current weapon is: SHOTGUN" << std::endl;
 
         // Empty
-        if (CanFire() && PressedFire() && weaponState->ammoInMag == 0) {
+        if (CanFire() && PressedFire() && WeaponMagIsEmpty(weaponState)) {
             Audio::PlayAudio("Dry_Fire.wav", 0.8f);
         }
+
         // Idle
         if (_weaponAction == IDLE) {
             if (Player::IsMoving()) {
@@ -456,8 +453,10 @@ void Player::UpdateViewWeaponLogic(float deltaTime) {
         if (_weaponAction == FIRE && viewWeapon->AnimationIsPastPercentage(100.0f)) {
             _weaponAction = IDLE;
         }
+
         // Reload
-        if (PressedReload() && CanReload()) {
+        if (PressedReload() && CanReload() && (_weaponAction != RELOAD_SHOTGUN_SINGLE_SHELL)) {
+            std::cout << "Reloading shotgun" << std::endl;
             viewWeapon->PlayAnimation(weaponInfo->animationNames.shotgunReloadStart, weaponInfo->animationSpeeds.shotgunReloadStart);
             _weaponAction = RELOAD_SHOTGUN_BEGIN;
         }
@@ -472,11 +471,13 @@ void Player::UpdateViewWeaponLogic(float deltaTime) {
 
             // Single shell
             if (singleShell) {
+                std::cout << "Single shell reloading" << std::endl;
                 viewWeapon->PlayAnimation(weaponInfo->animationNames.shotgunReloadOneShell, weaponInfo->animationSpeeds.shotgunReloadOneShell);
                 _weaponAction = RELOAD_SHOTGUN_SINGLE_SHELL;
             }
             // Double shell
             else {
+                std::cout << "Double shell reloading" << std::endl;
                 viewWeapon->PlayAnimation(weaponInfo->animationNames.shotgunReloadTwoShells, weaponInfo->animationSpeeds.shotgunReloadTwoShells);
                 _weaponAction = RELOAD_SHOTGUN_DOUBLE_SHELL;
             }
@@ -486,10 +487,14 @@ void Player::UpdateViewWeaponLogic(float deltaTime) {
         }
         // END RELOAD THING
         if (_weaponAction == RELOAD_SHOTGUN_SINGLE_SHELL && viewWeapon->IsAnimationComplete() && GetCurrentWeaponMagAmmo() == SHOTGUN_AMMO_SIZE) {
+            std::cout << "Single shell reload finished" << std::endl;
             viewWeapon->PlayAnimation(weaponInfo->animationNames.shotgunReloadEnd, weaponInfo->animationSpeeds.shotgunReloadEnd);
             _weaponAction = RELOAD_SHOTGUN_END;
         }
+
+
         if (_weaponAction == RELOAD_SHOTGUN_DOUBLE_SHELL && viewWeapon->IsAnimationComplete() && GetCurrentWeaponMagAmmo() == SHOTGUN_AMMO_SIZE) {
+            std::cout << "Double shell reload finished" << std::endl;
             viewWeapon->PlayAnimation(weaponInfo->animationNames.shotgunReloadEnd, weaponInfo->animationSpeeds.shotgunReloadEnd);
             _weaponAction = RELOAD_SHOTGUN_END;
         }
@@ -558,10 +563,21 @@ void Player::UpdateViewWeaponLogic(float deltaTime) {
             SpawnCasing(ammoInfo);
         }
     }
+}
 
+void Player::UpdateViewWeaponLogic(float deltaTime) {
 
+    AnimatedGameObject* viewWeapon = GetViewWeaponAnimatedGameObject();
+    WeaponInfo* weaponInfo = GetCurrentWeaponInfo();
+    WeaponState* weaponState = GetWeaponStateByName(weaponInfo->name);
+    AmmoInfo* ammoInfo = WeaponManager::GetAmmoInfoByName(weaponInfo->ammoType);
+    AmmoState* ammoState = GetAmmoStateByName(weaponInfo->ammoType);
 
+    m_firedThisFrame = false;
 
+    HandleMelee(viewWeapon, weaponInfo);
+    HandlePistols(viewWeapon, weaponInfo, weaponState, ammoState, ammoInfo, deltaTime);
+    HandleShotguns(viewWeapon, weaponInfo, weaponState, ammoState, ammoInfo, deltaTime);
 
     // Remove Smith bullets you don't have
     if (weaponInfo->name == "Smith & Wesson") {
