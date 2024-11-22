@@ -6,27 +6,25 @@
 #include "Input/InputMulti.h"
 #include "Util.hpp"
 #include "Timer.hpp"
+#include "Ammo.h"
 
 
 void Player::GiveDefaultLoadout() {
     GiveWeapon("Shotgun");
-    GiveAmmo("Shotgun", 50);
+    AmmoManager::GiveAmmo("Shotgun", 50);
 
     //GiveWeapon("Knife");
     //// GiveWeapon("GoldenKnife");
     //GiveWeapon("Glock");
+    //GiveAmmo("Glock", 80000);
     //GiveWeapon("GoldenGlock");
     //GiveWeapon("Tokarev");
+    //GiveAmmo("Tokarev", 200);
     //// GiveWeapon("Smith & Wesson");
     //GiveWeapon("AKS74U");
-    //GiveWeapon("P90");
-
-    //GiveWeapon("SPAS");
-
-    //GiveAmmo("Glock", 80000);
-    //GiveAmmo("Tokarev", 200);
     //GiveAmmo("AKS74U", 999999);
-
+    //GiveWeapon("P90");
+    //GiveWeapon("SPAS");
     //GiveRedDotToWeapon("GoldenGlock");
     // GiveSilencerToWeapon("Glock");
 }
@@ -84,7 +82,7 @@ void Player::HandleMelee(AnimatedGameObject* viewWeapon, WeaponInfo* weaponInfo)
 };
 
 
-void Player::HandlePistols(AnimatedGameObject* viewWeapon, WeaponInfo* weaponInfo, WeaponState* weaponState, AmmoState* ammoState, AmmoInfo* ammoInfo, float deltaTime) // And automatic weapons for now. Make more modular
+void Player::HandlePistols(AnimatedGameObject* viewWeapon, WeaponInfo* weaponInfo, WeaponState* weaponState, int ammoState, AmmoInfo* ammoInfo, float deltaTime) // And automatic weapons for now. Make more modular
 {
     if (weaponInfo->type == WeaponType::PISTOL || weaponInfo->type == WeaponType::AUTOMATIC) {
         if (!weaponState) {
@@ -218,9 +216,9 @@ void Player::HandlePistols(AnimatedGameObject* viewWeapon, WeaponInfo* weaponInf
                 frameNumber = weaponInfo->reloadEmptyMagInFrameNumber;
             }
             if (_needsAmmoReloaded && viewWeapon->AnimationIsPastFrameNumber(frameNumber)) {
-                int ammoToGive = std::min(weaponInfo->magSize - weaponState->ammoInMag, ammoState->ammoOnHand);
+                int ammoToGive = std::min(weaponInfo->magSize - weaponState->ammoInMag, AmmoManager::ammoOnHand);
                 weaponState->ammoInMag += ammoToGive;
-                ammoState->ammoOnHand -= ammoToGive;
+                AmmoManager::ammoOnHand -= ammoToGive;
                 _needsAmmoReloaded = false;
             }
         }
@@ -305,7 +303,7 @@ void Player::HandlePistols(AnimatedGameObject* viewWeapon, WeaponInfo* weaponInf
         // Add next revolver bullet
         if (_needsAmmoReloaded && _weaponAction == RELOAD_REVOLVER_LOOP && viewWeapon->AnimationIsPastFrameNumber(8)) {
             weaponState->ammoInMag++;
-            ammoState->ammoOnHand--;
+            AmmoManager::ammoOnHand--;
             _needsAmmoReloaded = false;
             Audio::PlayAudio("Smith_ReloadLoop0.wav", 1.0f);
         }
@@ -360,7 +358,7 @@ void Player::HandlePistols(AnimatedGameObject* viewWeapon, WeaponInfo* weaponInf
     }
 }
 
-void Player::HandleShotguns(AnimatedGameObject* viewWeapon, WeaponInfo* weaponInfo, WeaponState* weaponState, AmmoState* ammoState, AmmoInfo* ammoInfo, float deltaTime)
+void Player::HandleShotguns(AnimatedGameObject* viewWeapon, WeaponInfo* weaponInfo, WeaponState* weaponState, int ammoState, AmmoInfo* ammoInfo, float deltaTime)
 {
     if (weaponInfo->type == WeaponType::SHOTGUN) {
         //std::cout << "Current weapon is: SHOTGUN" << std::endl;
@@ -451,7 +449,7 @@ void Player::HandleShotguns(AnimatedGameObject* viewWeapon, WeaponInfo* weaponIn
         if (_weaponAction == RELOAD_SHOTGUN_BEGIN && viewWeapon->IsAnimationComplete()) {
             bool singleShell = false;
             if (weaponState->ammoInMag == 7 ||
-                ammoState->ammoOnHand == 1) {
+                AmmoManager::ammoOnHand == 1) {
                 singleShell = true;
             }
 
@@ -486,7 +484,7 @@ void Player::HandleShotguns(AnimatedGameObject* viewWeapon, WeaponInfo* weaponIn
         }
         // CONTINUE THE RELOAD THING
         if (_weaponAction == RELOAD_SHOTGUN_SINGLE_SHELL && viewWeapon->IsAnimationComplete()) {
-            if (ammoState->ammoOnHand > 0) {
+            if (AmmoManager::ammoOnHand > 0) {
                 viewWeapon->PlayAnimation(weaponInfo->animationNames.shotgunReloadOneShell, weaponInfo->animationSpeeds.shotgunReloadOneShell);
                 _weaponAction = RELOAD_SHOTGUN_SINGLE_SHELL;
                 _needsShotgunFirstShellAdded = true;
@@ -500,7 +498,7 @@ void Player::HandleShotguns(AnimatedGameObject* viewWeapon, WeaponInfo* weaponIn
         if (_weaponAction == RELOAD_SHOTGUN_DOUBLE_SHELL && viewWeapon->IsAnimationComplete()) {
             bool singleShell = false;
             if (weaponState->ammoInMag == weaponInfo->magSize - 1 ||
-                ammoState->ammoOnHand == 1) {
+                AmmoManager::ammoOnHand == 1) {
                 singleShell = true;
             }
             // Single shell
@@ -520,19 +518,19 @@ void Player::HandleShotguns(AnimatedGameObject* viewWeapon, WeaponInfo* weaponIn
         // Give ammo on reload
         if (_needsShotgunFirstShellAdded && _weaponAction == RELOAD_SHOTGUN_SINGLE_SHELL && viewWeapon->AnimationIsPastPercentage(35.0f)) {
             weaponState->ammoInMag++;
-            ammoState->ammoOnHand--;
+            AmmoManager::ammoOnHand--;
             _needsShotgunFirstShellAdded = false;
             Audio::PlayAudio("Shotgun_Reload.wav", 1.0f);
         }
         if (_needsShotgunFirstShellAdded && _weaponAction == RELOAD_SHOTGUN_DOUBLE_SHELL && viewWeapon->AnimationIsPastPercentage(28.0f)) {
             weaponState->ammoInMag++;
-            ammoState->ammoOnHand--;
+            AmmoManager::ammoOnHand--;
             _needsShotgunFirstShellAdded = false;
             Audio::PlayAudio("Shotgun_Reload.wav", 1.0f);
         }
         if (_needsShotgunSecondShellAdded && _weaponAction == RELOAD_SHOTGUN_DOUBLE_SHELL && viewWeapon->AnimationIsPastPercentage(62.0f)) {
             weaponState->ammoInMag++;
-            ammoState->ammoOnHand--;
+            AmmoManager::ammoOnHand--;
             _needsShotgunSecondShellAdded = false;
             Audio::PlayAudio("Shotgun_Reload.wav", 1.0f);
         }
@@ -557,7 +555,7 @@ void Player::UpdateViewWeaponLogic(float deltaTime) {
     WeaponInfo* weaponInfo = GetCurrentWeaponInfo();
     WeaponState* weaponState = GetWeaponStateByName(weaponInfo->name);
     AmmoInfo* ammoInfo = WeaponManager::GetAmmoInfoByName(weaponInfo->ammoType);
-    AmmoState* ammoState = GetAmmoStateByName(weaponInfo->ammoType);
+    int ammoState = AmmoManager::GetAmmoStateByName(weaponInfo->ammoType);
 
     m_firedThisFrame = false;
 
@@ -917,12 +915,13 @@ int Player::GetCurrentWeaponMagAmmo() {
     return 0;
 }
 
-int Player::GetCurrentWeaponTotalAmmo() {
+int Player::GetCurrentWeaponTotalAmmo() 
+{
     WeaponInfo* weaponInfo = GetCurrentWeaponInfo();
     if (weaponInfo) {
-        AmmoState* ammoState = GetAmmoStateByName(weaponInfo->ammoType);
+        int ammoState = AmmoManager::GetAmmoStateByName(weaponInfo->ammoType);
         if (ammoState) {
-            return ammoState->ammoOnHand;
+            return AmmoManager::ammoOnHand;
         }
     }
     return 0;
@@ -938,14 +937,6 @@ void Player::GiveWeapon(std::string name) {
     if (state && weaponInfo) {
         state->has = true;
         state->ammoInMag = weaponInfo->magSize;
-    }
-}
-
-void Player::GiveAmmo(std::string name, int amount) {
-    AmmoState* state = GetAmmoStateByName(name);
-    std::cout << "Giving " << name << " " << amount << " bullets" << std::endl;
-    if (state) {
-        state->ammoOnHand += amount;
     }
 }
 
@@ -969,15 +960,6 @@ WeaponState* Player::GetWeaponStateByName(std::string name) {
     for (int i = 0; i < m_weaponStates.size(); i++) {
         if (m_weaponStates[i].name == name) {
             return &m_weaponStates[i];
-        }
-    }
-    return nullptr;
-}
-
-AmmoState* Player::GetAmmoStateByName(std::string name) {
-    for (int i = 0; i < m_ammoStates.size(); i++) {
-        if (m_ammoStates[i].name == name) {
-            return &m_ammoStates[i];
         }
     }
     return nullptr;

@@ -190,8 +190,7 @@ void Player::Respawn() {
     }
 
     GiveDefaultLoadout();
-    SwitchWeapon("SPAS", SPAWNING);
-//    SwitchWeapon("GoldenGlock", SPAWNING);
+    SwitchWeapon("Shotgun", SPAWNING);
 
     if (_characterController) {
         PxExtendedVec3 globalPose = PxExtendedVec3(spawnPoint.position.x, spawnPoint.position.y, spawnPoint.position.z);

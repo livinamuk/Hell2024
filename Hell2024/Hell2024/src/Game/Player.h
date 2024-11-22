@@ -158,17 +158,15 @@ public:
     // Weapon shit
     void UpdateViewWeaponLogic(float deltaTime);
     void HandleMelee(AnimatedGameObject* viewWeapon, WeaponInfo* weaponInfo);
-    void HandlePistols(AnimatedGameObject* viewWeapon, WeaponInfo* weaponInfo, WeaponState* weaponState, AmmoState* ammoState, AmmoInfo* ammoInfo, float deltaTime);
-    void HandleShotguns(AnimatedGameObject* viewWeapon, WeaponInfo* weaponInfo, WeaponState* weaponState, AmmoState* ammoState, AmmoInfo* ammoInfo, float deltaTime);
+    void HandlePistols(AnimatedGameObject* viewWeapon, WeaponInfo* weaponInfo, WeaponState* weaponState, int ammoState, AmmoInfo* ammoInfo, float deltaTime);
+    void HandleShotguns(AnimatedGameObject* viewWeapon, WeaponInfo* weaponInfo, WeaponState* weaponState, int ammoState, AmmoInfo* ammoInfo, float deltaTime);
     bool WeaponMagIsEmpty(WeaponState* weaponState);
 
     void GiveDefaultLoadout();
     WeaponInfo* GetCurrentWeaponInfo();
     WeaponState* GetWeaponStateByName(std::string name);
     WeaponState* GetCurrentWeaponState();
-    AmmoState* GetAmmoStateByName(std::string name);
     void GiveWeapon(std::string name);
-    void GiveAmmo(std::string name, int amount);
     void SwitchWeapon(std::string name, WeaponAction weaponAction);
     void GiveRedDotToWeapon(std::string name);
     void GiveSilencerToWeapon(std::string name);
