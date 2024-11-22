@@ -6,6 +6,7 @@
 #include "../Physics/Physics.h"
 #include "../Math/Frustum.h"
 #include "../Math/Types.h"
+#include <chrono>
 
 #define GLOCK_CLIP_SIZE 12
 #define GLOCK_MAX_AMMO_SIZE 200
@@ -114,6 +115,8 @@ private:
     float m_accuracyModifer = 0;
     bool m_firedThisFrame = false;
 
+    std::chrono::steady_clock::time_point _lastReloadTime = std::chrono::steady_clock::now();
+    const std::chrono::milliseconds _reloadCooldown = std::chrono::milliseconds(200);
 
 public:
     glm::mat4 m_weaponSwayMatrix = glm::mat4(1);

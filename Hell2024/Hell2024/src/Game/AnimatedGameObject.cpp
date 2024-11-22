@@ -284,6 +284,7 @@ void AnimatedGameObject::UpdateAnimation(float deltaTime) {
             _currentAnimationTime = duration;
             _animationPaused = true;
             _animationIsComplete = true;
+            std::cout << "Animation completed" << std::endl;
         }
         else {
             _currentAnimationTime = 0;

@@ -7,12 +7,12 @@
 #include "Util.hpp"
 #include "Timer.hpp"
 #include "Ammo.h"
+#include "Reload.h"
 
 
 void Player::GiveDefaultLoadout() {
     GiveWeapon("Shotgun");
     AmmoManager::GiveAmmo("Shotgun", 50);
-
     //GiveWeapon("Knife");
     //// GiveWeapon("GoldenKnife");
     //GiveWeapon("Glock");
@@ -232,7 +232,7 @@ void Player::HandlePistols(AnimatedGameObject* viewWeapon, WeaponInfo* weaponInf
         }
 
         // Fire (has ammo)
-        if (triggeredFire && CanFire() && weaponState->ammoInMag > 0) {
+        if (triggeredFire && CanFire() && (!WeaponMagIsEmpty(weaponState))) {
             _weaponAction = FIRE;
             m_crosshairCrossSize = 40;
 
@@ -261,7 +261,7 @@ void Player::HandlePistols(AnimatedGameObject* viewWeapon, WeaponInfo* weaponInf
             }
         }
         // Reload
-        if (PressedReload() && CanReload()) {
+        if (ReloadManager::PressedReload() && CanReload()) {
 
             // Revolver reload
             if (weaponInfo->relolverStyleReload) {
@@ -415,7 +415,7 @@ void Player::HandleShotguns(AnimatedGameObject* viewWeapon, WeaponInfo* weaponIn
         if (triggeredFire && CanFire()) {
 
             // Has ammo
-            if (weaponState->ammoInMag > 0) {
+            if (!WeaponMagIsEmpty(weaponState)) {
                 _weaponAction = FIRE;
                 std::string aninName = "Shotgun_Fire";
                 std::string audioName = "Shotgun_Fire.wav";
@@ -426,7 +426,6 @@ void Player::HandleShotguns(AnimatedGameObject* viewWeapon, WeaponInfo* weaponIn
                     SpawnBullet(0.1, Weapon::SHOTGUN);
                 }
                 m_shellEjectionState = ShellEjectionState::AWAITING_SHELL_EJECTION;
-
 
                 // SpawnShotgunShell();
                 weaponState->ammoInMag--;
@@ -439,7 +438,7 @@ void Player::HandleShotguns(AnimatedGameObject* viewWeapon, WeaponInfo* weaponIn
         }
 
         // Reload
-        if (PressedReload() && CanReload() && (_weaponAction != RELOAD_SHOTGUN_SINGLE_SHELL)) {
+        if (ReloadManager::PressedReload() && CanReload() && (_weaponAction != RELOAD_SHOTGUN_SINGLE_SHELL)) {
             std::cout << "Reloading shotgun" << std::endl;
             viewWeapon->PlayAnimation(weaponInfo->animationNames.shotgunReloadStart, weaponInfo->animationSpeeds.shotgunReloadStart);
             _weaponAction = RELOAD_SHOTGUN_BEGIN;
@@ -709,11 +708,11 @@ bool Player::CanReload() {
     WeaponState* weaponState = GetCurrentWeaponState();
     AnimatedGameObject* viewWeaponModel = GetViewWeaponAnimatedGameObject();
 
-    if (!HasControl()) {
+    if (!HasControl() ) {
         return false;
     }
 
-    if (weaponState->ammoInMag < weaponInfo->magSize) {
+    if (weaponState->ammoInMag < weaponInfo->magSize && !viewWeaponModel->IsAnimationComplete()) {
         return true;
     }
 
