@@ -7,37 +7,29 @@
 #include "Util.hpp"
 #include "Timer.hpp"
 
+
 void Player::GiveDefaultLoadout() {
-
-    GiveWeapon("Knife");
-    // GiveWeapon("GoldenKnife");
-    GiveWeapon("Glock");
-    GiveWeapon("GoldenGlock");
-    GiveWeapon("Tokarev");
-    // GiveWeapon("Smith & Wesson");
-    GiveWeapon("AKS74U");
-    GiveWeapon("P90");
     GiveWeapon("Shotgun");
-    GiveWeapon("SPAS");
+    GiveAmmo("Shotgun", 50);
 
-    GiveAmmo("Glock", 80000);
-    GiveAmmo("Tokarev", 200);
-    GiveAmmo("AKS74U", 999999);
-    GiveAmmo("Shotgun", 6666);
+    //GiveWeapon("Knife");
+    //// GiveWeapon("GoldenKnife");
+    //GiveWeapon("Glock");
+    //GiveWeapon("GoldenGlock");
+    //GiveWeapon("Tokarev");
+    //// GiveWeapon("Smith & Wesson");
+    //GiveWeapon("AKS74U");
+    //GiveWeapon("P90");
 
-    GiveRedDotToWeapon("GoldenGlock");
-   // GiveSilencerToWeapon("Glock");
+    //GiveWeapon("SPAS");
+
+    //GiveAmmo("Glock", 80000);
+    //GiveAmmo("Tokarev", 200);
+    //GiveAmmo("AKS74U", 999999);
+
+    //GiveRedDotToWeapon("GoldenGlock");
+    // GiveSilencerToWeapon("Glock");
 }
-
-/*
- ▄█        ▄██████▄     ▄██████▄   ▄█   ▄████████
-███       ███    ███   ███    ███ ███  ███    ███
-███       ███    ███   ███    █▀  ███▌ ███    █▀
-███       ███    ███  ▄███        ███▌ ███
-███       ███    ███ ▀▀███ ████▄  ███▌ ███
-███       ███    ███   ███    ███ ███  ███    █▄
-███▌    ▄ ███    ███   ███    ███ ███  ███    ███
-█████▄▄██  ▀██████▀    ████████▀  █▀   ████████▀  */
 
 bool Player::WeaponMagIsEmpty(WeaponState* weaponState)
 {
@@ -46,10 +38,6 @@ bool Player::WeaponMagIsEmpty(WeaponState* weaponState)
 
 void Player::HandleMelee(AnimatedGameObject* viewWeapon, WeaponInfo* weaponInfo)
 {
-    /*
-    █▀▄▀█ █▀▀ █   █▀▀ █▀▀
-    █ ▀ █ █▀▀ █   █▀▀ █▀▀
-    ▀   ▀ ▀▀▀ ▀▀▀ ▀▀▀ ▀▀▀ */
     if (weaponInfo->type == WeaponType::MELEE) {
 
         // Idle
@@ -372,8 +360,6 @@ void Player::HandlePistols(AnimatedGameObject* viewWeapon, WeaponInfo* weaponInf
     }
 }
 
-
-
 void Player::HandleShotguns(AnimatedGameObject* viewWeapon, WeaponInfo* weaponInfo, WeaponState* weaponState, AmmoState* ammoState, AmmoInfo* ammoInfo, float deltaTime)
 {
     if (weaponInfo->type == WeaponType::SHOTGUN) {
@@ -579,82 +565,6 @@ void Player::UpdateViewWeaponLogic(float deltaTime) {
     HandlePistols(viewWeapon, weaponInfo, weaponState, ammoState, ammoInfo, deltaTime);
     HandleShotguns(viewWeapon, weaponInfo, weaponState, ammoState, ammoInfo, deltaTime);
 
-    // Remove Smith bullets you don't have
-    if (weaponInfo->name == "Smith & Wesson") {
-       
-        /*if (_weaponAction == RELOAD_REVOLVER_BEGIN && viewWeapon->AnimationIsPastFrameNumber(30)) {
-            viewWeapon->DisableDrawingForMeshByMeshName("Bullet_0");
-            viewWeapon->DisableDrawingForMeshByMeshName("Bullet_1");
-            viewWeapon->DisableDrawingForMeshByMeshName("Bullet_2");
-            viewWeapon->DisableDrawingForMeshByMeshName("Bullet_3");
-            viewWeapon->DisableDrawingForMeshByMeshName("Bullet_4");
-            viewWeapon->DisableDrawingForMeshByMeshName("Bullet_5");
-        }
-
-        if (_weaponAction == RELOAD_REVOLVER_LOOP) {
-
-            if (GetCurrentWeaponMagAmmo() == 1) {
-                viewWeapon->DisableDrawingForMeshByMeshName("Bullet_0");
-                viewWeapon->EnableDrawingForMeshByMeshName("Bullet_1");
-                viewWeapon->DisableDrawingForMeshByMeshName("Bullet_2");
-                viewWeapon->DisableDrawingForMeshByMeshName("Bullet_3");
-                viewWeapon->DisableDrawingForMeshByMeshName("Bullet_4");
-                viewWeapon->DisableDrawingForMeshByMeshName("Bullet_5");
-            }
-
-            if (m_revolverReloadIterations == 2) {
-                if (viewWeapon->AnimationIsPastFrameNumber(8)) {
-                    //viewWeapon->EnableDrawingForMeshByMeshName("Bullet_0");
-                }
-                else {
-                    viewWeapon->EnableDrawingForMeshByMeshName("Bullet_0");
-                }
-            }
-        }*/
-        /*
-        if (GetCurrentWeaponMagAmmo() == 2) {
-            viewWeapon->DisableDrawingForMeshByMeshName("Bullet_0");
-            viewWeapon->DisableDrawingForMeshByMeshName("Bullet_1");
-            viewWeapon->EnableDrawingForMeshByMeshName("Bullet_2");
-            viewWeapon->DisableDrawingForMeshByMeshName("Bullet_3");
-            viewWeapon->DisableDrawingForMeshByMeshName("Bullet_4");
-            viewWeapon->DisableDrawingForMeshByMeshName("Bullet_5");
-        }
-        if (GetCurrentWeaponMagAmmo() == 3) {
-            viewWeapon->DisableDrawingForMeshByMeshName("Bullet_0");
-            viewWeapon->DisableDrawingForMeshByMeshName("Bullet_1");
-            viewWeapon->DisableDrawingForMeshByMeshName("Bullet_2");
-            viewWeapon->EnableDrawingForMeshByMeshName("Bullet_3");
-            viewWeapon->DisableDrawingForMeshByMeshName("Bullet_4");
-            viewWeapon->DisableDrawingForMeshByMeshName("Bullet_5");
-        }
-        if (GetCurrentWeaponMagAmmo() == 4) {
-            viewWeapon->DisableDrawingForMeshByMeshName("Bullet_0");
-            viewWeapon->DisableDrawingForMeshByMeshName("Bullet_1");
-            viewWeapon->DisableDrawingForMeshByMeshName("Bullet_2");
-            viewWeapon->DisableDrawingForMeshByMeshName("Bullet_3");
-            viewWeapon->EnableDrawingForMeshByMeshName("Bullet_4");
-            viewWeapon->DisableDrawingForMeshByMeshName("Bullet_5");
-        }
-        if (GetCurrentWeaponMagAmmo() == 5) {
-            viewWeapon->DisableDrawingForMeshByMeshName("Bullet_0");
-            viewWeapon->DisableDrawingForMeshByMeshName("Bullet_1");
-            viewWeapon->DisableDrawingForMeshByMeshName("Bullet_2");
-            viewWeapon->DisableDrawingForMeshByMeshName("Bullet_3");
-            viewWeapon->DisableDrawingForMeshByMeshName("Bullet_4");
-            viewWeapon->EnableDrawingForMeshByMeshName("Bullet_5");
-        }
-        if (GetCurrentWeaponMagAmmo() == 6) {
-            viewWeapon->EnableDrawingForMeshByMeshName("Bullet_0");
-            viewWeapon->EnableDrawingForMeshByMeshName("Bullet_1");
-            viewWeapon->EnableDrawingForMeshByMeshName("Bullet_2");
-            viewWeapon->EnableDrawingForMeshByMeshName("Bullet_3");
-            viewWeapon->EnableDrawingForMeshByMeshName("Bullet_4");
-            viewWeapon->EnableDrawingForMeshByMeshName("Bullet_5");
-        }*/
-    }
-
-
     if (m_firedThisFrame) {
         m_accuracyModifer = 1;
     }
@@ -663,25 +573,9 @@ void Player::UpdateViewWeaponLogic(float deltaTime) {
 
     viewWeapon->Update(deltaTime);
 
-
     if (!PressingFire()) {
         m_crosshairCrossSize = Util::FInterpTo(m_crosshairCrossSize, 0, deltaTime, 10.0);
     }
-}
-
-/*
-   ▄████████  ▄█    █▄     ▄████████    ▄████████ ▄██   ▄       ███        ▄█    █▄     ▄█  ███▄▄▄▄      ▄██████▄            ▄████████  ▄█          ▄████████    ▄████████
-  ███    ███ ███    ███   ███    ███   ███    ███ ███   ██▄ ▀█████████▄   ███    ███   ███  ███▀▀▀██▄   ███    ███          ███    ███ ███         ███    ███   ███    ███
-  ███    █▀  ███    ███   ███    █▀    ███    ███ ███▄▄▄███    ▀███▀▀██   ███    ███   ███▌ ███   ███   ███    █▀           ███    █▀  ███         ███    █▀    ███    █▀
- ▄███▄▄▄     ███    ███  ▄███▄▄▄      ▄███▄▄▄▄██▀ ▀▀▀▀▀▀███     ███   ▀  ▄███▄▄▄▄███▄▄ ███▌ ███   ███  ▄███               ▄███▄▄▄     ███         ███         ▄███▄▄▄
-▀▀███▀▀▀     ███    ███ ▀▀███▀▀▀     ▀▀███▀▀▀▀▀   ▄██   ███     ███     ▀▀███▀▀▀▀███▀  ███▌ ███   ███ ▀▀███ ████▄        ▀▀███▀▀▀     ███       ▀███████████ ▀▀███▀▀▀
-  ███    █▄  ███    ███   ███    █▄  ▀███████████ ███   ███     ███       ███    ███   ███  ███   ███   ███    ███          ███    █▄  ███                ███   ███    █▄
-  ███    ███ ███    ███   ███    ███   ███    ███ ███   ███     ███       ███    ███   ███  ███   ███   ███    ███          ███    ███ ███▌    ▄    ▄█    ███   ███    ███
-  ██████████  ▀██████▀    ██████████   ███    ███  ▀█████▀     ▄████▀     ███    █▀    █▀    ▀█   █▀    ████████▀           ██████████ █████▄▄██  ▄████████▀    ██████████ */
-
-
-bool Player::CanMelee() {
-    return true;
 }
 
 bool Player::CanEnterADS() {
@@ -715,6 +609,9 @@ WeaponAction& Player::GetWeaponAction() {
     return _weaponAction;
 }
 
+bool Player::CanMelee() {
+    return true;
+}
 
 bool Player::CanFire() {
 
@@ -1046,6 +943,7 @@ void Player::GiveWeapon(std::string name) {
 
 void Player::GiveAmmo(std::string name, int amount) {
     AmmoState* state = GetAmmoStateByName(name);
+    std::cout << "Giving " << name << " " << amount << " bullets" << std::endl;
     if (state) {
         state->ammoOnHand += amount;
     }
