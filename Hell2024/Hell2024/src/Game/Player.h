@@ -6,6 +6,7 @@
 #include "../Physics/Physics.h"
 #include "../Math/Frustum.h"
 #include "../Math/Types.h"
+#include "Reload.h"
 #include <chrono>
 
 #define GLOCK_CLIP_SIZE 12
@@ -101,8 +102,7 @@ private:
     bool m_ignoreControl = false;
     int m_killCount = 0;
     int m_suicideCount = 0;
-    int m_mouseIndex = -1;
-    int m_keyboardIndex = -1;
+
     float m_capsuleRadius = 0.1f;
     bool m_isOutside = false;
     ShellEjectionState m_shellEjectionState;
@@ -129,6 +129,8 @@ public:
     Player(int playerIndex);
     PhysXRayResult m_cameraRayResult;
 
+    int m_mouseIndex = -1;
+    int m_keyboardIndex = -1;
     // Updates
     void Update(float deltaTime);
     void UpdateRagdoll();

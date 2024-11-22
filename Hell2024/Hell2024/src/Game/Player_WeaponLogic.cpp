@@ -261,7 +261,7 @@ void Player::HandlePistols(AnimatedGameObject* viewWeapon, WeaponInfo* weaponInf
             }
         }
         // Reload
-        if (ReloadManager::PressedReload() && CanReload()) {
+        if (PressedReload() && CanReload()) {
 
             // Revolver reload
             if (weaponInfo->relolverStyleReload) {
@@ -438,7 +438,7 @@ void Player::HandleShotguns(AnimatedGameObject* viewWeapon, WeaponInfo* weaponIn
         }
 
         // Reload
-        if (ReloadManager::PressedReload() && CanReload() && (_weaponAction != RELOAD_SHOTGUN_SINGLE_SHELL)) {
+        if (PressedReload() && CanReload() && (_weaponAction != RELOAD_SHOTGUN_SINGLE_SHELL)) {
             std::cout << "Reloading shotgun" << std::endl;
             viewWeapon->PlayAnimation(weaponInfo->animationNames.shotgunReloadStart, weaponInfo->animationSpeeds.shotgunReloadStart);
             _weaponAction = RELOAD_SHOTGUN_BEGIN;

@@ -1,14 +1,14 @@
 #pragma once
 
-#include <chrono>
-#include "Player.h"
 #include "../Input/InputMulti.h"
+#include "Player.h"
 
-class ReloadManager
-{
+class ReloadManager {
 public:
-	static inline std::chrono::steady_clock::time_point _lastReloadTime = std::chrono::steady_clock::now();
-	constexpr static std::chrono::milliseconds _reloadCooldown = std::chrono::milliseconds(200);
-
-	static bool PressedReload();
+    static bool PressedReload();
+    //InputType _inputType;
+    //PlayerControls _controls;
+    int m_keyboardIndex;
+    int m_mouseIndex;
+    int _controllerIndex;
 };
