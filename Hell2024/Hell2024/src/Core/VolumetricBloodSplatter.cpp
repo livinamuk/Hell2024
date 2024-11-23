@@ -6,7 +6,8 @@ GLuint VolumetricBloodSplatter::s_vao;
 GLuint VolumetricBloodSplatter::s_buffer_mode_matrices;
 unsigned int VolumetricBloodSplatter::s_counter = 0;
 
-VolumetricBloodSplatter::VolumetricBloodSplatter(glm::vec3 position, glm::vec3 rotation, glm::vec3 front) {
+VolumetricBloodSplatter::VolumetricBloodSplatter(glm::vec3 position, glm::vec3 rotation, glm::vec3 front) 
+{
     m_transform.position = position;
     m_transform.rotation = rotation;
     m_transform.scale = glm::vec3(0.5f);
@@ -27,11 +28,13 @@ VolumetricBloodSplatter::VolumetricBloodSplatter(glm::vec3 position, glm::vec3 r
         s_counter = 0;
 }
 
-void VolumetricBloodSplatter::Update(float deltaTime) {
+void VolumetricBloodSplatter::Update(float deltaTime) 
+{
     m_CurrentTime += deltaTime * 1.5f;
 }
 
-glm::mat4 VolumetricBloodSplatter::GetModelMatrix() {
+glm::mat4 VolumetricBloodSplatter::GetModelMatrix() 
+{
     Transform bloodMeshTransform;
     bloodMeshTransform.position = m_transform.position;
     bloodMeshTransform.rotation = m_transform.rotation;

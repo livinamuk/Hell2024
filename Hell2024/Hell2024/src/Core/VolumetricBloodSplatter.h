@@ -1,10 +1,11 @@
 #pragma once
+
 #include "HellCommon.h"
 #include "../API/OpenGL/Types/GL_shader.h"
 #include "../Renderer/Types/Model.hpp"
 
-struct VolumetricBloodSplatter {
-
+struct VolumetricBloodSplatter 
+{
 	float m_CurrentTime = 0.0f;
 	Transform m_transform;
     glm::vec3 m_front;

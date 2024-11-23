@@ -2,8 +2,8 @@
 #include "../Game/Game.h"
 #include "../Game/Scene.h"
 
-
-void RapidHotload::Update() {
+void RapidHotload::Update() 
+{
         
     //for (GameObject& gameObject : Scene::GetGamesObjects()) {
     //
@@ -13,8 +13,6 @@ void RapidHotload::Update() {
     //        std::cout << "moved house\n";
     //    }
     //}
-    
-
 }
 
 /*
@@ -42,7 +40,8 @@ glm::mat4 RapidHotload::TestMatrix() {
     return projectionMatrix;
 }*/
 
-glm::mat4 RapidHotload::computeTileProjectionMatrix(float fovY, float aspectRatio, float nearPlane, float farPlane, int screenWidth, int screenHeight, int tileX, int tileY, int tileWidth, int tileHeight) {
+glm::mat4 RapidHotload::computeTileProjectionMatrix(float fovY, float aspectRatio, float nearPlane, float farPlane, int screenWidth, int screenHeight, int tileX, int tileY, int tileWidth, int tileHeight) 
+{
     // Compute the tangents of half the field of view angles
     float tanHalfFovY = tanf(fovY * 0.5f);
     float tanHalfFovX = tanHalfFovY * aspectRatio;

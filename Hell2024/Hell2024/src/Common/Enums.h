@@ -3,17 +3,26 @@
 enum class API { OPENGL, VULKAN, UNDEFINED };
 enum class WindowedMode { WINDOWED, FULLSCREEN };
 enum class SplitscreenMode { NONE, TWO_PLAYER, FOUR_PLAYER, SPLITSCREEN_MODE_COUNT };
+
 enum class BulletHoleDecalType { REGULAR, GLASS };
+
 enum class PickUpType { NONE, AMMO, GLOCK, GLOCK_AMMO, TOKAREV_AMMO, SHOTGUN, SHOTGUN_AMMO, AKS74U, AKS74U_AMMO, AKS74U_SCOPE };
+
 enum class DobermannState { LAY, PATROL, KAMAKAZI, DOG_SHAPED_PIECE_OF_MEAT, RETURN_TO_ORIGIN, WALK_TO_TARGET };
 //enum class Gait { WALK, RUN, JUMP };
+
 enum class FacingDirection { LEFT, RIGHT, ALIGNED };
+
 enum class AABBLightVolumeMode { WORLDSPACE_CUBE_MAP, POSITION_RADIUS };
+
 enum class MenuType { NONE, FILE, INSERT, SELECTED_OBJECT, MISC };
 
 enum EngineMode { GAME = 0, FLOORPLAN, EDITOR };
+
 enum Weapon { KNIFE = 0, GLOCK, SHOTGUN, AKS74U, MP7, WEAPON_COUNT };
-enum WeaponAction {
+
+enum WeaponAction 
+{
     IDLE = 0,
     FIRE,
     RELOAD,
@@ -35,7 +44,8 @@ enum WeaponAction {
     MELEE
 };
 
-enum RaycastGroup {
+enum RaycastGroup 
+{
     RAYCAST_DISABLED = 0,
     RAYCAST_ENABLED = 1,
     PLAYER_1_RAGDOLL = 2,
@@ -45,7 +55,8 @@ enum RaycastGroup {
     DOBERMAN = 32
 };
 
-enum class ObjectType {
+enum class ObjectType 
+{
     UNDEFINED,
     GAME_OBJECT,
     GLASS,
@@ -62,7 +73,8 @@ enum class ObjectType {
     HEIGHT_MAP,
 };
 
-enum CollisionGroup {
+enum CollisionGroup 
+{
     NO_COLLISION = 0,
     BULLET_CASING = 1,
     PLAYER = 2,
