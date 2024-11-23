@@ -4,53 +4,69 @@
 #include "../../Core/Audio.hpp"
 #include "../../Util.hpp"
 
-Door::Door(glm::vec3 position, float rotation, bool openOnStart) {
+Door::Door(glm::vec3 position, float rotation, bool openOnStart) 
+{
     this->m_position = position;
     this->m_rotation = rotation;
     this->m_openOnStart = openOnStart;
     SetToInitialState();
 }
 
-void Door::SetToInitialState() {
-    if (m_openOnStart) {
+void Door::SetToInitialState() 
+{
+    if (m_openOnStart) 
+    {
         m_currentOpenRotation = -m_maxOpenRotation;
         state = OPEN;
     }
-    else {
+    else 
+    {
         m_currentOpenRotation = 0;
         state = CLOSED;
     }
 }
 
-void Door::Interact() {
-    if (state == CLOSED) {
+void Door::Interact() 
+{
+    if (state == CLOSED) 
+    {
         state = OPENING;
         Audio::PlayAudio("Door_Open.wav", DOOR_VOLUME);
     }
-    else if (state == OPEN) {
+    else if (state == OPEN)
+    {
         state = CLOSING;
         Audio::PlayAudio("Door_Open.wav", DOOR_VOLUME);
     }
 }
 
-void Door::Update(float deltaTime) {
+void Door::Update(float deltaTime) 
+{
     float openSpeed = 5.208f;
-    if (state == OPENING) {
+
+    if (state == OPENING) 
+    {
         m_currentOpenRotation -= openSpeed * deltaTime;
         if (m_currentOpenRotation < -m_maxOpenRotation) {
             m_currentOpenRotation = -m_maxOpenRotation;
             state = OPEN;
         }
     }
-    if (state == CLOSING) {
+
+    if (state == CLOSING)
+    {
         m_currentOpenRotation += openSpeed * deltaTime;
-        if (m_currentOpenRotation > 0) {
+        if (m_currentOpenRotation > 0)
+        {
             m_currentOpenRotation = 0;
             state = CLOSED;
         }
     }
+
     glm::mat4 modelMatrix = GetDoorModelMatrix();
-    if (collisionBody) {
+
+    if (collisionBody)
+    {
         Transform offset;
         offset.position.z = DOOR_WIDTH * -0.5f;
         offset.position.y = DOOR_HEIGHT * 0.5f;
@@ -59,7 +75,9 @@ void Door::Update(float deltaTime) {
         PxTransform transform = PxTransform(m);
         collisionBody->setGlobalPose(transform);
     }
-    if (raycastBody) {
+
+    if (raycastBody) 
+    {
         PxMat44 m2 = Util::GlmMat4ToPxMat44(modelMatrix);
         PxTransform transform2 = PxTransform(m2);
         raycastBody->setGlobalPose(transform2);
@@ -79,7 +97,8 @@ void Door::Update(float deltaTime) {
     m_doorFrameRenderItemAABB.boundsMax = center + extents;*/
 
     // AABB
-    if (raycastBody) {
+    if (raycastBody) 
+    {
         _aabbPreviousFrame = _aabb;
         glm::vec3 extents = Util::PxVec3toGlmVec3(raycastBody->getWorldBounds().getExtents());
         glm::vec3 center = Util::PxVec3toGlmVec3(raycastBody->getWorldBounds().getCenter());
@@ -91,81 +110,98 @@ void Door::Update(float deltaTime) {
     }
 }
 
-void Door::CleanUp() {
-    if (collisionBody) {
+void Door::CleanUp() 
+{
+    if (collisionBody)
+    {
         collisionBody->release();
     }
-    if (collisionShape) {
+    if (collisionShape)
+    {
         collisionShape->release();
     }
-    if (raycastBody) {
+    if (raycastBody)
+    {
         raycastBody->release();
     }
-    if (raycastShape) {
+    if (raycastShape)
+    {
         raycastShape->release();
     }
 }
 
-glm::mat4 Door::GetGizmoMatrix() {
+glm::mat4 Door::GetGizmoMatrix()
+{
     Transform frameTransform;
     frameTransform.position = m_position + glm::vec3(0, DOOR_HEIGHT * 0.5f, 0);
     frameTransform.rotation.y = m_rotation;
     return frameTransform.to_mat4();
 }
 
-glm::mat4 Door::GetFrameModelMatrix() {
+glm::mat4 Door::GetFrameModelMatrix()
+{
     Transform frameTransform;
     frameTransform.position = m_position;
     frameTransform.rotation.y = m_rotation;
     return frameTransform.to_mat4();
 }
 
-glm::mat4 Door::GetDoorModelMatrix() {
+glm::mat4 Door::GetDoorModelMatrix()
+{
     Transform doorTransform;
     doorTransform.position = glm::vec3(0.058520, 0, 0.39550f);
     doorTransform.rotation.y = m_currentOpenRotation;
     return GetFrameModelMatrix() * doorTransform.to_mat4();
 }
 
-glm::vec3 Door::GetFloorplanVertFrontLeft(float padding) {
+glm::vec3 Door::GetFloorplanVertFrontLeft(float padding)
+{
     return GetFrameModelMatrix() * glm::vec4(DOOR_EDITOR_DEPTH + padding, 0, (-DOOR_WIDTH / 2), 1.0f);
 }
 
-glm::vec3 Door::GetFloorplanVertFrontRight(float padding) {
+glm::vec3 Door::GetFloorplanVertFrontRight(float padding)
+{
     return GetFrameModelMatrix() * glm::vec4(DOOR_EDITOR_DEPTH + padding, 0, (DOOR_WIDTH / 2), 1.0f);
 }
 
-glm::vec3 Door::GetFloorplanVertBackLeft(float padding) {
+glm::vec3 Door::GetFloorplanVertBackLeft(float padding)
+{
     return GetFrameModelMatrix() * glm::vec4(-DOOR_EDITOR_DEPTH - padding, 0, (DOOR_WIDTH / 2), 1.0f);
 }
 
-glm::vec3 Door::GetFloorplanVertBackRight(float padding) {
+glm::vec3 Door::GetFloorplanVertBackRight(float padding)
+{
     return GetFrameModelMatrix() * glm::vec4(-DOOR_EDITOR_DEPTH - padding, 0, (-DOOR_WIDTH / 2), 1.0f);
 }
 
-glm::vec3 Door::GetFrontLeftCorner() {
+glm::vec3 Door::GetFrontLeftCorner() 
+{
     return GetDoorModelMatrix() * glm::vec4(0, 0, -DOOR_WIDTH, 1.0f);
 }
 
-glm::vec3 Door::GetFrontRightCorner() {
+glm::vec3 Door::GetFrontRightCorner()
+{
     return GetDoorModelMatrix() * glm::vec4(0, 0, 0, 1.0f);
 }
 
-glm::vec3 Door::GetBackLeftCorner() {
+glm::vec3 Door::GetBackLeftCorner()
+{
     return GetDoorModelMatrix() * glm::vec4(-DOOR_EDITOR_DEPTH, 0, -DOOR_WIDTH, 1.0f);
 }
 
-glm::vec3 Door::GetBackRightCorner() {
+glm::vec3 Door::GetBackRightCorner()
+{
     return GetDoorModelMatrix() * glm::vec4(-DOOR_EDITOR_DEPTH, 0, 0, 1.0f);
 }
 
-bool Door::IsInteractable(glm::vec3 playerPosition) {
+bool Door::IsInteractable(glm::vec3 playerPosition) 
+{
     float distSqrd = Util::DistanceSquared(m_position, playerPosition);
     return distSqrd < (INTERACT_DISTANCE * INTERACT_DISTANCE);
 }
 
-void Door::CreatePhysicsObject() {
-
+void Door::CreatePhysicsObject()
+{
     Physics::Destroy(collisionBody);
     Physics::Destroy(raycastBody);
     Physics::Destroy(collisionShape);
@@ -217,26 +253,26 @@ void Door::CreatePhysicsObject() {
     }*/
 }
 
-glm::vec3 Door::GetWorldDoorWayCenter() {
+glm::vec3 Door::GetWorldDoorWayCenter() 
+{
     return m_position + glm::vec3(0, 1.3f, 0);
 }
 
-bool Door::HasMovedSinceLastFrame() {
+bool Door::HasMovedSinceLastFrame() 
+{
     return (_aabb.boundsMin != _aabbPreviousFrame.boundsMin &&
         _aabb.boundsMax != _aabbPreviousFrame.boundsMax &&
         _aabb.GetCenter() != _aabbPreviousFrame.GetCenter());
 }
 
-
-
-
-void Door::UpdateRenderItems() {
-
+void Door::UpdateRenderItems() 
+{
     static int materialIndex = AssetManager::GetMaterialIndex("Door");
     renderItems.clear();
 
     Model* doorModel = AssetManager::GetModelByIndex(AssetManager::GetModelIndexByName("Door"));
-    for (uint32_t& meshIndex : doorModel->GetMeshIndices()) {
+    for (uint32_t& meshIndex : doorModel->GetMeshIndices()) 
+    {
         Mesh* mesh = AssetManager::GetMeshByIndex(meshIndex);
         RenderItem3D& renderItem = renderItems.emplace_back();
         renderItem.vertexOffset = mesh->baseVertex;
@@ -251,7 +287,8 @@ void Door::UpdateRenderItems() {
     }
 
     Model* frameModel = AssetManager::GetModelByIndex(AssetManager::GetModelIndexByName("DoorFrame"));
-    for (uint32_t& meshIndex : frameModel->GetMeshIndices()) {
+    for (uint32_t& meshIndex : frameModel->GetMeshIndices()) 
+    {
         Mesh* mesh = AssetManager::GetMeshByIndex(meshIndex);
         RenderItem3D& renderItem = renderItems.emplace_back();
         renderItem.vertexOffset = mesh->baseVertex;
@@ -266,11 +303,13 @@ void Door::UpdateRenderItems() {
     }
 }
 
-std::vector<RenderItem3D>& Door::GetRenderItems() {
+std::vector<RenderItem3D>& Door::GetRenderItems() 
+{
     return renderItems;
 }
 
-void Door::Rotate90() {
+void Door::Rotate90() 
+{
     m_rotation += HELL_PI * 0.5f;
     if (raycastBody) {
         PxMat44 worldMatrix = Util::GlmMat4ToPxMat44(GetFrameModelMatrix());
@@ -279,16 +318,17 @@ void Door::Rotate90() {
     }
 }
 
-void Door::SetPosition(glm::vec3 position) {
+void Door::SetPosition(glm::vec3 position) 
+{
     m_position = position;
 }
 
-void Door::SetRotation(float rotation) {
+void Door::SetRotation(float rotation) 
+{
     m_rotation = rotation;
 }
 
 // TODO
-
 /*
 std::vector<Vertex> Door::GetDoorAABBVertices() {
     glm::vec3 color = YELLOW;

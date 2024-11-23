@@ -1,5 +1,6 @@
 #pragma once
 
-namespace Engine {
+namespace Engine 
+{
     void Run();
 }

@@ -1,8 +1,10 @@
 #pragma once
+
 #include "HellCommon.h"
 #include <map>
 
-struct SQT {
+struct SQT 
+{
     glm::quat rotation = glm::quat(1, 0, 0, 0);
     glm::vec3 positon = glm::vec3(0, 0, 0);
     float scale = 1.0f;
@@ -10,24 +12,25 @@ struct SQT {
     const char* jointName;
 };
 
-struct AnimatedNode {
-    AnimatedNode(const char* name) {
+struct AnimatedNode
+{
+    AnimatedNode(const char* name) 
+    {
         m_nodeName = name;
     }
     std::vector<SQT> m_nodeKeys;
     const char* m_nodeName;
 };
 
-
 class Animation
 {
-public: // methods
+public:
     Animation() = default;
     Animation(std::string fulllPath);
     ~Animation();
     float GetTicksPerSecond();
 
-public: // fields
+public:
     bool m_awaitingLoadingFromDisk = true;
     bool m_loadedFromDisk = false;
     std::string m_fullPath = "";
