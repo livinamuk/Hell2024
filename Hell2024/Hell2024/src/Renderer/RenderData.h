@@ -1,4 +1,5 @@
 #pragma once
+
 #include "RendererCommon.h"
 #include "Types/DetachedMesh.hpp"
 #include "../Game/AnimatedGameObject.h"
@@ -9,19 +10,22 @@ struct PlayerInstanceDataOffsets {
     int decalsBullets[4];
 };*/
 
-struct AnimatedRenderItem3D {
+struct AnimatedRenderItem3D 
+{
     std::vector<RenderItem3D> renderItems;
     std::vector<glm::mat4>* animatedTransforms;
 };
 
-struct BlitDstCoords {
+struct BlitDstCoords 
+{
     unsigned int dstX0 = 0;
     unsigned int dstY0 = 0;
     unsigned int dstX1 = 0;
     unsigned int dstY1 = 0;
 };
 
-struct MuzzleFlashData {
+struct MuzzleFlashData 
+{
     glm::mat4 modelMatrix;
     int frameIndex;
     int RowCount;
@@ -35,7 +39,8 @@ struct MuzzleFlashData {
     int frameIndex = 0;*/
 };
 
-struct MultiDrawIndirectDrawInfo {
+struct MultiDrawIndirectDrawInfo 
+{
     std::vector<DrawIndexedIndirectCommand> commands;
     std::vector<RenderItem3D> renderItems;
 };
@@ -45,7 +50,8 @@ struct MultiDrawIndirectDrawInfo {
     std::vector<DrawIndexedIndirectCommand> decals;
 };*/
 
-struct RenderItems {
+struct RenderItems
+{
     std::vector<RenderItem3D> geometry;
     std::vector<RenderItem3D> decals;
 };
@@ -55,7 +61,8 @@ struct RenderItems {
 };*/
 
 
-struct IndirectDrawInfo {
+struct IndirectDrawInfo 
+{
     uint32_t instanceDataOffests[4];
     std::vector<RenderItem3D> instanceData;
     std::vector<DrawIndexedIndirectCommand> playerDrawCommands[4];
@@ -67,36 +74,40 @@ struct IndirectDrawInfo {
     std::vector<std::vector<DrawIndexedIndirectCommand>> playerDrawCommands;
 };*/
 
-struct PushConstants {
+struct PushConstants
+{
     int playerIndex;
     int instanceOffset;
     int emptpy;
     int emptp2;
 };
 
-struct BlurPushConstants {
+struct BlurPushConstants
+{
     int screenWidth;
     int screenHeight;
     int empty0;
     int empty1;
 };
 
-struct SkinningPushConstants {
+struct SkinningPushConstants
+{
     int vertexCount;
     int baseInputVertex;
     int baseOutputVertex;
     int animatedGameObjectIndex;
 };
 
-struct SkinnedMeshPushConstants {
+struct SkinnedMeshPushConstants 
+{
     int playerIndex;
     int renderItemIndex;
     int emptpy;
     int emptp2;
 };
 
-struct RenderData {
-
+struct RenderData 
+{
     //MultiDrawIndirectDrawInfo bulletHoleDecalDrawInfo[4];
     //MultiDrawIndirectDrawInfo geometryDrawInfo[4];
 
@@ -127,11 +138,9 @@ struct RenderData {
     float finalImageColorContrast;
     RenderMode renderMode;
 
-
     RenderItems renderItems;
 
     std::vector<RenderItem3D> geometryRenderItems;
-
 
     int playerCount = 1;
 
@@ -154,6 +163,5 @@ struct RenderData {
     std::vector<glm::mat4> skinningTransforms;
 
     //PlayerInstanceDataOffsets playerInstanceDataOffsets;
-
 };
 

@@ -1,4 +1,5 @@
 #pragma once
+
 #include "HellCommon.h"
 #include "../../Util.hpp"
 #include <vector>
@@ -6,13 +7,14 @@
 
 #define BVH_BINS 8
 
-struct Bin {
+struct Bin 
+{
     AABB bounds;
     int triCount = 0;
 };
 
-struct BLAS {
-
+struct BLAS 
+{
     std::vector<BVHNode> bvhNodes;
     std::vector<Triangle> triangles;
     std::vector<unsigned int> triIndices;
@@ -22,14 +24,15 @@ struct BLAS {
     int rootIndex = 0;                  // Into the global gBlasNodes array within Raytracing.cpp
     int baseTriangleIndex = 0;          // Into the global gTriIndices array within Raytracing.cpp
 
-    void Create(std::vector<CSGVertex>& vertices, std::vector<unsigned int>& indices, int baseVertex, int baseIndex) {
-
+    void Create(std::vector<CSGVertex>& vertices, std::vector<unsigned int>& indices, int baseVertex, int baseIndex) 
+    {
         meshbaseVertex = baseVertex;
         meshbaseIndex = baseIndex;
 
         int triCount = (int)indices.size() / 3;
 
-        if (indices.size() == 0) {
+        if (indices.size() == 0)
+        {
             std::cout << "ERROR: attempted to create BLAS from mesh with no vertices!\n";
             return;
         }
@@ -46,8 +49,8 @@ struct BLAS {
 
         // Create triangle array
         int j = 0;
-        for (int i = 0; i < indices.size(); i += 3) {
-
+        for (int i = 0; i < indices.size(); i += 3)
+        {
             triangles[j].v0 = vertices[indices[i + 0]].position;
             triangles[j].v1 = vertices[indices[i + 1]].position;
             triangles[j].v2 = vertices[indices[i + 2]].position;
@@ -66,7 +69,8 @@ struct BLAS {
         }
 
         // Populate triangle index array
-        for (int i = 0; i < triCount; i++) {
+        for (int i = 0; i < triCount; i++) 
+        {
             triIndices[i] = i;
         }
 
@@ -82,32 +86,35 @@ struct BLAS {
         bvhNodes.shrink_to_fit();
     }
 
-    float FindBestSplitPlane(BVHNode& node, int& axis, float& splitPos) {
-
+    float FindBestSplitPlane(BVHNode& node, int& axis, float& splitPos) 
+    {
         float bestCost = 1e30f;
 
-        for (int a = 0; a < 3; a++) {
-
+        for (int a = 0; a < 3; a++) 
+        {
             float boundsMin = 1e30f, boundsMax = -1e30f;
 
-            for (int i = 0; i < node.instanceCount; i++) {
+            for (int i = 0; i < node.instanceCount; i++) 
+            {
                 Triangle& triangle = triangles[triIndices[node.leftFirst + i]];
                 boundsMin = std::min(boundsMin, triangle.centoid[a]);
                 boundsMax = std::max(boundsMax, triangle.centoid[a]);
             }
-            if (boundsMin == boundsMax) {
+            if (boundsMin == boundsMax) 
+            {
                 continue;
             }
             // Populate the bins
             Bin bin[BVH_BINS];
             float scale = BVH_BINS / (boundsMax - boundsMin);
 
-            for (int i = 0; i < node.instanceCount; i++) {
-
+            for (int i = 0; i < node.instanceCount; i++) 
+            {
                 Triangle& triangle = triangles[triIndices[node.leftFirst + i]];
                 int binIdx = std::min(BVH_BINS - 1, (int)((triangle.centoid[a] - boundsMin) * scale));
 
-                if (binIdx >= BVH_BINS || binIdx < 0) {
+                if (binIdx >= BVH_BINS || binIdx < 0)
+                {
                     std::cout << "ERROR!\n";
                     std::cout << " binIdx: " << binIdx << "\n";
                     std::cout << " boundsMin: " << boundsMin << "\n";
@@ -132,7 +139,8 @@ struct BLAS {
             AABB leftBox, rightBox;
             int leftSum = 0, rightSum = 0;
 
-            for (int i = 0; i < BVH_BINS - 1; i++) {
+            for (int i = 0; i < BVH_BINS - 1; i++)
+            {
                 leftSum += bin[i].triCount;
                 leftCount[i] = leftSum;
                 leftBox.Grow(bin[i].bounds);
@@ -145,7 +153,8 @@ struct BLAS {
 
             // Calculate SAH cost for the 7 planes
             scale = (boundsMax - boundsMin) / BVH_BINS;
-            for (int i = 0; i < BVH_BINS - 1; i++) {
+            for (int i = 0; i < BVH_BINS - 1; i++) 
+            {
                 float planeCost = leftCount[i] * leftArea[i] + rightCount[i] * rightArea[i];
                 if (planeCost < bestCost) {
                     axis = a, splitPos = boundsMin + scale * (i + 1), bestCost = planeCost;
@@ -155,21 +164,23 @@ struct BLAS {
         return bestCost;
     }
 
-    float EvaluateSAH(BVHNode& node, int axis, float pos) {
-
+    float EvaluateSAH(BVHNode& node, int axis, float pos) 
+    {
         // Determine triangle counts and bounds for this split candidate
         AABB leftBox, rightBox;
         int leftCount = 0, rightCount = 0;
         for (int i = 0; i < node.instanceCount; i++)
         {
             Triangle& triangle = triangles[triIndices[node.leftFirst + i]];
-            if (triangle.centoid[axis] < pos) {
+            if (triangle.centoid[axis] < pos) 
+            {
                 leftCount++;
                 leftBox.Grow(triangle.v0);
                 leftBox.Grow(triangle.v1);
                 leftBox.Grow(triangle.v2);
             }
-            else {
+            else 
+            {
                 rightCount++;
                 rightBox.Grow(triangle.v0);
                 rightBox.Grow(triangle.v1);
@@ -180,12 +191,14 @@ struct BLAS {
         return cost > 0 ? cost : 1e30f;
     }
 
-    void UpdateNodeBounds(unsigned int nodeIndex) {
-
+    void UpdateNodeBounds(unsigned int nodeIndex) 
+    {
         BVHNode& node = bvhNodes[nodeIndex];
         node.aabbMin = glm::vec3(1e30f);
         node.aabbMax = glm::vec3(-1e30f);
-        for (int first = node.leftFirst, i = 0; i < node.instanceCount; i++) {
+
+        for (int first = node.leftFirst, i = 0; i < node.instanceCount; i++) 
+        {
             unsigned int leafTriIdx = triIndices[first + i];
             Triangle& leafTri = triangles[leafTriIdx];
             node.aabbMin = Util::Vec3Min(node.aabbMin, leafTri.v0);
@@ -197,19 +210,20 @@ struct BLAS {
         }
     }
 
-    float CalculateNodeCost(BVHNode& node) {
-
+    float CalculateNodeCost(BVHNode& node) 
+    {
         glm::vec3 e = node.aabbMax - node.aabbMin; // extent of the node
         float surfaceArea = e.x * e.y + e.y * e.z + e.z * e.x;
         return node.instanceCount * surfaceArea;
     }
 
-    void Subdivide(unsigned int nodeIdx) {
-
+    void Subdivide(unsigned int nodeIdx) 
+    {
         BVHNode& node = bvhNodes[nodeIdx];
 
         // Terminate recursion if it contains a single triangle
-        if (node.instanceCount == 1) {
+        if (node.instanceCount == 1)
+        {
             return;
         }
 
@@ -227,18 +241,22 @@ struct BLAS {
         // in-place partition
         int i = node.leftFirst;
         int j = i + node.instanceCount - 1;
-        while (i <= j) {
-            if (triangles[triIndices[i]].centoid[axis] < splitPos) {
+        while (i <= j) 
+        {
+            if (triangles[triIndices[i]].centoid[axis] < splitPos) 
+            {
                 i++;
             }
-            else {
+            else 
+            {
                 std::swap(triIndices[i], triIndices[j--]);
             }
         }
 
         // Abort split if one of the sides is empty
         int leftCount = i - node.leftFirst;
-        if (leftCount == 0 || leftCount == node.instanceCount) {
+        if (leftCount == 0 || leftCount == node.instanceCount) 
+        {
             return;
         }
 

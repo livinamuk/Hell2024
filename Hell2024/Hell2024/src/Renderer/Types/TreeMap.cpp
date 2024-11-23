@@ -1,19 +1,23 @@
 #pragma once
+
 #include "TreeMap.h"
 #include <stb_image.h>
 #include <iostream>
 
-void TreeMap::Load(const std::string& filepath) {
+void TreeMap::Load(const std::string& filepath) 
+{
     int channels;
     unsigned char* data = stbi_load(filepath.c_str(), &m_width, &m_depth, &channels, 0);
-    if (!data) {
+    if (!data) 
+    {
         std::cout << "Failed to load treemap image\n";
         return;
     }
     m_data.reserve(m_width * m_depth);
     m_array = std::vector<std::vector<int>>(m_width,std::vector<int>(m_depth));
 
-    for (int z = 0; z < m_depth; z ++) {
+    for (int z = 0; z < m_depth; z ++) 
+    {
         for (int x = 0; x < m_width; x++) { 
             int index = (z * m_width + x) * channels;
             unsigned char value = data[index];

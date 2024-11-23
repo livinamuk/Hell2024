@@ -1,12 +1,14 @@
 #pragma once
+
 #include "../../API/OpenGL/Types/GL_texture3D.h"
 #include "../../API/Vulkan/Types/VK_texture3D.h"
 
-struct Texture3D {
-
+struct Texture3D 
+{
 public:
     Texture3D() = default;
-    Texture3D(int width, int height, int depth) {
+    Texture3D(int width, int height, int depth) 
+    {
         this->width = width;
         this->height = height;
         this->depth = depth;

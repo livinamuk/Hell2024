@@ -1,7 +1,9 @@
 #pragma once
+
 #include <string>
 
-struct SkinnedMesh {
+struct SkinnedMesh 
+{
     std::string name = "undefined";
     int32_t baseVertexLocal = 0;
     int32_t baseVertexGlobal = 0;

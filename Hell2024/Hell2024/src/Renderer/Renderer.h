@@ -1,10 +1,11 @@
 #pragma once
+
 #include "RendererCommon.h"
 #include "Types/DetachedMesh.hpp"
 #include "Math/Frustum.h"
 
-namespace Renderer {
-
+namespace Renderer
+{
     void RenderLoadingScreen();
     void RenderFrame();
     void HotloadShaders();
@@ -35,5 +36,4 @@ namespace Renderer {
     inline DetachedMesh g_debugTrianglesMesh;
     inline std::vector<Vertex> g_debugLines;
     inline DebugLineRenderMode g_debugLineRenderMode = DebugLineRenderMode::SHOW_NO_LINES;
-
-;}
+};
