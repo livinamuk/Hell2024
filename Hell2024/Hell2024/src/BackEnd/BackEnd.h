@@ -1,8 +1,9 @@
 #pragma once
+
 #include "HellCommon.h"
 
-namespace BackEnd {
-
+namespace BackEnd 
+{
     // Core
     void Init(API api);
     void BeginFrame();

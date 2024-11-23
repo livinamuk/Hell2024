@@ -3,23 +3,27 @@
 #include <unordered_map>
 #include <format>
 
-struct TimerResult {
+struct TimerResult 
+{
     float allTimes = 0;
     float sampleCount = 0;
 };
+
 inline std::unordered_map<const char*, TimerResult> _timerResults;
 
-struct Timer {
-
+struct Timer 
+{
     std::chrono::time_point<std::chrono::steady_clock> _startTime;
     const char* _name;
 
-    Timer(const char* name) {
+    Timer(const char* name) 
+    {
         _startTime = std::chrono::steady_clock::now();
         _name = name;
     }
 
-    ~Timer() {
+    ~Timer() 
+    {
         std::chrono::duration<float> duration = std::chrono::steady_clock::now() - _startTime;
         float time = duration.count() * 1000.0f;
         std::string spacing;

@@ -14,8 +14,8 @@
 #include "../Physics/Physics.h"
 #include "../Pathfinding/Pathfinding2.h"
 
-namespace BackEnd {
-
+namespace BackEnd 
+{
     API _api = API::UNDEFINED;
     GLFWwindow* _window = NULL;
     WindowedMode _windowedMode = WindowedMode::WINDOWED;
@@ -35,19 +35,17 @@ namespace BackEnd {
     void framebuffer_size_callback(GLFWwindow* window, int width, int height);
     void window_focus_callback(GLFWwindow* window, int focused);
 
-
-    ////////////////////
-    //                //
     //      Core      //
-
-    void Init(API api) {
-
+    void Init(API api) 
+    {
         _api = api;
 
-        if (GetAPI() == API::OPENGL) {
+        if (GetAPI() == API::OPENGL) 
+        {
             // Nothing required
         }
-        else if (GetAPI() == API::VULKAN) {
+        else if (GetAPI() == API::VULKAN) 
+        {
             VulkanBackEnd::CreateVulkanInstance();
         }
 
@@ -57,13 +55,15 @@ namespace BackEnd {
         glfwInit();
         glfwSetErrorCallback([](int error, const char* description) { std::cout << "GLFW Error (" << std::to_string(error) << "): " << description << "\n";});
 
-        if (GetAPI() == API::OPENGL) {
+        if (GetAPI() == API::OPENGL) 
+        {
             glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
             glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
             glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
             glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, true);
         }
-        else if (GetAPI() == API::VULKAN) {
+        else if (GetAPI() == API::VULKAN) 
+        {
             glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
             glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
         }
@@ -82,7 +82,8 @@ namespace BackEnd {
         _windowedWidth = width;
         _windowedHeight = height;
         CreateGLFWWindow(WindowedMode::WINDOWED);
-        if (_window == NULL) {
+        if (_window == NULL) 
+        {
             std::cout << "Failed to create GLFW window\n";
             glfwTerminate();
             return;
@@ -90,18 +91,21 @@ namespace BackEnd {
         glfwSetFramebufferSizeCallback(_window, framebuffer_size_callback);
         glfwSetWindowFocusCallback(_window, window_focus_callback);
 
-        if (GetAPI() == API::OPENGL) {
+        if (GetAPI() == API::OPENGL) 
+        {
             AssetManager::FindAssetPaths();
         }
 
-        if (GetAPI() == API::OPENGL) {
+        if (GetAPI() == API::OPENGL) 
+        {
             glfwMakeContextCurrent(_window);
             OpenGLBackEnd::InitMinimum();
             OpenGLRenderer::InitMinimum();
             Gizmo::Init();
             glClipControl(GL_LOWER_LEFT, GL_ZERO_TO_ONE);
         }
-        else if (GetAPI() == API::VULKAN) {
+        else if (GetAPI() == API::VULKAN) 
+        {
             VulkanBackEnd::InitMinimum();
             // VulkanRenderer minimum init is tangled in the above function
         }
@@ -122,64 +126,73 @@ namespace BackEnd {
         glfwShowWindow(BackEnd::GetWindowPointer());
     }
 
-    void BeginFrame() {
+    void BeginFrame() 
+    {
         glfwPollEvents();
     }
 
-    void EndFrame() {
-
+    void EndFrame() 
+    {
         // OpenGL
-        if (GetAPI() == API::OPENGL) {
+        if (GetAPI() == API::OPENGL) 
+        {
             glfwSwapBuffers(_window);
         }
         // Vulkan
-        else if (GetAPI() == API::VULKAN){
-
+        else if (GetAPI() == API::VULKAN)
+        {
         }
     }
 
-    void UpdateSubSystems() {
+    void UpdateSubSystems() 
+    {
         Input::Update();
         Audio::Update();
         //Scene::Update();
     }
 
-    void CleanUp() {
-        if (GetWindowMode() == WindowedMode::FULLSCREEN) {
+    void CleanUp() 
+    {
+        if (GetWindowMode() == WindowedMode::FULLSCREEN) 
+        {
             ToggleFullscreen();
         }
         glfwTerminate();
     }
 
-    ///////////////////
-    //               //
     //      API      //
-
-    void SetAPI(API api) {
+    void SetAPI(API api) 
+    {
         _api = api;
     }
 
-    const API GetAPI() {
+    const API GetAPI() 
+    {
         return _api;
     }
 
     // Window
-    GLFWwindow* GetWindowPointer() {
+    GLFWwindow* GetWindowPointer() 
+    {
         return _window;
     }
 
-    void SetWindowPointer(GLFWwindow* window) {
+    void SetWindowPointer(GLFWwindow* window) 
+    {
         _window = window;
     }
 
-    void CreateGLFWWindow(const WindowedMode& windowedMode) {
-        if (windowedMode == WindowedMode::WINDOWED) {
+    void CreateGLFWWindow(const WindowedMode& windowedMode) 
+    {
+        if (windowedMode == WindowedMode::WINDOWED)
+        {
             _currentWindowWidth = _windowedWidth;
             _currentWindowHeight = _windowedHeight;
             _window = glfwCreateWindow(_windowedWidth, _windowedHeight, "Unloved", NULL, NULL);
             glfwSetWindowPos(_window, 0, 0);
         }
-        else if (windowedMode == WindowedMode::FULLSCREEN) {
+        else if (windowedMode == WindowedMode::FULLSCREEN)
+        {
             _currentWindowWidth = _fullscreenWidth;
             _currentWindowHeight = _fullscreenHeight;
             _window = glfwCreateWindow(_fullscreenWidth, _fullscreenHeight, "Unloved", _monitor, NULL);
@@ -187,14 +200,17 @@ namespace BackEnd {
         _windowedMode = windowedMode;
     }
 
-    void SetWindowedMode(const WindowedMode& windowedMode) {
-        if (windowedMode == WindowedMode::WINDOWED) {
+    void SetWindowedMode(const WindowedMode& windowedMode) 
+    {
+        if (windowedMode == WindowedMode::WINDOWED) 
+        {
             _currentWindowWidth = _windowedWidth;
             _currentWindowHeight = _windowedHeight;
             glfwSetWindowMonitor(_window, nullptr, 0, 0, _windowedWidth, _windowedHeight, _mode->refreshRate);
             glfwSetWindowPos(_window, 0, 0);
         }
-        else if (windowedMode == WindowedMode::FULLSCREEN) {
+        else if (windowedMode == WindowedMode::FULLSCREEN) 
+        {
             _currentWindowWidth = _fullscreenWidth;
             _currentWindowHeight = _fullscreenHeight;
             glfwSetWindowMonitor(_window, _monitor, 0, 0, _fullscreenWidth, _fullscreenHeight, _mode->refreshRate);
@@ -202,114 +218,134 @@ namespace BackEnd {
         _windowedMode = windowedMode;
     }
 
-    void ToggleFullscreen() {
-        if (_windowedMode == WindowedMode::WINDOWED) {
+    void ToggleFullscreen() 
+    {
+        if (_windowedMode == WindowedMode::WINDOWED) 
+        {
             SetWindowedMode(WindowedMode::FULLSCREEN);
         }
-        else {
+        else 
+        {
             SetWindowedMode(WindowedMode::WINDOWED);
         }
-        if (GetAPI() == API::OPENGL) {
+        if (GetAPI() == API::OPENGL) 
+        {
             //OpenGLBackEnd::HandleFrameBufferResized();
         }
-        else {
+        else 
+        {
             VulkanBackEnd::HandleFrameBufferResized();
         }
     }
 
-    void ForceCloseWindow() {
+    void ForceCloseWindow() 
+    {
         _forceCloseWindow = true;
     }
 
-    bool WindowHasFocus() {
+    bool WindowHasFocus() 
+    {
         return _windowHasFocus;
     }
 
-    bool WindowHasNotBeenForceClosed() {
+    bool WindowHasNotBeenForceClosed() 
+    {
         return !_forceCloseWindow;
     }
 
-    int GetWindowedWidth() {
+    int GetWindowedWidth() 
+    {
         return _windowedWidth;
     }
 
-    int GetWindowedHeight() {
+    int GetWindowedHeight()
+    {
         return _windowedHeight;
     }
 
-    int GetFullScreenWidth() {
+    int GetFullScreenWidth()
+    {
         return _fullscreenWidth;
     }
 
-    int GetFullScreenHeight() {
+    int GetFullScreenHeight()
+    {
         return _fullscreenHeight;
     }
 
-    int GetCurrentWindowWidth() {
+    int GetCurrentWindowWidth()
+    {
         return _currentWindowWidth;
     }
 
-    int GetCurrentWindowHeight() {
+    int GetCurrentWindowHeight()
+    {
         return _currentWindowHeight;
     }
 
-    bool WindowIsOpen() {
+    bool WindowIsOpen() 
+    {
         return !(glfwWindowShouldClose(_window) || _forceCloseWindow);
     }
 
-    bool WindowIsMinimized() {
+    bool WindowIsMinimized() 
+    {
         int width = 0;
         int height = 0;
         glfwGetFramebufferSize(_window, &width, &height);
         return (width == 0 || height == 0);
     }
 
-    const WindowedMode& GetWindowMode() {
+    const WindowedMode& GetWindowMode() 
+    {
         return _windowedMode;
     }
 
-    //////////////////////////////
-    //                          //
     //      Render Targets      //
-
-    void SetPresentTargetSize(int width, int height) {
+    void SetPresentTargetSize(int width, int height) 
+    {
         _presentTargetWidth = width;
         _presentTargetHeight = height;
-        if (GetAPI() == API::OPENGL) {
+        if (GetAPI() == API::OPENGL) 
+        {
             //OpenGLBackEnd::SetPresentTargetSize(width, height);
         }
-        else {
+        else 
+        {
             //VulkanBackEnd::SetPresentTargetSize(width, height);
         }
     }
 
-    int GetPresentTargetWidth() {
+    int GetPresentTargetWidth() 
+    {
         return _presentTargetWidth;
     }
 
-    int GetPresentTargetHeight() {
+    int GetPresentTargetHeight() 
+    {
         return _presentTargetHeight;
     }
 
-
-    /////////////////////////
-    //                     //
     //      Callbacks      //
-
-    void framebuffer_size_callback(GLFWwindow* /*window*/, int width, int height) {
-        if (GetAPI() == API::OPENGL) {
-
+    void framebuffer_size_callback(GLFWwindow* /*window*/, int width, int height) 
+    {
+        if (GetAPI() == API::OPENGL) 
+        {
         }
-        else {
+        else 
+        {
             VulkanBackEnd::MarkFrameBufferAsResized();
         }
     }
 
-    void window_focus_callback(GLFWwindow* /*window*/, int focused) {
-        if (focused) {
+    void window_focus_callback(GLFWwindow* /*window*/, int focused) 
+    {
+        if (focused) 
+        {
             BackEnd::_windowHasFocus = true;
         }
-        else {
+        else 
+        {
             BackEnd::_windowHasFocus = false;
         }
     }
