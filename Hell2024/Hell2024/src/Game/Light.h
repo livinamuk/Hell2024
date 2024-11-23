@@ -3,16 +3,19 @@
 #include "../Math/Frustum.h"
 
 
-struct Light {
+struct Light 
+{
 
-    struct BoundingVolume {
+    struct BoundingVolume 
+    {
         glm::vec3 min {0};
         glm::vec3 max {0};
     };
 
     Light() = default;
 
-    Light(glm::vec3 position, glm::vec3 color, float radius, float strength, int type) {
+    Light(glm::vec3 position, glm::vec3 color, float radius, float strength, int type) 
+    {
         this->position = position;
         this->color = color;
         this->radius = radius;
@@ -39,17 +42,20 @@ struct Light {
     int m_shadowMapIndex = -1;
     AABBLightVolumeMode m_aabbLightVolumeMode = AABBLightVolumeMode::WORLDSPACE_CUBE_MAP;
 
-    void MarkShadowMapDirty() {
+    void MarkShadowMapDirty() 
+    {
         m_shadowMapIsDirty = true;
     }
     
-    void MarkAllDirtyFlags() {
+    void MarkAllDirtyFlags() 
+    {
         m_shadowMapIsDirty = true;
         m_aaabbVolumeIsDirty = true;
         extraDirty = true;
     }
 
-    void UpdateMatricesAndFrustum() {
+    void UpdateMatricesAndFrustum() 
+    {
         m_projectionMatrix = glm::perspective(glm::radians(90.0f), (float)SHADOW_MAP_SIZE / (float)SHADOW_MAP_SIZE, SHADOW_NEAR_PLANE, radius);
 
         m_viewMatrix[0] = glm::lookAt(position, position + glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f));
@@ -66,7 +72,8 @@ struct Light {
         m_projectionTransforms[4] = m_projectionMatrix * glm::lookAt(position, position + glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, -1.0f, 0.0f));
         m_projectionTransforms[5] = m_projectionMatrix * glm::lookAt(position, position + glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, -1.0f, 0.0f));
         
-        for (int i = 0; i < 6; i++) {
+        for (int i = 0; i < 6; i++) 
+        {
             m_frustum[i].Update(m_projectionTransforms[i]);
         }
     }

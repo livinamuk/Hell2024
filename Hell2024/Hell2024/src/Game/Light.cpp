@@ -6,8 +6,8 @@
 #include "../Renderer/GlobalIllumination.h"
 #include "../Util.hpp"
 
-void Light::FindVisibleCloudPoints() {
-
+void Light::FindVisibleCloudPoints() 
+{
     return;
 
     std::vector<CSGVertex>& vertices = CSG::GetVertices();
@@ -18,24 +18,24 @@ void Light::FindVisibleCloudPoints() {
 
     visibleCloudPointIndices.clear();
 
-
-    for (int j = 0; j < GlobalIllumination::GetPointCloud().size(); j++) {
-
+    for (int j = 0; j < GlobalIllumination::GetPointCloud().size(); j++) 
+    {
         CloudPoint& point = pointCloud[j];
 
         float distanceToPointSquared = Util::DistanceSquared(this->position, point.position);
 
         // Is the point out of the lights influence? then bail
-        if (distanceToPointSquared > radius * radius) {
+        if (distanceToPointSquared > radius * radius) 
+        {
             continue;
         }
 
         bool hasLineOfSight = true;
 
-        for (CSGObject& csgObject : csgObjects) {
-
-            for (int i = csgObject.m_baseIndex; i < csgObject.m_baseIndex + csgObject.m_indexCount; i += 3) {
-
+        for (CSGObject& csgObject : csgObjects) 
+        {
+            for (int i = csgObject.m_baseIndex; i < csgObject.m_baseIndex + csgObject.m_indexCount; i += 3) 
+            {
                 uint32_t idx0 = indices[i + 0 + csgObject.m_baseIndex] + csgObject.m_baseVertex;
                 uint32_t idx1 = indices[i + 1 + csgObject.m_baseIndex] + csgObject.m_baseVertex;
                 uint32_t idx2 = indices[i + 2 + csgObject.m_baseIndex] + csgObject.m_baseVertex;
@@ -49,14 +49,16 @@ void Light::FindVisibleCloudPoints() {
                 IntersectionResult rayResult = Math::RayTriangleIntersectTest(rayOrigin, rayDir, v0.position, v1.position, v2.position);
 
                 // Has line of sight
-                if (rayResult.hitFound) {
+                if (rayResult.hitFound) 
+                {
                     hasLineOfSight = false;
                     break;
                 }
             }
         }
 
-        if (hasLineOfSight) {
+        if (hasLineOfSight) 
+        {
             visibleCloudPointIndices.push_back(j);
         }
     }
