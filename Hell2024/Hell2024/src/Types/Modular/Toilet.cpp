@@ -1,9 +1,10 @@
 #pragma once
+
 #include "Toilet.h"
 #include "../../Game/Scene.h"
 
-Toilet::Toilet(glm::vec3 position, float rotation) {
-
+Toilet::Toilet(glm::vec3 position, float rotation) 
+{
     transform.position = position;
     transform.rotation.y = rotation;
 
@@ -49,15 +50,19 @@ Toilet::Toilet(glm::vec3 position, float rotation) {
     lid->SetModelMatrixMode(ModelMatrixMode::GAME_TRANSFORM);
 }
 
-void Toilet::Draw(Shader& shader, bool bindMaterial) {
+void Toilet::Draw(Shader& shader, bool bindMaterial) 
+{
 }
 
-void Toilet::Update(float deltaTime) {
+void Toilet::Update(float deltaTime) 
+{
 }
 
-glm::mat4 Toilet::GetModelMatrix() {
+glm::mat4 Toilet::GetModelMatrix() 
+{
     return transform.to_mat4();
 }
 
-void Toilet::CleanUp() {
+void Toilet::CleanUp() 
+{
 }

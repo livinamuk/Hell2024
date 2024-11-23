@@ -1,15 +1,17 @@
 #pragma once
+
 #include <string>
 #include "../../Util.hpp"
 #include "../../API/OpenGL/Types/GL_cubemapTexture.h"
 //#include "../API/Vulkan/Types/VK_cubeMaptexture.h"
 
-struct CubemapTexture {
-
+struct CubemapTexture 
+{
 public:
 
     CubemapTexture() = default;
-    CubemapTexture(std::string fullPath) {
+    CubemapTexture(std::string fullPath) 
+    {
         m_fullPath = fullPath;
     }
     void Load();

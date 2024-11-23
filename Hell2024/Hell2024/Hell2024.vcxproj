@@ -171,7 +171,7 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <ClCompile Include="src\Renderer\GlobalIllumination.cpp" />
     <ClCompile Include="src\Renderer\Types\CubemapTexutre.cpp" />
     <ClCompile Include="src\Renderer\Types\ExrTexture.cpp" />
-    <ClCompile Include="src\Renderer\Types\LighjVolume.cpp" />
+    <ClCompile Include="src\Renderer\Types\LightVolume.cpp" />
     <ClCompile Include="src\Renderer\Types\SkinnedModel.cpp" />
     <ClCompile Include="src\Renderer\Types\Texture.cpp" />
     <ClCompile Include="src\Renderer\Types\Texture3D.cpp" />

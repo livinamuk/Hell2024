@@ -5,8 +5,8 @@
 
 #include <iostream>
 
-namespace Raytracing {
-
+namespace Raytracing 
+{
     std::vector<BLAS> _bottomLevelAccelerationStructures;
     std::vector<TLAS> _topLevelAccelerationStructures;
 
@@ -16,27 +16,33 @@ namespace Raytracing {
     int _nextBlasRootIndex = 0;
     int _nextBlasBaseTriangleIndex = 0;
 
-    TLAS* CreateTopLevelAccelerationStruture() {
+    TLAS* CreateTopLevelAccelerationStruture() 
+    {
         return &_topLevelAccelerationStructures.emplace_back();
     }
 
-    const void DestroyTopLevelAccelerationStructure(int index) {
-        if (index >= 0 && index < _topLevelAccelerationStructures.size()) {
+    const void DestroyTopLevelAccelerationStructure(int index)
+    {
+        if (index >= 0 && index < _topLevelAccelerationStructures.size())
+        {
             _topLevelAccelerationStructures.erase(_topLevelAccelerationStructures.begin() + index);
         }
     }
 
-    TLAS* GetTLASByIndex(int index) {
-        if (index >= 0 && index < _topLevelAccelerationStructures.size()) {
+    TLAS* GetTLASByIndex(int index)
+    {
+        if (index >= 0 && index < _topLevelAccelerationStructures.size())
+        {
             return &_topLevelAccelerationStructures[index];
         }
-        else {
+        else
+        {
             return nullptr;
         }
     }
 
-    const int CreateBLAS(std::vector<CSGVertex>& vertices, std::vector<unsigned int>& indices, unsigned int meshBaseVertex, unsigned int meshBaseIndex) {
-
+    const int CreateBLAS(std::vector<CSGVertex>& vertices, std::vector<unsigned int>& indices, unsigned int meshBaseVertex, unsigned int meshBaseIndex) 
+    {
         BLAS& blas = _bottomLevelAccelerationStructures.emplace_back();
         blas.Create(vertices, indices, meshBaseVertex, meshBaseIndex);
         blas.rootIndex = _nextBlasRootIndex;
@@ -57,8 +63,8 @@ namespace Raytracing {
         return (int)_bottomLevelAccelerationStructures.size() - 1;
     }
 
-    const void RecreateBLAS(unsigned int blasIndex, std::vector<CSGVertex>& vertices, std::vector<unsigned int>& indices, unsigned int meshBaseVertex, unsigned int meshBaseIndex) {
-
+    const void RecreateBLAS(unsigned int blasIndex, std::vector<CSGVertex>& vertices, std::vector<unsigned int>& indices, unsigned int meshBaseVertex, unsigned int meshBaseIndex) 
+    {
         BLAS& blas = _bottomLevelAccelerationStructures[blasIndex];
 
         // Remove triangles and BVH nodes from global buffers
@@ -81,32 +87,39 @@ namespace Raytracing {
         _nextBlasBaseTriangleIndex = (int)_triangleIndices.size();
     }
 
-    BLAS* GetBLASByIndex(int index) {
-        if (index >= 0 && index < _bottomLevelAccelerationStructures.size()) {
+    BLAS* GetBLASByIndex(int index) 
+    {
+        if (index >= 0 && index < _bottomLevelAccelerationStructures.size())
+        {
             return &_bottomLevelAccelerationStructures[index];
         }
-        else {
+        else
+        {
             return nullptr;
         }
     }
 
-    const std::vector<BVHNode>& GetBLSANodes() {
+    const std::vector<BVHNode>& GetBLSANodes()
+    {
         return _blasNodes;
     }
 
-    const std::vector<unsigned int>& GetTriangleIndices() {
+    const std::vector<unsigned int>& GetTriangleIndices()
+    {
         return _triangleIndices;
     }
 
-    const std::vector<BLASInstance> GetBLASInstances(int tlasIndex) {
-
+    const std::vector<BLASInstance> GetBLASInstances(int tlasIndex)
+    {
         std::vector<BLASInstance> blasInstnaces;
 
         TLAS* tlas = GetTLASByIndex(tlasIndex);
         if (tlas) {
-            for (auto& index : tlas->GetSortedBLASInstanceIndices()) {
+            for (auto& index : tlas->GetSortedBLASInstanceIndices()) 
+            {
                 BLAS* blas = GetBLASByIndex(tlas->GetInstanceBLASIndexByInstanceIndex(index));
-                if (blas) {
+                if (blas)
+                {
                     BLASInstance& blasInstance = blasInstnaces.emplace_back();
                     blasInstance.inverseModelMatrix = glm::inverse(tlas->GetInstanceWorldTransformByInstanceIndex(index));
                     blasInstance.blsaRootNodeIndex = blas->rootIndex;
@@ -116,13 +129,15 @@ namespace Raytracing {
                 }
             }
         }
-        else {
+        else
+        {
             //std::cout << "GetBLASInstances() returned empty vector because tlasIndex is out of range\n";
         }
         return blasInstnaces;
     }
 
-    void CleanUp() {
+    void CleanUp()
+    {
         _bottomLevelAccelerationStructures.clear();
         _topLevelAccelerationStructures.clear();
         _blasNodes.clear();
@@ -131,32 +146,38 @@ namespace Raytracing {
         _nextBlasBaseTriangleIndex = 0;
     }
 
-    int GetBottomLevelAccelerationStructureCount() {
+    int GetBottomLevelAccelerationStructureCount() 
+    {
         return _bottomLevelAccelerationStructures.size();
     }
 
-    struct Ray {
+    struct Ray
+    {
         glm::vec3 origin;
         glm::vec3 dir;
         glm::vec3 inverseDir;
         float t;
     };
 
-    float DistanceSquared(glm::vec3 A, glm::vec3 B) {
+    float DistanceSquared(glm::vec3 A, glm::vec3 B) 
+    {
         glm::vec3 C = A - B;
         return glm::dot(C, C);
     }
 
-    float SafeInverse(float x) {
+    float SafeInverse(float x) 
+    {
         const float epsilon = 0.001;
-        if (abs(x) <= epsilon) {
+        if (abs(x) <= epsilon) 
+        {
             if (x >= 0) return 1.f / epsilon;
             return -1.f / epsilon;
         }
         return 1.f / x;
     }
 
-    bool IntersectAABB(Ray ray, glm::vec3 bmin, glm::vec3 bmax) {
+    bool IntersectAABB(Ray ray, glm::vec3 bmin, glm::vec3 bmax)
+    {
         float tx1 = (bmin.x - ray.origin.x) * ray.inverseDir.x, tx2 = (bmax.x - ray.origin.x) * ray.inverseDir.x;
         float tmin = std::min(tx1, tx2), tmax = std::max(tx1, tx2);
         float ty1 = (bmin.y - ray.origin.y) * ray.inverseDir.y, ty2 = (bmax.y - ray.origin.y) * ray.inverseDir.y;
@@ -166,8 +187,8 @@ namespace Raytracing {
         return tmax >= tmin && tmin < ray.t && tmax > 0;
     }
 
-    bool TriIntersectBoolVersion(glm::vec3& origin, glm::vec3& direction, float rayMin, float rayMax, glm::vec3& v0, glm::vec3& v1, glm::vec3& v2) {
-
+    bool TriIntersectBoolVersion(glm::vec3& origin, glm::vec3& direction, float rayMin, float rayMax, glm::vec3& v0, glm::vec3& v1, glm::vec3& v2) 
+    {
         glm::vec3 a = v0 - v1;
         glm::vec3 b = v2 - v0;
         glm::vec3 p = v0 - origin;
@@ -191,15 +212,16 @@ namespace Raytracing {
         if (u < 0.0 || v < 0.0 || (u + v)>1.0)
             t = -1.0;
 
-        if (t > rayMin && t < rayMax) {
+        if (t > rayMin && t < rayMax) 
+        {
             return true;
         }
         return false;
     }
 
 
-    bool IntersectBLAS(Ray ray, const unsigned int nodeIdx, const unsigned int blasIndex, const std::vector<BVHNode>& blasNodes, std::vector<BLASInstance>& blasInstaces, const std::vector<unsigned int>& triangleIndices) {
-
+    bool IntersectBLAS(Ray ray, const unsigned int nodeIdx, const unsigned int blasIndex, const std::vector<BVHNode>& blasNodes, std::vector<BLASInstance>& blasInstaces, const std::vector<unsigned int>& triangleIndices) 
+    {
         const glm::mat4 inverseModelMatrix = blasInstaces[blasIndex].inverseModelMatrix;
         const unsigned int rootIndex = blasInstaces[blasIndex].blsaRootNodeIndex;
         const unsigned int baseTriangleIndex = blasInstaces[blasIndex].baseTriangleIndex;
@@ -226,24 +248,23 @@ namespace Raytracing {
         stackIndex++;
 
         // Iterate the stack while it still contains nodes
-        while (stackIndex > 0) {
-
+        while (stackIndex > 0)
+        {
             // Pop current node
             stackIndex--;
 
             unsigned int currentNodeIndex = stack[stackIndex];
             BVHNode childNode = blasNodes[currentNodeIndex];
 
-            if (IntersectAABB(adjustedRay, childNode.aabbMin, childNode.aabbMax)) {
-
-
+            if (IntersectAABB(adjustedRay, childNode.aabbMin, childNode.aabbMax)) 
+            {
                 std::cout << "blas aabb\n";
 
                 // If intersection was a leaf then it has children triangles, so return red
-                if (childNode.instanceCount > 0) {
-
-                    for (int j = 0; j < childNode.instanceCount; j++) {
-
+                if (childNode.instanceCount > 0) 
+                {
+                    for (int j = 0; j < childNode.instanceCount; j++) 
+                    {
                         const unsigned int result = triangleIndices[blasNodes[currentNodeIndex].leftFirst + j + baseTriangleIndex];
 
                         unsigned int idx0 = indices[result * 3 + 0 + baseIndex] + baseVertex;
@@ -259,17 +280,20 @@ namespace Raytracing {
 
                         bool triHit = TriIntersectBoolVersion(adjustedRay.origin, adjustedRay.dir, rayMin, rayMax, v0, v1, v2);
 
-                        if (triHit) {
+                        if (triHit) 
+                        {
                             std::cout << "TRI HIT! \n";
                             return true;
                         }
-                        else {
+                        else
+                        {
 
                             std::cout << "-but no tri hit\n";
                         }
                     }
                 }
-                else {
+                else
+                {
                     // If not a leaf, add children to stack
                     stack[stackIndex] = childNode.leftFirst + rootIndex;
                     stackIndex++;
@@ -278,7 +302,8 @@ namespace Raytracing {
                 }
             }
 
-            if (stackIndex == 0) {
+            if (stackIndex == 0)
+            {
                 false;
             }
         }
@@ -286,11 +311,12 @@ namespace Raytracing {
         return false;
     }
 
-    bool IntersectTLAS(Ray ray, const unsigned int nodeIdx) {
-
+    bool IntersectTLAS(Ray ray, const unsigned int nodeIdx) 
+    {
         int tlasIndex = 0;
         TLAS* tlas = Raytracing::GetTLASByIndex(tlasIndex);
-        if (!tlas) {
+        if (!tlas) 
+        {
             std::cout << "Invalid TLAS!\n";
             return false;
         }
@@ -302,9 +328,9 @@ namespace Raytracing {
 
         BVHNode rootNode = tlasNodes[nodeIdx];
 
-
         // Early out if ray doesn't even hit the root node
-        if (!IntersectAABB(ray, rootNode.aabbMin, rootNode.aabbMax)) {
+        if (!IntersectAABB(ray, rootNode.aabbMin, rootNode.aabbMax))
+        {
             std::cout << "Ray didn't even hit the root node!\n";
             return false;
         }
@@ -318,8 +344,8 @@ namespace Raytracing {
         stackIndex++;
 
         // Iterate the stack while it still contains nodes
-        while (stackIndex > 0) {
-
+        while (stackIndex > 0) 
+        {
             std::cout << "stackIndex: " << stackIndex << "\n";
 
             // Pop current node
@@ -328,22 +354,24 @@ namespace Raytracing {
             unsigned int currentNodeIndex = stack[stackIndex];
             BVHNode childNode = tlasNodes[currentNodeIndex];
 
-            if (IntersectAABB(ray, childNode.aabbMin, childNode.aabbMax)) {
-
+            if (IntersectAABB(ray, childNode.aabbMin, childNode.aabbMax))
+            {
                 std::cout << "Ray hit on AABB: " << Util::Vec3ToString(childNode.aabbMin) << " " << Util::Vec3ToString(childNode.aabbMax) << "\n";
 
                 // If intersection was a leaf then it has children
-                if (childNode.instanceCount > 0) {
-
+                if (childNode.instanceCount > 0) 
+                {
                     std::cout << "- was a leafnode..\n";
                     // Successful hit
                     unsigned int blasIndex = childNode.leftFirst;
-                    if (IntersectBLAS(ray, 0, blasIndex, blasNodes, blasInstaces, triangleIndices)) {
+                    if (IntersectBLAS(ray, 0, blasIndex, blasNodes, blasInstaces, triangleIndices)) 
+                    {
                         return true;
                     }
                 }
                 // If not a leaf, add children to stack
-                else {
+                else
+                {
                     std::cout << "-was NOT a leafnode, adding children\n";
                     stack[stackIndex] = childNode.leftFirst;
                     stackIndex++;
@@ -351,10 +379,12 @@ namespace Raytracing {
                     stackIndex++;
                 }
             }
-            else {
+            else
+            {
                 std::cout << "Failed ray hit on AABB: " << Util::Vec3ToString(childNode.aabbMin) << " " << Util::Vec3ToString(childNode.aabbMax) << "\n";
             }
-            if (stackIndex == 0) {
+            if (stackIndex == 0)
+            {
                 std::cout << "TLAS stack index 0\n";
                 return false;
             }
@@ -364,8 +394,8 @@ namespace Raytracing {
         return false;
     }
 
-    bool LineOfSight(glm::vec3 rayOrigin, glm::vec3 rayDirection, float rayLength) {
-
+    bool LineOfSight(glm::vec3 rayOrigin, glm::vec3 rayDirection, float rayLength) 
+    {
         Ray ray;
         ray.origin = rayOrigin;
         ray.dir = rayDirection;
@@ -380,5 +410,4 @@ namespace Raytracing {
 
         return IntersectTLAS(ray, 0);
     }
-
 }

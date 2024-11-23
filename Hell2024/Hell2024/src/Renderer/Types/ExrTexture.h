@@ -1,10 +1,11 @@
 #pragma once
+
 #include "HellCommon.h"
 #include "../../API/OpenGL/Types/GL_texture.h"
 #include "../../API/Vulkan/Types/VK_texture.h"
 
-class ExrTexture {
-
+class ExrTexture 
+{
 public: 
     ExrTexture() = default;
 	void Load(std::string filepath);

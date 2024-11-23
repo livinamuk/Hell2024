@@ -1,10 +1,11 @@
 #pragma once
+
 #include <string>
 #include "RendererCommon.h"
 #include "../Physics/Physics.h"
 
-struct HeightMap {
-
+struct HeightMap
+{
     unsigned int m_VAO = 0;
     unsigned int m_VBO = 0;
     unsigned int m_EBO = 0;
@@ -23,6 +24,4 @@ struct HeightMap {
     PxHeightField* m_pxHeightField = NULL;
     PxShape* m_pxShape = NULL;
     PxRigidStatic* m_pxRigidStatic = NULL;
-
-
 };

@@ -2,15 +2,14 @@
 #include "../../BackEnd/BackEnd.h"
 #include "RendererCommon.h"
 
-LightVolume::LightVolume(float width, float height, float depth, float posX, float posY, float posZ) {
-
+LightVolume::LightVolume(float width, float height, float depth, float posX, float posY, float posZ) 
+{
     this->width = width;
     this->height = height;
     this->depth = depth;
     this->posX = posX;
     this->posY = posY;
     this->posZ = posZ;
-
 
     int xCount = width / PROBE_SPACING;
     int yCount = height / PROBE_SPACING;
@@ -28,57 +27,68 @@ LightVolume::LightVolume(float width, float height, float depth, float posX, flo
     std::cout << xCount * yCount * zCount << "\n\n";*/
 }
 
-void LightVolume::CreateTexure3D() {
-
+void LightVolume::CreateTexure3D() 
+{
     int textureWidth = width / PROBE_SPACING;
     int textureHeight = height / PROBE_SPACING;
     int textureDepth = depth / PROBE_SPACING;
 
     //std::cout << "Created 3D texture of size " << textureWidth << " x " << textureHeight << " x " << textureDepth << "\n";
 
-    if (BackEnd::GetAPI() == API::OPENGL) {
+    if (BackEnd::GetAPI() == API::OPENGL) 
+    {
         texutre3D.GetGLTexture3D().Create(textureWidth, textureHeight, textureDepth);
     }
-    if (BackEnd::GetAPI() == API::VULKAN) {
+    if (BackEnd::GetAPI() == API::VULKAN) 
+    {
         texutre3D.GetVKTexture3D().Create(textureWidth, textureHeight, textureDepth);
     }
 }
 
-const float LightVolume::GetWorldSpaceWidth() {
+const float LightVolume::GetWorldSpaceWidth() 
+{
     return width;
 }
 
-const float LightVolume::GetWorldSpaceHeight() {
+const float LightVolume::GetWorldSpaceHeight() 
+{
     return height;
 }
 
-const float LightVolume::GetWorldSpaceDepth() {
+const float LightVolume::GetWorldSpaceDepth()
+{
     return depth;
 }
 
-const int LightVolume::GetProbeSpaceWidth() {
+const int LightVolume::GetProbeSpaceWidth() 
+{
     return  width / PROBE_SPACING;
 }
 
-const int LightVolume::GetProbeSpaceHeight() {
+const int LightVolume::GetProbeSpaceHeight() 
+{
     return height / PROBE_SPACING;;
 }
 
-const int LightVolume::GetProbeSpaceDepth() {
+const int LightVolume::GetProbeSpaceDepth() 
+{
     return depth / PROBE_SPACING;;
 }
 
-const int LightVolume::GetProbeCount() {
+const int LightVolume::GetProbeCount() 
+{
     int xCount = width / PROBE_SPACING;
     int yCount = height / PROBE_SPACING;
     int zCount = depth / PROBE_SPACING;
     return xCount * yCount * zCount;
 }
 
-const glm::vec3 LightVolume::GetPosition() {
+const glm::vec3 LightVolume::GetPosition() 
+{
     return glm::vec3(posX, posY, posZ);
 }
 
-const void LightVolume::CleanUp() {
+const void LightVolume::CleanUp() 
+{
     texutre3D.CleanUp();
 }

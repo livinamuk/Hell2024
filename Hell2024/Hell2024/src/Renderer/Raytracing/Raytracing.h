@@ -1,9 +1,10 @@
 #pragma once
+
 #include "TLAS.hpp"
 #include "BLAS.hpp"
 
-namespace Raytracing {
-
+namespace Raytracing 
+{
     const int CreateBLAS(std::vector<CSGVertex>& vertices, std::vector<unsigned int>& indices, unsigned int meshBaseVertex, unsigned int meshBaseIndex);
     const void RecreateBLAS(unsigned int blasIndex, std::vector<CSGVertex>& vertices, std::vector<unsigned int>& indices, unsigned int meshBaseVertex, unsigned int meshBaseIndex);
     TLAS* CreateTopLevelAccelerationStruture();
@@ -17,5 +18,4 @@ namespace Raytracing {
     void CleanUp();
     int GetBottomLevelAccelerationStructureCount();
     bool LineOfSight(glm::vec3 rayOrigin, glm::vec3 rayDirection, float rayLength);
-
 }

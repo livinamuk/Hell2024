@@ -23,7 +23,6 @@
 
 #pragma warning(disable:4996)   // Ignoring 'fopen': This function or variable may be unsafe
 
-
 #include "Compressonator.h"
 #include "DDSHelpers.h"
 #include <assert.h>

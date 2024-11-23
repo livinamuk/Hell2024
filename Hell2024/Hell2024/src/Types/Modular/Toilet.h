@@ -1,11 +1,12 @@
 #pragma once
+
 #include "HellCommon.h"
 #include "../../API/OpenGL/Types/GL_shader.h"
 #include "../../Core/AssetManager.h"
 #include "../../Game/GameObject.h"
 
-struct Toilet {
-
+struct Toilet 
+{
     Transform transform;
     Toilet() = default;
     Toilet(glm::vec3 position, float rotation);

@@ -1,20 +1,25 @@
 #pragma once
+
 #include "HeightMap.h"
 #include <stb_image.h>
 #include <iostream>
 
-void HeightMap::Load(const std::string& filepath, float textureRepeat) {
+void HeightMap::Load(const std::string& filepath, float textureRepeat)
+{
     int channels;
     unsigned char* data = stbi_load(filepath.c_str(), &m_width, &m_depth, &channels, 0);
-    if (!data) {
+    if (!data) 
+    {
         std::cout << "Failed to load heightmap image\n";
         return;
     }
 
     // Vertices
     m_vertices.reserve(m_width * m_depth);
-    for (int z = 0; z < m_depth; z ++) {
-        for (int x = 0; x < m_width; x++) { 
+    for (int z = 0; z < m_depth; z ++)
+    {
+        for (int x = 0; x < m_width; x++)
+        { 
             int index = (z * m_width + x) * channels;
             unsigned char value = data[index];
             float heightValue = static_cast<float>(value) / 255.0f;
@@ -26,8 +31,10 @@ void HeightMap::Load(const std::string& filepath, float textureRepeat) {
     stbi_image_free(data);
 
     // Calculate normals
-    for (int z = 0; z < m_depth; z++) {
-        for (int x = 0; x < m_width; x++) {
+    for (int z = 0; z < m_depth; z++)
+    {
+        for (int x = 0; x < m_width; x++) 
+        {
             glm::vec3 current = m_vertices[z * m_width + x].position;
             glm::vec3 left = (x > 0) ? m_vertices[z * m_width + (x - 1)].position : current;
             glm::vec3 right = (x < m_width - 1) ? m_vertices[z * m_width + (x + 1)].position : current;
@@ -41,20 +48,25 @@ void HeightMap::Load(const std::string& filepath, float textureRepeat) {
     }
     // Indices
     m_indices.reserve((m_width - 1) * (m_depth - 1) * 2 * 3); // Rough estimate of the size
-    for (int z = 0; z < m_depth - 1; ++z) {
-        for (int x = 0; x < m_width; ++x) {
+    for (int z = 0; z < m_depth - 1; ++z) 
+    {
+        for (int x = 0; x < m_width; ++x) 
+        {
             m_indices.push_back(z * m_width + x);
             m_indices.push_back((z + 1) * m_width + x);
         }
         // Degenerate triangles to connect rows
-        if (z < m_depth - 2) {
+        if (z < m_depth - 2) 
+        {
             m_indices.push_back((z + 1) * m_width + (m_width - 1));
             m_indices.push_back((z + 1) * m_width);
         }
     }
     // Calculate tangents
-    for (int z = 0; z < m_depth - 1; ++z) {
-        for (int x = 0; x < m_width - 1; ++x) {
+    for (int z = 0; z < m_depth - 1; ++z)
+    {
+        for (int x = 0; x < m_width - 1; ++x) 
+        {
             Vertex& v0 = m_vertices[z * m_width + x];
             Vertex& v1 = m_vertices[z * m_width + (x + 1)];
             Vertex& v2 = m_vertices[(z + 1) * m_width + x];
@@ -71,13 +83,15 @@ void HeightMap::Load(const std::string& filepath, float textureRepeat) {
         }
     }
     // Normalize tangents
-    for (Vertex& vertex : m_vertices) {
+    for (Vertex& vertex : m_vertices) 
+    {
         //vertex.tangent = glm::normalize(vertex.tangent);
     }
     std::cout << "Heightmap loaded: " << m_vertices.size() << " vertices\n";
 }
 
-void HeightMap::UploadToGPU() {
+void HeightMap::UploadToGPU() 
+{
     glGenVertexArrays(1, &m_VAO);
     glGenBuffers(1, &m_VBO);
     glGenBuffers(1, &m_EBO);
@@ -97,13 +111,14 @@ void HeightMap::UploadToGPU() {
     glBindVertexArray(0);
 }
 
-void HeightMap::CreatePhysicsObject() {
-
+void HeightMap::CreatePhysicsObject() 
+{
     //PxShapeFlags shapeFlags(PxShapeFlag::eSCENE_QUERY_SHAPE); // Most importantly NOT eSIMULATION_SHAPE. PhysX does not allow for tri mesh.
     PxShapeFlags shapeFlags(PxShapeFlag::eSCENE_QUERY_SHAPE | PxShapeFlag::eSIMULATION_SHAPE);
 
     PxHeightField* m_pxHeightField = Physics::CreateHeightField(m_vertices, m_width, m_depth);
-    if (!m_pxHeightField) {
+    if (!m_pxHeightField) 
+    {
         std::cout << "HeightMap::CreatePhysicsObject() failed!!!\n";
         std::cout << "- m_vertices.size(): " << m_vertices.size() << "\n";
         std::cout << "- m_width: " << m_width << "\n";
@@ -123,13 +138,14 @@ void HeightMap::CreatePhysicsObject() {
 
     m_pxRigidStatic = Physics::CreateRigidStatic(m_transform, filterData, m_pxShape);
     m_pxRigidStatic->userData = new PhysicsObjectData(ObjectType::HEIGHT_MAP, this);
-
 }
 
-glm::vec3 HeightMap::GetWorldSpaceCenter() {
+glm::vec3 HeightMap::GetWorldSpaceCenter() 
+{
     float width = m_width * m_transform.scale.x;
     float height = m_depth * m_transform.scale.z;
-    return {
+    return 
+    {
         m_transform.position.x + (width * 0.5f),
         m_transform.position.y,
         m_transform.position.z + (height * 0.5f)

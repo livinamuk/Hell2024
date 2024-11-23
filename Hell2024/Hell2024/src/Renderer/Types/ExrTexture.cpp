@@ -2,8 +2,8 @@
 #define TINYEXR_IMPLEMENTATION
 #include "tinyexr.h"
 
-void ExrTexture::Load(std::string filepath) {
-
+void ExrTexture::Load(std::string filepath)
+{
     int pos = filepath.rfind("\\") + 1;
     int pos2 = filepath.rfind("/") + 1;
     _filename = filepath.substr(max(pos, pos2));
@@ -18,37 +18,42 @@ void ExrTexture::Load(std::string filepath) {
     const char* layername = nullptr;
     int num_layers = 0;
     bool status = EXRLayers(filename, &layer_names, &num_layers, &err);
-    if (err) {
+    if (err)
+    {
         fprintf(stderr, "EXR error = %s\n", err);
     }
-    if (status != 0) {
+    if (status != 0) 
+    {
         fprintf(stderr, "Load EXR err: %s\n", err);
         std::cout << " GetEXRLayers() FAILED \n";
     }
-    if (num_layers > 0) {
+    if (num_layers > 0) 
+    {
         fprintf(stdout, "EXR Contains %i Layers\n", num_layers);
-        for (int i = 0; i < (int)num_layers; ++i) {
+        for (int i = 0; i < (int)num_layers; ++i) 
+        {
             fprintf(stdout, "Layer %i : %s\n", i + 1, layer_names[i]);
         }
     }
+
     free(layer_names);
 
     // Load the RGBA
     int width, height;
     float* image;
     status = LoadEXRWithLayer(&image, &width, &height, filename, layername, &err);
-    if (err) {
+    if (err) 
+    {
         fprintf(stderr, "EXR error = %s\n", err);
     }
-    if (status != 0) {
+    if (status != 0) 
+    {
         fprintf(stderr, "Load EXR err: %s\n", err);
         std::cout << " LoadEXRRGBA() FAILED \n";
     }
     gExrRGBA = image;
     gExrWidth = width;
     gExrHeight = height;
-
-
 
     // Load to GL
     gTexId;
@@ -62,7 +67,8 @@ void ExrTexture::Load(std::string filepath) {
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16, gExrWidth, gExrHeight, 0, GL_RGBA, GL_FLOAT, gExrRGBA);
 }
 
-std::string& ExrTexture::GetFilename() {
+std::string& ExrTexture::GetFilename() 
+{
     /*if (BackEnd::GetAPI() == API::OPENGL) {
         return glTexture.GetFilename();
     }
@@ -72,7 +78,8 @@ std::string& ExrTexture::GetFilename() {
     return _filename;
 }
 
-std::string& ExrTexture::GetFiletype() {
+std::string& ExrTexture::GetFiletype() 
+{
     return _filetype;
     /*
     if (BackEnd::GetAPI() == API::OPENGL) {
@@ -83,10 +90,12 @@ std::string& ExrTexture::GetFiletype() {
     }*/
 }
 
-OpenGLTexture& ExrTexture::GetGLTexture() {
+OpenGLTexture& ExrTexture::GetGLTexture() 
+{
     return glTexture;
 }
 
-VulkanTexture& ExrTexture::GetVKTexture() {
+VulkanTexture& ExrTexture::GetVKTexture()
+{
     return vkTexture;
 }

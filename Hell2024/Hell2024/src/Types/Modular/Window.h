@@ -1,11 +1,11 @@
 #pragma once
+
 #include "HellCommon.h"
 #include "../../Physics/Physics.h"
 
-class Window {
-
+class Window 
+{
 public:
-
 	PxRigidStatic* raycastBody = NULL;
 	PxShape* raycastShape = NULL;
 

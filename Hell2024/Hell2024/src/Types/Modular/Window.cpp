@@ -2,21 +2,23 @@
 #include "../../Core/AssetManager.h"
 #include "../../Util.hpp"
 
-Window::Window() {
-
+Window::Window() 
+{
 }
 
-glm::mat4 Window::GetModelMatrix() {
+glm::mat4 Window::GetModelMatrix() 
+{
 	Transform transform;
 	transform.position = m_position;
 	transform.rotation.y = m_rotationY;
 	return transform.to_mat4();
 }
 
-void Window::CleanUp() {
-
+void Window::CleanUp() 
+{
 	// If the raycastBody exists, then they all do, so remove the old ones
-	if (raycastBody) {
+	if (raycastBody) 
+	{
 		raycastBody->release();
 		//raycastBodyTop->release();
 		raycastShape->release();
@@ -24,17 +26,13 @@ void Window::CleanUp() {
 	}
 }
 
-void Window::CreatePhysicsObjects() {
-
-
+void Window::CreatePhysicsObjects() 
+{
     PxTriangleMesh* triangleMesh = Physics::CreateTriangleMeshFromModelIndex(AssetManager::GetModelIndexByName("Glass"));
-
 
 	CleanUp(); // removes old PhysX objects
 
-
 	{
-
 		PhysicsFilterData filterData2;
 		filterData2.raycastGroup = RaycastGroup::RAYCAST_ENABLED;
 		filterData2.collisionGroup = NO_COLLISION;
@@ -74,7 +72,8 @@ void Window::CreatePhysicsObjects() {
 
 }
 
-glm::vec3 Window::GetFrontLeftCorner() {
+glm::vec3 Window::GetFrontLeftCorner() 
+{
 	glm::vec4 result(0);
 	result.z -= 0.1f;
 	result.y += WINDOW_HEIGHT;
@@ -84,7 +83,8 @@ glm::vec3 Window::GetFrontLeftCorner() {
 	return worldSpaceResult;
 }
 
-glm::vec3 Window::GetFrontRightCorner() {
+glm::vec3 Window::GetFrontRightCorner() 
+{
 	glm::vec4 result(0);
 	result.z -= 0.1;
 	result.y += WINDOW_HEIGHT;
@@ -94,7 +94,8 @@ glm::vec3 Window::GetFrontRightCorner() {
 	return worldSpaceResult;
 }
 
-glm::vec3 Window::GetBackLeftCorner() {
+glm::vec3 Window::GetBackLeftCorner() 
+{
 	glm::vec4 result(0);
 	result.z += 0.1;
 	result.y += WINDOW_HEIGHT;
@@ -104,7 +105,8 @@ glm::vec3 Window::GetBackLeftCorner() {
 	return worldSpaceResult;
 }
 
-glm::vec3 Window::GetBackRightCorner() {
+glm::vec3 Window::GetBackRightCorner() 
+{
 	glm::vec4 result(0);
 	result.z += 0.1;
 	result.y += WINDOW_HEIGHT;
@@ -114,13 +116,13 @@ glm::vec3 Window::GetBackRightCorner() {
 	return worldSpaceResult;
 }
 
-glm::vec3 Window::GetWorldSpaceCenter() {
+glm::vec3 Window::GetWorldSpaceCenter() 
+{
     return m_position + glm::vec3(0, 1.5f, 0);
 }
 
-
-void Window::UpdateRenderItems() {
-
+void Window::UpdateRenderItems() 
+{
     renderItems.clear();
 
     static uint32_t interiorMaterialIndex = AssetManager::GetMaterialIndex("Window");
@@ -128,10 +130,12 @@ void Window::UpdateRenderItems() {
 
     Model* model = AssetManager::GetModelByIndex(AssetManager::GetModelIndexByName("Window"));
 
-    for (int i = 0; i < model->GetMeshIndices().size(); i++) {
+    for (int i = 0; i < model->GetMeshIndices().size(); i++) 
+	{
         uint32_t& meshIndex = model->GetMeshIndices()[i];
         uint32_t materialIndex = interiorMaterialIndex;
-        if (i == 4 || i == 5 || i == 6) {
+        if (i == 4 || i == 5 || i == 6) 
+		{
             materialIndex = exteriorMaterialIndex;
         }
         Mesh* mesh = AssetManager::GetMeshByIndex(meshIndex);
@@ -148,55 +152,67 @@ void Window::UpdateRenderItems() {
     }
 }
 
-std::vector<RenderItem3D>& Window::GetRenderItems() {
+std::vector<RenderItem3D>& Window::GetRenderItems() 
+{
     return renderItems;
 }
 
-glm::mat4 Window::GetGizmoMatrix() {
+glm::mat4 Window::GetGizmoMatrix() 
+{
     Transform transform;
     transform.position = m_position + glm::vec3(0, 1.5f, 0);
     transform.rotation.y = m_rotationY;
     return transform.to_mat4();
 }
 
-void Window::SetPosition(glm::vec3 position) {
+void Window::SetPosition(glm::vec3 position)
+{
     m_position = position;
-    if (raycastBody) {
+    if (raycastBody) 
+	{
         PxMat44 worldMatrix = Util::GlmMat4ToPxMat44(GetModelMatrix());
         PxTransform transform2 = PxTransform(worldMatrix);
         raycastBody->setGlobalPose(transform2);
     }
 }
 
-void Window::SetRotationY(float rotationY) {
+void Window::SetRotationY(float rotationY) 
+{
     m_rotationY = rotationY;
-    if (raycastBody) {
+    if (raycastBody) 
+	{
         PxMat44 worldMatrix = Util::GlmMat4ToPxMat44(GetModelMatrix());
         PxTransform transform = PxTransform(worldMatrix);
         raycastBody->setGlobalPose(transform);
     }
 }
 
-void Window::Rotate90() {
+void Window::Rotate90() 
+{
     SetRotationY(m_rotationY + HELL_PI * 0.5f);
 }
 
-glm::vec3 Window::GetPosition() {
+glm::vec3 Window::GetPosition() 
+{
     return m_position;
 }
 
-const float Window::GetPostionX() {
+const float Window::GetPostionX() 
+{
     return m_position.x;
 }
 
-const float Window::GetPostionY() {
+const float Window::GetPostionY() 
+{
     return m_position.y;
 }
 
-const float Window::GetPostionZ() {
+const float Window::GetPostionZ()
+{
     return m_position.z;
 }
 
-float Window::GetRotationY() {
+float Window::GetRotationY()
+{
     return m_rotationY;
 }
