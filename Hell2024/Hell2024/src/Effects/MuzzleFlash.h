@@ -1,10 +1,11 @@
 #pragma once
+
 #include "HellCommon.h"
 #include "../API/OpenGL/Types/GL_shader.h"
 
 class MuzzleFlash
 {
-public: // fields
+public:
 	uint32_t                CountRaw;
 	uint32_t                CountColumn;
 	float                   AnimationSeconds;
@@ -13,13 +14,15 @@ public: // fields
 	float                   m_Interpolate = 0.0f;
 	float                   m_CurrentTime = 0.0f;
 
-public: // methods
+public:
 	MuzzleFlash();
+
 	void Draw(Shader* shader, Transform& global, float rotation);
 	//void Update(float deltaTime);
 	void SetFrameByTime(float time);
 	void Init();
 	void CreateFlash(glm::vec3 worldPosition);
+
 	glm::vec3 m_worldPos;
 
 	GLuint m_VAO = 0;

@@ -1,4 +1,5 @@
 #pragma once
+
 #include "HellCommon.h"
 #include "../Math/Types.h"
 #include "../Renderer/Types/CubemapTexture.h"
@@ -11,8 +12,8 @@
 #include "../Renderer/Types/SkinnedModel.h"
 #include "../Renderer/Types/Texture.h"
 
-namespace AssetManager {
-
+namespace AssetManager 
+{
     // Asset Loading
     void FindAssetPaths();
     void LoadNextItem();
@@ -29,8 +30,8 @@ namespace AssetManager {
     void UploadWeightedVertexData();
 
     // Mesh
-    Mesh* GetMeshByModelNameAndMeshName(const std::string& modelName, const std::string& meshName);
-    Mesh* GetMeshByModelNameAndMeshIndex(const std::string& modelName, int meshIndex);
+    //Mesh* GetMeshByModelNameAndMeshName(const std::string& modelName, const std::string& meshName);
+    //Mesh* GetMeshByModelNameA/*n*/dMeshIndex(const std::string& modelName, int meshIndex);
     Mesh* GetMeshByIndex(int index);
     Mesh* GetQuadMesh();
     int GetMeshIndexByName(const std::string& name);
@@ -41,7 +42,7 @@ namespace AssetManager {
     Model* GetModelByIndex(int index);
     int GetModelIndexByName(const std::string& name);
     void LoadModel(Model* model);
-    void LoadModelAssimp(const std::string& filepath);
+    //void LoadModelAssimp(const std::string& filepath);
     bool ModelExists(const std::string& name);
     void CreateHardcodedModels();
 
