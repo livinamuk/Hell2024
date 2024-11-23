@@ -3,8 +3,8 @@
 #include "../Core/AssetManager.h"
 #include "../Util.hpp"
 
-void FbxImporter::LoadAnimation(Animation* animation) {
-
+void FbxImporter::LoadAnimation(Animation* animation) 
+{
     aiScene* m_pAnimationScene;
     Assimp::Importer m_AnimationImporter;
 
@@ -12,19 +12,22 @@ void FbxImporter::LoadAnimation(Animation* animation) {
     const aiScene* tempAnimScene = m_AnimationImporter.ReadFile(animation->m_fullPath.c_str(), aiProcess_Triangulate | aiProcess_GenSmoothNormals | aiProcess_FlipUVs);
 
     // Failed
-    if (!tempAnimScene) {
+    if (!tempAnimScene) 
+	{
         std::cout << "Could not load: " << animation->m_fullPath << "\n";
     }
 
     // Success
     m_pAnimationScene = new aiScene(*tempAnimScene);
-    if (m_pAnimationScene) {
+    if (m_pAnimationScene) 
+	{
         animation->m_duration = (float)m_pAnimationScene->mAnimations[0]->mDuration;
         animation->m_ticksPerSecond = (float)m_pAnimationScene->mAnimations[0]->mTicksPerSecond;
          //std::cout << "Loaded animation: " << Filename << "\n";
     }
     // Some other error possibility
-    else {
+    else 
+	{
         std::cout << "Error parsing " << animation->m_fullPath << ": " << m_AnimationImporter.GetErrorString();
     }
 
@@ -32,9 +35,7 @@ void FbxImporter::LoadAnimation(Animation* animation) {
     // need to fill it with animation poses.
     aiAnimation* aiAnim = m_pAnimationScene->mAnimations[0];
 
-
     //std::cout << " numChannels:" << aiAnim->mNumChannels << "\n";
-
     // so iterate over each channel, and each channel is for each NODE aka joint.
 
     // Resize the vector big enough for each pose
@@ -67,7 +68,6 @@ void FbxImporter::LoadAnimation(Animation* animation) {
         }
         animation->m_animatedNodes.push_back(animatedNode);
     }
-
     //std::cout << "Loaded animation: " << animation->_filename << "\n";// << " " << animation->m_duration << "\n";
 
     // Store it
