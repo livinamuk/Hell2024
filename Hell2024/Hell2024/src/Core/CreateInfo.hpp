@@ -1,18 +1,22 @@
 #pragma once
+
 #include "HellCommon.h"
 
-struct DoorCreateInfo {
+struct DoorCreateInfo 
+{
     glm::vec3 position = glm::vec3(0);
     float rotation = 0;
     bool openAtStart = false;
 };
 
-struct WindowCreateInfo {
+struct WindowCreateInfo 
+{
     glm::vec3 position = glm::vec3(0);
     float rotation = 0;
 };
 
-struct LightCreateInfo {
+struct LightCreateInfo 
+{
     glm::vec3 position;
     glm::vec3 color;
     float radius;
@@ -20,13 +24,15 @@ struct LightCreateInfo {
     int type;
 };
 
-struct DobermannCreateInfo {
+struct DobermannCreateInfo 
+{
     glm::vec3 position;
     float rotation;
     DobermannState initalState;
 };
 
-struct CSGPlaneCreateInfo {
+struct CSGPlaneCreateInfo 
+{
     glm::vec3 vertexTL;
     glm::vec3 vertexTR;
     glm::vec3 vertexBL;
