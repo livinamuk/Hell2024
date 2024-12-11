@@ -356,7 +356,7 @@ void OpenGLRenderer::RecreateBlurBuffers() {
 
 void OpenGLRenderer::InitMinimum() {
 
-    //QueryAvaliability();
+    QueryAvaliability();
     HotloadShaders();
 
     int desiredTotalLines = 40;

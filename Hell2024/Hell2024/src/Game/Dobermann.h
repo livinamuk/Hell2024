@@ -41,6 +41,8 @@ struct Dobermann {
     int m_targetPlayerIndex = -1;
     glm::vec3 m_targetPosition;
 
+    void Reset();
+
 private:
     void FindPath(glm::vec3 targetPosition);
     void UpdateDead(float deltaTime);

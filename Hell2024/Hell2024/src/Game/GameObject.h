@@ -12,7 +12,7 @@ enum class OpenAxis { NONE, TRANSLATE_X, TRANSLATE_Y, TRANSLATE_Z, ROTATION_POS_
 enum class InteractType { NONE, TEXT, QUESTION, PICKUP, CALLBACK_ONLY };
 enum class ModelMatrixMode { GAME_TRANSFORM, PHYSX_TRANSFORM };
 
-enum class CollisionType { NONE, STATIC_ENVIROMENT, BOUNCEABLE, PICKUP, BULLET_CASING };
+enum class CollisionType { NONE, STATIC_ENVIROMENT, STATIC_ENVIROMENT_NO_DOG, BOUNCEABLE, PICKUP, BULLET_CASING };
 
 struct GameObject {
 
@@ -171,6 +171,8 @@ public:
     std::vector<Vertex> GetAABBVertices();
 
     void PrintMeshNames();
+
+    float m_hackTimer = 0;
 
 private:
     std::vector<RenderItem3D> renderItems;

@@ -173,7 +173,7 @@ void Door::CreatePhysicsObject() {
 
     PhysicsFilterData filterData;
     filterData.raycastGroup = RAYCAST_DISABLED;
-    filterData.collisionGroup = CollisionGroup::ENVIROMENT_OBSTACLE;
+    filterData.collisionGroup = CollisionGroup::ENVIROMENT_OBSTACLE_NO_DOG;
     filterData.collidesWith = (CollisionGroup)(GENERIC_BOUNCEABLE | BULLET_CASING | RAGDOLL);
     collisionShape = Physics::CreateBoxShape(DOOR_EDITOR_DEPTH * 0.5f, DOOR_HEIGHT * 0.5f, DOOR_WIDTH * 0.5f);
     collisionBody = Physics::CreateRigidStatic(Transform(), filterData, collisionShape);

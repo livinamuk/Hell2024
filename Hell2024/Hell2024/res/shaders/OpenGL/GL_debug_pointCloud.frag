@@ -6,13 +6,13 @@ in vec3 Color;
 
 void main() {
 	if (Color == vec3(0 ,0, 0)) {
-		discard;
+		//discard;
 	}
     FragOut.rgb = Color;
 	FragOut.a = 1.0;
 
 	
-	//if (Color == vec3(0 ,0, 0)) {
-	//	FragOut.rgb = vec3(1, 1, 1);
-	//}
+	if (Color == vec3(0 ,0, 0)) {
+		FragOut.rgb = vec3(0, 1, 0);
+	}
 }

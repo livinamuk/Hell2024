@@ -382,7 +382,7 @@ float map(float value, float min1, float max1, float min2, float max2) {
 }
 
 
-void main() {
+void main2() {
 
 
 	const uint index = gl_GlobalInvocationID.x;
@@ -397,12 +397,12 @@ void main() {
 
 	vec3 color = vec3(0);
 
-	for (int i = 0; i < lightCount; i++) {
+	for (int i = 0; i < 1; i++) {
 
 		Light light = Lights[i];
 
 		if (light.contributesToGI == 0) {
-			continue;
+			//continue;
 		}
 
 		vec3 lightPosition = vec3(light.posX, light.posY, light.posZ);
@@ -415,7 +415,7 @@ void main() {
 		vec3 n = Normal;
 		float ndotl = clamp(dot(n, l), 0.0, 1.0);
 
-		if (ndotl >= 0) {
+		if (ndotl >= 0 || false) {
 			vec3 radiance = vec3(lightColor) * att * lightStrength * ndotl * 1.0;
 			radiance *= 2.5;
 
@@ -438,7 +438,81 @@ void main() {
 				color += radiance;
 			}
 		}
+		
+			color += vec3(lightColor) * att * lightStrength * 1.0;
+		//	color += vec3(0, 0, 0.1);
 	}
+	
+	//		color = vec3(0, 1, 0);
+
+	PointCloud[index].colorX = color.x;
+	PointCloud[index].colorY = color.y;
+	PointCloud[index].colorZ = color.z;
+}
+
+
+void main() {
+
+
+	const uint index = gl_GlobalInvocationID.x;
+
+	uint group = index + frameNumber % 2;
+	if (group != 0) {
+	//	return; // Skip this group in this frame
+	}
+
+	vec3 WorldPos = vec3(PointCloud[index].posX, PointCloud[index].posY, PointCloud[index].posZ);
+	vec3 Normal = vec3(PointCloud[index].normX, PointCloud[index].normY, PointCloud[index].normZ);
+
+	vec3 color = vec3(0);
+
+	for (int i = 0; i < lightCount; i++) {
+
+		Light light = Lights[i];
+		vec3 lightPosition = vec3(light.posX, light.posY, light.posZ);
+		vec3 lightColor = vec3(light.colorR, light.colorG, light.colorB);
+		float lightRadius = light.radius;
+		float lightStrength = light.strength;
+		float att = smoothstep(lightRadius, 0.0, length(lightPosition - WorldPos));
+		
+		const vec3 l = normalize(lightPosition - WorldPos);
+		vec3 n = Normal;
+		float ndotl = clamp(dot(n, l), 0.0, 1.0);
+
+		ndotl = 1;
+
+		
+		vec3 radiance = vec3(lightColor) * att * lightStrength * ndotl * 1.0;
+		radiance *= vec3(2.5);
+
+
+		float distToLight = distance(lightPosition, WorldPos);
+		vec3 rayDir = normalize(lightPosition - WorldPos);
+
+		Ray ray;
+		ray.origin = WorldPos + Normal * vec3(0.01);
+		ray.dir = rayDir;
+		ray.inverseDir.x = SafeInverse(ray.dir.x);
+		ray.inverseDir.y = SafeInverse(ray.dir.y);
+		ray.inverseDir.z = SafeInverse(ray.dir.z);
+		ray.t = distToLight;
+		//ray.t = 1000000;
+
+		vec3 rayResult = IntersectTLAS(ray, 0);
+		if (rayResult == vec3(1, 1, 1)) {
+			//color = vec3(0, 0, 0);
+		}
+		else {
+			color += radiance;
+		}
+		
+		//	color += radiance;
+
+	}
+	
+	//		color = vec3(0, 1, 0);
+
+	//color = Normal;
 
 	PointCloud[index].colorX = color.x;
 	PointCloud[index].colorY = color.y;

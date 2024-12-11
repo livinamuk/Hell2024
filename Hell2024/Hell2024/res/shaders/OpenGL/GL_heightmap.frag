@@ -63,6 +63,9 @@ void main() {
 
    // BaseColorOut.rgb = vec3(texture(MegaTexture, MegaTextureCoords).r, 0, 0);
 
+   
+    //BaseColorOut.rgb = vec3(treeValue);
+
 	//BaseColorOut.rgb = vec3(1,0,0);
 
 //	BaseColorOut.rgb = Normal;

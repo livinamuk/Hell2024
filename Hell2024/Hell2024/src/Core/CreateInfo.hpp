@@ -36,3 +36,11 @@ struct CSGPlaneCreateInfo {
     float textureOffsetX = 0;
     float textureOffsetY = 0;
 };
+
+struct GameObjectCreateInfo {
+    glm::vec3 position;
+    glm::vec3 rotation;
+    glm::vec3 scale;
+    std::string materialName;
+    std::string modelName;
+};

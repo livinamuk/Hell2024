@@ -24,6 +24,11 @@ PxFilterData GetPxFilterDataFromCollisionType(CollisionType collisionType) {
         filterData.word1 = (PxU32)(CollisionGroup)(ENVIROMENT_OBSTACLE);
         filterData.word2 = (PxU32)(CollisionGroup)(GENERIC_BOUNCEABLE | BULLET_CASING | PLAYER | RAGDOLL);
     }
+    else if (collisionType == CollisionType::STATIC_ENVIROMENT_NO_DOG) {
+        filterData.word0 = 0;
+        filterData.word1 = (PxU32)(CollisionGroup)(ENVIROMENT_OBSTACLE_NO_DOG);
+        filterData.word2 = (PxU32)(CollisionGroup)(GENERIC_BOUNCEABLE | BULLET_CASING | PLAYER | RAGDOLL);
+    }
     else if (collisionType == CollisionType::BOUNCEABLE) {
         filterData.word0 = 0;
         filterData.word1 = (PxU32)(CollisionGroup)(GENERIC_BOUNCEABLE);
@@ -195,41 +200,18 @@ void GameObject::Update(float deltaTime) {
     // DEAL WITH THIS A BETTER WAY
     // DEAL WITH THIS A BETTER WAY
 
-    if (_name == "GlockAmmo_PickUp") {
 
-        GameObject* topDraw = Scene::GetGameObjectByName("TopDraw");
-        if (topDraw) {
-
-            glm::mat4 globalPose = m_collisionRigidBody.GetGlobalPoseAsMatrix();
-            float width = 0.4f;
-            float height = 0.4f;
-            float depth = 0.4f;
-            PxShape* overlapShape = Physics::CreateBoxShape(width, height, depth, Transform());
-            const PxGeometry& overlapGeometry = overlapShape->getGeometry();
-            const PxTransform shapePose = m_collisionRigidBody.GetGlobalPoseAsPxTransform();
-            OverlapReport overlapReport = Physics::OverlapTest(overlapGeometry, shapePose, CollisionGroup::GENERIC_BOUNCEABLE);
-
-            //if (overlapReport.HitsFound()) {
-            //    for (auto& hit : overlapReport.hits) {
-            //
-            //        if (hit == topDraw->m_collisionRigidBody.pxRigidBody) {
-            //            float speed = 3.0f;
-            //            Transform displacement;
-            //
-            //            if (topDraw->_openState == OpenState::OPENING) {
-            //                displacement.position.z += deltaTime * speed;
-            //            }
-            //            else if (topDraw->_openState == OpenState::CLOSING) {
-            //                displacement.position.z -= deltaTime * speed;
-            //            }
-            //            m_collisionRigidBody.SetGlobalPose(globalPose* displacement.to_mat4());
-            //        }
-            //    }
-            //}
-        }
+    if (_collected) {
+        Transform transform;
+        transform.position.y = -50;
+        ((PxRigidDynamic*)m_collisionRigidBody.pxRigidBody)->putToSleep();
+        m_collisionRigidBody.SetGlobalPose(transform.to_mat4());
     }
 
 
+    if (m_collisionType == CollisionType::PICKUP && !_respawns) {
+        m_hackTimer += deltaTime;
+    }
 
 	if (_pickupType != PickUpType::NONE) {
 
@@ -788,7 +770,7 @@ void GameObject::PickUp() {
         _collected = true;
         _pickupCoolDownTime = Config::item_respawn_time;
         Transform transform;
-        transform.position.y = -100;
+        transform.position.y = -1;
         ((PxRigidDynamic*)m_collisionRigidBody.pxRigidBody)->putToSleep();
         m_collisionRigidBody.SetGlobalPose(transform.to_mat4());
         DisableRaycasting();
@@ -943,6 +925,20 @@ void GameObject::UpdateRenderItems() {
         renderItem.castShadow = m_castShadows;
         renderItem.aabbMin = _aabb.boundsMin;
         renderItem.aabbMax = _aabb.boundsMax;
+
+        if (model->GetName() == "House_WeatherBoardsA" ||
+            model->GetName() == "House_WeatherBoardsWindow" ||
+            model->GetName() == "House_WeatherBoardsDoor") {
+
+            if (Util::FloatWithinRange(_transform.rotation.y, HELL_PI * 0.5f, 0.1) ||
+                Util::FloatWithinRange(_transform.rotation.y, HELL_PI * -0.5f, 0.1)) {
+                renderItem.useEmissiveMask = 2;
+            }
+            if (Util::FloatWithinRange(_transform.rotation.y, 0, 0.1) ||
+                Util::FloatWithinRange(_transform.rotation.y, 0, 0.1)) {
+                renderItem.useEmissiveMask = 3;
+            }
+        }
     }
 }
 

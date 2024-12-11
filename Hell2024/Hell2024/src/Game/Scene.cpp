@@ -16,7 +16,12 @@
 #include "../Timer.hpp"
 #include "../Util.hpp"
 
+#include "RapidHotload.h"
+
 int _volumetricBloodObjectsSpawnedThisFrame = 0;
+
+float g_level = 0;
+float g_dobermanmTimer = 0;
 
 namespace Scene {
 
@@ -30,6 +35,7 @@ namespace Scene {
     void EvaluateDebugKeyPresses();
     void ProcessBullets();
     void CreateDefaultSpawnPoints();
+    void CreateWeaponSpawnPoints();
     void LoadMapData(const std::string& fileName);
     void AllocateStorageSpace();
     void AddDobermann(DobermannCreateInfo& createInfo);
@@ -140,6 +146,20 @@ void Scene::SaveMapData(const std::string& fileName) {
     }
     data["Lights"] = jsonLights;
 
+
+    // emergency game objects
+    nlohmann::json jsonGameObjects = nlohmann::json::array();
+    for (const GameObject& gameObject : RapidHotload::GetEmergencyGameObjects()) {
+        nlohmann::json jsonObject;
+        jsonObject["position"] = { {"x", gameObject._transform.position.x}, {"y", gameObject._transform.position.y}, {"z", gameObject._transform.position.z} };
+        jsonObject["rotation"] = { {"x", gameObject._transform.rotation.x}, {"y", gameObject._transform.rotation.y}, {"z", gameObject._transform.rotation.z} };
+        jsonObject["scale"] = { {"x", gameObject._transform.scale.x}, {"y", gameObject._transform.scale.y}, {"z", gameObject._transform.scale.z} };
+        jsonObject["modelName"] = gameObject.model->GetName();
+        jsonObject["materialName"] = AssetManager::GetMaterialByIndex(gameObject._meshMaterialIndices[0])->_name;
+        jsonGameObjects.push_back(jsonObject);
+    }
+    data["GameObjects"] = jsonGameObjects;
+
     // Print it
     int indent = 4;
     std::string text = data.dump(indent);
@@ -153,6 +173,9 @@ void Scene::SaveMapData(const std::string& fileName) {
 }
 
 void Scene::LoadMapData(const std::string& fileName) {
+
+    g_level = 0;
+    g_dobermanmTimer = 0;
 
     // Load file
     std::string fullPath = "res/maps/" + fileName;
@@ -227,6 +250,29 @@ void Scene::LoadMapData(const std::string& fileName) {
         createInfo.radius = jsonObject["radius"];
         Scene::CreateLight(createInfo);
     }
+
+    // GameObjects
+    for (const auto& jsonObject : data["GameObjects"]) {
+        GameObjectCreateInfo createInfo;
+        createInfo.position = { jsonObject["position"]["x"], jsonObject["position"]["y"], jsonObject["position"]["z"] };
+        createInfo.rotation = { jsonObject["rotation"]["x"], jsonObject["rotation"]["y"], jsonObject["rotation"]["z"] };
+        createInfo.scale = { jsonObject["scale"]["x"], jsonObject["scale"]["y"], jsonObject["scale"]["z"] };
+        createInfo.materialName = jsonObject["materialName"].get<std::string>().c_str();
+        createInfo.modelName = jsonObject["modelName"].get<std::string>().c_str();
+
+
+        CreateGameObject();
+        GameObject* gameObject = GetGameObjectByIndex(GetGameObjectCount() - 1);
+        gameObject->SetPosition(createInfo.position);
+        gameObject->SetRotation(createInfo.rotation);
+        gameObject->SetScale(createInfo.scale);
+        gameObject->SetName("GameObject");
+        gameObject->SetModel(createInfo.modelName);
+        gameObject->SetMeshMaterial(createInfo.materialName.c_str());
+    }
+
+
+    CreateWeaponSpawnPoints();
 }
 
 void Scene::LoadEmptyScene() {
@@ -499,8 +545,10 @@ void Scene::LoadDefaultScene() {
         g_dobermann.clear();
 
         DobermannCreateInfo createInfo;
-        createInfo.position = glm::vec3(-1.7f, 0.4f, -1.2f);
+        //createInfo.position = glm::vec3(-1.7f, 0.4f, -1.2f);
+        createInfo.position = glm::vec3(2.3f, 0.4f, 1.7f);
         createInfo.rotation = 0.7f;
+        createInfo.rotation = 0.7f + HELL_PI;
         createInfo.initalState = DobermannState::LAY;
         AddDobermann(createInfo);
 
@@ -509,8 +557,10 @@ void Scene::LoadDefaultScene() {
         createInfo.initalState = DobermannState::LAY;
         AddDobermann(createInfo);
 
-        createInfo.position = glm::vec3(-1.77f, 0.4f, -5.66f);
-        createInfo.rotation = (1.3f);
+        //createInfo.position = glm::vec3(-1.77f, 0.4f, -5.66f);
+        createInfo.position = glm::vec3(-0.8f, 0.4f, -6.8f);
+        //createInfo.rotation = (1.3f);
+        createInfo.rotation = (0.0f);
         createInfo.initalState = DobermannState::LAY;
         AddDobermann(createInfo);
     }
@@ -628,7 +678,7 @@ void Scene::LoadDefaultScene() {
     if (true) {
         CreateGameObject();
         GameObject* pictureFrame = GetGameObjectByIndex(GetGameObjectCount() - 1);
-        pictureFrame->SetPosition(1.1f, 1.9f, -0.85f);
+        pictureFrame->SetPosition(1.1f, 1.9f, -0.70f);
         pictureFrame->SetScale(0.01f);
         //pictureFrame->SetRotationY(HELL_PI / 2);
         pictureFrame->SetModel("PictureFrame_1");
@@ -741,46 +791,255 @@ void Scene::LoadDefaultScene() {
 
         CreateGameObject();
         GameObject* tree = GetGameObjectByIndex(GetGameObjectCount() - 1);
-        tree->SetPosition(-0.1f, 0.5f, 3.8f);
+        tree->SetPosition(-0.3f, 0.5f, 3.5f);
         tree->SetModel("ChristmasTree");
         tree->SetName("ChristmasTree");
         tree->SetMeshMaterial("Tree");
         tree->SetMeshMaterialByMeshName("Balls", "Gold");
+
+
+       //CreateGameObject();
+       //GameObject* mermaid = GetGameObjectByIndex(GetGameObjectCount() - 1);
+       //mermaid->SetPosition(3.5f, 0.5f, -0.5f);
+       //mermaid->SetModel("Mermaid");
+       //mermaid->SetName("ChristmasTree");
+       //mermaid->SetMeshMaterial("Gold");
+
+
+        CreateGameObject();
+        GameObject* kitchen = GetGameObjectByIndex(GetGameObjectCount() - 1);
+        kitchen->SetPosition(-3.45f, 0.4, 3.15f);
+        kitchen->SetModel("Kitchen");
+        kitchen->SetName("Ceiling2");
+        kitchen->SetMeshMaterial("Tree");
+        kitchen->SetMeshMaterialByMeshName("Cupboards", "Wood");
+        kitchen->SetMeshMaterialByMeshName("Counter", "Ceiling2");
+        //kitchen->SetMeshMaterialByMeshName("Counter", "PresentA");
+        kitchen->SetMeshMaterialByMeshName("Sink", "Metal");
+
+        std::cout << "\n";
+        std::cout << "\n";
+        std::cout << "\n";
+        kitchen->PrintMeshNames();
+
+
+     //   GameObjectCreateInfo createInfo;
+     //   createInfo.position = glm::vec3(-3.45f, 0.4, 3.15f);
+     //   createInfo.rotation = glm::vec3(0, 0, 0);
+     //   createInfo.scale = glm::vec3(1.0f, 1, 1);
+     //   createInfo.materialName = "Ceiling2";
+     //   createInfo.modelName = "Kitchen";
+     //   CreateGameObject(createInfo);
+
+      //CreateGameObject();
+      //GameObject* kitchen = GetGameObjectByIndex(GetGameObjectCount() - 1);
+      //kitchen->SetPosition(-3.25f, 0.4, 3.15f);
+      //kitchen->SetModel("ChristmasTree");
+      //kitchen->SetName("ChristmasTree");
+      //kitchen->SetMeshMaterial("Tree");
+      //kitchen->SetMeshMaterialByMeshName("Balls", "Gold");
+
+
+       // createInfo.position = glm::vec3(-3.25f, 0.4, 3.15f);
+       // createInfo.rotation = glm::vec3(0, 0, 0);
+       // createInfo.scale = glm::vec3(1.3f, 1, 1);
+       // createInfo.materialName = "Ceiling2";
+       // createInfo.modelName = "Kitchen";
     }
 
     glm::vec3 houseOrigin = glm::vec3(2, 0.5, 0);
 
-    CreateGameObject();
-    GameObject* houseRailings = GetGameObjectByIndex(GetGameObjectCount() - 1);
-    houseRailings->SetPosition(houseOrigin);
-    houseRailings->SetModel("House_Railings");
-    houseRailings->SetName("BlenderHouse");
-    houseRailings->SetMeshMaterial("Ceiling2");
+
+    // RAILINGS
 
     CreateGameObject();
-    GameObject* houseWalls = GetGameObjectByIndex(GetGameObjectCount() - 1);
-    houseWalls->SetPosition(houseOrigin);
-    houseWalls->SetModel("House_Walls2");
-    houseWalls->SetName("BlenderHouse");
-    houseWalls->SetMeshMaterial("Ceiling2");
+    GameObject* railingA = GetGameObjectByIndex(GetGameObjectCount() - 1);
+    railingA->SetPosition(houseOrigin);
+    railingA->SetName("House_RailingA");
+    railingA->SetModel("House_RailingA");
+    railingA->SetMeshMaterial("Ceiling2");
+    railingA->SetKinematic(true);
+    railingA->SetRaycastShapeFromModelIndex(AssetManager::GetModelIndexByName("House_RailingA_ConvexMesh"));
+    railingA->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("House_RailingA_ConvexMesh"));
+    railingA->SetModelMatrixMode(ModelMatrixMode::GAME_TRANSFORM);
+    railingA->SetCollisionType(CollisionType::STATIC_ENVIROMENT_NO_DOG);
 
     CreateGameObject();
-    GameObject* houseRoof = GetGameObjectByIndex(GetGameObjectCount() - 1);
-    houseRoof->SetPosition(houseOrigin);
-    houseRoof->SetModel("House_RoofA");
-    houseRoof->SetName("BlenderHouse");
-    houseRoof->SetMeshMaterial("Ceiling2");
+    GameObject* railingB = GetGameObjectByIndex(GetGameObjectCount() - 1);
+    railingB->SetPosition(houseOrigin);
+    railingB->SetName("House_RailingB");
+    railingB->SetModel("House_RailingB");
+    railingB->SetMeshMaterial("Ceiling2");
+    railingB->SetKinematic(true);
+    railingB->SetRaycastShapeFromModelIndex(AssetManager::GetModelIndexByName("House_RailingB_ConvexMesh"));
+    railingB->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("House_RailingB_ConvexMesh"));
+    railingB->SetModelMatrixMode(ModelMatrixMode::GAME_TRANSFORM);
+    railingB->SetCollisionType(CollisionType::STATIC_ENVIROMENT_NO_DOG);
 
     CreateGameObject();
-    GameObject* houseRoofB = GetGameObjectByIndex(GetGameObjectCount() - 1);
-    houseRoofB->SetPosition(houseOrigin);
-    houseRoofB->SetModel("House_RoofB");
-    houseRoofB->SetName("BlenderHouse");
-    houseRoofB->SetMeshMaterial("Ceiling2");
+    GameObject* railingC = GetGameObjectByIndex(GetGameObjectCount() - 1);
+    railingC->SetPosition(houseOrigin);
+    railingC->SetName("House_RailingC");
+    railingC->SetModel("House_RailingC");
+    railingC->SetMeshMaterial("Ceiling2");
+    railingC->SetKinematic(true);
+    railingC->SetRaycastShapeFromModelIndex(AssetManager::GetModelIndexByName("House_RailingC_ConvexMesh"));
+    railingC->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("House_RailingC_ConvexMesh"));
+    railingC->SetModelMatrixMode(ModelMatrixMode::GAME_TRANSFORM);
+    railingC->SetCollisionType(CollisionType::STATIC_ENVIROMENT_NO_DOG);
+
+    CreateGameObject();
+    GameObject* railingD = GetGameObjectByIndex(GetGameObjectCount() - 1);
+    railingD->SetPosition(houseOrigin);
+    railingD->SetName("House_RailingD");
+    railingD->SetModel("House_RailingD");
+    railingD->SetMeshMaterial("Ceiling2");
+    railingD->SetKinematic(true);
+    railingD->SetRaycastShapeFromModelIndex(AssetManager::GetModelIndexByName("House_RailingD_ConvexMesh"));
+    railingD->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("House_RailingD_ConvexMesh"));
+    railingD->SetModelMatrixMode(ModelMatrixMode::GAME_TRANSFORM);
+    railingD->SetCollisionType(CollisionType::STATIC_ENVIROMENT_NO_DOG);
+
+    CreateGameObject();
+    GameObject* railingE = GetGameObjectByIndex(GetGameObjectCount() - 1);
+    railingE->SetPosition(houseOrigin);
+    railingE->SetName("House_RailingE");
+    railingE->SetModel("House_RailingE");
+    railingE->SetMeshMaterial("Ceiling2");
+    railingE->SetKinematic(true);
+    railingE->SetRaycastShapeFromModelIndex(AssetManager::GetModelIndexByName("House_RailingE_ConvexMesh"));
+    railingE->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("House_RailingE_ConvexMesh"));
+    railingE->SetModelMatrixMode(ModelMatrixMode::GAME_TRANSFORM);
+    railingE->SetCollisionType(CollisionType::STATIC_ENVIROMENT_NO_DOG);
+
+    CreateGameObject();
+    GameObject* railingE2 = GetGameObjectByIndex(GetGameObjectCount() - 1);
+    railingE2->SetPosition(houseOrigin + glm::vec3(0,0,1.5f));
+    railingE2->SetName("House_RailingE");
+    railingE2->SetModel("House_RailingE");
+    railingE2->SetMeshMaterial("Ceiling2");
+    railingE2->SetKinematic(true);
+    railingE2->SetRaycastShapeFromModelIndex(AssetManager::GetModelIndexByName("House_RailingE_ConvexMesh"));
+    railingE2->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("House_RailingE_ConvexMesh"));
+    railingE2->SetModelMatrixMode(ModelMatrixMode::GAME_TRANSFORM);
+    railingE2->SetCollisionType(CollisionType::STATIC_ENVIROMENT_NO_DOG);
+
+    CreateGameObject();
+    GameObject* railingF = GetGameObjectByIndex(GetGameObjectCount() - 1);
+    railingF->SetPosition(houseOrigin);
+    railingF->SetName("House_RailingF");
+    railingF->SetModel("House_RailingF");
+    railingF->SetMeshMaterial("Ceiling2");
+    railingF->SetKinematic(true);
+    railingF->SetRaycastShapeFromModelIndex(AssetManager::GetModelIndexByName("House_RailingF_ConvexMesh"));
+    railingF->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("House_RailingF_ConvexMesh"));
+    railingF->SetModelMatrixMode(ModelMatrixMode::GAME_TRANSFORM);
+    railingF->SetCollisionType(CollisionType::STATIC_ENVIROMENT_NO_DOG);
+
+    CreateGameObject();
+    GameObject* railingF2 = GetGameObjectByIndex(GetGameObjectCount() - 1);
+    railingF2->SetPosition(houseOrigin + glm::vec3(0, 0, 5.1f));
+    railingF2->SetName("House_RailingF");
+    railingF2->SetModel("House_RailingF");
+    railingF2->SetMeshMaterial("Ceiling2");
+    railingF2->SetKinematic(true);
+    railingF2->SetRaycastShapeFromModelIndex(AssetManager::GetModelIndexByName("House_RailingF_ConvexMesh"));
+    railingF2->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("House_RailingF_ConvexMesh"));
+    railingF2->SetModelMatrixMode(ModelMatrixMode::GAME_TRANSFORM);
+    railingF2->SetCollisionType(CollisionType::STATIC_ENVIROMENT_NO_DOG);
+
+
+    CreateGameObject();
+    GameObject* railingG = GetGameObjectByIndex(GetGameObjectCount() - 1);
+    railingG->SetPosition(houseOrigin);
+    railingG->SetName("House_RailingG");
+    railingG->SetModel("House_RailingG");
+    railingG->SetMeshMaterial("Ceiling2");
+    railingG->SetKinematic(true);
+    railingG->SetRaycastShapeFromModelIndex(AssetManager::GetModelIndexByName("House_RailingG_ConvexMesh"));
+    railingG->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("House_RailingG_ConvexMesh"));
+    railingG->SetModelMatrixMode(ModelMatrixMode::GAME_TRANSFORM);
+    railingG->SetCollisionType(CollisionType::STATIC_ENVIROMENT_NO_DOG);
+
+    CreateGameObject();
+    GameObject* railingG2 = GetGameObjectByIndex(GetGameObjectCount() - 1);
+    railingG2->SetPosition(houseOrigin + glm::vec3(0, 0, 8.8f));
+    railingG2->SetName("House_RailingG");
+    railingG2->SetModel("House_RailingG");
+    railingG2->SetMeshMaterial("Ceiling2");
+    railingG2->SetKinematic(true);
+    railingG2->SetRaycastShapeFromModelIndex(AssetManager::GetModelIndexByName("House_RailingG_ConvexMesh"));
+    railingG2->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("House_RailingG_ConvexMesh"));
+    railingG2->SetModelMatrixMode(ModelMatrixMode::GAME_TRANSFORM);
+    railingG2->SetCollisionType(CollisionType::STATIC_ENVIROMENT_NO_DOG);
 
 
 
-    if (hardcoded) {
+ //  CreateGameObject();
+ //  GameObject* houseWalls = GetGameObjectByIndex(GetGameObjectCount() - 1);
+ //  houseWalls->SetPosition(houseOrigin);
+ //  houseWalls->SetModel("House_WeatherBoardsA");
+ //  houseWalls->SetName("BlenderHouse");
+ //  houseWalls->SetMeshMaterial("Ceiling2");
+
+  // CreateGameObject();
+  // GameObject* houseRoof = GetGameObjectByIndex(GetGameObjectCount() - 1);
+  // houseRoof->SetPosition(houseOrigin);
+  // houseRoof->SetModel("House_RoofA");
+  // houseRoof->SetName("BlenderHouse");
+  // houseRoof->SetMeshMaterial("PresentB");
+  //
+  // CreateGameObject();
+  // GameObject* houseRoofB = GetGameObjectByIndex(GetGameObjectCount() - 1);
+  // houseRoofB->SetPosition(houseOrigin);
+  // houseRoofB->SetModel("House_RoofB");
+  // houseRoofB->SetName("BlenderHouse");
+  // houseRoofB->SetMeshMaterial("PresentA");
+
+    CreateGameObject();
+    GameObject* houseMisc = GetGameObjectByIndex(GetGameObjectCount() - 1);
+    houseMisc->SetPosition(houseOrigin);
+    houseMisc->SetModel("House_Misc_Stairs");
+    houseMisc->SetName("BlenderHouse");
+    houseMisc->SetMeshMaterial("Wood");
+
+    CreateGameObject();
+    GameObject* houseMiscA = GetGameObjectByIndex(GetGameObjectCount() - 1);
+    houseMiscA->SetPosition(houseOrigin);
+    houseMiscA->SetModel("House_Misc_Railing");
+    houseMiscA->SetName("BlenderHouse");
+    houseMiscA->SetMeshMaterial("Gold");
+
+    CreateGameObject();
+    GameObject* houseMiscB = GetGameObjectByIndex(GetGameObjectCount() - 1);
+    houseMiscB->SetPosition(houseOrigin);
+    houseMiscB->SetModel("House_Misc_Railing2");
+    houseMiscB->SetName("BlenderHouse");
+    houseMiscB->SetMeshMaterial("Gold");
+
+    CreateGameObject();
+    GameObject* houseMiscD = GetGameObjectByIndex(GetGameObjectCount() - 1);
+    houseMiscD->SetPosition(houseOrigin);
+    houseMiscD->SetModel("House_Misc_Railing3");
+    houseMiscD->SetName("BlenderHouse");
+    houseMiscD->SetMeshMaterial("Wood");
+
+    CreateGameObject();
+    GameObject* houseMiscC = GetGameObjectByIndex(GetGameObjectCount() - 1);
+    houseMiscC->SetPosition(houseOrigin);
+    houseMiscC->SetModel("House_Misc_TriangleWall");
+    houseMiscC->SetName("BlenderHouse");
+    houseMiscC->SetMeshMaterial("WallPaper");
+    houseMiscC->SetKinematic(true);
+    houseMiscC->SetRaycastShapeFromModelIndex(AssetManager::GetModelIndexByName("House_Misc_TriangleWall"));
+    houseMiscC->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("House_Misc_TriangleWall"));
+    houseMiscC->SetModelMatrixMode(ModelMatrixMode::GAME_TRANSFORM);
+    houseMiscC->SetCollisionType(CollisionType::STATIC_ENVIROMENT);
+
+
+
+   // tree->SetPosition(-0.3f, 0.5f, 3.5f);
+    if (hardcoded || true) {
         float spacing = 0.3f;
         for (int x = -3; x < 1; x++) {
             for (int y = -1; y < 5; y++) {
@@ -788,7 +1047,7 @@ void Scene::LoadDefaultScene() {
                     CreateGameObject();
                     GameObject* cube = GetGameObjectByIndex(GetGameObjectCount() - 1);
                     float halfExtent = 0.1f;
-                    cube->SetPosition(2.6f + x * spacing, 1.5f + y * spacing * 1.25f, 2.1f + z * spacing);
+                    cube->SetPosition(-0.3f + x * spacing, 1.5f + y * spacing * 1.25f, 3.5f + z * spacing);
                     cube->SetRotationX(Util::RandomFloat(0, HELL_PI * 2));
                     cube->SetRotationY(Util::RandomFloat(0, HELL_PI * 2));
                     cube->SetRotationZ(Util::RandomFloat(0, HELL_PI * 2));
@@ -1032,32 +1291,275 @@ void Scene::RecreateFloorTrims() {
     }
 }
 
+void Scene::CreateWeaponSpawnPoints() {
+
+    {
+        WeaponInfo* weaponInfo = WeaponManager::GetWeaponInfoByName("Shotgun");
+        Scene::CreateGameObject();
+        GameObject* weapon = Scene::GetGameObjectByIndex(Scene::GetGameObjectCount() - 1);
+        weapon->SetPosition(glm::vec3(3.84f, 3.8, -1.2f));
+        weapon->SetRotationX(-1.7f);
+        weapon->SetRotationY(HELL_PI * 0.15f);
+        weapon->SetRotationZ(-1.6f);
+        weapon->SetModel(weaponInfo->pickupModelName);
+        weapon->SetName("PickUp");
+        for (auto& it : weaponInfo->pickUpMeshMaterials) {
+            weapon->SetMeshMaterialByMeshName(it.first, it.second);
+        }
+        weapon->SetWakeOnStart(true);
+        weapon->SetKinematic(false);
+        weapon->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName(weaponInfo->pickupConvexMeshModelName));
+        weapon->SetRaycastShapeFromModelIndex(AssetManager::GetModelIndexByName(weaponInfo->pickupModelName));
+        weapon->SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
+        weapon->UpdateRigidBodyMassAndInertia(50.0f);
+        //weapon->DisableRespawnOnPickup();
+        weapon->SetCollisionType(CollisionType::PICKUP);
+        weapon->SetPickUpType(PickUpType::AMMO);
+        weapon->m_collisionRigidBody.SetGlobalPose(weapon->_transform.to_mat4());
+    }
+
+
+    {
+        WeaponInfo* weaponInfo = WeaponManager::GetWeaponInfoByName("GoldenGlock");
+        Scene::CreateGameObject();
+        GameObject* weapon = Scene::GetGameObjectByIndex(Scene::GetGameObjectCount() - 1);
+        weapon->SetPosition(glm::vec3(-0.8f, 4.2, 4.2f));
+        weapon->SetRotationX(-1.7f);
+        weapon->SetRotationY(HELL_PI * 0.15f);
+        weapon->SetRotationZ(-1.6f);
+        weapon->SetModel(weaponInfo->pickupModelName);
+        weapon->SetName("PickUp");
+        for (auto& it : weaponInfo->pickUpMeshMaterials) {
+            weapon->SetMeshMaterialByMeshName(it.first, it.second);
+        }
+        weapon->SetWakeOnStart(true);
+        weapon->SetKinematic(false);
+        weapon->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName(weaponInfo->pickupConvexMeshModelName));
+        weapon->SetRaycastShapeFromModelIndex(AssetManager::GetModelIndexByName(weaponInfo->pickupModelName));
+        weapon->SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
+        weapon->UpdateRigidBodyMassAndInertia(50.0f);
+        //weapon->DisableRespawnOnPickup();
+        weapon->SetCollisionType(CollisionType::PICKUP);
+        weapon->SetPickUpType(PickUpType::AMMO);
+        weapon->m_collisionRigidBody.SetGlobalPose(weapon->_transform.to_mat4());
+    }
+
+    {
+        WeaponInfo* weaponInfo = WeaponManager::GetWeaponInfoByName("Tokarev");
+        Scene::CreateGameObject();
+        GameObject* weapon = Scene::GetGameObjectByIndex(Scene::GetGameObjectCount() - 1);
+        weapon->SetPosition(glm::vec3(-2.54f, 2.4, 3.99f));
+        weapon->SetRotationX(-1.7f);
+        weapon->SetRotationY(HELL_PI);
+        weapon->SetRotationZ(-1.6f);
+        weapon->SetModel(weaponInfo->pickupModelName);
+        weapon->SetName("PickUp");
+        for (auto& it : weaponInfo->pickUpMeshMaterials) {
+            weapon->SetMeshMaterialByMeshName(it.first, it.second);
+        }
+        weapon->SetWakeOnStart(true);
+        weapon->SetKinematic(false);
+        weapon->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName(weaponInfo->pickupConvexMeshModelName));
+        weapon->SetRaycastShapeFromModelIndex(AssetManager::GetModelIndexByName(weaponInfo->pickupModelName));
+        weapon->SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
+        weapon->UpdateRigidBodyMassAndInertia(50.0f);
+        //weapon->DisableRespawnOnPickup();
+        weapon->SetCollisionType(CollisionType::PICKUP);
+        weapon->SetPickUpType(PickUpType::AMMO);
+        weapon->m_collisionRigidBody.SetGlobalPose(weapon->_transform.to_mat4());
+    }
+
+
+    {
+        WeaponInfo* weaponInfo = WeaponManager::GetWeaponInfoByName("SPAS");
+        Scene::CreateGameObject();
+        GameObject* weapon = Scene::GetGameObjectByIndex(Scene::GetGameObjectCount() - 1);
+        weapon->SetPosition(glm::vec3(22.99f, 2.2, 13.28f));
+        weapon->SetRotationX(-1.7f);
+        weapon->SetRotationY(HELL_PI);
+        weapon->SetRotationZ(-1.6f);
+        weapon->SetModel(weaponInfo->pickupModelName);
+        weapon->SetName("PickUp");
+        for (auto& it : weaponInfo->pickUpMeshMaterials) {
+            weapon->SetMeshMaterialByMeshName(it.first, it.second);
+        }
+        weapon->SetWakeOnStart(true);
+        weapon->SetKinematic(false);
+        weapon->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName(weaponInfo->pickupConvexMeshModelName));
+        weapon->SetRaycastShapeFromModelIndex(AssetManager::GetModelIndexByName(weaponInfo->pickupModelName));
+        weapon->SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
+        weapon->UpdateRigidBodyMassAndInertia(50.0f);
+        //weapon->DisableRespawnOnPickup();
+        weapon->SetCollisionType(CollisionType::PICKUP);
+        weapon->SetPickUpType(PickUpType::AMMO);
+        weapon->m_collisionRigidBody.SetGlobalPose(weapon->_transform.to_mat4());
+    }
+    {
+        WeaponInfo* weaponInfo = WeaponManager::GetWeaponInfoByName("P90");
+        Scene::CreateGameObject();
+        GameObject* weapon = Scene::GetGameObjectByIndex(Scene::GetGameObjectCount() - 1);
+        weapon->SetPosition(glm::vec3(20.7f, 0.9, -17.15f));
+        weapon->SetRotationX(-1.7f);
+        weapon->SetRotationY(HELL_PI);
+        weapon->SetRotationZ(-1.6f);
+        weapon->SetModel(weaponInfo->pickupModelName);
+        weapon->SetName("PickUp");
+        for (auto& it : weaponInfo->pickUpMeshMaterials) {
+            weapon->SetMeshMaterialByMeshName(it.first, it.second);
+        }
+        weapon->SetWakeOnStart(true);
+        weapon->SetKinematic(false);
+        weapon->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName(weaponInfo->pickupConvexMeshModelName));
+        weapon->SetRaycastShapeFromModelIndex(AssetManager::GetModelIndexByName(weaponInfo->pickupModelName));
+        weapon->SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
+        weapon->UpdateRigidBodyMassAndInertia(50.0f);
+        //weapon->DisableRespawnOnPickup();
+        weapon->SetCollisionType(CollisionType::PICKUP);
+        weapon->SetPickUpType(PickUpType::AMMO);
+        weapon->m_collisionRigidBody.SetGlobalPose(weapon->_transform.to_mat4());
+    }
+
+    {
+        WeaponInfo* weaponInfo = WeaponManager::GetWeaponInfoByName("AKS74U");
+        Scene::CreateGameObject();
+        GameObject* weapon = Scene::GetGameObjectByIndex(Scene::GetGameObjectCount() - 1);
+        weapon->SetPosition(glm::vec3(-0.4f, 4.0, -7.4f));
+        weapon->SetRotationX(-1.7f);
+        weapon->SetRotationY(0.0f);
+        weapon->SetRotationZ(-1.6f);
+        weapon->SetModel(weaponInfo->pickupModelName);
+        weapon->SetName("PickUp");
+        for (auto& it : weaponInfo->pickUpMeshMaterials) {
+            weapon->SetMeshMaterialByMeshName(it.first, it.second);
+        }
+        weapon->SetWakeOnStart(true);
+        weapon->SetKinematic(false);
+        weapon->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName(weaponInfo->pickupConvexMeshModelName));
+        weapon->SetRaycastShapeFromModelIndex(AssetManager::GetModelIndexByName(weaponInfo->pickupModelName));
+        weapon->SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
+        weapon->UpdateRigidBodyMassAndInertia(50.0f);
+        //weapon->DisableRespawnOnPickup();
+        weapon->SetCollisionType(CollisionType::PICKUP);
+        weapon->SetPickUpType(PickUpType::AMMO);
+        weapon->m_collisionRigidBody.SetGlobalPose(weapon->_transform.to_mat4());
+    }
+
+}
+
 void Scene::CreateDefaultSpawnPoints() {
 
     g_spawnPoints.clear();
     {
         SpawnPoint& spawnPoint = g_spawnPoints.emplace_back();
+        spawnPoint.position = glm::vec3(5.5, 2, 4.0);
+        spawnPoint.rotation = glm::vec3(-0.3, -5.5, 0);
+    }
+    {
+        SpawnPoint& spawnPoint = g_spawnPoints.emplace_back();
+        spawnPoint.position = glm::vec3(-2.6, 2, 3.5);
+        spawnPoint.rotation = glm::vec3(-0.3, -6.3, 0);
+    }
+    {
+        SpawnPoint& spawnPoint = g_spawnPoints.emplace_back();
+        spawnPoint.position = glm::vec3(-0.88, 2.06f, -7.91);
+        spawnPoint.rotation = glm::vec3(-0.28, -3.18, 0);
+    }
+    {
+        SpawnPoint& spawnPoint = g_spawnPoints.emplace_back();
+        spawnPoint.position = glm::vec3(-0.38, 4.68f, -7.94);
+        spawnPoint.rotation = glm::vec3(-0.15, -9.44, 0);
+    }
+    {
+        SpawnPoint& spawnPoint = g_spawnPoints.emplace_back();
+        spawnPoint.position = glm::vec3(6.2, 4.66f, -0.4);
+        spawnPoint.rotation = glm::vec3(-0.3, -4.74, 0);
+    }
+    {
+        SpawnPoint& spawnPoint = g_spawnPoints.emplace_back();
+        spawnPoint.position = glm::vec3(25.3, 3.38f, 15.43);
+        spawnPoint.rotation = glm::vec3(-0.3, -5.49, 0);
+    }
+    {
+        SpawnPoint& spawnPoint = g_spawnPoints.emplace_back();
+        spawnPoint.position = glm::vec3(17.05, -0.24f, -26.41);
+        spawnPoint.rotation = glm::vec3(-0.3, -3.33, 0);
+    }
+
+  /* {
+        SpawnPoint& spawnPoint = g_spawnPoints.emplace_back();
         spawnPoint.position = glm::vec3(0, 2, 0);
         spawnPoint.rotation = glm::vec3(0);
     }
-    {
-        SpawnPoint& spawnPoint = g_spawnPoints.emplace_back();
-        spawnPoint.position = glm::vec3(0, 2.00, -1);
-        spawnPoint.rotation = glm::vec3(-0.0, HELL_PI, 0);
+   {
+       SpawnPoint& spawnPoint = g_spawnPoints.emplace_back();
+       spawnPoint.position = glm::vec3(0, 2.00, -1);
+       spawnPoint.rotation = glm::vec3(-0.0, HELL_PI, 0);
+   }
+   {
+       SpawnPoint& spawnPoint = g_spawnPoints.emplace_back();
+       spawnPoint.position = glm::vec3(1.40, 2.00, -6.68);
+       spawnPoint.rotation = glm::vec3(-0.35, -3.77, 0.00);
+   }
+   {
+       SpawnPoint& spawnPoint = g_spawnPoints.emplace_back();
+       spawnPoint.position = glm::vec3(1.78, 2.00, -7.80);
+       spawnPoint.rotation = glm::vec3(-0.34, -5.61, 0.00);
+   }*/
+}
+
+void Scene::HackToUpdateShadowMapsOnPickUp(GameObject* gameObject) {
+
+    for (Light& light : g_lights) {
+        float distance = glm::distance(light.position, gameObject->GetWorldSpaceOABBCenter());
+        if (distance < light.radius + 2.0f) {
+            light.MarkShadowMapDirty();
+        }
     }
-    {
-        SpawnPoint& spawnPoint = g_spawnPoints.emplace_back();
-        spawnPoint.position = glm::vec3(1.40, 2.00, -6.68);
-        spawnPoint.rotation = glm::vec3(-0.35, -3.77, 0.00);
-    }
-    {
-        SpawnPoint& spawnPoint = g_spawnPoints.emplace_back();
-        spawnPoint.position = glm::vec3(1.78, 2.00, -7.80);
-        spawnPoint.rotation = glm::vec3(-0.34, -5.61, 0.00);
-    }
+
 }
 
 void Scene::Update(float deltaTime) {
+
+   // std::cout << g_dobermann.size() << "\n";
+   //
+   // g_dobermanmTimer += deltaTime;
+   //
+   // static int randomTime = 30;
+   //
+   // if (g_dobermanmTimer >= randomTime) {
+   //
+   //     g_dobermanmTimer = 0;
+   //     randomTime = Util::RandomInt(5, 20);
+   //
+   //     int result = Util::RandomInt(0, 1);
+   //
+   //   if (result == 0) {
+   //         DobermannCreateInfo createInfo;
+   //         createInfo.posi   tion = glm::vec3(10, 0.4f, -2.34f);
+   //         createInfo.rotation = (HELL_PI * -0.5f);
+   //         createInfo.initalState = DobermannState::KAMAKAZI;
+   //         AddDobermann(createInfo);
+   //         Dobermann& dobermann = g_dobermann[g_dobermann.size() - 1];
+   //         dobermann.m_currentState = DobermannState::KAMAKAZI;
+   //     }
+   //     else {
+   //         DobermannCreateInfo createInfo;
+   //         createInfo.position = glm::vec3(-5.7f, 0.4f, -0.04f);
+   //         createInfo.rotation = (HELL_PI * 0.5f);
+   //         createInfo.initalState = DobermannState::KAMAKAZI;
+   //         AddDobermann(createInfo);
+   //         Dobermann& dobermann = g_dobermann[g_dobermann.size() - 1];
+   //         dobermann.m_currentState = DobermannState::KAMAKAZI;
+   //     }
+   //
+   //   if (g_dobermann.size() > 10) {
+   //       g_dobermann[0].CleanUp();
+   //       g_dobermann.erase(g_dobermann.begin());
+   //   }
+   // }
+
+
+   
 
     /*
     for (Light& light : g_lights) {
@@ -1066,6 +1568,15 @@ void Scene::Update(float deltaTime) {
         }
     }
     */
+
+    for (int i = 0; i < g_gameObjects.size(); i++) {
+        GameObject& gameObject = g_gameObjects[i];
+        if (gameObject.m_collisionType == CollisionType::PICKUP && !gameObject._respawns && gameObject.m_hackTimer > 40.0f) {
+            HackToUpdateShadowMapsOnPickUp(&gameObject);
+            g_gameObjects.erase(g_gameObjects.begin() + i);
+            i--;
+        }
+    }
 
     if (Input::KeyPressed(HELL_KEY_9)) {
         Dobermann& dobermann = Scene::g_dobermann[2];
@@ -1571,8 +2082,7 @@ std::vector<RenderItem3D> GetTreeRenderItems() {
             //tree->AddCollisionShape(sofaShapeBigCube, sofaFilterData);
             tree->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("Tree_0_ConvexHull"));
             tree->SetModelMatrixMode(ModelMatrixMode::GAME_TRANSFORM);
-            tree->SetCollisionType(CollisionType::STATIC_ENVIROMENT);
-
+            tree->SetCollisionType(CollisionType::STATIC_ENVIROMENT_NO_DOG);
 
 
 
@@ -3704,7 +4214,7 @@ CSGPlane* Scene::GetCeilingPlaneByIndex(int32_t index) {
         return &g_csgAdditiveCeilingPlanes[index];
     }
     else {
-        std::cout << "Scene::GetCeilingPlaneByIndex() failed coz " << index << " out of range of size " << g_csgAdditiveCubes.size() << "\n";
+        std::cout << "Scene::GetCeilingPlaneByIndex() failed coz " << index << " out of range of size " << g_csgAdditiveCeilingPlanes.size() << "\n";
         return nullptr;
     }
 }
@@ -3783,4 +4293,14 @@ void Scene::CreateWindow(WindowCreateInfo createInfo) {
     window.SetPosition(createInfo.position);
     window.SetRotationY(createInfo.rotation);
     window.CreatePhysicsObjects();
+}
+
+void Scene::CreateGameObject(GameObjectCreateInfo createInfo) {
+    GameObject& gameObject = g_gameObjects.emplace_back();
+    gameObject.SetPosition(createInfo.position);
+    gameObject.SetRotation(createInfo.rotation);
+    gameObject.SetScale(createInfo.scale);
+    gameObject.SetName("GameObject");
+    gameObject.SetModel(createInfo.modelName);
+    gameObject.SetMeshMaterial(createInfo.materialName.c_str());
 }

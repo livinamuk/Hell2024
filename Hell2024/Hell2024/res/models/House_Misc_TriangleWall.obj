@@ -1,0 +1,26 @@
+# 3ds Max Wavefront OBJ Exporter v0.99 - (c)2007 guruware
+# File Created: 10.11.2024 09:14:04
+
+#
+# object TriangleWall
+#
+
+v  1.4863 -0.2573 -2.3967
+v  -1.7064 2.4033 -2.3967
+v  -1.7064 -0.2573 -2.3967
+# 3 vertices
+
+vn 0.0000 0.0000 1.0000
+# 1 vertex normals
+
+vt 1.0008 -0.0045 0.0000
+vt 0.0069 1.0029 0.0000
+vt 0.0069 -0.0045 0.0000
+# 3 texture coords
+
+o TriangleWall
+g TriangleWall
+s off
+f 1/1/1 2/2/1 3/3/1 
+# 0 polygons - 1 triangles
+

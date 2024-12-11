@@ -37,19 +37,53 @@ std::vector<RenderItem2D> Player::GetHudRenderItems(hell::ivec2 presentSize) {
     }
 
     // Text
-    if (!Game::DebugTextIsEnabled() && IsAlive() && !Editor::IsOpen()) {
-        std::string text;
+    //if (!Game::DebugTextIsEnabled() && IsAlive() && !Editor::IsOpen() && !Game::KillLimitReached()) {
+    if (!Game::DebugTextIsEnabled() && !Editor::IsOpen() && !Game::KillLimitReached()) {
+            std::string text;
         text += "Health: " + std::to_string(_health) + "\n";
         text += "Kills: " + std::to_string(m_killCount) + "\n";
+        //text += "Pos: " + Util::Vec3ToString(GetViewPos()) + "\n";
+        //text += "Rot: " + Util::Vec3ToString(GetViewRotation()) + "\n";
         //text += "Crosshair size: " + std::to_string(m_crosshairCrossSize) + "\n";
         //text += "Accuracy Modifier: " + std::to_string(m_accuracyModifer) + "\n";
+        
         RendererUtil::AddRenderItems(renderItems, TextBlitter::CreateText(text, debugTextLocation, presentSize, Alignment::TOP_LEFT, BitmapFontType::STANDARD));
 
     }
 
 
+    if (Game::g_globalFadeOut < 0.05f) {
+
+        std::string winMessage = "";
+
+        if (m_killCount == Game::g_killLimit) {
+            winMessage += "Rank: FIRST\n";
+        }
+        else {
+            winMessage += "Rank: SECOND\n";
+        }
+        winMessage += "Kills: " + std::to_string(m_killCount) + "\n";
+        hell::ivec2 size = TextBlitter::GetTextSizeInPixels(winMessage, presentSize, BitmapFontType::STANDARD);
+
+
+        hell::ivec2 location;
+        location.x = RendererUtil::GetViewportCenterX(m_playerIndex, Game::GetSplitscreenMode(), presentSize.x, presentSize.y);
+        location.y = RendererUtil::GetViewportCenterY(m_playerIndex, Game::GetSplitscreenMode(), presentSize.x, presentSize.y);
+
+        location.x -= (size.x * 0.5f);
+        location.y -= (size.y * 0.5f);
+
+        RendererUtil::AddRenderItems(renderItems, TextBlitter::CreateText(winMessage, location, presentSize, Alignment::TOP_LEFT, BitmapFontType::STANDARD));
+
+    }
+
+
+
+  
+
+
     // Press Start
-    if (RespawnAllowed()) {
+    if (RespawnAllowed() && !Game::KillLimitReached()) {
         renderItems.push_back(RendererUtil::CreateRenderItem2D("PressStart", viewportCenter, presentSize, Alignment::CENTERED));
     }
 
@@ -92,8 +126,9 @@ std::vector<RenderItem2D> Player::GetHudRenderItems(hell::ivec2 presentSize) {
       //       renderItems.push_back(RendererUtil::CreateRenderItem2D("CrosshairDot", crosshairPos, presentSize, Alignment::CENTERED));
       //  }
 
-
-        renderItems.push_back(RendererUtil::CreateRenderItem2D("CrosshairDot", crosshairPos, presentSize, Alignment::CENTERED));
+        if (!Game::KillLimitReached()) {
+            renderItems.push_back(RendererUtil::CreateRenderItem2D("CrosshairDot", crosshairPos, presentSize, Alignment::CENTERED));
+        }
 
         static int texHeight = AssetManager::GetTextureByName("inventory_mockup")->GetHeight();
         static int height = (presentSize.y - texHeight) / 2;
@@ -172,6 +207,10 @@ std::vector<RenderItem2D> Player::GetHudRenderItemsHiRes(hell::ivec2 gBufferSize
             RendererUtil::AddRenderItems(renderItems, TextBlitter::CreateText("/", ammoSlashTextLocation, gBufferSize, Alignment::TOP_LEFT, BitmapFontType::AMMO_NUMBERS, glm::vec3(ammoTextScale)));
             RendererUtil::AddRenderItems(renderItems, TextBlitter::CreateText(clipText, ammoClipTextLocation, gBufferSize, Alignment::TOP_RIGHT, BitmapFontType::AMMO_NUMBERS, glm::vec3(ammoTextScale)));
         }
+    }
+
+    if (Game::KillLimitReached()) {
+        renderItems.clear();
     }
 
     return renderItems;

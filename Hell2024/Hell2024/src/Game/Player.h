@@ -98,8 +98,6 @@ private:
     float m_headBobTimer = 0;
     float m_breatheBobTimer = 0;
     bool m_ignoreControl = false;
-    int m_killCount = 0;
-    int m_suicideCount = 0;
     int m_mouseIndex = -1;
     int m_keyboardIndex = -1;
     float m_capsuleRadius = 0.1f;
@@ -116,6 +114,8 @@ private:
 
 
 public:
+    int m_killCount = 0;
+    int m_suicideCount = 0;
     glm::mat4 m_weaponSwayMatrix = glm::mat4(1);
     bool m_pickUpInteractable = false;
     bool g_awaitingRespawn = true;
@@ -147,6 +147,8 @@ public:
     void CheckForDeath();
     void CheckForDebugKeyPresses();
     void CheckForSuicide();
+
+    void ProcessWeaponPickUp(std::string modelName);
 
     // State queries
     bool IsMoving();

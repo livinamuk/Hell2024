@@ -41,4 +41,9 @@ void main() {
 
     EmssiveMask.rgb = vec3(0, 0, 0);
 	EmssiveMask.a = 1.0;
+
+	
+    //RMAOut.r = 1.0;
+    //RMAOut.g = 1.0;
+    //EmssiveMask.rgb = vec3(0.5);
 }

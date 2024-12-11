@@ -219,6 +219,14 @@ namespace CSG {
             brush.SetTransform(csgPlane.GetCSGMatrix());
             CreateCSGObjectFromBrush(brush, CSGObjecType::FLOOR_PLANE, i, csgPlane.materialIndex, csgPlane.textureScale, csgPlane.textureOffsetX, csgPlane.textureOffsetY);
         }
+        for (int i = 0; i < Scene::g_csgAdditiveCeilingPlanes.size(); i++) {
+            CSGPlane& csgPlane = Scene::g_csgAdditiveCeilingPlanes[i];
+            Brush brush;
+            brush.SetBrushType(SOLID_BRUSH);
+            brush.SetBrushShape(BrushShape::PLANE);
+            brush.SetTransform(csgPlane.GetCSGMatrix());
+            CreateCSGObjectFromBrush(brush, CSGObjecType::CEILING_PLANE, i, csgPlane.materialIndex, csgPlane.textureScale, csgPlane.textureOffsetX, csgPlane.textureOffsetY);
+        }
         for (int i = 0; i < Scene::g_csgAdditiveCubes.size(); i++) {
             CSGCube& csgCube = Scene::g_csgAdditiveCubes[i];
             Brush brush;
@@ -446,14 +454,28 @@ void CSGObject::CreatePhysicsObjectFromVertices() {
 
         m_triangleMesh = Physics::CreateTriangleMesh(pxvertices.size(), pxvertices.data(), pxindices.size() / 3, pxindices.data());
 
-        PhysicsFilterData filterData;
-        filterData.raycastGroup = RAYCAST_ENABLED;
-        filterData.collisionGroup = ENVIROMENT_OBSTACLE;
-        filterData.collidesWith = (CollisionGroup)(GENERIC_BOUNCEABLE | BULLET_CASING | PLAYER | RAGDOLL);
-        PxShapeFlags shapeFlags(PxShapeFlag::eSCENE_QUERY_SHAPE | PxShapeFlag::eSIMULATION_SHAPE);
+        if (!m_triangleMesh) {
+            std::cout << "pxvertices.size(): " << pxvertices.size() << "\n";
+            std::cout << "pxindices.size(): " << pxindices.size() << "\n";
+            std::cout << "CSGObject::CreatePhysicsObjectFromVertices() failed, m_triangleMesh failed to create\n!";
+        }
 
-        m_pxShape = Physics::CreateShapeFromTriangleMesh(m_triangleMesh, shapeFlags);
-        m_pxRigidStatic = Physics::CreateRigidStatic(Transform(), filterData, m_pxShape);
-        m_pxRigidStatic->userData = new PhysicsObjectData(m_parentObjectType, this);
+
+
+        if (m_triangleMesh || true) {
+            PhysicsFilterData filterData;
+            filterData.raycastGroup = RAYCAST_ENABLED;
+            filterData.collisionGroup = ENVIROMENT_OBSTACLE;
+            filterData.collidesWith = (CollisionGroup)(GENERIC_BOUNCEABLE | BULLET_CASING | PLAYER | RAGDOLL);
+            PxShapeFlags shapeFlags(PxShapeFlag::eSCENE_QUERY_SHAPE | PxShapeFlag::eSIMULATION_SHAPE);
+
+            m_pxShape = Physics::CreateShapeFromTriangleMesh(m_triangleMesh, shapeFlags);
+            m_pxRigidStatic = Physics::CreateRigidStatic(Transform(), filterData, m_pxShape);
+            m_pxRigidStatic->userData = new PhysicsObjectData(m_parentObjectType, this);
+        }
+        else {
+        //    std::cout << "CSGObject::CreatePhysicsObjectFromVertices() failed, m_triangleMesh failed to create\n!";
+        }
+    
     }
 }

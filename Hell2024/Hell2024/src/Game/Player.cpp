@@ -29,7 +29,11 @@ Player::Player(int playerIndex) {
 
 void Player::Update(float deltaTime) {
 
-    if (g_awaitingRespawn) {
+    if (IsDead()) {
+        m_flashlightOn = false;
+    }
+
+    if (g_awaitingRespawn && !Game::KillLimitReached()) {
         Respawn();
     }
 
@@ -154,12 +158,12 @@ void Player::Respawn() {
 
     // Debug hack to always spawn player 1 at location 0
     if (m_playerIndex == 0) {
-        randomSpawnLocationIndex = 0;
+        //randomSpawnLocationIndex = 0;
     }
     SpawnPoint& spawnPoint = Scene::g_spawnPoints[randomSpawnLocationIndex];
 
     // Check you didn't just spawn on another player
-    if (m_playerIndex != 0) {
+    //if (m_playerIndex != 0) {
         for (int i = 0; i < Game::GetPlayerCount(); i++) {
             Player* otherPlayer = Game::GetPlayerByIndex(i);
             if (this != otherPlayer) {
@@ -170,7 +174,7 @@ void Player::Respawn() {
                 }
             }
         }
-    }
+   // }
 
     // Load weapon states
     m_weaponStates.clear();
@@ -361,7 +365,7 @@ void Player::UpdatePickupText(float deltaTime) {
 
 void Player::CheckForAndEvaluateRespawnPress() {
     bool autoRespawn = false;
-    if (_isDead && _timeSinceDeath > 3.25) {
+    if (_isDead && _timeSinceDeath > 3.25 && !Game::KillLimitReached()) {
         if (PressedFire() ||
             PressedReload() ||
             PressedCrouch() ||
@@ -490,6 +494,10 @@ void Player::UpdateTimers(float deltaTime) {
         }
     }
 
+    if (Game::KillLimitReached()) {
+        finalImageColorTint *= Game::g_globalFadeOut;
+    }
+
 }
 
 void Player::UpdateMouseLook(float deltaTime) {
@@ -556,26 +564,35 @@ void Player::UpdateMovement(float deltaTime) {
     }
 
     // Jump
-    if (PresingJump() && HasControl() && _isGrounded) {
+    if (PresingJump() && HasControl() /* && _isGrounded*/) {
         _yVelocity = 4.75f; // magic value for jump strength
-        _yVelocity = 4.9f; // magic value for jump strength (had to change cause you could no longer jump thru window after fixing character controller height bug)
+        _yVelocity = 5.1f; // magic value for jump strength (had to change cause you could no longer jump thru window after fixing character controller height bug)
         _isGrounded = false;
     }
     // Gravity
-    if (_isGrounded) {
-        _yVelocity = -0.1f; // can't be 0, or the _isGrounded check next frame will fail
-        _yVelocity = -3.5f;
-    }
-    else {
-        float gravity = 15.75f; // 9.8 feels like the moon
-        _yVelocity -= gravity * deltaTime;
-    }
+  //  if (_isGrounded) {
+  //      _yVelocity = -0.1f; // can't be 0, or the _isGrounded check next frame will fail
+  //      _yVelocity = -3.5f;
+  //  }
+  //  else {
+  //      float gravity = 15.75f; // 9.8 feels like the moon
+  //      _yVelocity -= gravity * deltaTime;
+  //  }
+
+
+    float gravity = 15.75f; // 9.8 feels like the moon
+         _yVelocity -= gravity * deltaTime;
+
     float yDisplacement = _yVelocity * deltaTime;
+
+    if (Game::KillLimitReached()) {
+        _displacement = glm::vec3(0, 0, 0);
+    }
 
     // Move PhysX character controller
     PxFilterData filterData;
     filterData.word0 = 0;
-    filterData.word1 = CollisionGroup::ENVIROMENT_OBSTACLE;	// Things to collide with
+    filterData.word1 = CollisionGroup::ENVIROMENT_OBSTACLE | CollisionGroup::ENVIROMENT_OBSTACLE_NO_DOG;	// Things to collide with
     PxControllerFilters data;
     data.mFilterData = &filterData;
     PxF32 minDist = 0.001f;
@@ -674,6 +691,10 @@ void Player::CreateCharacterModel() {
     characterModel->SetMeshMaterialByMeshName("Trigger_low", "AKS74U_1");
     characterModel->SetMeshMaterialByMeshName("Magazine_Housing_low", "AKS74U_3");
     characterModel->SetMeshMaterialByMeshName("BarrelTip_low", "AKS74U_4");
+
+    if (m_playerIndex == 1) {
+      characterModel->SetMeshMaterialByMeshIndex(13, "UniSexGuyHead2");
+    }
 }
 
 void Player::CreateViewModel() {
@@ -1071,113 +1092,12 @@ glm::vec3 Player::GetCameraUp() {
 }
 
 bool Player::IsMoving() {
+    if (Game::KillLimitReached()) {
+        return false;
+    }
 	return m_moving;
 }
 
-void Player::CheckForAndEvaluateInteract() {
-
-    m_interactbleGameObjectIndex = -1;
-
-    // Get camera hit data
-    m_cameraRayResult = Util::CastPhysXRay(GetViewPos(), GetCameraForward() * glm::vec3(-1), 100, _interactFlags);
-    glm::vec3 hitPos = m_cameraRayResult.hitPosition;
-
-    // Get overlap report
-    const PxGeometry& overlapShape = m_interactSphere->getGeometry();
-    const PxTransform shapePose(PxVec3(hitPos.x, hitPos.y, hitPos.z));
-    m_interactOverlapReport = Physics::OverlapTest(overlapShape, shapePose, CollisionGroup(GENERIC_BOUNCEABLE | GENERTIC_INTERACTBLE));
-
-    // Sort by distance to player
-    sort(m_interactOverlapReport.hits.begin(), m_interactOverlapReport.hits.end(), [this, hitPos](OverlapResult& lhs, OverlapResult& rhs) {
-        float distanceA = glm::distance(hitPos, lhs.position);
-        float distanceB = glm::distance(hitPos, rhs.position);
-        return distanceA < distanceB;
-    });
-
-
-    overlapList = "Overlaps: " + std::to_string(m_interactOverlapReport.hits.size()) + "\n";
-
-    for (OverlapResult& overlapResult : m_interactOverlapReport.hits) {
-                overlapList += Util::PhysicsObjectTypeToString(overlapResult.objectType);
-                overlapList += " ";
-                overlapList += Util::Vec3ToString(overlapResult.position);
-                overlapList += "\n";
-
-        //if (overlapResult.objectType == ObjectType::GAME_OBJECT) {
-        //    GameObject* parent = (GameObject*)overlapResult.parent;
-        //    overlapList += parent->model->GetName();
-        //    overlapList += " ";
-        //    overlapList += Util::Vec3ToString(overlapResult.position);
-        //    overlapList += "\n";
-        //}
-    }
-
-
-    // Store index of gameobject if the first hit is one Clean this up
-    if (m_interactOverlapReport.hits.size()) {
-        OverlapResult& overlapResult = m_interactOverlapReport.hits[0];
-        if (overlapResult   .objectType == ObjectType::GAME_OBJECT) {
-            GameObject* gameObject = (GameObject*)(overlapResult.parent);
-            if (gameObject->GetName() == "PickUp") {
-                for (int i = 0; Scene::GetGamesObjects().size(); i++) {
-                    if (gameObject == &Scene::GetGamesObjects()[i]) {
-                        m_interactbleGameObjectIndex = i;
-                        goto label;
-                    }
-                }
-            }
-        }
-    }
-label:
-
-    overlapList += "\n" + std::to_string(m_interactbleGameObjectIndex);
-
-    if (m_interactOverlapReport.hits.size()) {
-
-        OverlapResult& overlapResult = m_interactOverlapReport.hits[0];
-
-        if (HasControl() && PressedInteract()) {
-
-            // Doors
-            if (overlapResult.objectType == ObjectType::DOOR) {
-                Door* door = (Door*)(overlapResult.parent);
-                if (!door->IsInteractable(GetFeetPosition())) {
-                    return;
-                }
-                door->Interact();
-            }
-
-            // Weapon pickups
-            if (overlapResult.objectType == ObjectType::GAME_OBJECT) {
-
-                GameObject* gameObject = (GameObject*)(overlapResult.parent);
-
-                if (gameObject->GetName() == "PickUp") {
-
-                    std::cout << "picked up " << gameObject->model->GetName() << "\n";
-
-
-                    for (int i = 0; Scene::GetGamesObjects().size(); i++) {
-                        if (gameObject == &Scene::GetGamesObjects()[i]) {
-                            Scene::RemoveGameObjectByIndex(i);
-                            Audio::PlayAudio("ItemPickUp.wav", 1.0f);
-                            Physics::ClearCollisionLists();
-                            return;
-                        }
-                    }
-                }
-
-                // if (gameObject && !gameObject->IsInteractable()) {
-                //     return;
-                // }
-                // if (gameObject) {
-                //     gameObject->Interact();
-                // }
-            }
-        }
-    }
-
-}
 
 void Player::SetPosition(glm::vec3 position) {
     _characterController->setFootPosition(PxExtendedVec3(position.x, position.y, position.z));
@@ -1296,6 +1216,10 @@ void Player::SpawnBullet(float variance, Weapon type) {
     WeaponInfo* weaponInfo = GetCurrentWeaponInfo();
     if (weaponInfo) {
         bullet.damage = weaponInfo->damage;
+    }
+
+    if (Game::g_liceneToKill) {
+        bullet.damage = 100;
     }
 
     glm::vec3 offset = glm::vec3(0);
@@ -1812,6 +1736,10 @@ void Player::CheckForMeleeHit() {
                         otherPlayer->_health -= weaponInfo->damage;// +rand() % 50;
 
                         otherPlayer->GiveDamageColor();
+
+                        int rand = Util::RandomInt(0, 7);
+                        std::string audioName = "FLY_Bullet_Impact_Flesh_0" + std::to_string(rand) + ".wav";
+                        Audio::PlayAudio(audioName, 1.0f);
 
                         // Are they dead???
                         if (otherPlayer->_health <= 0 && !otherPlayer->_isDead)

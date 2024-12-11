@@ -20,6 +20,13 @@ namespace Game {
     void SetPlayerGroundedStates();
     void GiveControlToPlayer1();
 
+    inline int g_killLimit = 10;
+    inline float g_globalFadeOut = 1.0f;
+    inline float g_globalFadeOutWaitTimer = 0.0f;
+    inline bool g_liceneToKill = false;
+
+
+    bool KillLimitReached();
     const int GetPlayerCount();
     const int GetPlayerIndexFromPlayerPointer(Player* player);
     Player* GetPlayerByIndex(unsigned int index);

@@ -6,7 +6,7 @@
 #define BL 2
 #define BR 3
 
-#define _propogationGridSpacing 0.375f
+#define _propogationGridSpacing 0.275f
 #define _pointCloudSpacing 0.4f
 #define _maxPropogationDistance 2.6f
 

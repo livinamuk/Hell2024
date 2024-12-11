@@ -126,6 +126,9 @@ struct PickUp {
 
 namespace Scene {
 
+    void HackToUpdateShadowMapsOnPickUp(GameObject* gameObject);
+    void CreateGameObject(GameObjectCreateInfo createInfo);
+
     inline bool g_needToPlantTrees = true;
     void Update(float deltaTime);
     void SaveMapData(const std::string& fileName);

@@ -1476,5 +1476,9 @@ namespace Util {
             return result;// This means that there is a line intersection, but not a ray intersection. 
         }
     }
+
+    inline bool FloatWithinRange(float a, float b, float threshold) {
+        return (a < b + threshold && a > b - threshold);
+    }
 }
 

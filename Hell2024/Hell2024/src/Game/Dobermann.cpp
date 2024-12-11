@@ -47,6 +47,15 @@ void Dobermann::Init() {
 
 }
 
+
+void Dobermann::Reset() {
+    m_targetPlayerIndex = -1;
+    m_health = DOG_MAX_HEALTH;
+    m_currentState == DobermannState::LAY;
+    m_characterController->setPosition({ m_initialPosition.x, m_initialPosition.y, m_initialPosition.z });
+
+}
+
 void Dobermann::GiveDamage(int amount, int targetPlayerIndex) {
     m_health -= amount;
     int rand = Util::RandomInt(0, 7);
@@ -128,19 +137,19 @@ void Dobermann::Update(float deltaTime) {
     }
 
     // Target is dead? then lay
-    if (m_currentState == DobermannState::KAMAKAZI && targetPlayer && targetPlayer->IsDead()) {
-        // Pick a random action
-        int rand = Util::RandomInt(0, 1);
-        if (rand == 0) {
-            m_currentState = DobermannState::RETURN_TO_ORIGIN;
-        }
-        if (rand == 1) {
-            m_currentState = DobermannState::LAY;
-        }
-        // Heal to full health
-        m_health = DOG_MAX_HEALTH;
-
-    }
+  //if (m_currentState == DobermannState::KAMAKAZI && targetPlayer && targetPlayer->IsDead()) {
+  //    // Pick a random action
+  //    int rand = Util::RandomInt(0, 1);
+  //    if (rand == 0) {
+  //        m_currentState = DobermannState::RETURN_TO_ORIGIN;
+  //    }
+  //    if (rand == 1) {
+  //        m_currentState = DobermannState::LAY;
+  //    }
+  //    // Heal to full health
+  //    m_health = DOG_MAX_HEALTH;
+  //
+  //}
     // Lay when reached home?
     if (GetDistanceToTarget() < 0.1f) {
        if (m_currentState == DobermannState::RETURN_TO_ORIGIN ||
@@ -200,6 +209,10 @@ void Dobermann::UpdateMovement(float deltaTime) {
                     std::ofstream out("PlayerDeaths.txt");
                     out << Game::g_playerDeaths;
                     out.close();
+
+                    if (targetPlayer->IsAlive()) {
+                        targetPlayer->m_killCount--;
+                    }
                 }
             }
         }
@@ -243,6 +256,12 @@ void Dobermann::UpdateMovement(float deltaTime) {
             float fixedDeltaTime = (1.0f / 60.0f);
 
 
+            for (auto& report : Physics::_characterCollisionReports) {
+                if (report.characterController == m_characterController && report.hitNormal.y > 0.1f) {
+                    PxExtendedVec3 v = m_characterController->getPosition();
+                    m_characterController->setPosition(v + PxExtendedVec3(0, 0.05, 0));
+                }
+            }
             
             float len = glm::length(enemyForward);
             glm::vec3 displacement;

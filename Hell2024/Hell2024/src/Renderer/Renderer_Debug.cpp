@@ -47,9 +47,20 @@ void Renderer::UpdateDebugPointsMesh() {
         }
     }
 
-    if (Editor::GetSelectedObjectType() == ObjectType::CSG_OBJECT_ADDITIVE_WALL_PLANE) {       
-        if (Editor::GetSelectedObjectIndex() != -1) {
-            CSGPlane* csgPlane = Scene::GetWallPlaneByIndex(Editor::GetSelectedObjectIndex());
+    // Plane vertices
+    if (Editor::GetSelectedObjectIndex() != -1) {
+        CSGPlane* csgPlane = nullptr;
+        if (Editor::GetSelectedObjectType() == ObjectType::CSG_OBJECT_ADDITIVE_WALL_PLANE) {
+            csgPlane = Scene::GetWallPlaneByIndex(Editor::GetSelectedObjectIndex());
+        }
+        if (Editor::GetSelectedObjectType() == ObjectType::CSG_OBJECT_ADDITIVE_FLOOR_PLANE) {
+            csgPlane = Scene::GetFloorPlaneByIndex(Editor::GetSelectedObjectIndex());
+        }
+        if (Editor::GetSelectedObjectType() == ObjectType::CSG_OBJECT_ADDITIVE_CEILING_PLANE) {
+            CSGObject& csgObject = CSG::GetCSGObjects()[Editor::GetSelectedObjectIndex()];
+            csgPlane = Scene::GetCeilingPlaneByIndex(csgObject.m_parentIndex);
+        }
+        if (csgPlane) {
             vertices.push_back(Vertex(csgPlane->m_veritces[0], ORANGE));
             vertices.push_back(Vertex(csgPlane->m_veritces[1], ORANGE));
             vertices.push_back(Vertex(csgPlane->m_veritces[2], ORANGE));
@@ -89,10 +100,10 @@ void Renderer::UpdateDebugPointsMesh() {
     // BROKEN ABOVE
     // BROKEN ABOVE
     if (Editor::GetHoveredVertexIndex() != -1) {
-        vertices.push_back(Vertex(Editor::GetHoveredVertexPosition(), WHITE));
+    //    vertices.push_back(Vertex(Editor::GetHoveredVertexPosition(), WHITE));
     }
     if (Editor::GetSelectedVertexIndex() != -1) {
-        vertices.push_back(Vertex(Editor::GetSelectedVertexPosition(), WHITE));
+     //   vertices.push_back(Vertex(Editor::GetSelectedVertexPosition(), WHITE));
     }
 
 
@@ -706,8 +717,10 @@ std::string& Renderer::GetDebugText() {
     }
 
     g_debugText += "Dog deaths: " + std::to_string(Game::g_dogDeaths) + "\n";
-    g_debugText += "Dog kills: " + std::to_string(Game::g_playerDeaths) + "\n"; 
+    g_debugText += "Dog kills: " + std::to_string(Game::g_playerDeaths) + "\n";
     g_debugText += "Cam pos: " + Util::Vec3ToString(Game::GetPlayerByIndex(0)->GetViewPos()) + "\n";
+    g_debugText += "Licence To Kill: " + std::to_string(Game::g_liceneToKill) + "\n";
+    g_debugText += "Kill limit: " + std::to_string(Game::g_killLimit) + "\n";
     g_debugText += "\n";
 
 
@@ -781,15 +794,19 @@ std::string& Renderer::GetDebugText() {
     }*/
 
 
-   //g_debugText = Util::MenuTypeToString(Editor::GetCurrentMenuType());
-   //g_debugText = "";
-   //g_debugText += "Hovered object index: " + std::to_string(Editor::g_hoveredObjectIndex) + "\n";
-   //g_debugText += "Selected object index: " + std::to_string(Editor::g_selectedObjectIndex) + "\n";
-   //g_debugText += "Hovered vertex index: " + std::to_string(Editor::g_hoveredVertexIndex) + "\n";
-   //g_debugText += "Selected vertex index: " + std::to_string(Editor::g_selectedVertexIndex) + "\n";
-   //g_debugText += "Selected vertex position: " + Util::Vec3ToString(Editor::g_selectedVertexPosition) + "\n";
-   //g_debugText += "\n";
-   //g_debugText += Util::Mat4ToString(Editor::g_gizmoMatrix);
+  // g_debugText = Util::MenuTypeToString(Editor::GetCurrentMenuType());
+  // g_debugText = "";
+  // g_debugText += "Hovered object index: " + std::to_string(Editor::g_hoveredObjectIndex) + "\n";
+  // g_debugText += "Selected object index: " + std::to_string(Editor::g_selectedObjectIndex) + "\n";
+  // g_debugText += "Hovered vertex index: " + std::to_string(Editor::g_hoveredVertexIndex) + "\n";
+  // g_debugText += "Selected vertex index: " + std::to_string(Editor::g_selectedVertexIndex) + "\n";
+  // g_debugText += "Selected vertex position: " + Util::Vec3ToString(Editor::g_selectedVertexPosition) + "\n";
+  // g_debugText += "\n";
+  // g_debugText += "Cubes: " + std::to_string(Scene::g_csgAdditiveCubes.size()) + "\n";
+  // g_debugText += "Wall planes: " + std::to_string(Scene::g_csgAdditiveWallPlanes.size()) + "\n";
+  // g_debugText += "Ceiling planes: " + std::to_string(Scene::g_csgAdditiveCeilingPlanes.size()) + "\n";
+  // g_debugText += "\n";
+  // g_debugText += Util::Mat4ToString(Editor::g_gizmoMatrix);
 
     return g_debugText;
 }

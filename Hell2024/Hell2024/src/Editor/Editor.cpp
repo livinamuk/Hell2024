@@ -134,6 +134,21 @@ namespace Editor {
                 }
             }
         }
+        if (Editor::GetSelectedObjectType() == ObjectType::CSG_OBJECT_ADDITIVE_CEILING_PLANE) {
+            CSGObject& csgObject = CSG::GetCSGObjects()[Editor::GetSelectedObjectIndex()];
+            CSGPlane* csgPlane = Scene::GetCeilingPlaneByIndex(csgObject.m_parentIndex);
+            for (int i = 0; i < 4; i++) {
+                glm::vec3 worldPos = csgPlane->m_veritces[i];
+                glm::ivec2 screenPos = Util::CalculateScreenSpaceCoordinates(worldPos, mvp, PRESENT_WIDTH, PRESENT_HEIGHT, true);
+                if (mouseX < screenPos.x + threshold &&
+                    mouseX > screenPos.x - threshold &&
+                    mouseY < screenPos.y + threshold &&
+                    mouseY > screenPos.y - threshold) {
+                    g_hoveredVertexIndex = i;
+                    g_hoveredVertexPosition = worldPos;
+                }
+            }
+        }
     }
 
     void CheckForVertexSelection() {
@@ -268,7 +283,8 @@ namespace Editor {
             }
         }
         else if (g_selectedObjectType == ObjectType::CSG_OBJECT_ADDITIVE_CEILING_PLANE) {
-            CSGPlane* csgPlane = Scene::GetCeilingPlaneByIndex(g_selectedObjectIndex);
+            CSGObject& csgObject = CSG::GetCSGObjects()[g_selectedObjectIndex];
+            CSGPlane* csgPlane = Scene::GetCeilingPlaneByIndex(csgObject.m_parentIndex);
             if (csgPlane) {
                 g_selectedVertexPosition = csgPlane->m_veritces[g_selectedVertexIndex];
             }
@@ -336,7 +352,17 @@ namespace Editor {
             glm::vec3 oldPos = gizmoTransform.position;
             glm::vec3 newPos = updatedGizmoPosition;
 
-            CSGPlane* csgPlane = Scene::GetWallPlaneByIndex(g_selectedObjectIndex);
+
+
+            CSGPlane* csgPlane = nullptr;
+            if (Editor::GetSelectedObjectType() == ObjectType::CSG_OBJECT_ADDITIVE_WALL_PLANE) {
+                CSGObject& csgObject = CSG::GetCSGObjects()[Editor::GetSelectedObjectIndex()];
+                csgPlane = Scene::GetWallPlaneByIndex(csgObject.m_parentIndex);
+            }
+            if (Editor::GetSelectedObjectType() == ObjectType::CSG_OBJECT_ADDITIVE_CEILING_PLANE) {
+                CSGObject& csgObject = CSG::GetCSGObjects()[Editor::GetSelectedObjectIndex()];
+                csgPlane = Scene::GetCeilingPlaneByIndex(csgObject.m_parentIndex);
+            }
             if (csgPlane) {
 
                 // Snapping
@@ -530,12 +556,20 @@ namespace Editor {
                 int i = 0;
                 for (CSGObject& csgObject : CSG::GetCSGObjects()) {
                     if (&csgObject == hitResult.parent) {
-                        g_hoveredObjectIndex = i;// csgObject.m_parentIndex;
+                        g_hoveredObjectIndex = i;// csgObject.m_parentIndex;   // CHECK HERE!!!!!
                         break;
                     }
                     i++;
                 }
             }
+          // else if (hitResult.objectType == ObjectType::CSG_OBJECT_ADDITIVE_CEILING_PLANE) {
+          //     for (CSGObject& csgObject : CSG::GetCSGObjects()) {
+          //         if (&csgObject == hitResult.parent) {
+          //             g_hoveredObjectIndex = csgObject.m_parentIndex;   // CHECK HERE!!!!!
+          //             break;
+          //         }
+          //     }
+          // }
             // CSG subtractive
             else if (hitResult.objectType == ObjectType::CSG_OBJECT_SUBTRACTIVE) {
                 for (int i = 0; i < Scene::g_csgSubtractiveCubes.size(); i++) {
@@ -980,6 +1014,16 @@ namespace Editor {
                     g_menuItems.push_back({ "Tex Offset Y", MenuItem::Type::VALUE_FLOAT, &csgPlane->textureOffsetY, 0.1f, 1 });
                 }
             }
+            else if (g_selectedObjectType == ObjectType::CSG_OBJECT_ADDITIVE_CEILING_PLANE) {
+                CSGObject& csgObject = CSG::GetCSGObjects()[g_selectedObjectIndex];
+                CSGPlane* csgPlane = Scene::GetCeilingPlaneByIndex(csgObject.m_parentIndex);
+                if (csgPlane) {
+                    g_menuItems.push_back({ "Material", MenuItem::Type::VALUE_INT, &csgPlane->materialIndex, 1, 1 });
+                    g_menuItems.push_back({ "Tex Scale", MenuItem::Type::VALUE_FLOAT, &csgPlane->textureScale, 0.1f, 1 });
+                    g_menuItems.push_back({ "Tex Offset X", MenuItem::Type::VALUE_FLOAT, &csgPlane->textureOffsetX, 0.1f, 1 });
+                    g_menuItems.push_back({ "Tex Offset Y", MenuItem::Type::VALUE_FLOAT, &csgPlane->textureOffsetY, 0.1f, 1 });
+                }
+            }
             else if (g_selectedObjectType == ObjectType::LIGHT && g_selectedObjectIndex != -1) {
                 Light& light = Scene::g_lights[g_selectedObjectIndex];
                 g_menuItems.push_back({ "Pos X", MenuItem::Type::VALUE_FLOAT, &light.position.x, 0.1f, 2 });
@@ -1098,9 +1142,6 @@ namespace Editor {
                 RebuildEverything();
             }
             else if (type == MenuItem::Type::INSERT_WALL_PLANE) {
-                Transform transform;
-                transform.position = spawnPos;
-                transform.scale = glm::vec3(1.0f);
                 CSGPlane& plane = Scene::g_csgAdditiveWallPlanes.emplace_back();
                 plane.m_veritces[TL] = spawnPos;
                 plane.m_veritces[TR] = spawnPos;
@@ -1122,6 +1163,31 @@ namespace Editor {
                 RebuildEverything();
                 Scene::RecreateCeilingTrims();
                 Scene::RecreateFloorTrims();
+            }
+            else if (type == MenuItem::Type::INSERT_CEILING_PLANE) {
+                CSGPlane& plane = Scene::g_csgAdditiveCeilingPlanes.emplace_back();
+                plane.m_veritces[TL] = spawnPos;
+                plane.m_veritces[TR] = spawnPos;
+                plane.m_veritces[BL] = spawnPos;
+                plane.m_veritces[BR] = spawnPos;
+                plane.m_veritces[TL].x -= 0.5f;
+                plane.m_veritces[TR].x += 0.5f;
+                plane.m_veritces[BL].x -= 0.5f;
+                plane.m_veritces[BR].x += 0.5f;
+                plane.m_veritces[TL].y += 0.65f;
+                plane.m_veritces[BL].y += 0.65f;
+                plane.m_veritces[TR].y += 0.65f;
+                plane.m_veritces[BR].y += 0.65f;
+                plane.m_veritces[TL].z += 0.5f;
+                plane.m_veritces[TR].z += 0.5f;
+                plane.m_veritces[BL].z -= 0.5f;
+                plane.m_veritces[BR].z -= 0.5f;
+                plane.textureScale = 1.0f;
+                plane.materialIndex = AssetManager::GetMaterialIndex("GlockAmmoBox");
+                g_selectedObjectIndex = Scene::g_csgAdditiveCeilingPlanes.size() - 1;
+                g_selectedObjectType = ObjectType::CSG_OBJECT_ADDITIVE_CEILING_PLANE;
+                SetCurrentMenuType(MenuType::SELECTED_OBJECT);
+                RebuildEverything();
             }
             else if (type == MenuItem::Type::INSERT_CSG_SUBTRACTIVE) {
                 Transform transform;
@@ -1247,13 +1313,13 @@ namespace Editor {
                     headingText += "-- ADDITIVE CSG " + std::to_string(g_selectedObjectIndex) + " -- ";
                 }
                 else if (g_selectedObjectType == ObjectType::CSG_OBJECT_ADDITIVE_CEILING_PLANE) {
-                    headingText += "--- CEILING PLANE ---";
+                    headingText += "-- CEILING PLANE " + std::to_string(g_selectedObjectIndex) + " -- ";
                 }
                 else if (g_selectedObjectType == ObjectType::CSG_OBJECT_ADDITIVE_WALL_PLANE) {
                     headingText += "---- WALL CSG " + std::to_string(g_selectedObjectIndex) + " ---- ";
                 }
                 else if (g_selectedObjectType == ObjectType::CSG_OBJECT_ADDITIVE_FLOOR_PLANE) {
-                    headingText += "--- FLOOR PLANE ---";
+                    headingText += "-- FLOOR PLANE " + std::to_string(g_selectedObjectIndex) + " -- ";
                 }
                 else if (g_selectedObjectType == ObjectType::CSG_OBJECT_SUBTRACTIVE) {
                     headingText += "-- SUBTRACTIVE CSG --";

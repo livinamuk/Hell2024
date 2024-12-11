@@ -12,18 +12,18 @@ void Player::GiveDefaultLoadout() {
     GiveWeapon("Knife");
     // GiveWeapon("GoldenKnife");
     GiveWeapon("Glock");
-    GiveWeapon("GoldenGlock");
+    //GiveWeapon("GoldenGlock");
     GiveWeapon("Tokarev");
-    // GiveWeapon("Smith & Wesson");
-    GiveWeapon("AKS74U");
-    GiveWeapon("P90");
-    GiveWeapon("Shotgun");
-    GiveWeapon("SPAS");
+    //                // GiveWeapon("Smith & Wesson");
+    //GiveWeapon("AKS74U");
+    //GiveWeapon("P90");
+    //GiveWeapon("Shotgun");
+    //GiveWeapon("SPAS");
 
-    GiveAmmo("Glock", 80000);
-    GiveAmmo("Tokarev", 200);
-    GiveAmmo("AKS74U", 999999);
-    GiveAmmo("Shotgun", 6666);
+    GiveAmmo("Glock", 80);
+   GiveAmmo("Tokarev", 200);
+   // GiveAmmo("AKS74U", 999999);
+   // GiveAmmo("Shotgun", 6666);
 
     GiveRedDotToWeapon("GoldenGlock");
    // GiveSilencerToWeapon("Glock");
@@ -91,7 +91,7 @@ void Player::UpdateViewWeaponLogic(float deltaTime) {
                     int rand = std::rand() % weaponInfo->animationNames.fire.size();
                     viewWeapon->PlayAnimation(weaponInfo->animationNames.fire[rand], weaponInfo->animationSpeeds.fire);
                 }
-                //CheckForMeleeHit();
+                CheckForMeleeHit();
             }
         }
         if (_weaponAction == FIRE && viewWeapon->IsAnimationComplete()) {
@@ -426,7 +426,17 @@ void Player::UpdateViewWeaponLogic(float deltaTime) {
         int frameNumber = GetViewWeaponAnimatedGameObject()->GetAnimationFrameNumber();
         int hitFrame = 9;
         int hitFrameWindow = 6;
-        if (_weaponAction == MELEE && frameNumber > hitFrame && frameNumber < hitFrame + hitFrameWindow) {
+        
+        bool otherPlayerIsAlive = true;
+        if (m_playerIndex == 1 && Game::GetPlayerByIndex(0)->IsDead()) {
+            otherPlayerIsAlive = false;
+        }
+        if (m_playerIndex == 0 && Game::GetPlayerByIndex(1)->IsDead()) {
+            otherPlayerIsAlive = false;
+        }
+        
+
+        if (otherPlayerIsAlive && _weaponAction == MELEE && frameNumber > hitFrame && frameNumber < hitFrame + hitFrameWindow) {
             CheckForMeleeHits();
         }
 
@@ -702,6 +712,10 @@ WeaponAction& Player::GetWeaponAction() {
 
 bool Player::CanFire() {
 
+    if (Game::g_globalFadeOut <= 0.01f) {
+        return false;
+    }
+
     AnimatedGameObject* viewWeaponGameObject = Scene::GetAnimatedGameObjectByIndex(m_viewWeaponAnimatedGameObjectIndex);
     WeaponInfo* weaponInfo = GetCurrentWeaponInfo();
 
@@ -910,6 +924,10 @@ void Player::DropWeapons() {
         WeaponState& weaponState = m_weaponStates[i];
         WeaponInfo* weaponInfo = WeaponManager::GetWeaponInfoByIndex(i);
 
+        if (weaponInfo->name == "Glock") {
+            continue;
+        }
+
         if (weaponState.has) {
             if (weaponInfo->pickupConvexMeshModelName == UNDEFINED_STRING ||
                 weaponInfo->modelName == UNDEFINED_STRING) {
@@ -1091,6 +1109,7 @@ void Player::CheckForMeleeHits() {
         if (distanceToOtherPlayer < 2) {
             otherPlayer->Kill();
             IncrementKillCount();
+
 
             glm::vec3 direction = glm::normalize(otherPlayer->GetViewPos() - this->GetViewPos());
 

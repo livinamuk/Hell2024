@@ -82,6 +82,18 @@ void main() {
     // Compute the final position of the vertex in screen space
     gl_Position = projection * view * modelMatrix * vec4(vPos, 1.0);
 
+
+	
+	int fuck =  renderItem.useEmissiveMask;
+	if (fuck == 2) {
+		vec3 WorldPos = vec4(modelMatrix * vec4(vPos, 1.0)).xyz;
+		TexCoord.x = WorldPos.z / 2;
+	}
+	if (fuck == 3) {
+		vec3 WorldPos = vec4(modelMatrix * vec4(vPos, 1.0)).xyz;
+		TexCoord.x = WorldPos.x / 2;
+	}
+
     // Pass the player index to the fragment shader
     PlayerIndex = playerIndex;
 }

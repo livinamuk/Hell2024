@@ -22,7 +22,7 @@ namespace Game {
     double _deltaTimeAccumulator = 0.0;
     double _fixedDeltaTime = 1.0 / 60.0;
     std::vector<Player> g_players;
-    bool _showDebugText = true;
+    bool _showDebugText = false;
 
     bool g_firstFrame = true;
     double g_lastFrame = 0;
@@ -136,7 +136,32 @@ namespace Game {
 
 
 
+        // Restart game?
+        if (Input::KeyPressed(HELL_KEY_7)) {
+            for (Player& player : g_players) {
+                player.m_killCount = 0;
+                player.Respawn();
+            }
+            Scene::CleanUpBulletHoleDecals();
+            Scene::CleanUpBulletCasings();
+            Physics::ClearCollisionLists();
 
+
+            for (Dobermann& dobermann : Scene::g_dobermann) {
+                dobermann.Reset();
+            }
+        }
+
+        if (Input::KeyPressed(HELL_KEY_9)) {          
+            for (Dobermann& dobermann : Scene::g_dobermann) {
+                dobermann.Reset();
+            }
+        }
+
+        if (Input::KeyPressed(HELL_KEY_8)) {
+            g_liceneToKill = !g_liceneToKill;
+            Audio::PlayAudio(AUDIO_SELECT, 1.00f);
+        }
 
         if (g_dogDeaths == -1) {
             std::ifstream file("DogDeaths.txt");
@@ -155,6 +180,22 @@ namespace Game {
         // Populate Player data
         for (int i = 0; i < g_players.size(); i++) {
             g_playerData[i].flashlightOn = g_players[i].m_flashlightOn;
+        }
+
+        if (KillLimitReached()) {
+            g_globalFadeOutWaitTimer += deltaTime;
+
+            if (g_globalFadeOutWaitTimer >= 2.0f) {
+                g_globalFadeOut -= deltaTime * 0.125F;
+            }
+            if (g_globalFadeOutWaitTimer >= 1.0f) {
+                g_globalFadeOut -= deltaTime * 0.25F;
+                g_globalFadeOut = std::max(g_globalFadeOut, 0.0f);
+            }
+        }
+        else {
+            g_globalFadeOut = 1.0f;
+            g_globalFadeOutWaitTimer = 0.0f;
         }
     }
 
@@ -179,8 +220,6 @@ namespace Game {
 
         AnimatedGameObject* p1characterModel = Scene::GetAnimatedGameObjectByIndex(Game::g_players[0].GetCharacterModelAnimatedGameObjectIndex());
         AnimatedGameObject* p2characterModel = Scene::GetAnimatedGameObjectByIndex(Game::g_players[1].GetCharacterModelAnimatedGameObjectIndex());
-        AnimatedGameObject* p3characterModel = Scene::GetAnimatedGameObjectByIndex(Game::g_players[2].GetCharacterModelAnimatedGameObjectIndex());
-        AnimatedGameObject* p4characterModel = Scene::GetAnimatedGameObjectByIndex(Game::g_players[3].GetCharacterModelAnimatedGameObjectIndex());
 
         p1characterModel->LoadRagdoll("UnisexGuy3.rag", p1RagdollCollisionGroupFlags);
         p2characterModel->LoadRagdoll("UnisexGuy3.rag", p2RagdollCollisionGroupFlags);
@@ -193,7 +232,9 @@ namespace Game {
         Game::g_players[0]._playerName = "Orion";
         Game::g_players[1]._playerName = "CrustyAssCracker";
 
-        if (g_players.size() == 4) {
+        if (GetPlayerCount() == 4) {
+            AnimatedGameObject* p3characterModel = Scene::GetAnimatedGameObjectByIndex(Game::g_players[2].GetCharacterModelAnimatedGameObjectIndex());
+            AnimatedGameObject* p4characterModel = Scene::GetAnimatedGameObjectByIndex(Game::g_players[3].GetCharacterModelAnimatedGameObjectIndex());
             p3characterModel->LoadRagdoll("UnisexGuy3.rag", p3RagdollCollisionGroupFlags);
             p4characterModel->LoadRagdoll("UnisexGuy3.rag", p4RagdollCollisionGroupFlags);
             Game::g_players[2]._interactFlags = RaycastGroup::RAYCAST_ENABLED;
@@ -206,7 +247,6 @@ namespace Game {
             Game::g_players[3]._playerName = "P4";
         }
 
-
         for (RigidComponent& rigid : p1characterModel->_ragdoll._rigidComponents) {
             PxShape* shape;
             rigid.pxRigidBody->getShapes(&shape, 1);
@@ -216,6 +256,16 @@ namespace Game {
 
     const int GetPlayerCount() {
         return g_players.size();
+    }
+
+    bool KillLimitReached() {
+        for (int i = 0; i < g_players.size(); i++) {
+            Player* player = GetPlayerByIndex(i);
+            if (player->m_killCount >= g_killLimit) {
+                return true;
+            }
+        }
+        return false;
     }
 
     const GameMode& GetGameMode() {
@@ -349,17 +399,17 @@ namespace Game {
                 //PrintPlayerControlIndices();
             }
             if (Input::KeyPressed(HELL_KEY_3)) {
-                SetPlayerKeyboardAndMouseIndex(0, 1, 1);
-                SetPlayerKeyboardAndMouseIndex(1, 1, 1);
-                SetPlayerKeyboardAndMouseIndex(2, 0, 0);
-                SetPlayerKeyboardAndMouseIndex(3, 1, 1);
+                SetPlayerKeyboardAndMouseIndex(0, 1, 0);
+                SetPlayerKeyboardAndMouseIndex(1, 0, 1);
+               //SetPlayerKeyboardAndMouseIndex(2, 0, 0);
+               //SetPlayerKeyboardAndMouseIndex(3, 1, 1);
                 //PrintPlayerControlIndices();
             }
             if (Input::KeyPressed(HELL_KEY_4)) {
-                SetPlayerKeyboardAndMouseIndex(0, 1, 1);
-                SetPlayerKeyboardAndMouseIndex(1, 1, 1);
-                SetPlayerKeyboardAndMouseIndex(2, 1, 1);
-                SetPlayerKeyboardAndMouseIndex(3, 0, 0);
+                SetPlayerKeyboardAndMouseIndex(0, 0, 1);
+                SetPlayerKeyboardAndMouseIndex(1, 1, 0);
+               // SetPlayerKeyboardAndMouseIndex(2, 1, 1);
+               // SetPlayerKeyboardAndMouseIndex(3, 0, 0);
                 //PrintPlayerControlIndices();
             }
         }
@@ -373,6 +423,7 @@ namespace Game {
             }
             else {
                 RespawnAllPlayers();
+                //Game::SetSplitscreenMode(SplitscreenMode::TWO_PLAYER);
             }
         }
         if (Input::KeyPressed(HELL_KEY_GRAVE_ACCENT)) {

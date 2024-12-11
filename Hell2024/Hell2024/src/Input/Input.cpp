@@ -49,7 +49,7 @@ namespace Input {
             BackEnd::ForceCloseWindow();
         }
         if (KeyPressed(HELL_KEY_G)) {
-            BackEnd::ToggleFullscreen();
+           BackEnd::ToggleFullscreen();
         }
         if (KeyPressed(HELL_KEY_H)) {
             Renderer::HotloadShaders();
