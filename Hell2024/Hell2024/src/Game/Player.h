@@ -254,7 +254,7 @@ public:
     PxShape* _itemPickupOverlapShape = NULL;
     PxShape* _meleeHitCheckOverlapShape = NULL;
 	//PxRigidStatic* _itemPickupOverlapDebugBody = NULL;
-    float _yVelocity = 0;
+    float m_yVelocity = 0;
 
 	//Inventory _inventory;
 
@@ -324,7 +324,7 @@ public:
 
     glm::vec3 GetGlockBarrelPosition();
 
-	bool _isGrounded = true;
+	bool m_grounded = true;
 
     void PickUpShotgun();
 
@@ -371,7 +371,7 @@ public:
     float _timeSinceDeath = 0;
     bool _isOutside = false;
 
-    float _currentSpeed = 0.0f;
+    float m_currentSpeed = 0.0f;
 
     void ForceSetViewMatrix(glm::mat4 viewMatrix);
     std::vector<RenderItem2D> GetHudRenderItems(hell::ivec2 presentSize);
@@ -383,7 +383,7 @@ public:
 
 private:
 
-    glm::vec3 _displacement;
+    glm::vec3 m_displacement;
 
 	void SpawnBullet(float variance, Weapon type);
 	bool CanFire();
@@ -401,8 +401,8 @@ private:
 	float _viewHeightCrouching = 1.15f;
 	float _crouchDownSpeed = 17.5f;
 	float _currentViewHeight = _viewHeightStanding;
-	float _walkingSpeed = 4.85f;
-	float _crouchingSpeed = 2.325f;
+	float m_walkingSpeed = 4.85f;
+	float m_crouchingSpeed = 2.325f;
 	glm::mat4 _viewMatrix = glm::mat4(1);
 	glm::mat4 _inverseViewMatrix = glm::mat4(1);
 	glm::vec3 _viewPos = glm::vec3(0);

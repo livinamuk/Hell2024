@@ -519,76 +519,67 @@ void Player::UpdateMouseLook(float deltaTime) {
 
 
 void Player::UpdateMovement(float deltaTime) {
-
     m_crouching = false;
     m_moving = false;
 
     if (HasControl()) {
-
         // Crouching
         if (PressingCrouch()) {
             m_crouching = true;
         }
-
         // WSAD movement
         if (PressingWalkForward()) {
-            _displacement -= _movementVector;
+            m_displacement -= _movementVector;
             m_moving = true;
         }
         if (PressingWalkBackward()) {
-            _displacement += _movementVector;
+            m_displacement += _movementVector;
             m_moving = true;
         }
         if (PressingWalkLeft()) {
-            _displacement -= _right;
+            m_displacement -= _right;
             m_moving = true;
         }
         if (PressingWalkRight()) {
-            _displacement += _right;
+            m_displacement += _right;
             m_moving = true;
         }
     }
-
-    float targetSpeed = m_crouching ? _crouchingSpeed : _walkingSpeed;
-    float interSpeed = 18.0f;
+    // Calculate movement speed
+    float targetSpeed = m_crouching ? m_crouchingSpeed : m_walkingSpeed;
+    float interpolationSpeed = 18.0f;
     if (!IsMoving()) {
         targetSpeed = 0.0f;
-        interSpeed = 22.0f;
+        interpolationSpeed = 22.0f;
     }
-    _currentSpeed = Util::FInterpTo(_currentSpeed, targetSpeed, deltaTime, interSpeed);
+    m_currentSpeed = Util::FInterpTo(m_currentSpeed, targetSpeed, deltaTime, interpolationSpeed);
 
     // Normalize displacement vector and include player speed
-    float len = length(_displacement);
+    float len = length(m_displacement);
     if (len != 0.0) {
-        _displacement = (_displacement / len) * _currentSpeed * deltaTime;
+        m_displacement = (m_displacement / len) * m_currentSpeed * deltaTime;
     }
-
     // Jump
-    if (PresingJump() && HasControl() /* && _isGrounded*/) {
-        _yVelocity = 4.75f; // magic value for jump strength
-        _yVelocity = 5.1f; // magic value for jump strength (had to change cause you could no longer jump thru window after fixing character controller height bug)
-        _isGrounded = false;
+    if (PresingJump() && HasControl() && m_grounded) {
+        m_yVelocity = 4.75f; // magic value for jump strength
+        m_yVelocity = 4.9f; // magic value for jump strength (had to change cause you could no longer jump thru window after fixing character controller height bug)
+        m_grounded = false;
     }
     // Gravity
-  //  if (_isGrounded) {
-  //      _yVelocity = -0.1f; // can't be 0, or the _isGrounded check next frame will fail
-  //      _yVelocity = -3.5f;
-  //  }
-  //  else {
-  //      float gravity = 15.75f; // 9.8 feels like the moon
-  //      _yVelocity -= gravity * deltaTime;
-  //  }
-
-
-    float gravity = 15.75f; // 9.8 feels like the moon
-         _yVelocity -= gravity * deltaTime;
-
-    float yDisplacement = _yVelocity * deltaTime;
+    if (m_grounded) {
+        m_yVelocity = -0.1f; // can't be 0, or the _isGrounded check next frame will fail
+        m_yVelocity = -3.5f;
+    }
+    else {
+        float gravity = 15.75f; // 9.8 feels like the moon
+        m_yVelocity -= gravity * deltaTime;
+    }
+    float yDisplacement = m_yVelocity * deltaTime;
 
     if (Game::KillLimitReached()) {
-        _displacement = glm::vec3(0, 0, 0);
+        m_displacement = glm::vec3(0, 0, 0);
     }
-
+        
     // Move PhysX character controller
     PxFilterData filterData;
     filterData.word0 = 0;
@@ -597,7 +588,7 @@ void Player::UpdateMovement(float deltaTime) {
     data.mFilterData = &filterData;
     PxF32 minDist = 0.001f;
     float fixedDeltaTime = (1.0f / 60.0f);
-    _characterController->move(PxVec3(_displacement.x, yDisplacement, _displacement.z), minDist, fixedDeltaTime, data);
+    _characterController->move(PxVec3(m_displacement.x, yDisplacement, m_displacement.z), minDist, fixedDeltaTime, data);
     _position = Util::PxVec3toGlmVec3(_characterController->getFootPosition());
 }
 

@@ -291,10 +291,10 @@ namespace Game {
 
     void SetPlayerGroundedStates() {
         for (Player& player : g_players) {
-            player._isGrounded = false;
+            player.m_grounded = false;
             for (auto& report : Physics::_characterCollisionReports) {
                 if (report.characterController == player._characterController && report.hitNormal.y > 0.5f) {
-                    player._isGrounded = true;
+                    player.m_grounded = true;
                 }
             }
         }
