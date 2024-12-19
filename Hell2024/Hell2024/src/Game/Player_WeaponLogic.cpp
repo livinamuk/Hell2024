@@ -12,13 +12,13 @@ void Player::GiveDefaultLoadout() {
     GiveWeapon("Knife");
     // GiveWeapon("GoldenKnife");
     GiveWeapon("Glock");
-    //GiveWeapon("GoldenGlock");
+    GiveWeapon("GoldenGlock");
     GiveWeapon("Tokarev");
     //                // GiveWeapon("Smith & Wesson");
-    //GiveWeapon("AKS74U");
-    //GiveWeapon("P90");
-    //GiveWeapon("Shotgun");
-    //GiveWeapon("SPAS");
+    GiveWeapon("AKS74U");
+    GiveWeapon("P90");
+    GiveWeapon("Shotgun");
+    GiveWeapon("SPAS");
 
     GiveAmmo("Glock", 80);
    GiveAmmo("Tokarev", 200);
@@ -49,6 +49,11 @@ void Player::UpdateViewWeaponLogic(float deltaTime) {
     AmmoState* ammoState = GetAmmoStateByName(weaponInfo->ammoType);
 
     m_firedThisFrame = false;
+
+    float weaponAudioFrequency = 1.0f;
+    if (CameraIsUnderwater()) {
+        weaponAudioFrequency = 0.4f;
+    }
 
     /*
      █▀▄▀█ █▀▀ █   █▀▀ █▀▀
@@ -116,7 +121,7 @@ void Player::UpdateViewWeaponLogic(float deltaTime) {
 
             // Empty
             if (CanFire() && PressedFire() && weaponState->ammoInMag == 0) {
-                Audio::PlayAudio("Dry_Fire.wav", 0.8f);
+                Audio::PlayAudio("Dry_Fire.wav", 0.8f, weaponAudioFrequency);
             }
 
             if (_weaponAction == ADS_IN ||
@@ -192,11 +197,11 @@ void Player::UpdateViewWeaponLogic(float deltaTime) {
                 if (!weaponState->hasSilencer) {
                     if (weaponInfo->audioFiles.fire.size()) {
                         int rand = std::rand() % weaponInfo->audioFiles.fire.size();
-                        Audio::PlayAudio(weaponInfo->audioFiles.fire[rand], 1.0f);
+                        Audio::PlayAudio(weaponInfo->audioFiles.fire[rand], 1.0f, weaponAudioFrequency);
                     }
                 }
                 else {
-                    Audio::PlayAudio("Silenced.wav", 1.0f);
+                    Audio::PlayAudio("Silenced.wav", 1.0f, weaponAudioFrequency);
                 }
                 SpawnMuzzleFlash();
                 SpawnBullet(0.05f * m_accuracyModifer, Weapon::AKS74U);
@@ -246,7 +251,7 @@ void Player::UpdateViewWeaponLogic(float deltaTime) {
             m_revolverNeedsCocking &&
             viewWeapon->AnimationIsPastFrameNumber(weaponInfo->revolverCockFrameNumber)) {
             int rand = std::rand() % weaponInfo->audioFiles.revolverCocks.size();
-            Audio::PlayAudio(weaponInfo->audioFiles.revolverCocks[rand], 1.0f);
+            Audio::PlayAudio(weaponInfo->audioFiles.revolverCocks[rand], 1.0f, weaponAudioFrequency);
             m_revolverNeedsCocking = false;
         }
 
@@ -268,11 +273,11 @@ void Player::UpdateViewWeaponLogic(float deltaTime) {
             if (!weaponState->hasSilencer) {
                 if (weaponInfo->audioFiles.fire.size()) {
                     int rand = std::rand() % weaponInfo->audioFiles.fire.size();
-                    Audio::PlayAudio(weaponInfo->audioFiles.fire[rand], 1.0f);
+                    Audio::PlayAudio(weaponInfo->audioFiles.fire[rand], 1.0f, weaponAudioFrequency);
                 }
             }
             else {
-                Audio::PlayAudio("Silenced.wav", 1.0f);
+                Audio::PlayAudio("Silenced.wav", 1.0f, weaponAudioFrequency);
             }
             if (weaponInfo->animationNames.fire.size()) {
                 int rand = std::rand() % weaponInfo->animationNames.fire.size();
@@ -385,7 +390,7 @@ void Player::UpdateViewWeaponLogic(float deltaTime) {
 
         // Empty
         if (CanFire() && PressedFire() && weaponState->ammoInMag == 0) {
-            Audio::PlayAudio("Dry_Fire.wav", 0.8f);
+            Audio::PlayAudio("Dry_Fire.wav", 0.8f, weaponAudioFrequency);
         }
         // Idle
         if (_weaponAction == IDLE) {
@@ -449,7 +454,7 @@ void Player::UpdateViewWeaponLogic(float deltaTime) {
                 std::string aninName = "Shotgun_Fire";
                 std::string audioName = "Shotgun_Fire.wav";
                 viewWeapon->PlayAnimation(aninName, 1.0f);
-                Audio::PlayAudio(audioName, 1.0f);
+                Audio::PlayAudio(audioName, 1.0f, weaponAudioFrequency);
                 SpawnMuzzleFlash();
                 for (int i = 0; i < 12; i++) {
                     SpawnBullet(0.1, Weapon::SHOTGUN);
@@ -541,19 +546,19 @@ void Player::UpdateViewWeaponLogic(float deltaTime) {
             weaponState->ammoInMag++;
             ammoState->ammoOnHand--;
             _needsShotgunFirstShellAdded = false;
-            Audio::PlayAudio("Shotgun_Reload.wav", 1.0f);
+            Audio::PlayAudio("Shotgun_Reload.wav", 1.0f, weaponAudioFrequency);
         }
         if (_needsShotgunFirstShellAdded && _weaponAction == RELOAD_SHOTGUN_DOUBLE_SHELL && viewWeapon->AnimationIsPastPercentage(28.0f)) {
             weaponState->ammoInMag++;
             ammoState->ammoOnHand--;
             _needsShotgunFirstShellAdded = false;
-            Audio::PlayAudio("Shotgun_Reload.wav", 1.0f);
+            Audio::PlayAudio("Shotgun_Reload.wav", 1.0f, weaponAudioFrequency);
         }
         if (_needsShotgunSecondShellAdded && _weaponAction == RELOAD_SHOTGUN_DOUBLE_SHELL && viewWeapon->AnimationIsPastPercentage(62.0f)) {
             weaponState->ammoInMag++;
             ammoState->ammoOnHand--;
             _needsShotgunSecondShellAdded = false;
-            Audio::PlayAudio("Shotgun_Reload.wav", 1.0f);
+            Audio::PlayAudio("Shotgun_Reload.wav", 1.0f, weaponAudioFrequency);
         }
 
         if (_weaponAction == FIRE && viewWeapon->IsAnimationComplete() ||

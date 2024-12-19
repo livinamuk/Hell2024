@@ -5,6 +5,9 @@ layout (local_size_x = 16, local_size_y = 4, local_size_z = 1) in;
 layout(rgba8, binding = 0) uniform image2D tex;
 layout(rgba16f, binding = 1) uniform image2D normalTexture;
 layout(r32f, binding = 2) uniform image2D ssaoTexture;
+layout(rgba8, binding = 3) uniform image2D waterColorTexture;
+layout(rgba8, binding = 4) uniform image2D waterMaskTexture;
+
 
 uniform float time;
 uniform float viewportWidth;
@@ -87,7 +90,7 @@ void main() {
 		
 	vec3 finalColor = imageLoad(tex, texCoord).rgb;
 
-
+    
 
 
 
@@ -193,5 +196,11 @@ void main() {
 	finalColor = finalColor * ssao;	
 
     imageStore(tex, texCoord, vec4(finalColor, 1));
+
+    
+	vec3 waterColorTextureColor = imageLoad(waterColorTexture, texCoord).rgb;
+	vec3 waterMaskColor = imageLoad(waterMaskTexture, texCoord).rgb;
+  //  imageStore(tex, texCoord, vec4(waterColorTextureColor, 1));
+    //imageStore(tex, texCoord, vec4(waterMaskColor, 1));
 }
 

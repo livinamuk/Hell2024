@@ -93,6 +93,7 @@ namespace AssetManager {
     void DebugTest();
 
     unsigned int GetUpFacingPlaneMeshIndex();
+    unsigned int GetDownFacingPlaneMeshIndex();
     unsigned int GetQuadMeshIndex();
     unsigned int GetQuadMeshIndexSplitscreenTop();
     unsigned int GetQuadMeshIndexSplitscreenBottom();

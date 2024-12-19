@@ -53,8 +53,8 @@ namespace BackEnd {
 
       //  int width = 1920 * 0.75f;// 1.5f;
       //  int height = 1080 * 0.75f;//1.5f;
-        int width = 1920;// 1.5f;
-        int height = 1080;//1.5f;
+        int width = 1920 * 1.5f;
+        int height = 1080* 1.5f;
         
         glfwInit();
         glfwSetErrorCallback([](int error, const char* description) { std::cout << "GLFW Error (" << std::to_string(error) << "): " << description << "\n";});

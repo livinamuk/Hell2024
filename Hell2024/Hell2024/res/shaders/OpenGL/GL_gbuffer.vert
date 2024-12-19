@@ -59,7 +59,7 @@ void main() {
 	int index = gl_InstanceID + gl_BaseInstance + instanceDataOffset;
 
     // Set the texture coordinates
-    TexCoord = vTexCoord;
+    TexCoord = vec2(vTexCoord.x, vTexCoord.y);
 
     // Load render item and material data
     RenderItem3D renderItem = RenderItems[index];	
@@ -78,6 +78,7 @@ void main() {
 	Normal = normalize(normalMatrix * vec4(vNormal, 0)).xyz;
 	Tangent = normalize(normalMatrix * vec4(vTangent, 0)).xyz;
 	BiTangent = normalize(cross(Normal, Tangent));
+    
 
     // Compute the final position of the vertex in screen space
     gl_Position = projection * view * modelMatrix * vec4(vPos, 1.0);
@@ -96,4 +97,6 @@ void main() {
 
     // Pass the player index to the fragment shader
     PlayerIndex = playerIndex;
+
+
 }

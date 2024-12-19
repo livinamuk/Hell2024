@@ -118,6 +118,15 @@ TextureData LoadTextureData(std::string filepath) {
     stbi_set_flip_vertically_on_load(false);
     TextureData textureData;
     textureData.m_data = stbi_load(filepath.data(), &textureData.m_width, &textureData.m_height, &textureData.m_numChannels, 0);
+
+    if (textureData.m_data == nullptr) {
+        std::cerr << "Failed to load texture: " << filepath << "\n";
+        std::cerr << "STB Image Error: " << stbi_failure_reason() << "\n";
+        textureData.m_width = 0;
+        textureData.m_height = 0;
+        textureData.m_numChannels = 0;
+    }
+
     return textureData;
 }
 
@@ -261,6 +270,11 @@ bool OpenGLTexture::Bake() {
         glGenerateMipmap(GL_TEXTURE_2D);
     }
 
+
+    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+
     if (!dontDoBindless) {
         bindlessID = glGetTextureHandleARB(ID);
         glMakeTextureHandleResidentARB(bindlessID);
@@ -294,6 +308,55 @@ void OpenGLTexture::BakeCMPData(CMP_Texture* cmpTexture) {
         bindlessID = glGetTextureHandleARB(ID);
         glMakeTextureHandleResidentARB(bindlessID);
     }
+}
+
+void OpenGLTexture::HotloadFromPath(const std::string filepath) {
+
+    m_compressed = false;
+    TextureData textureData = LoadTextureData(filepath);
+
+    if (!textureData.m_data) {
+        std::cout << "OpenGLTexture::HotloadFromPath() failed to load texture data for: " << filepath << "\n";
+        return;
+    }
+    else {
+        std::cout << "Hotloaded texture:" << filepath << "\n";
+    }
+
+    this->m_data = textureData.m_data;
+    this->_width = textureData.m_width;
+    this->_height = textureData.m_height;
+    this->_NumOfChannels = textureData.m_numChannels;
+
+    GLint format = GL_RGB;
+    if (_NumOfChannels == 4) {
+        format = GL_RGBA;
+    }
+    if (_NumOfChannels == 1) {
+        format = GL_RED;
+    }
+
+    // Unbind bindless
+    glMakeTextureHandleNonResidentARB(bindlessID);
+
+    glDeleteTextures(1, &ID);
+    glGenTextures(1, &ID);
+    glBindTexture(GL_TEXTURE_2D, ID);
+
+    // Upload the new texture data
+    glTexImage2D(GL_TEXTURE_2D, 0, format, _width, _height, 0, format, GL_UNSIGNED_BYTE, m_data);
+    glGenerateMipmap(GL_TEXTURE_2D);
+
+    // Clean up texture data after upload
+    stbi_image_free(m_data);
+    m_data = nullptr;
+
+    // Update the texture handle and make it resident again
+    bindlessID = glGetTextureHandleARB(ID);
+    glMakeTextureHandleResidentARB(bindlessID);
+
+    // Unbind texture to avoid unintentional state changes
+    glBindTexture(GL_TEXTURE_2D, 0);
 }
 
 unsigned int OpenGLTexture::GetID() {

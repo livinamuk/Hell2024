@@ -44,7 +44,7 @@ void VulkanTexture::InsertImageBarrier(VkCommandBuffer cmdbuffer, VkImageLayout 
 
 void VulkanTexture::Load(std::string_view filepath) {
 
-    FileInfo info = Util::GetFileInfo(std::string(filepath));
+    FileInfoOLD info = Util::GetFileInfo(std::string(filepath));
     filename = info.filename;
     filepath = info.fullpath;
 

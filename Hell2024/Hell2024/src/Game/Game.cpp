@@ -29,8 +29,22 @@ namespace Game {
     double g_thisFrame = 0;
     bool g_takeDamageOutside = false;
     float g_time = 0;
+    float g_waterHeight = 2.4f;
 
     void EvaluateDebugKeyPresses();
+
+
+    float GetWaterHeight() {
+        return g_waterHeight;
+    }
+
+    glm::mat4 GetWaterModelMatrix() {
+        Transform waterTransform;
+        waterTransform.scale.x = 100;
+        waterTransform.scale.z = 100;
+        waterTransform.position.y = GetWaterHeight();
+        return waterTransform.to_mat4();
+    }
 
     void Create() {
 
@@ -82,6 +96,21 @@ namespace Game {
         }
 
         RapidHotload::Update();
+
+        // Underwater ambiance audio
+        bool playersUnderWater = false;
+        for (Player& player : g_players) {
+            if (player.CameraIsUnderwater()) {
+                playersUnderWater = true;
+                break;
+            }
+        }
+        if (playersUnderWater && g_time > 1.0f) {
+            Audio::LoopAudioIfNotPlaying("Water_AmbientLoop.wav", 1.0);
+        }
+        else {
+            Audio::StopAudio("Water_AmbientLoop.wav");
+        }
 
         // Delta time
         g_lastFrame = g_thisFrame;
@@ -354,6 +383,7 @@ namespace Game {
     void RespawnAllPlayers() {
         for (Player& player : g_players) {
             player.Respawn();
+            player.ResetViewHeights();
         }
     }
 

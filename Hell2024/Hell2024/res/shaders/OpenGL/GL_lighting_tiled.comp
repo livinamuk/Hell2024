@@ -504,6 +504,7 @@ void main() {
 	vec3 rma = texture(rmaTexture, uv).rgb;
 	float roughness = rma.r;
 	float metallic = rma.g;
+	float ao = rma.b;
 
 	mat4 inverseProjection = cameraDataArray[playerIndex].projectionInverse;
 	mat4 inverseView = cameraDataArray[playerIndex].viewInverse;
@@ -556,13 +557,14 @@ void main() {
 	adjustedIndirectLighting *= (0.35) * vec3(factor2);
 	adjustedIndirectLighting = max(adjustedIndirectLighting, vec3(0));
 	adjustedIndirectLighting *= baseColor2.rgb * 1.0;
-	vec3 finalIndirectLighting = adjustedIndirectLighting * 0.15;
+	vec3 finalIndirectLighting = adjustedIndirectLighting * 0.12;
 
 	
-
+    directLighting *= ao;
 	
 	vec3 finalLighting = directLighting;
 	finalLighting += finalIndirectLighting;
+
 
 	//finalLighting = indirectLighting;
 
@@ -615,6 +617,13 @@ void main() {
 	vec3 fogLighting = ApplyFog(finalLighting, dist , fogColor, fogStart, fogEnd);
 	finalLighting = mix(fogLighting, finalLighting, insideOutsideScaleFactor);
 
+
+    //fogStart = 20;
+	//fogEnd = 30;	
+    //vec3 waterColor = vec3(0.8, 1.0, 0.9) * 0.025;
+	//fogLighting = ApplyFog(finalLighting, dist , waterColor, fogStart, fogEnd);
+	//finalLighting = mix(fogLighting, finalLighting, insideOutsideScaleFactor);
+
 	// Foreground fog
 	float fogIntensity = 0.1;
 	float fogFalloff = 0.05;
@@ -660,5 +669,6 @@ void main() {
 	finalLighting -= vec3(0.020);
 		
 	imageStore(lightingTexture, pixelCoords, vec4(finalLighting, 1));
+	//imageStore(lightingTexture, pixelCoords, vec4(baseColor, 1));
 	//imageStore(lightingTexture, pixelCoords, vec4(normal, 1));
 }

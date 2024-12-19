@@ -24,6 +24,7 @@
 #include "../../Renderer/Raytracing/Raytracing.h"
 #include "../../Renderer/SSAO.hpp"
 #include "Timer.hpp"
+#include <glm/gtx/matrix_decompose.hpp>
 
 #include "RapidHotload.h"
 
@@ -39,6 +40,7 @@ struct TileData {
     int lightIndices[127];
 };
 
+
 namespace OpenGLRenderer {
 
     struct FrameBuffers {
@@ -50,6 +52,8 @@ namespace OpenGLRenderer {
         GLFrameBuffer finalFullSizeImage;
         GLFrameBuffer genericRenderTargets;
         GLFrameBuffer megaTexture;
+        GLFrameBuffer waterReflection;
+        GLFrameBuffer water;
     } g_frameBuffers;
 
     struct BlurFrameBuffers {
@@ -87,9 +91,11 @@ namespace OpenGLRenderer {
         Shader winston;
         Shader megaTextureBloodDecals;
 
+        // water shaders
+        Shader waterReflectionGeometry;
+        Shader waterComposite;
+        Shader waterMask;
         
-
-
         ComputeShader debugTileView;
         ComputeShader lightingTiled;
         ComputeShader ssao;
@@ -112,12 +118,12 @@ namespace OpenGLRenderer {
         ComputeShader glassComposite;
         ComputeShader emissiveComposite;
         ComputeShader pointCloudDirectLigthing;
-        //ComputeShader sandbox;
-        //ComputeShader bloom;
         ComputeShader computeSkinning;
         ComputeShader raytracingTest;
         ComputeShader probeLighting;
         ComputeShader lightVolumeClear;
+
+        ComputeShader waterColorComposite;
     } g_shaders;
 
     struct SSBOs {
@@ -167,6 +173,7 @@ namespace OpenGLRenderer {
     void IndirectLightingPass();
     void HeightMapPass(RenderData& renderData);
     void UploadSSBOsGPU(RenderData& renderData);
+    void WaterPass(RenderData& renderData);
 }
 
 void DrawRenderItem(RenderItem3D& renderItem);
@@ -205,8 +212,13 @@ void WinstonPass(RenderData& renderData);
 
 void OpenGLRenderer::HotloadShaders() {
 
-    std::cout << "Hotloading shaders...\n";
+    std::cout << "Hotloading shaders...\n";           
     
+    // Water shaders
+    g_shaders.waterColorComposite.Load("res/shaders/OpenGL/GL_water_composite.comp");
+    g_shaders.waterMask.Load("GL_water_mask.vert", "GL_water_mask.frag");
+    g_shaders.waterReflectionGeometry.Load("GL_water_reflection_geometry.vert", "GL_water_reflection_geometry.frag");
+
     g_shaders.worldPosition.Load("res/shaders/OpenGL/GL_world_position.comp");
     g_shaders.ssaoBlur.Load("res/shaders/OpenGL/GL_ssaoBlur.comp");
     g_shaders.ssao.Load("res/shaders/OpenGL/GL_ssao.comp");
@@ -285,10 +297,19 @@ void OpenGLRenderer::CreatePlayerRenderTargets(int presentWidth, int presentHeig
     g_frameBuffers.gBuffer.CreateAttachment("P90MagSpecular", GL_RGBA8);
     g_frameBuffers.gBuffer.CreateDepthAttachment(GL_DEPTH32F_STENCIL8);
 
-    g_frameBuffers.genericRenderTargets.Create("GenericRenderTargets", presentWidth * 2, presentHeight * 2);
-    g_frameBuffers.genericRenderTargets.CreateAttachment("WorldSpacePosition", GL_RGBA16F);
-    g_frameBuffers.genericRenderTargets.CreateAttachment("SSAO", GL_R32F);
-    g_frameBuffers.genericRenderTargets.CreateAttachment("SSAOBlur", GL_R32F);
+    //g_frameBuffers.genericRenderTargets.Create("GenericRenderTargets", presentWidth * 2, presentHeight * 2);
+    //g_frameBuffers.genericRenderTargets.CreateAttachment("WorldSpacePosition", GL_RGBA16F);
+    //g_frameBuffers.genericRenderTargets.CreateAttachment("SSAO", GL_R32F);
+    //g_frameBuffers.genericRenderTargets.CreateAttachment("SSAOBlur", GL_R32F);
+
+    g_frameBuffers.water.Create("Water", presentWidth * 2, presentHeight * 2);
+    g_frameBuffers.water.CreateAttachment("WorldPosXZ", GL_RG32F);
+    g_frameBuffers.water.CreateAttachment("Mask", GL_R8);
+    g_frameBuffers.water.CreateAttachment("Color", GL_RGBA8);
+
+    g_frameBuffers.waterReflection.Create("Water", PRESENT_WIDTH * 0.5f, PRESENT_HEIGHT * 0.5f);
+    g_frameBuffers.waterReflection.CreateAttachment("Color", GL_RGBA8);
+    g_frameBuffers.waterReflection.CreateDepthAttachment(GL_DEPTH_COMPONENT24); // maybe even GL_DEPTH_COMPONENT16
 
 }
 
@@ -854,15 +875,23 @@ void OpenGLRenderer::RenderFrame(RenderData& renderData) {
     MegaTextureTestPass();
 
     GeometryPass(renderData);
+  //  WaterReflectionGeometryPass(renderData);
     HeightMapPass(renderData);
     DrawVATBlood(renderData);
     DrawBloodDecals(renderData);
     DrawBulletDecals(renderData);
-
     LightCullingPass(renderData);
     LightingPass(renderData);
-    //SSAOPass();
+
+    //WaterPassOLD(renderData);
+    //WaterReflectionPass(renderData);
+    //UnderWaterPass(renderData);
+    //WaterCompositePass(renderData);
+
     SkyBoxPass(renderData);
+    WaterPass(renderData);
+
+    //SSAOPass();
     DebugTileViewPass(renderData);
 
     // DebugPassProbePass(renderData);
@@ -891,6 +920,139 @@ void OpenGLRenderer::RenderFrame(RenderData& renderData) {
 }
 
 
+void OpenGLRenderer::WaterPass(RenderData& renderData) {
+
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 16, g_ssbos.cameraData);
+
+    GLFrameBuffer& gBuffer = OpenGLRenderer::g_frameBuffers.gBuffer;
+    GLFrameBuffer& waterFrameBuffer = OpenGLRenderer::g_frameBuffers.water; 
+    GLFrameBuffer& reflectionFBO = OpenGLRenderer::g_frameBuffers.waterReflection;
+
+    // Render reflection geometry
+    reflectionFBO.Bind();
+    reflectionFBO.DrawBuffers({ "Color" });
+    Shader& reflectionGeometryShader = OpenGLRenderer::g_shaders.waterReflectionGeometry;
+    reflectionGeometryShader.Use();
+    reflectionGeometryShader.SetVec4("clippingPlane", glm::vec4(0, 1, 0, -Game::GetWaterHeight()));
+    glClearColor(0, 0, 0, 0);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); 
+    glEnable(GL_CLIP_DISTANCE0);
+    glBindVertexArray(OpenGLBackEnd::GetVertexDataVAO());
+    Frustum reflectionFrustum;
+    for (int i = 0; i < renderData.playerCount; i++) {
+        // Reflection Frustum
+        glm::mat4 projectionView = Game::GetPlayerByIndex(i)->GetProjectionMatrix() * Game::GetPlayerByIndex(i)->GetWaterReflectionViewMatrix();
+        reflectionFrustum.Update(projectionView);
+        // Ok draw now
+        reflectionGeometryShader.SetInt("playerIndex", i);
+        reflectionGeometryShader.SetMat4("projection", Game::GetPlayerByIndex(i)->GetProjectionMatrix());
+        reflectionGeometryShader.SetMat4("view", Game::GetPlayerByIndex(i)->GetWaterReflectionViewMatrix());
+        reflectionGeometryShader.SetVec3("viewPos", Game::GetPlayerByIndex(i)->GetViewPos());
+        ViewportInfo viewportInfo = RendererUtil::CreateViewportInfo(i, Game::GetSplitscreenMode(), reflectionFBO.GetWidth(), reflectionFBO.GetHeight());
+        SetViewport(viewportInfo);
+        glViewport(viewportInfo.xOffset, viewportInfo.yOffset, viewportInfo.width, viewportInfo.height);
+        // Render all static mesh
+        for (RenderItem3D& renderItem : Scene::GetGeometryRenderItems()) {            
+            if (reflectionFrustum.IntersectsAABBFast(renderItem)) {
+                reflectionGeometryShader.SetMat4("model", renderItem.modelMatrix);
+                reflectionGeometryShader.SetMat4("inverseModel", renderItem.inverseModelMatrix);
+                reflectionGeometryShader.SetInt("baseColorIndex", renderItem.baseColorTextureIndex);
+                reflectionGeometryShader.SetInt("normalMapIndex", renderItem.normalMapTextureIndex);
+                reflectionGeometryShader.SetInt("rmaIndex", renderItem.rmaTextureIndex);
+                Mesh* mesh = AssetManager::GetMeshByIndex(renderItem.meshIndex);
+                glDrawElementsInstancedBaseVertex(GL_TRIANGLES, mesh->indexCount, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int) * mesh->baseIndex), 1, mesh->baseVertex);
+            }
+        }
+        // Constructive Solid Geometry
+        reflectionGeometryShader.SetMat4("model", glm::mat4(1));
+        reflectionGeometryShader.SetMat4("inverseModel", glm::inverse(glm::mat4(1)));
+        glBindVertexArray(OpenGLBackEnd::GetCSGVAO());
+        std::vector<CSGObject>& cubes = CSG::GetCSGObjects();
+        for (int j = 0; j < cubes.size(); j++) {
+            CSGObject& cube = cubes[j];
+            if (cube.m_disableRendering) {
+                continue;
+            }
+            Material* material = AssetManager::GetMaterialByIndex(cube.m_materialIndex);
+            reflectionGeometryShader.SetInt("baseColorIndex", material->_basecolor);
+            reflectionGeometryShader.SetInt("normalMapIndex", material->_normal);
+            reflectionGeometryShader.SetInt("rmaIndex", material->_rma);
+            glDrawElementsInstancedBaseVertexBaseInstance(GL_TRIANGLES, cube.m_vertexCount, GL_UNSIGNED_INT, (void*)(sizeof(uint32_t) * cube.m_baseIndex), 1, cube.m_baseVertex, j);
+        }
+    }
+    glDisable(GL_CLIP_DISTANCE0);
+
+    // Clear render targets
+    waterFrameBuffer.Bind();
+    //waterFrameBuffer.DrawBuffers({ "Mask", "Color" });
+    waterFrameBuffer.DrawBuffers({ "WorldPosXZ", "Color", "Mask" });
+    glClear(GL_COLOR_BUFFER_BIT);
+
+    // Render water mask
+    waterFrameBuffer.Bind();
+    waterFrameBuffer.DrawBuffers({ "WorldPosXZ", "Mask" });
+    waterFrameBuffer.BindExternalDepthBuffer(gBuffer.GetDepthAttachmentHandle());
+    glBindVertexArray(OpenGLBackEnd::GetVertexDataVAO());
+    glEnable(GL_DEPTH_TEST);
+    glDepthMask(GL_FALSE);
+    glDisable(GL_CULL_FACE);
+    Shader& shader = OpenGLRenderer::g_shaders.waterMask;
+    shader.Use();
+    shader.SetMat4("model", Game::GetWaterModelMatrix());
+    shader.SetFloat("waterHeight", Game::GetWaterHeight()); 
+    for (int i = 0; i < renderData.playerCount; i++) {
+        ViewportInfo viewportInfo = RendererUtil::CreateViewportInfo(i, Game::GetSplitscreenMode(), gBuffer.GetWidth(), gBuffer.GetHeight());
+        SetViewport(viewportInfo);
+        shader.SetInt("playerIndex", i);
+        shader.SetMat4("projection", renderData.cameraData[i].projection);
+        shader.SetMat4("view", renderData.cameraData[i].view);
+        Mesh* meshU = AssetManager::GetMeshByIndex(AssetManager::GetUpFacingPlaneMeshIndex());
+        Mesh* meshD = AssetManager::GetMeshByIndex(AssetManager::GetDownFacingPlaneMeshIndex());
+        glDrawElementsInstancedBaseVertex(GL_TRIANGLES, meshU->indexCount, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int) * meshU->baseIndex), 1, meshU->baseVertex);
+        //glDrawElementsInstancedBaseVertex(GL_TRIANGLES, meshD->indexCount, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int) * meshD->baseIndex), 1, meshD->baseVertex);
+    }
+    //glFinish();
+    waterFrameBuffer.UnbindDepthBuffer();
+    glDepthMask(GL_TRUE);
+    glEnable(GL_CULL_FACE);
+    glBindVertexArray(0);
+
+    // Render water color
+    ComputeShader& computeShader = OpenGLRenderer::g_shaders.waterColorComposite;
+    computeShader.Use();
+    computeShader.SetFloat("viewportWidth", gBuffer.GetWidth());
+    computeShader.SetFloat("viewportHeight", gBuffer.GetHeight());
+    computeShader.SetFloat("time", Game::GetTime());
+    computeShader.SetFloat("waterHeight", Game::GetWaterHeight());
+    glBindImageTexture(0, waterFrameBuffer.GetColorAttachmentHandleByName("Color"), 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA8);
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, waterFrameBuffer.GetColorAttachmentHandleByName("WorldPosXZ"));
+    glActiveTexture(GL_TEXTURE2);
+    glBindTexture(GL_TEXTURE_2D, gBuffer.GetColorAttachmentHandleByName("FinalLighting"));
+    glActiveTexture(GL_TEXTURE3);
+    glBindTexture(GL_TEXTURE_2D, gBuffer.GetDepthAttachmentHandle());
+    glActiveTexture(GL_TEXTURE4);
+    glBindTexture(GL_TEXTURE_2D, AssetManager::GetTextureByName("WaterNormals")->GetGLTexture().GetID());
+    glActiveTexture(GL_TEXTURE5);
+    glBindTexture(GL_TEXTURE_2D, AssetManager::GetTextureByName("WaterDUDV")->GetGLTexture().GetID());
+    glActiveTexture(GL_TEXTURE6);
+    glBindTexture(GL_TEXTURE_2D, reflectionFBO.GetColorAttachmentHandleByName("Color"));
+    glActiveTexture(GL_TEXTURE7);
+    glBindTexture(GL_TEXTURE_2D, waterFrameBuffer.GetColorAttachmentHandleByName("Mask"));
+    glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_TEXTURE_FETCH_BARRIER_BIT);
+    glDispatchCompute(gBuffer.GetWidth() / 16, gBuffer.GetHeight() / 4, 1);
+
+
+    BlitFrameBuffer(&waterFrameBuffer, &gBuffer, "Color", "FinalLighting", GL_COLOR_BUFFER_BIT, GL_LINEAR);
+
+    // Cleanup
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
+
+
+
+
 
 
 
@@ -914,11 +1076,12 @@ void ClearRenderTargets() {
 }
 
 void SkyBoxPass(RenderData& renderData) {
-
+    //return;
     static CubemapTexture* cubemapTexture = AssetManager::GetCubemapTextureByIndex(AssetManager::GetCubemapTextureIndexByName("NightSky"));
     static Mesh* mesh = AssetManager::GetMeshByIndex(AssetManager::GetModelByIndex(AssetManager::GetModelIndexByName("Cube"))->GetMeshIndices()[0]);
 
     GLFrameBuffer& gBuffer = OpenGLRenderer::g_frameBuffers.gBuffer;
+    gBuffer.Bind();
     Player* player = Game::GetPlayerByIndex(0);
 
     Transform skyBoxTransform;
@@ -1965,6 +2128,8 @@ float Lerp(float a, float b, float f) {
 
 void SSAOPass() {
 
+    return;
+
     GLFrameBuffer& gBuffer = OpenGLRenderer::g_frameBuffers.gBuffer;
     GLFrameBuffer& genericRenderTargets = OpenGLRenderer::g_frameBuffers.genericRenderTargets;
     ComputeShader& shader = OpenGLRenderer::g_shaders.ssao;
@@ -2641,6 +2806,7 @@ void OpenGLRenderer::RaytracingTestPass(RenderData& renderData) {
 
 void PostProcessingPass(RenderData& renderData) {
     GLFrameBuffer& gBuffer = OpenGLRenderer::g_frameBuffers.gBuffer;
+    GLFrameBuffer& waterFrameBuffer = OpenGLRenderer::g_frameBuffers.water;
     GLFrameBuffer& genericRenderTargets = OpenGLRenderer::g_frameBuffers.genericRenderTargets;
     ComputeShader& computeShader = OpenGLRenderer::g_shaders.postProcessing;
     computeShader.Use();
@@ -2649,8 +2815,11 @@ void PostProcessingPass(RenderData& renderData) {
     computeShader.SetFloat("time", Game::GetTime());
     glBindImageTexture(0, gBuffer.GetColorAttachmentHandleByName("FinalLighting"), 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA8);
     glBindImageTexture(1, gBuffer.GetColorAttachmentHandleByName("Normal"), 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA16F);
-    glBindImageTexture(2, genericRenderTargets.GetColorAttachmentHandleByName("SSAOBlur"), 0, GL_FALSE, 0, GL_READ_WRITE, GL_R32F);
+    //glBindImageTexture(2, genericRenderTargets.GetColorAttachmentHandleByName("SSAOBlur"), 0, GL_FALSE, 0, GL_READ_WRITE, GL_R32F);
+    glBindImageTexture(3, waterFrameBuffer.GetColorAttachmentHandleByName("Color"), 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA8);
+    //glBindImageTexture(4, waterFrameBuffer.GetColorAttachmentHandleByName("Mask"), 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA8);
     glDispatchCompute(gBuffer.GetWidth() / 16, gBuffer.GetHeight() / 4, 1);
+    //glFinish();
 }
 
 

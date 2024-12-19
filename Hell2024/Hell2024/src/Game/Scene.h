@@ -238,6 +238,11 @@ namespace Scene {
     std::vector<RenderItem3D> GetGeometryRenderItems();
     std::vector<RenderItem3D> CreateDecalRenderItems();
 
+
+
+    void CreateCouch();
+
+
     // Old shit
 	void LoadHardCodedObjects();
 	void LoadMap(std::string mapPath);

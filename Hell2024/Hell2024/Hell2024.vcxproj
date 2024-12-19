@@ -143,13 +143,17 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <ClCompile Include="src\API\Vulkan\Types\VK_texture3D.cpp" />
     <ClCompile Include="src\Common\RapidHotload.cpp" />
     <ClCompile Include="src\Core\AssetManager.cpp" />
+    <ClCompile Include="src\Core\Audio.cpp" />
     <ClCompile Include="src\Core\DebugMenu.cpp" />
     <ClCompile Include="src\Editor\Brush.cpp" />
     <ClCompile Include="src\Editor\CSGCommon.h" />
     <ClCompile Include="src\Editor\CSGShape.cpp" />
     <ClCompile Include="src\Editor\Editor.cpp" />
+    <ClCompile Include="src\File\AssimpImporter.cpp" />
+    <ClCompile Include="src\File\File.cpp" />
     <ClCompile Include="src\Game\Dobermann.cpp" />
     <ClCompile Include="src\Game\Player_GamePlayLogic.cpp" />
+    <ClCompile Include="src\Game\Player_Movement.cpp" />
     <ClCompile Include="src\Math\BVH.cpp" />
     <ClCompile Include="src\Math\Frustum.cpp" />
     <ClCompile Include="src\Pathfinding\Pathfinding2.cpp" />
@@ -286,6 +290,9 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <ClInclude Include="src\Editor\CSGShape.h" />
     <ClInclude Include="src\Editor\Editor.h" />
     <ClInclude Include="src\Common\HellCommon.h" />
+    <ClInclude Include="src\File\AssimpImporter.h" />
+    <ClInclude Include="src\File\File.h" />
+    <ClInclude Include="src\File\FileFormats.h" />
     <ClInclude Include="src\Math\Frustum.h" />
     <ClInclude Include="src\Renderer\RendererData.h" />
     <ClInclude Include="src\Renderer\SSAO.hpp" />
@@ -311,7 +318,6 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <ClInclude Include="src\Core\AssetManager.h" />
     <ClInclude Include="src\Config.hpp" />
     <ClInclude Include="src\Core\DebugMenu.h" />
-    <ClInclude Include="src\File\File.hpp" />
     <ClInclude Include="src\Renderer\GlobalIllumination.h" />
     <ClInclude Include="src\Renderer\PointCloud.h" />
     <ClInclude Include="src\Renderer\RenderData.h" />
@@ -487,6 +493,11 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <None Include="res\shaders\OpenGL\GL_ssao.comp" />
     <None Include="res\shaders\OpenGL\GL_triangles_3D.frag" />
     <None Include="res\shaders\OpenGL\GL_triangles_3D.vert" />
+    <None Include="res\shaders\OpenGL\GL_water_composite.comp" />
+    <None Include="res\shaders\OpenGL\GL_water_mask.frag" />
+    <None Include="res\shaders\OpenGL\GL_water_mask.vert" />
+    <None Include="res\shaders\OpenGL\GL_water_reflection_geometry.frag" />
+    <None Include="res\shaders\OpenGL\GL_water_reflection_geometry.vert" />
     <None Include="res\shaders\OpenGL\GL_winston.frag" />
     <None Include="res\shaders\OpenGL\GL_winston.vert" />
     <None Include="res\shaders\OpenGL_OLD\animated_quad.frag" />

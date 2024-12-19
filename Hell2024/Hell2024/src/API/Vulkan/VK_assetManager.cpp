@@ -216,7 +216,7 @@ VkImageViewCreateInfo ImageViewCreateInfo(VkFormat format, VkImage image, VkImag
 }
 
 bool VulkanAssetManager::LoadImageFromFile(VkDevice device, VmaAllocator allocator, const char* file, VulkanTexture& outTexture, VkFormat imageFormat, bool generateMips) {
-    FileInfo info = Util::GetFileInfo(file);
+    FileInfoOLD info = Util::GetFileInfo(file);
     std::string assetPath = "res/assets_vulkan/" + info.filename + ".tex";
 
     if (std::filesystem::exists(assetPath)) {

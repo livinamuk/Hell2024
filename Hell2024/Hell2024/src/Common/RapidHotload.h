@@ -5,9 +5,6 @@
 #include "Game/GameObject.h"
 
 namespace RapidHotload {
-   // glm::mat4 TestMatrix();
-
-    std::vector<GameObject>& GetEmergencyGameObjects();
     void Update();
     glm::mat4 computeTileProjectionMatrix(float fovY, float aspectRatio, float nearPlane, float farPlane, int screenWidth, int screenHeight, int tileX, int tileY, int tileWidth, int tileHeight);
 }

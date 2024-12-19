@@ -19,6 +19,8 @@
 #include <vector>
 #include <stb_image.h>
 #include "tiny_obj_loader.h"
+#include "../File/file.h"
+#include "../File/AssimpImporter.h"
 
 struct CMPTextureData {
     CMP_Texture m_cmpTexture;
@@ -73,6 +75,7 @@ namespace AssetManager {
     int _nextWeightedIndexInsert = 0;
 
     int _upFacingPlaneMeshIndex = 0;
+    int _downFacingPlaneMeshIndex = 0;
     int _quadMeshIndex = 0;
     int _quadMeshIndexSplitscreenTop = 0;
     int _quadMeshIndexSplitscreenBottom = 0;
@@ -81,6 +84,8 @@ namespace AssetManager {
     int _quadMeshIndexQuadscreenBottomLeft = 0;
     int _quadMeshIndexQuadscreenBottomRight = 0;
     int _halfSizeQuadMeshIndex = 0;
+    
+    bool g_loadedCustomFiles = false;
 
     // Async
     std::mutex _modelsMutex;
@@ -124,7 +129,7 @@ void AssetManager::FindAssetPaths() {
     // Cubemap Textures
     auto skyboxTexturePaths = std::filesystem::directory_iterator("res/textures/skybox/");
     for (const auto& entry : skyboxTexturePaths) {
-        FileInfo info = Util::GetFileInfo(entry);
+        FileInfoOLD info = Util::GetFileInfo(entry);
         if (info.filetype == "png" || info.filetype == "jpg" || info.filetype == "tga") {
             if (info.filename.substr(info.filename.length() - 5) == "Right") {
                 std::cout << info.fullpath << "\n";
@@ -135,7 +140,7 @@ void AssetManager::FindAssetPaths() {
     // Animations
     auto animationPaths = std::filesystem::directory_iterator("res/animations/");
     for (const auto& entry : animationPaths) {
-        FileInfo info = Util::GetFileInfo(entry);
+        FileInfoOLD info = Util::GetFileInfo(entry);
         if (info.filetype == "fbx") {
             g_animations.emplace_back(info.fullpath);
         }
@@ -143,7 +148,7 @@ void AssetManager::FindAssetPaths() {
     // Models
     auto modelPaths = std::filesystem::directory_iterator("res/models/");
     for (const auto& entry : modelPaths) {
-        FileInfo info = Util::GetFileInfo(entry);
+        FileInfoOLD info = Util::GetFileInfo(entry);
         if (info.filetype == "obj") {
             g_models.emplace_back(info.fullpath);
         }
@@ -151,7 +156,7 @@ void AssetManager::FindAssetPaths() {
     // Skinned models
     auto skinnedModelPaths = std::filesystem::directory_iterator("res/models/");
     for (const auto& entry : skinnedModelPaths) {
-        FileInfo info = Util::GetFileInfo(entry);
+        FileInfoOLD info = Util::GetFileInfo(entry);
         if (info.filetype == "fbx") {
             g_skinnedModels.emplace_back(info.fullpath.c_str());
         }
@@ -162,7 +167,7 @@ void AssetManager::FindAssetPaths() {
         // Textures
         auto compressedTexturePaths = std::filesystem::directory_iterator("res/textures/");
         for (const auto& entry : compressedTexturePaths) {
-            FileInfo info = Util::GetFileInfo(entry);
+            FileInfoOLD info = Util::GetFileInfo(entry);
             if (info.filetype == "png" || info.filetype == "jpg" || info.filetype == "tga") {
                 std::string compressedPath = "res/textures/dds/" + info.filename + ".dds";
                 std::string suffix = info.filename.substr(info.filename.length() - 3);
@@ -200,14 +205,14 @@ void AssetManager::FindAssetPaths() {
     // Textures
     auto texturePaths = std::filesystem::directory_iterator("res/textures/");
     for (const auto& entry : texturePaths) {
-        FileInfo info = Util::GetFileInfo(entry);
+        FileInfoOLD info = Util::GetFileInfo(entry);
         if (info.filetype == "png" || info.filetype == "jpg" || info.filetype == "tga") {
             g_textures.emplace_back(Texture(info.fullpath, true));
         }
     }
     auto uiTexturePaths = std::filesystem::directory_iterator("res/textures/ui/");
     for (const auto& entry : uiTexturePaths) {
-        FileInfo info = Util::GetFileInfo(entry);
+        FileInfoOLD info = Util::GetFileInfo(entry);
         if (info.filetype == "png" || info.filetype == "jpg" || info.filetype == "tga") {
             g_textures.emplace_back(Texture(info.fullpath, false));
         }
@@ -215,7 +220,7 @@ void AssetManager::FindAssetPaths() {
     if (BackEnd::GetAPI() == API::OPENGL) {
         auto vatTexturePaths = std::filesystem::directory_iterator("res/textures/exr/");
         for (const auto& entry : vatTexturePaths) {
-            FileInfo info = Util::GetFileInfo(entry);
+            FileInfoOLD info = Util::GetFileInfo(entry);
             if (info.filetype == "exr") {
                 g_textures.emplace_back(Texture(info.fullpath, false));
             }
@@ -238,8 +243,28 @@ bool AssetManager::LoadingComplete() {
     return g_completedLoadingTasks.g_all;
 }
 
+void CreateModelFromData(ModelData& modelData) {
+    std::cout << "CreateModelFromData() " << modelData.name << "\n";
+    std::cout << "CreateModelFromData() " << modelData.name << "\n";
+    std::cout << "CreateModelFromData() " << modelData.name << "\n";
+    std::cout << "CreateModelFromData() " << modelData.name << "\n";
+    std::cout << "CreateModelFromData() " << modelData.name << "\n";
+    std::cout << "CreateModelFromData() " << modelData.name << "\n";
+    std::cout << "CreateModelFromData() " << modelData.name << "\n";
+    std::cout << "CreateModelFromData() " << modelData.name << "\n";
+    Model& model = AssetManager::g_models.emplace_back();
+    model.SetName(modelData.name);
+    model.m_aabbMin = modelData.aabbMin;
+    model.m_aabbMax = modelData.aabbMax;
+    for (MeshData& meshData : modelData.meshes) {
+        model.AddMeshIndex(AssetManager::CreateMesh(meshData.name, meshData.vertices, meshData.indices, meshData.aabbMin, meshData.aabbMax));
+    }
+}
 
 void AssetManager::LoadNextItem() {
+
+    
+
     // Hardcoded models
     if (!g_completedLoadingTasks.g_hardcodedModels) {
         CreateHardcodedModels();
@@ -376,6 +401,28 @@ void AssetManager::LoadNextItem() {
         return;
     }
     
+    // Load custom model files
+    if (!g_loadedCustomFiles) {
+
+        // Export any models that aren't converted to custom format yet
+        auto modelPaths = Util::IterateDirectory("res/models2/", { "obj", "fbx" });
+        for (FileInfo& fileInfo : modelPaths) {
+            std::string outputPath = MODEL_DIR + fileInfo.name + ".model";
+            if (!Util::FileExists(outputPath)) {
+                ModelData modelData = AssimpImporter::ImportFbx(fileInfo.path);
+                File::ExportModel(modelData);
+                std::cout << "Exported " << outputPath << "\n";
+            }
+        }
+        // Load CUSTOM Models
+        auto customModelPaths = Util::IterateDirectory(MODEL_DIR);
+        for (FileInfo& fileInfo : customModelPaths) {
+            ModelData modelData = File::ImportModel(fileInfo.GetFileNameWithExtension());
+            CreateModelFromData(modelData);
+        }
+        g_loadedCustomFiles = true;
+    }
+
     // Build index maps
     for (int i = 0; i < g_textures.size(); i++) {
         g_textureIndexMap[g_textures[i].GetFilename()] = i;
@@ -433,11 +480,14 @@ void AssetManager::LoadNextItem() {
     for (auto& text : g_loadLog) {
         //std::cout << text << "\n";
     }
+
+
+
 }
 
 
 void AssetManager::LoadCubemapTexture(CubemapTexture* cubemapTexture) {
-    FileInfo fileInfo = Util::GetFileInfo(cubemapTexture->m_fullPath);
+    FileInfoOLD fileInfo = Util::GetFileInfo(cubemapTexture->m_fullPath);
     cubemapTexture->SetName(fileInfo.filename.substr(0, fileInfo.filename.length() - 6));
     cubemapTexture->SetFiletype(fileInfo.filetype);
     cubemapTexture->Load();
@@ -454,7 +504,7 @@ void AssetManager::LoadFont() {
     auto texturePaths = std::filesystem::directory_iterator("res/textures/font/");
 
     for (const auto& entry : texturePaths) {
-        FileInfo info = Util::GetFileInfo(entry);
+        FileInfoOLD info = Util::GetFileInfo(entry);
         if (info.filetype == "png" || info.filetype == "jpg" || info.filetype == "tga") {
             Texture& texture = g_textures.emplace_back(Texture(info.fullpath.c_str(), false));
             LoadTexture(&texture);
@@ -686,6 +736,44 @@ void AssetManager::CreateHardcodedModels() {
         _upFacingPlaneMeshIndex = model.GetMeshIndices()[0];
     }
 
+    /* Upfacing Plane */ {
+        Vertex vertA, vertB, vertC, vertD;
+        vertA.position = glm::vec3(-0.5, 0, 0.5);
+        vertB.position = glm::vec3(0.5, 0, 0.5f);
+        vertC.position = glm::vec3(0.5, 0, -0.5);
+        vertD.position = glm::vec3(-0.5, 0, -0.5);
+        vertA.uv = { 0.0f, 1.0f };
+        vertB.uv = { 1.0f, 1.0f };
+        vertC.uv = { 1.0f, 0.0f };
+        vertD.uv = { 0.0f, 0.0f };
+        vertA.normal = glm::vec3(0, -1, 0);
+        vertB.normal = glm::vec3(0, -1, 0);
+        vertC.normal = glm::vec3(0, -1, 0);
+        vertD.normal = glm::vec3(0, -1, 0);
+        vertA.tangent = glm::vec3(0, 0, 1);
+        vertB.tangent = glm::vec3(0, 0, 1);
+        vertC.tangent = glm::vec3(0, 0, 1);
+        vertD.tangent = glm::vec3(0, 0, 1);
+        std::vector<Vertex> vertices;
+        vertices.push_back(vertA);
+        vertices.push_back(vertB);
+        vertices.push_back(vertC);
+        vertices.push_back(vertD);
+        std::vector<uint32_t> indices = { 2, 1, 0, 0, 3, 2 };
+        std::string name = "DownFacingPLane";
+
+        glm::vec3 aabbMin;
+        glm::vec3 aabbMax;
+        Util::CalculateAABB(vertices, aabbMin, aabbMax);
+
+        Model& model = g_models.emplace_back();
+        model.SetName("DownFacingPLane");
+        model.AddMeshIndex(AssetManager::CreateMesh(name, vertices, indices, aabbMin, aabbMax));
+        model.m_awaitingLoadingFromDisk = false;
+        model.m_loadedFromDisk = true;
+        _downFacingPlaneMeshIndex = model.GetMeshIndices()[0];
+    }
+
     UploadVertexData();
 }
 
@@ -728,7 +816,7 @@ void AssetManager::LoadSkinnedModel(SkinnedModel* skinnedModel) {
     int baseVertexLocal = 0;
     int boneCount = 0;
 
-    FileInfo fileInfo = Util::GetFileInfo(skinnedModel->m_fullPath);
+    FileInfoOLD fileInfo = Util::GetFileInfo(skinnedModel->m_fullPath);
     skinnedModel->m_NumBones = 0;
     skinnedModel->_filename = fileInfo.filename;
 
@@ -1095,6 +1183,9 @@ unsigned int AssetManager::GetQuadMeshIndexQuadscreenBottomRight() {
 }
 unsigned int AssetManager::GetUpFacingPlaneMeshIndex() {
     return _upFacingPlaneMeshIndex;
+}
+unsigned int AssetManager::GetDownFacingPlaneMeshIndex() {
+    return _downFacingPlaneMeshIndex;
 }
 
 

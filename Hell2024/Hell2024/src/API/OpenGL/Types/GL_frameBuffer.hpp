@@ -54,6 +54,21 @@ public:
         glFramebufferTexture2D(GL_FRAMEBUFFER, slot, GL_TEXTURE_2D, colorAttachment.handle, 0);
     }
 
+    GLenum GetDepthAttachmentTypeFromDepthFromat(GLenum internalFormat) {
+        switch (internalFormat) {
+        case GL_DEPTH24_STENCIL8:
+        case GL_DEPTH32F_STENCIL8:
+            return GL_DEPTH_STENCIL_ATTACHMENT;
+        case GL_DEPTH_COMPONENT16:
+        case GL_DEPTH_COMPONENT24:
+        case GL_DEPTH_COMPONENT32:
+        case GL_DEPTH_COMPONENT32F:
+            return GL_DEPTH_ATTACHMENT;
+        default:
+            return 0;
+        }
+    }
+
     void CreateDepthAttachment(GLenum internalFormat) {
         depthAttachment.internalFormat = internalFormat;
         glBindFramebuffer(GL_FRAMEBUFFER, handle);
@@ -64,11 +79,27 @@ public:
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_TEXTURE_2D, depthAttachment.handle, 0);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GetDepthAttachmentTypeFromDepthFromat(internalFormat), GL_TEXTURE_2D, depthAttachment.handle, 0);
     }
 
     void Bind() {
         glBindFramebuffer(GL_FRAMEBUFFER, handle);
+    }
+
+    void BindExternalDepthBuffer(GLuint textureHandle) {
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_TEXTURE_2D, textureHandle, 0);
+    }
+
+    void UnbindDepthBuffer() {
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_TEXTURE_2D, 0, 0);
+    }
+
+    void DrawBuffers(std::vector<const char*> attachmentNames) {
+        std::vector<GLuint> attachments;
+        for (const char* attachmentName : attachmentNames) {
+            attachments.push_back(GetColorAttachmentSlotByName(attachmentName));
+        }
+        glDrawBuffers(attachments.size(), &attachments[0]);
     }
 
     void SetViewport() {

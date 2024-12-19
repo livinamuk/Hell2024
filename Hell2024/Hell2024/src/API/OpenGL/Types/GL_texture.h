@@ -22,6 +22,7 @@ struct OpenGLTexture {
     int GetHeight();
     std::string& GetFilename();
     std::string& GetFiletype();
+    void HotloadFromPath(const std::string filepath);
 
 private:
     GLuint ID;

@@ -3,7 +3,7 @@
 
 Animation::Animation(std::string fullPath) {
     m_fullPath = fullPath;
-    FileInfo info = Util::GetFileInfo(fullPath);
+    FileInfoOLD info = Util::GetFileInfo(fullPath);
     _filename = info.filename;
 }
 

@@ -27,6 +27,18 @@ Player::Player(int playerIndex) {
     g_awaitingRespawn = true;
 }
 
+bool Player::EnteredUnderwater() {
+    return m_feetUnderWater && !m_feetUnderwaterLastFrame;
+}
+
+bool Player::EyesExitedUnderwater() {
+    return !m_cameraUnderwater && m_cameraUnderwaterLastFrame;
+}
+
+bool Player::CameraIsUnderwater() {
+    return m_cameraUnderwater;
+}
+
 void Player::Update(float deltaTime) {
 
     if (IsDead()) {
@@ -36,6 +48,12 @@ void Player::Update(float deltaTime) {
     if (g_awaitingRespawn && !Game::KillLimitReached()) {
         Respawn();
     }
+
+    m_feetUnderwaterLastFrame = m_feetUnderWater;
+    m_cameraUnderwaterLastFrame = m_cameraUnderwater;
+    m_cameraUnderwater = GetViewPos().y < Game::GetWaterHeight();
+    m_feetUnderWater = GetFeetPosition().y < Game::GetWaterHeight();
+    m_underwater = GetViewPos().y < Game::GetWaterHeight() + 0.1f;
 
     AnimatedGameObject* characterModel = Scene::GetAnimatedGameObjectByIndex(m_characterModelAnimatedGameObjectIndex);
     AnimatedGameObject* viewWeaponGameObject = Scene::GetAnimatedGameObjectByIndex(m_viewWeaponAnimatedGameObjectIndex);
@@ -69,7 +87,6 @@ void Player::Update(float deltaTime) {
     UpdateTimers(deltaTime);
     UpdateAudio(deltaTime);
     UpdatePickupText(deltaTime);
-
     UpdateMovement(deltaTime);
     UpdateMouseLook(deltaTime);
     UpdateViewWeaponLogic(deltaTime);
@@ -149,6 +166,7 @@ void Player::Respawn() {
     AnimatedGameObject* characterModel = Scene::GetAnimatedGameObjectByIndex(m_characterModelAnimatedGameObjectIndex);
     AnimatedGameObject* viewWeaponGameObject = Scene::GetAnimatedGameObjectByIndex(m_viewWeaponAnimatedGameObjectIndex);
 
+    m_flashlightOn = false;
     _isDead = false;
     m_ignoreControl = false;
     characterModel->_ragdoll.DisableCollision();
@@ -207,13 +225,36 @@ void Player::Respawn() {
     g_awaitingRespawn = false;
 }
 
+void Player::ResetViewHeights() {
+    m_viewHeightStanding = m_realViewHeightStanding;
+    m_viewHeightCrouching = m_realViewHeightCrouching;
+}
 
 void Player::UpdateViewMatrix(float deltaTime) {
+
+  // PxVec3 globalGravity = Physics::GetScene()->getGravity();
+  // for (RigidComponent& rigid : GetCharacterAnimatedGameObject()->_ragdoll._rigidComponents) {
+  //     if (rigid.pxRigidBody->getGlobalPose().p.y < Game::GetWaterHeight()) {
+  //         PxRigidDynamic* rigidBody = rigid.pxRigidBody;
+  //         rigidBody->setActorFlag(PxActorFlag::eDISABLE_GRAVITY, true);
+  //         float mass = 1.0;// rigid.pxRigidBody->getMass();
+  //         PxVec3 waterGravity = mass * PxVec3(0.0, -10.0f, 0.0f);
+  //         // actor->setLinearDamping(5.0f); // Strong damping for water
+  //         rigidBody->setLinearVelocity({ 0, -2, 0 });
+  //         //rigidBody->addForce(waterGravity, PxForceMode::eFORCE);
+  //     }
+  //     else {
+  //         PxRigidDynamic* rigidBody = rigid.pxRigidBody;
+  //         rigidBody->setActorFlag(PxActorFlag::eDISABLE_GRAVITY, false);
+  //     }
+  // }
+
+
 
     AnimatedGameObject* viewWeapon = GetViewWeaponAnimatedGameObject();
 
     // View height
-    float viewHeightTarget = m_crouching ? _viewHeightCrouching : _viewHeightStanding;
+    float viewHeightTarget = m_crouching ? m_viewHeightCrouching : m_viewHeightStanding;
     _currentViewHeight = Util::FInterpTo(_currentViewHeight, viewHeightTarget, deltaTime, _crouchDownSpeed);
 
     // View matrix
@@ -515,83 +556,6 @@ void Player::UpdateMouseLook(float deltaTime) {
     }
 }
 
-
-
-
-void Player::UpdateMovement(float deltaTime) {
-    m_crouching = false;
-    m_moving = false;
-
-    if (HasControl()) {
-        // Crouching
-        if (PressingCrouch()) {
-            m_crouching = true;
-        }
-        // WSAD movement
-        if (PressingWalkForward()) {
-            m_displacement -= _movementVector;
-            m_moving = true;
-        }
-        if (PressingWalkBackward()) {
-            m_displacement += _movementVector;
-            m_moving = true;
-        }
-        if (PressingWalkLeft()) {
-            m_displacement -= _right;
-            m_moving = true;
-        }
-        if (PressingWalkRight()) {
-            m_displacement += _right;
-            m_moving = true;
-        }
-    }
-    // Calculate movement speed
-    float targetSpeed = m_crouching ? m_crouchingSpeed : m_walkingSpeed;
-    float interpolationSpeed = 18.0f;
-    if (!IsMoving()) {
-        targetSpeed = 0.0f;
-        interpolationSpeed = 22.0f;
-    }
-    m_currentSpeed = Util::FInterpTo(m_currentSpeed, targetSpeed, deltaTime, interpolationSpeed);
-
-    // Normalize displacement vector and include player speed
-    float len = length(m_displacement);
-    if (len != 0.0) {
-        m_displacement = (m_displacement / len) * m_currentSpeed * deltaTime;
-    }
-    // Jump
-    if (PresingJump() && HasControl() && m_grounded) {
-        m_yVelocity = 4.75f; // magic value for jump strength
-        m_yVelocity = 4.9f; // magic value for jump strength (had to change cause you could no longer jump thru window after fixing character controller height bug)
-        m_grounded = false;
-    }
-    // Gravity
-    if (m_grounded) {
-        m_yVelocity = -0.1f; // can't be 0, or the _isGrounded check next frame will fail
-        m_yVelocity = -3.5f;
-    }
-    else {
-        float gravity = 15.75f; // 9.8 feels like the moon
-        m_yVelocity -= gravity * deltaTime;
-    }
-    float yDisplacement = m_yVelocity * deltaTime;
-
-    if (Game::KillLimitReached()) {
-        m_displacement = glm::vec3(0, 0, 0);
-    }
-        
-    // Move PhysX character controller
-    PxFilterData filterData;
-    filterData.word0 = 0;
-    filterData.word1 = CollisionGroup::ENVIROMENT_OBSTACLE | CollisionGroup::ENVIROMENT_OBSTACLE_NO_DOG;	// Things to collide with
-    PxControllerFilters data;
-    data.mFilterData = &filterData;
-    PxF32 minDist = 0.001f;
-    float fixedDeltaTime = (1.0f / 60.0f);
-    _characterController->move(PxVec3(m_displacement.x, yDisplacement, m_displacement.z), minDist, fixedDeltaTime, data);
-    _position = Util::PxVec3toGlmVec3(_characterController->getFootPosition());
-}
-
 void Player::UpdateHeadBob(float deltaTime) {
     float breatheAmplitude = 0.0004f;
     float breatheFrequency = 5;
@@ -635,7 +599,7 @@ void Player::UpdateAudio(float deltaTime) {
         if (!IsMoving())
             _footstepAudioTimer = 0;
         else {
-            if (IsMoving() && _footstepAudioTimer == 0) {
+            if (IsMoving() && !IsUnderWater() && _footstepAudioTimer == 0) {
                 // Audio
                 
                 int random = rand() % 4;
@@ -653,6 +617,14 @@ void Player::UpdateAudio(float deltaTime) {
             }
         }
     }
+
+    // Water
+    if (EnteredUnderwater()) {
+        Audio::PlayAudio("Water_Impact0.wav", 1.0);
+    }
+    if (EyesExitedUnderwater()) {
+        //Audio::PlayAudio("Water_Impact1.wav", 1.0);
+    }    
 }
 
 
@@ -720,10 +692,10 @@ void Player::CheckForDebugKeyPresses() {
     }
     float amt = 0.02f;
     if (Input::KeyDown(HELL_KEY_MINUS)) {
-        _viewHeightStanding -= amt;
+        m_viewHeightStanding -= amt;
     }
     if (Input::KeyDown(HELL_KEY_EQUAL)) {
-        _viewHeightStanding += amt;
+        m_viewHeightStanding += amt;
     }
 }
 
@@ -1051,6 +1023,26 @@ glm::mat4 Player::GetViewMatrix() {
     // OLD BROKEN BELOW
   //  AnimatedGameObject* viewWeaponGameObject = Scene::GetAnimatedGameObjectByIndex(m_viewWeaponAnimatedGameObjectIndex);
   //  return  glm::mat4(glm::mat3(viewWeaponGameObject->_cameraMatrix)) * _viewMatrix;
+}
+
+glm::mat4 Player::GetWaterReflectionViewMatrix() {
+
+    float waterHeight = Game::GetWaterHeight();
+    glm::vec3 cameraPosition = GetViewPos();
+
+    // Reflect the camera's position across the water plane (y = waterHeight)
+    cameraPosition.y = 2.0f * waterHeight - cameraPosition.y;
+
+    // Rebuild the view matrix with the reflected position
+    glm::vec3 reflectedTarget = glm::vec3(_inverseViewMatrix[3]) - glm::vec3(_inverseViewMatrix[2]);
+    reflectedTarget.y = 2.0f * waterHeight - reflectedTarget.y;
+
+    glm::vec3 upDirection = glm::vec3(_inverseViewMatrix[1]);
+    upDirection.y = -upDirection.y; // Invert up direction for reflection
+
+    // Generate the reflected view matrix
+    return glm::lookAt(cameraPosition, reflectedTarget, upDirection);
+
 }
 
 glm::mat4 Player::GetInverseViewMatrix() {

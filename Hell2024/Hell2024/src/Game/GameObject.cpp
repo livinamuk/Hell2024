@@ -963,7 +963,7 @@ void GameObject::PrintMeshNames() {
         for (uint32_t meshIndex : model->GetMeshIndices()) {
             Mesh* mesh = AssetManager::GetMeshByIndex(meshIndex);
             if (mesh) {
-                std::cout << "-" << meshIndex << ": " << mesh->name << "\n";
+                std::cout << "-" << meshIndex << ": " << mesh->name << " " << Util::Vec3ToString(mesh->aabbMin) << " " << Util::Vec3ToString(mesh->aabbMin) << "\n";
             }
         }
     }

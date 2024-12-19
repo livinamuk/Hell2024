@@ -44,5 +44,10 @@ void main() {
 	vec4 color = mix(color0, color1, timeLerp) * vec4(tint, 1.0);
 	FragColor = color.rgba;
 
+    if (FragPos.y < 2.4) {
+     vec3 waterColor = vec3(0.8, 1.0, 0.9);
+        FragColor.rgb *=  waterColor * waterColor;
+    }
+
 	//FragColor = vec4(1,0,0,1);
 }

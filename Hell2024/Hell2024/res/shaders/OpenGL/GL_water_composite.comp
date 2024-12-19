@@ -1,0 +1,475 @@
+#version 450 core
+
+layout (local_size_x = 16, local_size_y = 4, local_size_z = 1) in;
+
+layout(binding = 0) writeonly uniform image2D waterColorTexture;
+layout (binding = 1) uniform sampler2D waterWorldPosXZTexture;
+layout (binding = 2) uniform sampler2D finalLightingTexture;
+layout (binding = 3) uniform sampler2D gBufferDepthTexture;
+layout (binding = 4) uniform sampler2D waterNormalTexture;
+layout (binding = 5) uniform sampler2D waterDUDVTexture;
+layout (binding = 6) uniform sampler2D waterReflectionTexture;
+layout (binding = 7) uniform sampler2D waterMaskTexture;
+
+struct CameraData {
+    mat4 projection;
+    mat4 projectionInverse;
+    mat4 view;
+    mat4 viewInverse;
+	float viewportWidth;
+	float viewportHeight;
+    float viewportOffsetX;
+    float viewportOffsetY;
+	float clipSpaceXMin;
+    float clipSpaceXMax;
+    float clipSpaceYMin;
+    float clipSpaceYMax;
+	float finalImageColorContrast;
+    float finalImageColorR;
+    float finalImageColorG;
+    float finalImageColorB;
+};
+
+layout(std430, binding = 16) readonly buffer CameraDataArray {
+    CameraData cameraDataArray[];
+};
+
+    //g_frameBuffers.water.CreateAttachment("WorldPosXZ", GL_RG16F);
+    //g_frameBuffers.water.CreateAttachment("Mask", GL_R8);
+    //g_frameBuffers.water.CreateAttachment("Color", GL_RGBA8);
+
+uniform float time;
+uniform float viewportWidth;
+uniform float viewportHeight;
+uniform float waterHeight;
+//uniform vec3 viewPos;
+//uniform int playerIndex;
+
+// Distortion params
+const float waveStrength = 0.0075;
+const float timeFactorY = -0.0125;
+const float timeFactorX = -0.00125;
+const float waterUVscaling = 0.45;
+
+// Gaussian params
+const int blurRadius = 5;  // Kernel radius (controls blur intensity)
+const float sigma = 20.0;    // Standard deviation for Gaussian
+
+// Reflection and refraction ripple params
+const float rippleWaveStrength = 0.0001;
+const float rippleFrequency = 0.1;
+const float rippleSpeed = 2.0;
+const float rippleStrength = 0.00075;
+
+void contrastAdjust( inout vec3 color, in float c) {
+    float t = 0.5 - c * 0.5;
+    color.rgb = color.rgb * c + t;
+}
+
+vec3 filmic(vec3 x) {
+  vec3 X = max(vec3(0.0), x - 0.004);
+  vec3 result = (X * (6.2 * X + 0.5)) / (X * (6.2 * X + 1.7) + 0.06);
+  return pow(result, vec3(2.2));
+}
+
+float filmic(float x) {
+  float X = max(0.0, x - 0.004);
+  float result = (X * (6.2 * X + 0.5)) / (X * (6.2 * X + 1.7) + 0.06);
+  return pow(result, 2.2);
+}
+
+vec3 Tonemap_ACES(const vec3 x) { // Narkowicz 2015, "ACES Filmic Tone Mapping Curve"
+    const float a = 2.51;
+    const float b = 0.03;
+    const float c = 2.43;
+    const float d = 0.59;
+    const float e = 0.14;
+    return (x * (a * x + b)) / (x * (c * x + d) + e);
+}
+
+float rand(vec2 co){
+    return fract(sin(dot(co, vec2(12.9898, 78.233))) * 43758.5453);
+}
+
+vec3 filmPixel(vec2 uv) {
+    mat2x3 uvs = mat2x3(uv.xxx, uv.yyy) + mat2x3(vec3(0, 0.1, 0.2), vec3(0, 0.3, 0.4));
+    return fract(sin(uvs * vec2(12.9898, 78.233) * time) * 43758.5453);
+}
+
+//float MapRange(float value, float oldMin, float oldMax, float newMin, float newMax) {
+//    return newMin + (value - oldMin) * (newMax - newMin) / (oldMax - oldMin);
+//}
+
+int MapRange(int value, int oldMin, int oldMax, int newMin, int newMax) {
+    return newMin + (value - oldMin) * (newMax - newMin) / (oldMax - oldMin);
+}
+
+
+
+// Gaussian weights
+float gaussian(float x, float sigma) {
+    return exp(-(x * x) / (2.0 * sigma * sigma));
+}
+
+bool IsValidWaterUV(vec2 uv, float waterMask) {
+    if (waterMask.r < 0.99 && waterMask.r > -0.99) {
+        return false;
+    }
+    return true;
+}
+
+// Gaussian Blur
+vec3 GaussianBlur(ivec2 pixelCoords, vec2 uv, vec2 direction, int radius, float sigma, float waterMask) {
+    vec3 color = vec3(0.0);
+    float weightSum = 0.0;
+    vec2 offsetMultipler = direction / imageSize(waterColorTexture);
+    for (int i = -radius; i <= radius; ++i) {
+        vec2 offset = vec2(i, i) * offsetMultipler;
+        float weight = gaussian(float(i), sigma);
+        vec2 sampleUV = uv + (offset);//* waterMask);
+        //if (IsValidWaterUV(sampleUV, waterMask)) {
+            color += texture(finalLightingTexture, sampleUV).rgb * weight;               
+            weightSum += weight;
+        //}
+    }
+    return color / weightSum;
+}
+
+
+
+const float PI = 3.14159265359;
+
+float D_GGX(float NoH, float roughness) {
+  float alpha = roughness * roughness;
+  float alpha2 = alpha * alpha;
+  float NoH2 = NoH * NoH;
+  float b = (NoH2 * (alpha2 - 1.0) + 1.0);
+  return alpha2 / (PI * b * b);
+}
+
+float G1_GGX_Schlick(float NdotV, float roughness) {
+  //float r = roughness; // original
+  float r = 0.5 + 0.5 * roughness; // Disney remapping
+  float k = (r * r) / 2.0;
+  float denom = NdotV * (1.0 - k) + k;
+  return NdotV / denom;
+}
+
+float G_Smith(float NoV, float NoL, float roughness) {
+  float g1_l = G1_GGX_Schlick(NoL, roughness);
+  float g1_v = G1_GGX_Schlick(NoV, roughness);
+  return g1_l * g1_v;
+}
+
+vec3 fresnelSchlick(float cosTheta, vec3 F0) {
+    return F0 + (1.0 - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
+}
+
+vec3 microfacetBRDF(in vec3 L, in vec3 V, in vec3 N, in float metallicness, in float fresnelReflect, in float roughness, in vec3 WorldPos) {
+  vec3 H = normalize(V + L); // half vector
+  // all required dot products
+  float NoV = clamp(dot(N, V), 0.0, 1.0);
+  float NoL = clamp(dot(N, L), 0.0, 1.0);
+  float NoH = clamp(dot(N, H), 0.0, 1.0);
+  float VoH = clamp(dot(V, H), 0.0, 1.0);
+  // F0 for dielectics in range [0.0, 0.16]
+  // default FO is (0.16 * 0.5^2) = 0.04
+  vec3 f0 = vec3(0.16 * (fresnelReflect * fresnelReflect));
+  // f0 = vec3(0.125);
+  // in case of metals, baseColor contains F0
+  vec3 baseColor = vec3(1, 1, 1);
+  f0 = mix(f0, baseColor, metallicness);
+  // specular microfacet (cook-torrance) BRDF
+  vec3 F = fresnelSchlick(VoH, f0);
+  float D = D_GGX(NoH, roughness);
+  float G = G_Smith(NoV, NoL, roughness);
+  vec3 spec = (D * G * F) / max(4.0 * NoV * NoL, 0.001);
+  return spec;
+}
+
+struct Light {
+    float posX;
+    float posY;
+    float posZ;
+    float colorR;
+    float colorG;
+    float colorB;
+    float strength;
+    float radius;
+    int shadowMapIndex;
+    int contributesToGI;
+    float padding0;
+    float padding1;
+};
+
+vec3 CalculateSpecular(vec3 viewPos, vec3 viewDir, vec3  WaterWorldPos, vec3 waterNormal) {
+    vec3 normal = waterNormal;
+    Light light;
+    light.posX = 13.05;
+    light.posY = 4.46;
+    light.posZ = -1.66;
+    light.colorR = 1;
+    light.colorG = 0.98;
+    light.colorB = 0.94;
+    light.radius = 7.9;
+    light.strength = 0.9;    
+    // Flip if viewpos is beneath water surface
+    float yDistFromWaterToLight = light.posY - WaterWorldPos.y; 
+    normal = (viewPos.y < WaterWorldPos.y) ? -normal : normal;
+    light.posY = (viewPos.y < WaterWorldPos.y) ? light.posY - yDistFromWaterToLight : light.posY;
+    // Go
+    vec3 lightColor = vec3(light.colorR, light.colorG, light.colorB);
+    vec3 lightPosition = vec3(light.posX, light.posY, light.posZ);
+    vec3 lightDir = normalize(lightPosition - WaterWorldPos.xyz);  
+    float fresnelReflect = 1.0;
+    float lightAttenuation = smoothstep(light.radius, 0, length(lightPosition - WaterWorldPos.xyz));
+    float irradiance = 1;
+    irradiance = max(dot(lightDir, normal), 0.0);
+    irradiance *= lightAttenuation * light.strength;
+    float roughness = 0.2;
+    float metallic = 0.0;
+    vec3 brdf = microfacetBRDF(lightDir, viewDir, normal * vec3(1, 1, 1), metallic, fresnelReflect, roughness, WaterWorldPos.xyz);
+    brdf *= irradiance * clamp(lightColor, 0, 1);
+
+    // Determine if the position is inside the room
+    vec3 roomCenterPos = vec3(12.4, 0, -1.4);
+    float roomHalfWidth = 5;
+    float roomHalfDepth = 3.45;
+    float isInsideRoom = step(roomCenterPos.x - roomHalfWidth, WaterWorldPos.x) *
+                          step(WaterWorldPos.x, roomCenterPos.x + roomHalfWidth) *
+                          step(roomCenterPos.z - roomHalfDepth, WaterWorldPos.z) *
+                          step(WaterWorldPos.z, roomCenterPos.z + roomHalfDepth);
+
+    return brdf * isInsideRoom;
+}
+
+vec3 CalculateMoonSpecular(vec3 viewPos, vec3 viewDir, vec3 WaterWorldPos, vec3 waterNormal) {    
+
+    // Determine if the position is inside the room
+    vec3 roomCenterPos = vec3(12.4, 0, -1.5);
+    float roomHalfWidth = 5;
+    float roomHalfDepth = 3.5;
+    float isOutsideRoom = step(roomCenterPos.x - roomHalfWidth, WaterWorldPos.x) *
+                          step(WaterWorldPos.x, roomCenterPos.x + roomHalfWidth) *
+                          step(roomCenterPos.z - roomHalfDepth, WaterWorldPos.z) *
+                          step(WaterWorldPos.z, roomCenterPos.z + roomHalfDepth);
+    isOutsideRoom = 1.0 - isOutsideRoom;
+
+    // Flip if viewpos is beneath water surface
+    vec3 normal = (viewPos.y < WaterWorldPos.y) ? -waterNormal : waterNormal;
+    vec3 lightDir = (viewPos.y < WaterWorldPos.y) ? vec3(0, -1, 0) : vec3(0, 1, 0);
+    // Go
+    vec3 lightColor = vec3(1, 0.98, 0.94);  
+    float testRadius = 10;
+    float fresnelReflect = 0.375;
+    float lightAttenuation = smoothstep(testRadius, 0, length(viewPos - WaterWorldPos.xyz));
+    float irradiance = max(dot(lightDir, normal), 0.0) * lightAttenuation;
+    float roughness = 0.2;
+    float metallic = 0.0;
+    vec3 brdf = microfacetBRDF(lightDir, viewDir, normal * vec3(1, 1, 1), metallic, fresnelReflect, roughness, WaterWorldPos.xyz);
+    brdf *= irradiance * clamp(lightColor, 0, 1);
+    return brdf * isOutsideRoom;
+}
+
+vec3 ApplyFog(vec3 color, float dist, vec3 fogColor, float fogStart, float fogEnd) {
+    float fogFactor = clamp((dist - fogStart) / (fogEnd - fogStart), 0.0, 1.0);
+    return mix(color.rgb, fogColor, fogFactor);
+}
+
+void main() {
+    
+    vec3 waterColor = vec3(0.4, 0.8, 0.6);
+     waterColor = vec3(0.8, 1.0, 0.9);
+     waterColor = vec3(0.85, 1.0, 0.95);
+     //waterColor = vec3(1, 1.0, 1.0);
+
+    ivec2 texCoord = ivec2(gl_GlobalInvocationID.xy);
+    vec2 viewportSize = vec2(viewportWidth, viewportHeight);
+    ivec2 pixelCoords = ivec2(gl_GlobalInvocationID.xy);
+    vec2 uv_screenspace = (vec2(pixelCoords) + vec2(0.5)) / viewportSize;
+
+
+
+    int playerIndex = 0;
+
+    mat4 inverseProjection = cameraDataArray[playerIndex].projectionInverse;
+	mat4 inverseView = cameraDataArray[playerIndex].viewInverse;
+	vec3 viewPos = cameraDataArray[playerIndex].viewInverse[3].xyz;
+	float clipSpaceXMin = cameraDataArray[playerIndex].clipSpaceXMin;
+	float clipSpaceXMax = cameraDataArray[playerIndex].clipSpaceXMax;
+	float clipSpaceYMin = cameraDataArray[playerIndex].clipSpaceYMin;
+	float clipSpaceYMax = cameraDataArray[playerIndex].clipSpaceYMax;
+	mat4 projection = cameraDataArray[playerIndex].projection;
+	mat4 view = cameraDataArray[playerIndex].view;
+	mat4 projectionView = projection * view;
+
+    // Position from depth reconstruction
+    float z = texture(gBufferDepthTexture, uv_screenspace).r;
+    vec2 clipSpaceTexCoord = uv_screenspace;
+	clipSpaceTexCoord.x = (clipSpaceTexCoord.x - clipSpaceXMin) / (clipSpaceXMax - clipSpaceXMin);
+	clipSpaceTexCoord.y = (clipSpaceTexCoord.y - clipSpaceYMin) / (clipSpaceYMax - clipSpaceYMin);
+	vec4 clipSpacePosition = vec4(clipSpaceTexCoord * 2.0 - 1.0, z, 1.0);
+    vec4 viewSpacePosition = inverseProjection * clipSpacePosition;
+    viewSpacePosition /= viewSpacePosition.w;
+    vec4 worldSpacePosition = inverseView * viewSpacePosition;
+    vec3 FragWorldPos = worldSpacePosition.xyz;
+
+
+
+    //
+
+    vec2 waterWorldPosXZColor = texture(waterWorldPosXZTexture, uv_screenspace).rg; 
+    float waterMask = texture(waterMaskTexture, uv_screenspace).r;
+     
+    
+    //vec3 waterMaskColor = texture(waterMaskTexture, uv_screenspace).rgb; 
+    vec3 finalLightingColor = texture(finalLightingTexture, uv_screenspace).rgb; 
+  
+//  if (!IsValidWaterUV(uv_screenspace, waterMask)) {
+//      vec3 final = finalLightingColor;// * vec3(1,0,0);
+// //     final = vec3(0,0,0);
+//      imageStore(waterColorTexture, texCoord, vec4(final, 1));
+//      return;
+//  }
+
+
+
+    vec3 WaterWorldPos = vec3(waterWorldPosXZColor.r, waterHeight, waterWorldPosXZColor.g);
+
+    // Get distortion texcoords
+    vec2 waterUV = vec2(WaterWorldPos.x, WaterWorldPos.z) * waterUVscaling;
+    float moveFactorX = time * timeFactorX;
+    float moveFactorY = time * timeFactorY;
+    vec2 distortedTexCoords = texture(waterDUDVTexture, vec2(waterUV.x + moveFactorX, waterUV.y)).rg*0.1;
+	distortedTexCoords = waterUV + vec2(distortedTexCoords.x, distortedTexCoords.y + moveFactorY);
+	vec2 totalDistortion = (texture(waterDUDVTexture, distortedTexCoords).rg * 2.0 - 1.0) * waveStrength;   
+
+   // distortedTexCoords = waterUV;
+
+    //vec2 refractionUV = uv_screenspace + (totalDistortion * waterMask);
+    //if (!IsValidWaterUV(refractionUV, waterMask)) {
+    //    refractionUV = uv_screenspace;
+    //}    
+    vec2 refractionUV = uv_screenspace + (totalDistortion * waterMask);
+
+
+    // Get water dudv and normals
+    vec3 waterNormalMap = texture(waterNormalTexture, distortedTexCoords).rgb;
+    vec3 waterDUDV = texture(waterDUDVTexture, distortedTexCoords).rgb;
+    vec3 waterNormal = normalize(vec3(waterNormalMap.r * 2 - 1, 1, waterNormalMap.g * 2 - 1));
+
+    
+    vec2 ripple =  vec2(sin((time + rippleFrequency * refractionUV.y) * rippleSpeed + refractionUV.y), 0);
+    ripple *= rippleStrength;
+    if (FragWorldPos.y < waterHeight) {
+        refractionUV += ripple;
+    }
+    
+    vec3 refractionColor = GaussianBlur(pixelCoords, refractionUV, vec2(1, 0), blurRadius, sigma, waterMask);
+    refractionColor += GaussianBlur(pixelCoords, refractionUV, vec2(0, 1), blurRadius, sigma, waterMask);
+    refractionColor *= 0.5;
+
+    
+    //refractionColor = texture(finalLightingTexture, refractionUV).rgb;
+
+    //vec3 refractionColor = applyHorizontalBlur(pixelCoords, refractionUV, blurRadius, sigma);
+    //refractionColor = applyVerticalBlur(pixelCoords, refractionUV, blurRadius, sigma);
+
+    // Specular
+    
+
+    
+    vec3 viewDir = normalize(viewPos - WaterWorldPos.xyz);
+
+
+    
+    vec3 specular = CalculateSpecular(viewPos, viewDir, WaterWorldPos.xyz, waterNormal);
+    specular *= vec3(0.9, 0.8799999713897705, 0.7289999842643738) * 0.9;
+
+    specular += CalculateMoonSpecular(viewPos, viewDir, WaterWorldPos.xyz, waterNormal);
+
+
+    // Water reflection
+    vec2 reflectionUV = uv_screenspace + (totalDistortion);
+    reflectionUV =  vec2(1 - reflectionUV.x, reflectionUV.y);;
+    vec3 reflectionColor = texture(waterReflectionTexture, reflectionUV).rgb;
+
+    vec3 viewVector = normalize(viewPos - WaterWorldPos);
+    float relfractiveFactor = dot(viewVector, vec3(0, 1, 0));
+
+    // Final color
+    vec3 finalColor = mix(reflectionColor, refractionColor, relfractiveFactor);
+    finalColor *= waterColor;
+    finalColor += specular;
+
+
+    // Or are you underwater?    
+    if (viewPos.y < waterHeight) {
+
+        finalColor = refractionColor;
+        finalColor *= waterColor;
+        finalColor += specular;
+
+        if (FragWorldPos.y < waterHeight) {
+        
+            finalColor *= waterColor;
+            finalColor *= waterColor;
+        }
+
+        // water line
+        float threshold = 0.002;
+        if (abs(FragWorldPos.y + (ripple.x * 3) - waterHeight) < threshold) {
+           finalColor *= waterColor;
+           finalColor *= waterColor;
+           finalColor *= waterColor;
+           finalColor *= waterColor;
+           finalColor *= waterColor;
+           finalColor *= waterColor;
+           finalColor *= waterColor;
+           finalColor *= waterColor;
+           finalColor *= waterColor;
+           finalColor *= waterColor;
+           finalColor *= waterColor;
+           finalColor *= waterColor;
+        }
+    }
+
+     if (viewPos.y > waterHeight && FragWorldPos.y > waterHeight) {
+
+        finalColor = finalLightingColor;
+    }
+
+    //vec3 fogColor = vec3(0.09, 0.09, 0.09) * vec3(0.075);	
+	//float fogStart = 1;
+	//float fogEnd = 50;	
+    //float dist = length(worldSpacePosition.xyz - viewPos);
+	//vec3 fogLighting = ApplyFog(finalColor, dist , fogColor, fogStart, fogEnd);
+	//finalColor = mix(fogLighting, finalColor, 0.5);
+
+    
+    // Specular debug
+    //finalColor = specular;
+    //finalColor = vec3(halfVec);
+
+    // Refraction debug
+    //finalColor = refractionColor;
+    //finalColor = refractionColor * waterColor;
+    
+    // Reflection debug
+    //finalColor = texture(waterReflectionTexture, vec2(1 - uv_screenspace.x, uv_screenspace.y)).rgb; // undistorted
+    //finalColor = texture(waterReflectionTexture, reflectionUV).rgb;         // distorted
+
+    // Normal debug
+    //finalColor = waterDUDV;
+    //finalColor = waterNormal;
+
+    // Water mask
+    //finalColor = vec3(waterMask);
+
+    // Camera shit
+    //finalColor = vec3(FragWorldPos);
+
+
+    imageStore(waterColorTexture, texCoord, vec4(finalColor, 1));
+}
+

@@ -845,7 +845,7 @@ namespace Util {
         return result;
     }
 
-    inline FileInfo GetFileInfo(std::string filepath) {
+    inline FileInfoOLD GetFileInfo(std::string filepath) {
         // isolate name
         std::string filename = filepath.substr(filepath.rfind("/") + 1);
         filename = filename.substr(0, filename.length() - 4);
@@ -861,7 +861,7 @@ namespace Util {
                 materialType = query;
         }
         // RETURN IT
-        FileInfo info;
+        FileInfoOLD info;
         info.fullpath = filepath;
         info.filename = filename;
         info.filetype = filetype;
@@ -870,7 +870,7 @@ namespace Util {
         return info;
     }
 
-    inline FileInfo GetFileInfo(const std::filesystem::directory_entry &filepath)
+    inline FileInfoOLD GetFileInfo(const std::filesystem::directory_entry &filepath)
     {
         const auto &path{ filepath.path() };
 
@@ -889,7 +889,7 @@ namespace Util {
         std::string filetype = path.has_extension() ? path.extension().string().substr(1) : "";  // remove dot
 
 
-        return FileInfo{
+        return FileInfoOLD{
             path.string(),
             path.parent_path().string(),
             stem,
@@ -1479,6 +1479,66 @@ namespace Util {
 
     inline bool FloatWithinRange(float a, float b, float threshold) {
         return (a < b + threshold && a > b - threshold);
+    }
+
+    inline std::string GetFileName(const std::string& filepath) {
+        // Find the last slash or backslash to remove directory paths
+        std::string::size_type pos = filepath.find_last_of("/\\");
+        std::string filename = (pos == std::string::npos) ? filepath : filepath.substr(pos + 1);
+        // Find the last dot to remove the file extension
+        pos = filename.find_last_of('.');
+        if (pos != std::string::npos) {
+            filename = filename.substr(0, pos);
+        }
+        return filename;
+    }
+
+    inline std::string RemoveFileExtension(const std::string& filename) {
+        size_t pos = filename.find_last_of('.');
+        if (pos != std::string::npos) {
+            return filename.substr(0, pos);
+        }
+        return filename;
+    }
+
+    inline std::string GetFullPath(const std::filesystem::directory_entry& entry) {
+        return entry.path().string();
+    }
+
+    inline std::string GetFileName(const std::filesystem::directory_entry& entry) {
+        return entry.path().filename().string();
+    }
+
+    inline std::string GetFileNameWithoutExtension(const std::filesystem::directory_entry& entry) {
+        return entry.path().stem().string(); // stem() removes the extension
+    }
+
+    inline std::string GetFileExtension(const std::filesystem::directory_entry& entry) {
+        return entry.path().extension().string().substr(1);
+    }
+
+    inline std::vector<FileInfo> IterateDirectory(const std::string& directory, std::vector<std::string> extensions = std::vector<std::string>()) {
+        std::vector<FileInfo> fileInfos;
+        auto entries = std::filesystem::directory_iterator(directory);
+        for (const auto& entry : entries) {
+            FileInfo fileInfo;
+            fileInfo.path = Util::GetFullPath(entry);
+            fileInfo.name = Util::GetFileNameWithoutExtension(entry);
+            fileInfo.ext = Util::GetFileExtension(entry);
+            fileInfo.dir = directory;
+            if (extensions.empty()) {
+                fileInfos.push_back(fileInfo);
+            }
+            else {
+                for (std::string& ext : extensions) {
+                    if (ext == fileInfo.ext) {
+                        fileInfos.push_back(fileInfo);
+                        break;
+                    }
+                }
+            }
+        }
+        return fileInfos;
     }
 }
 

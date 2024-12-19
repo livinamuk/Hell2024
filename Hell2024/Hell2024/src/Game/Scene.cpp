@@ -146,19 +146,19 @@ void Scene::SaveMapData(const std::string& fileName) {
     }
     data["Lights"] = jsonLights;
 
-
-    // emergency game objects
-    nlohmann::json jsonGameObjects = nlohmann::json::array();
-    for (const GameObject& gameObject : RapidHotload::GetEmergencyGameObjects()) {
-        nlohmann::json jsonObject;
-        jsonObject["position"] = { {"x", gameObject._transform.position.x}, {"y", gameObject._transform.position.y}, {"z", gameObject._transform.position.z} };
-        jsonObject["rotation"] = { {"x", gameObject._transform.rotation.x}, {"y", gameObject._transform.rotation.y}, {"z", gameObject._transform.rotation.z} };
-        jsonObject["scale"] = { {"x", gameObject._transform.scale.x}, {"y", gameObject._transform.scale.y}, {"z", gameObject._transform.scale.z} };
-        jsonObject["modelName"] = gameObject.model->GetName();
-        jsonObject["materialName"] = AssetManager::GetMaterialByIndex(gameObject._meshMaterialIndices[0])->_name;
-        jsonGameObjects.push_back(jsonObject);
-    }
-    data["GameObjects"] = jsonGameObjects;
+    //
+    //// emergency game objects
+    //nlohmann::json jsonGameObjects = nlohmann::json::array();
+    //for (const GameObject& gameObject : RapidHotload::GetEmergencyGameObjects()) {
+    //    nlohmann::json jsonObject;
+    //    jsonObject["position"] = { {"x", gameObject._transform.position.x}, {"y", gameObject._transform.position.y}, {"z", gameObject._transform.position.z} };
+    //    jsonObject["rotation"] = { {"x", gameObject._transform.rotation.x}, {"y", gameObject._transform.rotation.y}, {"z", gameObject._transform.rotation.z} };
+    //    jsonObject["scale"] = { {"x", gameObject._transform.scale.x}, {"y", gameObject._transform.scale.y}, {"z", gameObject._transform.scale.z} };
+    //    jsonObject["modelName"] = gameObject.model->GetName();
+    //    jsonObject["materialName"] = AssetManager::GetMaterialByIndex(gameObject._meshMaterialIndices[0])->_name;
+    //    jsonGameObjects.push_back(jsonObject);
+    //}
+    //data["GameObjects"] = jsonGameObjects;
 
     // Print it
     int indent = 4;
@@ -181,7 +181,7 @@ void Scene::LoadMapData(const std::string& fileName) {
     std::string fullPath = "res/maps/" + fileName;
     std::cout << "Loading map '" << fullPath << "'\n";
 
-    Scene::g_needToPlantTrees = true;
+    Scene::g_needToPlantTrees = false;
 
     std::ifstream file(fullPath);
     std::stringstream buffer;
@@ -567,6 +567,8 @@ void Scene::LoadDefaultScene() {
 
 
 
+
+
     if (false) {
 
         int index = CreateAnimatedGameObject();
@@ -673,129 +675,81 @@ void Scene::LoadDefaultScene() {
 
 
 
+    CreateGameObject();
+    GameObject* tree = GetGameObjectByIndex(GetGameObjectCount() - 1);
+    tree->SetPosition(8.3f, 2.7f, 1.1f);
+    tree->SetModel("ChristmasTree2");
+    tree->SetName("ChristmasTree2");
+    tree->SetMeshMaterial("Tree");
+    tree->SetMeshMaterialByMeshName("Balls", "Gold");
 
 
     if (true) {
         CreateGameObject();
         GameObject* pictureFrame = GetGameObjectByIndex(GetGameObjectCount() - 1);
-        pictureFrame->SetPosition(1.1f, 1.9f, -0.70f);
+        pictureFrame->SetPosition(9.6f, 4.1f, 2.00f);
         pictureFrame->SetScale(0.01f);
-        //pictureFrame->SetRotationY(HELL_PI / 2);
+        pictureFrame->SetRotationY(HELL_PI * 1.0f);
         pictureFrame->SetModel("PictureFrame_1");
         pictureFrame->SetMeshMaterial("LongFrame");
         pictureFrame->SetName("PictureFrame");
 
-        float cushionHeight = 0.555f;
-        Transform shapeOffset;
-        shapeOffset.position.y = cushionHeight * 0.5f;
-        shapeOffset.position.z = 0.5f;
-        PxShape* sofaShapeBigCube = Physics::CreateBoxShape(1, cushionHeight * 0.5f, 0.4f, shapeOffset);
-        PhysicsFilterData sofaFilterData;
-        sofaFilterData.raycastGroup = RAYCAST_DISABLED;
-        sofaFilterData.collisionGroup = CollisionGroup::ENVIROMENT_OBSTACLE;
-        sofaFilterData.collidesWith = (CollisionGroup)(GENERIC_BOUNCEABLE | BULLET_CASING | PLAYER | RAGDOLL);
+        PhysicsFilterData genericObstacleFilterData;
+        genericObstacleFilterData.raycastGroup = RAYCAST_DISABLED;
+        genericObstacleFilterData.collisionGroup = CollisionGroup::ENVIROMENT_OBSTACLE;
+        genericObstacleFilterData.collidesWith = (CollisionGroup)(GENERIC_BOUNCEABLE | BULLET_CASING | PLAYER | RAGDOLL);
 
-        float sofaX = 6.3f;
-        CreateGameObject();
-        GameObject* sofa = GetGameObjectByIndex(GetGameObjectCount() - 1);
-        sofa->SetPosition(sofaX, 0.4f, 1.89f);
-        sofa->SetRotationY(HELL_PI * -0.5f);
-        sofa->SetName("Sofa");
-        sofa->SetModel("Sofa_Cushionless");
-        sofa->SetMeshMaterial("Sofa");
-        sofa->SetKinematic(true);
-        sofa->SetRaycastShapeFromModelIndex(AssetManager::GetModelIndexByName("Sofa_Cushionless"));
-        sofa->AddCollisionShape(sofaShapeBigCube, sofaFilterData);
-        sofa->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("SofaBack_ConvexMesh"));
-        sofa->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("SofaLeftArm_ConvexMesh"));
-        sofa->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("SofaRightArm_ConvexMesh"));
-        sofa->SetModelMatrixMode(ModelMatrixMode::GAME_TRANSFORM);
-        sofa->SetCollisionType(CollisionType::STATIC_ENVIROMENT);
-        //sofa->MakeGold();
-
-        PhysicsFilterData cushionFilterData;
-        cushionFilterData.raycastGroup = RAYCAST_DISABLED;
-        cushionFilterData.collisionGroup = CollisionGroup::GENERIC_BOUNCEABLE;
-        cushionFilterData.collidesWith = CollisionGroup(ENVIROMENT_OBSTACLE | GENERIC_BOUNCEABLE);
-        float cushionDensity = 20.0f;
 
         CreateGameObject();
-        GameObject* cushion0 = GetGameObjectByIndex(GetGameObjectCount() - 1);
-        cushion0->SetPosition(sofaX, 0.4f, 1.89f);
-        cushion0->SetRotationY(HELL_PI * -0.5f);
-        cushion0->SetModel("SofaCushion0");
-        cushion0->SetMeshMaterial("Sofa");
-        cushion0->SetName("SofaCushion0");
-        cushion0->SetKinematic(false);
-        cushion0->SetRaycastShapeFromModelIndex(AssetManager::GetModelIndexByName("SofaCushion0"));
-        cushion0->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("SofaCushion0_ConvexMesh"));
-        cushion0->SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
-        cushion0->UpdateRigidBodyMassAndInertia(cushionDensity);
-        cushion0->SetCollisionType(CollisionType::BOUNCEABLE);
+        GameObject* mermaid = GetGameObjectByIndex(GetGameObjectCount() - 1);
+        mermaid->SetPosition(14.4f, 2.1f, -1.7);
+        mermaid->SetModel("Mermaid3");
+        mermaid->SetMeshMaterial("Gold");
+        mermaid->SetMeshMaterialByMeshName("Rock", "Rock");
+        mermaid->SetMeshMaterialByMeshName("BoobTube", "BoobTube");
+        mermaid->SetMeshMaterialByMeshName("Face", "MermaidFace");
+        mermaid->SetMeshMaterialByMeshName("Body", "MermaidBody");
+        mermaid->SetMeshMaterialByMeshName("Arms", "MermaidArms");
+        mermaid->SetMeshMaterialByMeshName("HairInner", "MermaidHair");
+        mermaid->SetMeshMaterialByMeshName("HairOutta", "MermaidHair");
+        mermaid->SetMeshMaterialByMeshName("HairScalp", "MermaidHair");
+        mermaid->SetMeshMaterialByMeshName("EyeLeft", "MermaidEye");
+        mermaid->SetMeshMaterialByMeshName("EyeRight", "MermaidEye");
+        mermaid->SetMeshMaterialByMeshName("Tail", "MermaidTail");
+        mermaid->SetMeshMaterialByMeshName("TailFin", "MermaidTail");
+        mermaid->SetMeshMaterialByMeshName("EyelashUpper", "MermaidLashes");
+        mermaid->SetMeshMaterialByMeshName("EyelashLower", "MermaidLashes");
+        mermaid->SetMeshMaterialByMeshName("ChristmasTopRed", "ChristmasTopRed");
+        mermaid->SetMeshMaterialByMeshName("ChristmasTopWhite", "ChristmasTopWhite");
+        mermaid->SetMeshMaterialByMeshName("Nails", "Nails");
+        mermaid->SetName("Mermaid");
+        mermaid->PrintMeshNames();
+        mermaid->SetKinematic(true);
+        mermaid->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("Rock_ConvexMesh"));
+        mermaid->SetModelMatrixMode(ModelMatrixMode::GAME_TRANSFORM);
+        mermaid->SetCollisionType(CollisionType::STATIC_ENVIROMENT);
 
         CreateGameObject();
-        GameObject* cushion1 = GetGameObjectByIndex(GetGameObjectCount() - 1);
-        cushion1->SetPosition(sofaX, 0.4f, 1.89f);
-        cushion1->SetModel("SofaCushion1");
-        cushion1->SetName("SofaCushion1");
-        cushion1->SetMeshMaterial("Sofa");
-        cushion1->SetKinematic(false);
-        cushion1->SetRaycastShapeFromModelIndex(AssetManager::GetModelIndexByName("SofaCushion0"));
-        cushion1->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("SofaCushion1_ConvexMesh"));
-        cushion1->SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
-        cushion1->UpdateRigidBodyMassAndInertia(cushionDensity);
-        cushion1->SetCollisionType(CollisionType::BOUNCEABLE);
-        cushion1->SetRotationY(HELL_PI * -0.5f);
+        GameObject* shark = GetGameObjectByIndex(GetGameObjectCount() - 1);
+        shark->SetPosition(14.4f, -0.8f, -15.7);
+        shark->SetModel("Shark");
+        shark->SetMeshMaterial("Shark");
+        shark->SetName("Shark");
+        shark->PrintMeshNames();
 
-        CreateGameObject();
-        GameObject* cushion2 = GetGameObjectByIndex(GetGameObjectCount() - 1);
-        cushion2->SetPosition(sofaX, 0.4f, 1.89f);
-        cushion2->SetModel("SofaCushion2");
-        cushion2->SetName("SofaCushion2");
-        cushion2->SetMeshMaterial("Sofa");
-        cushion2->SetKinematic(false);
-        cushion2->SetRaycastShapeFromModelIndex(AssetManager::GetModelIndexByName("SofaCushion2"));
-        cushion2->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("SofaCushion2_ConvexMesh"));
-        cushion2->SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
-        cushion2->UpdateRigidBodyMassAndInertia(cushionDensity);
-        cushion2->SetCollisionType(CollisionType::BOUNCEABLE);
-        cushion2->SetRotationY(HELL_PI * -0.5f);
 
-        CreateGameObject();
-        GameObject* cushion3 = GetGameObjectByIndex(GetGameObjectCount() - 1);
-        cushion3->SetPosition(sofaX, 0.4f, 1.89f);
-        cushion3->SetModel("SofaCushion3");
-        cushion3->SetName("SofaCushion3");
-        cushion3->SetMeshMaterial("Sofa");
-        cushion3->SetKinematic(false);
-        cushion3->SetRaycastShapeFromModelIndex(AssetManager::GetModelIndexByName("SofaCushion3"));
-        cushion3->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("SofaCushion3_ConvexMesh"));
-        cushion3->SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
-        cushion3->UpdateRigidBodyMassAndInertia(cushionDensity);
-        cushion3->SetCollisionType(CollisionType::BOUNCEABLE);
-        cushion3->SetRotationY(HELL_PI * -0.5f);
+        int testIndex = CreateAnimatedGameObject();
+        AnimatedGameObject& glock = g_animatedGameObjects[testIndex];
+        glock.SetFlag(AnimatedGameObject::Flag::NONE);
+        glock.SetSkinnedModel("SharkSkinned");
+        glock.SetName("SharkSkinned");
+        glock.SetAnimationModeToBindPose();
+        glock.SetAllMeshMaterials("Shark");
+        glock.SetPosition(glm::vec3(18.4f, -0.8f, -15.7));
+        glock.SetScale(0.01);
+        glock.PlayAndLoopAnimation("Shark_Swim", 1.0f);
+        
 
-        CreateGameObject();
-        GameObject* cushion4 = GetGameObjectByIndex(GetGameObjectCount() - 1);
-        cushion4->SetPosition(sofaX, 0.4f, 1.89f);
-        cushion4->SetModel("SofaCushion4");
-        cushion4->SetName("SofaCushion4");
-        cushion4->SetMeshMaterial("Sofa");
-        cushion4->SetKinematic(false);
-        cushion4->SetRaycastShapeFromModelIndex(AssetManager::GetModelIndexByName("SofaCushion4"));
-        cushion4->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("SofaCushion4_ConvexMesh"));
-        cushion4->SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
-        cushion4->UpdateRigidBodyMassAndInertia(15.0f);
-        cushion4->SetCollisionType(CollisionType::BOUNCEABLE);
-        cushion4->SetRotationY(HELL_PI * -0.5f);
-
-        CreateGameObject();
-        GameObject* tree = GetGameObjectByIndex(GetGameObjectCount() - 1);
-        tree->SetPosition(-0.3f, 0.5f, 3.5f);
-        tree->SetModel("ChristmasTree");
-        tree->SetName("ChristmasTree");
-        tree->SetMeshMaterial("Tree");
-        tree->SetMeshMaterialByMeshName("Balls", "Gold");
 
 
        //CreateGameObject();
@@ -806,22 +760,22 @@ void Scene::LoadDefaultScene() {
        //mermaid->SetMeshMaterial("Gold");
 
 
-        CreateGameObject();
-        GameObject* kitchen = GetGameObjectByIndex(GetGameObjectCount() - 1);
-        kitchen->SetPosition(-3.45f, 0.4, 3.15f);
-        kitchen->SetModel("Kitchen");
-        kitchen->SetName("Ceiling2");
-        kitchen->SetMeshMaterial("Tree");
-        kitchen->SetMeshMaterialByMeshName("Cupboards", "Wood");
-        kitchen->SetMeshMaterialByMeshName("Counter", "Ceiling2");
-        //kitchen->SetMeshMaterialByMeshName("Counter", "PresentA");
-        kitchen->SetMeshMaterialByMeshName("Sink", "Metal");
-
-        std::cout << "\n";
-        std::cout << "\n";
-        std::cout << "\n";
-        kitchen->PrintMeshNames();
-
+     //   CreateGameObject();
+     //   GameObject* kitchen = GetGameObjectByIndex(GetGameObjectCount() - 1);
+     //   kitchen->SetPosition(-3.45f, 0.4, 3.15f);
+     //   kitchen->SetModel("Kitchen");
+     //   kitchen->SetName("Ceiling2");
+     //   kitchen->SetMeshMaterial("Tree");
+     //   kitchen->SetMeshMaterialByMeshName("Cupboards", "Wood");
+     //   kitchen->SetMeshMaterialByMeshName("Counter", "Ceiling2");
+     //   //kitchen->SetMeshMaterialByMeshName("Counter", "PresentA");
+     //   kitchen->SetMeshMaterialByMeshName("Sink", "Metal");
+     //
+     //   std::cout << "\n";
+     //   std::cout << "\n";
+     //   std::cout << "\n";
+     //   kitchen->PrintMeshNames();
+     //
 
      //   GameObjectCreateInfo createInfo;
      //   createInfo.position = glm::vec3(-3.45f, 0.4, 3.15f);
@@ -847,198 +801,10 @@ void Scene::LoadDefaultScene() {
        // createInfo.modelName = "Kitchen";
     }
 
-    glm::vec3 houseOrigin = glm::vec3(2, 0.5, 0);
-
-
-    // RAILINGS
-
-    CreateGameObject();
-    GameObject* railingA = GetGameObjectByIndex(GetGameObjectCount() - 1);
-    railingA->SetPosition(houseOrigin);
-    railingA->SetName("House_RailingA");
-    railingA->SetModel("House_RailingA");
-    railingA->SetMeshMaterial("Ceiling2");
-    railingA->SetKinematic(true);
-    railingA->SetRaycastShapeFromModelIndex(AssetManager::GetModelIndexByName("House_RailingA_ConvexMesh"));
-    railingA->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("House_RailingA_ConvexMesh"));
-    railingA->SetModelMatrixMode(ModelMatrixMode::GAME_TRANSFORM);
-    railingA->SetCollisionType(CollisionType::STATIC_ENVIROMENT_NO_DOG);
-
-    CreateGameObject();
-    GameObject* railingB = GetGameObjectByIndex(GetGameObjectCount() - 1);
-    railingB->SetPosition(houseOrigin);
-    railingB->SetName("House_RailingB");
-    railingB->SetModel("House_RailingB");
-    railingB->SetMeshMaterial("Ceiling2");
-    railingB->SetKinematic(true);
-    railingB->SetRaycastShapeFromModelIndex(AssetManager::GetModelIndexByName("House_RailingB_ConvexMesh"));
-    railingB->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("House_RailingB_ConvexMesh"));
-    railingB->SetModelMatrixMode(ModelMatrixMode::GAME_TRANSFORM);
-    railingB->SetCollisionType(CollisionType::STATIC_ENVIROMENT_NO_DOG);
-
-    CreateGameObject();
-    GameObject* railingC = GetGameObjectByIndex(GetGameObjectCount() - 1);
-    railingC->SetPosition(houseOrigin);
-    railingC->SetName("House_RailingC");
-    railingC->SetModel("House_RailingC");
-    railingC->SetMeshMaterial("Ceiling2");
-    railingC->SetKinematic(true);
-    railingC->SetRaycastShapeFromModelIndex(AssetManager::GetModelIndexByName("House_RailingC_ConvexMesh"));
-    railingC->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("House_RailingC_ConvexMesh"));
-    railingC->SetModelMatrixMode(ModelMatrixMode::GAME_TRANSFORM);
-    railingC->SetCollisionType(CollisionType::STATIC_ENVIROMENT_NO_DOG);
-
-    CreateGameObject();
-    GameObject* railingD = GetGameObjectByIndex(GetGameObjectCount() - 1);
-    railingD->SetPosition(houseOrigin);
-    railingD->SetName("House_RailingD");
-    railingD->SetModel("House_RailingD");
-    railingD->SetMeshMaterial("Ceiling2");
-    railingD->SetKinematic(true);
-    railingD->SetRaycastShapeFromModelIndex(AssetManager::GetModelIndexByName("House_RailingD_ConvexMesh"));
-    railingD->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("House_RailingD_ConvexMesh"));
-    railingD->SetModelMatrixMode(ModelMatrixMode::GAME_TRANSFORM);
-    railingD->SetCollisionType(CollisionType::STATIC_ENVIROMENT_NO_DOG);
-
-    CreateGameObject();
-    GameObject* railingE = GetGameObjectByIndex(GetGameObjectCount() - 1);
-    railingE->SetPosition(houseOrigin);
-    railingE->SetName("House_RailingE");
-    railingE->SetModel("House_RailingE");
-    railingE->SetMeshMaterial("Ceiling2");
-    railingE->SetKinematic(true);
-    railingE->SetRaycastShapeFromModelIndex(AssetManager::GetModelIndexByName("House_RailingE_ConvexMesh"));
-    railingE->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("House_RailingE_ConvexMesh"));
-    railingE->SetModelMatrixMode(ModelMatrixMode::GAME_TRANSFORM);
-    railingE->SetCollisionType(CollisionType::STATIC_ENVIROMENT_NO_DOG);
-
-    CreateGameObject();
-    GameObject* railingE2 = GetGameObjectByIndex(GetGameObjectCount() - 1);
-    railingE2->SetPosition(houseOrigin + glm::vec3(0,0,1.5f));
-    railingE2->SetName("House_RailingE");
-    railingE2->SetModel("House_RailingE");
-    railingE2->SetMeshMaterial("Ceiling2");
-    railingE2->SetKinematic(true);
-    railingE2->SetRaycastShapeFromModelIndex(AssetManager::GetModelIndexByName("House_RailingE_ConvexMesh"));
-    railingE2->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("House_RailingE_ConvexMesh"));
-    railingE2->SetModelMatrixMode(ModelMatrixMode::GAME_TRANSFORM);
-    railingE2->SetCollisionType(CollisionType::STATIC_ENVIROMENT_NO_DOG);
-
-    CreateGameObject();
-    GameObject* railingF = GetGameObjectByIndex(GetGameObjectCount() - 1);
-    railingF->SetPosition(houseOrigin);
-    railingF->SetName("House_RailingF");
-    railingF->SetModel("House_RailingF");
-    railingF->SetMeshMaterial("Ceiling2");
-    railingF->SetKinematic(true);
-    railingF->SetRaycastShapeFromModelIndex(AssetManager::GetModelIndexByName("House_RailingF_ConvexMesh"));
-    railingF->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("House_RailingF_ConvexMesh"));
-    railingF->SetModelMatrixMode(ModelMatrixMode::GAME_TRANSFORM);
-    railingF->SetCollisionType(CollisionType::STATIC_ENVIROMENT_NO_DOG);
-
-    CreateGameObject();
-    GameObject* railingF2 = GetGameObjectByIndex(GetGameObjectCount() - 1);
-    railingF2->SetPosition(houseOrigin + glm::vec3(0, 0, 5.1f));
-    railingF2->SetName("House_RailingF");
-    railingF2->SetModel("House_RailingF");
-    railingF2->SetMeshMaterial("Ceiling2");
-    railingF2->SetKinematic(true);
-    railingF2->SetRaycastShapeFromModelIndex(AssetManager::GetModelIndexByName("House_RailingF_ConvexMesh"));
-    railingF2->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("House_RailingF_ConvexMesh"));
-    railingF2->SetModelMatrixMode(ModelMatrixMode::GAME_TRANSFORM);
-    railingF2->SetCollisionType(CollisionType::STATIC_ENVIROMENT_NO_DOG);
-
-
-    CreateGameObject();
-    GameObject* railingG = GetGameObjectByIndex(GetGameObjectCount() - 1);
-    railingG->SetPosition(houseOrigin);
-    railingG->SetName("House_RailingG");
-    railingG->SetModel("House_RailingG");
-    railingG->SetMeshMaterial("Ceiling2");
-    railingG->SetKinematic(true);
-    railingG->SetRaycastShapeFromModelIndex(AssetManager::GetModelIndexByName("House_RailingG_ConvexMesh"));
-    railingG->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("House_RailingG_ConvexMesh"));
-    railingG->SetModelMatrixMode(ModelMatrixMode::GAME_TRANSFORM);
-    railingG->SetCollisionType(CollisionType::STATIC_ENVIROMENT_NO_DOG);
-
-    CreateGameObject();
-    GameObject* railingG2 = GetGameObjectByIndex(GetGameObjectCount() - 1);
-    railingG2->SetPosition(houseOrigin + glm::vec3(0, 0, 8.8f));
-    railingG2->SetName("House_RailingG");
-    railingG2->SetModel("House_RailingG");
-    railingG2->SetMeshMaterial("Ceiling2");
-    railingG2->SetKinematic(true);
-    railingG2->SetRaycastShapeFromModelIndex(AssetManager::GetModelIndexByName("House_RailingG_ConvexMesh"));
-    railingG2->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("House_RailingG_ConvexMesh"));
-    railingG2->SetModelMatrixMode(ModelMatrixMode::GAME_TRANSFORM);
-    railingG2->SetCollisionType(CollisionType::STATIC_ENVIROMENT_NO_DOG);
-
-
-
- //  CreateGameObject();
- //  GameObject* houseWalls = GetGameObjectByIndex(GetGameObjectCount() - 1);
- //  houseWalls->SetPosition(houseOrigin);
- //  houseWalls->SetModel("House_WeatherBoardsA");
- //  houseWalls->SetName("BlenderHouse");
- //  houseWalls->SetMeshMaterial("Ceiling2");
-
-  // CreateGameObject();
-  // GameObject* houseRoof = GetGameObjectByIndex(GetGameObjectCount() - 1);
-  // houseRoof->SetPosition(houseOrigin);
-  // houseRoof->SetModel("House_RoofA");
-  // houseRoof->SetName("BlenderHouse");
-  // houseRoof->SetMeshMaterial("PresentB");
-  //
-  // CreateGameObject();
-  // GameObject* houseRoofB = GetGameObjectByIndex(GetGameObjectCount() - 1);
-  // houseRoofB->SetPosition(houseOrigin);
-  // houseRoofB->SetModel("House_RoofB");
-  // houseRoofB->SetName("BlenderHouse");
-  // houseRoofB->SetMeshMaterial("PresentA");
-
-    CreateGameObject();
-    GameObject* houseMisc = GetGameObjectByIndex(GetGameObjectCount() - 1);
-    houseMisc->SetPosition(houseOrigin);
-    houseMisc->SetModel("House_Misc_Stairs");
-    houseMisc->SetName("BlenderHouse");
-    houseMisc->SetMeshMaterial("Wood");
-
-    CreateGameObject();
-    GameObject* houseMiscA = GetGameObjectByIndex(GetGameObjectCount() - 1);
-    houseMiscA->SetPosition(houseOrigin);
-    houseMiscA->SetModel("House_Misc_Railing");
-    houseMiscA->SetName("BlenderHouse");
-    houseMiscA->SetMeshMaterial("Gold");
-
-    CreateGameObject();
-    GameObject* houseMiscB = GetGameObjectByIndex(GetGameObjectCount() - 1);
-    houseMiscB->SetPosition(houseOrigin);
-    houseMiscB->SetModel("House_Misc_Railing2");
-    houseMiscB->SetName("BlenderHouse");
-    houseMiscB->SetMeshMaterial("Gold");
-
-    CreateGameObject();
-    GameObject* houseMiscD = GetGameObjectByIndex(GetGameObjectCount() - 1);
-    houseMiscD->SetPosition(houseOrigin);
-    houseMiscD->SetModel("House_Misc_Railing3");
-    houseMiscD->SetName("BlenderHouse");
-    houseMiscD->SetMeshMaterial("Wood");
-
-    CreateGameObject();
-    GameObject* houseMiscC = GetGameObjectByIndex(GetGameObjectCount() - 1);
-    houseMiscC->SetPosition(houseOrigin);
-    houseMiscC->SetModel("House_Misc_TriangleWall");
-    houseMiscC->SetName("BlenderHouse");
-    houseMiscC->SetMeshMaterial("WallPaper");
-    houseMiscC->SetKinematic(true);
-    houseMiscC->SetRaycastShapeFromModelIndex(AssetManager::GetModelIndexByName("House_Misc_TriangleWall"));
-    houseMiscC->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("House_Misc_TriangleWall"));
-    houseMiscC->SetModelMatrixMode(ModelMatrixMode::GAME_TRANSFORM);
-    houseMiscC->SetCollisionType(CollisionType::STATIC_ENVIROMENT);
-
 
 
    // tree->SetPosition(-0.3f, 0.5f, 3.5f);
+    glm::vec3 presentsSpawnPoint = glm::vec3(8.35f, 4.5f, 1.2f);
     if (hardcoded || true) {
         float spacing = 0.3f;
         for (int x = -3; x < 1; x++) {
@@ -1047,7 +813,7 @@ void Scene::LoadDefaultScene() {
                     CreateGameObject();
                     GameObject* cube = GetGameObjectByIndex(GetGameObjectCount() - 1);
                     float halfExtent = 0.1f;
-                    cube->SetPosition(-0.3f + x * spacing, 1.5f + y * spacing * 1.25f, 3.5f + z * spacing);
+                    cube->SetPosition(presentsSpawnPoint.x + (x * spacing), presentsSpawnPoint.y + (y * spacing), presentsSpawnPoint.z + (z * spacing));
                     cube->SetRotationX(Util::RandomFloat(0, HELL_PI * 2));
                     cube->SetRotationY(Util::RandomFloat(0, HELL_PI * 2));
                     cube->SetRotationZ(Util::RandomFloat(0, HELL_PI * 2));
@@ -1449,41 +1215,56 @@ void Scene::CreateWeaponSpawnPoints() {
 void Scene::CreateDefaultSpawnPoints() {
 
     g_spawnPoints.clear();
+    
     {
         SpawnPoint& spawnPoint = g_spawnPoints.emplace_back();
-        spawnPoint.position = glm::vec3(5.5, 2, 4.0);
-        spawnPoint.rotation = glm::vec3(-0.3, -5.5, 0);
+       // spawnPoint.position = glm::vec3(5.5, 2, 4.0);
+        spawnPoint.position = glm::vec3(9, 4, -1.7);
+        spawnPoint.rotation = glm::vec3(-0.3, HELL_PI * -0.5f, 0);
     }
     {
         SpawnPoint& spawnPoint = g_spawnPoints.emplace_back();
-        spawnPoint.position = glm::vec3(-2.6, 2, 3.5);
-        spawnPoint.rotation = glm::vec3(-0.3, -6.3, 0);
+       // spawnPoint.position = glm::vec3(-2.6, 2, 3.5);
+        spawnPoint.position = glm::vec3(9, 4, 0);
+        spawnPoint.rotation = glm::vec3(-0.3, HELL_PI * -0.5f, 0);
     }
-    {
-        SpawnPoint& spawnPoint = g_spawnPoints.emplace_back();
-        spawnPoint.position = glm::vec3(-0.88, 2.06f, -7.91);
-        spawnPoint.rotation = glm::vec3(-0.28, -3.18, 0);
-    }
-    {
-        SpawnPoint& spawnPoint = g_spawnPoints.emplace_back();
-        spawnPoint.position = glm::vec3(-0.38, 4.68f, -7.94);
-        spawnPoint.rotation = glm::vec3(-0.15, -9.44, 0);
-    }
-    {
-        SpawnPoint& spawnPoint = g_spawnPoints.emplace_back();
-        spawnPoint.position = glm::vec3(6.2, 4.66f, -0.4);
-        spawnPoint.rotation = glm::vec3(-0.3, -4.74, 0);
-    }
-    {
-        SpawnPoint& spawnPoint = g_spawnPoints.emplace_back();
-        spawnPoint.position = glm::vec3(25.3, 3.38f, 15.43);
-        spawnPoint.rotation = glm::vec3(-0.3, -5.49, 0);
-    }
-    {
-        SpawnPoint& spawnPoint = g_spawnPoints.emplace_back();
-        spawnPoint.position = glm::vec3(17.05, -0.24f, -26.41);
-        spawnPoint.rotation = glm::vec3(-0.3, -3.33, 0);
-    }
+
+
+    //{
+    //    SpawnPoint& spawnPoint = g_spawnPoints.emplace_back();
+    //    spawnPoint.position = glm::vec3(5.5, 2, 4.0);
+    //    spawnPoint.rotation = glm::vec3(-0.3, -5.5, 0);
+    //}
+    //{
+    //    SpawnPoint& spawnPoint = g_spawnPoints.emplace_back();
+    //    spawnPoint.position = glm::vec3(-2.6, 2, 3.5);
+    //    spawnPoint.rotation = glm::vec3(-0.3, -6.3, 0);
+    //}
+    //{
+    //    SpawnPoint& spawnPoint = g_spawnPoints.emplace_back();
+    //    spawnPoint.position = glm::vec3(-0.88, 2.06f, -7.91);
+    //    spawnPoint.rotation = glm::vec3(-0.28, -3.18, 0);
+    //}
+    //{
+    //    SpawnPoint& spawnPoint = g_spawnPoints.emplace_back();
+    //    spawnPoint.position = glm::vec3(-0.38, 4.68f, -7.94);
+    //    spawnPoint.rotation = glm::vec3(-0.15, -9.44, 0);
+    //}
+    //{
+    //    SpawnPoint& spawnPoint = g_spawnPoints.emplace_back();
+    //    spawnPoint.position = glm::vec3(6.2, 4.66f, -0.4);
+    //    spawnPoint.rotation = glm::vec3(-0.3, -4.74, 0);
+    //}
+    //{
+    //    SpawnPoint& spawnPoint = g_spawnPoints.emplace_back();
+    //    spawnPoint.position = glm::vec3(25.3, 3.38f, 15.43);
+    //    spawnPoint.rotation = glm::vec3(-0.3, -5.49, 0);
+    //}
+    //{
+    //    SpawnPoint& spawnPoint = g_spawnPoints.emplace_back();
+    //    spawnPoint.position = glm::vec3(17.05, -0.24f, -26.41);
+    //    spawnPoint.rotation = glm::vec3(-0.3, -3.33, 0);
+    //}
 
   /* {
         SpawnPoint& spawnPoint = g_spawnPoints.emplace_back();
@@ -1661,17 +1442,17 @@ void Scene::Update(float deltaTime) {
         dobermann.Update(deltaTime);
     }
 
-    if (huntedByDogs && dobermanAudioHandlesVector.empty()) {
-        dobermanAudioHandlesVector.push_back(Audio::PlayAudio("Doberman_Loop.wav", 1.0f));
-        std::cout << "creating new sound\n";
-    }
-
-    if (!huntedByDogs && dobermanAudioHandlesVector.size()) {
-        dobermanAudioHandlesVector[0].sound->release();
-        dobermanAudioHandlesVector.clear();
-        std::cout << "STOPPING AUDIO\n";
-        Audio::g_loadedAudio.clear();
-    }
+    //if (huntedByDogs && dobermanAudioHandlesVector.empty()) {
+    //    dobermanAudioHandlesVector.push_back(Audio::PlayAudio("Doberman_Loop.wav", 1.0f));
+    //    std::cout << "creating new sound\n";
+    //}
+    //
+    //if (!huntedByDogs && dobermanAudioHandlesVector.size()) {
+    //    dobermanAudioHandlesVector[0].sound->release();
+    //    dobermanAudioHandlesVector.clear();
+    //    std::cout << "STOPPING AUDIO\n";
+    //    Audio::g_loadedAudio.clear();
+    //}
 
 
 
@@ -2079,7 +1860,6 @@ std::vector<RenderItem3D> GetTreeRenderItems() {
             tree->SetMeshMaterial("TreeBark");
             tree->SetKinematic(true);
             tree->SetRaycastShapeFromModelIndex(AssetManager::GetModelIndexByName("Tree_0_ConvexHull"));
-            //tree->AddCollisionShape(sofaShapeBigCube, sofaFilterData);
             tree->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("Tree_0_ConvexHull"));
             tree->SetModelMatrixMode(ModelMatrixMode::GAME_TRANSFORM);
             tree->SetCollisionType(CollisionType::STATIC_ENVIROMENT_NO_DOG);
@@ -2831,6 +2611,8 @@ void Scene::ProcessBullets() {
         Audio::PlayAudio(file.c_str(), 0.9f);
     }
 }
+
+
 void Scene::LoadHardCodedObjects() {
 
     _volumetricBloodSplatters.clear();
@@ -3123,7 +2905,6 @@ void Scene::LoadHardCodedObjects() {
         sofa->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("SofaRightArm_ConvexMesh"));
         sofa->SetModelMatrixMode(ModelMatrixMode::GAME_TRANSFORM);
         sofa->SetCollisionType(CollisionType::STATIC_ENVIROMENT);
-        //sofa->MakeGold();
 
         PhysicsFilterData cushionFilterData;
         cushionFilterData.raycastGroup = RAYCAST_DISABLED;
@@ -4303,4 +4084,115 @@ void Scene::CreateGameObject(GameObjectCreateInfo createInfo) {
     gameObject.SetName("GameObject");
     gameObject.SetModel(createInfo.modelName);
     gameObject.SetMeshMaterial(createInfo.materialName.c_str());
+}
+
+
+void Scene::CreateCouch() {
+
+    float cushionHeight = 0.555f;
+    Transform shapeOffset;
+    shapeOffset.position.y = cushionHeight * 0.5f;
+    shapeOffset.position.z = 0.5f;
+    PxShape* sofaShapeBigCube = Physics::CreateBoxShape(1, cushionHeight * 0.5f, 0.4f, shapeOffset);
+
+    PhysicsFilterData genericObstacleFilterData;
+    genericObstacleFilterData.raycastGroup = RAYCAST_DISABLED;
+    genericObstacleFilterData.collisionGroup = CollisionGroup::ENVIROMENT_OBSTACLE;
+    genericObstacleFilterData.collidesWith = (CollisionGroup)(GENERIC_BOUNCEABLE | BULLET_CASING | PLAYER | RAGDOLL);
+
+    float sofaX = 7.4f;
+    float sofaY = 2.7f;
+    float sofaZ = -1.89f;
+    CreateGameObject();
+    GameObject* sofa = GetGameObjectByIndex(GetGameObjectCount() - 1);
+    sofa->SetPosition(sofaX, sofaY, sofaZ);
+    sofa->SetRotationY(HELL_PI * -0.5f);
+    sofa->SetName("Sofa");
+    sofa->SetModel("Sofa_Cushionless");
+    sofa->SetMeshMaterial("Sofa");
+    sofa->SetKinematic(true);
+    sofa->SetRaycastShapeFromModelIndex(AssetManager::GetModelIndexByName("Sofa_Cushionless"));
+    sofa->AddCollisionShape(sofaShapeBigCube, genericObstacleFilterData);
+    sofa->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("SofaBack_ConvexMesh"));
+    sofa->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("SofaLeftArm_ConvexMesh"));
+    sofa->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("SofaRightArm_ConvexMesh"));
+    sofa->SetModelMatrixMode(ModelMatrixMode::GAME_TRANSFORM);
+    sofa->SetCollisionType(CollisionType::STATIC_ENVIROMENT);
+    //sofa->MakeGold();
+
+    PhysicsFilterData cushionFilterData;
+    cushionFilterData.raycastGroup = RAYCAST_DISABLED;
+    cushionFilterData.collisionGroup = CollisionGroup::GENERIC_BOUNCEABLE;
+    cushionFilterData.collidesWith = CollisionGroup(ENVIROMENT_OBSTACLE | GENERIC_BOUNCEABLE);
+    float cushionDensity = 20.0f;
+
+    CreateGameObject();
+    GameObject* cushion0 = GetGameObjectByIndex(GetGameObjectCount() - 1);
+    cushion0->SetPosition(sofaX, 0.4f, 1.89f);
+    cushion0->SetRotationY(HELL_PI * -0.5f);
+    cushion0->SetModel("SofaCushion0");
+    cushion0->SetMeshMaterial("Sofa");
+    cushion0->SetName("SofaCushion0");
+    cushion0->SetKinematic(false);
+    cushion0->SetRaycastShapeFromModelIndex(AssetManager::GetModelIndexByName("SofaCushion0"));
+    cushion0->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("SofaCushion0_ConvexMesh"));
+    cushion0->SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
+    cushion0->UpdateRigidBodyMassAndInertia(cushionDensity);
+    cushion0->SetCollisionType(CollisionType::BOUNCEABLE);
+
+    CreateGameObject();
+    GameObject* cushion1 = GetGameObjectByIndex(GetGameObjectCount() - 1);
+    cushion1->SetPosition(sofaX, 0.4f, 1.89f);
+    cushion1->SetModel("SofaCushion1");
+    cushion1->SetName("SofaCushion1");
+    cushion1->SetMeshMaterial("Sofa");
+    cushion1->SetKinematic(false);
+    cushion1->SetRaycastShapeFromModelIndex(AssetManager::GetModelIndexByName("SofaCushion0"));
+    cushion1->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("SofaCushion1_ConvexMesh"));
+    cushion1->SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
+    cushion1->UpdateRigidBodyMassAndInertia(cushionDensity);
+    cushion1->SetCollisionType(CollisionType::BOUNCEABLE);
+    cushion1->SetRotationY(HELL_PI * -0.5f);
+
+    CreateGameObject();
+    GameObject* cushion2 = GetGameObjectByIndex(GetGameObjectCount() - 1);
+    cushion2->SetPosition(sofaX, 0.4f, 1.89f);
+    cushion2->SetModel("SofaCushion2");
+    cushion2->SetName("SofaCushion2");
+    cushion2->SetMeshMaterial("Sofa");
+    cushion2->SetKinematic(false);
+    cushion2->SetRaycastShapeFromModelIndex(AssetManager::GetModelIndexByName("SofaCushion2"));
+    cushion2->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("SofaCushion2_ConvexMesh"));
+    cushion2->SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
+    cushion2->UpdateRigidBodyMassAndInertia(cushionDensity);
+    cushion2->SetCollisionType(CollisionType::BOUNCEABLE);
+    cushion2->SetRotationY(HELL_PI * -0.5f);
+
+    CreateGameObject();
+    GameObject* cushion3 = GetGameObjectByIndex(GetGameObjectCount() - 1);
+    cushion3->SetPosition(sofaX, 0.4f, 1.89f);
+    cushion3->SetModel("SofaCushion3");
+    cushion3->SetName("SofaCushion3");
+    cushion3->SetMeshMaterial("Sofa");
+    cushion3->SetKinematic(false);
+    cushion3->SetRaycastShapeFromModelIndex(AssetManager::GetModelIndexByName("SofaCushion3"));
+    cushion3->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("SofaCushion3_ConvexMesh"));
+    cushion3->SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
+    cushion3->UpdateRigidBodyMassAndInertia(cushionDensity);
+    cushion3->SetCollisionType(CollisionType::BOUNCEABLE);
+    cushion3->SetRotationY(HELL_PI * -0.5f);
+
+    CreateGameObject();
+    GameObject* cushion4 = GetGameObjectByIndex(GetGameObjectCount() - 1);
+    cushion4->SetPosition(sofaX, 0.4f, 1.89f);
+    cushion4->SetModel("SofaCushion4");
+    cushion4->SetName("SofaCushion4");
+    cushion4->SetMeshMaterial("Sofa");
+    cushion4->SetKinematic(false);
+    cushion4->SetRaycastShapeFromModelIndex(AssetManager::GetModelIndexByName("SofaCushion4"));
+    cushion4->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("SofaCushion4_ConvexMesh"));
+    cushion4->SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
+    cushion4->UpdateRigidBodyMassAndInertia(15.0f);
+    cushion4->SetCollisionType(CollisionType::BOUNCEABLE);
+    cushion4->SetRotationY(HELL_PI * -0.5f);
 }

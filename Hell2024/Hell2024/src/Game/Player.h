@@ -114,6 +114,7 @@ private:
 
 
 public:
+    bool m_grounded = true;
     int m_killCount = 0;
     int m_suicideCount = 0;
     glm::mat4 m_weaponSwayMatrix = glm::mat4(1);
@@ -121,6 +122,13 @@ public:
     bool g_awaitingRespawn = true;
     int m_interactbleGameObjectIndex = -1;
     bool m_flashlightOn = false;
+    bool m_underwater = false;
+
+
+    bool m_cameraUnderwater = false;
+    bool m_cameraUnderwaterLastFrame = false;
+    bool m_feetUnderWater = false;
+    bool m_feetUnderwaterLastFrame = false;
 
     Player() = default;
     Player(int playerIndex);
@@ -132,11 +140,16 @@ public:
     void UpdateMouseLook(float deltaTime);
     void UpdateViewMatrix(float deltaTime);
     void UpdateMovement(float deltaTime);
+    void UpdateMovementRegular(float deltaTime);
+    void UpdateMovementSwimming(float deltaTime);
     void UpdatePickupText(float deltaTime);
     void UpdateCharacterModelAnimation(float deltaTime);
     void UpdateTimers(float deltaTime);
     void UpdateHeadBob(float deltaTime);
     void UpdateAudio(float deltaTime);
+
+    // Character Controller
+    void MoveCharacterController(glm::vec3 displacement);
 
     // Checks
     void CheckForAndEvaluateFlashlight(float deltaTime);
@@ -156,6 +169,13 @@ public:
     bool IsDead();
     bool IsAlive();
     bool HasControl();
+
+    // Water
+    bool EnteredUnderwater();
+    bool EyesExitedUnderwater();
+    bool CameraIsUnderwater();
+
+    // Audio
 
     // Weapon shit
     void UpdateViewWeaponLogic(float deltaTime);
@@ -287,6 +307,7 @@ public:
 	glm::vec3 GetCameraRight();
 	glm::vec3 GetCameraForward();
 	glm::vec3 GetCameraUp();
+    glm::mat4 GetWaterReflectionViewMatrix();
     //int GetCurrentWeaponIndex();
 
     void UpdateViewWeaponLogicAndAnimations(float deltaTime);
@@ -324,7 +345,9 @@ public:
 
     glm::vec3 GetGlockBarrelPosition();
 
-	bool m_grounded = true;
+    bool m_underWater = false;
+
+    bool IsUnderWater();
 
     void PickUpShotgun();
 
@@ -380,6 +403,7 @@ public:
 
 
     bool RespawnAllowed();
+    void ResetViewHeights();
 
 private:
 
@@ -396,19 +420,25 @@ private:
     float _footstepAudioLoopLength = 0.5;
 
 	glm::vec3 _position = glm::vec3(0);
-	glm::vec3 _rotation = glm::vec3(-0.1f, -HELL_PI * 0.5f, 0);
-	float _viewHeightStanding = 1.65f;
-	float _viewHeightCrouching = 1.15f;
+    glm::vec3 _rotation = glm::vec3(-0.1f, -HELL_PI * 0.5f, 0);
+    float m_realViewHeightStanding = 1.65f;
+    float m_realViewHeightCrouching = 1.15f;
+    float m_viewHeightStanding = m_realViewHeightStanding;
+    float m_viewHeightCrouching = m_realViewHeightCrouching;
 	float _crouchDownSpeed = 17.5f;
-	float _currentViewHeight = _viewHeightStanding;
-	float m_walkingSpeed = 4.85f;
-	float m_crouchingSpeed = 2.325f;
+	float _currentViewHeight = m_viewHeightStanding;
+    float m_walkingSpeed = 4.85f;
+    float m_crouchingSpeed = 2.325f;
+    float m_swimmingSpeed = 3.5f;
 	glm::mat4 _viewMatrix = glm::mat4(1);
 	glm::mat4 _inverseViewMatrix = glm::mat4(1);
 	glm::vec3 _viewPos = glm::vec3(0);
 	glm::vec3 _forward = glm::vec3(0);
 	glm::vec3 _up = glm::vec3(0);
 	glm::vec3 _right = glm::vec3(0);
+
+    float m_waterImpactVelocity = 0;
+
 
 	float _muzzleFlashRotation = 0;
 	//int _currentWeaponIndex = 0;

@@ -104,13 +104,29 @@ struct UIRenderInfo {
     void* parent = nullptr;
 };
 
-struct FileInfo {
+struct FileInfoOLD {
     std::string fullpath;
     std::string directory;
     std::string filename;
     std::string filetype;
     std::string materialType;
 };
+
+struct FileInfo {
+    std::string path;
+    std::string name;
+    std::string ext;
+    std::string dir;
+    std::string GetFileNameWithExtension() {
+        if (ext.length() > 0) {
+            return name + "." + ext;
+        }
+        else {
+            return name;
+        }
+    }
+};
+
 
 struct Material {
     Material() {}

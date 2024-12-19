@@ -197,10 +197,16 @@ struct Vertex {
         position = pos;
         normal = norm;
     }
-   glm::vec3 position = glm::vec3(0);
-   glm::vec3 normal = glm::vec3(0);
-   glm::vec2 uv = glm::vec2(0);
-   glm::vec3 tangent = glm::vec3(0);
+    Vertex(glm::vec3 _position, glm::vec3 _normal, glm::vec2 _uv, glm::vec3 _tangent) {
+        position = _position;
+        normal = _normal;
+        uv = _uv;
+        tangent = _tangent;
+    }
+    glm::vec3 position = glm::vec3(0);
+    glm::vec3 normal = glm::vec3(0);
+    glm::vec2 uv = glm::vec2(0);
+    glm::vec3 tangent = glm::vec3(0);
     bool operator==(const Vertex& other) const {
         return position == other.position && normal == other.normal && uv == other.uv;
     }

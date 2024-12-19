@@ -128,7 +128,7 @@ void APIENTRY glDebugOutput(GLenum source, GLenum type, unsigned int id, GLenum 
         case GL_DEBUG_TYPE_OTHER:               std::cout << "Type: Other"; break;
     }
     std::cout << "\n";
-    switch (severity) {
+        switch (severity) {
         case GL_DEBUG_SEVERITY_HIGH:         std::cout << "Severity: high"; break;
         case GL_DEBUG_SEVERITY_MEDIUM:       std::cout << "Severity: medium"; break;
         case GL_DEBUG_SEVERITY_LOW:          std::cout << "Severity: low"; break;
