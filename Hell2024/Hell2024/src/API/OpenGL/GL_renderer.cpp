@@ -1039,6 +1039,8 @@ void OpenGLRenderer::WaterPass(RenderData& renderData) {
     glBindTexture(GL_TEXTURE_2D, reflectionFBO.GetColorAttachmentHandleByName("Color"));
     glActiveTexture(GL_TEXTURE7);
     glBindTexture(GL_TEXTURE_2D, waterFrameBuffer.GetColorAttachmentHandleByName("Mask"));
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, gBuffer.GetColorAttachmentHandleByName("Normal"));
     glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_TEXTURE_FETCH_BARRIER_BIT);
     glDispatchCompute(gBuffer.GetWidth() / 16, gBuffer.GetHeight() / 4, 1);
 

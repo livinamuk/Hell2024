@@ -729,28 +729,63 @@ void Scene::LoadDefaultScene() {
         mermaid->SetModelMatrixMode(ModelMatrixMode::GAME_TRANSFORM);
         mermaid->SetCollisionType(CollisionType::STATIC_ENVIROMENT);
 
-        CreateGameObject();
-        GameObject* shark = GetGameObjectByIndex(GetGameObjectCount() - 1);
-        shark->SetPosition(14.4f, -0.8f, -15.7);
-        shark->SetModel("Shark");
-        shark->SetMeshMaterial("Shark");
-        shark->SetName("Shark");
-        shark->PrintMeshNames();
+      //  CreateGameObject();
+      //  GameObject* shark = GetGameObjectByIndex(GetGameObjectCount() - 1);
+      //  shark->SetPosition(14.4f, -0.8f, -15.7);
+      //  shark->SetModel("Shark");
+      //  shark->SetMeshMaterial("Shark");
+      //  shark->SetName("Shark");
+      //  shark->PrintMeshNames();
 
 
-        int testIndex = CreateAnimatedGameObject();
-        AnimatedGameObject& glock = g_animatedGameObjects[testIndex];
-        glock.SetFlag(AnimatedGameObject::Flag::NONE);
-        glock.SetSkinnedModel("SharkSkinned");
-        glock.SetName("SharkSkinned");
-        glock.SetAnimationModeToBindPose();
-        glock.SetAllMeshMaterials("Shark");
-        glock.SetPosition(glm::vec3(18.4f, -0.8f, -15.7));
-        glock.SetScale(0.01);
-        glock.PlayAndLoopAnimation("Shark_Swim", 1.0f);
-        
+        for (int i = 0; i < 4; i++) {
+            if (i == 0 || i == 3) {
+                continue;
+            }
+            int index = CreateAnimatedGameObject();
+            AnimatedGameObject& shark = g_animatedGameObjects[index];
+            shark.SetFlag(AnimatedGameObject::Flag::NONE);
+            shark.SetSkinnedModel("SharkSkinned");
+            shark.SetName("SharkSkinned");
+            shark.SetAnimationModeToBindPose();
+            shark.SetAllMeshMaterials("Shark");
+            shark.SetPosition(glm::vec3((i * 7 + 0), -0.1f, -15.7));
 
 
+            if (i == 0) {
+                shark.PlayAndLoopAnimation("Shark_Swim", 1.0f);
+            }
+            if (i == 1) {
+                shark.PlayAndLoopAnimation("Shark_SwimFast", 1.0f);
+                PxU32 ragdollCollisionGroupFlags = RaycastGroup::RAYCAST_ENABLED;
+                shark.LoadRagdoll("Shark.rag", ragdollCollisionGroupFlags);
+            }
+            if (i == 2) {
+                shark.PlayAndLoopAnimation("Shark_Attack", 1.0f);
+                PxU32 ragdollCollisionGroupFlags = RaycastGroup::RAYCAST_ENABLED;
+                shark.LoadRagdoll("Shark.rag", ragdollCollisionGroupFlags);
+            }
+            if (i == 3) {
+                shark.PlayAndLoopAnimation("Shark_Die", 1.0f);
+            }
+        }
+
+       //     int index = CreateAnimatedGameObject();
+       //     AnimatedGameObject& shark = g_animatedGameObjects[index];
+       //     shark.SetFlag(AnimatedGameObject::Flag::NONE);
+       //     shark.SetSkinnedModel("SharkSkinned");
+       //     shark.SetName("SharkSkinned");
+       //     shark.SetAnimationModeToBindPose();
+       //     shark.SetAllMeshMaterials("Shark");
+       //     shark.SetPosition(glm::vec3((0 * 4 + 6), -0.1f, -15.7));
+       //   //  shark.SetScale(0.01);
+       //    
+       //     //  PxU32 ragdollCollisionGroupFlags = RaycastGroup::RAYCAST_ENABLED;
+       //     //  shark.PlayAndLoopAnimation("Shark_Swim", 1.0f);
+       //     //  shark.LoadRagdoll("Shark.rag", ragdollCollisionGroupFlags);
+       //    
+       //    
+       //         shark.PlayAndLoopAnimation("Shark_SwimFast2", 1.0f);
 
        //CreateGameObject();
        //GameObject* mermaid = GetGameObjectByIndex(GetGameObjectCount() - 1);

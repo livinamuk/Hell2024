@@ -16,7 +16,8 @@
 void RapidHotload::Update() {
 
     if (Input::KeyPressed(HELL_KEY_U)) {
-        Texture* texture = AssetManager::GetTextureByName("MermaidHair_ALB");
+        Texture* texture;
+        /*texture = AssetManager::GetTextureByName("MermaidHair_ALB");
         if (texture) {
             texture->GetGLTexture().HotloadFromPath("res/textures/ui/MermaidHair_ALB.png");
         }
@@ -39,6 +40,18 @@ void RapidHotload::Update() {
         texture = AssetManager::GetTextureByName("Nails_NRM");
         if (texture) {
             texture->GetGLTexture().HotloadFromPath("res/textures/ui/Nails_NRM.png");
+        }*/
+        texture = AssetManager::GetTextureByName("Shark_NRM");
+        if (texture) {
+            texture->GetGLTexture().HotloadFromPath("res/textures/ui/Shark_NRM.png");
+        }
+        texture = AssetManager::GetTextureByName("Shark_RMA");
+        if (texture) {
+            texture->GetGLTexture().HotloadFromPath("res/textures/ui/Shark_RMA.png");
+        }
+        texture = AssetManager::GetTextureByName("Shark_ALB");
+        if (texture) {
+            texture->GetGLTexture().HotloadFromPath("res/textures/ui/Shark_ALB.png");
         }
     }
 }

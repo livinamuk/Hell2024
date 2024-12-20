@@ -10,6 +10,7 @@ layout (binding = 4) uniform sampler2D waterNormalTexture;
 layout (binding = 5) uniform sampler2D waterDUDVTexture;
 layout (binding = 6) uniform sampler2D waterReflectionTexture;
 layout (binding = 7) uniform sampler2D waterMaskTexture;
+layout (binding = 0) uniform sampler2D gBufferNormalTexture;
 
 struct CameraData {
     mat4 projection;
@@ -34,16 +35,10 @@ layout(std430, binding = 16) readonly buffer CameraDataArray {
     CameraData cameraDataArray[];
 };
 
-    //g_frameBuffers.water.CreateAttachment("WorldPosXZ", GL_RG16F);
-    //g_frameBuffers.water.CreateAttachment("Mask", GL_R8);
-    //g_frameBuffers.water.CreateAttachment("Color", GL_RGBA8);
-
 uniform float time;
 uniform float viewportWidth;
 uniform float viewportHeight;
 uniform float waterHeight;
-//uniform vec3 viewPos;
-//uniform int playerIndex;
 
 // Distortion params
 const float waveStrength = 0.0075;
@@ -52,7 +47,7 @@ const float timeFactorX = -0.00125;
 const float waterUVscaling = 0.45;
 
 // Gaussian params
-const int blurRadius = 5;  // Kernel radius (controls blur intensity)
+const int blurRadius = 5;    // Kernel radius (controls blur intensity)
 const float sigma = 20.0;    // Standard deviation for Gaussian
 
 // Reflection and refraction ripple params
@@ -60,6 +55,8 @@ const float rippleWaveStrength = 0.0001;
 const float rippleFrequency = 0.1;
 const float rippleSpeed = 2.0;
 const float rippleStrength = 0.00075;
+
+const float PI = 3.14159265359;
 
 void contrastAdjust( inout vec3 color, in float c) {
     float t = 0.5 - c * 0.5;
@@ -96,18 +93,13 @@ vec3 filmPixel(vec2 uv) {
     return fract(sin(uvs * vec2(12.9898, 78.233) * time) * 43758.5453);
 }
 
-//float MapRange(float value, float oldMin, float oldMax, float newMin, float newMax) {
-//    return newMin + (value - oldMin) * (newMax - newMin) / (oldMax - oldMin);
-//}
 
 int MapRange(int value, int oldMin, int oldMax, int newMin, int newMax) {
     return newMin + (value - oldMin) * (newMax - newMin) / (oldMax - oldMin);
 }
 
-
-
 // Gaussian weights
-float gaussian(float x, float sigma) {
+float Gaussian(float x, float sigma) {
     return exp(-(x * x) / (2.0 * sigma * sigma));
 }
 
@@ -125,7 +117,7 @@ vec3 GaussianBlur(ivec2 pixelCoords, vec2 uv, vec2 direction, int radius, float 
     vec2 offsetMultipler = direction / imageSize(waterColorTexture);
     for (int i = -radius; i <= radius; ++i) {
         vec2 offset = vec2(i, i) * offsetMultipler;
-        float weight = gaussian(float(i), sigma);
+        float weight = Gaussian(float(i), sigma);
         vec2 sampleUV = uv + (offset);//* waterMask);
         //if (IsValidWaterUV(sampleUV, waterMask)) {
             color += texture(finalLightingTexture, sampleUV).rgb * weight;               
@@ -135,9 +127,6 @@ vec3 GaussianBlur(ivec2 pixelCoords, vec2 uv, vec2 direction, int radius, float 
     return color / weightSum;
 }
 
-
-
-const float PI = 3.14159265359;
 
 float D_GGX(float NoH, float roughness) {
   float alpha = roughness * roughness;
@@ -239,7 +228,6 @@ vec3 CalculateSpecular(vec3 viewPos, vec3 viewDir, vec3  WaterWorldPos, vec3 wat
                           step(WaterWorldPos.x, roomCenterPos.x + roomHalfWidth) *
                           step(roomCenterPos.z - roomHalfDepth, WaterWorldPos.z) *
                           step(WaterWorldPos.z, roomCenterPos.z + roomHalfDepth);
-
     return brdf * isInsideRoom;
 }
 
@@ -260,7 +248,7 @@ vec3 CalculateMoonSpecular(vec3 viewPos, vec3 viewDir, vec3 WaterWorldPos, vec3 
     vec3 lightDir = (viewPos.y < WaterWorldPos.y) ? vec3(0, -1, 0) : vec3(0, 1, 0);
     // Go
     vec3 lightColor = vec3(1, 0.98, 0.94);  
-    float testRadius = 10;
+    float testRadius = 15;
     float fresnelReflect = 0.375;
     float lightAttenuation = smoothstep(testRadius, 0, length(viewPos - WaterWorldPos.xyz));
     float irradiance = max(dot(lightDir, normal), 0.0) * lightAttenuation;
@@ -276,19 +264,121 @@ vec3 ApplyFog(vec3 color, float dist, vec3 fogColor, float fogStart, float fogEn
     return mix(color.rgb, fogColor, fogFactor);
 }
 
+
+
+
+vec4 permute(vec4 t) {
+    return t * (t * 34.0 + 133.0);
+}
+
+// Gradient set is a normalized expanded rhombic dodecahedron
+vec3 grad(float hash) {
+    
+    // Random vertex of a cube, +/- 1 each
+    vec3 cube = mod(floor(hash / vec3(1.0, 2.0, 4.0)), 2.0) * 2.0 - 1.0;
+    
+    // Random edge of the three edges connected to that vertex
+    // Also a cuboctahedral vertex
+    // And corresponds to the face of its dual, the rhombic dodecahedron
+    vec3 cuboct = cube;
+    cuboct[int(hash / 16.0)] = 0.0;
+    
+    // In a funky way, pick one of the four points on the rhombic face
+    float type = mod(floor(hash / 8.0), 2.0);
+    vec3 rhomb = (1.0 - type) * cube + type * (cuboct + cross(cube, cuboct));
+    
+    // Expand it so that the new edges are the same length
+    // as the existing ones
+    vec3 grad = cuboct * 1.22474487139 + rhomb;
+    
+    // To make all gradients the same length, we only need to shorten the
+    // second type of vector. We also put in the whole noise scale constant.
+    // The compiler should reduce it into the existing floats. I think.
+    grad *= (1.0 - 0.042942436724648037 * type) * 3.5946317686139184;
+    
+    return grad;
+}
+
+// BCC lattice split up into 2 cube lattices
+vec4 os2NoiseWithDerivativesPart(vec3 X) {
+    vec3 b = floor(X);
+    vec4 i4 = vec4(X - b, 2.5);
+    
+    // Pick between each pair of oppposite corners in the cube.
+    vec3 v1 = b + floor(dot(i4, vec4(.25)));
+    vec3 v2 = b + vec3(1, 0, 0) + vec3(-1, 1, 1) * floor(dot(i4, vec4(-.25, .25, .25, .35)));
+    vec3 v3 = b + vec3(0, 1, 0) + vec3(1, -1, 1) * floor(dot(i4, vec4(.25, -.25, .25, .35)));
+    vec3 v4 = b + vec3(0, 0, 1) + vec3(1, 1, -1) * floor(dot(i4, vec4(.25, .25, -.25, .35)));
+    
+    // Gradient hashes for the four vertices in this half-lattice.
+    vec4 hashes = permute(mod(vec4(v1.x, v2.x, v3.x, v4.x), 289.0));
+    hashes = permute(mod(hashes + vec4(v1.y, v2.y, v3.y, v4.y), 289.0));
+    hashes = mod(permute(mod(hashes + vec4(v1.z, v2.z, v3.z, v4.z), 289.0)), 48.0);
+    
+    // Gradient extrapolations & kernel function
+    vec3 d1 = X - v1; vec3 d2 = X - v2; vec3 d3 = X - v3; vec3 d4 = X - v4;
+    vec4 a = max(0.75 - vec4(dot(d1, d1), dot(d2, d2), dot(d3, d3), dot(d4, d4)), 0.0);
+    vec4 aa = a * a; vec4 aaaa = aa * aa;
+    vec3 g1 = grad(hashes.x); vec3 g2 = grad(hashes.y);
+    vec3 g3 = grad(hashes.z); vec3 g4 = grad(hashes.w);
+    vec4 extrapolations = vec4(dot(d1, g1), dot(d2, g2), dot(d3, g3), dot(d4, g4));
+    
+    // Derivatives of the noise
+    vec3 derivative = -8.0 * mat4x3(d1, d2, d3, d4) * (aa * a * extrapolations)
+        + mat4x3(g1, g2, g3, g4) * aaaa;
+    
+    // Return it all as a vec4
+    return vec4(derivative, dot(aaaa, extrapolations));
+}
+
+// Rotates domain, but preserve shape. Hides grid better in cardinal slices.
+// Good for texturing 3D objects with lots of flat parts along cardinal planes.
+vec4 os2NoiseWithDerivatives_Fallback(vec3 X) {
+    X = dot(X, vec3(2.0/3.0)) - X;
+    
+    vec4 result = os2NoiseWithDerivativesPart(X) + os2NoiseWithDerivativesPart(X + 144.5);
+    
+    return vec4(dot(result.xyz, vec3(2.0/3.0)) - result.xyz, result.w);
+}
+
+// Gives X and Y a triangular alignment, and lets Z move up the main diagonal.
+// Might be good for terrain, or a time varying X/Y plane. Z repeats.
+vec4 os2NoiseWithDerivatives_ImproveXY(vec3 X) {    
+    // Not a skew transform.
+    mat3 orthonormalMap = mat3(
+        0.788675134594813, -0.211324865405187, -0.577350269189626,
+        -0.211324865405187, 0.788675134594813, -0.577350269189626,
+        0.577350269189626, 0.577350269189626, 0.577350269189626);    
+    X = orthonormalMap * X;
+    vec4 result = os2NoiseWithDerivativesPart(X) + os2NoiseWithDerivativesPart(X + 144.5);    
+    return vec4(result.xyz * orthonormalMap, result.w);
+}
+
+vec3 Caustics(vec2 uv) {
+    vec3 x = vec3(uv, mod(time, 578.0) * 0.8660254037844386);
+    vec4 noiseResult = os2NoiseWithDerivatives_ImproveXY(x);
+    noiseResult = os2NoiseWithDerivatives_ImproveXY(x - noiseResult.xyz / 16.0);
+    float value = noiseResult.w;
+    //return vec3(.431, .8, 1.0) * (0.5 + 0.5 * value);
+    return vec3(1.0, 1.0, 1.0) * (0.5 + 0.5 * value);
+}
+
+
+
+
+
+
+
 void main() {
     
     vec3 waterColor = vec3(0.4, 0.8, 0.6);
      waterColor = vec3(0.8, 1.0, 0.9);
      waterColor = vec3(0.85, 1.0, 0.95);
-     //waterColor = vec3(1, 1.0, 1.0);
 
     ivec2 texCoord = ivec2(gl_GlobalInvocationID.xy);
     vec2 viewportSize = vec2(viewportWidth, viewportHeight);
     ivec2 pixelCoords = ivec2(gl_GlobalInvocationID.xy);
     vec2 uv_screenspace = (vec2(pixelCoords) + vec2(0.5)) / viewportSize;
-
-
 
     int playerIndex = 0;
 
@@ -314,26 +404,10 @@ void main() {
     vec4 worldSpacePosition = inverseView * viewSpacePosition;
     vec3 FragWorldPos = worldSpacePosition.xyz;
 
-
-
-    //
-
+    // Read water params out of water fbo
     vec2 waterWorldPosXZColor = texture(waterWorldPosXZTexture, uv_screenspace).rg; 
     float waterMask = texture(waterMaskTexture, uv_screenspace).r;
-     
-    
-    //vec3 waterMaskColor = texture(waterMaskTexture, uv_screenspace).rgb; 
-    vec3 finalLightingColor = texture(finalLightingTexture, uv_screenspace).rgb; 
-  
-//  if (!IsValidWaterUV(uv_screenspace, waterMask)) {
-//      vec3 final = finalLightingColor;// * vec3(1,0,0);
-// //     final = vec3(0,0,0);
-//      imageStore(waterColorTexture, texCoord, vec4(final, 1));
-//      return;
-//  }
-
-
-
+    vec3 finalLightingColor = texture(finalLightingTexture, uv_screenspace).rgb;   
     vec3 WaterWorldPos = vec3(waterWorldPosXZColor.r, waterHeight, waterWorldPosXZColor.g);
 
     // Get distortion texcoords
@@ -343,15 +417,7 @@ void main() {
     vec2 distortedTexCoords = texture(waterDUDVTexture, vec2(waterUV.x + moveFactorX, waterUV.y)).rg*0.1;
 	distortedTexCoords = waterUV + vec2(distortedTexCoords.x, distortedTexCoords.y + moveFactorY);
 	vec2 totalDistortion = (texture(waterDUDVTexture, distortedTexCoords).rg * 2.0 - 1.0) * waveStrength;   
-
-   // distortedTexCoords = waterUV;
-
-    //vec2 refractionUV = uv_screenspace + (totalDistortion * waterMask);
-    //if (!IsValidWaterUV(refractionUV, waterMask)) {
-    //    refractionUV = uv_screenspace;
-    //}    
     vec2 refractionUV = uv_screenspace + (totalDistortion * waterMask);
-
 
     // Get water dudv and normals
     vec3 waterNormalMap = texture(waterNormalTexture, distortedTexCoords).rgb;
@@ -369,25 +435,11 @@ void main() {
     refractionColor += GaussianBlur(pixelCoords, refractionUV, vec2(0, 1), blurRadius, sigma, waterMask);
     refractionColor *= 0.5;
 
-    
-    //refractionColor = texture(finalLightingTexture, refractionUV).rgb;
-
-    //vec3 refractionColor = applyHorizontalBlur(pixelCoords, refractionUV, blurRadius, sigma);
-    //refractionColor = applyVerticalBlur(pixelCoords, refractionUV, blurRadius, sigma);
-
     // Specular
-    
-
-    
-    vec3 viewDir = normalize(viewPos - WaterWorldPos.xyz);
-
-
-    
+    vec3 viewDir = normalize(viewPos - WaterWorldPos.xyz);    
     vec3 specular = CalculateSpecular(viewPos, viewDir, WaterWorldPos.xyz, waterNormal);
     specular *= vec3(0.9, 0.8799999713897705, 0.7289999842643738) * 0.9;
-
     specular += CalculateMoonSpecular(viewPos, viewDir, WaterWorldPos.xyz, waterNormal);
-
 
     // Water reflection
     vec2 reflectionUV = uv_screenspace + (totalDistortion);
@@ -397,25 +449,46 @@ void main() {
     vec3 viewVector = normalize(viewPos - WaterWorldPos);
     float relfractiveFactor = dot(viewVector, vec3(0, 1, 0));
 
+    // Caustics
+    // https://www.shadertoy.com/view/wlc3zr
+    vec2 uv_worldSpace = vec2(worldSpacePosition.x, worldSpacePosition.z); 
+    vec3 caustics = Caustics(uv_worldSpace * 5);
+    float causticsFactor = smoothstep(0.075, 0.1, length(worldSpacePosition.xyz - viewPos));     
+    vec3 fragmentNormal = texture(gBufferNormalTexture, uv_screenspace).rgb;
+    float normalFactor = clamp(dot(normalize(fragmentNormal), vec3(0.0, 1.0, 0.0)), 0.0, 1.0);
+    float finalCausticsFactor = causticsFactor * normalFactor;
+    vec3 finalCaustics = mix(vec3(0,0,0), caustics, finalCausticsFactor);
+    float causticsStrength = 0.125;
+
+
+    float fadeStart = 1.0;
+    float fadeEnd = 10.0;
+    float distanceToCamera = length(viewPos - FragWorldPos.xyz);
+    float fadeFactor = smoothstep(fadeEnd, fadeStart, distanceToCamera);
+
+   
+    finalCaustics *= causticsStrength;
+    finalCaustics *= fadeFactor;
+
     // Final color
     vec3 finalColor = mix(reflectionColor, refractionColor, relfractiveFactor);
     finalColor *= waterColor;
     finalColor += specular;
 
-
     // Or are you underwater?    
     if (viewPos.y < waterHeight) {
 
+        // Color stack
         finalColor = refractionColor;
         finalColor *= waterColor;
         finalColor += specular;
 
-        if (FragWorldPos.y < waterHeight) {
-        
+        // Fragment is also underwater? Then make it even more watery
+        if (FragWorldPos.y < waterHeight) {        
             finalColor *= waterColor;
             finalColor *= waterColor;
+            //finalColor += finalCaustics * waterColor;
         }
-
         // water line
         float threshold = 0.002;
         if (abs(FragWorldPos.y + (ripple.x * 3) - waterHeight) < threshold) {
@@ -434,10 +507,12 @@ void main() {
         }
     }
 
-     if (viewPos.y > waterHeight && FragWorldPos.y > waterHeight) {
-
+    if (viewPos.y > waterHeight && FragWorldPos.y > waterHeight) {
         finalColor = finalLightingColor;
     }
+
+    // Caustics
+
 
     //vec3 fogColor = vec3(0.09, 0.09, 0.09) * vec3(0.075);	
 	//float fogStart = 1;
@@ -446,7 +521,6 @@ void main() {
 	//vec3 fogLighting = ApplyFog(finalColor, dist , fogColor, fogStart, fogEnd);
 	//finalColor = mix(fogLighting, finalColor, 0.5);
 
-    
     // Specular debug
     //finalColor = specular;
     //finalColor = vec3(halfVec);
@@ -469,6 +543,9 @@ void main() {
     // Camera shit
     //finalColor = vec3(FragWorldPos);
 
+    //finalColor = texture(gBufferNormalTexture, uv_screenspace).rgb;
+
+    //finalColor = finalCaustics;
 
     imageStore(waterColorTexture, texCoord, vec4(finalColor, 1));
 }

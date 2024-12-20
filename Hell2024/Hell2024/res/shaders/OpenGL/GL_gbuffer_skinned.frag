@@ -8,9 +8,9 @@ layout (location = 6) out vec4 EmssiveMask;
 
 in vec2 TexCoords;
 in flat int PlayerIndex;
-in vec3 attrNormal;
-in vec3 attrTangent;
-in vec3 attrBiTangent;
+in vec3 Normal;
+in vec3 Tangent;
+in vec3 BiTangent;
 in flat int BaseColorTextureIndex;
 in flat int NormalTextureIndex;
 in flat int RMATextureIndex;
@@ -28,8 +28,14 @@ void main() {
     BaseColorOut.rgb = vec3(baseColor.xyz);
 	BaseColorOut.a = 1.0;
 
-	mat3 tbn = mat3(normalize(attrTangent), normalize(attrBiTangent), normalize(attrNormal));
-	vec3 normal = normalize(tbn * (normalMap.rgb * 2.0 - 1.0));
+//    normalMap = normalize(normalMap);
+ 
+	mat3 tbn = mat3(normalize(Tangent), normalize(BiTangent), normalize(Normal));
+
+    //mat3 tbn = mat3(Tangent, BiTangent, Normal);
+   
+   vec3 normal = normalize(tbn * (normalMap.rgb * 2.0 - 1.0));
+
     NormalsOut.rgb = vec3(normal);
   //  NormalsOut.rgb = vec3(attrNormal);
     //NormalsOut.rgb = mix(normal, attrNormal, 0.5);

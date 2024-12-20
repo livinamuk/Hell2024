@@ -1,9 +1,9 @@
 #version 460 core
 
-layout (location = 0) in vec3 aPos;
-layout (location = 1) in vec3 aNormal;
-layout (location = 2) in vec2 aTexCoord;
-layout (location = 3) in vec3 aTangent;
+layout (location = 0) in vec3 vPos;
+layout (location = 1) in vec3 vNormal;
+layout (location = 2) in vec2 vTexCoord;
+layout (location = 3) in vec3 vTangent;
 
 uniform mat4 projection;
 uniform mat4 view;
@@ -15,9 +15,9 @@ uniform int goldRMATextureIndex;
 //out vec3 Normal;
 out vec2 TexCoords;
 out flat int PlayerIndex;
-out vec3 attrNormal;
-out vec3 attrTangent;
-out vec3 attrBiTangent;
+out vec3 Normal;
+out vec3 Tangent;
+out vec3 BiTangent;
 
 out flat int BaseColorTextureIndex;
 out flat int NormalTextureIndex;
@@ -50,7 +50,7 @@ layout(std430, binding = 3) readonly buffer materials {
 
 void main() {
 
-	TexCoords = aTexCoord;
+	TexCoords = vTexCoord;
 	PlayerIndex = playerIndex;
 
 	mat4 model = RenderItems[renderItemIndex].modelMatrix;
@@ -61,13 +61,18 @@ void main() {
 	NormalTextureIndex =  material.normalTextureIndex;
 	RMATextureIndex =  material.rmaTextureIndex;
 
-	mat4 normalMatrix = transpose(invereseModel);
-	attrNormal = normalize((normalMatrix * vec4(aNormal, 0)).xyz);
-	attrTangent = normalize((normalMatrix * vec4(aTangent, 0)).xyz);;
-	//attrTangent = normalize(attrTangent - dot(attrTangent, attrNormal) * attrNormal);
-	attrBiTangent = normalize(cross(attrNormal,attrTangent));
+	//mat4 normalMatrix = transpose(invereseModel);
+	//attrNormal = normalize((normalMatrix * vec4(aNormal, 0)).xyz);
+	//attrTangent = normalize((normalMatrix * vec4(aTangent, 0)).xyz);;
+	////attrTangent = normalize(attrTangent - dot(attrTangent, attrNormal) * attrNormal);
+	//attrBiTangent = normalize(cross(attrNormal,attrTangent));
 
-	gl_Position = projection * view * model * vec4(aPos, 1.0);
+    mat4 normalMatrix = transpose(invereseModel);
+	Normal = normalize(normalMatrix * vec4(vNormal, 0)).xyz;
+	Tangent = normalize(normalMatrix * vec4(vTangent, 0)).xyz;
+	BiTangent = normalize(cross(Normal, Tangent));
+
+	gl_Position = projection * view * model * vec4(vPos, 1.0);
 
 	// Gold?
 	if (RenderItems[renderItemIndex].isGold == 1) {

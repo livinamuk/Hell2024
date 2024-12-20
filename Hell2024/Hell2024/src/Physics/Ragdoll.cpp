@@ -160,28 +160,30 @@ void Ragdoll::LoadFromJSON(std::string filename, PxU32 collisionGroup) {
         rigid.pxRigidBody->setName("RAGDOLL");
 
         if (Util::StrCmp(rigid.shapeType.c_str(), "Capsule")) {
-
             rigid.capsuleRadius *= rigid.scaleAbsoluteVector.x;
             rigid.capsuleLength *= rigid.scaleAbsoluteVector.y;
-
             float halfExtent = rigid.capsuleLength * 0.5f;
             float radius = rigid.capsuleRadius;
-
             PxMaterial* material = Physics::GetDefaultMaterial();
             PxCapsuleGeometry geom = PxCapsuleGeometry(radius, halfExtent);
             PxShape* shape = PxRigidActorExt::createExclusiveShape(*rigid.pxRigidBody, geom, *material);
         }
         else if (Util::StrCmp(rigid.shapeType.c_str(), "Box")) {
-
             rigid.boxExtents.x *= rigid.scaleAbsoluteVector.x;
             rigid.boxExtents.y *= rigid.scaleAbsoluteVector.y;
             rigid.boxExtents.z *= rigid.scaleAbsoluteVector.z;
-
             float halfExtent = rigid.capsuleLength;
             float radius = rigid.capsuleRadius;
-
             PxMaterial* material = Physics::GetDefaultMaterial();
             PxBoxGeometry geom = PxBoxGeometry(rigid.boxExtents.x * 0.5f, rigid.boxExtents.y * 0.5f, rigid.boxExtents.z * 0.5f);
+            PxShape* shape = PxRigidActorExt::createExclusiveShape(*rigid.pxRigidBody, geom, *material);
+        }
+        else if (Util::StrCmp(rigid.shapeType.c_str(), "Sphere")) {
+            rigid.capsuleRadius *= rigid.scaleAbsoluteVector.x;
+            rigid.capsuleLength *= rigid.scaleAbsoluteVector.y;
+            float radius = rigid.capsuleRadius;
+            PxMaterial* material = Physics::GetDefaultMaterial();
+            PxSphereGeometry geom = PxSphereGeometry(radius);
             PxShape* shape = PxRigidActorExt::createExclusiveShape(*rigid.pxRigidBody, geom, *material);
         }
 
