@@ -303,6 +303,17 @@ PxMaterial* Physics::GetDefaultMaterial() {
     return _defaultMaterial;
 }
 
+PxShape* Physics::CreateSphereShape(float radius, Transform shapeOffset, PxMaterial* material) {
+    if (material == NULL) {
+        material = _defaultMaterial;
+    }
+    PxShape* shape = g_physics->createShape(PxSphereGeometry(radius), *material, true);
+    PxMat44 localShapeMatrix = Util::GlmMat4ToPxMat44(shapeOffset.to_mat4());
+    PxTransform localShapeTransform(localShapeMatrix);
+    shape->setLocalPose(localShapeTransform);
+    return shape;
+}
+
 PxShape* Physics::CreateBoxShape(float width, float height, float depth, Transform shapeOffset, PxMaterial* material) {
     if (material == NULL) {
         material = _defaultMaterial;

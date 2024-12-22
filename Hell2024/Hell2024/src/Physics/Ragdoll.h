@@ -12,7 +12,7 @@ public:
     std::string name;
     std::string shapeType;
     std::string correspondingJointName;
-    float capsuleLength, capsuleRadius;
+    float capsuleLength, radius;
     float mass, friction, restitution, linearDamping, angularDamping, sleepThreshold;
     PxRigidDynamic* pxRigidBody = nullptr;
     PxVec3 angularMass;
@@ -42,7 +42,7 @@ public:
 
 struct Ragdoll {
 
-    std::vector<RigidComponent> _rigidComponents;
+    std::vector<RigidComponent> m_rigidComponents;
     std::vector<JointComponent> _jointComponents;
 
     void LoadFromJSON(std::string filename, PxU32 raycastFlag, PxU32 collisionGroupFlag, PxU32 collidesWithGroupFlag);

@@ -70,29 +70,29 @@ ModelData AssimpImporter::ImportFbx(const std::string filepath) {
             meshData.indices[baseIndex + 2] = face.mIndices[2];
         }
         // Generate Tangents
-        //std::cout << meshData.indices.size() << "\n";
-        //for (int i = 0; i < meshData.indices.size(); i += 3) {
-        //    Vertex* vert0 = &meshData.vertices[meshData.indices[i]];
-        //    Vertex* vert1 = &meshData.vertices[meshData.indices[i + 1]];
-        //    Vertex* vert2 = &meshData.vertices[meshData.indices[i + 2]];
-        //    glm::vec3 deltaPos1 = vert1->position - vert0->position;
-        //    glm::vec3 deltaPos2 = vert2->position - vert0->position;
-        //    glm::vec2 deltaUV1 = vert1->uv - vert0->uv;
-        //    glm::vec2 deltaUV2 = vert2->uv - vert0->uv;
-        //    float r = 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV1.y * deltaUV2.x);
-        //    glm::vec3 tangent = (deltaPos1 * deltaUV2.y - deltaPos2 * deltaUV1.y) * r;
-        //    glm::vec3 bitangent = (deltaPos2 * deltaUV1.x - deltaPos1 * deltaUV2.x) * r;
-        //    tangent = glm::vec3(1, 0, 0);
-        //    vert0->tangent = tangent;
-        //    vert1->tangent = tangent;
-        //    vert2->tangent = tangent;
-        //    Util::SetNormalsAndTangentsFromVertices(vert0, vert1, vert2);
-        //    std::cout << i << ": " << Util::Vec3ToString(vert0->normal) << " " << Util::Vec3ToString(vert1->normal) << " " << Util::Vec3ToString(vert2->normal) << "\n";
-        //}
+        std::cout << meshData.indices.size() << "\n";
+        for (int i = 0; i < meshData.indices.size(); i += 3) {
+            Vertex* vert0 = &meshData.vertices[meshData.indices[i]];
+            Vertex* vert1 = &meshData.vertices[meshData.indices[i + 1]];
+            Vertex* vert2 = &meshData.vertices[meshData.indices[i + 2]];
+            glm::vec3 deltaPos1 = vert1->position - vert0->position;
+            glm::vec3 deltaPos2 = vert2->position - vert0->position;
+            glm::vec2 deltaUV1 = vert1->uv - vert0->uv;
+            glm::vec2 deltaUV2 = vert2->uv - vert0->uv;
+            float r = 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV1.y * deltaUV2.x);
+            glm::vec3 tangent = (deltaPos1 * deltaUV2.y - deltaPos2 * deltaUV1.y) * r;
+            glm::vec3 bitangent = (deltaPos2 * deltaUV1.x - deltaPos1 * deltaUV2.x) * r;
+            tangent = glm::vec3(1, 0, 0);
+            vert0->tangent = tangent;
+            vert1->tangent = tangent;
+            vert2->tangent = tangent;
+            //Util::SetNormalsAndTangentsFromVertices(vert0, vert1, vert2);
+            //std::cout << i << ": " << Util::Vec3ToString(vert0->normal) << " " << Util::Vec3ToString(vert1->normal) << " " << Util::Vec3ToString(vert2->normal) << "\n";
+        }
+        meshData.aabbMin = aabbMin;
+        meshData.aabbMax = aabbMax;
+        std::cout << "Loaded mesh '" << meshData.name << "' " << meshData.vertices.size() << " verts " << meshData.indices.size() << " indices " << " " << Util::Vec3ToString(meshData.aabbMin) << " " << Util::Vec3ToString(meshData.aabbMin) << "\n";
     }
-
-
-
     importer.FreeScene();
     return modelData;
 }

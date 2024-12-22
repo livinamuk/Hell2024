@@ -142,19 +142,19 @@ void Dobermann::Update(float deltaTime) {
     }
 
     // Target is dead? then lay
-  //if (m_currentState == DobermannState::KAMAKAZI && targetPlayer && targetPlayer->IsDead()) {
-  //    // Pick a random action
-  //    int rand = Util::RandomInt(0, 1);
-  //    if (rand == 0) {
-  //        m_currentState = DobermannState::RETURN_TO_ORIGIN;
-  //    }
-  //    if (rand == 1) {
-  //        m_currentState = DobermannState::LAY;
-  //    }
-  //    // Heal to full health
-  //    m_health = DOG_MAX_HEALTH;
-  //
-  //}
+    if (m_currentState == DobermannState::KAMAKAZI && targetPlayer && targetPlayer->IsDead()) {
+        // Pick a random action
+        int rand = Util::RandomInt(0, 1);
+        if (rand == 0) {
+            m_currentState = DobermannState::RETURN_TO_ORIGIN;
+        }
+        if (rand == 1) {
+            m_currentState = DobermannState::LAY;
+        }
+        // Heal to full health
+        m_health = DOG_MAX_HEALTH;
+    
+    }
     // Lay when reached home?
     if (GetDistanceToTarget() < 0.1f) {
        if (m_currentState == DobermannState::RETURN_TO_ORIGIN ||

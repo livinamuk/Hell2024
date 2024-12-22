@@ -7,6 +7,7 @@
 #include "../Pathfinding/Pathfinding2.h"
 #include "../Renderer/Raytracing/Raytracing.h"
 #include "../Renderer/RendererData.h"
+#include "../Renderer/RendererUtil.hpp"
 #include "../Math/Frustum.h"
 
 #include "../Math/BVH.h"
@@ -214,7 +215,7 @@ void Renderer::UpdateDebugLinesMesh() {
     // Skip debug lines for player 0 ragdoll
     Player* player = Game::GetPlayerByIndex(0);
     AnimatedGameObject* characterModel = Scene::GetAnimatedGameObjectByIndex(player->GetCharacterModelAnimatedGameObjectIndex());
-    for (auto r : characterModel->_ragdoll._rigidComponents) {
+    for (auto r : characterModel->m_ragdoll.m_rigidComponents) {
         ignoreList.push_back(r.pxRigidBody);
     }
 
@@ -231,9 +232,6 @@ void Renderer::UpdateDebugLinesMesh() {
  //         vertices.push_back(Vertex(brushVertices[i + 2]));
  //     }
  // }
-
-
-
 
 
 
@@ -707,6 +705,7 @@ std::string& Renderer::GetDebugText() {
         text += "\n";
     }*/
 
+
     g_debugText = Util::RenderModeToString(Renderer::GetRenderMode()) + "\n";
 
     if (Renderer::GetDebugLineRenderMode() != SHOW_NO_LINES) {
@@ -719,8 +718,8 @@ std::string& Renderer::GetDebugText() {
     g_debugText += "Dog deaths: " + std::to_string(Game::g_dogDeaths) + "\n";
     g_debugText += "Dog kills: " + std::to_string(Game::g_playerDeaths) + "\n";
     g_debugText += "Cam pos: " + Util::Vec3ToString(Game::GetPlayerByIndex(0)->GetViewPos()) + "\n";
-    g_debugText += "Licence To Kill: " + std::to_string(Game::g_liceneToKill) + "\n";
-    g_debugText += "Kill limit: " + std::to_string(Game::g_killLimit) + "\n";
+    //g_debugText += "Licence To Kill: " + std::to_string(Game::g_liceneToKill) + "\n";
+    //g_debugText += "Kill limit: " + std::to_string(Game::g_killLimit) + "\n";
     g_debugText += "\n";
 
 

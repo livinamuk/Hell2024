@@ -1436,19 +1436,21 @@ void DebugPass(RenderData& renderData) {
         shader.SetMat4("view", renderData.cameraData[i].view);
 
         //// Water ray cast test
-        //static Model* model = AssetManager::GetModelByIndex(AssetManager::GetModelIndexByName("Sphere"));
-        //static Mesh* sphereMesh = AssetManager::GetMeshByIndex(model->GetMeshIndices()[0]);
-        //static Transform sphereTransform;
-        //if (Input::KeyPressed(HELL_KEY_H)) {
-        //    WaterRayIntersectionResult rayResult = Water::GetMouseRayIntersection(renderData.cameraData[i].projection, renderData.cameraData[i].view);
-        //    if (rayResult.hitFound) {
-        //        sphereTransform.position = rayResult.hitPosition;
-        //    }
-        //}
-        //glEnable(GL_DEPTH_TEST);
-        //shader.SetMat4("model", sphereTransform.to_mat4());
-        //glDrawElementsInstancedBaseVertex(GL_TRIANGLES, sphereMesh->indexCount, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int) * sphereMesh->baseIndex), 1, sphereMesh->baseVertex);
-        //shader.SetMat4("model", Water::GetModelMatrix());
+        static Model* model = AssetManager::GetModelByIndex(AssetManager::GetModelIndexByName("Sphere"));
+        static Mesh* sphereMesh = AssetManager::GetMeshByIndex(model->GetMeshIndices()[0]);
+        static Transform sphereTransform(glm::vec3(0,-10,0));
+        if (Input::KeyPressed(HELL_KEY_3)) {
+            WaterRayIntersectionResult rayResult = Water::GetMouseRayIntersection(renderData.cameraData[i].projection, renderData.cameraData[i].view);
+            if (rayResult.hitFound) {
+                sphereTransform.position = rayResult.hitPosition;
+            }
+        }
+
+
+        glEnable(GL_DEPTH_TEST);
+        shader.SetMat4("model", sphereTransform.to_mat4());
+        glDrawElementsInstancedBaseVertex(GL_TRIANGLES, sphereMesh->indexCount, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int) * sphereMesh->baseIndex), 1, sphereMesh->baseVertex);
+        shader.SetMat4("model", Water::GetModelMatrix());
         //Mesh* mesh = AssetManager::GetMeshByIndex(AssetManager::GetUpFacingPlaneMeshIndex());
         //glBindVertexArray(OpenGLBackEnd::GetVertexDataVAO());
         //glDrawElementsInstancedBaseVertex(GL_TRIANGLES, mesh->indexCount, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int) * mesh->baseIndex), 1, mesh->baseVertex);
@@ -2114,7 +2116,15 @@ void LightingPass(RenderData& renderData) {
     computeShader.SetFloat("time", Game::GetTime());
     computeShader.SetInt("fogAABBCount", Scene::g_fogAABB.size());
     computeShader.SetInt("rendererOverrideState", RendererData::GetRendererOverrideStateAsInt());
-
+    if (Renderer::GetRenderMode() == COMPOSITE || Renderer::GetRenderMode() == COMPOSITE_PLUS_POINT_CLOUD) {
+        computeShader.SetInt("renderMode", 0);
+    }
+    else if (Renderer::GetRenderMode() == DIRECT_LIGHT) {
+        computeShader.SetInt("renderMode", 1);
+    }
+    else if (Renderer::GetRenderMode() == POINT_CLOUD) {
+        computeShader.SetInt("renderMode", 2);
+    }
     glBindImageTexture(0, gBuffer.GetColorAttachmentHandleByName("FinalLighting"), 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA8);
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, gBuffer.GetDepthAttachmentHandle());

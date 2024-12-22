@@ -100,7 +100,7 @@ public:
 	//glm::mat4 _cameraMatrix = glm::mat4(1);
 	std::vector<MeshRenderingEntry> _meshRenderingEntries;
     AnimationMode _animationMode = BINDPOSE;
-    Ragdoll _ragdoll;
+    Ragdoll m_ragdoll;
 
     void LoadRagdoll(std::string filename, PxU32 raycastFlag, PxU32 collisionGroupFlag, PxU32 collidesWithGroupFlag);
     void SetAnimatedModeToRagdoll();

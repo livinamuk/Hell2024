@@ -25,6 +25,7 @@ uniform float probeSpacing;
 uniform vec3 lightVolumePosition;
 uniform int fogAABBCount;
 uniform int rendererOverrideState;
+uniform int renderMode;
 
 const float PI = 3.14159265359;
 
@@ -623,6 +624,16 @@ void main() {
 	vec3 fogLighting = ApplyFog(finalLighting, dist , fogColor, fogStart, fogEnd);
 	finalLighting = mix(fogLighting, finalLighting, insideOutsideScaleFactor);
 
+    
+    // Render modes 
+    if (renderMode == 1) {
+        finalLighting = directLighting; 
+    }
+    if (renderMode == 2) { // point cloud
+        finalLighting = vec3(0,0,0); 
+    }
+	
+
 
     //fogStart = 20;
 	//fogEnd = 30;	
@@ -673,7 +684,7 @@ void main() {
 
 	// Brightness
 	finalLighting -= vec3(0.020);
-	
+
     // Renderer override states
     if (rendererOverrideState == 1) {
         finalLighting = baseColor;

@@ -8,25 +8,24 @@
 #include "Timer.hpp"
 
 void Player::GiveDefaultLoadout() {
-
     GiveWeapon("Knife");
     // GiveWeapon("GoldenKnife");
     GiveWeapon("Glock");
     GiveWeapon("GoldenGlock");
     GiveWeapon("Tokarev");
-    //                // GiveWeapon("Smith & Wesson");
+    // GiveWeapon("Smith & Wesson");
     GiveWeapon("AKS74U");
     GiveWeapon("P90");
     GiveWeapon("Shotgun");
     GiveWeapon("SPAS");
 
     GiveAmmo("Glock", 80);
-   GiveAmmo("Tokarev", 200);
-   // GiveAmmo("AKS74U", 999999);
-   // GiveAmmo("Shotgun", 6666);
+    GiveAmmo("Tokarev", 200);
+    GiveAmmo("AKS74U", 999999);
+    GiveAmmo("Shotgun", 6666);
 
     GiveRedDotToWeapon("GoldenGlock");
-    GiveSilencerToWeapon("Glock");
+    // GiveSilencerToWeapon("Glock");
 }
 
 /*
@@ -1121,7 +1120,7 @@ void Player::CheckForMeleeHits() {
             // Apply force to their ragdoll
             AnimatedGameObject* hitCharacterModel = otherPlayer->GetCharacterAnimatedGameObject();
 
-            for (RigidComponent& rigidComponent : hitCharacterModel->_ragdoll._rigidComponents) {
+            for (RigidComponent& rigidComponent : hitCharacterModel->m_ragdoll.m_rigidComponents) {
                 float strength = 35;
                 strength *= rigidComponent.mass * 1.5f;
                 PxVec3 force = PxVec3(direction.x, direction.y,direction.z) * strength;

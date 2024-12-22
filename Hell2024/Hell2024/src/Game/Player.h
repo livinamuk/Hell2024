@@ -178,6 +178,7 @@ public:
     void UpdateAudio(float deltaTime);
     void UpdateWaterState();
     void UpdateLadderIndex();
+    void UpdateCharacterController();
 
     // Character Controller
     void MoveCharacterController(glm::vec3 displacement);
@@ -311,7 +312,7 @@ public:
 	//RayCastResult _cameraRayData;
 	PxController* _characterController = NULL;
 
-
+    bool m_pressingCrouchLastFrame = false;
     
 
     PxShape* _itemPickupOverlapShape = NULL;

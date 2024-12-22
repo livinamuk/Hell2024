@@ -483,9 +483,9 @@ void AnimatedGameObject::CalculateBoneTransforms() {
     }
 
     // Animated any ragdoll rigids to their corresponding joint
-    for (int j = 0; j < _ragdoll._rigidComponents.size(); j++) {
+    for (int j = 0; j < m_ragdoll.m_rigidComponents.size(); j++) {
         bool found = false;
-        RigidComponent& rigid = _ragdoll._rigidComponents[j];
+        RigidComponent& rigid = m_ragdoll.m_rigidComponents[j];
         for (int i = 0; i < m_jointWorldMatrices.size(); i++) {
 
             std::string a = rigid.correspondingJointName;
@@ -685,17 +685,17 @@ void AnimatedGameObject::UpdateBoneTransformsFromBindPose() {
 }
 
 void AnimatedGameObject::LoadRagdoll(std::string filename, PxU32 raycastFlag, PxU32 collisionGroupFlag, PxU32 collidesWithGroupFlag) {
-    _ragdoll.LoadFromJSON(filename, raycastFlag, collisionGroupFlag, collidesWithGroupFlag);
+    m_ragdoll.LoadFromJSON(filename, raycastFlag, collisionGroupFlag, collidesWithGroupFlag);
     _hasRagdoll = true;
 }
 
 void AnimatedGameObject::DestroyRagdoll() {
-    for (JointComponent& joint: _ragdoll._jointComponents) {
+    for (JointComponent& joint: m_ragdoll._jointComponents) {
         if (joint.pxD6) {
             joint.pxD6->release();
         }
     }
-    for (RigidComponent& rigid : _ragdoll._rigidComponents) {
+    for (RigidComponent& rigid : m_ragdoll.m_rigidComponents) {
         if (rigid.pxRigidBody) {
             rigid.pxRigidBody->release();
         }
@@ -747,8 +747,8 @@ void AnimatedGameObject::UpdateBoneTransformsFromRagdoll() {
         glm::mat4 ParentTransformation = (parentIndex == -1) ? glm::mat4(1) : m_joints[parentIndex].m_currentFinalTransform;
         glm::mat4 GlobalTransformation = ParentTransformation * NodeTransformation;
         m_joints[i].m_currentFinalTransform = GlobalTransformation;
-        for (int j = 0; j < _ragdoll._rigidComponents.size(); j++) {
-            RigidComponent& rigid = _ragdoll._rigidComponents[j];
+        for (int j = 0; j < m_ragdoll.m_rigidComponents.size(); j++) {
+            RigidComponent& rigid = m_ragdoll.m_rigidComponents[j];
             if (NodeName == rigid.correspondingJointName) {
                 PxRigidDynamic* rigidBody = rigid.pxRigidBody;
                 glm::mat4 matrix = Util::PxMat44ToGlmMat4(rigidBody->getGlobalPose());

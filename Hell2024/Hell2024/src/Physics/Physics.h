@@ -53,6 +53,7 @@ namespace Physics {
 	PxPhysics* GetPhysics();
 	PxMaterial* GetDefaultMaterial();
 	PxScene* GetEditorScene();
+    PxShape* CreateSphereShape(float radius, Transform shapeOffset = Transform(), PxMaterial* material = NULL);
 	PxShape* CreateBoxShape(float width, float height, float depth, Transform shapeOffset = Transform(), PxMaterial* material = NULL);
 	PxRigidDynamic* CreateRigidDynamic(Transform transform, PhysicsFilterData filterData, PxShape* shape, Transform shapeOffset = Transform());
 	PxRigidStatic* CreateRigidStatic(Transform transform, PhysicsFilterData physicsFilterData, PxShape* shape, Transform shapeOffset = Transform());

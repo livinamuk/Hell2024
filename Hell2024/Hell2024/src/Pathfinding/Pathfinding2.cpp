@@ -191,21 +191,23 @@ namespace Pathfinding2 {
         }
         */
 
-        float y = -1.75f;
-        float size = 50;
 
-        glm::vec3 cornerA = glm::vec3(-size, y, -size);
-        glm::vec3 cornerB = glm::vec3(size, y, size);
-        glm::vec3 cornerC = glm::vec3(-size, y, size);
-        glm::vec3 cornerD = glm::vec3(size, y, -size);
-
-        vertices.push_back(cornerC);
-        vertices.push_back(cornerB);
-        vertices.push_back(cornerA);
-
-        vertices.push_back(cornerB);
-        vertices.push_back(cornerD);
-        vertices.push_back(cornerA);
+        // Hack to add height map to nav mesh
+         float y = -1.75f;
+         float size = 50;
+        
+         glm::vec3 cornerA = glm::vec3(-size, y, -size);
+         glm::vec3 cornerB = glm::vec3(size, y, size);
+         glm::vec3 cornerC = glm::vec3(-size, y, size);
+         glm::vec3 cornerD = glm::vec3(size, y, -size);
+        
+         vertices.push_back(cornerC);
+         vertices.push_back(cornerB);
+         vertices.push_back(cornerA);
+        
+         vertices.push_back(cornerB);
+         vertices.push_back(cornerD);
+         vertices.push_back(cornerA);
 
         g_navMesh.Create(g_ctx, vertices, NavMeshRegionMode::MONOTONE);
         DrawNavMesh(g_debugDraw, g_navMesh, g_debugVertices);

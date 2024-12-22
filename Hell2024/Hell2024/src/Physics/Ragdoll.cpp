@@ -50,7 +50,7 @@ void Ragdoll::LoadFromJSON(std::string filename, PxU32 raycastFlag, PxU32 collis
 
 
             rigidComponent.scaleAbsoluteVector = Util::Vec3FromJSONArray(components["ScaleComponent"].GetObject()["members"].GetObject()["absolute"].GetObject()["values"].GetArray());
-            rigidComponent.capsuleRadius = components["GeometryDescriptionComponent"].GetObject()["members"].GetObject()["radius"].GetFloat();
+            rigidComponent.radius = components["GeometryDescriptionComponent"].GetObject()["members"].GetObject()["radius"].GetFloat();
             rigidComponent.capsuleLength = components["GeometryDescriptionComponent"].GetObject()["members"].GetObject()["length"].GetFloat();
             rigidComponent.shapeType = components["GeometryDescriptionComponent"].GetObject()["members"].GetObject()["type"].GetString();
             rigidComponent.boxExtents = Util::Vec3FromJSONArray(components["GeometryDescriptionComponent"].GetObject()["members"].GetObject()["extents"].GetObject()["values"].GetArray());
@@ -70,7 +70,7 @@ void Ragdoll::LoadFromJSON(std::string filename, PxU32 raycastFlag, PxU32 collis
             rigidComponent.angularMass = Util::PxVec3FromJSONArray(components["RigidComponent"].GetObject()["members"].GetObject()["angularMass"].GetObject()["values"].GetArray());
 
             if (rigidComponent.name != "rSceneShape" && rigidComponent.correspondingJointName != "rScene") {
-                _rigidComponents.push_back(rigidComponent);
+                m_rigidComponents.push_back(rigidComponent);
             }
         }
 
@@ -145,7 +145,7 @@ void Ragdoll::LoadFromJSON(std::string filename, PxU32 raycastFlag, PxU32 collis
         joint.name = joint.name.substr(0, joint.name.size() - 8);
     }
 
-    for (RigidComponent& rigid : _rigidComponents) {
+    for (RigidComponent& rigid : m_rigidComponents) {
 
         // Skip the scene rigid (it's outputted in the JSON export)
         if (Util::StrCmp(rigid.name.c_str(), "rSceneShape")) {
@@ -160,10 +160,10 @@ void Ragdoll::LoadFromJSON(std::string filename, PxU32 raycastFlag, PxU32 collis
         rigid.pxRigidBody->setName("RAGDOLL");
 
         if (Util::StrCmp(rigid.shapeType.c_str(), "Capsule")) {
-            rigid.capsuleRadius *= rigid.scaleAbsoluteVector.x;
+            rigid.radius *= rigid.scaleAbsoluteVector.x;
             rigid.capsuleLength *= rigid.scaleAbsoluteVector.y;
             float halfExtent = rigid.capsuleLength * 0.5f;
-            float radius = rigid.capsuleRadius;
+            float radius = rigid.radius;
             PxMaterial* material = Physics::GetDefaultMaterial();
             PxCapsuleGeometry geom = PxCapsuleGeometry(radius, halfExtent);
             PxShape* shape = PxRigidActorExt::createExclusiveShape(*rigid.pxRigidBody, geom, *material);
@@ -173,15 +173,14 @@ void Ragdoll::LoadFromJSON(std::string filename, PxU32 raycastFlag, PxU32 collis
             rigid.boxExtents.y *= rigid.scaleAbsoluteVector.y;
             rigid.boxExtents.z *= rigid.scaleAbsoluteVector.z;
             float halfExtent = rigid.capsuleLength;
-            float radius = rigid.capsuleRadius;
+            float radius = rigid.radius;
             PxMaterial* material = Physics::GetDefaultMaterial();
             PxBoxGeometry geom = PxBoxGeometry(rigid.boxExtents.x * 0.5f, rigid.boxExtents.y * 0.5f, rigid.boxExtents.z * 0.5f);
             PxShape* shape = PxRigidActorExt::createExclusiveShape(*rigid.pxRigidBody, geom, *material);
         }
         else if (Util::StrCmp(rigid.shapeType.c_str(), "Sphere")) {
-            rigid.capsuleRadius *= rigid.scaleAbsoluteVector.x;
-            rigid.capsuleLength *= rigid.scaleAbsoluteVector.y;
-            float radius = rigid.capsuleRadius;
+            rigid.radius *= rigid.scaleAbsoluteVector.x;
+            float radius = rigid.radius;
             PxMaterial* material = Physics::GetDefaultMaterial();
             PxSphereGeometry geom = PxSphereGeometry(radius);
             PxShape* shape = PxRigidActorExt::createExclusiveShape(*rigid.pxRigidBody, geom, *material);
@@ -239,7 +238,7 @@ void Ragdoll::LoadFromJSON(std::string filename, PxU32 raycastFlag, PxU32 collis
         RigidComponent* parentRigid = NULL;
         RigidComponent* childRigid = NULL;
 
-        for (RigidComponent& rigid : _rigidComponents) {
+        for (RigidComponent& rigid : m_rigidComponents) {
             if (rigid.ID == joint.parentID)
                 parentRigid = &rigid;
             if (rigid.ID == joint.childID)
@@ -403,7 +402,7 @@ void Ragdoll::LoadFromJSON(std::string filename, PxU32 raycastFlag, PxU32 collis
 
 RigidComponent* Ragdoll::GetRigidByName(std::string& name) {
     //std::cout << "m_rigidComponents size: " << m_rigidComponents.size() << "\n";
-    for (RigidComponent& rigidComponent : _rigidComponents) {
+    for (RigidComponent& rigidComponent : m_rigidComponents) {
         //std::cout << "rigidComponent: " << rigidComponent.correspondingJointName << "\n";
         if (rigidComponent.correspondingJointName == name) {
             return &rigidComponent;
@@ -413,7 +412,7 @@ RigidComponent* Ragdoll::GetRigidByName(std::string& name) {
 }
 
 void Ragdoll::EnableVisualization() {
-    for (RigidComponent& rigid : _rigidComponents) {
+    for (RigidComponent& rigid : m_rigidComponents) {
         PxShape* shape;
         rigid.pxRigidBody->getShapes(&shape, 1);
         shape->setFlag(PxShapeFlag::eVISUALIZATION, true);
@@ -421,7 +420,7 @@ void Ragdoll::EnableVisualization() {
 }
 
 void Ragdoll::DisableVisualization() {
-    for (RigidComponent& rigid : _rigidComponents) {
+    for (RigidComponent& rigid : m_rigidComponents) {
         PxShape* shape;
         rigid.pxRigidBody->getShapes(&shape, 1);
         shape->setFlag(PxShapeFlag::eVISUALIZATION, false);

@@ -1,6 +1,7 @@
 #include "RendererData.h"
 #include "../Game/Game.h"
 #include "../Game/Scene.h"
+#include "../Editor/Editor.h"
 #include "Timer.hpp"
 #include "../Renderer/RendererUtil.hpp"
 
@@ -35,7 +36,7 @@ namespace RendererData {
             g_geometryDrawInfo[i].baseInstance = g_geometryRenderItems.size();
             g_geometryDrawInfo[i].instanceCount = 0;
             for (auto& renderItem : g_sceneGeometryRenderItems) {
-                if (frustum.IntersectsAABBFast(renderItem)) {
+                if (Editor::IsOpen() || frustum.IntersectsAABBFast(renderItem)) {
                     g_geometryRenderItems.push_back(renderItem);
                     g_geometryDrawInfo[i].instanceCount++;
                 }

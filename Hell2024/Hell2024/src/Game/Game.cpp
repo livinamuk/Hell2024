@@ -275,7 +275,7 @@ namespace Game {
             Game::g_players[3]._playerName = "P4";
         }
 
-        for (RigidComponent& rigid : p1characterModel->_ragdoll._rigidComponents) {
+        for (RigidComponent& rigid : p1characterModel->m_ragdoll.m_rigidComponents) {
             PxShape* shape;
             rigid.pxRigidBody->getShapes(&shape, 1);
             shape->setFlag(PxShapeFlag::eVISUALIZATION, false);
@@ -427,20 +427,20 @@ namespace Game {
                 SetPlayerKeyboardAndMouseIndex(3, 1, 1);
                 //PrintPlayerControlIndices();
             }
-            if (Input::KeyPressed(HELL_KEY_3)) {
-                SetPlayerKeyboardAndMouseIndex(0, 1, 0);
-                SetPlayerKeyboardAndMouseIndex(1, 0, 1);
-               //SetPlayerKeyboardAndMouseIndex(2, 0, 0);
-               //SetPlayerKeyboardAndMouseIndex(3, 1, 1);
-                //PrintPlayerControlIndices();
-            }
-            if (Input::KeyPressed(HELL_KEY_4)) {
-                SetPlayerKeyboardAndMouseIndex(0, 0, 1);
-                SetPlayerKeyboardAndMouseIndex(1, 1, 0);
-               // SetPlayerKeyboardAndMouseIndex(2, 1, 1);
-               // SetPlayerKeyboardAndMouseIndex(3, 0, 0);
-                //PrintPlayerControlIndices();
-            }
+           //if (Input::KeyPressed(HELL_KEY_3)) {
+           //    SetPlayerKeyboardAndMouseIndex(0, 1, 0);
+           //    SetPlayerKeyboardAndMouseIndex(1, 0, 1);
+           //   //SetPlayerKeyboardAndMouseIndex(2, 0, 0);
+           //   //SetPlayerKeyboardAndMouseIndex(3, 1, 1);
+           //    //PrintPlayerControlIndices();
+           //}
+           //if (Input::KeyPressed(HELL_KEY_4)) {
+           //    SetPlayerKeyboardAndMouseIndex(0, 0, 1);
+           //    SetPlayerKeyboardAndMouseIndex(1, 1, 0);
+           //   // SetPlayerKeyboardAndMouseIndex(2, 1, 1);
+           //   // SetPlayerKeyboardAndMouseIndex(3, 0, 0);
+           //    //PrintPlayerControlIndices();
+           //}
         }
         if (Input::KeyPressed(HELL_KEY_J)) {
             RespawnAllDeadPlayers();

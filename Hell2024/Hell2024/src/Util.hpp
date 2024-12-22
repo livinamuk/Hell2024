@@ -1291,9 +1291,12 @@ namespace Util {
     }
 
     inline float NormalizeAngle(float angle) {
-        while (angle > HELL_PI) angle -= 2 * HELL_PI;
-        while (angle < -HELL_PI) angle += 2 * HELL_PI;
-        return angle;
+        angle = fmod(angle + HELL_PI, 2 * HELL_PI);
+        if (angle < 0) angle += 2 * HELL_PI;
+        return angle - HELL_PI;
+        //while (angle > HELL_PI) angle -= 2 * HELL_PI;
+        //while (angle < -HELL_PI) angle += 2 * HELL_PI;
+        //return angle;
     }
 
     inline void RotateYTowardsTarget(glm::vec3& objectPosition, float& objectYRotation, const glm::vec3& targetPosition, float rotationSpeed) {

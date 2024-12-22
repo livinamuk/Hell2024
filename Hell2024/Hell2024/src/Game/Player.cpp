@@ -75,6 +75,7 @@ void Player::Update(float deltaTime) {
     UpdateCharacterModelAnimation(deltaTime);
     UpdateAttachmentRenderItems();
     UpdateAttachmentGlassRenderItems();
+    UpdateCharacterController();
 
     glm::mat4 projectionView = GetProjectionMatrix() * GetViewMatrix();
     m_frustum.Update(projectionView);
@@ -82,6 +83,8 @@ void Player::Update(float deltaTime) {
     if (_isDead) {
         _health = 0;
     }
+
+    m_pressingCrouchLastFrame = PressingCrouch();
 }
 
 
@@ -92,7 +95,7 @@ void Player::Respawn() {
     m_flashlightOn = false;
     _isDead = false;
     m_ignoreControl = false;
-    characterModel->_ragdoll.DisableCollision();
+    characterModel->m_ragdoll.DisableCollision();
     _health = 100;
 
     int randomSpawnLocationIndex = Util::RandomInt(0, Scene::g_spawnPoints.size() - 1);
@@ -293,7 +296,7 @@ void Player::UpdateViewMatrix(float deltaTime) {
     if (IsDead()) {
         AnimatedGameObject* characterModel = GetCharacterAnimatedGameObject();
         if (characterModel) {
-            for (RigidComponent& rigidComponent : characterModel->_ragdoll._rigidComponents) {
+            for (RigidComponent& rigidComponent : characterModel->m_ragdoll.m_rigidComponents) {
                 if (rigidComponent.name == "rMarker_CC_Base_Head") {
                     PxMat44 globalPose = rigidComponent.pxRigidBody->getGlobalPose();
                     _viewMatrix = glm::inverse(Util::PxMat44ToGlmMat4(globalPose));
@@ -724,7 +727,7 @@ void Player::UpdateRagdoll() {
 
     AnimatedGameObject* characterModel = Scene::GetAnimatedGameObjectByIndex(m_characterModelAnimatedGameObjectIndex);
 
-    for (RigidComponent& rigid : characterModel->_ragdoll._rigidComponents) {
+    for (RigidComponent& rigid : characterModel->m_ragdoll.m_rigidComponents) {
         PhysicsObjectData* physicsObjectData = (PhysicsObjectData*)rigid.pxRigidBody->userData;
         physicsObjectData->parent = this;
     }
@@ -1033,17 +1036,6 @@ float Player::GetRadius() {
 	return m_capsuleRadius;
 }
 
-
-PxShape* Player::GetCharacterControllerShape() {
-	PxShape* shape;
-	_characterController->getActor()->getShapes(&shape, 1);
-	return shape;
-}
-
-PxRigidDynamic* Player::GetCharacterControllerActor() {
-	return _characterController->getActor();
-}
-
 void Player::CreateItemPickupOverlapShape() {
 
     // Put this somewhere else 
@@ -1074,32 +1066,6 @@ void Player::CreateItemPickupOverlapShape() {
 
 PxShape* Player::GetItemPickupOverlapShape() {
 	return _itemPickupOverlapShape;
-}
-
-void Player::CreateCharacterController(glm::vec3 position) {
-
-	PxMaterial* material = Physics::GetDefaultMaterial();
-	PxCapsuleControllerDesc* desc = new PxCapsuleControllerDesc;
-	desc->setToDefault();
-	desc->height = PLAYER_CAPSULE_HEIGHT;
-	desc->radius = PLAYER_CAPSULE_RADIUS;
-	desc->position = PxExtendedVec3(position.x, position.y + (PLAYER_CAPSULE_HEIGHT / 2) + (PLAYER_CAPSULE_RADIUS * 2), position.z);
-	desc->material = material;
-	desc->stepOffset = 0.1f;
-	desc->contactOffset = 0.001;
-	desc->scaleCoeff = .99f;
-	desc->reportCallback = &Physics::_cctHitCallback; 
-    desc->slopeLimit = cosf(glm::radians(75.0f)); 
-	_characterController = Physics::_characterControllerManager->createController(*desc);
-
-	PxShape* shape;
-	_characterController->getActor()->getShapes(&shape, 1);
-
-	PxFilterData filterData;
-	filterData.word1 = CollisionGroup::PLAYER;
-	filterData.word2 = CollisionGroup(ITEM_PICK_UP | ENVIROMENT_OBSTACLE | SHARK);
-	shape->setQueryFilterData(filterData);
-
 }
 
 float Player::GetZoom() {
@@ -1419,9 +1385,9 @@ void Player::Kill()  {
     std::cout << _playerName << " was killed\n";
     AnimatedGameObject* characterModel = Scene::GetAnimatedGameObjectByIndex(m_characterModelAnimatedGameObjectIndex);
     characterModel->_animationMode = AnimatedGameObject::AnimationMode::RAGDOLL;
-    characterModel->_ragdoll.EnableCollision();
+    characterModel->m_ragdoll.EnableCollision();
 
-    for (RigidComponent& rigid : characterModel->_ragdoll._rigidComponents) {
+    for (RigidComponent& rigid : characterModel->m_ragdoll.m_rigidComponents) {
         rigid.pxRigidBody->wakeUp();
     }
 

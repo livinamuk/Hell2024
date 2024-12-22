@@ -566,9 +566,6 @@ void Scene::LoadDefaultScene() {
         AddDobermann(createInfo);
     }
 
-
-
-
     CreateGameObject();
     GameObject* tree = GetGameObjectByIndex(GetGameObjectCount() - 1);
     tree->SetPosition(8.3f, 2.7f, 1.1f);
@@ -577,6 +574,12 @@ void Scene::LoadDefaultScene() {
     tree->SetMeshMaterial("Tree");
     tree->SetMeshMaterialByMeshName("Balls", "Gold");
 
+    //CreateGameObject();
+    //GameObject* christmasLight = GetGameObjectByIndex(GetGameObjectCount() - 1);
+    //christmasLight->SetPosition(9.0f, 4.2f, -1.8f);
+    //christmasLight->SetModel("ChristmasLight");
+    //christmasLight->SetName("ChristmasLight");
+    //christmasLight->SetMeshMaterial("Gold");
 
     if (true) {
         CreateGameObject();
@@ -663,19 +666,19 @@ void Scene::LoadDefaultScene() {
         platform->SetModel("PlatformSquare");
         platform->SetMeshMaterial("Platform");
 
-        int index = CreateAnimatedGameObject();
-        AnimatedGameObject& shark = g_animatedGameObjects[index];
-        shark.SetFlag(AnimatedGameObject::Flag::NONE);
-        shark.SetSkinnedModel("SharkSkinned");
-        shark.SetName("SharkSkinned");
-        shark.SetAnimationModeToBindPose();
-        shark.SetAllMeshMaterials("Shark");
-        shark.SetPosition(glm::vec3(7.0f, -0.1f, -15.7));
-        PxU32 raycastFlag = RaycastGroup::RAYCAST_ENABLED;
-        PxU32 collsionGroupFlag  = CollisionGroup::SHARK;
-        PxU32 collidesWithGroupFlag  = CollisionGroup::ENVIROMENT_OBSTACLE | CollisionGroup::GENERIC_BOUNCEABLE | CollisionGroup::RAGDOLL | CollisionGroup::PLAYER;
-        shark.PlayAndLoopAnimation("Shark_Swim", 1.0f);
-        shark.LoadRagdoll("Shark.rag", raycastFlag, collsionGroupFlag, collidesWithGroupFlag);
+        //int index = CreateAnimatedGameObject();
+        //AnimatedGameObject& shark = g_animatedGameObjects[index];
+        //shark.SetFlag(AnimatedGameObject::Flag::NONE);
+        //shark.SetSkinnedModel("SharkSkinned");
+        //shark.SetName("SharkSkinned");
+        //shark.SetAnimationModeToBindPose();
+        //shark.SetAllMeshMaterials("Shark");
+        //shark.SetPosition(glm::vec3(7.0f, -0.1f, -15.7));
+        //PxU32 raycastFlag = RaycastGroup::RAYCAST_ENABLED;
+        //PxU32 collsionGroupFlag  = CollisionGroup::SHARK;
+        //PxU32 collidesWithGroupFlag  = CollisionGroup::ENVIROMENT_OBSTACLE | CollisionGroup::GENERIC_BOUNCEABLE | CollisionGroup::RAGDOLL | CollisionGroup::PLAYER;
+        //shark.PlayAndLoopAnimation("Shark_Swim", 1.0f);
+        //shark.LoadRagdoll("Shark.rag", raycastFlag, collsionGroupFlag, collidesWithGroupFlag);
        
     }
 
@@ -1198,55 +1201,6 @@ void Scene::Update(float deltaTime) {
     }
     g_shark.Update(deltaTime);
 
-   // std::cout << g_dobermann.size() << "\n";
-   //
-   // g_dobermanmTimer += deltaTime;
-   //
-   // static int randomTime = 30;
-   //
-   // if (g_dobermanmTimer >= randomTime) {
-   //
-   //     g_dobermanmTimer = 0;
-   //     randomTime = Util::RandomInt(5, 20);
-   //
-   //     int result = Util::RandomInt(0, 1);
-   //
-   //   if (result == 0) {
-   //         DobermannCreateInfo createInfo;
-   //         createInfo.posi   tion = glm::vec3(10, 0.4f, -2.34f);
-   //         createInfo.rotation = (HELL_PI * -0.5f);
-   //         createInfo.initalState = DobermannState::KAMAKAZI;
-   //         AddDobermann(createInfo);
-   //         Dobermann& dobermann = g_dobermann[g_dobermann.size() - 1];
-   //         dobermann.m_currentState = DobermannState::KAMAKAZI;
-   //     }
-   //     else {
-   //         DobermannCreateInfo createInfo;
-   //         createInfo.position = glm::vec3(-5.7f, 0.4f, -0.04f);
-   //         createInfo.rotation = (HELL_PI * 0.5f);
-   //         createInfo.initalState = DobermannState::KAMAKAZI;
-   //         AddDobermann(createInfo);
-   //         Dobermann& dobermann = g_dobermann[g_dobermann.size() - 1];
-   //         dobermann.m_currentState = DobermannState::KAMAKAZI;
-   //     }
-   //
-   //   if (g_dobermann.size() > 10) {
-   //       g_dobermann[0].CleanUp();
-   //       g_dobermann.erase(g_dobermann.begin());
-   //   }
-   // }
-
-
-   
-
-    /*
-    for (Light& light : g_lights) {
-        if (light.m_pointCloudIndicesNeedRecalculating) {
-            light.FindVisibleCloudPoints();
-        }
-    }
-    */
-
     for (int i = 0; i < g_gameObjects.size(); i++) {
         GameObject& gameObject = g_gameObjects[i];
         if (gameObject.m_collisionType == CollisionType::PICKUP && !gameObject._respawns && gameObject.m_hackTimer > 40.0f) {
@@ -1344,6 +1298,13 @@ void Scene::Update(float deltaTime) {
             break;
         }
         dobermann.Update(deltaTime);
+    }
+    // Dobermann audio
+    if (huntedByDogs) {
+        Audio::LoopAudioIfNotPlaying("Doberman_Loop.wav", 1.0f);
+    }
+    else {
+        Audio::StopAudio("Doberman_Loop.wav");
     }
 
     //if (huntedByDogs && dobermanAudioHandlesVector.empty()) {
@@ -2257,7 +2218,7 @@ void Scene::ProcessBullets() {
 
                         for (Dobermann& dobermann : Scene::g_dobermann) {
                             AnimatedGameObject* animatedGameObject = dobermann.GetAnimatedGameObject();
-                            for (RigidComponent& rigidComponent : animatedGameObject->_ragdoll._rigidComponents) {
+                            for (RigidComponent& rigidComponent : animatedGameObject->m_ragdoll.m_rigidComponents) {
                                 if (rigidComponent.pxRigidBody == actor) {
                                     if (animatedGameObject->_animationMode == AnimatedGameObject::ANIMATION) {
                                         dobermann.GiveDamage(bullet.damage, bullet.parentPlayerIndex);
@@ -2314,7 +2275,7 @@ void Scene::ProcessBullets() {
 
                                 AnimatedGameObject* hitCharacterModel = GetAnimatedGameObjectByIndex(parentPlayerHit->GetCharacterModelAnimatedGameObjectIndex());
 
-                                for (RigidComponent& rigidComponent : hitCharacterModel->_ragdoll._rigidComponents) {
+                                for (RigidComponent& rigidComponent : hitCharacterModel->m_ragdoll.m_rigidComponents) {
                                     float strength = 75;
                                     if (bullet.type == SHOTGUN) {
                                         strength = 20;
@@ -2486,80 +2447,6 @@ void Scene::LoadHardCodedObjects() {
         object.SetPosition(glm::vec3(3, 0, 2));
         object.SetScale(0.01);
     }
-
-    /*
-
-
-    // DEBUG ANIMS
-
-    if (true) {
-        int testIndex = CreateAnimatedGameObject();
-        AnimatedGameObject& glock = g_animatedGameObjects[testIndex];
-        glock.SetFlag(AnimatedGameObject::Flag::NONE);
-        glock.SetPlayerIndex(1);
-        glock.SetSkinnedModel("Glock");
-        glock.SetName("Glock");
-        glock.SetAnimationModeToBindPose();
-        glock.SetMeshMaterialByMeshName("ArmsMale", "Hands");
-        glock.SetMeshMaterialByMeshName("ArmsFemale", "FemaleArms");
-        glock.SetMeshMaterialByMeshName("Glock", "Glock");
-        glock.SetMeshMaterialByMeshName("RedDotSight", "RedDotSight");
-        glock.SetMeshMaterialByMeshName("RedDotSightGlass", "RedDotSight");
-        glock.SetMeshMaterialByMeshName("Glock_silencer", "Silencer");
-        //glock.DisableDrawingForMeshByMeshName("Silencer");
-        glock.PlayAndLoopAnimation("Glock_Reload", 1.0f);
-        glock.SetPosition(glm::vec3(2, 0, 2));
-        glock.SetScale(0.01);
-    }
-
-    if (true) {
-        int testIndex = CreateAnimatedGameObject();
-        AnimatedGameObject& object = g_animatedGameObjects[testIndex];
-        object.SetSkinnedModel("Tokarev");
-        object.SetAnimationModeToBindPose();
-        object.SetMeshMaterialByMeshName("ArmsMale", "Hands");
-        object.SetMeshMaterialByMeshName("ArmsFemale", "FemaleArms");
-        object.SetMeshMaterialByMeshName("TokarevBody", "Tokarev");
-        object.SetMeshMaterialByMeshName("TokarevMag", "TokarevMag");
-        object.SetMeshMaterialByMeshName("TokarevGripPolymer", "TokarevGrip");
-        object.SetMeshMaterialByMeshName("TokarevGripWood", "TokarevGrip");
-        object.SetPosition(glm::vec3(2, 0, 3));
-        object.SetScale(0.01);
-        object.PlayAndLoopAnimation("Tokarev_Reload", 1.0f);
-    }
-
-    if (true) {
-        int testIndex = CreateAnimatedGameObject();
-        AnimatedGameObject& object = g_animatedGameObjects[testIndex];
-        object.SetSkinnedModel("AKS74U");
-        object.SetAnimationModeToBindPose();
-        object.SetMeshMaterialByMeshName("ArmsMale", "Hands");
-        object.SetMeshMaterialByMeshName("ArmsFemale", "FemaleArms");
-        object.SetMeshMaterialByMeshName("AKS74UBarrel", "AKS74U_4");
-        object.SetMeshMaterialByMeshName("AKS74UBolt", "AKS74U_1");
-        object.SetMeshMaterialByMeshName("AKS74UHandGuard", "AKS74U_0");
-        object.SetMeshMaterialByMeshName("AKS74UMag", "AKS74U_3");
-        object.SetMeshMaterialByMeshName("AKS74UPistolGrip", "AKS74U_2");
-        object.SetMeshMaterialByMeshName("AKS74UReceiver", "AKS74U_1");
-        object.SetPosition(glm::vec3(3, 0, 3));
-        object.SetScale(0.01);
-        object.PlayAndLoopAnimation("AKS74U_Reload", 1.0f);
-    }
-
-    if (true) {
-        int testIndex = CreateAnimatedGameObject();
-        AnimatedGameObject& object = g_animatedGameObjects[testIndex];
-        object.SetSkinnedModel("Knife");
-        object.SetAnimationModeToBindPose();
-        object.SetAllMeshMaterials("Hands");
-        object.SetMeshMaterialByMeshName("ArmsMale", "Hands");
-        object.SetMeshMaterialByMeshName("ArmsFemale", "FemaleArms");
-        object.SetMeshMaterialByMeshName("Knife", "Knife");
-        object.SetPosition(glm::vec3(3, 0, 2));
-        object.SetScale(0.01);
-        object.PlayAndLoopAnimation("Knife_Swing0", 1.0f);
-    }
-    */
 
 
 
@@ -2812,12 +2699,6 @@ void Scene::LoadHardCodedObjects() {
         tree->SetMeshMaterial("Tree");
         tree->SetMeshMaterialByMeshName("Balls", "Gold");
 
-        CreateGameObject();
-        GameObject* christmasLight = GetGameObjectByIndex(GetGameObjectCount() - 1);
-        christmasLight->SetPosition(10, 4, -2);
-        christmasLight->SetScale(10);
-        christmasLight->SetModel("ChristmasLight");
-        christmasLight->SetMeshMaterial("Gold");
 
 
         {

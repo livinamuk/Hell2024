@@ -7,16 +7,34 @@
 #include "../Input/Input.h"
 
 void Shark::Init() {
-    int index = Scene::CreateAnimatedGameObject();
-    AnimatedGameObject* animatedGameObject = Scene::GetAnimatedGameObjectByIndex(index);
+
+    glm::vec3 initialPosition = glm::vec3(7.0f, -0.1f, -15.7);
+
+    m_animatedGameObjectIndex = Scene::CreateAnimatedGameObject();
+    AnimatedGameObject* animatedGameObject = Scene::GetAnimatedGameObjectByIndex(m_animatedGameObjectIndex);
     animatedGameObject->SetFlag(AnimatedGameObject::Flag::NONE);
     animatedGameObject->SetPlayerIndex(1);
     animatedGameObject->SetSkinnedModel("SharkSkinned");
     animatedGameObject->SetName("Shark");
     animatedGameObject->SetAnimationModeToBindPose();
-    animatedGameObject->SetAllMeshMaterials("Gold");
+    animatedGameObject->SetAllMeshMaterials("Shark");
     animatedGameObject->SetPosition(glm::vec3(0, 0, 0));
     animatedGameObject->PlayAndLoopAnimation("Shark_Swim", 1.0f);
+    animatedGameObject->SetPosition(initialPosition);
+
+    // Create ragdoll
+    PxU32 raycastFlag = RaycastGroup::RAYCAST_ENABLED;
+  //  PxU32 collsionGroupFlag = CollisionGroup::RAGDOLL;
+  //  PxU32 collidesWithGroupFlag = CollisionGroup::ENVIROMENT_OBSTACLE | CollisionGroup::GENERIC_BOUNCEABLE | CollisionGroup::RAGDOLL;
+
+
+   // PxU32 collsionGroupFlag = CollisionGroup::SHARK;
+    PxU32 collsionGroupFlag = CollisionGroup::RAGDOLL;
+    PxU32 collidesWithGroupFlag = CollisionGroup::ENVIROMENT_OBSTACLE | CollisionGroup::GENERIC_BOUNCEABLE | CollisionGroup::RAGDOLL | CollisionGroup::PLAYER;
+
+   //PxU32 collsionGroupFlag = CollisionGroup::RAGDOLL;
+   //PxU32 collidesWithGroupFlag = CollisionGroup::NO_COLLISION;
+    animatedGameObject->LoadRagdoll("Shark.rag", raycastFlag, collsionGroupFlag, collidesWithGroupFlag);
     m_init = true;
 
     // Find head position
@@ -40,8 +58,6 @@ void Shark::Init() {
             // No idea why this scale is required
             float scale = 0.01f;
             glm::vec3 position = Util::GetTranslationFromMatrix(GlobalTransformation) * scale;
-            m_debugPoints.push_back(position);
-
             if (Util::StrCmp(NodeName, "BN_Head_00")) {
                 m_spinePositions[0] = position;
                 m_spineBoneNames[0] = NodeName;
@@ -87,29 +103,93 @@ void Shark::Init() {
                 m_spineBoneNames[10] = NodeName;
             }
         }
-        std::cout << i << ": " << NodeName << "\n";
     }
-    animatedGameObject->SetScale(0.001f);
     m_spinePositions[0].y -= 2.0f;
 
     // Reset height
     for (int i = 1; i < SHARK_SPINE_SEGMENT_COUNT; i++) {
         m_spinePositions[i].y = m_spinePositions[0].y;
     }
-
     // Print names
-    std::cout << "\n";
+    //std::cout << "\n";
     for (int i = 0; i < SHARK_SPINE_SEGMENT_COUNT; i++) {
         std::cout << i << ": " << m_spineBoneNames[i] << "\n";
     }
-
-
     // Calculate distances
     for (int i = 0; i < SHARK_SPINE_SEGMENT_COUNT - 1; i++) {
         m_spineSegmentLengths[i] = glm::distance(m_spinePositions[i], m_spinePositions[i+1]);
+    }    
+    CreatePhyicsObjects();
+}
+
+void Shark::CreatePhyicsObjects() {
+    for (int i = 0; i < m_collisionPxShapes.size(); i++) {
+        Physics::Destroy(m_collisionPxShapes[i]);
+        Physics::Destroy(m_collisionPxRigidStatics[i]);
+    }
+    AnimatedGameObject* animatedGameObject = Scene::GetAnimatedGameObjectByIndex(m_animatedGameObjectIndex);
+    Ragdoll& ragdoll = animatedGameObject->m_ragdoll;
+    for (RigidComponent& rigidComponent : ragdoll.m_rigidComponents) {
+        PhysicsFilterData filterData;
+        //filterData.raycastGroup = RAYCAST_DISABLED;
+        //filterData.collisionGroup = CollisionGroup::ENVIROMENT_OBSTACLE;
+        //filterData.collidesWith = CollisionGroup::PLAYER;
+
+        filterData.raycastGroup = RAYCAST_DISABLED;
+        filterData.collisionGroup = CollisionGroup::ENVIROMENT_OBSTACLE;
+        filterData.collidesWith = (CollisionGroup)(GENERIC_BOUNCEABLE | BULLET_CASING);
+
+        if (Util::StrCmp(rigidComponent.shapeType.c_str(), "Sphere") || Util::StrCmp(rigidComponent.shapeType.c_str(), "Capsule")) {
+            PxShape* pxShape = Physics::CreateSphereShape(rigidComponent.radius);
+            PxRigidDynamic* pxRigidStatic = Physics::CreateRigidDynamic(Transform(), filterData, pxShape);
+            m_collisionPxShapes.push_back(pxShape);
+            m_collisionPxRigidStatics.push_back(pxRigidStatic);
+
+            PxTransform offsetTranslation = PxTransform(PxVec3(rigidComponent.offset.x, rigidComponent.offset.y, rigidComponent.offset.z));
+            PxTransform offsetRotation = PxTransform(rigidComponent.rotation);
+            pxShape->setLocalPose(offsetTranslation.transform(offsetRotation));
+            pxRigidStatic->setRigidBodyFlag(PxRigidBodyFlag::eKINEMATIC, true);
+        }
+        else if (Util::StrCmp(rigidComponent.shapeType.c_str(), "Box")) {
+            PxShape* pxShape = Physics::CreateBoxShape(rigidComponent.boxExtents.x * 0.5f, rigidComponent.boxExtents.y * 0.5f, rigidComponent.boxExtents.z * 0.5f);
+            PxRigidDynamic* pxRigidStatic = Physics::CreateRigidDynamic(Transform(), filterData, pxShape);
+            m_collisionPxShapes.push_back(pxShape);
+            m_collisionPxRigidStatics.push_back(pxRigidStatic);
+
+            PxTransform offsetTranslation = PxTransform(PxVec3(rigidComponent.offset.x, rigidComponent.offset.y, rigidComponent.offset.z));
+            PxTransform offsetRotation = PxTransform(rigidComponent.rotation);
+            pxShape->setLocalPose(offsetTranslation.transform(offsetRotation));
+            pxRigidStatic->setRigidBodyFlag(PxRigidBodyFlag::eKINEMATIC, true);
+        }
+        else {
+            std::cout << "NOT A BOX OR Sphere!!!! " << rigidComponent.name << " " << rigidComponent.shapeType << "\n";
+        }
     }
 }
 
+void Shark::UpdatePxRigidStatics() {
+    //if (Input::KeyPressed(HELL_KEY_SPACE)) {
+        AnimatedGameObject* animatedGameObject = Scene::GetAnimatedGameObjectByIndex(m_animatedGameObjectIndex);
+        Ragdoll& ragdoll = animatedGameObject->m_ragdoll;
+        for (int i = 0; i < ragdoll.m_rigidComponents.size(); i++) {
+            RigidComponent& rigidComponent = ragdoll.m_rigidComponents[i];
+            if (rigidComponent.pxRigidBody && m_collisionPxRigidStatics[i]) {
+                PxTransform pxTransform = rigidComponent.pxRigidBody->getGlobalPose();
+                glm::vec3 position = Util::PxVec3toGlmVec3(pxTransform.p);
+                m_collisionPxRigidStatics[i]->setGlobalPose(pxTransform);
+            }
+        }
+    //}
+}
+
+void Shark::CleanUp() {
+    for (int i = 0; i < m_collisionPxShapes.size(); i++) {
+        Physics::Destroy(m_collisionPxShapes[i]);
+        Physics::Destroy(m_collisionPxRigidStatics[i]);
+    }
+    m_collisionPxShapes.clear();
+    m_collisionPxRigidStatics.clear();
+}
 
 glm::vec3 Shark::GetForwardVector() {
     glm::quat q = glm::quat(glm::vec3(0, m_rotation, 0));
@@ -130,6 +210,8 @@ glm::vec3 Shark::GetSpinePosition(int index) {
 }
 
 void Shark::Update(float deltaTime) {
+
+    UpdatePxRigidStatics();
 
     if (Input::KeyDown(HELL_KEY_LEFT)) {
         m_rotation += m_rotateSpeed * deltaTime;
