@@ -12,6 +12,7 @@
 #include "../../Core/AssetManager.h"
 #include "../../Game/Scene.h"
 #include "../../Game/Game.h"
+#include "../../Game/Water.h"
 #include "../../Editor/CSG.h"
 #include "../../Editor/Editor.h"
 #include "../../Editor/Gizmo.hpp"
@@ -933,7 +934,7 @@ void OpenGLRenderer::WaterPass(RenderData& renderData) {
     reflectionFBO.DrawBuffers({ "Color" });
     Shader& reflectionGeometryShader = OpenGLRenderer::g_shaders.waterReflectionGeometry;
     reflectionGeometryShader.Use();
-    reflectionGeometryShader.SetVec4("clippingPlane", glm::vec4(0, 1, 0, -Game::GetWaterHeight()));
+    reflectionGeometryShader.SetVec4("clippingPlane", glm::vec4(0, 1, 0, -Water::GetHeight()));
     glClearColor(0, 0, 0, 0);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); 
     glEnable(GL_CLIP_DISTANCE0);
@@ -998,8 +999,8 @@ void OpenGLRenderer::WaterPass(RenderData& renderData) {
     glDisable(GL_CULL_FACE);
     Shader& shader = OpenGLRenderer::g_shaders.waterMask;
     shader.Use();
-    shader.SetMat4("model", Game::GetWaterModelMatrix());
-    shader.SetFloat("waterHeight", Game::GetWaterHeight()); 
+    shader.SetMat4("model", Water::GetModelMatrix());
+    shader.SetFloat("waterHeight", Water::GetHeight());
     for (int i = 0; i < renderData.playerCount; i++) {
         ViewportInfo viewportInfo = RendererUtil::CreateViewportInfo(i, Game::GetSplitscreenMode(), gBuffer.GetWidth(), gBuffer.GetHeight());
         SetViewport(viewportInfo);
@@ -1023,7 +1024,7 @@ void OpenGLRenderer::WaterPass(RenderData& renderData) {
     computeShader.SetFloat("viewportWidth", gBuffer.GetWidth());
     computeShader.SetFloat("viewportHeight", gBuffer.GetHeight());
     computeShader.SetFloat("time", Game::GetTime());
-    computeShader.SetFloat("waterHeight", Game::GetWaterHeight());
+    computeShader.SetFloat("waterHeight", Water::GetHeight());
     glBindImageTexture(0, waterFrameBuffer.GetColorAttachmentHandleByName("Color"), 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA8);
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D, waterFrameBuffer.GetColorAttachmentHandleByName("WorldPosXZ"));
@@ -1433,9 +1434,27 @@ void DebugPass(RenderData& renderData) {
         shader.Use();
         shader.SetMat4("projection", renderData.cameraData[i].projection);
         shader.SetMat4("view", renderData.cameraData[i].view);
-        shader.SetMat4("model", glm::mat4(1));
+
+        //// Water ray cast test
+        //static Model* model = AssetManager::GetModelByIndex(AssetManager::GetModelIndexByName("Sphere"));
+        //static Mesh* sphereMesh = AssetManager::GetMeshByIndex(model->GetMeshIndices()[0]);
+        //static Transform sphereTransform;
+        //if (Input::KeyPressed(HELL_KEY_H)) {
+        //    WaterRayIntersectionResult rayResult = Water::GetMouseRayIntersection(renderData.cameraData[i].projection, renderData.cameraData[i].view);
+        //    if (rayResult.hitFound) {
+        //        sphereTransform.position = rayResult.hitPosition;
+        //    }
+        //}
+        //glEnable(GL_DEPTH_TEST);
+        //shader.SetMat4("model", sphereTransform.to_mat4());
+        //glDrawElementsInstancedBaseVertex(GL_TRIANGLES, sphereMesh->indexCount, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int) * sphereMesh->baseIndex), 1, sphereMesh->baseVertex);
+        //shader.SetMat4("model", Water::GetModelMatrix());
+        //Mesh* mesh = AssetManager::GetMeshByIndex(AssetManager::GetUpFacingPlaneMeshIndex());
+        //glBindVertexArray(OpenGLBackEnd::GetVertexDataVAO());
+        //glDrawElementsInstancedBaseVertex(GL_TRIANGLES, mesh->indexCount, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int) * mesh->baseIndex), 1, mesh->baseVertex);
 
         glDisable(GL_DEPTH_TEST);
+        shader.SetMat4("model", glm::mat4(1));
 
         // Draw lines
         if (linesMesh.GetIndexCount() > 0) {
@@ -2094,7 +2113,7 @@ void LightingPass(RenderData& renderData) {
     computeShader.SetFloat("probeSpacing", PROBE_SPACING);
     computeShader.SetFloat("time", Game::GetTime());
     computeShader.SetInt("fogAABBCount", Scene::g_fogAABB.size());
-        
+    computeShader.SetInt("rendererOverrideState", RendererData::GetRendererOverrideStateAsInt());
 
     glBindImageTexture(0, gBuffer.GetColorAttachmentHandleByName("FinalLighting"), 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA8);
     glActiveTexture(GL_TEXTURE0);

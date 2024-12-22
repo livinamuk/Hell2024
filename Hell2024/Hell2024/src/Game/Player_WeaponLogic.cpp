@@ -1,7 +1,7 @@
 ﻿#include "Player.h"
 #include "Game.h"
 #include "Scene.h"
-#include "Core/Audio.hpp"
+#include "Core/Audio.h"
 #include "Input/Input.h"
 #include "Input/InputMulti.h"
 #include "Util.hpp"
@@ -26,7 +26,7 @@ void Player::GiveDefaultLoadout() {
    // GiveAmmo("Shotgun", 6666);
 
     GiveRedDotToWeapon("GoldenGlock");
-   // GiveSilencerToWeapon("Glock");
+    GiveSilencerToWeapon("Glock");
 }
 
 /*

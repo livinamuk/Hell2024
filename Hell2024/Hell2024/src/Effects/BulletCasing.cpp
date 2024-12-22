@@ -1,6 +1,6 @@
 #include "BulletCasing.h"
 #include "../Util.hpp"
-#include "../Core/Audio.hpp"
+#include "../Core/Audio.h"
 #include "../Physics/Physics.h"
 
 #define BULLET_CASING_LIFETIME 2.0f
@@ -41,4 +41,14 @@ void BulletCasing::CollisionResponse() {
         Audio::PlayAudio("BulletCasingBounce.wav", Util::RandomFloat(0.1f, 0.2f));
     }
     m_audioDelay = 0.1f;
+}
+
+void BulletCasing::UpdatePhysXPointer() {
+    // Update collision object PhysX pointer
+    if (m_pxRigidBody) {
+        if (m_pxRigidBody->userData) {
+            delete static_cast<PhysicsObjectData*>(m_pxRigidBody->userData);
+        }
+        m_pxRigidBody->userData = new PhysicsObjectData(ObjectType::GAME_OBJECT, this);
+    }
 }

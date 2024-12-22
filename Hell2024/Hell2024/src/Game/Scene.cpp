@@ -5,7 +5,7 @@
 
 #include "../BackEnd/BackEnd.h"
 #include "../Core/AssetManager.h"
-#include "../Core/Audio.hpp"
+#include "../Core/Audio.h"
 #include "../Core/JSON.hpp"
 #include "../Editor/CSG.h"
 #include "../Game/Game.h"
@@ -113,6 +113,9 @@ void Scene::SaveMapData(const std::string& fileName) {
         jsonObject["texOffsetX"] = plane.textureOffsetX;
         jsonObject["texOffsetY"] = plane.textureOffsetY;
         jsonObject["texScale"] = plane.textureScale;
+        jsonObject["ceilingTrims"] = plane.m_ceilingTrims;
+        jsonObject["floorTrims"] = plane.m_floorTrims;
+        std::cout << "SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSAVING " << plane.m_ceilingTrims << " " << jsonObject["ceilingTrims"] << "\n";
         jsonWallPLanes.push_back(jsonObject);
     }
     data["WallPlanes"] = jsonWallPLanes;
@@ -227,6 +230,8 @@ void Scene::LoadMapData(const std::string& fileName) {
         plane.textureOffsetX = jsonObject["texOffsetX"];
         plane.textureOffsetY = jsonObject["texOffsetY"];
         plane.textureScale = jsonObject["texScale"];
+        plane.m_ceilingTrims = jsonObject["ceilingTrims"];
+        plane.m_floorTrims = jsonObject["floorTrims"];
     }
     // Load Volumes Subtractive
     for (const auto& jsonObject : data["VolumesSubtractive"]) {
@@ -536,7 +541,6 @@ void Scene::LoadDefaultScene() {
         }
     }
 
-   
 
     std::cout << "Light Count: " << g_lights.size() << "\n";
 
@@ -545,133 +549,23 @@ void Scene::LoadDefaultScene() {
         g_dobermann.clear();
 
         DobermannCreateInfo createInfo;
-        //createInfo.position = glm::vec3(-1.7f, 0.4f, -1.2f);
-        createInfo.position = glm::vec3(2.3f, 0.4f, 1.7f);
+        createInfo.position = glm::vec3(15.0f, 5.3f, 0.5f);
         createInfo.rotation = 0.7f;
         createInfo.rotation = 0.7f + HELL_PI;
         createInfo.initalState = DobermannState::LAY;
         AddDobermann(createInfo);
 
-        createInfo.position = glm::vec3(-2.46f, 0.4f, -3.08f);
-        createInfo.rotation = HELL_PI * 0.5f;
+        createInfo.position = glm::vec3(15.0f, 5.3f, -3.3f);
+        createInfo.rotation = -0.8f;
         createInfo.initalState = DobermannState::LAY;
         AddDobermann(createInfo);
 
-        //createInfo.position = glm::vec3(-1.77f, 0.4f, -5.66f);
-        createInfo.position = glm::vec3(-0.8f, 0.4f, -6.8f);
-        //createInfo.rotation = (1.3f);
-        createInfo.rotation = (0.0f);
+        createInfo.position = glm::vec3(9.8f, 5.3f, 0.5f);
+        createInfo.rotation = HELL_PI + 0.1f;
         createInfo.initalState = DobermannState::LAY;
         AddDobermann(createInfo);
     }
 
-
-
-
-
-    if (false) {
-
-        int index = CreateAnimatedGameObject();
-        AnimatedGameObject& dobermann = g_animatedGameObjects[index];
-        dobermann.SetFlag(AnimatedGameObject::Flag::NONE);
-        dobermann.SetPlayerIndex(1);
-        dobermann.SetSkinnedModel("Smith");
-        dobermann.SetName("SMITHTHTIHSAOIAISDH");
-        dobermann.SetAnimationModeToBindPose();
-        dobermann.SetAllMeshMaterials("Dobermann");
-        dobermann.SetPosition(glm::vec3(0, 0, 0));
-        dobermann.SetRotationY(1.3f);
-        dobermann.SetScale(0.01);
-        dobermann.PlayAndLoopAnimation("Smith_Idle", 1.0f);
-        dobermann.PrintMeshNames();
-    }
-
-
-    /*
-    if (true) {
-
-        PxU32 collisionGroupFlags = RaycastGroup::DOBERMAN;
-
-
-        int index = CreateAnimatedGameObject();
-        AnimatedGameObject& dobermann = g_animatedGameObjects[index];
-        dobermann.SetFlag(AnimatedGameObject::Flag::NONE);
-        dobermann.SetPlayerIndex(1);
-        dobermann.SetSkinnedModel("Dobermann");
-        dobermann.SetName("Dobermann");
-        dobermann.SetAnimationModeToBindPose();
-        dobermann.SetAllMeshMaterials("Dobermann");
-        dobermann.SetPosition(glm::vec3(-1.7f, 0, -1.2f));
-        dobermann.SetRotationY(0.7f);
-        dobermann.SetScale(1.35);
-        dobermann.PlayAndLoopAnimation("Dobermann_Lay", 1.0f);
-        //dobermann.SetAnimationModeToBindPose();
-        dobermann.LoadRagdoll("dobermann.rag", collisionGroupFlags);
-    }
-
-
-    if (true) {
-
-        PxU32 collisionGroupFlags = RaycastGroup::DOBERMAN;
-
-        int index = CreateAnimatedGameObject();
-        AnimatedGameObject& dobermann = g_animatedGameObjects[index];
-        dobermann.SetFlag(AnimatedGameObject::Flag::NONE);
-        dobermann.SetPlayerIndex(1);
-        dobermann.SetSkinnedModel("Dobermann");
-        dobermann.SetName("Dobermann");
-        dobermann.SetAnimationModeToBindPose();
-        dobermann.SetAllMeshMaterials("Dobermann");
-        dobermann.SetPosition(glm::vec3(-1.77f, 0, -5.66f));
-        dobermann.SetRotationY(1.3f);
-        dobermann.SetScale(1.35);
-        dobermann.PlayAndLoopAnimation("Dobermann_Lay", 1.0f);
-        //dobermann.SetAnimationModeToBindPose();
-        dobermann.LoadRagdoll("dobermann.rag", collisionGroupFlags);
-    }
-    */
-    /*
-
-    if (true) {
-        int testIndex = CreateAnimatedGameObject();
-        AnimatedGameObject& glock = g_animatedGameObjects[testIndex];
-        glock.SetFlag(AnimatedGameObject::Flag::NONE);
-        glock.SetPlayerIndex(1);
-        glock.SetSkinnedModel("Glock");
-        glock.SetName("Glock");
-        glock.SetAnimationModeToBindPose();
-        glock.SetMeshMaterialByMeshName("ArmsMale", "Hands");
-        glock.SetMeshMaterialByMeshName("ArmsFemale", "FemaleArms");
-        glock.SetMeshMaterialByMeshName("Glock", "Glock");
-        glock.SetMeshMaterialByMeshName("RedDotSight", "RedDotSight");
-        glock.SetMeshMaterialByMeshName("RedDotSightGlass", "RedDotSight");
-        glock.SetMeshMaterialByMeshName("Glock_silencer", "Silencer");
-        //glock.DisableDrawingForMeshByMeshName("Silencer");
-       // glock.PlayAndLoopAnimation("Glock_Reload", 1.0f);
-        glock.SetPosition(glm::vec3(0, 1, 0));
-        glock.SetScale(0.01);
-    }
-
-    if (true) {
-        int testIndex = CreateAnimatedGameObject();
-        AnimatedGameObject& glock = g_animatedGameObjects[testIndex];
-        glock.SetFlag(AnimatedGameObject::Flag::NONE);
-        glock.SetPlayerIndex(1);
-        glock.SetSkinnedModel("P90");
-        glock.SetName("P90");
-        glock.SetAnimationModeToBindPose();
-        glock.SetMeshMaterialByMeshName("ArmsMale", "Hands");
-        glock.SetMeshMaterialByMeshName("ArmsFemale", "FemaleArms");
-        glock.SetMeshMaterialByMeshName("Glock", "Glock");
-        glock.SetMeshMaterialByMeshName("RedDotSight", "RedDotSight");
-        glock.SetMeshMaterialByMeshName("RedDotSightGlass", "RedDotSight");
-        glock.SetMeshMaterialByMeshName("Glock_silencer", "Silencer");
-        //glock.DisableDrawingForMeshByMeshName("Silencer");
-      //  glock.PlayAndLoopAnimation("P90_Draw", 1.0f);
-        glock.SetPosition(glm::vec3(2, 1, 0));
-        glock.SetScale(0.01);
-    }
-    */
 
 
 
@@ -687,7 +581,7 @@ void Scene::LoadDefaultScene() {
     if (true) {
         CreateGameObject();
         GameObject* pictureFrame = GetGameObjectByIndex(GetGameObjectCount() - 1);
-        pictureFrame->SetPosition(9.6f, 4.1f, 2.00f);
+        pictureFrame->SetPosition(9.6f, 4.1f, 1.95f);
         pictureFrame->SetScale(0.01f);
         pictureFrame->SetRotationY(HELL_PI * 1.0f);
         pictureFrame->SetModel("PictureFrame_1");
@@ -703,6 +597,7 @@ void Scene::LoadDefaultScene() {
         CreateGameObject();
         GameObject* mermaid = GetGameObjectByIndex(GetGameObjectCount() - 1);
         mermaid->SetPosition(14.4f, 2.1f, -1.7);
+      //  mermaid->SetPosition(14.4f, 2.0f, -11.7);
         mermaid->SetModel("Mermaid3");
         mermaid->SetMeshMaterial("Gold");
         mermaid->SetMeshMaterialByMeshName("Rock", "Rock");
@@ -729,111 +624,59 @@ void Scene::LoadDefaultScene() {
         mermaid->SetModelMatrixMode(ModelMatrixMode::GAME_TRANSFORM);
         mermaid->SetCollisionType(CollisionType::STATIC_ENVIROMENT);
 
-      //  CreateGameObject();
-      //  GameObject* shark = GetGameObjectByIndex(GetGameObjectCount() - 1);
-      //  shark->SetPosition(14.4f, -0.8f, -15.7);
-      //  shark->SetModel("Shark");
-      //  shark->SetMeshMaterial("Shark");
-      //  shark->SetName("Shark");
-      //  shark->PrintMeshNames();
+        LadderCreateInfo ladderCreateInfo;
+        ladderCreateInfo.position = glm::vec3(11.0f, 0.5f, 0.9f);
+        ladderCreateInfo.rotation = HELL_PI * 0.5f;
+        ladderCreateInfo.yCount = 1;
+        CreateLadder(ladderCreateInfo);
 
+        ladderCreateInfo.position = glm::vec3(7.75f, 3.2f, -4.95);
+        ladderCreateInfo.rotation = HELL_PI;
+        ladderCreateInfo.yCount = 2;
+        CreateLadder(ladderCreateInfo);
 
-        for (int i = 0; i < 4; i++) {
-            if (i == 0 || i == 3) {
-                continue;
-            }
-            int index = CreateAnimatedGameObject();
-            AnimatedGameObject& shark = g_animatedGameObjects[index];
-            shark.SetFlag(AnimatedGameObject::Flag::NONE);
-            shark.SetSkinnedModel("SharkSkinned");
-            shark.SetName("SharkSkinned");
-            shark.SetAnimationModeToBindPose();
-            shark.SetAllMeshMaterials("Shark");
-            shark.SetPosition(glm::vec3((i * 7 + 0), -0.1f, -15.7));
+            //CreateGameObject();
+            //GameObject* ladder = GetGameObjectByIndex(GetGameObjectCount() - 1);
+            //ladder->SetPosition(11.0f, 0.5f, 0.9);
+            //ladder->SetRotationY(HELL_PI * 0.5f);
+            //ladder->SetModel("Ladder");
+            //ladder->SetMeshMaterial("Ladder");
+            //
+            //CreateGameObject();
+            //GameObject* ladder2 = GetGameObjectByIndex(GetGameObjectCount() - 1);
+            //ladder2->SetPosition(7.75f, 3.2f, -4.95);
+            //ladder2->SetRotationY(HELL_PI);
+            //ladder2->SetModel("Ladder");
+            //ladder2->SetMeshMaterial("Ladder");
+            //
+            //CreateGameObject();
+            //GameObject* ladder3 = GetGameObjectByIndex(GetGameObjectCount() - 1);
+            //ladder3->SetPosition(7.75f, 3.2f - 2.44f, -4.95);
+            //ladder3->SetRotationY(HELL_PI);
+            //ladder3->SetModel("Ladder");
+            //ladder3->SetMeshMaterial("Ladder");
 
+        CreateGameObject();
+        GameObject* platform = GetGameObjectByIndex(GetGameObjectCount() - 1);
+        platform->SetPosition(8.8f, 2.6f, -4.95);
+        platform->SetRotationY(HELL_PI);
+        platform->SetModel("PlatformSquare");
+        platform->SetMeshMaterial("Platform");
 
-            if (i == 0) {
-                shark.PlayAndLoopAnimation("Shark_Swim", 1.0f);
-            }
-            if (i == 1) {
-                shark.PlayAndLoopAnimation("Shark_SwimFast", 1.0f);
-                PxU32 ragdollCollisionGroupFlags = RaycastGroup::RAYCAST_ENABLED;
-                shark.LoadRagdoll("Shark.rag", ragdollCollisionGroupFlags);
-            }
-            if (i == 2) {
-                shark.PlayAndLoopAnimation("Shark_Attack", 1.0f);
-                PxU32 ragdollCollisionGroupFlags = RaycastGroup::RAYCAST_ENABLED;
-                shark.LoadRagdoll("Shark.rag", ragdollCollisionGroupFlags);
-            }
-            if (i == 3) {
-                shark.PlayAndLoopAnimation("Shark_Die", 1.0f);
-            }
-        }
-
-       //     int index = CreateAnimatedGameObject();
-       //     AnimatedGameObject& shark = g_animatedGameObjects[index];
-       //     shark.SetFlag(AnimatedGameObject::Flag::NONE);
-       //     shark.SetSkinnedModel("SharkSkinned");
-       //     shark.SetName("SharkSkinned");
-       //     shark.SetAnimationModeToBindPose();
-       //     shark.SetAllMeshMaterials("Shark");
-       //     shark.SetPosition(glm::vec3((0 * 4 + 6), -0.1f, -15.7));
-       //   //  shark.SetScale(0.01);
-       //    
-       //     //  PxU32 ragdollCollisionGroupFlags = RaycastGroup::RAYCAST_ENABLED;
-       //     //  shark.PlayAndLoopAnimation("Shark_Swim", 1.0f);
-       //     //  shark.LoadRagdoll("Shark.rag", ragdollCollisionGroupFlags);
-       //    
-       //    
-       //         shark.PlayAndLoopAnimation("Shark_SwimFast2", 1.0f);
-
-       //CreateGameObject();
-       //GameObject* mermaid = GetGameObjectByIndex(GetGameObjectCount() - 1);
-       //mermaid->SetPosition(3.5f, 0.5f, -0.5f);
-       //mermaid->SetModel("Mermaid");
-       //mermaid->SetName("ChristmasTree");
-       //mermaid->SetMeshMaterial("Gold");
-
-
-     //   CreateGameObject();
-     //   GameObject* kitchen = GetGameObjectByIndex(GetGameObjectCount() - 1);
-     //   kitchen->SetPosition(-3.45f, 0.4, 3.15f);
-     //   kitchen->SetModel("Kitchen");
-     //   kitchen->SetName("Ceiling2");
-     //   kitchen->SetMeshMaterial("Tree");
-     //   kitchen->SetMeshMaterialByMeshName("Cupboards", "Wood");
-     //   kitchen->SetMeshMaterialByMeshName("Counter", "Ceiling2");
-     //   //kitchen->SetMeshMaterialByMeshName("Counter", "PresentA");
-     //   kitchen->SetMeshMaterialByMeshName("Sink", "Metal");
-     //
-     //   std::cout << "\n";
-     //   std::cout << "\n";
-     //   std::cout << "\n";
-     //   kitchen->PrintMeshNames();
-     //
-
-     //   GameObjectCreateInfo createInfo;
-     //   createInfo.position = glm::vec3(-3.45f, 0.4, 3.15f);
-     //   createInfo.rotation = glm::vec3(0, 0, 0);
-     //   createInfo.scale = glm::vec3(1.0f, 1, 1);
-     //   createInfo.materialName = "Ceiling2";
-     //   createInfo.modelName = "Kitchen";
-     //   CreateGameObject(createInfo);
-
-      //CreateGameObject();
-      //GameObject* kitchen = GetGameObjectByIndex(GetGameObjectCount() - 1);
-      //kitchen->SetPosition(-3.25f, 0.4, 3.15f);
-      //kitchen->SetModel("ChristmasTree");
-      //kitchen->SetName("ChristmasTree");
-      //kitchen->SetMeshMaterial("Tree");
-      //kitchen->SetMeshMaterialByMeshName("Balls", "Gold");
-
-
-       // createInfo.position = glm::vec3(-3.25f, 0.4, 3.15f);
-       // createInfo.rotation = glm::vec3(0, 0, 0);
-       // createInfo.scale = glm::vec3(1.3f, 1, 1);
-       // createInfo.materialName = "Ceiling2";
-       // createInfo.modelName = "Kitchen";
+        int index = CreateAnimatedGameObject();
+        AnimatedGameObject& shark = g_animatedGameObjects[index];
+        shark.SetFlag(AnimatedGameObject::Flag::NONE);
+        shark.SetSkinnedModel("SharkSkinned");
+        shark.SetName("SharkSkinned");
+        shark.SetAnimationModeToBindPose();
+        shark.SetAllMeshMaterials("Shark");
+        shark.SetPosition(glm::vec3(7.0f, -0.1f, -15.7));
+        PxU32 raycastFlag = RaycastGroup::RAYCAST_ENABLED;
+        PxU32 collsionGroupFlag  = CollisionGroup::SHARK;
+        PxU32 collidesWithGroupFlag  = CollisionGroup::ENVIROMENT_OBSTACLE | CollisionGroup::GENERIC_BOUNCEABLE | CollisionGroup::RAGDOLL | CollisionGroup::PLAYER;
+        shark.PlayAndLoopAnimation("Shark_Swim", 1.0f);
+        shark.LoadRagdoll("Shark.rag", raycastFlag, collsionGroupFlag, collidesWithGroupFlag);
+       
     }
 
 
@@ -913,8 +756,8 @@ void Scene::LoadDefaultScene() {
     }
 
     CSG::Build();
-    RecreateFloorTrims();
-    RecreateCeilingTrims();
+    //RecreateFloorTrims();
+    //RecreateCeilingTrims();
     
     // FOG hack
     g_fogAABB.clear();
@@ -1009,14 +852,17 @@ void Scene::CreateTopLevelAccelerationStructures() {
 void Scene::RecreateCeilingTrims() {
     g_ceilingTrims.clear();
     for (CSGPlane& plane : g_csgAdditiveWallPlanes) {
-        glm::vec3 planeDir = glm::normalize(plane.m_veritces[BR] - plane.m_veritces[BL]);
-        Transform transform;
-        transform.position = plane.m_veritces[TL];
-        transform.rotation.y = Util::YRotationBetweenTwoPoints(plane.m_veritces[TR], plane.m_veritces[TL]) + HELL_PI;
-        transform.scale = glm::vec3(1.0f);
-        transform.scale.x = glm::distance(plane.m_veritces[TR], plane.m_veritces[TL]);
-        g_ceilingTrims.push_back(transform.to_mat4());
+        if (plane.m_ceilingTrims) {
+            glm::vec3 planeDir = glm::normalize(plane.m_veritces[BR] - plane.m_veritces[BL]);
+            Transform transform;
+            transform.position = plane.m_veritces[TL];
+            transform.rotation.y = Util::YRotationBetweenTwoPoints(plane.m_veritces[TR], plane.m_veritces[TL]) + HELL_PI;
+            transform.scale = glm::vec3(1.0f);
+            transform.scale.x = glm::distance(plane.m_veritces[TR], plane.m_veritces[TL]);
+            g_ceilingTrims.push_back(transform.to_mat4());
+        }
     }
+    std::cout << g_ceilingTrims.size() << "\n";
 }
 
 void Scene::RecreateFloorTrims() {
@@ -1092,16 +938,28 @@ void Scene::RecreateFloorTrims() {
     }
 }
 
+void Scene::ClearAllItemPickups() {
+    for (int i = 0; i < g_gameObjects.size(); i++) {
+        GameObject& gameObject = g_gameObjects[i];
+        if (gameObject.m_collisionType == CollisionType::PICKUP) {
+            gameObject.CleanUp();
+            g_gameObjects.erase(g_gameObjects.begin() + i);
+            i--;
+        }
+    }
+
+}
+
 void Scene::CreateWeaponSpawnPoints() {
 
     {
         WeaponInfo* weaponInfo = WeaponManager::GetWeaponInfoByName("Shotgun");
         Scene::CreateGameObject();
         GameObject* weapon = Scene::GetGameObjectByIndex(Scene::GetGameObjectCount() - 1);
-        weapon->SetPosition(glm::vec3(3.84f, 3.8, -1.2f));
-        weapon->SetRotationX(-1.7f);
-        weapon->SetRotationY(HELL_PI * 0.15f);
-        weapon->SetRotationZ(-1.6f);
+        weapon->SetPosition(glm::vec3(12.2f, 6.5, -1.2f));
+        weapon->SetRotationX(Util::RandomFloat(0, HELL_PI * 2.0f));
+        weapon->SetRotationY(Util::RandomFloat(0, HELL_PI * 2.0f));
+        weapon->SetRotationZ(Util::RandomFloat(0, HELL_PI * 2.0f));
         weapon->SetModel(weaponInfo->pickupModelName);
         weapon->SetName("PickUp");
         for (auto& it : weaponInfo->pickUpMeshMaterials) {
@@ -1124,10 +982,10 @@ void Scene::CreateWeaponSpawnPoints() {
         WeaponInfo* weaponInfo = WeaponManager::GetWeaponInfoByName("GoldenGlock");
         Scene::CreateGameObject();
         GameObject* weapon = Scene::GetGameObjectByIndex(Scene::GetGameObjectCount() - 1);
-        weapon->SetPosition(glm::vec3(-0.8f, 4.2, 4.2f));
-        weapon->SetRotationX(-1.7f);
-        weapon->SetRotationY(HELL_PI * 0.15f);
-        weapon->SetRotationZ(-1.6f);
+        weapon->SetPosition(glm::vec3(12.2f, 6.5, -1.5f));
+        weapon->SetRotationX(Util::RandomFloat(0, HELL_PI * 2.0f));
+        weapon->SetRotationY(Util::RandomFloat(0, HELL_PI * 2.0f));
+        weapon->SetRotationZ(Util::RandomFloat(0, HELL_PI * 2.0f));
         weapon->SetModel(weaponInfo->pickupModelName);
         weapon->SetName("PickUp");
         for (auto& it : weaponInfo->pickUpMeshMaterials) {
@@ -1149,10 +1007,10 @@ void Scene::CreateWeaponSpawnPoints() {
         WeaponInfo* weaponInfo = WeaponManager::GetWeaponInfoByName("Tokarev");
         Scene::CreateGameObject();
         GameObject* weapon = Scene::GetGameObjectByIndex(Scene::GetGameObjectCount() - 1);
-        weapon->SetPosition(glm::vec3(-2.54f, 2.4, 3.99f));
-        weapon->SetRotationX(-1.7f);
-        weapon->SetRotationY(HELL_PI);
-        weapon->SetRotationZ(-1.6f);
+        weapon->SetPosition(glm::vec3(12.0f, 6.5, -1.4f));
+        weapon->SetRotationX(Util::RandomFloat(0, HELL_PI * 2.0f));
+        weapon->SetRotationY(Util::RandomFloat(0, HELL_PI * 2.0f));
+        weapon->SetRotationZ(Util::RandomFloat(0, HELL_PI * 2.0f));
         weapon->SetModel(weaponInfo->pickupModelName);
         weapon->SetName("PickUp");
         for (auto& it : weaponInfo->pickUpMeshMaterials) {
@@ -1175,10 +1033,10 @@ void Scene::CreateWeaponSpawnPoints() {
         WeaponInfo* weaponInfo = WeaponManager::GetWeaponInfoByName("SPAS");
         Scene::CreateGameObject();
         GameObject* weapon = Scene::GetGameObjectByIndex(Scene::GetGameObjectCount() - 1);
-        weapon->SetPosition(glm::vec3(22.99f, 2.2, 13.28f));
-        weapon->SetRotationX(-1.7f);
-        weapon->SetRotationY(HELL_PI);
-        weapon->SetRotationZ(-1.6f);
+        weapon->SetPosition(glm::vec3(12.15f, 6.5, -1.3f));
+        weapon->SetRotationX(Util::RandomFloat(0, HELL_PI * 2.0f));
+        weapon->SetRotationY(Util::RandomFloat(0, HELL_PI * 2.0f));
+        weapon->SetRotationZ(Util::RandomFloat(0, HELL_PI * 2.0f));
         weapon->SetModel(weaponInfo->pickupModelName);
         weapon->SetName("PickUp");
         for (auto& it : weaponInfo->pickUpMeshMaterials) {
@@ -1199,10 +1057,10 @@ void Scene::CreateWeaponSpawnPoints() {
         WeaponInfo* weaponInfo = WeaponManager::GetWeaponInfoByName("P90");
         Scene::CreateGameObject();
         GameObject* weapon = Scene::GetGameObjectByIndex(Scene::GetGameObjectCount() - 1);
-        weapon->SetPosition(glm::vec3(20.7f, 0.9, -17.15f));
-        weapon->SetRotationX(-1.7f);
-        weapon->SetRotationY(HELL_PI);
-        weapon->SetRotationZ(-1.6f);
+        weapon->SetPosition(glm::vec3(12.7f, 6.5, -1.5f));
+        weapon->SetRotationX(Util::RandomFloat(0, HELL_PI * 2.0f));
+        weapon->SetRotationY(Util::RandomFloat(0, HELL_PI * 2.0f));
+        weapon->SetRotationZ(Util::RandomFloat(0, HELL_PI * 2.0f));
         weapon->SetModel(weaponInfo->pickupModelName);
         weapon->SetName("PickUp");
         for (auto& it : weaponInfo->pickUpMeshMaterials) {
@@ -1224,7 +1082,7 @@ void Scene::CreateWeaponSpawnPoints() {
         WeaponInfo* weaponInfo = WeaponManager::GetWeaponInfoByName("AKS74U");
         Scene::CreateGameObject();
         GameObject* weapon = Scene::GetGameObjectByIndex(Scene::GetGameObjectCount() - 1);
-        weapon->SetPosition(glm::vec3(-0.4f, 4.0, -7.4f));
+        weapon->SetPosition(glm::vec3(12.3, 6.5, -1.9f));
         weapon->SetRotationX(-1.7f);
         weapon->SetRotationY(0.0f);
         weapon->SetRotationZ(-1.6f);
@@ -1336,6 +1194,11 @@ void Scene::HackToUpdateShadowMapsOnPickUp(GameObject* gameObject) {
 
 void Scene::Update(float deltaTime) {
 
+    if (!g_shark.m_init) {
+        g_shark.Init();
+    }
+    g_shark.Update(deltaTime);
+
    // std::cout << g_dobermann.size() << "\n";
    //
    // g_dobermanmTimer += deltaTime;
@@ -1410,6 +1273,13 @@ void Scene::Update(float deltaTime) {
         }
     }
 
+    for (GameObject& gameObject : g_gameObjects) {
+        gameObject.Update(deltaTime);
+    }
+
+    for (Ladder& ladder: g_ladders) {
+        ladder.Update(deltaTime);
+    }
 
     for (Dobermann& dobermann : g_dobermann) {
         dobermann.Update(deltaTime);
@@ -1591,10 +1461,6 @@ void Scene::Update(float deltaTime) {
         }
     }
 
-    for (GameObject& gameObject : g_gameObjects) {
-        gameObject.Update(deltaTime);
-    }
-
     CreateTopLevelAccelerationStructures();
 
     Game::SetPlayerGroundedStates();
@@ -1620,7 +1486,6 @@ void Scene::Update(float deltaTime) {
     }
     ProcessBullets();
 
-    UpdateGameObjects(deltaTime);
     //UpdateAnimatedGameObjects(deltaTime);
 
     for (BulletCasing& bulletCasing : g_bulletCasings) {
@@ -1749,13 +1614,6 @@ const size_t Scene::GetGameObjectCount() {
 
 std::vector<GameObject>& Scene::GetGamesObjects() {
     return g_gameObjects;
-}
-
-void Scene::UpdateGameObjects(float deltaTime) {
-    for (GameObject& gameObject : g_gameObjects) {
-        gameObject.Update(deltaTime);
-        gameObject.UpdateRenderItems();
-    }
 }
 
 // Animated Game Objects
@@ -1955,8 +1813,10 @@ std::vector<RenderItem3D> Scene::GetGeometryRenderItems() {
     // Ceiling trims
     static int ceilingTrimMeshIndex = AssetManager::GetModelByName("TrimCeiling")->GetMeshIndices()[0];
     static int floorTrimMeshIndex = AssetManager::GetModelByName("TrimFloor")->GetMeshIndices()[0];
-    static int ceilingTrimMaterialIndex = AssetManager::GetMaterialIndex("Trims");
+    //static int ceilingTrimMaterialIndex = AssetManager::GetMaterialIndex("Trims");
+    static int ceilingTrimMaterialIndex = AssetManager::GetMaterialIndex("Ceiling2");
     int index = 0;
+    RecreateCeilingTrims();
     for (glm::mat4& matrix : g_ceilingTrims) {
         RenderItem3D renderItem;
         renderItem.meshIndex = ceilingTrimMeshIndex;
@@ -2009,6 +1869,12 @@ std::vector<RenderItem3D> Scene::GetGeometryRenderItems() {
     //}
 
 
+    // Ladders
+    std::vector<RenderItem3D> ladderRenderItems;
+    for (Ladder& ladder : g_ladders) {
+        renderItems.reserve(renderItems.size() + ladder.GetRenderItems().size());
+        renderItems.insert(std::end(renderItems), std::begin(ladder.GetRenderItems()), std::end(ladder.GetRenderItems()));
+    }
 
     // Trees
     std::vector<RenderItem3D> treeRenderItems = GetTreeRenderItems();
@@ -2251,105 +2117,6 @@ void Scene::CreateVolumetricBlood(glm::vec3 position, glm::vec3 rotation, glm::v
     _volumetricBloodObjectsSpawnedThisFrame++;
 }
 
-void Scene::Update_OLD(float deltaTime) {
-
-    EvaluateDebugKeyPresses();
-
-
-    // OLD SHIT BELOW
-
-    _volumetricBloodObjectsSpawnedThisFrame = 0;
-
-    for (VolumetricBloodSplatter& volumetricBloodSplatter : _volumetricBloodSplatters) {
-        volumetricBloodSplatter.Update(deltaTime);
-    }
-
-    for (vector<VolumetricBloodSplatter>::iterator it = _volumetricBloodSplatters.begin(); it != _volumetricBloodSplatters.end();) {
-        if (it->m_CurrentTime > 0.9f)
-            it = _volumetricBloodSplatters.erase(it);
-        else
-            ++it;
-    }
-
-
-
-
-
-
-    static int i = 0;
-    i++;
-
-    // Move light source 3 to the lamp
-    GameObject* lamp = GetGameObjectByName("Lamp");
-    if (lamp && i > 2) {
-        glm::mat4 lampMatrix = lamp->GetModelMatrix();
-        Transform globeTransform;
-        globeTransform.position = glm::vec3(0, 0.45f, 0);
-        glm::mat4 worldSpaceMatrix = lampMatrix * globeTransform.to_mat4();
-        Scene::g_lights[3].position = Util::GetTranslationFromMatrix(worldSpaceMatrix);
-    }
-   // Scene::_lights[3].isDirty = true;
-
-
-    GameObject* ak = GetGameObjectByName("AKS74U_Carlos");
-   // ak->_transform.rotation = glm::vec3(0, 0, 0);
-    if (Input::KeyPressed(HELL_KEY_SPACE) && false) {
-        std::cout << "updating game object: " << ak->_name << "\n";
-        //ak->_editorRaycastBody->setGlobalPose(PxTransform(Util::GlmMat4ToPxMat44(ak->GetModelMatrix())));
-        Transform transform = ak->_transform;
-		PxQuat quat = Util::GlmQuatToPxQuat(glm::quat(transform.rotation));
-		PxTransform trans = PxTransform(PxVec3(transform.position.x, transform.position.y, transform.position.z), quat);
-		//ak->_editorRaycastBody->setGlobalPose(PxTransform(Util::GlmMat4ToPxMat44(trans.to_mat4())));
-		//ak->_editorRaycastBody->setGlobalPose(trans);
-    }
-
-    Game::SetPlayerGroundedStates();
-    ProcessBullets();
-
-    for (BulletCasing& bulletCasing : g_bulletCasings) {
-        bulletCasing.Update(deltaTime);
-    }
-
-    for (Toilet& toilet : _toilets) {
-        toilet.Update(deltaTime);
-    }
-
-	for (PickUp& pickUp : _pickUps) {
-        pickUp.Update(deltaTime);
-	}
-
-    if (Input::KeyPressed(HELL_KEY_T)) {
-        for (Light& light : Scene::g_lights) {
-            light.m_shadowMapIsDirty = true;
-        }
-    }
-
-       /*
-    for (AnimatedGameObject& animatedGameObject : g_animatedGameObjects) {
-        animatedGameObject.Update(deltaTime);
-    }*/
-
-    for (GameObject& gameObject : g_gameObjects) {
-        gameObject.Update(deltaTime);
-    }
-
-    for (Door& door : g_doors) {
-        door.Update(deltaTime);
-    }
-
-    UpdateRTInstanceData();
-    ProcessPhysicsCollisions();
-}
-
-//
-//void Scene::DirtyAllLights() {
-//    for (Light& light : Scene::g_lights) {
-//        light.extraDirty = true;
-//        light.m_aaabbVolumeIsDirty = true;
-//    }
-//}
-
-
 void Scene::CheckForDirtyLights() {
     for (Light& light : Scene::g_lights) {
         if (!light.extraDirty) {
@@ -2396,8 +2163,23 @@ void Scene::CheckForDirtyLights() {
 }
 
 
+void Scene::UpdatePhysXPointers() {
+    // HACK to fix invalidated pointer crash
+    for (GameObject& gameObject : Scene::GetGamesObjects()) {
+        gameObject.UpdatePhysXPointers();
+    }
+    for (BulletCasing& bulletCasing : Scene::g_bulletCasings) {
+        bulletCasing.UpdatePhysXPointer();
+    }
+    for (Ladder& ladder : Scene::g_ladders) {
+        ladder.UpdatePhysXPointer();
+    }
+}
 
 void Scene::ProcessBullets() {
+
+    // HACK to fix invalidated pointer crash
+    UpdatePhysXPointers();
 
     bool fleshWasHit = false;
     bool glassWasHit = false;
@@ -2423,6 +2205,7 @@ void Scene::ProcessBullets() {
                         glm::vec3 rotation = glm::vec3(0, 0, 0);
                         glm::vec3 front = bullet.direction * glm::vec3(-1);
                         Scene::CreateVolumetricBlood(position, rotation, -bullet.direction);
+                        fleshWasHit = true;
 
                         // Spawn blood decal
                         static int counter = 0;
@@ -2443,7 +2226,7 @@ void Scene::ProcessBullets() {
                         if (rayResult.hitFound && rayResult.objectType == ObjectType::HEIGHT_MAP) {
                             Scene::g_bloodDecalsForMegaTexture.push_back(BloodDecal(transform, typeCounter));
                         }
-                        else {
+                        else if (rayResult.hitFound&& rayResult.objectType != ObjectType::RAGDOLL_RIGID) {
                             transform.position.y = rayResult.hitPosition.y + 0.005f;
                             Scene::g_bloodDecals.push_back(BloodDecal(transform, typeCounter));
                             BloodDecal* decal = &Scene::g_bloodDecals.back();
@@ -2641,9 +2424,19 @@ void Scene::ProcessBullets() {
         Audio::PlayAudio("GlassImpact.wav", 3.0f);
     }
     if (fleshWasHit) {
-        int random_number = std::rand() % 8 + 1;
-        std::string file = "FLY_Bullet_Impact_Flesh_0" + std::to_string(random_number) + ".wav";
-        Audio::PlayAudio(file.c_str(), 0.9f);
+        static const std::vector<std::string> fleshImpactFilenames = {
+            "FLY_Bullet_Impact_Flesh_00.wav",
+            "FLY_Bullet_Impact_Flesh_01.wav",
+            "FLY_Bullet_Impact_Flesh_02.wav",
+            "FLY_Bullet_Impact_Flesh_03.wav",
+            "FLY_Bullet_Impact_Flesh_04.wav",
+            "FLY_Bullet_Impact_Flesh_05.wav",
+            "FLY_Bullet_Impact_Flesh_06.wav",
+            "FLY_Bullet_Impact_Flesh_07.wav",
+        };
+        int random = rand() % fleshImpactFilenames.size();
+        Audio::PlayAudio(fleshImpactFilenames[random], 0.9f);
+        std::cout << "Flesh was hit\n";
     }
 }
 
@@ -3020,6 +2813,11 @@ void Scene::LoadHardCodedObjects() {
         tree->SetMeshMaterial("Tree");
         tree->SetMeshMaterialByMeshName("Balls", "Gold");
 
+        CreateGameObject();
+        GameObject* christmasLight = GetGameObjectByIndex(GetGameObjectCount() - 1);
+        christmasLight->SetPosition(10, 4, -2);
+        christmasLight->SetModel("ChristmasLight");
+        christmasLight->SetMeshMaterial("Gold");
 
 
         {
@@ -3571,10 +3369,12 @@ void Scene::ResetGameObjectStates() {
 
 void Scene::CleanUp() {
 
+    for (Ladder& ladder : g_ladders) {
+        ladder.CleanUp();
+    }
     for (Door& door : g_doors) {
         door.CleanUp();
     }
-
     for (Dobermann& dobermann : g_dobermann) {
         dobermann.CleanUp();
     }
@@ -3605,6 +3405,7 @@ void Scene::CleanUp() {
     }
 
     _toilets.clear();
+    g_ladders.clear();
     g_bloodDecals.clear();
     g_spawnPoints.clear();
     g_bulletCasings.clear();
@@ -3647,6 +3448,11 @@ void Scene::CreateLight(LightCreateInfo createInfo) {
     light.type = createInfo.type;
     light.m_shadowMapIsDirty = true;
     light.extraDirty = true;
+}
+
+void Scene::CreateLadder(LadderCreateInfo createInfo) {
+    Ladder& ladder = g_ladders.emplace_back();
+    ladder.Init(createInfo);
 }
 
 void Scene::AddLight(Light& light) {
@@ -3762,6 +3568,9 @@ void Scene::RemoveAllDecalsFromWindow(Window* window) {
 
 void Scene::ProcessPhysicsCollisions() {
 
+    // HACK to fix crash from invalidated pointers
+    Scene::UpdatePhysXPointers();
+
     bool bulletCasingCollision = false;
     bool shotgunShellCollision = false;
 
@@ -3778,6 +3587,13 @@ void Scene::ProcessPhysicsCollisions() {
         // IF you crash here again, try clearing all collisions the second you allow weapon pickup
         // IF you crash here again, try clearing all collisions the second you allow weapon pickup
         // IF you crash here again, try clearing all collisions the second you allow weapon pickup
+
+        // OR better yet, do a search through the collision report list before you ever remove any physics object
+        // OR better yet, do a search through the collision report list before you ever remove any physics object
+        // OR better yet, do a search through the collision report list before you ever remove any physics object
+        // OR better yet, do a search through the collision report list before you ever remove any physics object
+        // OR better yet, do a search through the collision report list before you ever remove any physics object
+        // OR better yet, do a search through the collision report list before you ever remove any physics object
 
         const char* nameA = report.rigidA->getName();
         const char* nameB = report.rigidB->getName();

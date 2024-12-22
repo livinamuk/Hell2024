@@ -35,7 +35,8 @@ void main() {
     //mat3 tbn = mat3(Tangent, BiTangent, Normal);
    
    vec3 normal = normalize(tbn * (normalMap.rgb * 2.0 - 1.0));
-
+   
+    //normal = normalize(Normal);
     NormalsOut.rgb = vec3(normal);
   //  NormalsOut.rgb = vec3(attrNormal);
     //NormalsOut.rgb = mix(normal, attrNormal, 0.5);
@@ -47,7 +48,7 @@ void main() {
 
     EmssiveMask.rgb = vec3(0, 0, 0);
 	EmssiveMask.a = 1.0;
-
+    
 	
     //RMAOut.r = 1.0;
     //RMAOut.g = 1.0;

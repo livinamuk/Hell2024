@@ -18,8 +18,13 @@ void Dobermann::Init() {
     animatedGameObject->SetRotationY(m_initialRotation);
     animatedGameObject->SetScale(1.35);
     animatedGameObject->PlayAndLoopAnimation("Dobermann_Lay", 1.0f);
-    PxU32 collisionGroupFlags = RaycastGroup::DOBERMAN;
-    animatedGameObject->LoadRagdoll("dobermann.rag", collisionGroupFlags);
+    //PxU32 collisionGroupFlags = RaycastGroup::DOBERMAN;
+
+    PxU32 raycastFlag = RaycastGroup::DOBERMAN;
+    PxU32 collsionGroupFlag = CollisionGroup::RAGDOLL;
+    PxU32 collidesWithGroupFlag = CollisionGroup::ENVIROMENT_OBSTACLE | CollisionGroup::GENERIC_BOUNCEABLE | CollisionGroup::RAGDOLL;
+
+    animatedGameObject->LoadRagdoll("dobermann.rag", raycastFlag, collsionGroupFlag, collidesWithGroupFlag);
     m_health = DOG_MAX_HEALTH;
     m_currentRotation = m_initialRotation;
 

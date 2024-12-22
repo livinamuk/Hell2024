@@ -330,21 +330,8 @@ void GameObject::Update(float deltaTime) {
             m_raycastRigidStatic.pxRigidStatic->setGlobalPose(m_collisionRigidBody.GetGlobalPoseAsPxTransform());
 		}
 	}
-
-	// Update raycast object PhysX pointer
-	if (m_raycastRigidStatic.pxRigidStatic) {
-        if (m_raycastRigidStatic.pxRigidStatic->userData) {
-            delete static_cast<PhysicsObjectData*>(m_raycastRigidStatic.pxRigidStatic->userData);
-		}
-        m_raycastRigidStatic.pxRigidStatic->userData = new PhysicsObjectData(ObjectType::GAME_OBJECT, this);
-	}
-	// Update collision object PhysX pointer
-	if (m_collisionRigidBody.Exists()) {
-        if (m_collisionRigidBody.pxRigidBody->userData) {
-            delete static_cast<PhysicsObjectData*>(m_collisionRigidBody.pxRigidBody->userData);
-		}
-        m_collisionRigidBody.pxRigidBody->userData = new PhysicsObjectData(ObjectType::GAME_OBJECT, this);
-	}
+    
+    UpdatePhysXPointers();
 
     // AABB
     if (m_raycastRigidStatic.pxRigidStatic) {
@@ -358,7 +345,7 @@ void GameObject::Update(float deltaTime) {
     else {
         // Rewrite this to work per mesh
         _aabbPreviousFrame = _aabb;
-        std::vector<glm::vec3> modelCorners = {
+                std::vector<glm::vec3> modelCorners = {
             glm::vec3(model->m_aabbMin.x, model->m_aabbMin.y, model->m_aabbMin.z),
             glm::vec3(model->m_aabbMax.x, model->m_aabbMin.y, model->m_aabbMin.z),
             glm::vec3(model->m_aabbMin.x, model->m_aabbMax.y, model->m_aabbMin.z),
@@ -377,6 +364,25 @@ void GameObject::Update(float deltaTime) {
             worldMaxBounds = glm::max(worldMaxBounds, worldCornerVec3);
         }
         _aabb = AABB(worldMinBounds, worldMaxBounds);
+    }
+
+    UpdateRenderItems();
+}
+
+void GameObject::UpdatePhysXPointers() {
+    // Update raycast object PhysX pointer
+    if (m_raycastRigidStatic.pxRigidStatic) {
+        if (m_raycastRigidStatic.pxRigidStatic->userData) {
+            delete static_cast<PhysicsObjectData*>(m_raycastRigidStatic.pxRigidStatic->userData);
+        }
+        m_raycastRigidStatic.pxRigidStatic->userData = new PhysicsObjectData(ObjectType::GAME_OBJECT, this);
+    }
+    // Update collision object PhysX pointer
+    if (m_collisionRigidBody.Exists()) {
+        if (m_collisionRigidBody.pxRigidBody->userData) {
+            delete static_cast<PhysicsObjectData*>(m_collisionRigidBody.pxRigidBody->userData);
+        }
+        m_collisionRigidBody.pxRigidBody->userData = new PhysicsObjectData(ObjectType::GAME_OBJECT, this);
     }
 }
 
@@ -925,20 +931,6 @@ void GameObject::UpdateRenderItems() {
         renderItem.castShadow = m_castShadows;
         renderItem.aabbMin = _aabb.boundsMin;
         renderItem.aabbMax = _aabb.boundsMax;
-
-        if (model->GetName() == "House_WeatherBoardsA" ||
-            model->GetName() == "House_WeatherBoardsWindow" ||
-            model->GetName() == "House_WeatherBoardsDoor") {
-
-            if (Util::FloatWithinRange(_transform.rotation.y, HELL_PI * 0.5f, 0.1) ||
-                Util::FloatWithinRange(_transform.rotation.y, HELL_PI * -0.5f, 0.1)) {
-                renderItem.useEmissiveMask = 2;
-            }
-            if (Util::FloatWithinRange(_transform.rotation.y, 0, 0.1) ||
-                Util::FloatWithinRange(_transform.rotation.y, 0, 0.1)) {
-                renderItem.useEmissiveMask = 3;
-            }
-        }
     }
 }
 

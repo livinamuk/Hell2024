@@ -1,4 +1,5 @@
 #pragma once
+#include <cstdint>
 
 enum class API { OPENGL, VULKAN, UNDEFINED };
 enum class WindowedMode { WINDOWED, FULLSCREEN };
@@ -10,6 +11,7 @@ enum class DobermannState { LAY, PATROL, KAMAKAZI, DOG_SHAPED_PIECE_OF_MEAT, RET
 enum class FacingDirection { LEFT, RIGHT, ALIGNED };
 enum class AABBLightVolumeMode { WORLDSPACE_CUBE_MAP, POSITION_RADIUS };
 enum class MenuType { NONE, FILE, INSERT, SELECTED_OBJECT, MISC };
+enum class RendererOverrideState { NONE, BASE_COLOR, NORMALS, RMA, WILD_COLORS, STATE_COUNT };
 
 enum EngineMode { GAME = 0, FLOORPLAN, EDITOR };
 enum Weapon { KNIFE = 0, GLOCK, SHOTGUN, AKS74U, MP7, WEAPON_COUNT };
@@ -60,9 +62,10 @@ enum class ObjectType {
     CSG_OBJECT_SUBTRACTIVE,
     LIGHT,
     HEIGHT_MAP,
+    LADDER
 };
 
-enum CollisionGroup {
+enum CollisionGroup : uint64_t {
     NO_COLLISION = 0,
     BULLET_CASING = 1,
     PLAYER = 2,
@@ -73,5 +76,6 @@ enum CollisionGroup {
     DOG_CHARACTER_CONTROLLER = 64,
     GENERTIC_INTERACTBLE = 128,
     ENVIROMENT_OBSTACLE_NO_DOG = 256,
-    RAGDOLL_SHARK = 32,
+    SHARK = 512,
+    LADDER = 1024,
 };

@@ -1,7 +1,7 @@
 #include "Door.h"
 #include "../../Core/AssetManager.h"
 #include "../../Game/Player.h"
-#include "../../Core/Audio.hpp"
+#include "../../Core/Audio.h"
 #include "../../Util.hpp"
 
 Door::Door(glm::vec3 position, float rotation, bool openOnStart) {

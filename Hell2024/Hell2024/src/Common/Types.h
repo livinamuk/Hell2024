@@ -211,6 +211,26 @@ struct AABB {
     const glm::vec3 GetBoundsMax() {
         return boundsMax;
     }
+    const glm::vec3 GetExtents() const {
+        return (boundsMax - boundsMin) / 2.0f;
+    }
+    bool ContainsPoint(const glm::vec3& point) const {
+        return (point.x >= boundsMin.x && point.x <= boundsMax.x &&
+            point.y >= boundsMin.y && point.y <= boundsMax.y &&
+            point.z >= boundsMin.z && point.z <= boundsMax.z);
+    }
+    bool ContainsSphere(const glm::vec3& sphereCenter, const float sphereRadius) const {
+        glm::vec3 closestPoint = glm::clamp(sphereCenter, boundsMin, boundsMax);
+        float distanceSquared = glm::dot(closestPoint - sphereCenter, closestPoint - sphereCenter);
+        return distanceSquared <= (sphereRadius * sphereRadius);
+        
+      //float distanceSquared = glm::distance(center, sphereCenter);
+      //
+      //bool res = distanceSquared <= (sphereRadius * sphereRadius);
+      //std::cout << "Failed sphere test for " << Util::Vec3ToString(boundsMin, )
+      //
+      //return distanceSquared <= (sphereRadius * sphereRadius);
+    }
 
 public: // make private later
     glm::vec3 center = glm::vec3(0);

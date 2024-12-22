@@ -70,10 +70,13 @@ namespace Util {
         }
     }
 
-    inline std::string PhysicsObjectTypeToString(ObjectType& type) {
+    inline std::string ObjectTypeToString(ObjectType& type) {
 
         if (type == ObjectType::GAME_OBJECT) {
             return "GAME_OBJECT";
+        }
+        else if (type == ObjectType::LADDER) {
+            return "LADDER";
         }
         else if (type == ObjectType::GLASS) {
             return "GLASS";
@@ -111,7 +114,6 @@ namespace Util {
         else if (type == ObjectType::UNDEFINED) {
             return "UNDEFINED";
         }
-
         else  {
             return "U N K N O W N";
         }
@@ -681,25 +683,39 @@ namespace Util {
     }
 
     inline void SetNormalsAndTangentsFromVertices(Vertex* vert0, Vertex* vert1, Vertex* vert2) {
-        // Shortcuts for UVs
+        // Shortcuts for positions and UVs
         glm::vec3& v0 = vert0->position;
         glm::vec3& v1 = vert1->position;
         glm::vec3& v2 = vert2->position;
+
         glm::vec2& uv0 = vert0->uv;
         glm::vec2& uv1 = vert1->uv;
         glm::vec2& uv2 = vert2->uv;
-        // Edges of the triangle : position delta. UV delta
-        glm::vec3 deltaPos1 = v1 - v0;
-        glm::vec3 deltaPos2 = v2 - v0;
+
+        // Compute edges of the triangle
+        glm::vec3 edge1 = v1 - v0;
+        glm::vec3 edge2 = v2 - v0;
+
         glm::vec2 deltaUV1 = uv1 - uv0;
         glm::vec2 deltaUV2 = uv2 - uv0;
+
+        // Compute the normal
+        glm::vec3 normal = glm::normalize(glm::cross(edge1, edge2));
+
+        // Compute the tangent and bitangent
         float r = 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV1.y * deltaUV2.x);
-        glm::vec3 tangent = (deltaPos1 * deltaUV2.y - deltaPos2 * deltaUV1.y) * r;
-        glm::vec3 bitangent = (deltaPos2 * deltaUV1.x - deltaPos1 * deltaUV2.x) * r;
-        glm::vec3 normal = glm::normalize(glm::cross(deltaPos1, deltaPos2));
-        vert0->normal = normal;
-        vert1->normal = normal;
-        vert2->normal = normal;
+        glm::vec3 tangent = (edge1 * deltaUV2.y - edge2 * deltaUV1.y) * r;
+        glm::vec3 bitangent = (edge2 * deltaUV1.x - edge1 * deltaUV2.x) * r;
+
+        // Normalize tangent and bitangent
+        tangent = glm::normalize(tangent);
+        bitangent = glm::normalize(bitangent);
+
+        // Assign the normal, tangent, and bitangent to the vertices
+        //vert0->normal = normal;
+        //vert1->normal = normal;
+        //vert2->normal = normal;
+
         vert0->tangent = tangent;
         vert1->tangent = tangent;
         vert2->tangent = tangent;

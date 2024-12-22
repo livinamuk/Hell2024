@@ -1,6 +1,6 @@
 #pragma once
 #include "RendererCommon.h"
-#include "../Core/Audio.hpp"
+#include "../Core/Audio.h"
 #include "../Physics/RigidBody.hpp"
 #include "../Physics/RigidStatic.hpp"
 #include "../Physics/Physics.h"
@@ -162,8 +162,8 @@ public:
     void SetWakeOnStart(bool value);
     void UpdateRigidStatic();
     void DisableRespawnOnPickup();
+    void UpdatePhysXPointers();
 
-    void UpdateRenderItems();
     std::vector<RenderItem3D>& GetRenderItems();
     RenderItem3D* GetRenderItemByIndex(int index);
 
@@ -174,10 +174,12 @@ public:
 
     float m_hackTimer = 0;
 
+    void UpdateRenderItems();
 private:
     std::vector<RenderItem3D> renderItems;
     bool _wasPickedUpLastFrame = false;
     bool _wasRespawnedUpLastFrame = false;
     bool _wakeOnStart = false;
 	//glm::mat4 CalculateModelMatrix(ModelMatrixMode modelMatrixMode);
+
 };

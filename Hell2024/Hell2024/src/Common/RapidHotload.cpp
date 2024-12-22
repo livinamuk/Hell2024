@@ -17,11 +17,11 @@ void RapidHotload::Update() {
 
     if (Input::KeyPressed(HELL_KEY_U)) {
         Texture* texture;
-        /*texture = AssetManager::GetTextureByName("MermaidHair_ALB");
+        texture = AssetManager::GetTextureByName("MermaidTail_NRM");
         if (texture) {
-            texture->GetGLTexture().HotloadFromPath("res/textures/ui/MermaidHair_ALB.png");
+            texture->GetGLTexture().HotloadFromPath("res/textures/ui/MermaidTail_NRM.png");
         }
-        texture = AssetManager::GetTextureByName("MermaidHair_RMA");
+        /*texture = AssetManager::GetTextureByName("MermaidHair_RMA");
         if (texture) {
             texture->GetGLTexture().HotloadFromPath("res/textures/ui/MermaidHair_RMA.png");
         }

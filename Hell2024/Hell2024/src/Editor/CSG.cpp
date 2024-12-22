@@ -181,9 +181,9 @@ namespace CSG {
         // Windows
         for (Window& window : Scene::GetWindows()) {
             Transform transform;
-            transform.position = window.GetPosition() + glm::vec3(0, 1.5f, 0);
+            transform.position = window.GetPosition() + glm::vec3(0, 1.45f, 0);
             transform.rotation = glm::vec3(0, window.GetRotationY(), 0);
-            transform.scale = glm::vec3(0.8f, 1.3f, 0.2f);
+            transform.scale = glm::vec3(0.9f, 1.2f, 0.2f);
             transform.scale *= glm::vec3(0.5f);
             Brush& brush = g_subtractiveBrushes.emplace_back();
             brush.SetBrushType(AIR_BRUSH);

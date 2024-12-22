@@ -2,9 +2,10 @@
 #include "AnimatedGameObject.h"
 #include "Game.h"
 #include "Scene.h"
+#include "Water.h"
 #include "WeaponManager.h"
 #include "../BackEnd/BackEnd.h"
-#include "../Core/Audio.hpp"
+#include "../Core/Audio.h"
 #include "../Input/Input.h"
 #include "../Input/InputMulti.h"
 #include "../Renderer/TextBlitter.h"
@@ -27,34 +28,13 @@ Player::Player(int playerIndex) {
     g_awaitingRespawn = true;
 }
 
-bool Player::EnteredUnderwater() {
-    return m_feetUnderWater && !m_feetUnderwaterLastFrame;
-}
-
-bool Player::EyesExitedUnderwater() {
-    return !m_cameraUnderwater && m_cameraUnderwaterLastFrame;
-}
-
-bool Player::CameraIsUnderwater() {
-    return m_cameraUnderwater;
-}
-
 void Player::Update(float deltaTime) {
-
     if (IsDead()) {
         m_flashlightOn = false;
     }
-
     if (g_awaitingRespawn && !Game::KillLimitReached()) {
         Respawn();
     }
-
-    m_feetUnderwaterLastFrame = m_feetUnderWater;
-    m_cameraUnderwaterLastFrame = m_cameraUnderwater;
-    m_cameraUnderwater = GetViewPos().y < Game::GetWaterHeight();
-    m_feetUnderWater = GetFeetPosition().y < Game::GetWaterHeight();
-    m_underwater = GetViewPos().y < Game::GetWaterHeight() + 0.1f;
-
     AnimatedGameObject* characterModel = Scene::GetAnimatedGameObjectByIndex(m_characterModelAnimatedGameObjectIndex);
     AnimatedGameObject* viewWeaponGameObject = Scene::GetAnimatedGameObjectByIndex(m_viewWeaponAnimatedGameObjectIndex);
 
@@ -73,7 +53,7 @@ void Player::Update(float deltaTime) {
 
     UpdateRagdoll(); // updates pointers to rigids
 
-    CheckForItemPickOverlaps();
+    CheckOverlapShape();
     CheckForEnviromentalDamage(deltaTime);
     CheckForDeath();
     CheckForDebugKeyPresses();
@@ -91,6 +71,8 @@ void Player::Update(float deltaTime) {
     UpdateMouseLook(deltaTime);
     UpdateViewWeaponLogic(deltaTime);
     UpdateWeaponSway(deltaTime); // this needs checking
+    UpdateWaterState();
+    UpdateLadderIndex();
 
     UpdateViewMatrix(deltaTime);
 
@@ -234,7 +216,7 @@ void Player::UpdateViewMatrix(float deltaTime) {
 
   // PxVec3 globalGravity = Physics::GetScene()->getGravity();
   // for (RigidComponent& rigid : GetCharacterAnimatedGameObject()->_ragdoll._rigidComponents) {
-  //     if (rigid.pxRigidBody->getGlobalPose().p.y < Game::GetWaterHeight()) {
+  //     if (rigid.pxRigidBody->getGlobalPose().p.y < Water::GetHeight()) {
   //         PxRigidDynamic* rigidBody = rigid.pxRigidBody;
   //         rigidBody->setActorFlag(PxActorFlag::eDISABLE_GRAVITY, true);
   //         float mass = 1.0;// rigid.pxRigidBody->getMass();
@@ -578,57 +560,6 @@ void Player::UpdateHeadBob(float deltaTime) {
     }
 }
 
-
-void Player::UpdateAudio(float deltaTime) {
-
-    const std::vector<const char*> indoorFootstepFilenames = {
-                    "player_step_1.wav",
-                    "player_step_2.wav",
-                    "player_step_3.wav",
-                    "player_step_4.wav",
-    }; 
-    const std::vector<const char*> outdoorFootstepFilenames = {
-                    "player_step_grass_1.wav",
-                    "player_step_grass_2.wav",
-                    "player_step_grass_3.wav",
-                    "player_step_grass_4.wav",
-    };
-
-    // Footstep audio
-    if (HasControl()) {
-        if (!IsMoving())
-            _footstepAudioTimer = 0;
-        else {
-            if (IsMoving() && !IsUnderWater() && _footstepAudioTimer == 0) {
-                // Audio
-                
-                int random = rand() % 4;
-                if (m_isOutside) {
-                    Audio::PlayAudio(outdoorFootstepFilenames[random], 0.125f);
-                }
-                else {
-                    Audio::PlayAudio(indoorFootstepFilenames[random], 0.5f);
-                }
-            }
-            float timerIncrement = m_crouching ? deltaTime * 0.75f : deltaTime;
-            _footstepAudioTimer += timerIncrement;
-            if (_footstepAudioTimer > _footstepAudioLoopLength) {
-                _footstepAudioTimer = 0;
-            }
-        }
-    }
-
-    // Water
-    if (EnteredUnderwater()) {
-        Audio::PlayAudio("Water_Impact0.wav", 1.0);
-    }
-    if (EyesExitedUnderwater()) {
-        //Audio::PlayAudio("Water_Impact1.wav", 1.0);
-    }    
-}
-
-
-
 void Player::CreateCharacterModel() {
     m_characterModelAnimatedGameObjectIndex = Scene::CreateAnimatedGameObject();
     AnimatedGameObject* characterModel = GetCharacterAnimatedGameObject();
@@ -655,9 +586,9 @@ void Player::CreateCharacterModel() {
     characterModel->SetMeshMaterialByMeshName("Magazine_Housing_low", "AKS74U_3");
     characterModel->SetMeshMaterialByMeshName("BarrelTip_low", "AKS74U_4");
 
-    if (m_playerIndex == 1) {
-      characterModel->SetMeshMaterialByMeshIndex(13, "UniSexGuyHead2");
-    }
+    //if (m_playerIndex == 1) {
+    //  characterModel->SetMeshMaterialByMeshIndex(13, "UniSexGuyHead2");
+    //}
 }
 
 void Player::CreateViewModel() {
@@ -743,29 +674,15 @@ glm::vec3 Player::GetMuzzleFlashPosition() {
     }
 }
 
-glm::vec3 Player::GetPistolCasingSpawnPostion() {
-
+glm::vec3 Player::GetPistolCasingSpawnPostion() { // Is this ever called ?????????????????????????????????????????????????????????????????????????????????????????????
     AnimatedGameObject* viewWeaponAnimatedGameObject = Scene::GetAnimatedGameObjectByIndex(m_viewWeaponAnimatedGameObjectIndex);
     WeaponInfo* weaponInfo = GetCurrentWeaponInfo();
-
     if (!viewWeaponAnimatedGameObject || !weaponInfo || GetCurrentWeaponInfo()->casingEjectionBoneName == UNDEFINED_STRING) {
         return glm::vec3(0);
     }
     glm::vec3 position = viewWeaponAnimatedGameObject->m_cameraSpawnMatrix * viewWeaponAnimatedGameObject->GetAnimatedTransformByBoneName(weaponInfo->casingEjectionBoneName) * glm::vec4(0, 0, 0, 1);
     return position;
 }
-
-
-
-
-/*
-void Player::SetWeapon(Weapon weapon) {
-	if (_currentWeaponIndex != weapon) {
-		_currentWeaponIndex = (int)weapon;
-		_needsAmmoReloaded = false;
-		_weaponAction = WeaponAction::DRAW_BEGIN;
-	}
-}*/
 
 PxSweepCallback* CreateSweepBuffer() {
 	return new PxSweepBuffer;
@@ -816,147 +733,32 @@ void Player::AddPickUpText(std::string text, int count) {
     pickUpText.count = count;
 }
 
-
-/*
-void Player::PickUpGlock() {
-    if (_weaponInventory[Weapon::GLOCK] == false) {
-        AddPickUpText("PICKED UP GLOCK");
-        Audio::PlayAudio("ItemPickUp.wav", 1.0f, true);
-        _weaponInventory[Weapon::GLOCK] = true;
-        _inventory.glockAmmo.clip = GLOCK_CLIP_SIZE;
-        _inventory.glockAmmo.total = GLOCK_CLIP_SIZE * 2;
-    }
-    else {
-        PickUpGlockAmmo();
-    }
-}
-
-
-void Player::PickUpAKS74U() {
-    if (_weaponInventory[Weapon::AKS74U] == false) {
-        AddPickUpText("PICKED UP AKS74U");
-        Audio::PlayAudio("ItemPickUp.wav", 1.0f, true);
-        _weaponInventory[Weapon::AKS74U] = true;
-        _inventory.aks74uAmmo.clip = AKS74U_MAG_SIZE;
-        _inventory.aks74uAmmo.total = AKS74U_MAG_SIZE * 2;
-        if (_currentWeaponIndex == GLOCK || _currentWeaponIndex == KNIFE) {
-            SetWeapon(Weapon::AKS74U);
-        }
-    }
-    else {
-        PickUpAKS74UAmmo();
-    }
-}
-
-void Player::PickUpShotgun() {
-    if (_weaponInventory[Weapon::SHOTGUN] == false) {
-        AddPickUpText("PICKED UP REMINGTON 870");
-        Audio::PlayAudio("ItemPickUp.wav", 1.0f, true);
-        _weaponInventory[Weapon::SHOTGUN] = true;
-        _inventory.shotgunAmmo.clip = SHOTGUN_AMMO_SIZE;
-        _inventory.shotgunAmmo.total += SHOTGUN_AMMO_SIZE * 2;
-        if (_currentWeaponIndex == KNIFE || _currentWeaponIndex == GLOCK) {
-            SetWeapon(Weapon::SHOTGUN);
-        }
-    }
-    else {
-        PickUpShotgunAmmo();
-    }
-}
-
-
-void Player::PickUpAKS74UAmmo() {
-    AddPickUpText("PICKED UP AKS74U AMMO");
-    Audio::PlayAudio("ItemPickUp.wav", 1.0f, true);
-    _inventory.aks74uAmmo.total += AKS74U_MAG_SIZE * 3;
-}
-
-void Player::PickUpShotgunAmmo() {
-    AddPickUpText("PICKED UP REMINGTON 870 AMMO");
-    Audio::PlayAudio("ItemPickUp.wav", 1.0f, true);
-    _inventory.shotgunAmmo.total += 25; // make this a define when you see this next or else.
-}
-
-void Player::PickUpGlockAmmo() {
-    AddPickUpText("PICKED UP GLOCK AMMO");
-    Audio::PlayAudio("ItemPickUp.wav", 1.0f, true);
-    _inventory.glockAmmo.total += 50; // make this a define when you see this next or else.
-}*/
-
-
-
-void Player::CheckForItemPickOverlaps() {
-/*
-	if (!HasControl()) {
-		return;
-	}
-
-	const PxGeometry& overlapShape = _itemPickupOverlapShape->getGeometry();
-	const PxTransform shapePose(_characterController->getActor()->getGlobalPose());
-
-	OverlapReport overlapReport = Physics::OverlapTest(overlapShape, shapePose, CollisionGroup::GENERIC_BOUNCEABLE);
-
-	if (overlapReport.hits.size()) {
-		for (auto* hit : overlapReport.hits) {
-			if (hit->userData) {
-
-				PhysicsObjectData* physicsObjectData = (PhysicsObjectData*)hit->userData;
-				ObjectType physicsObjectType = physicsObjectData->type;
-				GameObject* parent = (GameObject*)physicsObjectData->parent;
-
-				if (physicsObjectType == ObjectType::GAME_OBJECT) {
-                    // Weapon pickups
-                  // if (!parent->IsCollected() && parent->GetPickUpType() == PickUpType::AKS74U) {
-                  //     PickUpAKS74U();
-                  //     parent->PickUp();
-                  // }
-                  // if (!parent->IsCollected() && parent->GetPickUpType() == PickUpType::GLOCK) {
-                  //     PickUpGlock();
-                  //     parent->PickUp();
-                  // }
-                  // if (!parent->IsCollected() && parent->GetPickUpType() == PickUpType::SHOTGUN) {
-                  //     PickUpShotgun();
-                  //     parent->PickUp();
-                  //     // Think about this brother. Next time you see it of course. Not now.
-                  //     // Think about this brother. Next time you see it of course. Not now.
-                  //     // Think about this brother. Next time you see it of course. Not now.
-                  //     if (parent->_respawns) {
-                  //         parent->PutRigidBodyToSleep();
-                  //     }
-                  // }
-                    
-                    // if (!parent->IsCollected() && parent->GetPickUpType() == PickUpType::AKS74U_SCOPE) {
-                    //     GiveAKS74UScope();
-                    //     parent->PickUp();
-                    //     // Think about this brother. Next time you see it of course. Not now.
-                    //     // Think about this brother. Next time you see it of course. Not now.
-                    //     // Think about this brother. Next time you see it of course. Not now.
-                    //     if (parent->_respawns) {
-                    //         parent->PutRigidBodyToSleep();
-                    //     }
-                    // }
-
-                    if (!parent->IsCollected() && parent->GetPickUpType() == PickUpType::AMMO) {
-                        AmmoInfo* ammoInfo = WeaponManager::GetAmmoInfoByName(parent->_name);
-                        if (ammoInfo) {
-                            AmmoState* ammoState = GetAmmoStateByName(parent->_name);
-                            ammoState->ammoOnHand += ammoInfo->pickupAmount;
-                        }
-                        parent->PickUp();
-                        parent->PutRigidBodyToSleep();
-                        Audio::PlayAudio("ItemPickUp.wav", 1.0f, true);
-                        AddPickUpText("PICKED UP " + Util::Uppercase(parent->_name) + " AMMO", ammoInfo->pickupAmount);
-                    }
-				}
-			}
-			else {
-				// std::cout << "no user data found on ray hit\n";
-			}
-		}
-	}
-	else {
-		// std::cout << "no overlap bro\n";
-	}*/
+void Player::CheckOverlapShape() {
+    // Reset state
+    //m_overlappingState = {};
+    //
+    //if (!HasControl()) {
+    //    return;
+    //}
+	//const PxGeometry& overlapShape = _itemPickupOverlapShape->getGeometry();
+	//const PxTransform shapePose(_characterController->getActor()->getGlobalPose());
+    //
+	//OverlapReport overlapReport = Physics::OverlapTest(overlapShape, shapePose, CollisionGroup::LADDER);
+    //
+	//if (overlapReport.hits.size()) {
+	//	for (OverlapResult& hit : overlapReport.hits) {
+    //        if (hit.objectType == ObjectType::LADDER) {
+    //            m_overlappingState.ladder = true;
+    //            m_overlappedLadderHeight = hit.position.y;
+    //
+    //      //     PhysicsObjectData* physicsObjectData = hit.parent;
+    //      //     PxRigidStatic* rigidStatic = hit.parent;
+    //        }
+	//	}
+	//}
+	//else {
+	//	// std::cout << "no overlap bro\n";
+	//}
 }
 
 void Player::UpdateRagdoll() {
@@ -1027,7 +829,7 @@ glm::mat4 Player::GetViewMatrix() {
 
 glm::mat4 Player::GetWaterReflectionViewMatrix() {
 
-    float waterHeight = Game::GetWaterHeight();
+    float waterHeight = Water::GetHeight();
     glm::vec3 cameraPosition = GetViewPos();
 
     // Reflect the camera's position across the water plane (y = waterHeight)
@@ -1354,7 +1156,7 @@ void Player::CreateCharacterController(glm::vec3 position) {
 
 	PxFilterData filterData;
 	filterData.word1 = CollisionGroup::PLAYER;
-	filterData.word2 = CollisionGroup(ITEM_PICK_UP | ENVIROMENT_OBSTACLE);
+	filterData.word2 = CollisionGroup(ITEM_PICK_UP | ENVIROMENT_OBSTACLE | SHARK);
 	shape->setQueryFilterData(filterData);
 
 }

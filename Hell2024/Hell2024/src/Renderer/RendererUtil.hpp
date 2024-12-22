@@ -5,6 +5,21 @@
 
 namespace RendererUtil {
 
+    inline void CalculateAABB(RenderItem3D& renderItem) {
+        Mesh* mesh = AssetManager::GetMeshByIndex(renderItem.meshIndex);
+        if (mesh) {
+            glm::vec3 obbCenter = (mesh->aabbMin + mesh->aabbMax) * 0.5f;
+            glm::vec3 obbExtent = (mesh->aabbMax - mesh->aabbMin) * 0.5f;
+            glm::vec3 right = glm::vec3(renderItem.modelMatrix[0]);
+            glm::vec3 up = glm::vec3(renderItem.modelMatrix[1]);
+            glm::vec3 forward = glm::vec3(renderItem.modelMatrix[2]);
+            glm::vec3 worldCenter = glm::vec3(renderItem.modelMatrix * glm::vec4(obbCenter, 1.0f));
+            glm::vec3 worldExtent = glm::abs(obbExtent.x * right) + glm::abs(obbExtent.y * up) + glm::abs(obbExtent.z * forward);
+            renderItem.aabbMin = worldCenter - worldExtent;
+            renderItem.aabbMax = worldCenter + worldExtent;
+        }
+    }
+
     inline int GetViewportTopY(int playerIndex, SplitscreenMode splitscreenMode, int frameBufferWidth, int frameBufferHeight) {
         if (splitscreenMode == SplitscreenMode::NONE) {
             return frameBufferHeight;

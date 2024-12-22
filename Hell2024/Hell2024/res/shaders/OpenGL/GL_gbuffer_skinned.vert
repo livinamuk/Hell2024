@@ -71,7 +71,7 @@ void main() {
 	Normal = normalize(normalMatrix * vec4(vNormal, 0)).xyz;
 	Tangent = normalize(normalMatrix * vec4(vTangent, 0)).xyz;
 	BiTangent = normalize(cross(Normal, Tangent));
-
+    
 	gl_Position = projection * view * model * vec4(vPos, 1.0);
 
 	// Gold?

@@ -102,7 +102,7 @@ public:
     AnimationMode _animationMode = BINDPOSE;
     Ragdoll _ragdoll;
 
-    void LoadRagdoll(std::string filename, PxU32 ragdollCollisionFlags);
+    void LoadRagdoll(std::string filename, PxU32 raycastFlag, PxU32 collisionGroupFlag, PxU32 collidesWithGroupFlag);
     void SetAnimatedModeToRagdoll();
     void DestroyRagdoll();
     void EnableDrawingForAllMesh();

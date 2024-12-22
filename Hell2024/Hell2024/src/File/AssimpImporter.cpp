@@ -70,6 +70,7 @@ ModelData AssimpImporter::ImportFbx(const std::string filepath) {
             meshData.indices[baseIndex + 2] = face.mIndices[2];
         }
         // Generate Tangents
+        std::cout << meshData.indices.size() << "\n";
         for (int i = 0; i < meshData.indices.size(); i += 3) {
             Vertex* vert0 = &meshData.vertices[meshData.indices[i]];
             Vertex* vert1 = &meshData.vertices[meshData.indices[i + 1]];
@@ -81,12 +82,13 @@ ModelData AssimpImporter::ImportFbx(const std::string filepath) {
             float r = 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV1.y * deltaUV2.x);
             glm::vec3 tangent = (deltaPos1 * deltaUV2.y - deltaPos2 * deltaUV1.y) * r;
             glm::vec3 bitangent = (deltaPos2 * deltaUV1.x - deltaPos1 * deltaUV2.x) * r;
+            tangent = glm::vec3(1, 0, 0);
             vert0->tangent = tangent;
             vert1->tangent = tangent;
             vert2->tangent = tangent;
+            Util::SetNormalsAndTangentsFromVertices(vert0, vert1, vert2);
+            std::cout << i << ": " << Util::Vec3ToString(vert0->normal) << " " << Util::Vec3ToString(vert1->normal) << " " << Util::Vec3ToString(vert2->normal) << "\n";
         }
-        meshData.aabbMin = aabbMin;
-        meshData.aabbMax = aabbMax;
     }
 
 

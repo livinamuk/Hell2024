@@ -16,4 +16,5 @@ struct BulletCasing {
     void CollisionResponse();
     void CleanUp();
     glm::mat4 GetModelMatrix();
+    void UpdatePhysXPointer();
 };

@@ -2,7 +2,7 @@
 #include "CSG.h"
 #include "Gizmo.hpp"
 #include "../BackEnd/BackEnd.h"
-#include "../Core/Audio.hpp"
+#include "../Core/Audio.h"
 #include "../Core/CreateInfo.hpp"
 #include "../Core/JSON.hpp"
 #include "../Game/Game.h"
@@ -272,8 +272,8 @@ namespace Editor {
             CSGPlane* csgPlane = Scene::GetWallPlaneByIndex(g_selectedObjectIndex);
             if (csgPlane) {
                 g_selectedVertexPosition = csgPlane->m_veritces[g_selectedVertexIndex];
-                Scene::RecreateFloorTrims();
-                Scene::RecreateCeilingTrims();
+                //Scene::RecreateFloorTrims();
+                //Scene::RecreateCeilingTrims();
             }
         }
         else if (g_selectedObjectType == ObjectType::CSG_OBJECT_ADDITIVE_FLOOR_PLANE) {
@@ -355,75 +355,74 @@ namespace Editor {
 
 
             CSGPlane* csgPlane = nullptr;
-            if (Editor::GetSelectedObjectType() == ObjectType::CSG_OBJECT_ADDITIVE_WALL_PLANE) {
-                CSGObject& csgObject = CSG::GetCSGObjects()[Editor::GetSelectedObjectIndex()];
-                csgPlane = Scene::GetWallPlaneByIndex(csgObject.m_parentIndex);
-            }
-            if (Editor::GetSelectedObjectType() == ObjectType::CSG_OBJECT_ADDITIVE_CEILING_PLANE) {
-                CSGObject& csgObject = CSG::GetCSGObjects()[Editor::GetSelectedObjectIndex()];
-                csgPlane = Scene::GetCeilingPlaneByIndex(csgObject.m_parentIndex);
-            }
-            if (csgPlane) {
+            if (Editor::GetSelectedObjectIndex() != -1) {
+                if (Editor::GetSelectedObjectType() == ObjectType::CSG_OBJECT_ADDITIVE_WALL_PLANE) {
+                    CSGObject& csgObject = CSG::GetCSGObjects()[Editor::GetSelectedObjectIndex()];
+                    csgPlane = Scene::GetWallPlaneByIndex(csgObject.m_parentIndex);
+                }
+                if (Editor::GetSelectedObjectType() == ObjectType::CSG_OBJECT_ADDITIVE_CEILING_PLANE) {
+                    CSGObject& csgObject = CSG::GetCSGObjects()[Editor::GetSelectedObjectIndex()];
+                    csgPlane = Scene::GetCeilingPlaneByIndex(csgObject.m_parentIndex);
+                }
+                if (csgPlane) {
 
-                // Snapping
-                if (Input::KeyDown(HELL_KEY_LEFT_SHIFT_GLFW)) {
-                    float snapThreshold = 0.5;
-                    if (moveAxis == Axis::X && FloatWithinRange(oldPos.x, newPos.x, snapThreshold)) {
-                        if (g_selectedVertexIndex == TR || g_selectedVertexIndex == BR) {
-                            csgPlane->m_veritces[TR].x = csgPlane->m_veritces[TL].x;
-                            csgPlane->m_veritces[BR].x = csgPlane->m_veritces[TL].x;
+                    // Snapping
+                    if (Input::KeyDown(HELL_KEY_LEFT_SHIFT_GLFW)) {
+                        float snapThreshold = 0.5;
+                        if (moveAxis == Axis::X && FloatWithinRange(oldPos.x, newPos.x, snapThreshold)) {
+                            if (g_selectedVertexIndex == TR || g_selectedVertexIndex == BR) {
+                                csgPlane->m_veritces[TR].x = csgPlane->m_veritces[TL].x;
+                                csgPlane->m_veritces[BR].x = csgPlane->m_veritces[TL].x;
+                            }
+                            if (g_selectedVertexIndex == TL || g_selectedVertexIndex == BL) {
+                                csgPlane->m_veritces[TL].x = csgPlane->m_veritces[TR].x;
+                                csgPlane->m_veritces[BL].x = csgPlane->m_veritces[TR].x;
+                            }
                         }
-                        if (g_selectedVertexIndex == TL || g_selectedVertexIndex == BL) {
-                            csgPlane->m_veritces[TL].x = csgPlane->m_veritces[TR].x;
-                            csgPlane->m_veritces[BL].x = csgPlane->m_veritces[TR].x;
+                        if (moveAxis == Axis::Z && FloatWithinRange(oldPos.z, newPos.z, snapThreshold)) {
+                            if (g_selectedVertexIndex == TL || g_selectedVertexIndex == BL) {
+                                csgPlane->m_veritces[TL].z = csgPlane->m_veritces[TR].z;
+                                csgPlane->m_veritces[BL].z = csgPlane->m_veritces[BR].z;
+                            }
+                            if (g_selectedVertexIndex == TR || g_selectedVertexIndex == BR) {
+                                csgPlane->m_veritces[TR].z = csgPlane->m_veritces[TL].z;
+                                csgPlane->m_veritces[BR].z = csgPlane->m_veritces[BL].z;
+                            }
                         }
                     }
-                    if (moveAxis == Axis::Z && FloatWithinRange(oldPos.z, newPos.z, snapThreshold)) {
-                        if (g_selectedVertexIndex == TL || g_selectedVertexIndex == BL) {
-                            csgPlane->m_veritces[TL].z = csgPlane->m_veritces[TR].z;
-                            csgPlane->m_veritces[BL].z = csgPlane->m_veritces[BR].z;
+                    // Non snapping logic
+                    else {
+                        if (g_selectedVertexIndex == TR) {
+                            csgPlane->m_veritces[TR] = updatedGizmoPosition;
+                            csgPlane->m_veritces[BR].x = updatedGizmoPosition.x;
+                            csgPlane->m_veritces[BR].z = updatedGizmoPosition.z;
+                            csgPlane->m_veritces[TL].y = updatedGizmoPosition.y;
                         }
-                        if (g_selectedVertexIndex == TR || g_selectedVertexIndex == BR) {
-                            csgPlane->m_veritces[TR].z = csgPlane->m_veritces[TL].z;
-                            csgPlane->m_veritces[BR].z = csgPlane->m_veritces[BL].z;
+                        if (g_selectedVertexIndex == TL) {
+                            csgPlane->m_veritces[TL] = updatedGizmoPosition;
+                            csgPlane->m_veritces[BL].x = updatedGizmoPosition.x;
+                            csgPlane->m_veritces[BL].z = updatedGizmoPosition.z;
+                            csgPlane->m_veritces[TR].y = updatedGizmoPosition.y;
                         }
+                        if (g_selectedVertexIndex == BL) {
+                            csgPlane->m_veritces[BL] = updatedGizmoPosition;
+                            csgPlane->m_veritces[TL].x = updatedGizmoPosition.x;
+                            csgPlane->m_veritces[TL].z = updatedGizmoPosition.z;
+                            csgPlane->m_veritces[BR].y = updatedGizmoPosition.y;
+                        }
+                        if (g_selectedVertexIndex == BR) {
+                            csgPlane->m_veritces[BR] = updatedGizmoPosition;
+                            csgPlane->m_veritces[TR].x = updatedGizmoPosition.x;
+                            csgPlane->m_veritces[TR].z = updatedGizmoPosition.z;
+                            csgPlane->m_veritces[BL].y = updatedGizmoPosition.y;
+                        }
+                    }
+
+                    if (moveAxis != Axis::NONE) {
+                        RebuildEverything();
                     }
                 }
-                // Non snapping logic
-                else {
-                    if (g_selectedVertexIndex == TR) {
-                        csgPlane->m_veritces[TR] = updatedGizmoPosition;
-                        csgPlane->m_veritces[BR].x = updatedGizmoPosition.x;
-                        csgPlane->m_veritces[BR].z = updatedGizmoPosition.z;
-                        csgPlane->m_veritces[TL].y = updatedGizmoPosition.y;
-                    }
-                    if (g_selectedVertexIndex == TL) {
-                        csgPlane->m_veritces[TL] = updatedGizmoPosition;
-                        csgPlane->m_veritces[BL].x = updatedGizmoPosition.x;
-                        csgPlane->m_veritces[BL].z = updatedGizmoPosition.z;
-                        csgPlane->m_veritces[TR].y = updatedGizmoPosition.y;
-                    }
-                    if (g_selectedVertexIndex == BL) {
-                        csgPlane->m_veritces[BL] = updatedGizmoPosition;
-                        csgPlane->m_veritces[TL].x = updatedGizmoPosition.x;
-                        csgPlane->m_veritces[TL].z = updatedGizmoPosition.z;
-                        csgPlane->m_veritces[BR].y = updatedGizmoPosition.y;
-                    }
-                    if (g_selectedVertexIndex == BR) {
-                        csgPlane->m_veritces[BR] = updatedGizmoPosition;
-                        csgPlane->m_veritces[TR].x = updatedGizmoPosition.x;
-                        csgPlane->m_veritces[TR].z = updatedGizmoPosition.z;
-                        csgPlane->m_veritces[BL].y = updatedGizmoPosition.y;
-                    }
-                }
-
-                
-
-                if (moveAxis != Axis::NONE) {
-                    RebuildEverything();
-                }
             }
-
         }
 
     }
@@ -634,6 +633,14 @@ namespace Editor {
             for (int i = 0; i < Scene::g_lights.size(); i++) {
 
                 Light& light = Scene::g_lights[i];
+
+                // Skip lights too far
+                glm::vec3 editorViewPos = glm::inverse(g_editorViewMatrix)[3];
+                float distanceToCamera = glm::distance(editorViewPos, light.position);
+                if (distanceToCamera > 5) {
+                    continue;
+                }
+
                 glm::ivec2 res = Util::CalculateScreenSpaceCoordinates(light.position, mvp, PRESENT_WIDTH, PRESENT_HEIGHT, true);
                 int leftX = res.x - texture->GetWidth() / 2;
                 int rightX = res.x + texture->GetWidth() / 2;
@@ -1161,8 +1168,8 @@ namespace Editor {
                 g_selectedObjectType = ObjectType::CSG_OBJECT_ADDITIVE_WALL_PLANE;
                 SetCurrentMenuType(MenuType::SELECTED_OBJECT);
                 RebuildEverything();
-                Scene::RecreateCeilingTrims();
-                Scene::RecreateFloorTrims();
+                //Scene::RecreateCeilingTrims();
+                //Scene::RecreateFloorTrims();
             }
             else if (type == MenuItem::Type::INSERT_CEILING_PLANE) {
                 CSGPlane& plane = Scene::g_csgAdditiveCeilingPlanes.emplace_back();
@@ -1427,6 +1434,15 @@ namespace Editor {
 
             hell::ivec2 presentSize = hell::ivec2(PRESENT_WIDTH, PRESENT_HEIGHT);
             for (Light& light : Scene::g_lights) {
+
+                // Skip lights too far
+                glm::vec3 editorViewPos = glm::inverse(g_editorViewMatrix)[3];
+                float distanceToCamera = glm::distance(editorViewPos, light.position);
+                if (distanceToCamera > 5) {
+                    continue;
+                }
+
+
                 glm::vec3 d = glm::normalize(viewPos - light.position);
                 float ndotl = glm::dot(d, cameraForward);
                 if (ndotl < 0) {

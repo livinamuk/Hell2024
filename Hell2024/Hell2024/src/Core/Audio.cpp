@@ -1,4 +1,11 @@
-#include "Audio.hpp"
+#include "Audio.h"
+
+namespace Audio {
+    std::unordered_map<std::string, FMOD::Sound*> g_loadedAudio;
+    constexpr int AUDIO_CHANNEL_COUNT = 512;
+    FMOD::System* g_system;
+    std::vector<AudioHandle> g_playingAudio;
+}
 
 void Audio::Init() {
     // Create the main system object.
@@ -41,29 +48,22 @@ void Audio::Update() {
     }
     // Update FMOD internal hive mind
     g_system->update();
-    //std::cout << g_playingAudio.size() << "\n";
 }
 
 void Audio::PlayAudio(std::string filename, float volume, float frequency) {
     // Load if needed
-    if (g_loadedAudio.find(filename) == g_loadedAudio.end()) {
+    if (g_loadedAudio.find(filename) == g_loadedAudio.end()) {  // i think you are removing all these per frame
         LoadAudio(filename);
     }
-    FMOD::Channel* freeChannel = nullptr;
-    g_system->getChannel(g_nextFreeChannel, &freeChannel);
-    g_nextFreeChannel++;
-    if (g_nextFreeChannel == AUDIO_CHANNEL_COUNT) {
-        g_nextFreeChannel = 0;
-    }
-    AudioHandle handle;
+    AudioHandle& handle = g_playingAudio.emplace_back();
     handle.sound = g_loadedAudio[filename];
     handle.filename = filename;
-    handle.channel = freeChannel;
     g_system->playSound(handle.sound, nullptr, false, &handle.channel);
-    handle.channel->setVolume(volume); 
-    float currentFrequency;
+    handle.channel->setVolume(volume);
+    float currentFrequency = 0.0f;
     handle.channel->getFrequency(&currentFrequency);
     handle.channel->setFrequency(currentFrequency * frequency);
+    return;
 }
 
 
@@ -81,24 +81,15 @@ void Audio::LoopAudio(const std::string& filename, float volume) {
     if (g_loadedAudio.find(filename) == g_loadedAudio.end()) {  // i think you are removing all these per frame
         LoadAudio(filename);
     }
-    FMOD::Channel* freeChannel = nullptr;
-    g_system->getChannel(g_nextFreeChannel, &freeChannel);
-    g_nextFreeChannel++;
-
-    if (g_nextFreeChannel == AUDIO_CHANNEL_COUNT) {
-        g_nextFreeChannel = 0;
-    }
     AudioHandle& handle = g_playingAudio.emplace_back();
     handle.sound = g_loadedAudio[filename];
     handle.filename = filename;
-    handle.channel = freeChannel;
     handle.channel->setMode(FMOD_LOOP_NORMAL);
     handle.sound->setMode(FMOD_LOOP_NORMAL);
     handle.sound->setLoopCount(-1);
     g_system->playSound(handle.sound, nullptr, false, &handle.channel);
     handle.channel->setVolume(volume);
-    std::cout << "Looping sound" << std::endl;
-    return;
+    std::cout << "Looping sound" << std::endl;    
 }
 
 void Audio::StopAudio(const std::string& filename) {

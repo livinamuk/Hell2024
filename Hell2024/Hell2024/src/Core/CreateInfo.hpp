@@ -20,6 +20,12 @@ struct LightCreateInfo {
     int type;
 };
 
+struct LadderCreateInfo {
+    glm::vec3 position;
+    float rotation;
+    uint32_t yCount;
+};
+
 struct DobermannCreateInfo {
     glm::vec3 position;
     float rotation;
@@ -35,6 +41,8 @@ struct CSGPlaneCreateInfo {
     float textureScale = 1;
     float textureOffsetX = 0;
     float textureOffsetY = 0;
+    bool ceilingTrim = false;
+    bool floorTrim = false;
 };
 
 struct GameObjectCreateInfo {

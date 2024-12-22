@@ -41,10 +41,6 @@ namespace Game {
 
     const GameSettings& GetSettings();
 
-    float GetWaterHeight();
-
-    glm::mat4 GetWaterModelMatrix();
-
     inline int g_dogDeaths = -1;
     inline int g_playerDeaths = -1;
     inline std::vector<glm::vec3> testPoints;

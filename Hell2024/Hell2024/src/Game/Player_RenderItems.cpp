@@ -281,6 +281,7 @@ void Player::UpdateAttachmentRenderItems() {
     WeaponInfo* weaponInfo = GetCurrentWeaponInfo();
     WeaponState* weaponState = GetCurrentWeaponState();
 
+
     // Red dot sight
     if (weaponInfo && weaponState && weaponInfo->type == WeaponType::PISTOL && weaponState->hasScope) {
         glm::mat4 modelMatrix = viewWeaponAnimatedGameObject->GetModelMatrix() * m_weaponSwayMatrix * viewWeaponAnimatedGameObject->GetAnimatedTransformByBoneName("Weapon");
@@ -305,12 +306,13 @@ void Player::UpdateAttachmentRenderItems() {
             renderItem.baseColorTextureIndex = material->_basecolor;
             renderItem.rmaTextureIndex = material->_rma;
         }
+        renderItem.normalMapTextureIndex = material->_normal;
     }
 
     // Silencer
     if (weaponInfo && weaponState && weaponInfo->type == WeaponType::PISTOL && weaponState->hasSilencer) {
         glm::mat4 modelMatrix = viewWeaponAnimatedGameObject->GetModelMatrix() * m_weaponSwayMatrix * viewWeaponAnimatedGameObject->GetAnimatedTransformByBoneName("Muzzle");
-        static int materialIndex = AssetManager::GetMaterialIndex("RedDotSight"); // FIXXXXXXXX
+        static int materialIndex = AssetManager::GetMaterialIndex("Silencer");
         uint32_t modelIndex = AssetManager::GetModelIndexByName("Glock_Silencer");
         Model* model = AssetManager::GetModelByIndex(modelIndex);
         uint32_t& meshIndex = model->GetMeshIndices()[0];
@@ -331,6 +333,7 @@ void Player::UpdateAttachmentRenderItems() {
             renderItem.baseColorTextureIndex = material->_basecolor;
             renderItem.rmaTextureIndex = material->_rma;
         }
+        renderItem.normalMapTextureIndex = material->_normal;
     }
 
     if (weaponInfo->name == "GoldenGlock" && false) {
@@ -358,6 +361,7 @@ void Player::UpdateAttachmentRenderItems() {
                 renderItem.baseColorTextureIndex = material->_basecolor;
                 renderItem.rmaTextureIndex = material->_rma;
             }
+            renderItem.normalMapTextureIndex = material->_normal;
         }
 
         // Actual Lazer
@@ -396,6 +400,7 @@ void Player::UpdateAttachmentRenderItems() {
                 renderItem.baseColorTextureIndex = material->_basecolor;
                 renderItem.rmaTextureIndex = material->_rma;
             }
+            renderItem.normalMapTextureIndex = material->_normal;
         }
     }
 }
@@ -418,19 +423,21 @@ void Player::UpdateAttachmentGlassRenderItems() {
         static int materialIndex = AssetManager::GetMaterialIndex("RedDotSight");
         uint32_t modelIndex = AssetManager::GetModelIndexByName("Glock_RedDotSight");
         Model* model = AssetManager::GetModelByIndex(modelIndex);
-        uint32_t& meshIndex = model->GetMeshIndices()[1];
-        Mesh* mesh = AssetManager::GetMeshByIndex(meshIndex);
-        RenderItem3D& renderItem = m_attachmentGlassRenderItems.emplace_back();
-        renderItem.vertexOffset = mesh->baseVertex;
-        renderItem.indexOffset = mesh->baseIndex;
-        renderItem.modelMatrix = modelMatrix;
-        renderItem.inverseModelMatrix = inverse(renderItem.modelMatrix);
-        renderItem.meshIndex = meshIndex;
-        renderItem.castShadow = false;
-        Material* material = AssetManager::GetMaterialByIndex(materialIndex);
-        renderItem.baseColorTextureIndex = material->_basecolor;
-        renderItem.rmaTextureIndex = material->_rma;
-        renderItem.normalMapTextureIndex = material->_normal;
+        if (model) {
+            uint32_t& meshIndex = model->GetMeshIndices()[1];
+            Mesh* mesh = AssetManager::GetMeshByIndex(meshIndex);
+            RenderItem3D& renderItem = m_attachmentGlassRenderItems.emplace_back();
+            renderItem.vertexOffset = mesh->baseVertex;
+            renderItem.indexOffset = mesh->baseIndex;
+            renderItem.modelMatrix = modelMatrix;
+            renderItem.inverseModelMatrix = inverse(renderItem.modelMatrix);
+            renderItem.meshIndex = meshIndex;
+            renderItem.castShadow = false;
+            Material* material = AssetManager::GetMaterialByIndex(materialIndex);
+            renderItem.baseColorTextureIndex = material->_basecolor;
+            renderItem.rmaTextureIndex = material->_rma;
+            renderItem.normalMapTextureIndex = material->_normal;
+        }
     }
 }
 

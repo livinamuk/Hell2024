@@ -26,6 +26,10 @@ void main() {
     
     vec4 baseColor = texture(sampler2D(textureSamplers[BaseColorTextureIndex]), TexCoord);
     
+    //if (length(baseColor.rgb) < 0.25) {
+    //discard;
+    //}
+
     // FIX THIS!!!!!!!!!!!!!! 
     // It's only for the transparent leaves on the Christmas tree and 
     // is slowing down the rendering of ALL other geometry
@@ -37,13 +41,15 @@ void main() {
     //mat3 tbn = mat3(Tangent, BiTangent, Normal);
     mat3 tbn = mat3(normalize(Tangent), normalize(BiTangent), normalize(Normal));
 
+    
+   // normalMap = vec3((0.5, 0.5, 1.0));
     normalMap = normalMap.rgb * 2.0 - 1.0;
+    normalMap = normalize(normalMap);
  //  normalMap.z *= 0.75;
  //  normalMap = normalize(normalMap);
 
     vec3 normal = normalize(tbn * (normalMap));
-
-
+  //  normal = normalize(Normal);
     vec4 rma = texture(sampler2D(textureSamplers[RMATextureIndex]), TexCoord);
     
    // baseColor *= baseColor;

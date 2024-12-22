@@ -83,6 +83,27 @@ struct AmmoState {
     int ammoOnHand = 0;
 };
 
+struct WaterState {
+    float heightBeneathWater = 0;
+    float heightAboveWater = 0;
+
+    bool cameraUnderWater = false;
+    bool feetUnderWater = false;
+    bool wading = false;
+    bool swimming = false;
+
+    // Previous frame
+    bool cameraUnderWaterPrevious = true;
+    bool feetUnderWaterPrevious = true;
+    bool wadingPrevious = true;
+    bool swimmingPrevious = true;
+};
+
+
+//struct OverlappingState {
+//    bool ladder = false;
+//};
+
 class Player {
 
 private:
@@ -112,8 +133,11 @@ private:
     float m_accuracyModifer = 0;
     bool m_firedThisFrame = false;
 
+    uint32_t m_ladderOverlapIndexFeet = -1;
+    uint32_t m_ladderOverlapIndexEyes = -1;
 
 public:
+    
     bool m_grounded = true;
     int m_killCount = 0;
     int m_suicideCount = 0;
@@ -122,13 +146,17 @@ public:
     bool g_awaitingRespawn = true;
     int m_interactbleGameObjectIndex = -1;
     bool m_flashlightOn = false;
-    bool m_underwater = false;
+    //bool m_underwater = false;
+
+    //OverlappingState m_overlappingState;
 
 
-    bool m_cameraUnderwater = false;
-    bool m_cameraUnderwaterLastFrame = false;
-    bool m_feetUnderWater = false;
-    bool m_feetUnderwaterLastFrame = false;
+    float m_overlappedLadderHeight = 0.0f;
+
+    //bool m_cameraUnderwater = false;
+    //bool m_cameraUnderwaterLastFrame = false;
+    //bool m_feetUnderWater = false;
+    //bool m_feetUnderwaterLastFrame = false;
 
     Player() = default;
     Player(int playerIndex);
@@ -140,13 +168,16 @@ public:
     void UpdateMouseLook(float deltaTime);
     void UpdateViewMatrix(float deltaTime);
     void UpdateMovement(float deltaTime);
-    void UpdateMovementRegular(float deltaTime);
-    void UpdateMovementSwimming(float deltaTime);
+    void UpdateWalkingMovement(float deltaTime);
+    void UpdateSwimmingMovement(float deltaTime);
+    void UpdateLadderMovement(float deltaTime);
     void UpdatePickupText(float deltaTime);
     void UpdateCharacterModelAnimation(float deltaTime);
     void UpdateTimers(float deltaTime);
     void UpdateHeadBob(float deltaTime);
     void UpdateAudio(float deltaTime);
+    void UpdateWaterState();
+    void UpdateLadderIndex();
 
     // Character Controller
     void MoveCharacterController(glm::vec3 displacement);
@@ -169,11 +200,23 @@ public:
     bool IsDead();
     bool IsAlive();
     bool HasControl();
+    bool IsOverlappingLadder();
 
     // Water
-    bool EnteredUnderwater();
-    bool EyesExitedUnderwater();
+    WaterState m_waterState;
+    bool FeetEnteredUnderwater();
+    bool FeetExitedUnderwater();
+    bool CameraEnteredUnderwater();
+    bool CameraExitedUnderwater();
+    bool IsSwimming();
+    bool IsWading();
+    bool IsWalkingThroughWater();
     bool CameraIsUnderwater();
+    bool FeetBelowWater();
+    bool StartedSwimming();
+    bool StoppedSwimming();
+    bool StartingWading();
+    bool StoppedWading();
 
     // Audio
 
@@ -347,8 +390,6 @@ public:
 
     bool m_underWater = false;
 
-    bool IsUnderWater();
-
     void PickUpShotgun();
 
 
@@ -412,12 +453,14 @@ private:
 	void SpawnBullet(float variance, Weapon type);
 	bool CanFire();
 	bool CanReload();
-	void CheckForItemPickOverlaps();
+	void CheckOverlapShape();
 
 	bool _needsToDropAKMag = false;
 
     float _footstepAudioTimer = 0;
     float _footstepAudioLoopLength = 0.5;
+    float m_ladderFootstepAudioTimer = 0;
+    float m_ladderFootstepAudioLoopLength = 0.5;
 
 	glm::vec3 _position = glm::vec3(0);
     glm::vec3 _rotation = glm::vec3(-0.1f, -HELL_PI * 0.5f, 0);

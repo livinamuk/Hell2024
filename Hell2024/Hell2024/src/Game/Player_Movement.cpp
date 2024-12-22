@@ -1,25 +1,24 @@
-#include "player.h"
+#include "Player.h"
 #include "Game.h"
+#include "Scene.h"
+#include "Water.h"
 #include "../Util.hpp"
-
-bool Player::IsUnderWater() {
-    return m_underwater;
-}
 
 void Player::UpdateMovement(float deltaTime) {
     m_crouching = false;
     m_moving = false;
     if (HasControl()) {
-        if (IsUnderWater()) {
-            UpdateMovementSwimming(deltaTime);
+        if (GetViewPos().y < Water::GetHeight() + 0.1f) {
+            UpdateSwimmingMovement(deltaTime);
         }
         else {
-            UpdateMovementRegular(deltaTime);
+            UpdateWalkingMovement(deltaTime);
         }
+        UpdateLadderMovement(deltaTime);
     }
 }
 
-void Player::UpdateMovementRegular(float deltaTime) {
+void Player::UpdateWalkingMovement(float deltaTime) {
     // Crouching
     if (PressingCrouch()) {
         m_crouching = true;
@@ -61,6 +60,10 @@ void Player::UpdateMovementRegular(float deltaTime) {
         m_yVelocity = 4.9f; // magic value for jump strength (had to change cause you could no longer jump thru window after fixing character controller height bug)
         m_grounded = false;
     }
+    if (IsOverlappingLadder()) {
+        m_grounded = true;
+    }
+
     // Gravity
     if (m_grounded) {
         m_yVelocity = -0.1f; // can't be 0, or the _isGrounded check next frame will fail
@@ -72,6 +75,12 @@ void Player::UpdateMovementRegular(float deltaTime) {
     }
     float yDisplacement = m_yVelocity * deltaTime;
 
+    // TODO: instead make it so you can jump off ladders, this prevents it.
+    if (IsOverlappingLadder()) {
+        yDisplacement = 0;
+    }
+    // TODO: add y velociity for ladder use here, instead of what you wrote in UpdateLadderMovement
+
     if (Game::KillLimitReached()) {
         m_displacement = glm::vec3(0, 0, 0);
     }
@@ -79,7 +88,16 @@ void Player::UpdateMovementRegular(float deltaTime) {
     m_waterImpactVelocity = 15.75f;
 }
 
-void Player::UpdateMovementSwimming(float deltaTime) {
+void Player::UpdateLadderMovement(float deltaTime) {
+    float ladderClimpingSpeed = 3.5f;
+    //if (IsOverlappingLadder() && IsMoving() && !IsCrouching() && GetCameraForward().y < 0.5f) {
+    if (m_ladderOverlapIndexEyes != -1 && IsMoving() && !IsCrouching()) {
+        glm::vec3 ladderMovementDisplacement = glm::vec3(0.0f, 1.0f, 0.0f) * ladderClimpingSpeed * deltaTime;
+        MoveCharacterController(ladderMovementDisplacement);
+   }
+}
+
+void Player::UpdateSwimmingMovement(float deltaTime) {
     // WSAD movement
     if (PressingWalkForward()) {
         m_displacement -= _forward;
@@ -136,19 +154,103 @@ void Player::UpdateMovementSwimming(float deltaTime) {
 
     MoveCharacterController(glm::vec3(m_displacement.x, m_displacement.y, m_displacement.z));
 
+    
+
    // std::cout << m_waterImpactVelocity << " " << m_yVelocity << "\n";
    // std::cout << m_yVelocity << "\n";
 }
 
-
 void Player::MoveCharacterController(glm::vec3 displacement) {
     PxFilterData filterData;
     filterData.word0 = 0;
-    filterData.word1 = CollisionGroup::ENVIROMENT_OBSTACLE | CollisionGroup::ENVIROMENT_OBSTACLE_NO_DOG;	// Things to collide with
+    filterData.word1 = CollisionGroup::ENVIROMENT_OBSTACLE | CollisionGroup::ENVIROMENT_OBSTACLE_NO_DOG | CollisionGroup::SHARK;	// Things to collide with
     PxControllerFilters data;
     data.mFilterData = &filterData;
     PxF32 minDist = 0.001f;
     float fixedDeltaTime = (1.0f / 60.0f);
     _characterController->move(PxVec3(displacement.x, displacement.y, displacement.z), minDist, fixedDeltaTime, data);
     _position = Util::PxVec3toGlmVec3(_characterController->getFootPosition());
+}
+
+bool Player::FeetEnteredUnderwater() {
+    return !m_waterState.feetUnderWaterPrevious && m_waterState.feetUnderWater;
+}
+
+bool Player::FeetExitedUnderwater() {
+    return m_waterState.feetUnderWaterPrevious && !m_waterState.feetUnderWater;
+}
+
+bool Player::CameraEnteredUnderwater() {
+    return !m_waterState.cameraUnderWaterPrevious && m_waterState.cameraUnderWater;
+}
+
+bool Player::CameraExitedUnderwater() {
+    return m_waterState.cameraUnderWaterPrevious && !m_waterState.cameraUnderWater;
+}
+
+bool Player::CameraIsUnderwater() {
+    return m_waterState.cameraUnderWater;
+}
+
+bool Player::FeetBelowWater() {
+    return m_waterState.feetUnderWater;
+}
+
+bool Player::IsSwimming() {
+    return m_waterState.cameraUnderWater && IsMoving();
+}
+
+bool Player::IsWading() {
+    return m_waterState.wading;
+}
+
+bool Player::StartedSwimming() {
+    return !m_waterState.swimmingPrevious && m_waterState.swimming;
+}
+
+bool Player::StoppedSwimming() {
+    return m_waterState.swimmingPrevious && !m_waterState.swimming;
+}
+
+bool Player::StartingWading() {
+    return !m_waterState.wadingPrevious && m_waterState.wading;
+}
+
+bool Player::StoppedWading() {
+    return m_waterState.wadingPrevious && !m_waterState.wading;
+}
+
+void Player::UpdateWaterState() {
+    m_waterState.feetUnderWaterPrevious = m_waterState.feetUnderWater;
+    m_waterState.cameraUnderWaterPrevious = m_waterState.cameraUnderWater;
+    m_waterState.wadingPrevious = m_waterState.wading;
+    m_waterState.swimmingPrevious = m_waterState.swimming;
+    m_waterState.cameraUnderWater = GetViewPos().y < Water::GetHeight();
+    m_waterState.feetUnderWater = GetFeetPosition().y < Water::GetHeight();
+    m_waterState.heightAboveWater = (GetFeetPosition().y > Water::GetHeight()) ? (GetFeetPosition().y - Water::GetHeight()) : 0.0f;
+    m_waterState.heightBeneathWater = (GetFeetPosition().y < Water::GetHeight()) ? (Water::GetHeight() - GetFeetPosition().y) : 0.0f;
+    m_waterState.swimming = m_waterState.cameraUnderWater && IsMoving();
+    m_waterState.wading = !m_waterState.cameraUnderWater && m_waterState.feetUnderWater && IsMoving();
+}
+
+bool Player::IsOverlappingLadder() {
+    return (m_ladderOverlapIndexFeet != -1 && m_ladderOverlapIndexEyes != -1);
+}
+
+void Player::UpdateLadderIndex() {
+    m_ladderOverlapIndexFeet = -1;
+    m_ladderOverlapIndexEyes = -1;
+    for (int i = 0; i < Scene::g_ladders.size(); i++) {
+        Ladder& ladder = Scene::g_ladders[i];     
+
+        float sphereRadius = 0.25f;
+        if (ladder.GetOverlapHitBoxAABB().ContainsSphere(GetFeetPosition(), sphereRadius)) {
+            m_ladderOverlapIndexFeet = i;
+            std::cout << "ladder m_ladderOverlapIndexFeet " << i << "\n";
+        }
+        if (ladder.GetOverlapHitBoxAABB().ContainsSphere(GetViewPos(), sphereRadius)) {
+            m_ladderOverlapIndexEyes = i;
+            std::cout << "ladder m_ladderOverlapIndexEyes " << i << "\n";
+        }
+    }
 }

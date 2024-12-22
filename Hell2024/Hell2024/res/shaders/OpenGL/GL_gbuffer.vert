@@ -10,8 +10,6 @@ layout (location = 5) in vec4 vBoneWeight;
 uniform mat4 projection;
 uniform mat4 view;
 uniform int playerIndex;
-uniform int goldBaseColorTextureIndex;
-uniform int goldRMATextureIndex;
 uniform int instanceDataOffset;
 
 out vec2 TexCoord;
@@ -55,7 +53,6 @@ layout(std430, binding = 1) readonly buffer renderItems {
 };
 
 void main() {
-
 	int index = gl_InstanceID + gl_BaseInstance + instanceDataOffset;
 
     // Set the texture coordinates
@@ -75,16 +72,22 @@ void main() {
     mat4 modelMatrix = renderItem.modelMatrix;
 	mat4 normalMatrix = transpose(renderItem.inverseModelMatrix);
 
+    //mat3 normalMatrix = transpose(inverse(mat3(modelMatrix)));
+    //Normal = normalize(normalMatrix * vNormal);
+    //Tangent = normalize(normalMatrix * vTangent);
+    //BiTangent = normalize(cross(Normal, Tangent));
+
 	Normal = normalize(normalMatrix * vec4(vNormal, 0)).xyz;
 	Tangent = normalize(normalMatrix * vec4(vTangent, 0)).xyz;
 	BiTangent = normalize(cross(Normal, Tangent));
     
-
     // Compute the final position of the vertex in screen space
     gl_Position = projection * view * modelMatrix * vec4(vPos, 1.0);
-
-
-	
+    
+    // What did or does this do?
+    // What did or does this do?
+    // What did or does this do?
+    // What did or does this do?
 	int fuck =  renderItem.useEmissiveMask;
 	if (fuck == 2) {
 		vec3 WorldPos = vec4(modelMatrix * vec4(vPos, 1.0)).xyz;
@@ -97,6 +100,4 @@ void main() {
 
     // Pass the player index to the fragment shader
     PlayerIndex = playerIndex;
-
-
 }

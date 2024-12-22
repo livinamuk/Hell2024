@@ -2,13 +2,15 @@
 #include "../Game/Game.h"
 #include "../Game/Scene.h"
 #include "Timer.hpp"
+#include "../Renderer/RendererUtil.hpp"
 
 namespace RendererData {
 
+    RendererOverrideState g_rendererOverrideState = RendererOverrideState::NONE;
+
     std::vector<DrawIndexedIndirectCommand> CreateMultiDrawIndirectCommands(std::vector<RenderItem3D>& renderItems, int firstInstance, int instanceCount);
     void CalculateAbsentAABBs(std::vector<RenderItem3D>& renderItems);
-    void CalculateAABB(RenderItem3D& renderItem);
-
+    
     void CreateDrawCommands(int playerCount) {
 
         //Timer timer("CreateDrawCommands");
@@ -108,22 +110,9 @@ namespace RendererData {
     void CalculateAbsentAABBs(std::vector<RenderItem3D>& renderItems) {
         for (RenderItem3D& renderItem : renderItems) {
             if (renderItem.aabbMin == glm::vec3(0) && renderItem.aabbMax == glm::vec3(0)) {
-                CalculateAABB(renderItem);
+                RendererUtil::CalculateAABB(renderItem);
             }
         }
-    }
-
-    void CalculateAABB(RenderItem3D& renderItem) {
-        Mesh* mesh = AssetManager::GetMeshByIndex(renderItem.meshIndex);
-        glm::vec3 obbCenter = (mesh->aabbMin + mesh->aabbMax) * 0.5f;
-        glm::vec3 obbExtent = (mesh->aabbMax - mesh->aabbMin) * 0.5f;
-        glm::vec3 right = glm::vec3(renderItem.modelMatrix[0]);
-        glm::vec3 up = glm::vec3(renderItem.modelMatrix[1]);
-        glm::vec3 forward = glm::vec3(renderItem.modelMatrix[2]);
-        glm::vec3 worldCenter = glm::vec3(renderItem.modelMatrix * glm::vec4(obbCenter, 1.0f));
-        glm::vec3 worldExtent = glm::abs(obbExtent.x * right) + glm::abs(obbExtent.y * up) + glm::abs(obbExtent.z * forward);
-        renderItem.aabbMin = worldCenter - worldExtent;
-        renderItem.aabbMax = worldCenter + worldExtent;
     }
 
     void UpdateGPULights() {
@@ -143,5 +132,19 @@ namespace RendererData {
             g_gpuLights[i].lightVolumeAABBIsDirty = light.m_aaabbVolumeIsDirty ? 1 : 0;
             g_gpuLights[i].lightVolumeMode = light.m_aabbLightVolumeMode == AABBLightVolumeMode::WORLDSPACE_CUBE_MAP ? 0 : 1;
         }
+    }
+
+    RendererOverrideState GetRendererOverrideState() {
+        return g_rendererOverrideState;
+    }
+
+    int GetRendererOverrideStateAsInt() {
+        return static_cast<int>(g_rendererOverrideState);
+    }
+
+    void NextRendererOverrideState() {
+        static int i = 0;
+        i = (i + 1) % static_cast<int>(RendererOverrideState::STATE_COUNT);
+        g_rendererOverrideState = static_cast<RendererOverrideState>(i);
     }
 }

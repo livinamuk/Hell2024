@@ -45,7 +45,7 @@ struct Ragdoll {
     std::vector<RigidComponent> _rigidComponents;
     std::vector<JointComponent> _jointComponents;
 
-    void LoadFromJSON(std::string filename, PxU32 collisionGroup);
+    void LoadFromJSON(std::string filename, PxU32 raycastFlag, PxU32 collisionGroupFlag, PxU32 collidesWithGroupFlag);
     RigidComponent* GetRigidByName(std::string& name);
 
     void EnableVisualization();

@@ -18,7 +18,7 @@ std::string FindParentJointName(std::string query) {
     return result;
 }
 
-void Ragdoll::LoadFromJSON(std::string filename, PxU32 collisionGroup) {
+void Ragdoll::LoadFromJSON(std::string filename, PxU32 raycastFlag, PxU32 collisionGroupFlag, PxU32 collidesWithGroupFlag) {
 
     FILE* filepoint;
     errno_t err;
@@ -204,9 +204,9 @@ void Ragdoll::LoadFromJSON(std::string filename, PxU32 collisionGroup) {
         PxRigidBodyExt::setMassAndUpdateInertia(*rigid.pxRigidBody, rigid.mass);
 
         PxFilterData filterData;
-        filterData.word0 = collisionGroup;
-        filterData.word1 = CollisionGroup::RAGDOLL;
-        filterData.word2 = CollisionGroup::ENVIROMENT_OBSTACLE | CollisionGroup::GENERIC_BOUNCEABLE | CollisionGroup::RAGDOLL;
+        filterData.word0 = raycastFlag;
+        filterData.word1 = collisionGroupFlag;
+        filterData.word2 = collidesWithGroupFlag;
         shape->setQueryFilterData(filterData);
         shape->setSimulationFilterData(filterData);
 

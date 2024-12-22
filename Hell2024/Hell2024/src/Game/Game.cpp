@@ -1,14 +1,16 @@
 ﻿
 #include "Game.h"
 #include "Scene.h"
+#include "Water.h"
 #include "../BackEnd/BackEnd.h"
-#include "../Core/Audio.hpp"
+#include "../Core/Audio.h"
 #include "../Editor/CSG.h"
 #include "../Editor/Editor.h"
 #include "../Input/Input.h"
 #include "../Input/InputMulti.h"
 #include "../Renderer/GlobalIllumination.h"
 #include "../Renderer/Renderer.h"
+#include "../Renderer/RendererData.h"
 #include "../Pathfinding/Pathfinding2.h"
 #include "RapidHotload.h"
 
@@ -29,22 +31,9 @@ namespace Game {
     double g_thisFrame = 0;
     bool g_takeDamageOutside = false;
     float g_time = 0;
-    float g_waterHeight = 2.4f;
+    
 
     void EvaluateDebugKeyPresses();
-
-
-    float GetWaterHeight() {
-        return g_waterHeight;
-    }
-
-    glm::mat4 GetWaterModelMatrix() {
-        Transform waterTransform;
-        waterTransform.scale.x = 100;
-        waterTransform.scale.z = 100;
-        waterTransform.position.y = GetWaterHeight();
-        return waterTransform.to_mat4();
-    }
 
     void Create() {
 
@@ -59,7 +48,7 @@ namespace Game {
         CreatePlayers(2);
 
         Scene::Init();
-
+        Water::SetHeight(2.4f);
 
 
 
@@ -110,6 +99,14 @@ namespace Game {
         }
         else {
             Audio::StopAudio("Water_AmbientLoop.wav");
+        }
+
+        Player& player = g_players[0];
+        if (player.IsWading()) {
+            Audio::LoopAudioIfNotPlaying("Water_PaddlingLoop_1.wav", 1.0);
+        }
+        else {
+            Audio::StopAudio("Water_PaddlingLoop_1.wav");
         }
 
         // Delta time
@@ -242,16 +239,18 @@ namespace Game {
         SetPlayerKeyboardAndMouseIndex(2, 1, 1);
         SetPlayerKeyboardAndMouseIndex(3, 1, 1);
 
-        PxU32 p1RagdollCollisionGroupFlags = RaycastGroup::PLAYER_1_RAGDOLL;
-        PxU32 p2RagdollCollisionGroupFlags = RaycastGroup::PLAYER_2_RAGDOLL;
-        PxU32 p3RagdollCollisionGroupFlags = RaycastGroup::PLAYER_3_RAGDOLL;
-        PxU32 p4RagdollCollisionGroupFlags = RaycastGroup::PLAYER_4_RAGDOLL;
+        PxU32 p1raycastFlag = RaycastGroup::PLAYER_1_RAGDOLL;
+        PxU32 p2raycastFlag = RaycastGroup::PLAYER_2_RAGDOLL;
+        PxU32 p3raycastFlag = RaycastGroup::PLAYER_3_RAGDOLL;
+        PxU32 p4raycastFlag = RaycastGroup::PLAYER_4_RAGDOLL;
+        PxU32 collsionGroupFlag = CollisionGroup::RAGDOLL;
+        PxU32 collidesWithGroupFlag = CollisionGroup::ENVIROMENT_OBSTACLE | CollisionGroup::GENERIC_BOUNCEABLE | CollisionGroup::RAGDOLL;
 
         AnimatedGameObject* p1characterModel = Scene::GetAnimatedGameObjectByIndex(Game::g_players[0].GetCharacterModelAnimatedGameObjectIndex());
         AnimatedGameObject* p2characterModel = Scene::GetAnimatedGameObjectByIndex(Game::g_players[1].GetCharacterModelAnimatedGameObjectIndex());
 
-        p1characterModel->LoadRagdoll("UnisexGuy3.rag", p1RagdollCollisionGroupFlags);
-        p2characterModel->LoadRagdoll("UnisexGuy3.rag", p2RagdollCollisionGroupFlags);
+        p1characterModel->LoadRagdoll("UnisexGuy3.rag", p1raycastFlag, collsionGroupFlag, collidesWithGroupFlag);
+        p2characterModel->LoadRagdoll("UnisexGuy3.rag", p2raycastFlag, collsionGroupFlag, collidesWithGroupFlag);
         Game::g_players[0]._interactFlags = RaycastGroup::RAYCAST_ENABLED;
         Game::g_players[0]._interactFlags &= ~RaycastGroup::PLAYER_1_RAGDOLL;
         Game::g_players[1]._interactFlags = RaycastGroup::RAYCAST_ENABLED;
@@ -264,8 +263,8 @@ namespace Game {
         if (GetPlayerCount() == 4) {
             AnimatedGameObject* p3characterModel = Scene::GetAnimatedGameObjectByIndex(Game::g_players[2].GetCharacterModelAnimatedGameObjectIndex());
             AnimatedGameObject* p4characterModel = Scene::GetAnimatedGameObjectByIndex(Game::g_players[3].GetCharacterModelAnimatedGameObjectIndex());
-            p3characterModel->LoadRagdoll("UnisexGuy3.rag", p3RagdollCollisionGroupFlags);
-            p4characterModel->LoadRagdoll("UnisexGuy3.rag", p4RagdollCollisionGroupFlags);
+            p3characterModel->LoadRagdoll("UnisexGuy3.rag", p3raycastFlag, collsionGroupFlag, collidesWithGroupFlag);
+            p4characterModel->LoadRagdoll("UnisexGuy3.rag", p4raycastFlag, collsionGroupFlag, collidesWithGroupFlag);
             Game::g_players[2]._interactFlags = RaycastGroup::RAYCAST_ENABLED;
             Game::g_players[2]._interactFlags &= ~RaycastGroup::PLAYER_3_RAGDOLL;
             Game::g_players[3]._interactFlags = RaycastGroup::RAYCAST_ENABLED;
@@ -453,12 +452,17 @@ namespace Game {
             }
             else {
                 RespawnAllPlayers();
-                //Game::SetSplitscreenMode(SplitscreenMode::TWO_PLAYER);
+                Scene::ClearAllItemPickups();
             }
         }
         if (Input::KeyPressed(HELL_KEY_GRAVE_ACCENT)) {
             _showDebugText = !_showDebugText;
             Audio::PlayAudio(AUDIO_SELECT, 1.00f);
+        }
+        if (Input::KeyPressed(HELL_KEY_T)) {
+            Audio::PlayAudio(AUDIO_SELECT, 1.00f);
+            RendererData::NextRendererOverrideState();
+            std::cout << "RendererOverrideState: " << RendererData::GetRendererOverrideStateAsInt() << "\n";
         }
     }
 

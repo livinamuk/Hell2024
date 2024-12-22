@@ -2,12 +2,13 @@
 #include "glm/glm.hpp"
 
 struct CSGPlane {
-
     glm::vec3 m_veritces[4];
     int materialIndex = -1;
     float textureScale = 0;
     float textureOffsetX = 0;
     float textureOffsetY = 0;
+    bool m_ceilingTrims = false;
+    bool m_floorTrims = false;
 
     glm::vec3 GetCenter() {
         return glm::vec3(m_veritces[TL] + m_veritces[TR] + m_veritces[BL] + m_veritces[BR]) / 4.0f;

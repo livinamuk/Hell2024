@@ -26,7 +26,12 @@ namespace RendererData {
     inline DrawInfo g_bulletDecalDrawInfo[4];
 
     inline DrawInfo g_shadowMapGeometryDrawInfo[MAX_SHADOW_CASTING_LIGHTS][6];
-    
+        
     void CreateDrawCommands(int playerCount);
-    void UpdateGPULights();
+    void UpdateGPULights(); 
+    
+    // Renderer override state
+    void NextRendererOverrideState(); 
+    int GetRendererOverrideStateAsInt();
+    RendererOverrideState GetRendererOverrideState();
 }

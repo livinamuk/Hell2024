@@ -15,10 +15,12 @@
 #include "../Game/Dobermann.h"
 #include "../Renderer/Types/HeightMap.h"
 #include "../Types/Modular/Door.h"
+#include "../Types/Modular/Ladder.h"
 #include "../Types/Modular/Staircase.h"
 #include "../Types/Modular/Toilet.h"
 #include "../Types/Modular/Window.h"
 #include "../Util.hpp"
+#include "Shark.h"
 
 #include "../Editor/CSGPlane.hpp"
 
@@ -126,6 +128,8 @@ struct PickUp {
 
 namespace Scene {
 
+    inline Shark g_shark;
+
     void HackToUpdateShadowMapsOnPickUp(GameObject* gameObject);
     void CreateGameObject(GameObjectCreateInfo createInfo);
 
@@ -133,6 +137,7 @@ namespace Scene {
     void Update(float deltaTime);
     void SaveMapData(const std::string& fileName);
     void RemoveGameObjectByIndex(int index);
+    void ClearAllItemPickups();
 
     void LoadEmptyScene();
     void LoadDefaultScene();
@@ -155,7 +160,6 @@ namespace Scene {
     GameObject* GetGameObjectByIndex(int32_t index);
     GameObject* GetGameObjectByName(std::string name);
     std::vector<GameObject>& GetGamesObjects();
-    void UpdateGameObjects(float deltaTime);
     const size_t GetGameObjectCount();
 
     // Animated Game Objects
@@ -175,6 +179,7 @@ namespace Scene {
     const size_t GetCubeVolumeAdditiveCount();
 
     // Cuntainers
+    inline std::vector<Ladder> g_ladders;
     inline std::vector<Light> g_lights;
     inline std::vector<SpawnPoint> g_spawnPoints;
     inline std::vector<BulletCasing> g_bulletCasings;
@@ -212,6 +217,9 @@ namespace Scene {
 
     // Lights
     void CreateLight(LightCreateInfo createInfo);
+
+    // Ladders
+    void CreateLadder(LadderCreateInfo createInfo);
 
     // CSG Objects
     void AddCSGWallPlane(CSGPlaneCreateInfo& createInfo);
@@ -265,6 +273,8 @@ namespace Scene {
     void CheckForDirtyLights();
     void ResetGameObjectStates();
     //void DirtyAllLights();
+
+    void UpdatePhysXPointers();
 
     void CreateVolumetricBlood(glm::vec3 position, glm::vec3 rotation, glm::vec3 front);
 

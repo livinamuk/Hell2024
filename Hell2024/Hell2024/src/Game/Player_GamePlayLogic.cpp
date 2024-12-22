@@ -1,5 +1,5 @@
 #include "Player.h"
-#include "../Core/Audio.hpp"
+#include "../Core/Audio.h"
 #include "Util.hpp"
 #include "../Game/GameObject.h"
 #include "../Game/Scene.h"
@@ -131,7 +131,7 @@ void Player::CheckForAndEvaluateInteract() {
     overlapList = "Overlaps: " + std::to_string(m_interactOverlapReport.hits.size()) + "\n";
 
     for (OverlapResult& overlapResult : m_interactOverlapReport.hits) {
-        overlapList += Util::PhysicsObjectTypeToString(overlapResult.objectType);
+        overlapList += Util::ObjectTypeToString(overlapResult.objectType);
         overlapList += " ";
         overlapList += Util::Vec3ToString(overlapResult.position);
         overlapList += "\n";
