@@ -862,7 +862,6 @@ void Scene::RecreateCeilingTrims() {
             g_ceilingTrims.push_back(transform.to_mat4());
         }
     }
-    std::cout << g_ceilingTrims.size() << "\n";
 }
 
 void Scene::RecreateFloorTrims() {
@@ -2816,6 +2815,7 @@ void Scene::LoadHardCodedObjects() {
         CreateGameObject();
         GameObject* christmasLight = GetGameObjectByIndex(GetGameObjectCount() - 1);
         christmasLight->SetPosition(10, 4, -2);
+        christmasLight->SetScale(10);
         christmasLight->SetModel("ChristmasLight");
         christmasLight->SetMeshMaterial("Gold");
 

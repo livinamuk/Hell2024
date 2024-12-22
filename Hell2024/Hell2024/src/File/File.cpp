@@ -5,7 +5,7 @@
 #include <cstdint>
 #include "../Util.hpp"
 
-bool debugPringHeaders = true;
+bool debugPringHeaders = false;
 bool debugPrintData = false;
 
 void File::ExportModel(const ModelData& modelData) {

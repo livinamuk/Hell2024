@@ -244,14 +244,6 @@ bool AssetManager::LoadingComplete() {
 }
 
 void CreateModelFromData(ModelData& modelData) {
-    std::cout << "CreateModelFromData() " << modelData.name << "\n";
-    std::cout << "CreateModelFromData() " << modelData.name << "\n";
-    std::cout << "CreateModelFromData() " << modelData.name << "\n";
-    std::cout << "CreateModelFromData() " << modelData.name << "\n";
-    std::cout << "CreateModelFromData() " << modelData.name << "\n";
-    std::cout << "CreateModelFromData() " << modelData.name << "\n";
-    std::cout << "CreateModelFromData() " << modelData.name << "\n";
-    std::cout << "CreateModelFromData() " << modelData.name << "\n";
     Model& model = AssetManager::g_models.emplace_back();
     model.SetName(modelData.name);
     model.m_aabbMin = modelData.aabbMin;

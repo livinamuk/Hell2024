@@ -34,7 +34,7 @@ void AnimatedGameObject::CreateSkinnedMeshRenderItems() {
             Material* material = AssetManager::GetMaterialByIndex(_meshRenderingEntries[i].materialIndex);
 
             if (!material) {
-                std::cout << "AnimatedGameObject with model '" << _skinnedModel->_filename << "' had null pointer material\n";
+                //std::cout << "AnimatedGameObject with model '" << _skinnedModel->_filename << "' had null pointer material\n";
                 return;
             }
 
