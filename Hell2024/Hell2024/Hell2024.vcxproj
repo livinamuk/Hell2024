@@ -438,6 +438,7 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <ClInclude Include="vendor\VulkanMemoryAllocator\include\vk_mem_alloc.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\..\..\Users\livinamuk\Desktop\Unloved\Sandbox Repos\AnimPlayground\AnimPlayground\AnimPlayground\res\shaders\OpenGL\GL_gbuffer_alpha_discard.frag" />
     <None Include="res\shaders\OpenGL\GL_compute_test.comp" />
     <None Include="res\shaders\OpenGL\GL_debug_light_volume_aabb.frag" />
     <None Include="res\shaders\OpenGL\GL_debug_light_volume_aabb.vert" />
@@ -462,21 +463,19 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <None Include="res\shaders\OpenGL\GL_flipBook.vert" />
     <None Include="res\shaders\OpenGL\GL_debug.frag" />
     <None Include="res\shaders\OpenGL\GL_debug.vert" />
+    <None Include="res\shaders\OpenGL\GL_gbuffer_alpha_discarded.frag" />
     <None Include="res\shaders\OpenGL\GL_glass.frag" />
     <None Include="res\shaders\OpenGL\GL_glass.vert" />
     <None Include="res\shaders\OpenGL\GL_glassComposite.comp" />
     <None Include="res\shaders\OpenGL\GL_heightmap.frag" />
     <None Include="res\shaders\OpenGL\GL_heightmap.vert" />
-    <None Include="res\shaders\OpenGL\GL_lighting_tiled.comp" />
+    <None Include="res\shaders\OpenGL\GL_lighting.comp" />
     <None Include="res\shaders\OpenGL\GL_lightvolume_aabb_from_pos_radius.comp" />
     <None Include="res\shaders\OpenGL\GL_lightvolume_prepass.frag" />
     <None Include="res\shaders\OpenGL\GL_lightvolume_prepass.geom" />
     <None Include="res\shaders\OpenGL\GL_lightvolume_prepass.vert" />
-    <None Include="res\shaders\OpenGL\GL_lighting.frag" />
-    <None Include="res\shaders\OpenGL\GL_lighting.vert" />
     <None Include="res\shaders\OpenGL\GL_lightvolume_aabb_from_cubemap.comp" />
     <None Include="res\shaders\OpenGL\GL_light_culling.comp" />
-    <None Include="res\shaders\OpenGL\GL_light_culling_OLD.comp" />
     <None Include="res\shaders\OpenGL\GL_light_volume_clear.comp" />
     <None Include="res\shaders\OpenGL\GL_mega_texture_blood_decals.frag" />
     <None Include="res\shaders\OpenGL\GL_mega_texture_blood_decals.vert" />

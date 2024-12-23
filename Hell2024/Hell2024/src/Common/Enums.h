@@ -12,6 +12,7 @@ enum class FacingDirection { LEFT, RIGHT, ALIGNED };
 enum class AABBLightVolumeMode { WORLDSPACE_CUBE_MAP, POSITION_RADIUS };
 enum class MenuType { NONE, FILE, INSERT, SELECTED_OBJECT, MISC };
 enum class RendererOverrideState { NONE, BASE_COLOR, NORMALS, RMA, WILD_COLORS, STATE_COUNT };
+enum class BlendingMode { NONE, BLENDED, ALPHA_DISCARDED };
 
 enum EngineMode { GAME = 0, FLOORPLAN, EDITOR };
 enum Weapon { KNIFE = 0, GLOCK, SHOTGUN, AKS74U, MP7, WEAPON_COUNT };

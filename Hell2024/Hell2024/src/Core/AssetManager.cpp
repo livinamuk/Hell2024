@@ -150,6 +150,9 @@ void AssetManager::FindAssetPaths() {
     for (const auto& entry : modelPaths) {
         FileInfoOLD info = Util::GetFileInfo(entry);
         if (info.filetype == "obj") {
+            if (info.fullpath == "") {
+                std::cout << "Empty path: " << entry << "\n";
+            }
             g_models.emplace_back(info.fullpath);
         }
     }
@@ -560,7 +563,7 @@ void AssetManager::LoadModel(Model* model) {
     glm::vec3 modelAabbMax = glm::vec3(-std::numeric_limits<float>::max());
 
     if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, model->m_fullPath.c_str())) {
-        std::cout << "LoadModel() failed to load: '" << model->m_fullPath << "'\n";
+        std::cout << "LoadModel() failed to load: FAILED '" << model->m_fullPath << "'\n";
         return;
     }
 

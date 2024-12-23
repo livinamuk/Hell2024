@@ -26,11 +26,11 @@ void Audio::Init() {
     }
 }
 
-void Audio::LoadAudio(std::string name) {
+void Audio::LoadAudio(const std::string& filename) {
     FMOD_MODE eMode = FMOD_DEFAULT;
     FMOD::Sound* sound = nullptr;
-    g_system->createSound(("res/audio/" + name).c_str(), eMode, nullptr, &sound);
-    g_loadedAudio[name] = sound;
+    g_system->createSound(("res/audio/" + filename).c_str(), eMode, nullptr, &sound);
+    g_loadedAudio[filename] = sound;
 }
 
 void Audio::Update() {
@@ -40,7 +40,7 @@ void Audio::Update() {
         bool isPlaying = false;
         FMOD_RESULT result = handle.channel->isPlaying(&isPlaying);
         if (!isPlaying) {
-            std::cout << "Audio finished: " << handle.filename << "\n";
+            //std::cout << "Audio finished: " << handle.filename << "\n";
             g_playingAudio.erase(g_playingAudio.begin() + i);
             i--;
             continue;
@@ -50,7 +50,7 @@ void Audio::Update() {
     g_system->update();
 }
 
-void Audio::PlayAudio(std::string filename, float volume, float frequency) {
+void Audio::PlayAudio(const std::string& filename, float volume, float frequency) {
     // Load if needed
     if (g_loadedAudio.find(filename) == g_loadedAudio.end()) {  // i think you are removing all these per frame
         LoadAudio(filename);
@@ -89,7 +89,7 @@ void Audio::LoopAudio(const std::string& filename, float volume) {
     handle.sound->setLoopCount(-1);
     g_system->playSound(handle.sound, nullptr, false, &handle.channel);
     handle.channel->setVolume(volume);
-    std::cout << "Looping sound" << std::endl;    
+    //std::cout << "Looping sound" << std::endl;    
 }
 
 void Audio::StopAudio(const std::string& filename) {
@@ -100,8 +100,17 @@ void Audio::StopAudio(const std::string& filename) {
                 std::cerr << "FMOD error: " << FMOD_ErrorString(result) << "\n";
             }
             else {
-                std::cout << "Sound stopped.\n";
+                //std::cout << "Sound stopped.\n";
             }
+        }
+    }
+}
+
+
+void Audio::SetAudioVolume(const std::string& filename, float volume) {
+    for (AudioHandle& handle : g_playingAudio) {
+        if (handle.filename == filename) {
+            handle.channel->setVolume(volume);
         }
     }
 }

@@ -30,7 +30,7 @@ namespace BVH {
 
     void UpdateBVH(std::vector<glm::vec3>& vertices) {
 
-        Timer timer("bvh construction");
+        //Timer timer("bvh construction");
 
         std::vector<Tri> tris;
         tris.reserve(vertices.size());
@@ -73,7 +73,7 @@ namespace BVH {
 
     bool AnyHit(Ray& ray) {
 
-        Timer timer("closest hit traversal");
+        //Timer timer("closest hit traversal");
 
         BVHRay bvhRay = BVHRay{
             Vec3(ray.origin.x, ray.origin.y, ray.origin.z),          // Ray origin

@@ -7,6 +7,7 @@
 void Player::UpdateMovement(float deltaTime) {
     m_crouching = false;
     m_moving = false;
+
     if (HasControl()) {
         if (GetViewPos().y < Water::GetHeight() + 0.1f) {
             UpdateSwimmingMovement(deltaTime);
@@ -57,7 +58,7 @@ void Player::UpdateWalkingMovement(float deltaTime) {
     // Jump
     if (PresingJump() && HasControl() && m_grounded) {
         m_yVelocity = 4.75f; // magic value for jump strength
-        m_yVelocity = 4.9f; // magic value for jump strength (had to change cause you could no longer jump thru window after fixing character controller height bug)
+        m_yVelocity = 4.9f;  // better magic value for jump strength
         m_grounded = false;
     }
     if (IsOverlappingLadder()) {
@@ -79,7 +80,9 @@ void Player::UpdateWalkingMovement(float deltaTime) {
     if (IsOverlappingLadder()) {
         yDisplacement = 0;
     }
-    // TODO: add y velociity for ladder use here, instead of what you wrote in UpdateLadderMovement
+    // TODO: add y velocity for ladder use here, instead of what you wrote in UpdateLadderMovement
+    // TODO: add y velocity for ladder use here, instead of what you wrote in UpdateLadderMovement
+    // TODO: add y velocity for ladder use here, instead of what you wrote in UpdateLadderMovement
 
     if (Game::KillLimitReached()) {
         m_displacement = glm::vec3(0, 0, 0);
@@ -90,7 +93,6 @@ void Player::UpdateWalkingMovement(float deltaTime) {
 
 void Player::UpdateLadderMovement(float deltaTime) {
     float ladderClimpingSpeed = 3.5f;
-    //if (IsOverlappingLadder() && IsMoving() && !IsCrouching() && GetCameraForward().y < 0.5f) {
     if (m_ladderOverlapIndexEyes != -1 && IsMoving() && !IsCrouching()) {
         glm::vec3 ladderMovementDisplacement = glm::vec3(0.0f, 1.0f, 0.0f) * ladderClimpingSpeed * deltaTime;
         MoveCharacterController(ladderMovementDisplacement);
@@ -129,35 +131,12 @@ void Player::UpdateSwimmingMovement(float deltaTime) {
     if (len != 0.0) {
         m_displacement = (m_displacement / len) * m_currentSpeed * deltaTime;
     }
-
-
-    // Gravity
-  // if (m_grounded) {
-  //     m_yVelocity = -0.1f; // can't be 0, or the _isGrounded check next frame will fail
-  //     m_yVelocity = -3.5f;
-  // }
-  // else {
-   // m_yVelocity -= m_waterImpactVelocity * deltaTime;
-
-   //m_waterImpactVelocity += deltaTime * 5; 
-   //m_waterImpactVelocity = std::max(m_waterImpactVelocity, 0.0f);
-  
     float yDisplacement = m_yVelocity * deltaTime;
-
     m_displacement.y += yDisplacement;
-
-   // m_yVelocity += 5 * deltaTime;
-   // m_yVelocity = std::min(m_yVelocity, 0.0f);
-
     float yVelocityCancelationInterpolationSpeed = 15;
     m_yVelocity = Util::FInterpTo(m_yVelocity, 0, deltaTime, yVelocityCancelationInterpolationSpeed);
 
     MoveCharacterController(glm::vec3(m_displacement.x, m_displacement.y, m_displacement.z));
-
-    
-
-   // std::cout << m_waterImpactVelocity << " " << m_yVelocity << "\n";
-   // std::cout << m_yVelocity << "\n";
 }
 
 void Player::MoveCharacterController(glm::vec3 displacement) {
@@ -220,6 +199,19 @@ bool Player::StoppedWading() {
     return m_waterState.wadingPrevious && !m_waterState.wading;
 }
 
+void Player::UpdateOutsideState() {
+    glm::vec3 origin = GetFeetPosition() + glm::vec3(0, 0.1f, 0);
+    PxU32 raycastFlags = RaycastGroup::RAYCAST_ENABLED;
+    PhysXRayResult rayResult = Util::CastPhysXRay(origin, glm::vec3(0, -1, 0), 20, raycastFlags);
+    if (rayResult.hitFound && rayResult.objectType == ObjectType::HEIGHT_MAP) {
+        m_isOutside = true;
+    }
+    if (rayResult.hitFound && rayResult.objectType == ObjectType::CSG_OBJECT_ADDITIVE_CUBE ||
+        rayResult.hitFound && rayResult.objectType == ObjectType::CSG_OBJECT_ADDITIVE_FLOOR_PLANE) {
+        m_isOutside = false;
+    }
+}
+
 void Player::UpdateWaterState() {
     m_waterState.feetUnderWaterPrevious = m_waterState.feetUnderWater;
     m_waterState.cameraUnderWaterPrevious = m_waterState.cameraUnderWater;
@@ -241,16 +233,19 @@ void Player::UpdateLadderIndex() {
     m_ladderOverlapIndexFeet = -1;
     m_ladderOverlapIndexEyes = -1;
     for (int i = 0; i < Scene::g_ladders.size(); i++) {
-        Ladder& ladder = Scene::g_ladders[i];     
-
+        Ladder& ladder = Scene::g_ladders[i];
         float sphereRadius = 0.25f;
         if (ladder.GetOverlapHitBoxAABB().ContainsSphere(GetFeetPosition(), sphereRadius)) {
             m_ladderOverlapIndexFeet = i;
-            std::cout << "ladder m_ladderOverlapIndexFeet " << i << "\n";
+            //std::cout << "ladder m_ladderOverlapIndexFeet " << i << "\n";
         }
         if (ladder.GetOverlapHitBoxAABB().ContainsSphere(GetViewPos(), sphereRadius)) {
             m_ladderOverlapIndexEyes = i;
-            std::cout << "ladder m_ladderOverlapIndexEyes " << i << "\n";
+            //std::cout << "ladder m_ladderOverlapIndexEyes " << i << "\n";
         }
     }
+}
+
+bool Player::IsAtShop() {
+    return m_atShop;
 }

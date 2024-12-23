@@ -421,12 +421,12 @@ void NavMesh::AllocateMemory() {
     m_tileCache = dtAllocTileCache();
 
     m_memoryAllocated = true;
-    std::cout << "Navmesh memory allocated\n";
+    //std::cout << "Navmesh memory allocated\n";
 }
 
 void NavMesh::Create(rcContext* context, std::vector<glm::vec3>& vertices, NavMeshRegionMode regionMode) {
 
-    Timer timer("NavMesh::Create");
+    //Timer timer("NavMesh::Create");
 
     //CleanUp();
 

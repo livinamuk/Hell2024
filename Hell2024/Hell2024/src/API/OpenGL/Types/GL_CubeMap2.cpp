@@ -36,7 +36,7 @@ void CubeMap2::Init(unsigned int size) {
     glBindTexture(GL_TEXTURE_CUBE_MAP, m_colorTex);
     glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
 
-    CheckStatus();
+    //CheckStatus();
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 

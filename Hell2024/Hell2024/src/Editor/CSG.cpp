@@ -96,7 +96,7 @@ namespace CSG {
     std::vector<CSGNew> g_csgNewObjects;
 
     void CreateCSGObjectFromBrush(Brush& brush, CSGObjecType csgObjectType, int parentIndex, int materialIndex, float textureScale, float textureOffsetX, float textureOffsetY) {
-        Timer timer("CreateCSGObjectFromBrush()");
+        //Timer timer("CreateCSGObjectFromBrush()");
         // Create new world
         csg::world_t world;
         world.set_void_volume(AIR);
@@ -154,7 +154,7 @@ namespace CSG {
     }
 
     void CreateSubractiveBrushes() {
-        Timer timer("CreateSubractiveBrushes()");
+        //Timer timer("CreateSubractiveBrushes()");
         g_subtractiveBrushes.clear();
         // Subtractive cubes
         for (int i = 0; i < Scene::g_csgSubtractiveCubes.size(); i++) {
@@ -319,7 +319,7 @@ namespace CSG {
         }
 
         {
-            Timer timer4("-creating csg object physx objects");
+            //Timer timer4("-creating csg object physx objects");
             for (CSGObject& csgObject : g_objects) {
                 if (csgObject.m_vertexCount > 0) {
                     csgObject.CreatePhysicsObjectFromVertices();
@@ -341,7 +341,7 @@ namespace CSG {
 
 
         {
-            Timer timer4("-uploading csg geo to gpu");
+            //Timer timer4("-uploading csg geo to gpu");
             g_sceneDirty = true;
             if (g_sceneDirty && g_vertices.size()) {
                 if (BackEnd::GetAPI() == API::OPENGL) {

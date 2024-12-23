@@ -1038,6 +1038,10 @@ int Player::GetCurrentWeaponTotalAmmo() {
 }
 
 WeaponInfo* Player::GetCurrentWeaponInfo() {
+    if (m_currentWeaponIndex < 0 || m_currentWeaponIndex > m_weaponStates.size()) {
+        std::cout << "layer::GetCurrentWeaponInfo() failed because m_currentWeaponIndex was " << m_currentWeaponIndex << " but m_weaponStates.size() was " << m_weaponStates.size() << "\n";
+        return nullptr;
+    }
     return WeaponManager::GetWeaponInfoByName(m_weaponStates[m_currentWeaponIndex].name);;
 }
 

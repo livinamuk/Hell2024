@@ -275,7 +275,7 @@ void main() {
     ivec2 pixelCoords = ivec2(gl_GlobalInvocationID.xy);
     vec2 uv_screenspace = (vec2(pixelCoords) + vec2(0.5)) / viewportSize;
 
-    int playerIndex = 0;
+    int playerIndex = int(texture(gBufferNormalTexture, uv_screenspace).a * 4 + 0.5);
 
     mat4 inverseProjection = cameraDataArray[playerIndex].projectionInverse;
 	mat4 inverseView = cameraDataArray[playerIndex].viewInverse;
@@ -319,7 +319,6 @@ void main() {
     vec3 waterDUDV = texture(waterDUDVTexture, distortedTexCoords).rgb;
     vec3 waterNormal = normalize(vec3(waterNormalMap.r * 2 - 1, 1, waterNormalMap.g * 2 - 1));
 
-    
     vec2 ripple =  vec2(sin((time + rippleFrequency * refractionUV.y) * rippleSpeed + refractionUV.y), 0);
     ripple *= rippleStrength;
     if (FragWorldPos.y < waterHeight) {
@@ -328,7 +327,7 @@ void main() {
     
     vec3 refractionColor = GaussianBlur(pixelCoords, refractionUV, vec2(1, 0), blurRadius, sigma, waterMask);
     refractionColor += GaussianBlur(pixelCoords, refractionUV, vec2(0, 1), blurRadius, sigma, waterMask);
-    refractionColor *= 0.5;
+    refractionColor *= 0.6;
 
     // Specular
     vec3 viewDir = normalize(viewPos - WaterWorldPos.xyz);    
@@ -346,13 +345,13 @@ void main() {
 
     // Caustics
     // https://www.shadertoy.com/view/wlc3zr
+
     //vec2 uv_worldSpace = vec2(worldSpacePosition.x, worldSpacePosition.z);    
     //float causticsFactor = smoothstep(0.075, 0.1, length(worldSpacePosition.xyz - viewPos));        
     //vec3 fragmentNormal = texture(gBufferNormalTexture, uv_screenspace).rgb;
     //float normalFactor = clamp(dot(normalize(fragmentNormal), vec3(0.0, 1.0, 0.0)), 0.0, 1.0);
     //float finalCausticsFactor = causticsFactor * normalFactor;
     //vec3 finalCaustics = mix(vec3(0,0,0), caustics, finalCausticsFactor);
-
 
     // Fade a value  from the camera
     //float fadeStart = 1.0;
@@ -433,9 +432,8 @@ void main() {
     // Camera shit
     //finalColor = vec3(FragWorldPos);
 
-    //finalColor = texture(gBufferNormalTexture, uv_screenspace).rgb;
+//    finalColor = texture(waterReflectionTexture, uv_screenspace).rgb;
 
-    //finalColor = finalCaustics;
 
     imageStore(waterColorTexture, texCoord, vec4(finalColor, 1));
 }

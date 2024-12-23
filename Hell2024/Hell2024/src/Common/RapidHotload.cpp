@@ -15,16 +15,48 @@
 
 void RapidHotload::Update() {
 
+    Player* player = Game::GetPlayerByIndex(0);
+   
+    GameObject* mermaid = Scene::GetGameObjectByName("Mermaid");
+
+    glm::vec3 mermaidPosition = mermaid->GetWorldPosition();
+    glm::vec3 mermaidRotation = glm::vec3(mermaid->GetRotationX(), mermaid->GetRotationY(), mermaid->GetRotationZ());
+   
+    glm::vec3 pPos = player->GetViewPos();
+    glm::vec3 pRot = player->GetViewRotation();
+    glm::vec3 dPos = mermaidPosition - pPos;
+    glm::vec3 dRot = mermaidRotation - pRot;
+    glm::vec3 dPos2 = pPos - mermaidPosition;
+    glm::vec3 dRot2 = pRot - mermaidRotation;
+   
+   //std::cout << "\nM pos: " << Util::Vec3ToString(mermaidPosition) << " rot: " << Util::Vec3ToString(mermaidRotation) << "\n";
+   //std::cout << "P pos: " << Util::Vec3ToString(pPos) << " rot: " << Util::Vec3ToString(pRot) << "\n";
+   //std::cout << "D pos: " << Util::Vec3ToString(dPos) << " rot: " << Util::Vec3ToString(dRot) << "\n";
+   //std::cout << "D pos: " << Util::Vec3ToString(dPos2) << " rot: " << Util::Vec3ToString(dRot2) << "\n";
+   
+    if (Input::KeyPressed(HELL_KEY_U)) {
+        GameObject* mermaid = Scene::GetGameObjectByName("Mermaid");
+        Player* player = Game::GetPlayerByIndex(0);    
+        glm::vec3 mermaidPosition = mermaid->GetWorldPosition();
+        glm::vec3 mermaidRotation = glm::vec3(mermaid->GetRotationX(), mermaid->GetRotationY(), mermaid->GetRotationZ());
+        player->SetPosition(mermaidPosition + glm::vec3(-1.03, 1.49, 0.40));
+        player->SetRotation(mermaidRotation + glm::vec3(-0.24, -1.74, 0.00));
+    }
+
     if (Input::KeyPressed(HELL_KEY_U)) {
         Texture* texture;
-        texture = AssetManager::GetTextureByName("MermaidTail_NRM");
+        texture = AssetManager::GetTextureByName("PresentSmallRed_RMA");
         if (texture) {
-            texture->GetGLTexture().HotloadFromPath("res/textures/ui/MermaidTail_NRM.png");
+            texture->GetGLTexture().HotloadFromPath("res/textures/ui/PresentSmallRed_RMA.png");
         }
-        /*texture = AssetManager::GetTextureByName("MermaidHair_RMA");
+        texture = AssetManager::GetTextureByName("PresentSmallRed_ALB");
         if (texture) {
-            texture->GetGLTexture().HotloadFromPath("res/textures/ui/MermaidHair_RMA.png");
+            texture->GetGLTexture().HotloadFromPath("res/textures/ui/PresentSmallRed_ALB.png");
         }
+        texture = AssetManager::GetTextureByName("MermaidEye_RMA");
+        if (texture) {
+            texture->GetGLTexture().HotloadFromPath("res/textures/ui/MermaidEye_RMA.png");
+        }/*
         texture = AssetManager::GetTextureByName("Nails_RMA");
         if (texture) {
             texture->GetGLTexture().HotloadFromPath("res/textures/ui/Nails_RMA.png");
@@ -41,18 +73,18 @@ void RapidHotload::Update() {
         if (texture) {
             texture->GetGLTexture().HotloadFromPath("res/textures/ui/Nails_NRM.png");
         }*/
-        texture = AssetManager::GetTextureByName("Shark_NRM");
-        if (texture) {
-            texture->GetGLTexture().HotloadFromPath("res/textures/ui/Shark_NRM.png");
-        }
-        texture = AssetManager::GetTextureByName("Shark_RMA");
-        if (texture) {
-            texture->GetGLTexture().HotloadFromPath("res/textures/ui/Shark_RMA.png");
-        }
-        texture = AssetManager::GetTextureByName("Shark_ALB");
-        if (texture) {
-            texture->GetGLTexture().HotloadFromPath("res/textures/ui/Shark_ALB.png");
-        }
+   //  texture = AssetManager::GetTextureByName("Shark_NRM");
+   //  if (texture) {
+   //      texture->GetGLTexture().HotloadFromPath("res/textures/ui/Shark_NRM.png");
+   //  }
+   //  texture = AssetManager::GetTextureByName("Shark_RMA");
+   //  if (texture) {
+   //      texture->GetGLTexture().HotloadFromPath("res/textures/ui/Shark_RMA.png");
+   //  }
+   //  texture = AssetManager::GetTextureByName("Shark_ALB");
+   //  if (texture) {
+   //      texture->GetGLTexture().HotloadFromPath("res/textures/ui/Shark_ALB.png");
+   //  }
     }
 }
 

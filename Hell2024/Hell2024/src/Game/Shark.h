@@ -11,6 +11,7 @@ struct Shark {
     void UpdatePxRigidStatics();
     void Update(float deltaTime);
     void CleanUp();
+    void SetPosition(glm::vec3 position);
 
     glm::vec3 GetForwardVector();
     glm::vec3 GetHeadPosition();

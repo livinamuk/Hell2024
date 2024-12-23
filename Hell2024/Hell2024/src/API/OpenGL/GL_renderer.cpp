@@ -66,7 +66,7 @@ namespace OpenGLRenderer {
 
     struct Shaders {
         Shader geometry;
-        Shader lighting;
+        Shader geometryAlphaDiscard;
         Shader UI;
         Shader shadowMap;
         Shader shadowMapCSG;
@@ -98,7 +98,7 @@ namespace OpenGLRenderer {
         Shader waterMask;
         
         ComputeShader debugTileView;
-        ComputeShader lightingTiled;
+        ComputeShader lighting;
         ComputeShader ssao;
         ComputeShader ssaoBlur;
         ComputeShader worldPosition;
@@ -223,7 +223,7 @@ void OpenGLRenderer::HotloadShaders() {
     g_shaders.worldPosition.Load("res/shaders/OpenGL/GL_world_position.comp");
     g_shaders.ssaoBlur.Load("res/shaders/OpenGL/GL_ssaoBlur.comp");
     g_shaders.ssao.Load("res/shaders/OpenGL/GL_ssao.comp");
-    g_shaders.lightingTiled.Load("res/shaders/OpenGL/GL_lighting_tiled.comp");
+    g_shaders.lighting.Load("res/shaders/OpenGL/GL_lighting.comp");
     g_shaders.debugTileView.Load("res/shaders/OpenGL/GL_debug_tile_view.comp");
     g_shaders.lightVolumeClear.Load("res/shaders/OpenGL/GL_light_volume_clear.comp");
     g_shaders.winston.Load("GL_winston.vert", "GL_winston.frag");
@@ -241,7 +241,7 @@ void OpenGLRenderer::HotloadShaders() {
     g_shaders.outline.Load("GL_outline.vert", "GL_outline.frag");
     g_shaders.UI.Load("GL_ui.vert", "GL_ui.frag");
     g_shaders.geometry.Load("GL_gbuffer.vert", "GL_gbuffer.frag");
-    g_shaders.lighting.Load("GL_lighting.vert", "GL_lighting.frag");
+    g_shaders.geometryAlphaDiscard.Load("GL_gbuffer.vert", "GL_gbuffer_alpha_discarded.frag");
     g_shaders.shadowMap.Load("GL_shadowMap.vert", "GL_shadowMap.frag");
     g_shaders.shadowMapCSG.Load("GL_shadowMap_csg.vert", "GL_shadowMap_csg.frag");
     g_shaders.flipBook.Load("GL_flipBook.vert", "GL_flipBook.frag");
@@ -698,7 +698,6 @@ void OpenGLRenderer::UploadSSBOsGPU(RenderData& renderData) {
     g_ssbos.bloodVATRenderItems.Update(renderData.bloodVATDrawInfo.renderItems.size() * sizeof(RenderItem3D), renderData.bloodVATDrawInfo.renderItems.data());
     g_ssbos.materials.Update(AssetManager::GetGPUMaterials().size() * sizeof(GPUMaterial), &AssetManager::GetGPUMaterials()[0]);
 
-    g_ssbos.geometryRenderItems.Update(RendererData::g_geometryRenderItems.size() * sizeof(RenderItem3D), &RendererData::g_geometryRenderItems[0]);
     g_ssbos.bulletHoleDecalRenderItems.Update(RendererData::g_bulletDecalRenderItems.size() * sizeof(RenderItem3D), &RendererData::g_bulletDecalRenderItems[0]);    
     
     g_ssbos.shadowMapGeometryRenderItems.Update(RendererData::g_shadowMapGeometryRenderItems.size() * sizeof(RenderItem3D), &RendererData::g_shadowMapGeometryRenderItems[0]);
@@ -838,13 +837,13 @@ void OpenGLRenderer::RenderFrame(RenderData& renderData) {
     OpenGLRenderer::UploadSSBOsGPU(renderData);
 
     // Update GI 
-    if (GlobalIllumination::GetFrameCounter() < 20) {
-        if (GlobalIllumination::GetFrameCounter() < 20) {
+    if (GlobalIllumination::GetFrameCounter() < 9) {
+        if (GlobalIllumination::GetFrameCounter() < 9) {
             UpdatePointCloud();
         }
         IndirectLightingPass();
         GlobalIllumination::IncrementFrameCounter();
-        std::cout << "Updating GI\n";
+        //std::cout << "Updating GI\n";
     }
 
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, g_ssbos.samplers);
@@ -1712,25 +1711,54 @@ void GeometryPass(RenderData& renderData) {
         }
     }
 
-    // Draw mesh
+    // Geometry (non blended)
     static Material* goldMaterial = AssetManager::GetMaterialByIndex(AssetManager::GetMaterialIndex("Gold"));
-    Shader& gBufferShader = OpenGLRenderer::g_shaders.geometry;
-    gBufferShader.Use();
-    gBufferShader.SetInt("goldBaseColorTextureIndex", goldMaterial->_basecolor);
-    gBufferShader.SetInt("goldRMATextureIndex", goldMaterial->_rma);
-
+    OpenGLRenderer::g_ssbos.geometryRenderItems.Update(RendererData::g_geometryRenderItems.size() * sizeof(RenderItem3D), &RendererData::g_geometryRenderItems[0]);
+    Shader& geometryShader = OpenGLRenderer::g_shaders.geometry;
+    geometryShader.Use();
     for (int i = 0; i < renderData.playerCount; i++) {
         ViewportInfo viewportInfo = RendererUtil::CreateViewportInfo(i, Game::GetSplitscreenMode(), gBuffer.GetWidth(), gBuffer.GetHeight());
         SetViewport(viewportInfo);
         glViewport(viewportInfo.xOffset, viewportInfo.yOffset, viewportInfo.width, viewportInfo.height);
-
-        gBufferShader.SetMat4("projection", renderData.cameraData[i].projection);
-        gBufferShader.SetMat4("view", renderData.cameraData[i].view);
-        gBufferShader.SetInt("playerIndex", i);
-        gBufferShader.SetInt("instanceDataOffset", RendererData::g_geometryDrawInfo[i].baseInstance);
+        geometryShader.SetMat4("projection", renderData.cameraData[i].projection);
+        geometryShader.SetMat4("view", renderData.cameraData[i].view);
+        geometryShader.SetInt("playerIndex", i);
+        geometryShader.SetInt("instanceDataOffset", RendererData::g_geometryDrawInfo[i].baseInstance);
         MultiDrawIndirect(RendererData::g_geometryDrawInfo[i].commands, OpenGLBackEnd::GetVertexDataVAO());
+    }    
+    // Geometry (Alpha discarded)
+    Shader& geometryShaderAlphaDiscarded = OpenGLRenderer::g_shaders.geometryAlphaDiscard;
+    geometryShaderAlphaDiscarded.Use();
+    OpenGLRenderer::g_ssbos.geometryRenderItems.Update(RendererData::g_geometryRenderItemsAlphaDiscarded .size() * sizeof(RenderItem3D), &RendererData::g_geometryRenderItemsAlphaDiscarded[0]);
+    glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+    for (int i = 0; i < renderData.playerCount; i++) {
+        ViewportInfo viewportInfo = RendererUtil::CreateViewportInfo(i, Game::GetSplitscreenMode(), gBuffer.GetWidth(), gBuffer.GetHeight());
+        SetViewport(viewportInfo);
+        glViewport(viewportInfo.xOffset, viewportInfo.yOffset, viewportInfo.width, viewportInfo.height);
+        geometryShaderAlphaDiscarded.SetMat4("projection", renderData.cameraData[i].projection);
+        geometryShaderAlphaDiscarded.SetMat4("view", renderData.cameraData[i].view);
+        geometryShaderAlphaDiscarded.SetInt("playerIndex", i);
+        geometryShaderAlphaDiscarded.SetInt("instanceDataOffset", RendererData::g_geometryDrawInfoAlphaDiscarded[i].baseInstance);
+        MultiDrawIndirect(RendererData::g_geometryDrawInfoAlphaDiscarded[i].commands, OpenGLBackEnd::GetVertexDataVAO());
     }
-
+    // Geometry (blended)
+    OpenGLRenderer::g_ssbos.geometryRenderItems.Update(RendererData::g_geometryRenderItemsBlended.size() * sizeof(RenderItem3D), &RendererData::g_geometryRenderItemsBlended[0]);
+    glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glDepthMask(GL_FALSE);
+    for (int i = 0; i < renderData.playerCount; i++) {
+        ViewportInfo viewportInfo = RendererUtil::CreateViewportInfo(i, Game::GetSplitscreenMode(), gBuffer.GetWidth(), gBuffer.GetHeight());
+        SetViewport(viewportInfo);
+        glViewport(viewportInfo.xOffset, viewportInfo.yOffset, viewportInfo.width, viewportInfo.height);
+        geometryShader.SetMat4("projection", renderData.cameraData[i].projection);
+        geometryShader.SetMat4("view", renderData.cameraData[i].view);
+        geometryShader.SetInt("playerIndex", i);
+        geometryShader.SetInt("instanceDataOffset", RendererData::g_geometryDrawInfoBlended[i].baseInstance);
+        MultiDrawIndirect(RendererData::g_geometryDrawInfoBlended[i].commands, OpenGLBackEnd::GetVertexDataVAO());
+    }
+    glDisable(GL_BLEND); 
+    glDepthMask(GL_TRUE);
 
     // Skinned mesh
     glBindVertexArray(OpenGLBackEnd::GetSkinnedVertexDataVAO());
@@ -2040,67 +2068,12 @@ void DrawBulletDecals(RenderData& renderData) {
 █    █ █ ▀█ █▀▀█   █   █ █  █ █ ▀█ 　 █▄▄█ █▄▄█ ▀▀█ ▀▀█
 █▄▄█ ▀ ▀▀▀▀ ▀  ▀   ▀   ▀ ▀  ▀ ▀▀▀▀ 　 ▀    ▀  ▀ ▀▀▀ ▀▀▀  */
 
-void LightingPass2(RenderData& renderData) {
-
-    GLFrameBuffer& gBuffer = OpenGLRenderer::g_frameBuffers.gBuffer;
-    gBuffer.Bind();
-    gBuffer.SetViewport();
-    glDrawBuffer(gBuffer.GetColorAttachmentSlotByName("FinalLighting"));
-
-    Shader& shader = OpenGLRenderer::g_shaders.lighting;
-    shader.Use();
-    shader.SetFloat("time", Game::GetTime());
-    shader.SetInt("lightCount", Scene::g_lights.size());
-
-    if (Renderer::GetRenderMode() == COMPOSITE ||
-        Renderer::GetRenderMode() == COMPOSITE_PLUS_POINT_CLOUD) {
-        shader.SetInt("renderMode", 0);
-    }
-    else if(Renderer::GetRenderMode() == DIRECT_LIGHT) {
-        shader.SetInt("renderMode", 1);
-    }
-    else if (Renderer::GetRenderMode() == POINT_CLOUD) {
-        shader.SetInt("renderMode", 2);
-    }
-
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, gBuffer.GetColorAttachmentHandleByName("BaseColor"));
-    glActiveTexture(GL_TEXTURE1);
-    glBindTexture(GL_TEXTURE_2D, gBuffer.GetColorAttachmentHandleByName("Normal"));
-    glActiveTexture(GL_TEXTURE2);
-    glBindTexture(GL_TEXTURE_2D, gBuffer.GetColorAttachmentHandleByName("RMA"));
-    glActiveTexture(GL_TEXTURE3);
-    glBindTexture(GL_TEXTURE_2D, gBuffer.GetDepthAttachmentHandle());
-    glActiveTexture(GL_TEXTURE4);
-    glBindTexture(GL_TEXTURE_2D, gBuffer.GetColorAttachmentHandleByName("EmissiveMask"));
-
-    LightVolume* lightVolume = GlobalIllumination::GetLightVolumeByIndex(0);
-    shader.SetInt("probeSpaceWidth", lightVolume->GetProbeSpaceWidth());
-    shader.SetInt("probeSpaceHeight", lightVolume->GetProbeSpaceHeight());
-    shader.SetInt("probeSpaceDepth", lightVolume->GetProbeSpaceDepth());
-    shader.SetVec3("lightVolumePosition", lightVolume->GetPosition());
-    shader.SetFloat("probeSpacing", PROBE_SPACING);
-    glActiveTexture(GL_TEXTURE5);
-    glBindTexture(GL_TEXTURE_3D, lightVolume->texutre3D.GetGLTexture3D().GetID());
-
-    glActiveTexture(GL_TEXTURE6);
-    glBindTexture(GL_TEXTURE_CUBE_MAP_ARRAY, OpenGLRenderer::g_shadowMapArray.m_depthTexture);
-
-    glDisable(GL_DEPTH_TEST);
-    glDisable(GL_CULL_FACE);
-
-    glBindVertexArray(OpenGLBackEnd::GetVertexDataVAO());
-    int meshIndex = AssetManager::GetQuadMeshIndex();
-    Mesh* mesh = AssetManager::GetMeshByIndex(meshIndex);
-    glDrawElementsBaseVertex(GL_TRIANGLES, mesh->indexCount, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int) * mesh->baseIndex), mesh->baseVertex);
-}
-
 void LightingPass(RenderData& renderData) {
 
     GLFrameBuffer& gBuffer = OpenGLRenderer::g_frameBuffers.gBuffer;
     LightVolume* lightVolume = GlobalIllumination::GetLightVolumeByIndex(0);
 
-    ComputeShader& computeShader = OpenGLRenderer::g_shaders.lightingTiled;
+    ComputeShader& computeShader = OpenGLRenderer::g_shaders.lighting;
     computeShader.Use();
     computeShader.SetFloat("viewportWidth", gBuffer.GetWidth());
     computeShader.SetFloat("viewportHeight", gBuffer.GetHeight());
@@ -3196,6 +3169,7 @@ void OpenGLRenderer::QueryAvaliability() {
     GLint maxInvocations;
     glGetIntegerv(GL_MAX_COMPUTE_WORK_GROUP_INVOCATIONS, &maxInvocations);
     printf("Max Workgroup Invocations: %d\n", maxInvocations);
+    std::cout << "\n";
 }
 
 

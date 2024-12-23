@@ -19,18 +19,19 @@
 #include "RapidHotload.h"
 
 int _volumetricBloodObjectsSpawnedThisFrame = 0;
-
-float g_level = 0;
 float g_dobermanmTimer = 0;
 
 namespace Scene {
-
     std::vector<GameObject> g_gameObjects;
     std::vector<AnimatedGameObject> g_animatedGameObjects;
     std::vector<Door> g_doors;
     std::vector<Window> g_windows;
 
-    AudioHandle dobermannLoopAudio;
+    Shark g_shark;
+
+    std::vector<RenderItem3D> g_geometryRenderItems;
+    std::vector<RenderItem3D> g_geometryRenderItemsBlended;
+    std::vector<RenderItem3D> g_geometryRenderItemsAlphaDiscarded;
 
     void EvaluateDebugKeyPresses();
     void ProcessBullets();
@@ -39,6 +40,10 @@ namespace Scene {
     void LoadMapData(const std::string& fileName);
     void AllocateStorageSpace();
     void AddDobermann(DobermannCreateInfo& createInfo);
+}
+
+Shark& Scene::GetShark() {
+    return g_shark;
 }
 
 void Scene::AllocateStorageSpace() {
@@ -177,7 +182,6 @@ void Scene::SaveMapData(const std::string& fileName) {
 
 void Scene::LoadMapData(const std::string& fileName) {
 
-    g_level = 0;
     g_dobermanmTimer = 0;
 
     // Load file
@@ -265,7 +269,6 @@ void Scene::LoadMapData(const std::string& fileName) {
         createInfo.materialName = jsonObject["materialName"].get<std::string>().c_str();
         createInfo.modelName = jsonObject["modelName"].get<std::string>().c_str();
 
-
         CreateGameObject();
         GameObject* gameObject = GetGameObjectByIndex(GetGameObjectCount() - 1);
         gameObject->SetPosition(createInfo.position);
@@ -275,7 +278,6 @@ void Scene::LoadMapData(const std::string& fileName) {
         gameObject->SetModel(createInfo.modelName);
         gameObject->SetMeshMaterial(createInfo.materialName.c_str());
     }
-
 
     CreateWeaponSpawnPoints();
 }
@@ -380,6 +382,8 @@ void Scene::LoadDefaultScene() {
 
     CleanUp();
     CreateDefaultSpawnPoints();
+
+    g_shark.Init();
 
     HeightMap& heightMap = AssetManager::g_heightMap;
     heightMap.m_transform.scale = glm::vec3(0.40f);
@@ -572,7 +576,7 @@ void Scene::LoadDefaultScene() {
     tree->SetModel("ChristmasTree2");
     tree->SetName("ChristmasTree2");
     tree->SetMeshMaterial("Tree");
-    tree->SetMeshMaterialByMeshName("Balls", "Gold");
+    tree->SetMeshBlendingModes(BlendingMode::ALPHA_DISCARDED);
 
     //CreateGameObject();
     //GameObject* christmasLight = GetGameObjectByIndex(GetGameObjectCount() - 1);
@@ -596,11 +600,9 @@ void Scene::LoadDefaultScene() {
         genericObstacleFilterData.collisionGroup = CollisionGroup::ENVIROMENT_OBSTACLE;
         genericObstacleFilterData.collidesWith = (CollisionGroup)(GENERIC_BOUNCEABLE | BULLET_CASING | PLAYER | RAGDOLL);
 
-
         CreateGameObject();
         GameObject* mermaid = GetGameObjectByIndex(GetGameObjectCount() - 1);
         mermaid->SetPosition(14.4f, 2.1f, -1.7);
-      //  mermaid->SetPosition(14.4f, 2.0f, -11.7);
         mermaid->SetModel("Mermaid3");
         mermaid->SetMeshMaterial("Gold");
         mermaid->SetMeshMaterialByMeshName("Rock", "Rock");
@@ -610,7 +612,7 @@ void Scene::LoadDefaultScene() {
         mermaid->SetMeshMaterialByMeshName("Arms", "MermaidArms");
         mermaid->SetMeshMaterialByMeshName("HairInner", "MermaidHair");
         mermaid->SetMeshMaterialByMeshName("HairOutta", "MermaidHair");
-        mermaid->SetMeshMaterialByMeshName("HairScalp", "MermaidHair");
+        mermaid->SetMeshMaterialByMeshName("HairScalp", "MermaidScalp");
         mermaid->SetMeshMaterialByMeshName("EyeLeft", "MermaidEye");
         mermaid->SetMeshMaterialByMeshName("EyeRight", "MermaidEye");
         mermaid->SetMeshMaterialByMeshName("Tail", "MermaidTail");
@@ -620,8 +622,12 @@ void Scene::LoadDefaultScene() {
         mermaid->SetMeshMaterialByMeshName("ChristmasTopRed", "ChristmasTopRed");
         mermaid->SetMeshMaterialByMeshName("ChristmasTopWhite", "ChristmasTopWhite");
         mermaid->SetMeshMaterialByMeshName("Nails", "Nails");
+        mermaid->SetMeshBlendingMode("EyelashUpper", BlendingMode::BLENDED);
+        mermaid->SetMeshBlendingMode("EyelashLower", BlendingMode::BLENDED);
+        mermaid->SetMeshBlendingMode("HairScalp", BlendingMode::BLENDED);
+        mermaid->SetMeshBlendingMode("HairOutta", BlendingMode::ALPHA_DISCARDED);
+        mermaid->SetMeshBlendingMode("HairInner", BlendingMode::ALPHA_DISCARDED);
         mermaid->SetName("Mermaid");
-        mermaid->PrintMeshNames();
         mermaid->SetKinematic(true);
         mermaid->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("Rock_ConvexMesh"));
         mermaid->SetModelMatrixMode(ModelMatrixMode::GAME_TRANSFORM);
@@ -638,48 +644,12 @@ void Scene::LoadDefaultScene() {
         ladderCreateInfo.yCount = 2;
         CreateLadder(ladderCreateInfo);
 
-            //CreateGameObject();
-            //GameObject* ladder = GetGameObjectByIndex(GetGameObjectCount() - 1);
-            //ladder->SetPosition(11.0f, 0.5f, 0.9);
-            //ladder->SetRotationY(HELL_PI * 0.5f);
-            //ladder->SetModel("Ladder");
-            //ladder->SetMeshMaterial("Ladder");
-            //
-            //CreateGameObject();
-            //GameObject* ladder2 = GetGameObjectByIndex(GetGameObjectCount() - 1);
-            //ladder2->SetPosition(7.75f, 3.2f, -4.95);
-            //ladder2->SetRotationY(HELL_PI);
-            //ladder2->SetModel("Ladder");
-            //ladder2->SetMeshMaterial("Ladder");
-            //
-            //CreateGameObject();
-            //GameObject* ladder3 = GetGameObjectByIndex(GetGameObjectCount() - 1);
-            //ladder3->SetPosition(7.75f, 3.2f - 2.44f, -4.95);
-            //ladder3->SetRotationY(HELL_PI);
-            //ladder3->SetModel("Ladder");
-            //ladder3->SetMeshMaterial("Ladder");
-
         CreateGameObject();
         GameObject* platform = GetGameObjectByIndex(GetGameObjectCount() - 1);
         platform->SetPosition(8.8f, 2.6f, -4.95);
         platform->SetRotationY(HELL_PI);
         platform->SetModel("PlatformSquare");
-        platform->SetMeshMaterial("Platform");
-
-        //int index = CreateAnimatedGameObject();
-        //AnimatedGameObject& shark = g_animatedGameObjects[index];
-        //shark.SetFlag(AnimatedGameObject::Flag::NONE);
-        //shark.SetSkinnedModel("SharkSkinned");
-        //shark.SetName("SharkSkinned");
-        //shark.SetAnimationModeToBindPose();
-        //shark.SetAllMeshMaterials("Shark");
-        //shark.SetPosition(glm::vec3(7.0f, -0.1f, -15.7));
-        //PxU32 raycastFlag = RaycastGroup::RAYCAST_ENABLED;
-        //PxU32 collsionGroupFlag  = CollisionGroup::SHARK;
-        //PxU32 collidesWithGroupFlag  = CollisionGroup::ENVIROMENT_OBSTACLE | CollisionGroup::GENERIC_BOUNCEABLE | CollisionGroup::RAGDOLL | CollisionGroup::PLAYER;
-        //shark.PlayAndLoopAnimation("Shark_Swim", 1.0f);
-        //shark.LoadRagdoll("Shark.rag", raycastFlag, collsionGroupFlag, collidesWithGroupFlag);
-       
+        platform->SetMeshMaterial("Platform");       
     }
 
 
@@ -699,22 +669,21 @@ void Scene::LoadDefaultScene() {
                     cube->SetRotationY(Util::RandomFloat(0, HELL_PI * 2));
                     cube->SetRotationZ(Util::RandomFloat(0, HELL_PI * 2));
                     cube->SetWakeOnStart(true);
-                    cube->SetModel("ChristmasPresent");
+                    cube->SetModel("ChristmasPresentSmall");
                     cube->SetName("Present");
                     int rand = Util::RandomInt(0, 3);
                     if (rand == 0) {
-                        cube->SetMeshMaterial("PresentA");
+                        cube->SetMeshMaterial("PresentSmallRed");
                     }
                     else if (rand == 1) {
-                        cube->SetMeshMaterial("PresentB");
+                        cube->SetMeshMaterial("PresentSmallYellow");
                     }
                     else if (rand == 2) {
-                        cube->SetMeshMaterial("PresentC");
+                        cube->SetMeshMaterial("PresentSmallBlue");
                     }
                     else if (rand == 3) {
-                        cube->SetMeshMaterial("PresentD");
+                        cube->SetMeshMaterial("PresentSmallGreen");
                     }
-                    cube->SetMeshMaterialByMeshName("Bow", "Gold");
                     Transform transform;
                     transform.position = glm::vec3(2.0f, y * halfExtent * 2 + 0.2f, 3.5f);
                     PxShape* collisionShape = Physics::CreateBoxShape(halfExtent, halfExtent, halfExtent);
@@ -1196,9 +1165,6 @@ void Scene::HackToUpdateShadowMapsOnPickUp(GameObject* gameObject) {
 
 void Scene::Update(float deltaTime) {
 
-    if (!g_shark.m_init) {
-        g_shark.Init();
-    }
     g_shark.Update(deltaTime);
 
     for (int i = 0; i < g_gameObjects.size(); i++) {
@@ -1207,6 +1173,23 @@ void Scene::Update(float deltaTime) {
             HackToUpdateShadowMapsOnPickUp(&gameObject);
             g_gameObjects.erase(g_gameObjects.begin() + i);
             i--;
+        }
+        //static bool lowGrav = false;
+        //if (Input::KeyPressed(HELL_KEY_H)) {
+        //    lowGrav = !lowGrav;
+        //}
+        //if (lowGrav) {
+        //    if (gameObject.m_collisionRigidBody.pxRigidBody) {
+        //        auto lim = gameObject.m_collisionRigidBody.pxRigidBody->getLinearVelocity();
+        //        auto ang = gameObject.m_collisionRigidBody.pxRigidBody->getLinearVelocity();
+        //        std::cout << gameObject.GetName() << " vel: " << Util::Vec3ToString(Util::PxVec3toGlmVec3(lim)) << " " << Util::Vec3ToString(Util::PxVec3toGlmVec3(ang)) << "\n";
+        //       // gameObject.m_collisionRigidBody.pxRigidBody->setMaxLinearVelocity(maxv);
+        //    }
+        //}
+        //
+        if (Input::KeyPressed(HELL_KEY_R)) {
+            AnimatedGameObject* ao = GetAnimatedGameObjectByIndex(g_shark.m_animatedGameObjectIndex);
+            //ao->SetAnimatedModeToRagdoll();
         }
     }
 
@@ -1274,15 +1257,15 @@ void Scene::Update(float deltaTime) {
    //}
 
 
-    if (Input::KeyPressed(HELL_KEY_5)) {
-        g_dobermann[0].m_currentState = DobermannState::KAMAKAZI;
-        g_dobermann[0].m_health = 100;
-    }
-    if (Input::KeyPressed(HELL_KEY_6)) {
-        for (Dobermann& dobermann : g_dobermann) {
-            dobermann.Revive();
-        }
-    }
+  // if (Input::KeyPressed(HELL_KEY_5)) {
+  //     g_dobermann[0].m_currentState = DobermannState::KAMAKAZI;
+  //     g_dobermann[0].m_health = 100;
+  // }
+  // if (Input::KeyPressed(HELL_KEY_6)) {
+  //     for (Dobermann& dobermann : g_dobermann) {
+  //         dobermann.Revive();
+  //     }
+  // }
 
 
     static AudioHandle dobermanLoopaudioHandle;
@@ -1500,6 +1483,8 @@ void Scene::Update(float deltaTime) {
              it = _volumetricBloodSplatters.erase(it);
          }
     }
+    // Render items
+    CreateGeometryRenderItems();
 }
 
 
@@ -1667,7 +1652,7 @@ std::vector<RenderItem3D> GetTreeRenderItems() {
     if (Scene::g_needToPlantTrees) {
         Scene::g_needToPlantTrees = false;
 
-        Timer timer("PLANT SAMPLINGS");
+        //Timer timer("PLANT SAMPLINGS");
 
         int iterationMax = 800;
         int desiredTreeCount = 800;
@@ -1764,11 +1749,30 @@ std::vector<RenderItem3D> GetTreeRenderItems() {
     return renderItems;
 }
 
-std::vector<RenderItem3D> Scene::GetGeometryRenderItems() {
+
+
+std::vector<RenderItem3D>& Scene::GetGeometryRenderItems() {
+    return g_geometryRenderItems;
+}
+
+std::vector<RenderItem3D>& Scene::GetGeometryRenderItemsBlended() {
+    return g_geometryRenderItemsBlended;
+
+}
+
+std::vector<RenderItem3D>& Scene::GetGeometryRenderItemsAlphaDiscarded() {
+    return g_geometryRenderItemsAlphaDiscarded;
+
+}
+
+
+void Scene::CreateGeometryRenderItems() {
+
+    g_geometryRenderItems.clear();
+    g_geometryRenderItemsBlended.clear();
+    g_geometryRenderItemsAlphaDiscarded.clear();
 
     static int ceilingMaterialIndex = AssetManager::GetMaterialIndex("Ceiling");
-
-    std::vector<RenderItem3D> renderItems;
 
     // Ceiling trims
     static int ceilingTrimMeshIndex = AssetManager::GetModelByName("TrimCeiling")->GetMeshIndices()[0];
@@ -1786,7 +1790,7 @@ std::vector<RenderItem3D> Scene::GetGeometryRenderItems() {
         renderItem.baseColorTextureIndex = material->_basecolor;
         renderItem.rmaTextureIndex = material->_rma;
         renderItem.normalMapTextureIndex = material->_normal;
-        renderItems.push_back(renderItem);
+        g_geometryRenderItems.push_back(renderItem);
     }
     for (glm::mat4& matrix : g_floorTrims) {
         RenderItem3D renderItem;
@@ -1797,49 +1801,20 @@ std::vector<RenderItem3D> Scene::GetGeometryRenderItems() {
         renderItem.baseColorTextureIndex = material->_basecolor;
         renderItem.rmaTextureIndex = material->_rma;
         renderItem.normalMapTextureIndex = material->_normal;
-        renderItems.push_back(renderItem);
+        g_geometryRenderItems.push_back(renderItem);
     }
-    //std::cout << "g_ceilingTrims.size(): " << g_ceilingTrims.size() << "\n";
-    //std::cout << "ceilingTrimMaterialIndex: " << ceilingTrimMaterialIndex << "\n";
-    //std::cout << "ceilingTrimMeshIndex: " << ceilingTrimMeshIndex << "\n\n";
-
-
-
-    //for (CSGPlane& plane : g_csgAdditiveFloorPlanes) {
-    //    RenderItem3D renderItem;
-    //    renderItem.meshIndex = AssetManager::GetHalfSizeQuadMeshIndex();
-    //    renderItem.modelMatrix = plane.GetModelMatrix();
-    //    renderItem.inverseModelMatrix = glm::inverse(renderItem.modelMatrix);
-    //    Material* material = AssetManager::GetMaterialByIndex(ceilingMaterialIndex);
-    //    renderItem.baseColorTextureIndex = material->_basecolor;
-    //    renderItem.rmaTextureIndex = material->_rma;
-    //    renderItem.normalMapTextureIndex = material->_normal;
-    //    renderItems.push_back(renderItem);
-    //}
-    //for (CSGPlane& plane : g_csgAdditiveWallPlanes) {
-    //    RenderItem3D renderItem;
-    //    renderItem.meshIndex = AssetManager::GetHalfSizeQuadMeshIndex();
-    //    renderItem.modelMatrix = plane.GetModelMatrix();
-    //    renderItem.inverseModelMatrix = glm::inverse(renderItem.modelMatrix);
-    //    Material* material = AssetManager::GetMaterialByIndex(ceilingMaterialIndex);
-    //    renderItem.baseColorTextureIndex = material->_basecolor;
-    //    renderItem.rmaTextureIndex = material->_rma;
-    //    renderItem.normalMapTextureIndex = material->_normal;
-    //    renderItems.push_back(renderItem);
-    //}
-
-
+   
     // Ladders
     std::vector<RenderItem3D> ladderRenderItems;
     for (Ladder& ladder : g_ladders) {
-        renderItems.reserve(renderItems.size() + ladder.GetRenderItems().size());
-        renderItems.insert(std::end(renderItems), std::begin(ladder.GetRenderItems()), std::end(ladder.GetRenderItems()));
+        g_geometryRenderItems.reserve(g_geometryRenderItems.size() + ladder.GetRenderItems().size());
+        g_geometryRenderItems.insert(std::end(g_geometryRenderItems), std::begin(ladder.GetRenderItems()), std::end(ladder.GetRenderItems()));
     }
 
     // Trees
     std::vector<RenderItem3D> treeRenderItems = GetTreeRenderItems();
-    renderItems.reserve(renderItems.size() + treeRenderItems.size());
-    renderItems.insert(std::end(renderItems), std::begin(treeRenderItems), std::end(treeRenderItems));
+    g_geometryRenderItems.reserve(g_geometryRenderItems.size() + treeRenderItems.size());
+    g_geometryRenderItems.insert(std::end(g_geometryRenderItems), std::begin(treeRenderItems), std::end(treeRenderItems));
 
     // Staircase
     static Model* model = AssetManager::GetModelByIndex(AssetManager::GetModelIndexByName("Staircase"));
@@ -1856,7 +1831,7 @@ std::vector<RenderItem3D> Scene::GetGeometryRenderItems() {
                 renderItem.baseColorTextureIndex = material->_basecolor;
                 renderItem.rmaTextureIndex = material->_rma;
                 renderItem.normalMapTextureIndex = material->_normal;
-                renderItems.push_back(renderItem);
+                g_geometryRenderItems.push_back(renderItem);
             }
             segmentOffset.position.y += 0.432;
             segmentOffset.position.z += 0.45f;
@@ -1864,22 +1839,30 @@ std::vector<RenderItem3D> Scene::GetGeometryRenderItems() {
     }
 
     for (GameObject& gameObject : Scene::g_gameObjects) {
-        renderItems.reserve(renderItems.size() + gameObject.GetRenderItems().size());
-        renderItems.insert(std::end(renderItems), std::begin(gameObject.GetRenderItems()), std::end(gameObject.GetRenderItems()));
+        g_geometryRenderItems.reserve(g_geometryRenderItems.size() + gameObject.GetRenderItems().size());
+        g_geometryRenderItems.insert(std::end(g_geometryRenderItems), std::begin(gameObject.GetRenderItems()), std::end(gameObject.GetRenderItems()));
+    }
+    for (GameObject& gameObject : Scene::g_gameObjects) {
+        g_geometryRenderItemsBlended.reserve(g_geometryRenderItemsBlended.size() + gameObject.GetRenderItemsBlended().size());
+        g_geometryRenderItemsBlended.insert(std::end(g_geometryRenderItemsBlended), std::begin(gameObject.GetRenderItemsBlended()), std::end(gameObject.GetRenderItemsBlended()));
+    }
+    for (GameObject& gameObject : Scene::g_gameObjects) {
+        g_geometryRenderItemsAlphaDiscarded.reserve(g_geometryRenderItemsAlphaDiscarded.size() + gameObject.GetRenderItemsAlphaDiscarded().size());
+        g_geometryRenderItemsAlphaDiscarded.insert(std::end(g_geometryRenderItemsAlphaDiscarded), std::begin(gameObject.GetRenderItemsAlphaDiscarded()), std::end(gameObject.GetRenderItemsAlphaDiscarded()));
     }
     for (Door& door : Scene::g_doors) {
-        renderItems.reserve(renderItems.size() + door.GetRenderItems().size());
-        renderItems.insert(std::end(renderItems), std::begin(door.GetRenderItems()), std::end(door.GetRenderItems()));
+        g_geometryRenderItems.reserve(g_geometryRenderItems.size() + door.GetRenderItems().size());
+        g_geometryRenderItems.insert(std::end(g_geometryRenderItems), std::begin(door.GetRenderItems()), std::end(door.GetRenderItems()));
     }
     for (Window& window : Scene::g_windows) {
-        renderItems.reserve(renderItems.size() + window.GetRenderItems().size());
-        renderItems.insert(std::end(renderItems), std::begin(window.GetRenderItems()), std::end(window.GetRenderItems()));
+        g_geometryRenderItems.reserve(g_geometryRenderItems.size() + window.GetRenderItems().size());
+        g_geometryRenderItems.insert(std::end(g_geometryRenderItems), std::begin(window.GetRenderItems()), std::end(window.GetRenderItems()));
     }
 
     for (int i = 0; i < Game::GetPlayerCount(); i++) {
         Player* player = Game::GetPlayerByIndex(i);
-        renderItems.reserve(renderItems.size() + player->GetAttachmentRenderItems().size());
-        renderItems.insert(std::end(renderItems), std::begin(player->GetAttachmentRenderItems()), std::end(player->GetAttachmentRenderItems()));
+        g_geometryRenderItems.reserve(g_geometryRenderItems.size() + player->GetAttachmentRenderItems().size());
+        g_geometryRenderItems.insert(std::end(g_geometryRenderItems), std::begin(player->GetAttachmentRenderItems()), std::end(player->GetAttachmentRenderItems()));
     }
 
     // Casings
@@ -1890,7 +1873,7 @@ std::vector<RenderItem3D> Scene::GetGeometryRenderItems() {
     static int shotgunShellMeshIndex = AssetManager::GetModelByIndex(AssetManager::GetModelIndexByName("Shell"))->GetMeshIndices()[0];
     static int aks74uCasingMeshIndex = AssetManager::GetModelByIndex(AssetManager::GetModelIndexByName("CasingAKS74U"))->GetMeshIndices()[0];
     for (BulletCasing& casing : Scene::g_bulletCasings) {
-        RenderItem3D& renderItem = renderItems.emplace_back();
+        RenderItem3D& renderItem = g_geometryRenderItems.emplace_back();
         renderItem.modelMatrix = casing.m_modelMatrix;
         renderItem.inverseModelMatrix = inverse(renderItem.modelMatrix);
         renderItem.castShadow = false;
@@ -1921,7 +1904,7 @@ std::vector<RenderItem3D> Scene::GetGeometryRenderItems() {
         static Model* wallMountedLightmodel = AssetManager::GetModelByIndex(AssetManager::GetModelIndexByName("LightWallMounted"));
 
         if (light.type == 0) {
-            RenderItem3D& renderItem = renderItems.emplace_back();
+            RenderItem3D& renderItem = g_geometryRenderItems.emplace_back();
             renderItem.meshIndex = lightBulb0MeshIndex;
             renderItem.modelMatrix = lightBulbWorldMatrix;
             renderItem.inverseModelMatrix = inverse(renderItem.modelMatrix);
@@ -1942,7 +1925,7 @@ std::vector<RenderItem3D> Scene::GetGeometryRenderItems() {
                 Transform mountTransform;
                 mountTransform.position = rayResult.hitPosition;
 
-                RenderItem3D& renderItemMount = renderItems.emplace_back();
+                RenderItem3D& renderItemMount = g_geometryRenderItems.emplace_back();
                 renderItemMount.meshIndex = lightMount0MeshIndex;
                 renderItemMount.modelMatrix = mountTransform.to_mat4();
                 renderItemMount.inverseModelMatrix = inverse(renderItem.modelMatrix);
@@ -1955,7 +1938,7 @@ std::vector<RenderItem3D> Scene::GetGeometryRenderItems() {
                 cordTransform.position = light.position;
                 cordTransform.scale.y = abs(rayResult.hitPosition.y - light.position.y);
 
-                RenderItem3D& renderItemCord = renderItems.emplace_back();
+                RenderItem3D& renderItemCord = g_geometryRenderItems.emplace_back();
                 renderItemCord.meshIndex = lightCord0MeshIndex;
                 renderItemCord.modelMatrix = cordTransform.to_mat4();
                 renderItemCord.inverseModelMatrix = inverse(renderItem.modelMatrix);
@@ -1969,7 +1952,7 @@ std::vector<RenderItem3D> Scene::GetGeometryRenderItems() {
         else if (light.type == 1) {
 
             for (int j = 0; j < wallMountedLightmodel->GetMeshCount(); j++) {
-                RenderItem3D& renderItem = renderItems.emplace_back();
+                RenderItem3D& renderItem = g_geometryRenderItems.emplace_back();
                 renderItem.meshIndex = wallMountedLightmodel->GetMeshIndices()[j];
                 renderItem.modelMatrix = lightBulbWorldMatrix;
                 renderItem.inverseModelMatrix = inverse(renderItem.modelMatrix);
@@ -1983,8 +1966,6 @@ std::vector<RenderItem3D> Scene::GetGeometryRenderItems() {
             }
         }
     }
-
-    return renderItems;
 }
 
 
@@ -2396,849 +2377,8 @@ void Scene::ProcessBullets() {
         };
         int random = rand() % fleshImpactFilenames.size();
         Audio::PlayAudio(fleshImpactFilenames[random], 0.9f);
-        std::cout << "Flesh was hit\n";
+        //std::cout << "Flesh was hit\n";
     }
-}
-
-
-void Scene::LoadHardCodedObjects() {
-
-    _volumetricBloodSplatters.clear();
-
-    _toilets.push_back(Toilet(glm::vec3(8.3, 0.1, 2.8), 0));
-    _toilets.push_back(Toilet(glm::vec3(11.2f, 0.1f, 3.65f), HELL_PI * 0.5f));
-
-
-    if (true) {
-        int testIndex = CreateAnimatedGameObject();
-        AnimatedGameObject& glock = g_animatedGameObjects[testIndex];
-        glock.SetFlag(AnimatedGameObject::Flag::NONE);
-        glock.SetPlayerIndex(1);
-        glock.SetSkinnedModel("Glock");
-        glock.SetName("TestGlock");
-        glock.SetAnimationModeToBindPose();
-        glock.SetMeshMaterialByMeshName("ArmsMale", "Hands");
-        glock.SetMeshMaterialByMeshName("ArmsFemale", "FemaleArms");
-        glock.SetMeshMaterialByMeshName("Glock", "Glock");
-        glock.SetMeshMaterialByMeshName("RedDotSight", "RedDotSight");
-        glock.SetMeshMaterialByMeshName("RedDotSightGlass", "RedDotSight");
-        glock.SetMeshMaterialByMeshName("Glock_silencer", "Silencer");
-        //glock.DisableDrawingForMeshByMeshName("Silencer");
-        glock.PlayAndLoopAnimation("Glock_Reload", 0.1f);
-        glock.SetPosition(glm::vec3(2, 0, 2));
-        glock.SetScale(0.01);
-    }
-
-
-    if (true) {
-        int testIndex = CreateAnimatedGameObject();
-        AnimatedGameObject& object = g_animatedGameObjects[testIndex];
-        object.SetFlag(AnimatedGameObject::Flag::NONE);
-        object.SetPlayerIndex(1);
-        object.SetSkinnedModel("Smith");
-        object.SetName("TestSmith");
-        object.SetAnimationModeToBindPose();
-        object.SetAllMeshMaterials("Glock");
-        object.SetMeshMaterialByMeshName("ArmsMale", "Hands");
-        object.SetMeshMaterialByMeshName("ArmsFemale", "FemaleArms");
-        object.PrintMeshNames();
-        //glock.DisableDrawingForMeshByMeshName("Silencer");
-        object.PlayAndLoopAnimation("Smith_Idle", 0.1f);
-        object.SetPosition(glm::vec3(3, 0, 2));
-        object.SetScale(0.01);
-    }
-
-
-
-
-    if (true) {
-
-        CreateGameObject();
-        GameObject* aks74u = GetGameObjectByIndex(GetGameObjectCount()-1);
-        aks74u->SetPosition(1.8f, 1.7f, 0.75f);
-        aks74u->SetRotationX(-1.7f);
-        aks74u->SetRotationY(0.0f);
-        aks74u->SetRotationZ(-1.6f);
-        aks74u->SetModel("AKS74U_Carlos");
-        aks74u->SetName("AKS74U_Carlos");
-        aks74u->SetMeshMaterial("Ceiling");
-        aks74u->SetMeshMaterialByMeshName("FrontSight_low", "AKS74U_0");
-        aks74u->SetMeshMaterialByMeshName("Receiver_low", "AKS74U_1");
-        aks74u->SetMeshMaterialByMeshName("BoltCarrier_low", "AKS74U_1");
-        aks74u->SetMeshMaterialByMeshName("SafetySwitch_low", "AKS74U_1");
-        aks74u->SetMeshMaterialByMeshName("Pistol_low", "AKS74U_2");
-        aks74u->SetMeshMaterialByMeshName("Trigger_low", "AKS74U_2");
-        aks74u->SetMeshMaterialByMeshName("MagRelease_low", "AKS74U_2");
-        aks74u->SetMeshMaterialByMeshName("Magazine_Housing_low", "AKS74U_3");
-        aks74u->SetMeshMaterialByMeshName("BarrelTip_low", "AKS74U_4");
-        aks74u->SetPickUpType(PickUpType::AKS74U);
-        aks74u->SetWakeOnStart(true);
-        aks74u->SetCollisionType(CollisionType::PICKUP);
-        aks74u->SetKinematic(false);
-        aks74u->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("AKS74U_Carlos_ConvexMesh"));
-        aks74u->SetRaycastShapeFromModelIndex(AssetManager::GetModelIndexByName("AKS74U_Carlos"));
-        aks74u->SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
-        aks74u->UpdateRigidBodyMassAndInertia(50.0f);
-
-
-
-        CreateGameObject();
-        GameObject* shotgunPickup = GetGameObjectByIndex(GetGameObjectCount() - 1);
-        shotgunPickup->SetPosition(11.07, 0.65f, 4.025f);
-        shotgunPickup->SetRotationX(1.5916);
-        shotgunPickup->SetRotationY(3.4f);
-        shotgunPickup->SetRotationZ(-0.22);
-        shotgunPickup->SetModel("Shotgun_Isolated");
-        shotgunPickup->SetName("Shotgun_Pickup");
-        shotgunPickup->SetMeshMaterial("Shotgun");
-        shotgunPickup->SetPickUpType(PickUpType::SHOTGUN);
-        shotgunPickup->SetKinematic(false);
-        shotgunPickup->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("Shotgun_Isolated_ConvexMesh"));
-        shotgunPickup->SetRaycastShapeFromModelIndex(AssetManager::GetModelIndexByName("Shotgun_Isolated"));
-        shotgunPickup->SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
-        shotgunPickup->UpdateRigidBodyMassAndInertia(75.0f);
-        shotgunPickup->PutRigidBodyToSleep();
-        shotgunPickup->SetCollisionType(CollisionType::PICKUP);
-
-
-        CreateGameObject();
-        GameObject* scopePickUp = GetGameObjectByIndex(GetGameObjectCount() - 1);
-        scopePickUp->SetPosition(9.07f, 0.979f, 7.96f);
-        scopePickUp->SetModel("ScopePickUp");
-        scopePickUp->SetName("ScopePickUp");
-        scopePickUp->SetMeshMaterial("Shotgun");
-        scopePickUp->SetPickUpType(PickUpType::AKS74U_SCOPE);
-        scopePickUp->SetKinematic(false);
-        scopePickUp->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("ScopePickUp_ConvexMesh"));
-        scopePickUp->SetRaycastShapeFromModelIndex(AssetManager::GetModelIndexByName("ScopePickUp"));
-        scopePickUp->SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
-        scopePickUp->UpdateRigidBodyMassAndInertia(750.0f);
-        scopePickUp->PutRigidBodyToSleep();
-        scopePickUp->SetCollisionType(CollisionType::PICKUP);
-
-
-
-        /*
-
-        CreateGameObject();
-        GameObject* tokarevPickup = GetGameObjectByIndex(GetGameObjectCount() - 1);
-        tokarevPickup->SetPosition(2,1.6,3);
-        tokarevPickup->SetModel("Tokarev");
-        tokarevPickup->SetName("Tokarev");
-        tokarevPickup->SetMeshMaterial("Tokarev", 0);
-        tokarevPickup->SetMeshMaterial("Gold", 1);
-        tokarevPickup->SetMeshMaterial("Ceiling", 2);
-        tokarevPickup->SetScale(3);
-
-        std::cout << "\n";
-        std::cout << "\n";
-    std::cout << "MESH COUNT: " << tokarevPickup->model->GetMeshCount() << "\n";
-
-    std::cout << "\n";
-    std::cout << "\n";*/
-
-
-
-
-
-        // tokarevPickup->SetKinematic(false);
-        // tokarevPickup->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("ScopePickUp_ConvexMesh"));
-        // tokarevPickup->SetRaycastShapeFromModelIndex(AssetManager::GetModelIndexByName("ScopePickUp"));
-        // tokarevPickup->SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
-        // tokarevPickup->UpdateRigidBodyMassAndInertia(750.0f);
-        // tokarevPickup->PutRigidBodyToSleep();
-        // tokarevPickup->SetCollisionType(CollisionType::PICKUP);
-
-
-   /*   CreateGameObject();
-        GameObject* glockAmmo = GetGameObjectByIndex(GetGameObjectCount() - 1);
-        glockAmmo->SetPosition(0.40f, 0.78f, 4.45f);
-        glockAmmo->SetRotationY(HELL_PI * 0.4f);
-        glockAmmo->SetModel("GlockAmmoBox");
-        glockAmmo->SetName("GlockAmmo_PickUp");
-        glockAmmo->SetMeshMaterial("GlockAmmoBox");
-        glockAmmo->SetPickUpType(PickUpType::GLOCK_AMMO);
-        glockAmmo->SetKinematic(false);
-        glockAmmo->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("GlockAmmoBox_ConvexMesh"));
-        glockAmmo->SetRaycastShapeFromModelIndex(AssetManager::GetModelIndexByName("GlockAmmoBox_ConvexMesh"));
-        glockAmmo->SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
-        glockAmmo->UpdateRigidBodyMassAndInertia(150.0f);
-        glockAmmo->PutRigidBodyToSleep();
-        glockAmmo->SetCollisionType(CollisionType::PICKUP);*/
-
-        Game::SpawnPickup(PickUpType::GLOCK_AMMO, glm::vec3(0.40f, 0.78f, 4.45f), glm::vec3(0, HELL_PI * 0.4f, 0), true);
-
-        for (int x = 0; x < 10; x++) {
-            for (int z = 0; z < 10; z++) {
-
-                glm::vec3 position = glm::vec3(1 + x * 0.4f, 0.5f, 1 + z * 0.4f);
-                glm::vec3 rotation = glm::vec3(0, Util::RandomFloat(0, HELL_PI * 2), 0);
-
-
-                int random_number = std::rand() % 2;
-                if (random_number == 0) {
-                    //Game::SpawnAmmo("Glock", position, rotation, true);
-                }
-                else {
-                    //Game::SpawnAmmo("Tokarev", position, rotation, true);
-                }
-            }
-        }
-
-
-        CreateGameObject();
-        GameObject* pictureFrame = GetGameObjectByIndex(GetGameObjectCount() - 1);
-        pictureFrame->SetPosition(0.1f, 1.5f, 2.5f);
-        pictureFrame->SetScale(0.01f);
-        pictureFrame->SetRotationY(HELL_PI / 2);
-		pictureFrame->SetModel("PictureFrame_1");
-		pictureFrame->SetMeshMaterial("LongFrame");
-		pictureFrame->SetName("PictureFrame");
-
-        float cushionHeight = 0.555f;
-        Transform shapeOffset;
-        shapeOffset.position.y = cushionHeight * 0.5f;
-        shapeOffset.position.z = 0.5f;
-        PxShape* sofaShapeBigCube = Physics::CreateBoxShape(1, cushionHeight * 0.5f, 0.4f, shapeOffset);
-        PhysicsFilterData sofaFilterData;
-        sofaFilterData.raycastGroup = RAYCAST_DISABLED;
-        sofaFilterData.collisionGroup = CollisionGroup::ENVIROMENT_OBSTACLE;
-        sofaFilterData.collidesWith = (CollisionGroup)(GENERIC_BOUNCEABLE | BULLET_CASING | PLAYER | RAGDOLL);
-
-        CreateGameObject();
-        GameObject* sofa = GetGameObjectByIndex(GetGameObjectCount() - 1);
-        sofa->SetPosition(2.0f, 0.1f, 0.1f);
-        sofa->SetName("Sofa");
-        sofa->SetModel("Sofa_Cushionless");
-        sofa->SetMeshMaterial("Sofa");
-        sofa->SetKinematic(true);
-        sofa->SetRaycastShapeFromModelIndex(AssetManager::GetModelIndexByName("Sofa_Cushionless"));
-        sofa->AddCollisionShape(sofaShapeBigCube, sofaFilterData);
-        sofa->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("SofaBack_ConvexMesh"));
-        sofa->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("SofaLeftArm_ConvexMesh"));
-        sofa->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("SofaRightArm_ConvexMesh"));
-        sofa->SetModelMatrixMode(ModelMatrixMode::GAME_TRANSFORM);
-        sofa->SetCollisionType(CollisionType::STATIC_ENVIROMENT);
-
-        PhysicsFilterData cushionFilterData;
-        cushionFilterData.raycastGroup = RAYCAST_DISABLED;
-        cushionFilterData.collisionGroup = CollisionGroup::GENERIC_BOUNCEABLE;
-        cushionFilterData.collidesWith = CollisionGroup(ENVIROMENT_OBSTACLE | GENERIC_BOUNCEABLE);
-        float cushionDensity = 20.0f;
-
-        CreateGameObject();
-        GameObject* cushion0 = GetGameObjectByIndex(GetGameObjectCount() - 1);
-        cushion0->SetPosition(2.0f, 0.1f, 0.1f);
-        cushion0->SetModel("SofaCushion0");
-        cushion0->SetMeshMaterial("Sofa");
-        cushion0->SetName("SofaCushion0");
-        cushion0->SetKinematic(false);
-        cushion0->SetRaycastShapeFromModelIndex(AssetManager::GetModelIndexByName("SofaCushion0"));
-        cushion0->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("SofaCushion0_ConvexMesh"));
-        cushion0->SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
-        cushion0->UpdateRigidBodyMassAndInertia(cushionDensity);
-        cushion0->SetCollisionType(CollisionType::BOUNCEABLE);
-
-        CreateGameObject();
-        GameObject* cushion1 = GetGameObjectByIndex(GetGameObjectCount() - 1);
-        cushion1->SetPosition(2.0f, 0.1f, 0.1f);
-        cushion1->SetModel("SofaCushion1");
-        cushion1->SetName("SofaCushion1");
-        cushion1->SetMeshMaterial("Sofa");
-        cushion1->SetKinematic(false);
-        cushion1->SetRaycastShapeFromModelIndex(AssetManager::GetModelIndexByName("SofaCushion0"));
-        cushion1->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("SofaCushion1_ConvexMesh"));
-        cushion1->SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
-        cushion1->UpdateRigidBodyMassAndInertia(cushionDensity);
-        cushion1->SetCollisionType(CollisionType::BOUNCEABLE);
-
-        CreateGameObject();
-        GameObject* cushion2 = GetGameObjectByIndex(GetGameObjectCount() - 1);
-        cushion2->SetPosition(2.0f, 0.1f, 0.1f);
-        cushion2->SetModel("SofaCushion2");
-        cushion2->SetName("SofaCushion2");
-        cushion2->SetMeshMaterial("Sofa");
-        cushion2->SetKinematic(false);
-        cushion2->SetRaycastShapeFromModelIndex(AssetManager::GetModelIndexByName("SofaCushion2"));
-        cushion2->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("SofaCushion2_ConvexMesh"));
-        cushion2->SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
-        cushion2->UpdateRigidBodyMassAndInertia(cushionDensity);
-        cushion2->SetCollisionType(CollisionType::BOUNCEABLE);
-
-        CreateGameObject();
-        GameObject* cushion3 = GetGameObjectByIndex(GetGameObjectCount() - 1);
-        cushion3->SetPosition(2.0f, 0.1f, 0.1f);
-        cushion3->SetModel("SofaCushion3");
-        cushion3->SetName("SofaCushion3");
-        cushion3->SetMeshMaterial("Sofa");
-        cushion3->SetKinematic(false);
-        cushion3->SetRaycastShapeFromModelIndex(AssetManager::GetModelIndexByName("SofaCushion3"));
-        cushion3->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("SofaCushion3_ConvexMesh"));
-        cushion3->SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
-        cushion3->UpdateRigidBodyMassAndInertia(cushionDensity);
-        cushion3->SetCollisionType(CollisionType::BOUNCEABLE);
-
-        CreateGameObject();
-        GameObject* cushion4 = GetGameObjectByIndex(GetGameObjectCount() - 1);
-        cushion4->SetPosition(2.0f, 0.1f, 0.1f);
-        cushion4->SetModel("SofaCushion4");
-        cushion4->SetName("SofaCushion4");
-        cushion4->SetMeshMaterial("Sofa");
-        cushion4->SetKinematic(false);
-        cushion4->SetRaycastShapeFromModelIndex(AssetManager::GetModelIndexByName("SofaCushion4"));
-        cushion4->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("SofaCushion4_ConvexMesh"));
-        cushion4->SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
-        cushion4->UpdateRigidBodyMassAndInertia(15.0f);
-        cushion4->SetCollisionType(CollisionType::BOUNCEABLE);
-
-        CreateGameObject();
-        GameObject* tree = GetGameObjectByIndex(GetGameObjectCount() - 1);
-        tree->SetPosition(0.75f, 0.1f, 6.2f);
-        tree->SetModel("ChristmasTree");
-        tree->SetName("ChristmasTree");
-        tree->SetMeshMaterial("Tree");
-        tree->SetMeshMaterialByMeshName("Balls", "Gold");
-
-
-
-        {
-            PhysicsFilterData filterData;
-            filterData.raycastGroup = RAYCAST_ENABLED;
-            filterData.collisionGroup = CollisionGroup::NO_COLLISION;
-            filterData.collidesWith = CollisionGroup::NO_COLLISION;
-
-
-
-            CreateGameObject();
-            GameObject* smallChestOfDrawers = GetGameObjectByIndex(GetGameObjectCount() - 1);
-            smallChestOfDrawers->SetModel("SmallChestOfDrawersFrame");
-            smallChestOfDrawers->SetMeshMaterial("Drawers");
-            smallChestOfDrawers->SetName("SmallDrawersHis");
-            smallChestOfDrawers->SetPosition(0.1f, 0.1f, 4.45f);
-            smallChestOfDrawers->SetRotationY(NOOSE_PI / 2);
-            smallChestOfDrawers->SetRaycastShapeFromModelIndex(AssetManager::GetModelIndexByName("SmallChestOfDrawersFrame"));
-            smallChestOfDrawers->SetOpenState(OpenState::NONE, 0, 0, 0);
-            smallChestOfDrawers->SetAudioOnOpen("DrawerOpen.wav", 1.0f);
-            smallChestOfDrawers->SetAudioOnClose("DrawerOpen.wav", 1.0f);
-
-            PhysicsFilterData filterData3;
-            filterData3.raycastGroup = RAYCAST_DISABLED;
-            filterData3.collisionGroup = CollisionGroup::ENVIROMENT_OBSTACLE;
-            filterData3.collidesWith = CollisionGroup(GENERIC_BOUNCEABLE | BULLET_CASING | PLAYER | RAGDOLL);
-            smallChestOfDrawers->SetKinematic(true);
-            smallChestOfDrawers->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("SmallChestOfDrawersFrame_ConvexMesh"));
-            smallChestOfDrawers->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("SmallChestOfDrawersFrame_ConvexMesh1"));
-            smallChestOfDrawers->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("SmallChestOfDrawersFrameLeftSide_ConvexMesh"));
-            smallChestOfDrawers->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("SmallChestOfDrawersFrameRightSide_ConvexMesh"));
-            smallChestOfDrawers->SetCollisionType(CollisionType::STATIC_ENVIROMENT);
-
-            CreateGameObject();
-            GameObject* smallChestOfDrawers2 = GetGameObjectByIndex(GetGameObjectCount() - 1);
-            smallChestOfDrawers2->SetModel("SmallChestOfDrawersFrame");
-            smallChestOfDrawers2->SetMeshMaterial("Drawers");
-            smallChestOfDrawers2->SetName("SmallDrawersHers");
-            smallChestOfDrawers2->SetPosition(8.9, 0.1f, 8.3f);
-            smallChestOfDrawers2->SetRotationY(NOOSE_PI);
-            smallChestOfDrawers2->SetRaycastShapeFromModelIndex(AssetManager::GetModelIndexByName("SmallChestOfDrawersFrame"));
-            smallChestOfDrawers2->SetOpenState(OpenState::NONE, 0, 0, 0);
-            smallChestOfDrawers2->SetAudioOnOpen("DrawerOpen.wav", 1.0f);
-            smallChestOfDrawers2->SetAudioOnClose("DrawerOpen.wav", 1.0f);
-            smallChestOfDrawers2->SetKinematic(true);
-            smallChestOfDrawers2->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("SmallChestOfDrawersFrame_ConvexMesh"));
-            smallChestOfDrawers2->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("SmallChestOfDrawersFrame_ConvexMesh1"));
-            smallChestOfDrawers2->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("SmallChestOfDrawersFrameLeftSide_ConvexMesh"));
-            smallChestOfDrawers2->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("SmallChestOfDrawersFrameRightSide_ConvexMesh"));
-            smallChestOfDrawers2->SetCollisionType(CollisionType::STATIC_ENVIROMENT);
-
-
-            CreateGameObject();
-            GameObject* lamp2 = GetGameObjectByIndex(GetGameObjectCount() - 1);
-            //lamp.SetModel("LampFullNoGlobe");
-            lamp2->SetModel("Lamp");
-            lamp2->SetName("Lamp");
-            lamp2->SetMeshMaterial("Lamp");
-            lamp2->SetPosition(glm::vec3(0.25f, 0.88, 0.105f) + glm::vec3(0.1f, 0.1f, 4.45f));
-            lamp2->SetRaycastShapeFromModelIndex(AssetManager::GetModelIndexByName("LampFull"));
-            lamp2->SetKinematic(false);
-            lamp2->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("LampConvexMesh_0"));
-            lamp2->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("LampConvexMesh_1"));
-            lamp2->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("LampConvexMesh_2"));
-            lamp2->SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
-            lamp2->UpdateRigidBodyMassAndInertia(20.0f);
-            lamp2->SetCollisionType(CollisionType::BOUNCEABLE);
-
-       /*    GameObject& toilet = _gameObjects.emplace_back();
-            toilet.SetPosition(11.2f, 0.1f, 3.65f);
-            toilet.SetModel("Toilet");
-            toilet.SetName("Toilet");
-            toilet.SetMeshMaterial("Toilet");
-            toilet.SetRaycastShapeFromModel(OpenGLAssetManager::GetModel("Toilet"));
-            toilet.SetRotationY(HELL_PI * 0.5f);
-            toilet.SetKinematic(true);
-            toilet.AddCollisionShapeFromConvexMesh(&OpenGLAssetManager::GetModel("Toilet_ConvexMesh")->_meshes[0], sofaFilterData);
-            toilet.AddCollisionShapeFromConvexMesh(&OpenGLAssetManager::GetModel("Toilet_ConvexMesh1")->_meshes[0], sofaFilterData);
-            toilet.SetModelMatrixMode(ModelMatrixMode::GAME_TRANSFORM);
-
-
-            GameObject& toiletSeat = _gameObjects.emplace_back();
-            toiletSeat.SetModel("ToiletSeat");
-            toiletSeat.SetPosition(0, 0.40727, -0.2014);
-            toiletSeat.SetName("ToiletSeat");
-            toiletSeat.SetMeshMaterial("Toilet");
-            toiletSeat.SetParentName("Toilet");
-            toiletSeat.SetOpenState(OpenState::CLOSED, 2.183f, 0, 0.2f);
-            toiletSeat.SetOpenAxis(OpenAxis::ROTATION_NEG_X);
-            toiletSeat.SetRaycastShapeFromModel(OpenGLAssetManager::GetModel("ToiletSeat"));
-
-            GameObject& toiletLid = _gameObjects.emplace_back();
-            toiletLid.SetPosition(0, 0.40727, -0.2014);
-            toiletLid.SetModel("ToiletLid");
-            toiletLid.SetName("ToiletLid");
-            toiletLid.SetMeshMaterial("Toilet");
-            toiletLid.SetParentName("Toilet");
-            toiletLid.SetOpenState(OpenState::CLOSED, 2.183f, 0, 0.2f);
-            toiletLid.SetOpenAxis(OpenAxis::ROTATION_POS_X);
-            toiletLid.SetRaycastShapeFromModel(OpenGLAssetManager::GetModel("ToiletLid"));
-            */
-
-            //  lamp.userData = new PhysicsObjectData(PhysicsObjectType::GAME_OBJECT, &_gameObjects[_gameObjects.size()-1]);
-
-
-            CreateGameObject();
-            GameObject* smallChestOfDrawer_1 = GetGameObjectByIndex(GetGameObjectCount() - 1);
-            smallChestOfDrawer_1->SetModel("SmallDrawerTop");
-            smallChestOfDrawer_1->SetMeshMaterial("Drawers");
-            smallChestOfDrawer_1->SetParentName("SmallDrawersHis");
-            smallChestOfDrawer_1->SetName("TopDraw");
-            smallChestOfDrawer_1->SetOpenState(OpenState::CLOSED, 2.183f, 0, 0.2f);
-            smallChestOfDrawer_1->SetOpenAxis(OpenAxis::TRANSLATE_Z);
-            smallChestOfDrawer_1->SetRaycastShapeFromModelIndex(AssetManager::GetModelIndexByName("SmallDrawerTop"));
-            smallChestOfDrawer_1->SetKinematic(true);
-            smallChestOfDrawer_1->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("SmallDrawerTop_ConvexMesh0"));
-            smallChestOfDrawer_1->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("SmallDrawerTop_ConvexMesh1"));
-            smallChestOfDrawer_1->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("SmallDrawerTop_ConvexMesh2"));
-            smallChestOfDrawer_1->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("SmallDrawerTop_ConvexMesh3"));
-            smallChestOfDrawer_1->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("SmallDrawerTop_ConvexMesh4"));
-            smallChestOfDrawer_1->SetCollisionType(CollisionType::STATIC_ENVIROMENT);
-
-            CreateGameObject();
-            GameObject* smallChestOfDrawer_2 = GetGameObjectByIndex(GetGameObjectCount() - 1);
-            smallChestOfDrawer_2->SetModel("SmallDrawerSecond");
-            smallChestOfDrawer_2->SetMeshMaterial("Drawers");
-            smallChestOfDrawer_2->SetParentName("SmallDrawersHis");
-			smallChestOfDrawer_2->SetName("SecondDraw");
-			smallChestOfDrawer_2->SetOpenState(OpenState::CLOSED, 2.183f, 0, 0.2f);
-            smallChestOfDrawer_2->SetOpenAxis(OpenAxis::TRANSLATE_Z);
-            smallChestOfDrawer_2->SetRaycastShapeFromModelIndex(AssetManager::GetModelIndexByName("SmallDrawerSecond"));
-
-            CreateGameObject();
-            GameObject* smallChestOfDrawer_3 = GetGameObjectByIndex(GetGameObjectCount() - 1);
-            smallChestOfDrawer_3->SetModel("SmallDrawerThird");
-            smallChestOfDrawer_3->SetMeshMaterial("Drawers");
-			smallChestOfDrawer_3->SetParentName("SmallDrawersHis");
-			smallChestOfDrawer_3->SetName("ThirdDraw");
-			smallChestOfDrawer_3->SetOpenState(OpenState::CLOSED, 2.183f, 0, 0.2f);
-            smallChestOfDrawer_3->SetOpenAxis(OpenAxis::TRANSLATE_Z);
-            smallChestOfDrawer_3->SetRaycastShapeFromModelIndex(AssetManager::GetModelIndexByName("SmallDrawerThird"));
-
-            CreateGameObject();
-            GameObject* smallChestOfDrawer_4 = GetGameObjectByIndex(GetGameObjectCount() - 1);
-            smallChestOfDrawer_4->SetModel("SmallDrawerFourth");
-            smallChestOfDrawer_4->SetMeshMaterial("Drawers");
-            smallChestOfDrawer_4->SetParentName("SmallDrawersHis");
-            smallChestOfDrawer_4->SetName("ForthDraw");
-            smallChestOfDrawer_4->SetOpenState(OpenState::CLOSED, 2.183f, 0, 0.2f);
-            smallChestOfDrawer_4->SetOpenAxis(OpenAxis::TRANSLATE_Z);
-            smallChestOfDrawer_4->SetRaycastShapeFromModelIndex(AssetManager::GetModelIndexByName("SmallDrawerFourth"));
-        }
-
-
-
-        for (int y = 0; y < 12; y++) {
-
-            CreateGameObject();
-            GameObject* cube = GetGameObjectByIndex(GetGameObjectCount() - 1);
-            float halfExtent = 0.1f;
-            cube->SetPosition(2.0f, y * halfExtent * 2 + 0.2f, 3.5f);
-            cube->SetModel("ChristmasPresent");
-            cube->SetName("Present");
-
-            if (y == 0 || y == 4 || y == 8) {
-                cube->SetMeshMaterial("PresentA");
-            }
-            if (y == 1 || y == 5 || y == 9) {
-                cube->SetMeshMaterial("PresentB");
-            }
-            if (y == 2 || y == 6 || y == 10) {
-                cube->SetMeshMaterial("PresentC");
-            }
-            if (y == 3 || y == 7 || y == 11) {
-                cube->SetMeshMaterial("PresentD");
-            }
-
-            cube->SetMeshMaterialByMeshName("Bow", "Gold");
-
-            Transform transform;
-            transform.position = glm::vec3(2.0f, y * halfExtent * 2 + 0.2f, 3.5f);
-
-            PxShape* collisionShape = Physics::CreateBoxShape(halfExtent, halfExtent, halfExtent);
-            PxShape* raycastShape = Physics::CreateBoxShape(halfExtent, halfExtent, halfExtent);
-
-            PhysicsFilterData filterData;
-            filterData.raycastGroup = RAYCAST_DISABLED;
-            filterData.collisionGroup = CollisionGroup::GENERIC_BOUNCEABLE;
-            filterData.collidesWith = (CollisionGroup)(ENVIROMENT_OBSTACLE | GENERIC_BOUNCEABLE | RAGDOLL);
-
-            cube->SetKinematic(false);
-            cube->AddCollisionShape(collisionShape, filterData);
-            cube->SetRaycastShape(raycastShape);
-            cube->SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
-            cube->UpdateRigidBodyMassAndInertia(20.0f);
-            cube->SetCollisionType(CollisionType::BOUNCEABLE);
-        }
-
-    }
-
-
-    // GO HERE
-
-    if (false) {
-        int testIndex = CreateAnimatedGameObject();
-        AnimatedGameObject& glock = g_animatedGameObjects[testIndex];
-        glock.SetFlag(AnimatedGameObject::Flag::NONE);
-        glock.SetPlayerIndex(1);
-        //glock.SetSkinnedModel("Glock");
-        glock.SetSkinnedModel("Tokarev");
-        glock.SetName("Tokarev");
-        // glock.SetAllMeshMaterials("Tokarev");
-        glock.SetAnimationModeToBindPose();
-        glock.SetMeshMaterialByMeshName("ArmsMale", "Hands");
-        glock.SetMeshMaterialByMeshName("ArmsFemale", "FemaleArms");
-        glock.SetMeshMaterialByMeshName("TokarevBody", "Tokarev");
-        glock.SetMeshMaterialByMeshName("TokarevMag", "TokarevMag");
-        glock.SetMeshMaterialByMeshName("TokarevGripPolymer", "TokarevGrip");
-        glock.SetMeshMaterialByMeshName("TokarevGripPolyWood", "TokarevGrip");
-        //glock.PlayAndLoopAnimation("Glock_Walk", 1.0f);
-        glock.PlayAndLoopAnimation("Tokarev_Reload", 1.0f);
-        glock.SetPosition(glm::vec3(2.5f, 1.5f, 3));
-        glock.SetScale(0.01);
-    }
-    if (false) {
-        int testIndex = CreateAnimatedGameObject();
-        AnimatedGameObject& glock = g_animatedGameObjects[testIndex];
-        glock.SetFlag(AnimatedGameObject::Flag::NONE);
-        glock.SetPlayerIndex(1);
-        glock.SetSkinnedModel("Glock");
-        glock.SetName("Glock");
-        glock.SetAllMeshMaterials("Glock");
-        glock.SetAnimationModeToBindPose();
-        glock.PlayAndLoopAnimation("Glock_Reload", 1.0f);
-        glock.SetPosition(glm::vec3(2.5f, 1.5f, 3));
-        glock.SetScale(0.01);
-    }
-
-
-
-
-    /*
-    glock.SetName("Glock");
-    glock.SetSkinnedModel("Glock");
-    glock.SetAnimationModeToBindPose();
-    glock.SetFlag(AnimatedGameObject::Flag::CHARACTER_MODEL);
-    //glock.PlayAndLoopAnimation("Glock_Idle", 1.0f);
-    glock.SetAllMeshMaterials("Glock");
-    glock.SetScale(0.01f);
-    glock.SetPosition(glm::vec3(2.5f, 1.5f, 3));
-    glock.SetRotationY(HELL_PI * 0.5f);*/
-
-
-   /* auto glock = GetAnimatedGameObjectByName("Glock");
-    glock->SetScale(0.01f);
-    glock->SetScale(0.00f);
-    glock->SetPosition(glm::vec3(1.3f, 1.1, 3.5f));
-
-    auto mp7 = GetAnimatedGameObjectByName("MP7_test");
-    mp7->SetScale(0.01f);
-    mp7->SetScale(0.00f);
-    mp7->SetPosition(glm::vec3(2.3f, 1.1, 3.5f));
-    */
-
-    /*AnimatedGameObject& mp7 = _animatedGameObjects.emplace_back(AnimatedGameObject());
-    mp7.SetName("MP7");
-    mp7.SetSkinnedModel("MP7_test");
-    mp7.SetAnimatedTransformsToBindPose();
-    mp7.PlayAndLoopAnimation("MP7_ReloadTest", 1.0f);
-    mp7.SetMaterial("Glock");
-    mp7.SetMeshMaterial("manniquen1_2.001", "Hands");
-    mp7.SetMeshMaterial("manniquen1_2", "Hands");
-    mp7.SetMeshMaterial("SK_FPSArms_Female.001", "FemaleArms");
-    mp7.SetMeshMaterial("SK_FPSArms_Female", "FemaleArms");
-    mp7.SetScale(0.01f);
-    mp7.SetPosition(glm::vec3(2.5f, 1.5f, 4));
-    mp7.SetRotationY(HELL_PI * 0.5f);*/
-
-
-    //////////////////////
-    //                  //
-    //      AKS74U      //
-
-   /* if (false) {
-        AnimatedGameObject& aks = g_animatedGameObjects.emplace_back(AnimatedGameObject());
-        aks.SetName("AKS74U_TEST");
-        aks.SetSkinnedModel("AKS74U");
-        aks.SetAnimationModeToBindPose();
-        //aks.PlayAndLoopAnimation("AKS74U_ReloadEmpty", 0.2f);
-        aks.PlayAndLoopAnimation("AKS74U_Idle", 1.0f);
-        aks.SetMeshMaterialByMeshName("manniquen1_2.001", "Hands");
-        aks.SetMeshMaterialByMeshName("manniquen1_2", "Hands");
-        aks.SetMeshMaterialByMeshName("SK_FPSArms_Female.001", "FemaleArms");
-        aks.SetMeshMaterialByMeshName("SK_FPSArms_Female", "FemaleArms");
-        aks.SetMeshMaterialByMeshIndex(2, "AKS74U_3");
-        aks.SetMeshMaterialByMeshIndex(3, "AKS74U_3"); // possibly incorrect. this is the follower
-        aks.SetMeshMaterialByMeshIndex(4, "AKS74U_1");
-        aks.SetMeshMaterialByMeshIndex(5, "AKS74U_4");
-        aks.SetMeshMaterialByMeshIndex(6, "AKS74U_0");
-        aks.SetMeshMaterialByMeshIndex(7, "AKS74U_2");
-        aks.SetMeshMaterialByMeshIndex(8, "AKS74U_1");  // Bolt_low. Possibly wrong
-        aks.SetMeshMaterialByMeshIndex(9, "AKS74U_3"); // possibly incorrect.
-        aks.SetScale(0.01f);
-        aks.SetPosition(glm::vec3(2.5f, 1.5f, 3));
-        aks.SetRotationY(HELL_PI * 0.5f);
-    }*/
-
-    /////////////////////
-    //                 //
-    //      GLOCK      //
-
-    /*if (false) {
-        AnimatedGameObject& glock = _animatedGameObjects.emplace_back(AnimatedGameObject());
-        glock.SetName("GLOCK_TEST");
-        glock.SetSkinnedModel("Glock");
-        glock.SetAnimationModeToBindPose();
-        glock.PlayAndLoopAnimation("Glock_Reload", 0.2f);
-        glock.PlayAndLoopAnimation("AKS74U_Idle", 1.0f);
-        glock.SetAllMeshMaterials("Glock");
-        glock.SetScale(0.01f);
-        glock.SetPosition(glm::vec3(2.5f, 1.5f, 3));
-        glock.SetRotationY(HELL_PI * 0.5f);
-    }*/
-
-    /*AnimatedGameObject& nurse = _animatedGameObjects.emplace_back(AnimatedGameObject());
-    nurse.SetName("NURSEGUY");
-    nurse.SetSkinnedModel("NurseGuy");
-    nurse.SetAnimatedTransformsToBindPose();
-    //nurse.PlayAndLoopAnimation("NurseGuy_Glock_Idle", 1.0f);
-    nurse.SetMaterial("Glock");
-    //  glock.SetScale(0.01f);
-    nurse.SetPosition(glm::vec3(1.5f, 0.1f, 3));
-    // glock.SetRotationY(HELL_PI * 0.5f);
-    */
-
-    /*
-    AnimatedGameObject& dyingGuy = _animatedGameObjects.emplace_back(AnimatedGameObject());
-    dyingGuy.SetName("DyingGuy");
-    dyingGuy.SetSkinnedModel("DyingGuy");
-    dyingGuy.SetAnimationModeToBindPose();
-    dyingGuy.PlayAndLoopAnimation("DyingGuy_Death", 1.0f);
-    dyingGuy.SetMaterial("Glock");
-    dyingGuy.SetPosition(glm::vec3(1.5f, -10.1f, 3));
-    dyingGuy.SetRotationX(HELL_PI * 0.5f);
-    dyingGuy.SetMeshMaterial("CC_Base_Body", "UniSexGuyBody");
-    dyingGuy.SetMeshMaterial("CC_Base_Eye", "UniSexGuyBody");
-    dyingGuy.SetMeshMaterial("Biker_Jeans", "UniSexGuyJeans");
-    dyingGuy.SetMeshMaterial("CC_Base_Eye", "UniSexGuyEyes");
-    dyingGuy.SetMeshMaterial("Glock", "Glock");
-    dyingGuy.SetMeshMaterial("SM_Knife_01", "Knife");
-    dyingGuy.SetMeshMaterial("Shotgun_Mesh", "Shotgun");
-    dyingGuy.SetMeshMaterialByIndex(13, "UniSexGuyHead");*/
-
-    /*
-
-    AnimatedGameObject& unisexGuy = _animatedGameObjects.emplace_back(AnimatedGameObject());
-    unisexGuy.SetName("UNISEXGUY");
-    unisexGuy.SetSkinnedModel("UniSexGuyScaled");
-    //unisexGuy.SetAnimationModeToBindPose();
-    unisexGuy.PlayAndLoopAnimation("Character_Glock_Walk", 1.0f);
-    //unisexGuy.PlayAndLoopAnimation("Character_Glock_Walk", 1.0f);
-    //unisexGuy.PlayAndLoopAnimation("UnisexGuy_Death", 1.0f);
-    //unisexGuy.SetRotationX(HELL_PI * 0.5f);
-    unisexGuy.SetMaterial("NumGrid");
-    unisexGuy.SetPosition(glm::vec3(3.0f, 0.1f, 3));
-    unisexGuy.SetMeshMaterial("CC_Base_Body", "UniSexGuyBody");
-    unisexGuy.SetMeshMaterial("CC_Base_Eye", "UniSexGuyBody");
-    unisexGuy.SetMeshMaterial("Biker_Jeans", "UniSexGuyJeans");
-    unisexGuy.SetMeshMaterial("CC_Base_Eye", "UniSexGuyEyes");
-    unisexGuy.SetMeshMaterial("Glock", "Glock");
-    unisexGuy.SetMeshMaterial("SM_Knife_01", "Knife");
-    unisexGuy.SetMeshMaterial("Shotgun_Mesh", "Shotgun");
-    unisexGuy.SetMeshMaterialByIndex(13, "UniSexGuyHead");
-
-
-
-    PxU32 ragdollCollisionGroupFlags = RaycastGroup::RAYCAST_ENABLED;
-    unisexGuy.LoadRagdoll("UnisexGuy4.rag", ragdollCollisionGroupFlags);
-
-    unisexGuy.PrintMeshNames();
-
-    unisexGuy.AddSkippedMeshIndexByName("Glock");
-    unisexGuy.AddSkippedMeshIndexByName("SM_Knife_01");
-    unisexGuy.AddSkippedMeshIndexByName("Shotgun_Mesh");
-
-
-    unisexGuy.SetMeshMaterial("FrontSight_low", "AKS74U_0");
-    unisexGuy.SetMeshMaterial("Receiver_low", "AKS74U_1");
-    unisexGuy.SetMeshMaterial("BoltCarrier_low", "AKS74U_1");
-    unisexGuy.SetMeshMaterial("SafetySwitch_low", "AKS74U_0");
-    unisexGuy.SetMeshMaterial("MagRelease_low", "AKS74U_0");
-    unisexGuy.SetMeshMaterial("Pistol_low", "AKS74U_2");
-    unisexGuy.SetMeshMaterial("Trigger_low", "AKS74U_1");
-    unisexGuy.SetMeshMaterial("Magazine_Housing_low", "AKS74U_3");
-    unisexGuy.SetMeshMaterial("BarrelTip_low", "AKS74U_4");
-
-
-    unisexGuy.AddSkippedMeshIndexByName("FrontSight_low");
-    unisexGuy.AddSkippedMeshIndexByName("Receiver_low");
-    unisexGuy.AddSkippedMeshIndexByName("BoltCarrier_low");
-    unisexGuy.AddSkippedMeshIndexByName("SafetySwitch_low");
-    unisexGuy.AddSkippedMeshIndexByName("MagRelease_low");
-    unisexGuy.AddSkippedMeshIndexByName("Pistol_low");
-    unisexGuy.AddSkippedMeshIndexByName("Trigger_low");
-    unisexGuy.AddSkippedMeshIndexByName("Magazine_Housing_low");
-    unisexGuy.AddSkippedMeshIndexByName("BarrelTip_low");
-   */
-
-    /*
-    AnimatedGameObject& glock = _animatedGameObjects.emplace_back(AnimatedGameObject());
-    glock.SetName("Glock");
-    glock.SetSkinnedModel("Glock");
-    glock.SetAnimatedTransformsToBindPose();
-    glock.PlayAndLoopAnimation("Glock_Idle", 1.0f);
-    glock.SetMaterial("Glock");
-    glock.SetMeshMaterial("manniquen1_2.001", "Hands");
-    glock.SetMeshMaterial("manniquen1_2", "Hands");
-    glock.SetMeshMaterial("SK_FPSArms_Female.001", "FemaleArms");
-    glock.SetMeshMaterial("SK_FPSArms_Female", "FemaleArms");
-    glock.SetScale(0.01f);
-    glock.SetPosition(glm::vec3(2.5f, 1.5f, 3));
-    glock.SetRotationY(HELL_PI * 0.5f);
-
-    */
-
-    /*
-    AnimatedGameObject & shotgun = _animatedGameObjects.emplace_back(AnimatedGameObject());
-    shotgun.SetName("ShotgunTest");
-    shotgun.SetSkinnedModel("Shotgun");
-    shotgun.SetAnimatedTransformsToBindPose();
-    shotgun.PlayAndLoopAnimation("Shotgun_Fire", 0.5f);
-    shotgun.SetMaterial("Shotgun");
-    shotgun.SetMeshMaterial("Arms", "Hands");
-  //  glock.SetMeshMaterial("manniquen1_2", "Hands");
-  //  glock.SetMeshMaterial("SK_FPSArms_Female.001", "FemaleArms");
- //   glock.SetMeshMaterial("SK_FPSArms_Female", "FemaleArms");
-    shotgun.SetScale(0.02f);
-    shotgun.SetPosition(glm::vec3(2.5f, 1.5f, 4));
-    shotgun.SetRotationY(HELL_PI * 0.5f);
-    shotgun.SetMeshMaterialByIndex(2, "Shell");
-    */
-    /*
-    for (auto& mesh : shotgun._skinnedModel->m_meshEntries) {
-        std::cout << "shit         shit      " << mesh.Name << "\n";
-   }
-
-   */
-
-    /* THIS IS THE AK U WERE TESTING WITH ON STREAM WHEN DOING THE STILL UNFINISHED AK MAG DROP THING
-        AnimatedGameObject& aks74u = _animatedGameObjects.emplace_back(AnimatedGameObject());
-
-        aks74u.SetName("AKS74U");
-        aks74u.SetSkinnedModel("AKS74U");
-        aks74u.SetMeshMaterial("manniquen1_2.001", "Hands");
-        aks74u.SetMeshMaterial("manniquen1_2", "Hands");
-        aks74u.SetMeshMaterialByIndex(2, "AKS74U_3");
-        aks74u.SetMeshMaterialByIndex(3, "AKS74U_3"); // possibly incorrect. this is the follower
-        aks74u.SetMeshMaterialByIndex(4, "AKS74U_1");
-        aks74u.SetMeshMaterialByIndex(5, "AKS74U_4");
-        aks74u.SetMeshMaterialByIndex(6, "AKS74U_0");
-        aks74u.SetMeshMaterialByIndex(7, "AKS74U_2");
-        aks74u.SetMeshMaterialByIndex(8, "AKS74U_1");  // Bolt_low. Possibly wrong
-        aks74u.SetMeshMaterialByIndex(9, "AKS74U_3"); // possibly incorrect.
-
-
-		aks74u.SetMeshMaterialByIndex(1, "AKS74U_3");
-	//	aks74u.PlayAndLoopAnimation("AKS74U_ReloadEmpty", 0.1f);
-		aks74u.PlayAndLoopAnimation("AKS74U_Idle", 0.1f);
-        aks74u.SetScale(0.01f);
-        aks74u.SetPosition(glm::vec3(2.5f, 1.5f, 3));
-        aks74u.SetRotationY(HELL_PI * 0.5f);   */
-
-        /*
-
-        AnimatedGameObject& enemy2 = _animatedGameObjects.emplace_back(AnimatedGameObject());
-        enemy2.SetName("Wife");
-        enemy2.SetSkinnedModel("UniSexGuy2");
-        enemy2.SetMeshMaterial("CC_Base_Body", "UniSexGuyBody");
-        enemy2.SetMeshMaterial("CC_Base_Eye", "UniSexGuyBody");
-        enemy2.SetMeshMaterial("Biker_Jeans", "UniSexGuyJeans");
-        enemy2.SetMeshMaterial("CC_Base_Eye", "UniSexGuyEyes");
-        enemy2.SetMeshMaterialByIndex(1, "UniSexGuyHead");
-        enemy2.PlayAndLoopAnimation("Character_Glock_Idle", 1.0f);
-        enemy2.SetScale(0.01f);
-        enemy2.SetPosition(glm::vec3(2.5f, 0.1f, 2));
-        enemy2.SetRotationX(HELL_PI / 2);
-        */
-        /*
-
-        AnimatedGameObject& aks74u = _animatedGameObjects.emplace_back(AnimatedGameObject());
-        aks74u.SetName("AKS74U");
-        aks74u.SetSkinnedModel("AKS74U");
-        aks74u.PlayAnimation("AKS74U_Idle", 0.5f);
-
-       /* AnimatedGameObject& glock = _animatedGameObjects.emplace_back(AnimatedGameObject());
-        glock.SetName("Shotgun");
-        glock.SetSkinnedModel("Shotgun");
-        glock.PlayAndLoopAnimation("Shotgun_Walk", 1.0f);*/
-
-
-        /*AnimatedGameObject& glock = _animatedGameObjects.emplace_back(AnimatedGameObject());
-         glock.SetName("Glock");
-         glock.SetSkinnedModel("Glock");
-         glock.PlayAndLoopAnimation("Glock_Walk", 1.0f);
-         glock.SetScale(0.04f);
-         glock.SetPosition(glm::vec3(2, 1.2, 3.5));
-         */
-
-
-    /*
-	AnimatedGameObject& aks74u = _animatedGameObjects.emplace_back(AnimatedGameObject());
-	aks74u.SetName("Shotgun");
-	aks74u.SetSkinnedModel("Shotgun");
-	aks74u.PlayAnimation("Shotgun_Idle", 0.5f);
-	aks74u.SetMaterial("Hands");
-	aks74u.SetPosition(glm::vec3(2, 1.75f, 3.5));
-	aks74u.SetScale(0.01f);
-    */
-
-    /*
-	aks74u.SetMeshMaterialByIndex(2, "AKS74U_3");
-	aks74u.SetMeshMaterialByIndex(3, "AKS74U_3"); // possibly incorrect. this is the follower
-	aks74u.SetMeshMaterialByIndex(4, "AKS74U_1");
-	aks74u.SetMeshMaterialByIndex(5, "AKS74U_4");
-	aks74u.SetMeshMaterialByIndex(6, "AKS74U_0");
-	aks74u.SetMeshMaterialByIndex(7, "AKS74U_2");
-	aks74u.SetMeshMaterialByIndex(8, "AKS74U_1");  // Bolt_low. Possibly wrong
-	aks74u.SetMeshMaterialByIndex(9, "AKS74U_3"); // possibly incorrect.
-    */
-
-    /*
-   auto _skinnedModel = AssetManager::GetSkinnedModel("AKS74U");
-	for (int i = 0; i < _skinnedModel->m_meshEntries.size(); i++) {
-		auto& mesh = _skinnedModel->m_meshEntries[i];
-        std::cout << i << ": " << mesh.Name << "\n";
-		//if (mesh.Name == meshName) {
-		//	_materialIndices[i] = AssetManager::GetMaterialIndex(materialName);
-			//return;
-		//}
-	}*/
 }
 
 void Scene::ResetGameObjectStates() {
@@ -3249,6 +2389,8 @@ void Scene::ResetGameObjectStates() {
 
 
 void Scene::CleanUp() {
+
+    g_shark.CleanUp();
 
     for (Ladder& ladder : g_ladders) {
         ladder.CleanUp();

@@ -71,7 +71,7 @@ void DrawNavMesh(MyDebugDraw& dd, NavMesh& navMesh, dtTileCache* tileCache, std:
 
 void DrawNavMesh(MyDebugDraw& dd, NavMesh& navMesh, std::vector<glm::vec3>& vector) {
 
-    Timer timer("DrawNavMesh()");
+    //Timer timer("DrawNavMesh()");
 
     if (!navMesh.GetDtNaveMesh()) {
         return;
@@ -173,7 +173,7 @@ namespace Pathfinding2 {
 
     void CalculateNavMesh() {
 
-        Timer timer("Pathfinding::UpdateNavMesh()");
+        //Timer timer("Pathfinding::UpdateNavMesh()");
 
         std::vector<glm::vec3> vertices = CSG::GetNavMeshVertices();
         std::cout << "CSG vertices: " << vertices.size() << "\n";

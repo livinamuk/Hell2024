@@ -71,13 +71,7 @@ void main() {
     // Compute model-space and normal-space transformations
     mat4 modelMatrix = renderItem.modelMatrix;
 	mat4 normalMatrix = transpose(renderItem.inverseModelMatrix);
-
-    //mat3 normalMatrix = transpose(inverse(mat3(modelMatrix)));
-    //Normal = normalize(normalMatrix * vNormal);
-    //Tangent = normalize(normalMatrix * vTangent);
-    //BiTangent = normalize(cross(Normal, Tangent));
-
-	Normal = normalize(normalMatrix * vec4(vNormal, 0)).xyz;
+    Normal = normalize(normalMatrix * vec4(vNormal, 0)).xyz;
 	Tangent = normalize(normalMatrix * vec4(vTangent, 0)).xyz;
 	BiTangent = normalize(cross(Normal, Tangent));
     

@@ -109,6 +109,27 @@ namespace Game {
             Audio::StopAudio("Water_PaddlingLoop_1.wav");
         }
 
+        ///Audio::StopAudio("Shark_SwimLoopAbove.wav");
+        Audio::LoopAudioIfNotPlaying("Shark_SwimLoopAbove.wav", 0.5);
+
+        float distanceToPlayer = glm::distance(Scene::GetShark().GetHeadPosition(), Game::GetPlayerByIndex(0)->GetViewPos());
+        float minDistance = 3.0f;
+        float maxDistance = 40.0f;
+        float volume = 0.0f;
+        if (distanceToPlayer <= minDistance) {
+            volume = 1.0f;
+        }
+        else if (distanceToPlayer >= maxDistance) {
+            volume = 0.0f;
+        }
+        else {
+            float t = (distanceToPlayer - minDistance) / (maxDistance - minDistance);
+            volume = glm::mix(1.0f, 0.0f, t); // Linear interpolation
+        }
+        volume *= 0.7f;
+        //std::cout << "dist: " << distanceToPlayer << " " << "volume: " << volume << "\n";
+        Audio::SetAudioVolume("Shark_SwimLoopAbove.wav", volume);
+
         // Delta time
         g_lastFrame = g_thisFrame;
         g_thisFrame = glfwGetTime();
@@ -130,7 +151,7 @@ namespace Game {
             Audio::PlayAudio(AUDIO_SELECT, 1.00f);
             Editor::EnterEditor();
         }
-        if (Input::KeyPressed(HELL_KEY_TAB)) {
+        if (Input::KeyPressed(HELL_KEY_TAB) && !Game::GetPlayerByIndex(0)->IsAtShop()) {
             Audio::PlayAudio(AUDIO_SELECT, 1.00f);
             if (Editor::IsOpen()) {
                 Editor::LeaveEditor();
@@ -463,6 +484,22 @@ namespace Game {
             Audio::PlayAudio(AUDIO_SELECT, 1.00f);
             RendererData::NextRendererOverrideState();
             std::cout << "RendererOverrideState: " << RendererData::GetRendererOverrideStateAsInt() << "\n";
+        }
+        // Move mermaid
+        static bool mermaidOutside = false;
+        if (Input::KeyPressed(HELL_KEY_4)) {
+            Audio::PlayAudio(AUDIO_SELECT, 1.00f);
+            mermaidOutside = !mermaidOutside;
+            for (GameObject& gameObject : Scene::GetGamesObjects()) {
+                if (gameObject.GetName() == "Mermaid") {
+                    if (mermaidOutside) {
+                        gameObject.SetPosition(14.4f, 2.0f, -11.7);
+                    }
+                    else {
+                        gameObject.SetPosition(14.4f, 2.1f, -1.7);
+                    }
+                }
+            }
         }
     }
 

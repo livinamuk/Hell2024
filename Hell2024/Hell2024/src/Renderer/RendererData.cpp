@@ -17,11 +17,14 @@ namespace RendererData {
         //Timer timer("CreateDrawCommands");
 
         g_geometryRenderItems.clear();
-        g_blendGeometryRenderItems.clear();
+        g_geometryRenderItemsBlended.clear();
+        g_geometryRenderItemsAlphaDiscarded.clear();
         g_bulletDecalRenderItems.clear();
         g_shadowMapGeometryRenderItems.clear();
 
         g_sceneGeometryRenderItems = Scene::GetGeometryRenderItems();
+        g_sceneGeometryRenderItemsBlended = Scene::GetGeometryRenderItemsBlended();
+        g_sceneGeometryRenderItemsAlphaDiscarded = Scene::GetGeometryRenderItemsAlphaDiscarded();
         g_sceneBulletDecalRenderItems = Scene::CreateDecalRenderItems();
 
         std::sort(g_sceneGeometryRenderItems.begin(), g_sceneGeometryRenderItems.end());
@@ -42,7 +45,29 @@ namespace RendererData {
                 }
             }
             g_geometryDrawInfo[i].commands = CreateMultiDrawIndirectCommands(g_geometryRenderItems, g_geometryDrawInfo[i].baseInstance, g_geometryDrawInfo[i].instanceCount);
-
+            
+            // Geometry Blended
+            g_geometryDrawInfoBlended[i].baseInstance = g_geometryRenderItemsBlended.size();
+            g_geometryDrawInfoBlended[i].instanceCount = 0;
+            for (auto& renderItem : g_sceneGeometryRenderItemsBlended) {
+                if (Editor::IsOpen() || frustum.IntersectsAABBFast(renderItem)) {
+                    g_geometryRenderItemsBlended.push_back(renderItem);
+                    g_geometryDrawInfoBlended[i].instanceCount++;
+                }
+            }
+            g_geometryDrawInfoBlended[i].commands = CreateMultiDrawIndirectCommands(g_geometryRenderItemsBlended, g_geometryDrawInfoBlended[i].baseInstance, g_geometryDrawInfoBlended[i].instanceCount);
+            
+            // Geometry Alpha Discarded
+            g_geometryDrawInfoAlphaDiscarded[i].baseInstance = g_geometryRenderItemsAlphaDiscarded.size();
+            g_geometryDrawInfoAlphaDiscarded[i].instanceCount = 0;
+            for (auto& renderItem : g_sceneGeometryRenderItemsAlphaDiscarded) {
+                if (Editor::IsOpen() || frustum.IntersectsAABBFast(renderItem)) {
+                    g_geometryRenderItemsAlphaDiscarded.push_back(renderItem);
+                    g_geometryDrawInfoAlphaDiscarded[i].instanceCount++;
+                }
+            }
+            g_geometryDrawInfoAlphaDiscarded[i].commands = CreateMultiDrawIndirectCommands(g_geometryRenderItemsAlphaDiscarded, g_geometryDrawInfoAlphaDiscarded[i].baseInstance, g_geometryDrawInfoAlphaDiscarded[i].instanceCount);
+           
             // Bullet decals
             g_bulletDecalDrawInfo[i].baseInstance = g_bulletDecalRenderItems.size();
             g_bulletDecalDrawInfo[i].instanceCount = 0;

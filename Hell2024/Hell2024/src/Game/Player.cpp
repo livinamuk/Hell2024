@@ -35,21 +35,81 @@ void Player::Update(float deltaTime) {
     if (g_awaitingRespawn && !Game::KillLimitReached()) {
         Respawn();
     }
-    AnimatedGameObject* characterModel = Scene::GetAnimatedGameObjectByIndex(m_characterModelAnimatedGameObjectIndex);
-    AnimatedGameObject* viewWeaponGameObject = Scene::GetAnimatedGameObjectByIndex(m_viewWeaponAnimatedGameObjectIndex);
-
-    // Update outside
-    glm::vec3 origin = GetFeetPosition() + glm::vec3(0, 0.1f, 0);
-    PxU32 raycastFlags = RaycastGroup::RAYCAST_ENABLED;
-    PhysXRayResult rayResult = Util::CastPhysXRay(origin, glm::vec3(0, -1, 0), 10, raycastFlags);
-    if (rayResult.hitFound && rayResult.objectType == ObjectType::HEIGHT_MAP) {
-        m_isOutside = true;
-    }
-    if (rayResult.hitFound && rayResult.objectType == ObjectType::CSG_OBJECT_ADDITIVE_CUBE ||
-        rayResult.hitFound && rayResult.objectType == ObjectType::CSG_OBJECT_ADDITIVE_FLOOR_PLANE) {
-        m_isOutside = false;
-    }
     UpdateRagdoll(); // updates pointers to rigids
+
+    // Wrap rotation
+    if (_rotation.y > HELL_PI * 2) {
+        _rotation.y = 0;
+    }
+    else if (_rotation.y < 0) {
+        _rotation.y = HELL_PI * 2;
+    }
+
+
+    GameObject* mermaid = Scene::GetGameObjectByName("Mermaid");
+    glm::vec3 mermaidPosition = mermaid->GetWorldPosition();
+    glm::vec3 deltaPosition = glm::vec3(14.40f, 2.00f, -11.70f) - glm::vec3(13.48f, 3.48f, -11.36f);
+    glm::vec3 targetShopCameraPosition = mermaid->GetWorldPosition() - deltaPosition;
+    glm::vec3 targetShopCameraRotation = glm::vec3(-0.29, -1.66, 0.00);
+    glm::quat targetShopCameraRotationQ = glm::quat(targetShopCameraRotation);
+
+    if (HasControl()) {
+        if (Input::KeyPressed(HELL_KEY_5)) {
+            Audio::PlayAudio(AUDIO_SELECT, 1.00f);
+            m_atShop = !m_atShop;
+            if (m_atShop) {
+                m_shopCameraPosition = GetViewPos();
+                m_shopCameraRotation = GetCameraRotation();
+
+                if (m_shopCameraRotation.y > HELL_PI) {
+                    m_shopCameraRotation.y = -HELL_PI;
+                }
+                if (m_shopCameraRotation.y < -HELL_PI) {
+                    m_shopCameraRotation.y = HELL_PI;
+                }
+
+                m_shopCameraRotationQ = glm::quat(GetCameraRotation());
+                std::cout << "your rotation was  " << Util::Vec3ToString(m_shopCameraRotation) << "\n";
+                std::cout << "target rotation is " << Util::Vec3ToString(targetShopCameraRotation) << "\n";
+            }
+        }
+    }
+
+    if (IsAtShop()) {        
+        _zoom = 1.0f;
+        float lerpSpeed = 20;
+        m_shopCameraPosition.x = Util::FInterpTo(m_shopCameraPosition.x, targetShopCameraPosition.x, deltaTime, lerpSpeed);
+        m_shopCameraPosition.y = Util::FInterpTo(m_shopCameraPosition.y, targetShopCameraPosition.y, deltaTime, lerpSpeed);
+        m_shopCameraPosition.z = Util::FInterpTo(m_shopCameraPosition.z, targetShopCameraPosition.z, deltaTime, lerpSpeed);
+
+        m_shopCameraRotation.x = Util::FInterpTo(m_shopCameraRotation.x, targetShopCameraRotation.x, deltaTime, lerpSpeed);
+        m_shopCameraRotation.y = Util::FInterpTo(m_shopCameraRotation.y, targetShopCameraRotation.y, deltaTime, lerpSpeed);
+        m_shopCameraRotation.z = Util::FInterpTo(m_shopCameraRotation.z, targetShopCameraRotation.z, deltaTime, lerpSpeed);
+
+        m_shopCameraRotationQ.x = Util::FInterpTo(m_shopCameraRotationQ.x, targetShopCameraRotationQ.x, deltaTime, lerpSpeed);
+        m_shopCameraRotationQ.y = Util::FInterpTo(m_shopCameraRotationQ.y, targetShopCameraRotationQ.y, deltaTime, lerpSpeed);
+        m_shopCameraRotationQ.z = Util::FInterpTo(m_shopCameraRotationQ.z, targetShopCameraRotationQ.z, deltaTime, lerpSpeed);
+        m_shopCameraRotationQ.w = Util::FInterpTo(m_shopCameraRotationQ.w, targetShopCameraRotationQ.w, deltaTime, lerpSpeed);
+
+        glm::vec3 cameraPosition;
+        cameraPosition = m_shopCameraPosition;
+        cameraPosition += GetCameraUp() * m_breatheBob.y;
+        cameraPosition += GetCameraRight() * m_breatheBob.x;
+        cameraPosition += GetCameraUp() * m_headBob.y;
+        cameraPosition += GetCameraRight() * m_headBob.x;
+
+        glm::mat4 cameraTransform = glm::translate(glm::mat4(1), cameraPosition); 
+        cameraTransform *= glm::mat4_cast(glm::quat(m_shopCameraRotation));
+
+
+        _viewMatrix = glm::inverse(cameraTransform);
+        _inverseViewMatrix = glm::inverse(_viewMatrix);
+        _right = glm::vec3(_inverseViewMatrix[0]);
+        _up = glm::vec3(_inverseViewMatrix[1]);
+        _forward = glm::vec3(_inverseViewMatrix[2]);
+        _movementVector = glm::normalize(glm::vec3(_forward.x, 0, _forward.z));
+        _viewPos = _inverseViewMatrix[3];
+    }
 
     CheckOverlapShape();
     CheckForEnviromentalDamage(deltaTime);
@@ -58,32 +118,33 @@ void Player::Update(float deltaTime) {
     CheckForAndEvaluateRespawnPress();
     CheckForAndEvaluateNextWeaponPress();
     CheckForAndEvaluateInteract();
-    CheckForSuicide();
-    
+    CheckForSuicide();    
     CheckForAndEvaluateFlashlight(deltaTime);
+
     UpdateHeadBob(deltaTime);
     UpdateTimers(deltaTime);
     UpdateAudio(deltaTime);
     UpdatePickupText(deltaTime);
-    UpdateMovement(deltaTime);
-    UpdateMouseLook(deltaTime);
-    UpdateViewWeaponLogic(deltaTime);
-    UpdateWeaponSway(deltaTime); // this needs checking
-    UpdateWaterState();
-    UpdateLadderIndex();
-    UpdateViewMatrix(deltaTime);
-    UpdateCharacterModelAnimation(deltaTime);
-    UpdateAttachmentRenderItems();
-    UpdateAttachmentGlassRenderItems();
-    UpdateCharacterController();
+    if (!IsAtShop()) {
+        UpdateMovement(deltaTime);
+        UpdateMouseLook(deltaTime);
+        UpdateViewWeaponLogic(deltaTime);
+        UpdateWeaponSway(deltaTime); // this needs checking
+        UpdateLadderIndex();
+        UpdateViewMatrix(deltaTime);
+        UpdateCharacterModelAnimation(deltaTime);
+        UpdateAttachmentRenderItems();
+        UpdateAttachmentGlassRenderItems();
+        UpdateCharacterController();
+        UpdateWaterState();
+        UpdateOutsideState();
+    }
 
     glm::mat4 projectionView = GetProjectionMatrix() * GetViewMatrix();
     m_frustum.Update(projectionView);
-
     if (_isDead) {
         _health = 0;
     }
-
     m_pressingCrouchLastFrame = PressingCrouch();
 }
 
@@ -487,6 +548,9 @@ void Player::UpdateHeadBob(float deltaTime) {
     float breatheFrequency = 5;
     float headBobAmplitude = 0.008;
     float headBobFrequency = 17.0f;
+    if (IsAtShop()) {
+        breatheAmplitude = 0.001f;
+    }
     if (m_crouching) {
         breatheFrequency *= 0.5f;
         headBobFrequency *= 0.5f;

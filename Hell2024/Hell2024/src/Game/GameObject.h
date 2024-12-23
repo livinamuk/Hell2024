@@ -11,7 +11,6 @@ enum class OpenState { NONE, CLOSED, CLOSING, OPEN, OPENING };
 enum class OpenAxis { NONE, TRANSLATE_X, TRANSLATE_Y, TRANSLATE_Z, ROTATION_POS_X, ROTATION_POS_Y, ROTATION_POS_Z, ROTATION_NEG_X, ROTATION_NEG_Y, ROTATION_NEG_Z };
 enum class InteractType { NONE, TEXT, QUESTION, PICKUP, CALLBACK_ONLY };
 enum class ModelMatrixMode { GAME_TRANSFORM, PHYSX_TRANSFORM };
-
 enum class CollisionType { NONE, STATIC_ENVIROMENT, STATIC_ENVIROMENT_NO_DOG, BOUNCEABLE, PICKUP, BULLET_CASING };
 
 struct GameObject {
@@ -22,11 +21,12 @@ public:
 public:
     GameObject() = default;
     void SetCollisionType(CollisionType collisionType);
-
     void DisableShadows();
 
     RigidBody m_collisionRigidBody;
     RigidStatic m_raycastRigidStatic;
+    std::vector<BlendingMode> m_meshBlendingModes;
+    std::vector<int> m_meshMaterialIndices;
 
 
 
@@ -34,13 +34,7 @@ public:
 
 
 public:
-
-
-    //bool blendEnabled = false;
-
-    //OpenGLModel* _model_OLD = nullptr;
     Model* model = nullptr;
-	std::vector<int> _meshMaterialIndices;
 	Transform _transform;
 	Transform _openTransform;
 	std::string _name = "undefined";
@@ -122,8 +116,10 @@ public:
 	bool IsInteractable();
 	void Interact();
 	void Update(float deltaTime);
-	void SetModel(const std::string& name);
-	void SetMeshMaterial(const char* name, int meshIndex = -1);
+    void SetModel(const std::string& name);
+    void SetMeshMaterial(const char* name, int meshIndex = -1);
+    void SetMeshBlendingMode(const char* meshName, BlendingMode blendingMode);
+    void SetMeshBlendingModes(BlendingMode blendingMode);
 	void SetCollectedState(bool value);
 	BoundingBox GetBoundingBox();
 	const InteractType& GetInteractType();
@@ -165,7 +161,8 @@ public:
     void UpdatePhysXPointers();
 
     std::vector<RenderItem3D>& GetRenderItems();
-    RenderItem3D* GetRenderItemByIndex(int index);
+    std::vector<RenderItem3D>& GetRenderItemsBlended();
+    std::vector<RenderItem3D>& GetRenderItemsAlphaDiscarded();
 
     std::vector<Triangle> GetTris();
     std::vector<Vertex> GetAABBVertices();
@@ -176,10 +173,10 @@ public:
 
     void UpdateRenderItems();
 private:
-    std::vector<RenderItem3D> renderItems;
+    std::vector<RenderItem3D> m_renderItems;
+    std::vector<RenderItem3D> m_renderItemsBlended;
+    std::vector<RenderItem3D> m_renderItemsAlphaDiscarded;
     bool _wasPickedUpLastFrame = false;
     bool _wasRespawnedUpLastFrame = false;
     bool _wakeOnStart = false;
-	//glm::mat4 CalculateModelMatrix(ModelMatrixMode modelMatrixMode);
-
 };

@@ -496,10 +496,14 @@ void GameObject::SetOpenState(OpenState openState, float speed, float min, float
 void GameObject::SetModel(const std::string& name){
     model = AssetManager::GetModelByIndex(AssetManager::GetModelIndexByName(name.c_str()));
     if (model) {
-        _meshMaterialIndices.resize(model->GetMeshCount());
+        m_meshMaterialIndices.resize(model->GetMeshCount());
+        m_meshBlendingModes.resize(model->GetMeshCount());
     }
     else {
         std::cout << "Failed to set model '" << name << "', it does not exist.\n";
+    }
+    for (BlendingMode& blendingMode : m_meshBlendingModes) {
+        blendingMode = BlendingMode::NONE;
     }
 }
 
@@ -510,7 +514,7 @@ void GameObject::SetMeshMaterialByMeshName(std::string meshName, const char* mat
 
             if (AssetManager::GetMeshByIndex(model->GetMeshIndices()[i])->name == meshName) {
             //if (model->GetMeshNameByIndex(i) == meshName) {
-				_meshMaterialIndices[i] = materialIndex;
+				m_meshMaterialIndices[i] = materialIndex;
 				return;
 			}
 		}
@@ -529,43 +533,60 @@ void GameObject::SetMeshMaterialByMeshName(std::string meshName, const char* mat
 
 void GameObject::SetMeshMaterial(const char* name, int meshIndex) {
 	// Range checks
-	if (!_meshMaterialIndices.size()) {
-		std::cout << "Failed to set mesh material, GameObject has _meshMaterials with size " << _meshMaterialIndices.size() << "\n";
+    if (m_meshMaterialIndices.empty()) {
+        std::cout << "GameObject::SetMeshMaterial() failed: m_meshMaterials was empty!\n";
 		return;
 	}
-	else if (meshIndex != -1 && meshIndex > _meshMaterialIndices.size()) {
-		std::cout << "Failed to set mesh material with mesh Index " << meshIndex << ", GameObject has _meshMaterials with size " << _meshMaterialIndices.size() << "\n";
+	else if (meshIndex != -1 && meshIndex > m_meshMaterialIndices.size()) {
+		std::cout << "Failed to set mesh material with mesh Index " << meshIndex << ", GameObject has _meshMaterials with size " << m_meshMaterialIndices.size() << "\n";
 		return;
 	}
 	// Get the material index via the material name
 	int materialIndex = AssetManager::GetMaterialIndex(name);
 	// Set material for single mesh
 	if (meshIndex != -1) {
-		_meshMaterialIndices[meshIndex] = materialIndex;
+		m_meshMaterialIndices[meshIndex] = materialIndex;
 	}
 	// Set material for all mesh
 	if (meshIndex == -1) {
-		for (int i = 0; i < _meshMaterialIndices.size(); i++) {
-			_meshMaterialIndices[i] = materialIndex;
+		for (int i = 0; i < m_meshMaterialIndices.size(); i++) {
+			m_meshMaterialIndices[i] = materialIndex;
 		}
 	}
 }
-/*
-Material* GameObject::GetMaterial(int meshIndex) {
-	if (meshIndex < 0 || meshIndex >= _meshMaterialIndices.size()) {
-		std::cout << "Mesh index " << meshIndex << " is out of range of _meshMaterialIndices with size " << _meshMaterialIndices.size() << "\n";
-	}
-	int materialIndex = _meshMaterialIndices[meshIndex];
-	return AssetManager::GetMaterial(materialIndex);
-}*/
 
-//#include "GameData.h"
 
+void GameObject::SetMeshBlendingMode(const char* meshName, BlendingMode blendingMode) {
+    // Range checks
+    if (m_meshBlendingModes.empty()) {
+        std::cout << "GameObject::SetMeshBlendingMode() failed: m_meshBlendingModes was empty!\n";
+        return;
+    }    
+    bool found = false;
+    for (int i = 0; i < model->GetMeshIndices().size(); i++) {
+        Mesh* mesh = AssetManager::GetMeshByIndex(model->GetMeshIndices()[i]);
+        if (mesh && mesh->name == meshName) {
+            m_meshBlendingModes[i] = blendingMode;
+            found = true;
+        }
+    }
+    if (!found) {
+        std::cout << "GameObject::SetMeshBlendingMode() failed: " << meshName << " was not found!\n";
+    }
+}
+
+void GameObject::SetMeshBlendingModes(BlendingMode blendingMode) {
+    for (int i = 0; i < model->GetMeshIndices().size(); i++) {
+        Mesh* mesh = AssetManager::GetMeshByIndex(model->GetMeshIndices()[i]);
+        if (mesh) {
+            m_meshBlendingModes[i] = blendingMode;
+        }
+    }
+}
 
 void GameObject::SetCollectedState(bool value) {
 	//_collected = value;
 }
-
 
 BoundingBox GameObject::GetBoundingBox() {
 	return _boundingBox;
@@ -908,17 +929,19 @@ void GameObject::SetCollidesWithGroup(PxU32 collisionGroup) {
 
 
 void GameObject::UpdateRenderItems() {
-    renderItems.clear();
+    m_renderItems.clear();
+    m_renderItemsBlended.clear();
+    m_renderItemsAlphaDiscarded.clear();
     for (int i = 0; i < model->GetMeshIndices().size(); i++) {
         uint32_t& meshIndex = model->GetMeshIndices()[i];
         Mesh* mesh = AssetManager::GetMeshByIndex(meshIndex);
-        RenderItem3D& renderItem = renderItems.emplace_back();
+        RenderItem3D renderItem;
         renderItem.vertexOffset = mesh->baseVertex;
         renderItem.indexOffset = mesh->baseIndex;
         renderItem.modelMatrix = GetModelMatrix();
         renderItem.inverseModelMatrix = inverse(renderItem.modelMatrix);
         renderItem.meshIndex = meshIndex;
-        Material* material = AssetManager::GetMaterialByIndex(_meshMaterialIndices[i]);
+        Material* material = AssetManager::GetMaterialByIndex(m_meshMaterialIndices[i]);
         if (m_isGold) {
             renderItem.baseColorTextureIndex = AssetManager::GetGoldBaseColorTextureIndex();
             renderItem.rmaTextureIndex = AssetManager::GetGoldRMATextureIndex();
@@ -931,22 +954,28 @@ void GameObject::UpdateRenderItems() {
         renderItem.castShadow = m_castShadows;
         renderItem.aabbMin = _aabb.boundsMin;
         renderItem.aabbMax = _aabb.boundsMax;
+        if (m_meshBlendingModes[i] == BlendingMode::NONE) {
+            m_renderItems.push_back(renderItem);
+        }
+        else if (m_meshBlendingModes[i] == BlendingMode::BLENDED) {
+            m_renderItemsBlended.push_back(renderItem);
+        }
+        else if (m_meshBlendingModes[i] == BlendingMode::ALPHA_DISCARDED) {
+            m_renderItemsAlphaDiscarded.push_back(renderItem);
+        }   
     }
 }
 
 std::vector<RenderItem3D>& GameObject::GetRenderItems() {
-    return renderItems;
+    return m_renderItems;
 }
 
-RenderItem3D* GameObject::GetRenderItemByIndex(int index) {
-    if (index >= 0 && index < renderItems.size()) {
-        return &renderItems[index];
-    }
-    else {
-        std::cout << "GameObject::GetRenderItemByIndex() failed. Index " << index << " out of range. Size is " << renderItems.size() << "!\n";
-        return nullptr;
-    }
+std::vector<RenderItem3D>& GameObject::GetRenderItemsBlended() {
+    return m_renderItemsBlended;
+}
 
+std::vector<RenderItem3D>& GameObject::GetRenderItemsAlphaDiscarded() {
+    return m_renderItemsAlphaDiscarded;
 }
 
 void GameObject::PrintMeshNames() {

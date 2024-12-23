@@ -128,7 +128,7 @@ struct PickUp {
 
 namespace Scene {
 
-    inline Shark g_shark;
+    Shark& GetShark();
 
     void HackToUpdateShadowMapsOnPickUp(GameObject* gameObject);
     void CreateGameObject(GameObjectCreateInfo createInfo);
@@ -243,7 +243,10 @@ namespace Scene {
 
     // New shit
     void Init();
-    std::vector<RenderItem3D> GetGeometryRenderItems();
+    void CreateGeometryRenderItems();
+    std::vector<RenderItem3D>& GetGeometryRenderItems();
+    std::vector<RenderItem3D>& GetGeometryRenderItemsBlended();
+    std::vector<RenderItem3D>& GetGeometryRenderItemsAlphaDiscarded();
     std::vector<RenderItem3D> CreateDecalRenderItems();
 
 
@@ -252,7 +255,6 @@ namespace Scene {
 
 
     // Old shit
-	void LoadHardCodedObjects();
 	void LoadMap(std::string mapPath);
 	void SaveMap(std::string mapPath);
     void CleanUp();

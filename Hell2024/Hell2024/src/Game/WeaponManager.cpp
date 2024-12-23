@@ -449,7 +449,7 @@ namespace WeaponManager {
         spas.meshMaterials["SPAS12_Main"] = "SPAS_Main";
         spas.meshMaterials["SPAS12_Moving"] = "SPAS_Moving";
         spas.meshMaterials["SPAS12_Stamped"] = "SPAS_Stamped";
-        spas.animationNames.idle = "Shotgun_Idle";
+        spas.animationNames.idle = "SPAS_Idle";
         spas.animationNames.walk = "SPAS_Walk";
         spas.animationNames.melee = "SPAS_Melee";
         spas.animationNames.reload = "SPAS_Fire";
@@ -461,8 +461,8 @@ namespace WeaponManager {
         spas.animationSpeeds.fire = 1.5f;
         spas.animationSpeeds.shotgunReloadStart = 1.5f;
         spas.animationSpeeds.shotgunReloadEnd = 1.5f;
-        spas.animationSpeeds.shotgunReloadOneShell = 1.5f;
-        spas.animationSpeeds.shotgunReloadTwoShells = 1.5f;
+        spas.animationSpeeds.shotgunReloadOneShell = 1.25f;
+        spas.animationSpeeds.shotgunReloadTwoShells = 1.25f;
         spas.animationNames.shotgunReloadOneShell = "SPAS_Reload1Shell";
         spas.animationNames.shotgunReloadTwoShells = "SPAS_Reload2Shells";
         spas.audioFiles.fire.push_back("Glock_Fire0.wav");

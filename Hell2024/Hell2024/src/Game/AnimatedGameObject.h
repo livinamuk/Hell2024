@@ -91,7 +91,8 @@ public:
     bool IsAnimationComplete();
     bool AnimationIsPastPercentage(float percent);
     bool AnimationIsPastFrameNumber(int frameNumber);
-    glm::vec3 GetScale();
+    glm::vec3 GetScale(); 
+    glm::vec3 GetPosition();
 
 	SkinnedModel* _skinnedModel = nullptr;
 	Transform _transform;

@@ -75,7 +75,7 @@ void GlobalIllumination::CreatePointCloud() {
     g_pointCloud.reserve(vertices.size() / 3);
 
     {
-        Timer timer4("-CreatePointCloud() loop");
+        //Timer timer4("-CreatePointCloud() loop");
         for (size_t i = CSG::GetBaseCSGVertex(); i < vertices.size(); i += 3) {
 
             const CSGVertex& v0 = vertices[i];

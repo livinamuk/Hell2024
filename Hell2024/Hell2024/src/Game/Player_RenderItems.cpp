@@ -10,6 +10,10 @@ std::vector<RenderItem2D> Player::GetHudRenderItems(hell::ivec2 presentSize) {
 
     std::vector<RenderItem2D> renderItems;
 
+    if (IsAtShop()) {
+        return renderItems;
+    }
+
     hell::ivec2 debugTextLocation;
     debugTextLocation.x = RendererUtil::GetViewportLeftX(m_playerIndex, Game::GetSplitscreenMode(), presentSize.x, presentSize.y);
     debugTextLocation.y = RendererUtil::GetViewportTopY(m_playerIndex, Game::GetSplitscreenMode(), presentSize.x, presentSize.y);
@@ -166,6 +170,10 @@ std::vector<RenderItem2D> Player::GetHudRenderItemsHiRes(hell::ivec2 gBufferSize
 
     std::vector<RenderItem2D> renderItems;
 
+    if (IsAtShop() || Editor::IsOpen()) {
+        return renderItems;
+    }
+
     int leftX = RendererUtil::GetViewportLeftX(m_playerIndex, Game::GetSplitscreenMode(), gBufferSize.x, gBufferSize.y);
     int rightX = RendererUtil::GetViewportRightX(m_playerIndex, Game::GetSplitscreenMode(), gBufferSize.x, gBufferSize.y);
     int bottomY = RendererUtil::GetViewportBottomY(m_playerIndex, Game::GetSplitscreenMode(), gBufferSize.x, gBufferSize.y);
@@ -273,7 +281,7 @@ void Player::UpdateAttachmentRenderItems() {
 
     m_attachmentRenderItems.clear();
 
-    if (Editor::IsOpen() || !IsAlive()) {
+    if (Editor::IsOpen() || !IsAlive() || IsAtShop()) {
         return;
     }
 
@@ -409,7 +417,7 @@ void Player::UpdateAttachmentGlassRenderItems() {
 
     m_attachmentGlassRenderItems.clear();
 
-    if (Editor::IsOpen() || !IsAlive()) {
+    if (Editor::IsOpen() || !IsAlive() || IsAtShop()) {
         return;
     }
 

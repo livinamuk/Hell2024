@@ -93,16 +93,12 @@ struct WaterState {
     bool swimming = false;
 
     // Previous frame
-    bool cameraUnderWaterPrevious = true;
-    bool feetUnderWaterPrevious = true;
+    bool cameraUnderWaterPrevious = false;
+    bool feetUnderWaterPrevious = false;
     bool wadingPrevious = true;
     bool swimmingPrevious = true;
 };
 
-
-//struct OverlappingState {
-//    bool ladder = false;
-//};
 
 class Player {
 
@@ -132,9 +128,14 @@ private:
     float m_crosshairCrossSize = 0;
     float m_accuracyModifer = 0;
     bool m_firedThisFrame = false;
+    bool m_atShop = false;
 
-    uint32_t m_ladderOverlapIndexFeet = -1;
-    uint32_t m_ladderOverlapIndexEyes = -1;
+    int m_ladderOverlapIndexFeet = -1;
+    int m_ladderOverlapIndexEyes = -1;
+
+    glm::vec3 m_shopCameraPosition;
+    glm::vec3 m_shopCameraRotation;
+    glm::quat m_shopCameraRotationQ;
 
 public:
     
@@ -178,6 +179,7 @@ public:
     void UpdateAudio(float deltaTime);
     void UpdateWaterState();
     void UpdateLadderIndex();
+    void UpdateOutsideState();
     void UpdateCharacterController();
 
     // Character Controller
@@ -202,6 +204,7 @@ public:
     bool IsAlive();
     bool HasControl();
     bool IsOverlappingLadder();
+    bool IsAtShop();
 
     // Water
     WaterState m_waterState;

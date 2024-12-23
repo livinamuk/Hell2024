@@ -377,7 +377,7 @@ void AnimatedGameObject::CalculateBoneTransforms() {
 
         if (_skinnedModel->_filename == "SharkSkinned") {
           //  std::cout << "hi!\n";
-            Shark& shark = Scene::g_shark;
+            Shark& shark = Scene::GetShark();;
 
             // Root to the end of the spine
             float rot0 = Util::YRotationBetweenTwoPoints(shark.m_spinePositions[3], shark.m_spinePositions[2]) + HELL_PI * 0.5f;
@@ -607,12 +607,17 @@ void AnimatedGameObject::SetSkinnedModel(std::string name) {
 }
 
 glm::vec3 AnimatedGameObject::GetScale() {
-    return  _transform.scale;
+    return _transform.scale;
+}
+
+glm::vec3 AnimatedGameObject::GetPosition() {
+    return _transform.position;
 }
 
 void AnimatedGameObject::SetScale(float scale) {
     _transform.scale = glm::vec3(scale);
 }
+
 void AnimatedGameObject::SetPosition(glm::vec3 position) {
     _transform.position = position;
 }
