@@ -148,7 +148,11 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <ClCompile Include="src\Editor\Brush.cpp" />
     <ClCompile Include="src\Editor\CSGCommon.h" />
     <ClCompile Include="src\Editor\CSGShape.cpp" />
+    <ClCompile Include="src\Editor\Edior_SharkPath.cpp" />
     <ClCompile Include="src\Editor\Editor.cpp" />
+    <ClCompile Include="src\Editor\Editor_ChristmasLights.cpp" />
+    <ClCompile Include="src\Editor\Editor_DebugText.cpp" />
+    <ClCompile Include="src\Enemies\Shark\SharkLogic.cpp" />
     <ClCompile Include="src\File\AssimpImporter.cpp" />
     <ClCompile Include="src\File\File.cpp" />
     <ClCompile Include="src\Game\Dobermann.cpp" />
@@ -156,7 +160,7 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <ClCompile Include="src\Game\Player_CharacterController.cpp" />
     <ClCompile Include="src\Game\Player_GamePlayLogic.cpp" />
     <ClCompile Include="src\Game\Player_Movement.cpp" />
-    <ClCompile Include="src\Game\Shark.cpp" />
+    <ClCompile Include="src\Enemies\Shark\Shark.cpp" />
     <ClCompile Include="src\Game\Water.cpp" />
     <ClCompile Include="src\Math\BVH.cpp" />
     <ClCompile Include="src\Math\Frustum.cpp" />
@@ -183,6 +187,7 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <ClCompile Include="src\Tools\DDSHelpers.cpp" />
     <ClCompile Include="src\Tools\ImageTools.cpp" />
     <ClCompile Include="src\Types\Animation.cpp" />
+    <ClCompile Include="src\Types\Modular\ChristmasLights.cpp" />
     <ClCompile Include="src\Types\Modular\Door.cpp" />
     <ClCompile Include="src\Renderer\Renderer.cpp" />
     <ClCompile Include="src\Core\Floorplan.cpp" />
@@ -295,12 +300,14 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <ClInclude Include="src\Editor\CSGShape.h" />
     <ClInclude Include="src\Editor\Editor.h" />
     <ClInclude Include="src\Common\HellCommon.h" />
+    <ClInclude Include="src\Enemies\Shark\SharkLogic.h" />
     <ClInclude Include="src\File\AssimpImporter.h" />
     <ClInclude Include="src\File\File.h" />
     <ClInclude Include="src\File\FileFormats.h" />
-    <ClInclude Include="src\Game\Shark.h" />
+    <ClInclude Include="src\Enemies\Shark\Shark.h" />
     <ClInclude Include="src\Game\Water.h" />
     <ClInclude Include="src\Math\Frustum.h" />
+    <ClInclude Include="src\Math\LineMath.hpp" />
     <ClInclude Include="src\Renderer\RendererData.h" />
     <ClInclude Include="src\Renderer\SSAO.hpp" />
     <ClInclude Include="src\Renderer\Types\HeightMap.h" />
@@ -340,6 +347,7 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <ClInclude Include="src\Renderer\Types\Texture.h" />
     <ClInclude Include="src\Renderer\Types\Texture3D.h" />
     <ClInclude Include="src\Types\Animation.h" />
+    <ClInclude Include="src\Types\Modular\ChristmasLights.h" />
     <ClInclude Include="src\Types\Modular\Ladder.h" />
     <ClInclude Include="src\Types\Modular\Staircase.h" />
     <ClInclude Include="src\Types\SkinnedMesh.hpp" />

@@ -14,13 +14,14 @@
 #include "../Game/Player.h"
 #include "../Game/Dobermann.h"
 #include "../Renderer/Types/HeightMap.h"
+#include "../Types/Modular/ChristmasLights.h"
 #include "../Types/Modular/Door.h"
 #include "../Types/Modular/Ladder.h"
 #include "../Types/Modular/Staircase.h"
 #include "../Types/Modular/Toilet.h"
 #include "../Types/Modular/Window.h"
 #include "../Util.hpp"
-#include "Shark.h"
+#include "../Enemies/Shark/Shark.h"
 
 #include "../Editor/CSGPlane.hpp"
 
@@ -179,6 +180,7 @@ namespace Scene {
     const size_t GetCubeVolumeAdditiveCount();
 
     // Cuntainers
+    inline std::vector<ChristmasLights> g_christmasLights;
     inline std::vector<Ladder> g_ladders;
     inline std::vector<Light> g_lights;
     inline std::vector<SpawnPoint> g_spawnPoints;
@@ -220,6 +222,10 @@ namespace Scene {
 
     // Ladders
     void CreateLadder(LadderCreateInfo createInfo);
+
+    // Christmas Lights
+
+    void CreateChristmasLights(ChristmasLightsCreateInfo createInfo);
 
     // CSG Objects
     void AddCSGWallPlane(CSGPlaneCreateInfo& createInfo);

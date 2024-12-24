@@ -21,6 +21,9 @@ struct JSONObject {
     void WriteArray(std::string elementName, std::vector<std::string> value) {
         data[elementName] = value;
     }
+    void WriteFloatArray(std::string elementName, std::vector<float> array) {
+        data[elementName] = array;
+    }
 
     std::string GetJSONAsString() {
         int indent = 4;

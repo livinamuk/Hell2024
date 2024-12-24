@@ -23,10 +23,30 @@
 
 namespace Util {
 
+
+    inline glm::dvec3 Rot3D(glm::dvec3 v, glm::dvec2 rot) {
+        glm::vec2 c = cos(rot);
+        glm::vec2 s = sin(rot);
+        glm::dmat3 rm = glm::dmat3(c.x, c.x * s.y, s.x * c.y, 0.0, c.y, s.y, -c.x, s.y * c.x, c.y * c.x);
+        return v * rm;
+    }
+
   //  long MapRange(long x, long in_min, long in_max, long out_min, long out_max) {
    //     return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
    // }
-
+    
+    inline std::string EditorModeToString(EditorMode editormode) {
+        if (editormode == EditorMode::MAP) {
+            return "MAP";
+        }
+        else if (editormode == EditorMode::CHRISTMAS) {
+            return "CHRISTMAS";
+        }
+        else if (editormode == EditorMode::SHARK_PATH) {
+            return "SHARK_PATH";
+        }
+    };
+     
     inline std::string MenuTypeToString(MenuType menuType) {
         if (menuType == MenuType::NONE) {
             return "NONE";

@@ -6,6 +6,7 @@
 #include "../Core/Audio.h"
 #include "../Editor/CSG.h"
 #include "../Editor/Editor.h"
+#include "../Enemies/Shark/SharkLogic.h"
 #include "../Input/Input.h"
 #include "../Input/InputMulti.h"
 #include "../Renderer/GlobalIllumination.h"
@@ -31,7 +32,6 @@ namespace Game {
     double g_thisFrame = 0;
     bool g_takeDamageOutside = false;
     float g_time = 0;
-    
 
     void EvaluateDebugKeyPresses();
 
@@ -109,8 +109,7 @@ namespace Game {
             Audio::StopAudio("Water_PaddlingLoop_1.wav");
         }
 
-        ///Audio::StopAudio("Shark_SwimLoopAbove.wav");
-        Audio::LoopAudioIfNotPlaying("Shark_SwimLoopAbove.wav", 0.5);
+        //Audio::LoopAudioIfNotPlaying("Shark_SwimLoopAbove.wav", 0.5);
 
         float distanceToPlayer = glm::distance(Scene::GetShark().GetHeadPosition(), Game::GetPlayerByIndex(0)->GetViewPos());
         float minDistance = 3.0f;
@@ -128,7 +127,7 @@ namespace Game {
         }
         volume *= 0.7f;
         //std::cout << "dist: " << distanceToPlayer << " " << "volume: " << volume << "\n";
-        Audio::SetAudioVolume("Shark_SwimLoopAbove.wav", volume);
+        //Audio::SetAudioVolume("Shark_SwimLoopAbove.wav", volume);
 
         // Delta time
         g_lastFrame = g_thisFrame;
@@ -161,8 +160,23 @@ namespace Game {
             }
         }
         if (Editor::IsOpen()) {
-            Editor::Update(deltaTime);
+            if (g_editorMode == EditorMode::MAP) {
+                Editor::UpdateMapEditor(deltaTime);
+            }
+            else if (g_editorMode == EditorMode::CHRISTMAS) {
+                Editor::UpdateChristmasLightEditor(deltaTime);
+            }
+            else if (g_editorMode == EditorMode::SHARK_PATH) {
+                Editor::UpdateSharkPathEditor(deltaTime);
+            }
+            Editor::UpdateDebugText();
         }
+
+        if (Input::KeyPressed(HELL_KEY_PAGE_UP)) {
+            Audio::PlayAudio(AUDIO_SELECT, 1.00f);
+            Editor::NextEditorMode();
+        }
+
 
         // Physics
         while (_deltaTimeAccumulator >= _fixedDeltaTime) {
@@ -180,6 +194,7 @@ namespace Game {
         }
         InputMulti::ResetMouseOffsets();
         Scene::Update(deltaTime);
+        SharkLogic::Update(deltaTime);
 
 
 
@@ -494,6 +509,7 @@ namespace Game {
                 if (gameObject.GetName() == "Mermaid") {
                     if (mermaidOutside) {
                         gameObject.SetPosition(14.4f, 2.0f, -11.7);
+                        gameObject.SetPosition(14.4f, 2.1f, -20.7);
                     }
                     else {
                         gameObject.SetPosition(14.4f, 2.1f, -1.7);

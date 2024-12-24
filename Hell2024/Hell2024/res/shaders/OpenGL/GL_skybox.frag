@@ -17,6 +17,7 @@ void contrastAdjust( inout vec4 color, in float c) {
 void main() {
 
 
+
     FinalLighting.rgb = texture(cubeMap, TexCoords).rgb;
 
 	FinalLighting.rgb *= skyboxTint;

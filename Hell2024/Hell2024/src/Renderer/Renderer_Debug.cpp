@@ -3,6 +3,7 @@
 #include "../Editor/Editor.h"
 #include "../Game/Game.h"
 #include "../Game/Scene.h"
+#include "../Enemies/Shark/SharkLogic.h"
 #include "../Renderer/GlobalIllumination.h"
 #include "../Pathfinding/Pathfinding2.h"
 #include "../Renderer/Raytracing/Raytracing.h"
@@ -36,6 +37,23 @@ void Renderer::UpdateDebugPointsMesh() {
 
     std::vector<Vertex> vertices;
     std::vector<uint32_t> indices;
+
+
+    if (Editor::IsOpen() && Game::g_editorMode == EditorMode::SHARK_PATH) {
+        // Draw WIP Shark Path
+        if (!Editor::g_sharkPath.empty()) {
+            for (int i = 0; i < Editor::g_sharkPath.size(); i++) {
+                vertices.push_back({ Editor::g_sharkPath[i], YELLOW });
+            }
+        }
+    }
+    // Draw all existing shark paths
+    for (SharkPath& sharkPath : SharkLogic::GetSharkPaths()) {
+        for (int i = 0; i < sharkPath.m_points.size(); i++) {
+            vertices.push_back({ sharkPath.m_points[i].position, WHITE });
+        }
+    }
+
 
     Player* player = Game::GetPlayerByIndex(0);
 
@@ -209,6 +227,41 @@ void Renderer::UpdateDebugLinesMesh() {
 
     std::vector<Vertex> vertices;
     std::vector<uint32_t> indices;
+
+    if (Editor::IsOpen() && Game::g_editorMode == EditorMode::SHARK_PATH) {
+        // Draw WIP Shark Path
+        if (!Editor::g_sharkPath.empty()) {
+            for (int i = 0; i < Editor::g_sharkPath.size() - 1; i++) {
+                vertices.push_back({ Editor::g_sharkPath[i], RED });
+                vertices.push_back({ Editor::g_sharkPath[i + 1], RED });
+            }
+        }
+    }
+    // Draw all existing shark paths
+    for (SharkPath& sharkPath : SharkLogic::GetSharkPaths()) {
+        for (int i = 0; i < sharkPath.m_points.size() - 1; i++) {
+            vertices.push_back({ sharkPath.m_points[i].position, WHITE });
+            vertices.push_back({ sharkPath.m_points[i + 1].position, WHITE });
+
+            // Draw it's direction as two lines (like an arrow)
+            glm::vec3 position = sharkPath.m_points[i].position;
+            glm::vec3 forward = sharkPath.m_points[i].forward;
+            glm::vec3 left = sharkPath.m_points[i].left;
+            glm::vec3 right = sharkPath.m_points[i].right;
+
+            glm::vec leftArrowPosition = glm::mix(position + forward, position + left, 0.5f);
+            glm::vec rightArrowPosition = glm::mix(position + forward, position + right, 0.5f);
+
+            vertices.push_back({ position , WHITE });
+            vertices.push_back({ leftArrowPosition , WHITE });
+            vertices.push_back({ position , WHITE });
+            vertices.push_back({ rightArrowPosition , WHITE });
+        }
+        vertices.push_back({ sharkPath.m_points[0].position, WHITE });
+        vertices.push_back({ sharkPath.m_points[sharkPath.m_points.size() - 1].position, WHITE });
+    }
+    
+
 
     std::vector<PxRigidActor*> ignoreList;
 
@@ -711,15 +764,10 @@ std::string& Renderer::GetDebugText() {
     if (Renderer::GetDebugLineRenderMode() != SHOW_NO_LINES) {
         g_debugText += "Line mode: " + Util::DebugLineRenderModeToString(Renderer::GetDebugLineRenderMode()) + "\n";
     }
-    if (Editor::IsOpen()) {
-        g_debugText = Editor::GetDebugText();
-    }
 
     g_debugText += "Dog deaths: " + std::to_string(Game::g_dogDeaths) + "\n";
     g_debugText += "Dog kills: " + std::to_string(Game::g_playerDeaths) + "\n";
     g_debugText += "Cam pos: " + Util::Vec3ToString(Game::GetPlayerByIndex(0)->GetViewPos()) + "\n";
-    //g_debugText += "Licence To Kill: " + std::to_string(Game::g_liceneToKill) + "\n";
-    //g_debugText += "Kill limit: " + std::to_string(Game::g_killLimit) + "\n";
     g_debugText += "\n";
 
 

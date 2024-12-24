@@ -91,6 +91,7 @@ namespace OpenGLRenderer {
         Shader debugLightVolumeAabb;
         Shader winston;
         Shader megaTextureBloodDecals;
+        Shader christmasLightWireShader;
 
         // water shaders
         Shader waterReflectionGeometry;
@@ -220,6 +221,7 @@ void OpenGLRenderer::HotloadShaders() {
     g_shaders.waterMask.Load("GL_water_mask.vert", "GL_water_mask.frag");
     g_shaders.waterReflectionGeometry.Load("GL_water_reflection_geometry.vert", "GL_water_reflection_geometry.frag");
 
+    g_shaders.christmasLightWireShader.Load("GL_christmas_light_wire.vert", "GL_christmas_light_wire.frag");
     g_shaders.worldPosition.Load("res/shaders/OpenGL/GL_world_position.comp");
     g_shaders.ssaoBlur.Load("res/shaders/OpenGL/GL_ssaoBlur.comp");
     g_shaders.ssao.Load("res/shaders/OpenGL/GL_ssao.comp");
@@ -1446,6 +1448,18 @@ void DebugPass(RenderData& renderData) {
         }
 
 
+
+    //   // Draw Christmas lights
+    //   glEnable(GL_DEPTH_TEST);
+    //   for (ChristmasLights& lights : Scene::g_christmasLights) {
+    //       auto& mesh = lights.g_wireMesh;
+    //       glBindVertexArray(mesh.GetVAO());
+    //       glDrawElements(GL_TRIANGLES, mesh.GetIndexCount(), GL_UNSIGNED_INT, 0);
+    //   }
+
+
+
+
         glEnable(GL_DEPTH_TEST);
         shader.SetMat4("model", sphereTransform.to_mat4());
         glDrawElementsInstancedBaseVertex(GL_TRIANGLES, sphereMesh->indexCount, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int) * sphereMesh->baseIndex), 1, sphereMesh->baseVertex);
@@ -1764,6 +1778,29 @@ void GeometryPass(RenderData& renderData) {
     glDisable(GL_BLEND); 
     glDepthMask(GL_TRUE);
 
+
+    glFinish();
+
+    // Render Christmas lights
+    Shader& christmasLightsShader = OpenGLRenderer::g_shaders.christmasLightWireShader;
+    christmasLightsShader.Use();
+    glEnable(GL_DEPTH_TEST);
+    for (int i = 0; i < renderData.playerCount; i++) {
+        ViewportInfo viewportInfo = RendererUtil::CreateViewportInfo(i, Game::GetSplitscreenMode(), gBuffer.GetWidth(), gBuffer.GetHeight());
+        SetViewport(viewportInfo);
+        christmasLightsShader.SetInt("playerIndex", i);
+        christmasLightsShader.SetMat4("projection", renderData.cameraData[i].projection);
+        christmasLightsShader.SetMat4("view", renderData.cameraData[i].view);
+
+        // Draw Christmas lights
+        for (ChristmasLights& lights : Scene::g_christmasLights) {
+            auto& mesh = lights.g_wireMesh;
+            glBindVertexArray(mesh.GetVAO());
+            glDrawElements(GL_TRIANGLES, mesh.GetIndexCount(), GL_UNSIGNED_INT, 0);
+        }
+    }
+
+
     // Skinned mesh
     glBindVertexArray(OpenGLBackEnd::GetSkinnedVertexDataVAO());
     glBindBuffer(GL_ARRAY_BUFFER, OpenGLBackEnd::GetSkinnedVertexDataVBO());
@@ -1796,6 +1833,7 @@ void GeometryPass(RenderData& renderData) {
             k++;
         }
     }
+
     glBindVertexArray(0);
 
 // Mesh names

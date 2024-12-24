@@ -22,32 +22,7 @@ namespace Editor {
 
     enum class InteractionType { HOVERED, SELECTED };
 
-    struct MenuItem {
-        std::string name;
-        enum class Type {
-            VALUE_INT,
-            VALUE_FLOAT,
-            VALUE_STRING,
-            VALUE_BOOL,
-            INSERT_CSG_ADDITIVE,
-            INSERT_WALL_PLANE,
-            INSERT_CEILING_PLANE,
-            INSERT_FLOOR_PLANE,
-            INSERT_CSG_SUBTRACTIVE,
-            INSERT_DOOR,
-            INSERT_WINDOW,
-            INSERT_LIGHT,
-            CLOSE_MENU,
-            FILE_NEW_MAP,
-            FILE_LOAD_MAP,
-            FILE_SAVE_MAP,
-            RECALCULATE_NAV_MESH,
-            RECALCULATE_GI
-        } type;
-        void* ptr;
-        float increment = 1.0f;
-        int percision = 2;
-    };
+    
 
     // Editor constants
     constexpr double g_orbitRadius = 2.5f;
@@ -61,32 +36,7 @@ namespace Editor {
         float textureOffsetX = 0;
         float textureOffsetY = 0;
     } g_clipBoard;
-
-    // Editor globals
-    glm::mat4 g_editorViewMatrix;
-    glm::dvec3 g_viewTarget;
-    glm::dvec3 g_camPos;
-    double g_yawAngle = 0.0;
-    double g_pitchAngle = 0.0;
-    bool g_editorOpen = false;
-    //bool g_objectIsSelected = false;
-    ObjectType g_hoveredObjectType = ObjectType::UNDEFINED;
-    ObjectType g_selectedObjectType = ObjectType::UNDEFINED;
-    std::vector<RenderItem3D> gHoveredRenderItems;
-    std::vector<RenderItem3D> gSelectedRenderItems;
-    std::vector<RenderItem2D> gMenuRenderItems;
-    std::vector<RenderItem2D> gEditorUIRenderItems;
-    std::string g_debugText = "";
-    std::vector<MenuItem> g_menuItems;
-    int g_menuSelectionIndex = 0;
-    //bool g_insertMenuOpen = false;
-    //bool g_fileMenuOpen = false;
-    MenuType g_currentMenuType = MenuType::NONE;
-    bool g_isDraggingMenu = false;
-    hell::ivec2 g_menuLocation = hell::ivec2(76, 460);
-    hell::ivec2 g_backgroundLocation = hell::ivec2(0, 0);
-    hell::ivec2 g_backgroundSize = hell::ivec2(0, 0);
-    hell::ivec2 g_dragOffset = hell::ivec2(0, 0);     
+  
 
     MenuType GetCurrentMenuType() {
         return g_currentMenuType;
@@ -98,11 +48,9 @@ namespace Editor {
     }
 
     // Forward declarations
-    glm::dvec3 Rot3D(glm::dvec3 v, glm::dvec2 rot);
     void UpdateRenderItems(std::vector<RenderItem3D>& renderItems, InteractionType interactionType, int index);
     void RebuildEverything();
     void UpdateMenu();
-    void UpdateDebugText();
     bool MenuHasHover();
 
     long MapRange(long x, long in_min, long in_max, long out_min, long out_max) {
@@ -479,7 +427,7 @@ namespace Editor {
     }
 
 
-    void Update(float deltaTime) {
+    void UpdateMapEditor(float deltaTime) {
 
         Player* player = Game::GetPlayerByIndex(0);
         glm::mat4 mvp = player->GetProjectionMatrix() * g_editorViewMatrix;
@@ -498,7 +446,7 @@ namespace Editor {
             g_yawAngle += Input::GetMouseOffsetX() * g_orbiteSpeed;
             g_pitchAngle -= Input::GetMouseOffsetY() * g_orbiteSpeed;
             g_camPos = g_orbitRadius * glm::dvec3(0, 0, 1);
-            g_camPos = Rot3D(g_camPos, { -g_yawAngle, -g_pitchAngle });
+            g_camPos = Util::Rot3D(g_camPos, { -g_yawAngle, -g_pitchAngle });
             g_camPos += g_viewTarget;
             g_editorViewMatrix = glm::lookAt(g_camPos, g_viewTarget, glm::dvec3(0.0, 1.0, 0.0));
         }
@@ -723,7 +671,6 @@ namespace Editor {
         }
 
         UpdateMenu();
-        UpdateDebugText();
     }
 
 
@@ -786,13 +733,6 @@ namespace Editor {
         g_menuSelectionIndex = 0;
     }
 
-    glm::dvec3 Rot3D(glm::dvec3 v, glm::dvec2 rot) {
-        glm::vec2 c = cos(rot);
-        glm::vec2 s = sin(rot);
-        glm::dmat3 rm = glm::dmat3(c.x, c.x * s.y, s.x * c.y, 0.0, c.y, s.y, -c.x, s.y * c.x, c.y * c.x);
-        return v * rm;
-    }
-
     void LeaveEditor() {
         g_editorOpen = false;
         SetCurrentMenuType(MenuType::NONE);
@@ -848,9 +788,6 @@ namespace Editor {
         return g_selectedVertexIndex;
     }
 
-    std::string& GetDebugText() {
-        return g_debugText;
-    }
 
     ObjectType& GetHoveredObjectType() {
         return g_hoveredObjectType;
@@ -1460,70 +1397,42 @@ namespace Editor {
                 // Update camera frustum
                 player->m_frustum.Update(mvp);
 
-                static Texture* texture = AssetManager::GetTextureByName("Icon_Light");
-
-                int leftX = res.x - texture->GetWidth() / 2;
-                int rightX = res.x + texture->GetWidth() / 2;
-                int topY = res.y - texture->GetHeight() / 2;
-                int bottomY = res.y + texture->GetHeight() / 2;
-
-                glm::vec3 color = WHITE;
-
-
-                if (!Input::KeyDown(HELL_KEY_LEFT_CONTROL_GLFW) && !Input::KeyDown(HELL_KEY_LEFT_ALT) && !MenuHasHover() && !Gizmo::HasHover()) {
-                    int mouseX = Input::GetViewportMappedMouseX(PRESENT_WIDTH);
-                    int mouseY = PRESENT_HEIGHT - Input::GetViewportMappedMouseY(PRESENT_HEIGHT);
-                    float adjustedBackgroundY = PRESENT_HEIGHT - g_backgroundLocation.y;
-                    if (mouseX > leftX && mouseX < rightX && mouseY > topY && mouseY < bottomY) {
-                        color = RED;
+                // Render light icons
+                if (Game::g_editorMode == EditorMode::MAP) {
+                    static Texture* texture = AssetManager::GetTextureByName("Icon_Light");
+                    int leftX = res.x - texture->GetWidth() / 2;
+                    int rightX = res.x + texture->GetWidth() / 2;
+                    int topY = res.y - texture->GetHeight() / 2;
+                    int bottomY = res.y + texture->GetHeight() / 2;
+                    glm::vec3 color = WHITE;
+                    if (!Input::KeyDown(HELL_KEY_LEFT_CONTROL_GLFW) && !Input::KeyDown(HELL_KEY_LEFT_ALT) && !MenuHasHover() && !Gizmo::HasHover()) {
+                        int mouseX = Input::GetViewportMappedMouseX(PRESENT_WIDTH);
+                        int mouseY = PRESENT_HEIGHT - Input::GetViewportMappedMouseY(PRESENT_HEIGHT);
+                        float adjustedBackgroundY = PRESENT_HEIGHT - g_backgroundLocation.y;
+                        if (mouseX > leftX && mouseX < rightX && mouseY > topY && mouseY < bottomY) {
+                            color = RED;
+                        }
                     }
+                    gEditorUIRenderItems.push_back(RendererUtil::CreateRenderItem2D("Icon_Light", { res.x, res.y }, presentSize, Alignment::CENTERED, color));
                 }
-
-                gEditorUIRenderItems.push_back(RendererUtil::CreateRenderItem2D("Icon_Light", { res.x, res.y }, presentSize, Alignment::CENTERED, color));
             }
         }
     }
 
-    void UpdateDebugText() {
 
-        g_debugText = "";
-        /*
-        g_debugText += "MouseX: " + std::to_string(Input::GetMouseX()) + "\n";
-        g_debugText += "MouseY: " + std::to_string(Input::GetMouseY()) + "\n";
-        g_debugText += "Mapped MouseX: " + std::to_string(Input::GetViewportMappedMouseX(PRESENT_WIDTH)) + "\n";
-        g_debugText += "Mapped MouseY: " + std::to_string(Input::GetViewportMappedMouseY(PRESENT_HEIGHT)) + "\n";
-        g_debugText += "Menu location: " + std::to_string(g_menuLocation.x) + ", " + std::to_string(g_menuLocation.y) + "\n";
-        g_debugText += "Background location: " + std::to_string(g_backgroundLocation.x) + ", " + std::to_string(g_backgroundLocation.y) + "\n";
-        g_debugText += "Background size: " + std::to_string(g_backgroundSize.x) + ", " + std::to_string(g_backgroundSize.y) + "\n";
-        g_debugText += "Offset X: " + std::to_string(g_dragOffset.x) + "\n";
-        g_debugText += "Offset Y: " + std::to_string(g_dragOffset.y) + "\n";
-        */
-        /* g_debugText = "g_fileMenuOpen: " + std::to_string(g_fileMenuOpen) + "\n";
-         g_debugText += "g_insertMenuOpen: " + std::to_string(g_insertMenuOpen) + "\n";
-         g_debugText += "g_selectedObjectType: " + Util::PhysicsObjectTypeToString(g_selectedObjectType) + "\n";
-         */
-
-        if (MenuHasHover()) {
-            g_debugText += "Menu HAS HOVER!!!!!!!!!\n";
+    void NextEditorMode() {
+        static int i = 0;
+        i = (i + 1) % static_cast<int>(EditorMode::MODE_COUNT);
+        if (i == 0) {
+            Game::g_editorMode = EditorMode::MAP;
         }
-
-
-        /*  if (ObjectIsHoverered()) {
-               g_debugText += "Hovered: " + Util::PhysicsObjectTypeToString(g_hoveredObjectType) + "\n";
-           }
-           else {
-               g_debugText += "Hovered: NONE_FOUND " + std::to_string(g_hoveredObjectIndex) + "\n";
-           }
-           if (ObjectIsSelected()) {
-               g_debugText += "Selected: " + Util::PhysicsObjectTypeToString(g_selectedObjectType) + "\n";
-           }
-           else {
-               g_debugText += "Selected: NONE_FOUND " + std::to_string(g_selectedObjectIndex) + "\n";
-           }
-           g_debugText = "";
-
-           // g_debugText += "Gizmo Has Hover: " + std::to_string(Gizmo::HasHover());
-
-           */
+        if (i == 1) {
+            Game::g_editorMode = EditorMode::CHRISTMAS;
+        }
+        if (i == 2) {
+            Game::g_editorMode = EditorMode::SHARK_PATH;
+        }
+        //Game::g_editorMode = static_cast<EditorMode>(i);
+        std::cout << "Editor Mode: " << i <<  " " << Util::EditorModeToString(Game::g_editorMode) << "\n";
     }
 }

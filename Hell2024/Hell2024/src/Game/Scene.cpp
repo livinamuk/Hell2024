@@ -8,6 +8,7 @@
 #include "../Core/Audio.h"
 #include "../Core/JSON.hpp"
 #include "../Editor/CSG.h"
+#include "../Enemies/Shark/SharkLogic.h"
 #include "../Game/Game.h"
 #include "../Input/Input.h"
 #include "../Renderer/GlobalIllumination.h"
@@ -69,6 +70,34 @@ void Scene::SaveMapData(const std::string& fileName) {
 
     JSONObject saveFile;
     nlohmann::json data;
+
+    // save Christmas lights
+    nlohmann::json jsonChristmasLights = nlohmann::json::array();
+    for (const ChristmasLights& lights : Scene::g_christmasLights) {
+        if (!lights.m_spiral) {
+            nlohmann::json jsonObject;
+            jsonObject["start"] = { {"x", lights.m_start.x}, {"y", lights.m_start.y}, {"z", lights.m_start.z} };
+            jsonObject["end"] = { {"x", lights.m_end.x}, {"y", lights.m_end.y}, {"z", lights.m_end.z} };
+            jsonChristmasLights.push_back(jsonObject);
+        }
+    }
+    data["christmasLights"] = jsonChristmasLights;
+
+    //  Save shark paths
+    nlohmann::json jsonSharkPoints = nlohmann::json::array();
+    for (const SharkPath& sharkPath : SharkLogic::GetSharkPaths()) {
+        std::vector<float> floatArray;
+        floatArray.reserve(floatArray.size() + (sharkPath.m_points.size() * 3));
+        for (const SharkPathPoint& pathPoint : sharkPath.m_points) {
+            floatArray.push_back(pathPoint.position.x);
+            floatArray.push_back(pathPoint.position.y);
+            floatArray.push_back(pathPoint.position.z);
+        }
+        nlohmann::json jsonObject;
+        jsonObject["points"] = floatArray;
+        jsonSharkPoints.push_back(jsonObject);
+    }
+    data["sharkPathPoints"] = jsonSharkPoints;
 
     // save doors
     nlohmann::json jsonDoors = nlohmann::json::array();
@@ -154,20 +183,6 @@ void Scene::SaveMapData(const std::string& fileName) {
     }
     data["Lights"] = jsonLights;
 
-    //
-    //// emergency game objects
-    //nlohmann::json jsonGameObjects = nlohmann::json::array();
-    //for (const GameObject& gameObject : RapidHotload::GetEmergencyGameObjects()) {
-    //    nlohmann::json jsonObject;
-    //    jsonObject["position"] = { {"x", gameObject._transform.position.x}, {"y", gameObject._transform.position.y}, {"z", gameObject._transform.position.z} };
-    //    jsonObject["rotation"] = { {"x", gameObject._transform.rotation.x}, {"y", gameObject._transform.rotation.y}, {"z", gameObject._transform.rotation.z} };
-    //    jsonObject["scale"] = { {"x", gameObject._transform.scale.x}, {"y", gameObject._transform.scale.y}, {"z", gameObject._transform.scale.z} };
-    //    jsonObject["modelName"] = gameObject.model->GetName();
-    //    jsonObject["materialName"] = AssetManager::GetMaterialByIndex(gameObject._meshMaterialIndices[0])->_name;
-    //    jsonGameObjects.push_back(jsonObject);
-    //}
-    //data["GameObjects"] = jsonGameObjects;
-
     // Print it
     int indent = 4;
     std::string text = data.dump(indent);
@@ -196,6 +211,34 @@ void Scene::LoadMapData(const std::string& fileName) {
 
     // Parse file
     nlohmann::json data = nlohmann::json::parse(buffer.str());
+
+
+    // Load Shark Paths
+    int j = 0;
+    SharkLogic::ClearSharkPaths();
+    //std::cout << "Shark path count: " << data["sharkPathPoints"].size() << "\n";
+    for (const auto& jsonObject : data["sharkPathPoints"]) {
+        std::vector<float> floatArray = jsonObject["points"];
+
+        std::vector<glm::vec3> vec3Array;
+        vec3Array.reserve(floatArray.size() / 3);
+        for (int i = 0; i < floatArray.size(); i+=3) {
+            glm::vec3& sharkPathPoint = vec3Array.emplace_back();
+            sharkPathPoint.x = floatArray[i];
+            sharkPathPoint.y = floatArray[i+1];
+            sharkPathPoint.z = floatArray[i+2];
+        }
+        SharkLogic::AddPath(vec3Array);
+    }
+
+    // Load Christmas lights
+    for (const auto& jsonObject : data["christmasLights"]) {
+        ChristmasLightsCreateInfo createInfo;
+        createInfo.start = { jsonObject["start"]["x"], jsonObject["start"]["y"], jsonObject["start"]["z"] };
+        createInfo.end = { jsonObject["end"]["x"], jsonObject["end"]["y"], jsonObject["end"]["z"] };
+        createInfo.sag = 1.0f;
+        Scene::CreateChristmasLights(createInfo);
+    }
 
     // Load doors
     for (const auto& jsonObject : data["doors"]) {
@@ -257,6 +300,7 @@ void Scene::LoadMapData(const std::string& fileName) {
         createInfo.strength = jsonObject["strength"];
         createInfo.type = jsonObject["type"];
         createInfo.radius = jsonObject["radius"];
+        createInfo.shadowCasting = true;
         Scene::CreateLight(createInfo);
     }
 
@@ -400,6 +444,16 @@ void Scene::LoadDefaultScene() {
         }
     }
 
+  // {
+  //     // Christmas light debug spawn lab
+  //     ChristmasLightsCreateInfo createInfo;
+  //     createInfo.start = glm::vec3(14, 5, -3);
+  //     createInfo.end = glm::vec3(16, 4, 0);
+  //     createInfo.sag = 1.0f;
+  //     CreateChristmasLights(createInfo);
+  // }
+
+
     g_doors.clear();
     g_doors.reserve(sizeof(Door) * 1000);
     g_csgAdditiveCubes.clear();
@@ -461,9 +515,20 @@ void Scene::LoadDefaultScene() {
     }
 
 
+    g_christmasLights.clear();
+
     LoadMapData("mappp.txt");
     for (Light& light : g_lights) {
         light.m_shadowMapIsDirty = true;
+    }
+
+
+    {
+        // Christmas light debug spawn lab
+        ChristmasLightsCreateInfo createInfo;
+        createInfo.sprialTopCenter = glm::vec3(10, 4, -2);
+        createInfo.spiral = true;
+        CreateChristmasLights(createInfo);
     }
 
       
@@ -619,8 +684,7 @@ void Scene::LoadDefaultScene() {
         mermaid->SetMeshMaterialByMeshName("TailFin", "MermaidTail");
         mermaid->SetMeshMaterialByMeshName("EyelashUpper", "MermaidLashes");
         mermaid->SetMeshMaterialByMeshName("EyelashLower", "MermaidLashes");
-        mermaid->SetMeshMaterialByMeshName("ChristmasTopRed", "ChristmasTopRed");
-        mermaid->SetMeshMaterialByMeshName("ChristmasTopWhite", "ChristmasTopWhite");
+        mermaid->SetMeshMaterialByMeshName("red", "ChristmasHat");
         mermaid->SetMeshMaterialByMeshName("Nails", "Nails");
         mermaid->SetMeshBlendingMode("EyelashUpper", BlendingMode::BLENDED);
         mermaid->SetMeshBlendingMode("EyelashLower", BlendingMode::BLENDED);
@@ -654,9 +718,7 @@ void Scene::LoadDefaultScene() {
 
 
 
-   // tree->SetPosition(-0.3f, 0.5f, 3.5f);
     glm::vec3 presentsSpawnPoint = glm::vec3(8.35f, 4.5f, 1.2f);
-
 
     if (hardcoded || true) {
         // Big
@@ -1812,6 +1874,67 @@ void Scene::CreateGeometryRenderItems() {
     g_geometryRenderItemsBlended.clear();
     g_geometryRenderItemsAlphaDiscarded.clear();
 
+
+    // Christmas lights 
+    for (ChristmasLights& christmasLights : Scene::g_christmasLights) {
+
+        g_geometryRenderItems.reserve(g_geometryRenderItems.size() + christmasLights.m_renderItems.size());
+        g_geometryRenderItems.insert(std::end(g_geometryRenderItems), std::begin(christmasLights.m_renderItems), std::end(christmasLights.m_renderItems));
+
+
+        //static Model* model = AssetManager::GetModelByName("ChristmasLight2");
+        //static int whiteMaterialIndex = AssetManager::GetMaterialIndex("ChristmasLightWhite");
+        //static int blackMaterialIndex = AssetManager::GetMaterialIndex("Black");
+        //
+        //for (int i = 0; i < christmasLights.m_lightSpawnPoints.size(); i++) {
+        //
+        //    Transform transform;
+        //    transform.position = christmasLights.m_lightSpawnPoints[i];
+        //    
+        //    // Plastic
+        //    RenderItem3D renderItem;
+        //    renderItem.meshIndex =  model->GetMeshIndices()[0];;
+        //    renderItem.modelMatrix = transform.to_mat4();
+        //    renderItem.inverseModelMatrix = glm::inverse(renderItem.modelMatrix);
+        //    Material* material = AssetManager::GetMaterialByIndex(blackMaterialIndex);
+        //    renderItem.baseColorTextureIndex = material->_basecolor;
+        //    renderItem.rmaTextureIndex = material->_rma;
+        //    renderItem.normalMapTextureIndex = material->_normal;
+        //    g_geometryRenderItems.push_back(renderItem);
+        //
+        //    // Light
+        //    renderItem.meshIndex = model->GetMeshIndices()[1];;
+        //    material = AssetManager::GetMaterialByIndex(whiteMaterialIndex);
+        //    renderItem.baseColorTextureIndex = material->_basecolor;
+        //    renderItem.rmaTextureIndex = material->_rma;
+        //    renderItem.normalMapTextureIndex = material->_normal;
+        //    renderItem.useEmissiveMask = 1.0f;
+        //    renderItem.emissiveColor = YELLOW;
+        //    g_geometryRenderItems.push_back(renderItem);
+        //}
+
+
+        //for (int i = 0; i < christmasLights.m_lightSpawnPoints.size(); i++) {
+        //    for (uint32_t& meshIndex : model->GetMeshIndices()) {
+        //        Transform transform;
+        //        transform.position = christmasLights.m_lightSpawnPoints[i];
+        //        RenderItem3D renderItem;
+        //        renderItem.meshIndex = meshIndex;
+        //        renderItem.modelMatrix = transform.to_mat4();
+        //        renderItem.inverseModelMatrix = glm::inverse(renderItem.modelMatrix);
+        //        Material* material = AssetManager::GetMaterialByIndex(goldMaterialIndex);
+        //        renderItem.baseColorTextureIndex = material->_basecolor;
+        //        renderItem.rmaTextureIndex = material->_rma;
+        //        renderItem.normalMapTextureIndex = material->_normal;
+        //        g_geometryRenderItems.push_back(renderItem);
+        //    }
+        //}
+    }
+
+
+
+
+
     static int ceilingMaterialIndex = AssetManager::GetMaterialIndex("Ceiling");
 
     // Ceiling trims
@@ -2511,11 +2634,18 @@ void Scene::CreateLight(LightCreateInfo createInfo) {
     light.type = createInfo.type;
     light.m_shadowMapIsDirty = true;
     light.extraDirty = true;
+    light.m_shadowCasting = createInfo.shadowCasting;
 }
 
 void Scene::CreateLadder(LadderCreateInfo createInfo) {
     Ladder& ladder = g_ladders.emplace_back();
     ladder.Init(createInfo);
+}
+
+void Scene::CreateChristmasLights(ChristmasLightsCreateInfo createInfo) {
+    ChristmasLights& christmasLights = g_christmasLights.emplace_back();
+    christmasLights.Init(createInfo);
+
 }
 
 void Scene::AddLight(Light& light) {

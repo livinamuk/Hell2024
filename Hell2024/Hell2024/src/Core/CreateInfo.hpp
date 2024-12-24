@@ -1,6 +1,16 @@
 #pragma once
 #include "HellCommon.h"
 
+struct ChristmasLightsCreateInfo {
+    glm::vec3 start = glm::vec3(0);
+    glm::vec3 end = glm::vec3(0);
+    float sag = 0;
+    bool spiral = false;
+    float spiralRadius = 1.0f;
+    float spiarlHeight = 1.0f;
+    glm::vec3 sprialTopCenter;
+};
+
 struct DoorCreateInfo {
     glm::vec3 position = glm::vec3(0);
     float rotation = 0;
@@ -18,6 +28,7 @@ struct LightCreateInfo {
     float radius;
     float strength;
     int type;
+    bool shadowCasting;
 };
 
 struct LadderCreateInfo {

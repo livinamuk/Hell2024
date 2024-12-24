@@ -62,7 +62,6 @@ std::vector<RenderItem2D> Player::GetHudRenderItems(hell::ivec2 presentSize) {
 
     }
 
-
     if (Game::g_globalFadeOut < 0.05f) {
 
         std::string winMessage = "";

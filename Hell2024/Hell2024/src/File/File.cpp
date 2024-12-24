@@ -119,7 +119,7 @@ ModelData File::ImportModel(const std::string& filename) {
     modelData.aabbMax = modelAabbMax;
 
     file.close();
-    std::cout << "Loaded: " << filename << "\n";
+    //std::cout << "Loaded: " << filename << "\n";
     return modelData;
 }
 

@@ -441,10 +441,16 @@ std::vector<RenderItem2D> CreateRenderItems2D(hell::ivec2 presentSize, int playe
     for (int i = 0; i < playerCount; i++) {
 
         // Debug Text
-        if (Game::DebugTextIsEnabled()) {
+        if (Game::DebugTextIsEnabled() && !Editor::IsOpen()) {
+            std::string text = Renderer::GetDebugText();
+            int x = RendererUtil::GetViewportLeftX(i, Game::GetSplitscreenMode(), presentSize.x, presentSize.y);
+            int y = RendererUtil::GetViewportTopY(i, Game::GetSplitscreenMode(), presentSize.x, presentSize.y);
+            RendererUtil::AddRenderItems(renderItems, TextBlitter::CreateText(text, { x, y }, presentSize, Alignment::TOP_LEFT, BitmapFontType::STANDARD));
+        }
 
-            std::string& text = Renderer::GetDebugText();
-
+        // Editor TEXT
+        if (Editor::IsOpen()) {
+            std::string text = Editor::GetDebugText();
             int x = RendererUtil::GetViewportLeftX(i, Game::GetSplitscreenMode(), presentSize.x, presentSize.y);
             int y = RendererUtil::GetViewportTopY(i, Game::GetSplitscreenMode(), presentSize.x, presentSize.y);
             RendererUtil::AddRenderItems(renderItems, TextBlitter::CreateText(text, { x, y }, presentSize, Alignment::TOP_LEFT, BitmapFontType::STANDARD));

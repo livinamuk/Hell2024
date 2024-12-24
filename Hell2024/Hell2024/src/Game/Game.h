@@ -45,5 +45,6 @@ namespace Game {
     inline int g_playerDeaths = -1;
     inline std::vector<glm::vec3> testPoints;
     inline std::vector<PlayerData> g_playerData;
+    inline EditorMode g_editorMode = EditorMode::SHARK_PATH;
 
 }
