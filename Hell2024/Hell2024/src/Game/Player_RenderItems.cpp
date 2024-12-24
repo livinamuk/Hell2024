@@ -138,7 +138,12 @@ std::vector<RenderItem2D> Player::GetHudRenderItems(hell::ivec2 presentSize) {
       //  }
 
         if (!Game::KillLimitReached()) {
-            renderItems.push_back(RendererUtil::CreateRenderItem2D("CrosshairDot", crosshairPos, presentSize, Alignment::CENTERED));
+            if (GetCrosshairType() == CrosshairType::REGULAR) {
+                renderItems.push_back(RendererUtil::CreateRenderItem2D("CrosshairDot", crosshairPos, presentSize, Alignment::CENTERED));
+            }
+            if (GetCrosshairType() == CrosshairType::INTERACT) {
+                renderItems.push_back(RendererUtil::CreateRenderItem2D("CrosshairSquare", crosshairPos, presentSize, Alignment::CENTERED));
+            }
         }
 
         static int texHeight = AssetManager::GetTextureByName("inventory_mockup")->GetHeight();

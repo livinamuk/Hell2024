@@ -1549,7 +1549,7 @@ CrosshairType Player::GetCrosshairType() {
         return CrosshairType::NONE;
     }
 
-    if (m_pickUpInteractable) {
+    if (m_interactbleGameObjectIndex != -1) {
         return CrosshairType::INTERACT;
     }
 

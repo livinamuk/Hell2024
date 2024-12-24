@@ -69,12 +69,17 @@ void main() {
     emissiveColor = vec3(renderItem.emissiveColorR, renderItem.emissiveColorG, renderItem.emissiveColorB);
 
     // Compute model-space and normal-space transformations
-    mat4 modelMatrix = renderItem.modelMatrix;
-	mat4 normalMatrix = transpose(renderItem.inverseModelMatrix);
-    Normal = normalize(normalMatrix * vec4(vNormal, 0)).xyz;
-	Tangent = normalize(normalMatrix * vec4(vTangent, 0)).xyz;
-	BiTangent = normalize(cross(Normal, Tangent));
+   mat4 modelMatrix = renderItem.modelMatrix;
+//	mat4 normalMatrix = transpose(renderItem.inverseModelMatrix);
+//   Normal = normalize(normalMatrix * vec4(vNormal, 0)).xyz;
+//	Tangent = normalize(normalMatrix * vec4(vTangent, 0)).xyz;
+//	BiTangent = normalize(cross(Normal, Tangent));
     
+    mat3 normalMatrix = transpose(mat3(renderItem.inverseModelMatrix));
+Normal = normalize(normalMatrix * vNormal);
+Tangent = normalize(normalMatrix * vTangent);
+BiTangent = normalize(cross(Normal, Tangent));
+
     // Compute the final position of the vertex in screen space
     gl_Position = projection * view * modelMatrix * vec4(vPos, 1.0);
     

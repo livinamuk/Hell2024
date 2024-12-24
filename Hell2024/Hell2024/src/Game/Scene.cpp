@@ -656,7 +656,49 @@ void Scene::LoadDefaultScene() {
 
    // tree->SetPosition(-0.3f, 0.5f, 3.5f);
     glm::vec3 presentsSpawnPoint = glm::vec3(8.35f, 4.5f, 1.2f);
+
+
     if (hardcoded || true) {
+        // Big
+        for (int j = 0; j < 2; j++) {
+            for (int i = 0; i < 4; i++) {
+                CreateGameObject();
+                GameObject* cube = GetGameObjectByIndex(GetGameObjectCount() - 1);
+                float halfExtent = 0.1f;
+                cube->SetPosition(presentsSpawnPoint.x - 0.5f + j, presentsSpawnPoint.y + (i * 0.5f) - 1.0f, presentsSpawnPoint.z);
+                cube->SetRotationX(Util::RandomFloat(0, HELL_PI * 2));
+                cube->SetRotationY(Util::RandomFloat(0, HELL_PI * 2));
+                cube->SetRotationZ(Util::RandomFloat(0, HELL_PI * 2));
+                cube->SetWakeOnStart(true);
+                cube->SetModel("ChristmasPresentBig");
+                cube->SetName("PresentBig");
+                if (i == 0) {
+                    cube->SetMeshMaterial("PresentBigBlue");
+                }
+                if (i == 1) {
+                    cube->SetMeshMaterial("PresentBigRed");
+                }
+                if (i == 2) {
+                    cube->SetMeshMaterial("PresentBigGreen");
+                }
+                if (i == 3) {
+                    cube->SetMeshMaterial("PresentBigYellow");
+                }
+                PxShape* collisionShape = Physics::CreateBoxShape(halfExtent, halfExtent * 2.0f, halfExtent);
+                PxShape* raycastShape = Physics::CreateBoxShape(halfExtent, halfExtent * 2.0f, halfExtent);
+                PhysicsFilterData filterData;
+                filterData.raycastGroup = RAYCAST_DISABLED;
+                filterData.collisionGroup = CollisionGroup::GENERIC_BOUNCEABLE;
+                filterData.collidesWith = (CollisionGroup)(ENVIROMENT_OBSTACLE | GENERIC_BOUNCEABLE | RAGDOLL);
+                cube->SetKinematic(false);
+                cube->AddCollisionShape(collisionShape, filterData);
+                cube->SetRaycastShape(raycastShape);
+                cube->SetModelMatrixMode(ModelMatrixMode::PHYSX_TRANSFORM);
+                cube->UpdateRigidBodyMassAndInertia(20.0f);
+                cube->SetCollisionType(CollisionType::BOUNCEABLE);
+            }
+        }
+        // Small
         float spacing = 0.3f;
         for (int x = -3; x < 1; x++) {
             for (int y = -1; y < 5; y++) {
@@ -684,8 +726,6 @@ void Scene::LoadDefaultScene() {
                     else if (rand == 3) {
                         cube->SetMeshMaterial("PresentSmallGreen");
                     }
-                    Transform transform;
-                    transform.position = glm::vec3(2.0f, y * halfExtent * 2 + 0.2f, 3.5f);
                     PxShape* collisionShape = Physics::CreateBoxShape(halfExtent, halfExtent, halfExtent);
                     PxShape* raycastShape = Physics::CreateBoxShape(halfExtent, halfExtent, halfExtent);
                     PhysicsFilterData filterData;
