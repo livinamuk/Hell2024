@@ -128,11 +128,11 @@ void Player::UpdateViewWeaponLogic(float deltaTime) {
                 _weaponAction == ADS_FIRE
                 ) {
                 current = Util::FInterpTo(current, max, deltaTime, speed);
-                _zoom -= zoomSpeed;
+                m_cameraZoom -= zoomSpeed;
             }
             else {
                 current = Util::FInterpTo(current, 0, deltaTime, speed);
-                _zoom += zoomSpeed;
+                m_cameraZoom += zoomSpeed;
             }
             // move the weapon down if you are in ads
             /*if (InADS()) {
@@ -144,12 +144,12 @@ void Player::UpdateViewWeaponLogic(float deltaTime) {
         }
 
         // ZOOM
-        _zoom = std::max(0.575f, _zoom);
-        _zoom = std::min(1.0f, _zoom);
+        m_cameraZoom = std::max(0.575f, m_cameraZoom);
+        m_cameraZoom = std::min(1.0f, m_cameraZoom);
 
 
         if (weaponInfo->name == "P90") {
-            _zoom = std::max(0.775f, _zoom);
+            m_cameraZoom = std::max(0.775f, m_cameraZoom);
         }
 
         float adsInOutSpeed = 3.0f;
@@ -859,7 +859,7 @@ void Player::UpdateWeaponSway(float deltaTime) {
         AnimatedGameObject* viewWeapon = Scene::GetAnimatedGameObjectByIndex(m_viewWeaponAnimatedGameObjectIndex);
 
         float xMax = 4.0;
-        if (_zoom < 0.99f) {
+        if (m_cameraZoom < 0.99f) {
             xMax = 2.0f;
         }
 

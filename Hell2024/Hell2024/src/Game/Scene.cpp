@@ -2616,7 +2616,7 @@ void Scene::ProcessPhysicsCollisions() {
         // OR better yet, do a search through the collision report list before you ever remove any physics object
         // OR better yet, do a search through the collision report list before you ever remove any physics object
         // OR better yet, do a search through the collision report list before you ever remove any physics object
-        // OR better yet, do a search through the collision report list before you ever remove any physics object
+        // OR better yet, do a search through the collision report list before you ever remove any physics object, and re-set all physx pointers
 
         const char* nameA = report.rigidA->getName();
         const char* nameB = report.rigidB->getName();

@@ -407,7 +407,7 @@ public:
 
 	//std::string _pickUpText = "";
 	//float _pickUpTextTimer = 0;
-    float _zoom = 1.0f;
+    float m_cameraZoom = 1.0f;
 
 
     //void LoadWeaponInfo(std::string name, WeaponAction weaponAction);

@@ -1,16 +1,26 @@
 #include "Player.h"
 #include "Game.h"
 #include "../Editor/Editor.h"
-#include "../Renderer/RendererUtil.hpp"
+#include "../Input/Input.h"
 #include "../Game/Scene.h"
-#include "../Renderer/TextBlitter.h"
 #include "../Renderer/Renderer.h"
+#include "../Renderer/RendererUtil.hpp"
+#include "../Renderer/TextBlitter.h"
 
 std::vector<RenderItem2D> Player::GetHudRenderItems(hell::ivec2 presentSize) {
 
     std::vector<RenderItem2D> renderItems;
 
+    float framebufferToWindowRatioX = PRESENT_WIDTH / (float)BackEnd::GetCurrentWindowWidth();
+    float framebufferToWindowRatioY = PRESENT_HEIGHT / (float)BackEnd::GetCurrentWindowHeight();
+    float cursorX = Input::GetMouseX() * framebufferToWindowRatioX;
+    float cursorY = (BackEnd::GetCurrentWindowHeight() - Input::GetMouseY()) * framebufferToWindowRatioY;
+    hell::ivec2 cursorLocation = hell::ivec2(cursorX, cursorY);
+    hell::ivec2 viewportCenter = hell::ivec2(RendererUtil::GetViewportCenterX(m_playerIndex, Game::GetSplitscreenMode(), presentSize.x, presentSize.y), RendererUtil::GetViewportCenterY(m_playerIndex, Game::GetSplitscreenMode(), presentSize.x, presentSize.y));
+
     if (IsAtShop()) {
+        // Cursor
+        renderItems.push_back(RendererUtil::CreateRenderItem2D("Cursor_0", cursorLocation, presentSize, Alignment::TOP_LEFT, WHITE, hell::ivec2(40, 40)));
         return renderItems;
     }
 
@@ -22,9 +32,6 @@ std::vector<RenderItem2D> Player::GetHudRenderItems(hell::ivec2 presentSize) {
     pickupTextLocation.x = RendererUtil::GetViewportLeftX(m_playerIndex, Game::GetSplitscreenMode(), presentSize.x, presentSize.y);
     pickupTextLocation.y = RendererUtil::GetViewportBottomY(m_playerIndex, Game::GetSplitscreenMode(), presentSize.x, presentSize.y);
 
-    hell::ivec2 viewportCenter;
-    viewportCenter.x = RendererUtil::GetViewportCenterX(m_playerIndex, Game::GetSplitscreenMode(), presentSize.x, presentSize.y);
-    viewportCenter.y = RendererUtil::GetViewportCenterY(m_playerIndex, Game::GetSplitscreenMode(), presentSize.x, presentSize.y);
 
     if (Game::GetSplitscreenMode() == SplitscreenMode::NONE) {
         pickupTextLocation.x += presentSize.x * 0.09f;
@@ -171,6 +178,16 @@ std::vector<RenderItem2D> Player::GetHudRenderItemsHiRes(hell::ivec2 gBufferSize
     std::vector<RenderItem2D> renderItems;
 
     if (IsAtShop() || Editor::IsOpen()) {
+
+        // Cursor
+        float framebufferToWindowRatioX = PRESENT_WIDTH * 2 / (float)BackEnd::GetCurrentWindowWidth();
+        float framebufferToWindowRatioY = PRESENT_HEIGHT * 2 / (float)BackEnd::GetCurrentWindowHeight();
+        float cursorX = Input::GetMouseX() * framebufferToWindowRatioX;
+        float cursorY = (BackEnd::GetCurrentWindowHeight() - Input::GetMouseY()) * framebufferToWindowRatioY;
+        hell::ivec2 cursorLocation = hell::ivec2(cursorX, cursorY);
+        cursorLocation = hell::ivec2(100, 100);
+        //renderItems.push_back(RendererUtil::CreateRenderItem2D("Cursor_0", cursorLocation, gBufferSize, Alignment::TOP_LEFT, WHITE, hell::ivec2(12, 12)));
+
         return renderItems;
     }
 

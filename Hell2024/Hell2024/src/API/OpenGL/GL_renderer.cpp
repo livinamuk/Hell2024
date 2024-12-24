@@ -1746,7 +1746,10 @@ void GeometryPass(RenderData& renderData) {
     glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    glDepthMask(GL_FALSE);
+    if (!Input::KeyDown(HELL_KEY_U)) {
+        glDepthMask(GL_FALSE);
+    }
+    glDisable(GL_CULL_FACE);
     for (int i = 0; i < renderData.playerCount; i++) {
         ViewportInfo viewportInfo = RendererUtil::CreateViewportInfo(i, Game::GetSplitscreenMode(), gBuffer.GetWidth(), gBuffer.GetHeight());
         SetViewport(viewportInfo);
@@ -1757,6 +1760,7 @@ void GeometryPass(RenderData& renderData) {
         geometryShader.SetInt("instanceDataOffset", RendererData::g_geometryDrawInfoBlended[i].baseInstance);
         MultiDrawIndirect(RendererData::g_geometryDrawInfoBlended[i].commands, OpenGLBackEnd::GetVertexDataVAO());
     }
+    glEnable(GL_CULL_FACE);
     glDisable(GL_BLEND); 
     glDepthMask(GL_TRUE);
 

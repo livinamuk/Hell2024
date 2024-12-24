@@ -52,31 +52,33 @@ void Player::Update(float deltaTime) {
     glm::vec3 targetShopCameraPosition = mermaid->GetWorldPosition() - deltaPosition;
     glm::vec3 targetShopCameraRotation = glm::vec3(-0.29, -1.66, 0.00);
     glm::quat targetShopCameraRotationQ = glm::quat(targetShopCameraRotation);
-
     if (HasControl()) {
         if (Input::KeyPressed(HELL_KEY_5)) {
             Audio::PlayAudio(AUDIO_SELECT, 1.00f);
             m_atShop = !m_atShop;
             if (m_atShop) {
+                glfwSetCursorPos(BackEnd::GetWindowPointer(), BackEnd::GetFullScreenWidth() / 2, BackEnd::GetFullScreenHeight() / 2);
                 m_shopCameraPosition = GetViewPos();
                 m_shopCameraRotation = GetCameraRotation();
-
+                m_cameraZoom = 1.0f;
+                m_moving = false;
                 if (m_shopCameraRotation.y > HELL_PI) {
                     m_shopCameraRotation.y = -HELL_PI;
                 }
                 if (m_shopCameraRotation.y < -HELL_PI) {
                     m_shopCameraRotation.y = HELL_PI;
                 }
-
                 m_shopCameraRotationQ = glm::quat(GetCameraRotation());
                 std::cout << "your rotation was  " << Util::Vec3ToString(m_shopCameraRotation) << "\n";
                 std::cout << "target rotation is " << Util::Vec3ToString(targetShopCameraRotation) << "\n";
             }
+            else {
+                // nothing yet
+            }
         }
     }
 
-    if (IsAtShop()) {        
-        _zoom = 1.0f;
+    if (IsAtShop()) {       
         float lerpSpeed = 20;
         m_shopCameraPosition.x = Util::FInterpTo(m_shopCameraPosition.x, targetShopCameraPosition.x, deltaTime, lerpSpeed);
         m_shopCameraPosition.y = Util::FInterpTo(m_shopCameraPosition.y, targetShopCameraPosition.y, deltaTime, lerpSpeed);
@@ -98,8 +100,9 @@ void Player::Update(float deltaTime) {
         cameraPosition += GetCameraUp() * m_headBob.y;
         cameraPosition += GetCameraRight() * m_headBob.x;
 
-        glm::mat4 cameraTransform = glm::translate(glm::mat4(1), cameraPosition); 
+        glm::mat4 cameraTransform = glm::translate(glm::mat4(1), cameraPosition);
         cameraTransform *= glm::mat4_cast(glm::quat(m_shopCameraRotation));
+        //cameraTransform *= glm::mat4_cast(m_shopCameraRotationQ);
 
 
         _viewMatrix = glm::inverse(cameraTransform);
@@ -1133,7 +1136,7 @@ PxShape* Player::GetItemPickupOverlapShape() {
 }
 
 float Player::GetZoom() {
-    return _zoom;
+    return m_cameraZoom;
 }
 
 glm::mat4 Player::GetProjectionMatrix() {
@@ -1143,7 +1146,7 @@ glm::mat4 Player::GetProjectionMatrix() {
     if (Game::GetSplitscreenMode() == SplitscreenMode::TWO_PLAYER) {
         height *= 0.5f;
     }
-    return glm::perspective(_zoom, width / height, NEAR_PLANE, FAR_PLANE);
+    return glm::perspective(m_cameraZoom, width / height, NEAR_PLANE, FAR_PLANE);
 
     /*
     float fovY = _zoom;

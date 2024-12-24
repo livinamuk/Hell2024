@@ -449,7 +449,7 @@ glm::mat4 CreatePerspectiveProjectionMatrix(int x1, int x2, int y1, int y2, floa
     float ndcX2 = (2.0f * x2 / screenWidth) - 1.0f;
     float ndcY1 = 1.0f - (2.0f * y1 / screenHeight);
     float ndcY2 = 1.0f - (2.0f * y2 / screenHeight);
-    float fov = Game::GetPlayerByIndex(0)->_zoom;
+    float fov = Game::GetPlayerByIndex(0)->m_cameraZoom;
     float tanHalfFov = tan(fov / 2.0f);
     float left = ndcX1 * nearPlane * tanHalfFov;
     float right = ndcX2 * nearPlane * tanHalfFov;

@@ -508,13 +508,18 @@ namespace Editor {
         glm::dvec3 forward = inverseViewMatrix[2];
         glm::dvec3 right = inverseViewMatrix[0];
         glm::dvec3 up = inverseViewMatrix[1];
+
+        double zoomSpeed = g_zoomSpeed;
+        if (Input::KeyDown(HELL_KEY_LEFT_SHIFT_GLFW)) {
+            zoomSpeed *= 0.25f;
+        }
         if (Input::MouseWheelUp()) {
-            g_camPos += (forward * -g_zoomSpeed);
-            g_viewTarget += (forward * -g_zoomSpeed);
+            g_camPos += (forward * -zoomSpeed);
+            g_viewTarget += (forward * -zoomSpeed);
         }
         if (Input::MouseWheelDown()) {
-            g_camPos += (forward * g_zoomSpeed);
-            g_viewTarget += (forward * g_zoomSpeed);
+            g_camPos += (forward * zoomSpeed);
+            g_viewTarget += (forward * zoomSpeed);
         }
 
         // Camera Pan
