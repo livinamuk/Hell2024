@@ -6,9 +6,6 @@
 struct RigidComponent {
 public:
     int ID;
-    //const char* name;
-    //const char* shapeType;
-    //const char* correspondingJointName;
     std::string name;
     std::string shapeType;
     std::string correspondingJointName;
@@ -47,9 +44,11 @@ struct Ragdoll {
 
     void LoadFromJSON(std::string filename, PxU32 raycastFlag, PxU32 collisionGroupFlag, PxU32 collidesWithGroupFlag);
     RigidComponent* GetRigidByName(std::string& name);
+    void SetKinematicState(bool state);
 
     void EnableVisualization();
     void DisableVisualization();
     void EnableCollision();
     void DisableCollision();
+    void CleanUp();
 };

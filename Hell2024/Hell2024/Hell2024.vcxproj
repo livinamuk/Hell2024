@@ -152,7 +152,10 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <ClCompile Include="src\Editor\Editor.cpp" />
     <ClCompile Include="src\Editor\Editor_ChristmasLights.cpp" />
     <ClCompile Include="src\Editor\Editor_DebugText.cpp" />
-    <ClCompile Include="src\Enemies\Shark\SharkLogic.cpp" />
+    <ClCompile Include="src\Enemies\Shark\SharkPathManager.cpp" />
+    <ClCompile Include="src\Enemies\Shark\Shark_DebugKeys.cpp" />
+    <ClCompile Include="src\Enemies\Shark\Shark_Update.cpp" />
+    <ClCompile Include="src\Enemies\Shark\Shark_Util.cpp" />
     <ClCompile Include="src\File\AssimpImporter.cpp" />
     <ClCompile Include="src\File\File.cpp" />
     <ClCompile Include="src\Game\Dobermann.cpp" />
@@ -300,7 +303,7 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <ClInclude Include="src\Editor\CSGShape.h" />
     <ClInclude Include="src\Editor\Editor.h" />
     <ClInclude Include="src\Common\HellCommon.h" />
-    <ClInclude Include="src\Enemies\Shark\SharkLogic.h" />
+    <ClInclude Include="src\Enemies\Shark\SharkPathManager.h" />
     <ClInclude Include="src\File\AssimpImporter.h" />
     <ClInclude Include="src\File\File.h" />
     <ClInclude Include="src\File\FileFormats.h" />

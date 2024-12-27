@@ -122,7 +122,7 @@ void AnimatedGameObject::ToggleAnimationPause() {
     _animationPaused = !_animationPaused;
 }
 
-void AnimatedGameObject::PlayAndLoopAnimation(std::string animationName, float speed) {
+void AnimatedGameObject::PlayAndLoopAnimation(const std::string& animationName, float speed) {
 
     if (!_skinnedModel) {
         //std::cout << "could not play animation cause skinned model was nullptr\n";
@@ -157,7 +157,7 @@ void AnimatedGameObject::PauseAnimation() {
     _animationPaused = true;
 }
 
-void AnimatedGameObject::SetMeshMaterialByMeshName(std::string meshName, const char* materialName) {
+void AnimatedGameObject::SetMeshMaterialByMeshName(const std::string& meshName, const char* materialName) {
     if (!_skinnedModel) {
         return;
     }
@@ -177,7 +177,7 @@ void AnimatedGameObject::SetMeshMaterialByMeshIndex(int meshIndex, const char* m
     }
 }
 
-void AnimatedGameObject::SetMeshToRenderAsGlassByMeshIndex(std::string meshName) {
+void AnimatedGameObject::SetMeshToRenderAsGlassByMeshIndex(const std::string& meshName) {
     if (!_skinnedModel) {
         return;
     }
@@ -188,7 +188,7 @@ void AnimatedGameObject::SetMeshToRenderAsGlassByMeshIndex(std::string meshName)
     }
 }
 
-void AnimatedGameObject::SetMeshEmissiveColorTextureByMeshName(std::string meshName, std::string textureName) {
+void AnimatedGameObject::SetMeshEmissiveColorTextureByMeshName(const std::string& meshName, const std::string& textureName) {
     if (!_skinnedModel) {
         return;
     }
@@ -229,7 +229,7 @@ void AnimatedGameObject::SetAllMeshMaterials(const char* materialName) {
     }
 }
 
-glm::mat4 AnimatedGameObject::GetBoneWorldMatrixFromBoneName(std::string name) {
+glm::mat4 AnimatedGameObject::GetBoneWorldMatrixFromBoneName(const std::string& name) {
 	for (int i = 0; i < _animatedTransforms.names.size(); i++) {
         if (_animatedTransforms.names[i] == name) {
             return _animatedTransforms.worldspace[i];
@@ -247,7 +247,7 @@ void AnimatedGameObject::SetAnimatedModeToRagdoll() {
     _animationMode = RAGDOLL;
 }
 
-void AnimatedGameObject::PlayAnimation(std::string animationName, float speed) {
+void AnimatedGameObject::PlayAnimation(const std::string& animationName, float speed) {
     if (!_skinnedModel) {
         return; // Remove once you have Vulkan loading shit properly.
     }
@@ -569,11 +569,11 @@ std::string AnimatedGameObject::GetName() {
     return _name;
 }
 
-void AnimatedGameObject::SetName(std::string name) {
+void AnimatedGameObject::SetName(const std::string& name) {
     _name = name;
 }
 
-void AnimatedGameObject::SetSkinnedModel(std::string name) {
+void AnimatedGameObject::SetSkinnedModel(const std::string& name) {
     SkinnedModel* ptr = AssetManager::GetSkinnedModelByName(name);
     if (ptr) {
 
@@ -713,7 +713,7 @@ void AnimatedGameObject::EnableDrawingForAllMesh() {
     }
 }
 
-void AnimatedGameObject::EnableDrawingForMeshByMeshName(std::string meshName) {
+void AnimatedGameObject::EnableDrawingForMeshByMeshName(const std::string& meshName) {
     for (MeshRenderingEntry& meshRenderingEntry : _meshRenderingEntries) {
         if (meshRenderingEntry.meshName == meshName) {
             meshRenderingEntry.drawingEnabled = true;
@@ -723,7 +723,7 @@ void AnimatedGameObject::EnableDrawingForMeshByMeshName(std::string meshName) {
     //std::cout << "DisableDrawingForMeshByMeshName() called but name " << meshName << " was not found!\n";
 }
 
-void AnimatedGameObject::DisableDrawingForMeshByMeshName(std::string meshName) {
+void AnimatedGameObject::DisableDrawingForMeshByMeshName(const std::string& meshName) {
     for (MeshRenderingEntry& meshRenderingEntry : _meshRenderingEntries) {
         if (meshRenderingEntry.meshName == meshName) {
             meshRenderingEntry.drawingEnabled = false;

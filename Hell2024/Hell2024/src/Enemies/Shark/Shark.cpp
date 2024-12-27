@@ -1,25 +1,14 @@
 #include "Shark.h"
-#include "SharkLogic.h"
+#include "SharkPathManager.h"
+#include "../Game/Game.h"
 #include "../Game/Scene.h"
+#include "../Game/Water.h"
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include "glm/gtx/hash.hpp"
 #include "../Input/Input.h"
 #include "../Math/LineMath.hpp"
-
-void Shark::SetPosition(glm::vec3 position) {   
-    m_spinePositions[0] = position;
-    for (int i = 1; i < SHARK_SPINE_SEGMENT_COUNT; i++) {
-        m_spinePositions[i].x = m_spinePositions[0].x;
-        m_spinePositions[i].y = m_spinePositions[0].y;
-        m_spinePositions[i].z = m_spinePositions[i-1].z - m_spineSegmentLengths[i];
-    }
-}
-
-void Shark::SetDirection(glm::vec3 direction) {
-    std::cout << "Shark::SetDirection(glm::vec3 direction) DOES NOTHING!!!!!!!!!";
-}
 
 void Shark::Init() {
     glm::vec3 initialPosition = glm::vec3(7.0f, -0.1f, -15.7);
@@ -36,7 +25,7 @@ void Shark::Init() {
 
     // Create ragdoll
     PxU32 raycastFlag = RaycastGroup::RAYCAST_ENABLED;
-    PxU32 collsionGroupFlag = CollisionGroup::RAGDOLL;
+    PxU32 collsionGroupFlag = CollisionGroup::SHARK;
     PxU32 collidesWithGroupFlag = CollisionGroup::ENVIROMENT_OBSTACLE | CollisionGroup::GENERIC_BOUNCEABLE | CollisionGroup::RAGDOLL | CollisionGroup::PLAYER;
     animatedGameObject->LoadRagdoll("Shark.rag", raycastFlag, collsionGroupFlag, collidesWithGroupFlag);
     m_init = true;
@@ -126,7 +115,17 @@ void Shark::Init() {
     //std::cout << "SET SHARK POSITION!\n";
     //std::cout << "SET SHARK POSITION!\n";
     //std::cout << "SET SHARK POSITION!\n";
-    CreatePhyicsObjects();
+    //CreatePhyicsObjects();
+}
+
+void Shark::SetPosition(glm::vec3 position) {
+    m_spinePositions[0] = position;
+    for (int i = 1; i < SHARK_SPINE_SEGMENT_COUNT; i++) {
+        m_spinePositions[i].x = m_spinePositions[0].x;
+        m_spinePositions[i].y = -0.1f;// m_spinePositions[0].y;
+        m_spinePositions[i].z = m_spinePositions[i - 1].z - m_spineSegmentLengths[i];
+        m_rotation = 0;
+    }
 }
 
 void Shark::CreatePhyicsObjects() {
@@ -168,20 +167,21 @@ void Shark::CreatePhyicsObjects() {
 }
 
 void Shark::UpdatePxRigidStatics() {
-    AnimatedGameObject* animatedGameObject = Scene::GetAnimatedGameObjectByIndex(m_animatedGameObjectIndex);
-    if (animatedGameObject) {
-        Ragdoll& ragdoll = animatedGameObject->m_ragdoll;
-        int i = 0;
-        for (RigidComponent& rigidComponent : ragdoll.m_rigidComponents) {
-            if (rigidComponent.pxRigidBody && m_collisionPxRigidStatics[i]) {
-                PxTransform pxTransform = rigidComponent.pxRigidBody->getGlobalPose();
-                glm::vec3 position = Util::PxVec3toGlmVec3(pxTransform.p);
-                m_collisionPxRigidStatics[i]->setGlobalPose(pxTransform);
-            }
-            i++;
-        }
-    }
+   //AnimatedGameObject* animatedGameObject = Scene::GetAnimatedGameObjectByIndex(m_animatedGameObjectIndex);
+   //if (animatedGameObject) {
+   //    Ragdoll& ragdoll = animatedGameObject->m_ragdoll;
+   //    int i = 0;
+   //    for (RigidComponent& rigidComponent : ragdoll.m_rigidComponents) {
+   //        if (rigidComponent.pxRigidBody && m_collisionPxRigidStatics[i]) {
+   //            PxTransform pxTransform = rigidComponent.pxRigidBody->getGlobalPose();
+   //            glm::vec3 position = Util::PxVec3toGlmVec3(pxTransform.p);
+   //            m_collisionPxRigidStatics[i]->setGlobalPose(pxTransform);
+   //        }
+   //        i++;
+   //    }
+   //}
 }
+
 
 void Shark::CleanUp() {
     for (int i = 0; i < m_collisionPxShapes.size(); i++) {
@@ -203,104 +203,33 @@ void Shark::CleanUp() {
     m_animatedGameObjectIndex = -1;
 }
 
-void Shark::Update(float deltaTime) {
-
-    AnimatedGameObject* animatedGameObject = Scene::GetAnimatedGameObjectByIndex(m_animatedGameObjectIndex);
-    static bool anim = true;
-    if (Input::KeyPressed(HELL_KEY_DOWN)) {
-        anim = !anim;
-        if (anim) {
-            animatedGameObject->PlayAndLoopAnimation("Shark_Attack_Left", 1.0f);
-        }
-        else {
-            animatedGameObject->PlayAndLoopAnimation("Shark_Attack_Right", 1.0f);
-        }
-    }
-
-    UpdatePxRigidStatics();
-
-    if (Input::KeyDown(HELL_KEY_LEFT)) {
-        m_rotation += m_rotationSpeed * deltaTime;
-    }
-    if (Input::KeyDown(HELL_KEY_RIGHT)) {
-        m_rotation -= m_rotationSpeed * deltaTime;
-    }
-
-
-    // Move
-    if (m_sharkMovementState == SharkMovementState::FOLLOWING_PATH) {
-        glm::vec3 nextPathPoint = SharkLogic::GetSharkPathByIndex(0)->m_points[m_nextPathPointIndex].position;
-        glm::vec3 dirToNextPathPoint = glm::normalize(nextPathPoint - GetHeadPosition());
-        SetTarget(nextPathPoint);
-        if (TargetIsOnLeft(m_targetPosition)) {
-            m_movementDirection = SharkMovementDirection::LEFT;
-        }
-        else {
-            m_movementDirection = SharkMovementDirection::RIGHT;
-        }
-    }
-
-
-    // Move forward
-    if (m_sharkMovementState == SharkMovementState::FOLLOWING_PATH) {
-        m_spinePositions[0] += GetForwardVector() * m_swimSpeed * deltaTime;
-
-        // Rotate
-        if (m_movementDirection == SharkMovementDirection::LEFT) {
-            m_rotation += m_rotationSpeed * deltaTime;
-        }
-        if (m_movementDirection == SharkMovementDirection::RIGHT) {
-            m_rotation -= m_rotationSpeed * deltaTime;
-        }
-
-        // Move the rest of the spine
-        for (int i = 1; i < SHARK_SPINE_SEGMENT_COUNT; ++i) {
-            glm::vec3 direction = m_spinePositions[i - 1] - m_spinePositions[i];
-            float currentDistance = glm::length(direction);
-            if (currentDistance > m_spineSegmentLengths[i - 1]) {
-                glm::vec3 correction = glm::normalize(direction) * (currentDistance - m_spineSegmentLengths[i - 1]);
-                m_spinePositions[i] += correction;
-            }
-        }
-    }
+void Shark::Respawn() {
+    SetPositionToBeginningOfPath();
+    m_movementState = SharkMovementState::FOLLOWING_PATH;
+    m_health = SHARK_HEALTH_MAX;
+    m_isDead = false;
+    m_hasBitPlayer = false;
+    PlayAndLoopAnimation("Shark_Swim", 1.0f);
 }
 
+void Shark::Kill() {
+    m_health = 0;
+    m_isDead = true;
+    Audio::PlayAudio("Shark_Death.wav", 1.0f);
+    PlayAndLoopAnimation("Shark_Die", 1.0f);
+}
+
+void Shark::HuntPlayer(int playerIndex) {
+    m_hunterPlayerIndex = playerIndex;
+    m_movementState = SharkMovementState::HUNT_PLAYER;
+    m_huntState = HuntState::CHARGE_PLAYER;
+}
 
 
 // Helper functions
 
-void Shark::SetTarget(glm::vec3 position) {
-    m_targetPosition = position;
-}
 
-glm::vec3 Shark::GetForwardVector() {
-    return m_forward;
-}
 
-glm::vec3 Shark::GetRightVector() {
-    return m_right;
-}
-
-glm::vec3 Shark::GetHeadPosition() {
-    return m_spinePositions[0];
-}
-
-glm::vec3 Shark::GetSpinePosition(int index) {
-    if (index >= 0 && index < SHARK_SPINE_SEGMENT_COUNT) {
-        return m_spinePositions[index];
-    }
-    else {
-        return glm::vec3(0.0f, 0.0f, 0.0f);
-    }
-}
-
-glm::vec3 Shark::GetCollisionSphereFrontPosition() {
-    return GetHeadPosition() + GetForwardVector() * glm::vec3(COLLISION_SPHERE_RADIUS);
-}
-
-glm::vec3 Shark::GetCollisionLineEnd() {
-    return GetCollisionSphereFrontPosition() + (GetForwardVector() * GetTurningRadius());
-}
 
 float CalculateAngle(const glm::vec3& from, const glm::vec3& to) {
     return atan2(to.x - from.x, to.z - from.z);
@@ -345,4 +274,13 @@ bool Shark::TargetIsOnLeft(glm::vec3 targetPosition) {
     glm::vec3 lineNormal = LineMath::GetLineNormal(lineStart, lineEnd);
     glm::vec3 midPoint = LineMath::GetLineMidPoint(lineStart, lineEnd);
     return LineMath::IsPointOnOtherSideOfLine(lineStart, lineEnd, lineNormal, targetPosition);
+}
+
+void Shark::SetPositionToBeginningOfPath() {
+    AnimatedGameObject* animatedGameObject = Scene::GetAnimatedGameObjectByIndex(m_animatedGameObjectIndex);
+    if (SharkPathManager::PathExists()) {
+        SharkPath* path = SharkPathManager::GetSharkPathByIndex(0);
+        SetPosition(path->m_points[0].position);
+        m_nextPathPointIndex = 1;
+    }
 }

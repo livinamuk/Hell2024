@@ -97,9 +97,9 @@ void Dobermann::Kill() {
 
 void Dobermann::Update(float deltaTime) {
 
-    if (Input::KeyPressed(HELL_KEY_7)) {
-        m_currentState = DobermannState::RETURN_TO_ORIGIN;
-    }
+    //if (Input::KeyPressed(HELL_KEY_7)) {
+    //    m_currentState = DobermannState::RETURN_TO_ORIGIN;
+    //}
 
     Player* targetPlayer = Game::GetPlayerByIndex(m_targetPlayerIndex);
     AnimatedGameObject* animatedGameObject = GetAnimatedGameObject();

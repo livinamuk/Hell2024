@@ -13,13 +13,11 @@ struct SharkPath {
     std::vector<SharkPathPoint> m_points;
 };
 
-namespace SharkLogic {
+namespace SharkPathManager {
     void AddPath(std::vector<glm::vec3>& path);
-    void Update(float deltaTime);
 
     std::vector<SharkPath>& GetSharkPaths();
     void ClearSharkPaths();
-    void SetSharkToBeginningOfPath();
     Shark* GetSharkByIndex(int index);
     SharkPath* GetSharkPathByIndex(int index);
     bool PathExists();

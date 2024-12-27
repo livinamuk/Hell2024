@@ -401,14 +401,19 @@ void Ragdoll::LoadFromJSON(std::string filename, PxU32 raycastFlag, PxU32 collis
 }
 
 RigidComponent* Ragdoll::GetRigidByName(std::string& name) {
-    //std::cout << "m_rigidComponents size: " << m_rigidComponents.size() << "\n";
     for (RigidComponent& rigidComponent : m_rigidComponents) {
-        //std::cout << "rigidComponent: " << rigidComponent.correspondingJointName << "\n";
         if (rigidComponent.correspondingJointName == name) {
             return &rigidComponent;
         }
     }
     return nullptr;
+}
+
+
+void Ragdoll::SetKinematicState(bool state) {
+    for (RigidComponent& rigidComponent : m_rigidComponents) {
+        rigidComponent.pxRigidBody->setRigidBodyFlag(PxRigidBodyFlag::eKINEMATIC, state);
+    }
 }
 
 void Ragdoll::EnableVisualization() {
@@ -453,4 +458,10 @@ void Ragdoll::DisableCollision() {
     }*/
 }
 
+void Ragdoll::CleanUp() {
+    for (RigidComponent& rigidComponent : m_rigidComponents) {
+        Physics::Destroy(rigidComponent.pxRigidBody);
+    }
+    m_rigidComponents.clear();
+}
 

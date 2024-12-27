@@ -8,7 +8,7 @@
 #include "../Core/Audio.h"
 #include "../Core/JSON.hpp"
 #include "../Editor/CSG.h"
-#include "../Enemies/Shark/SharkLogic.h"
+#include "../Enemies/Shark/SharkPathManager.h"
 #include "../Game/Game.h"
 #include "../Input/Input.h"
 #include "../Renderer/GlobalIllumination.h"
@@ -85,7 +85,7 @@ void Scene::SaveMapData(const std::string& fileName) {
 
     //  Save shark paths
     nlohmann::json jsonSharkPoints = nlohmann::json::array();
-    for (const SharkPath& sharkPath : SharkLogic::GetSharkPaths()) {
+    for (const SharkPath& sharkPath : SharkPathManager::GetSharkPaths()) {
         std::vector<float> floatArray;
         floatArray.reserve(floatArray.size() + (sharkPath.m_points.size() * 3));
         for (const SharkPathPoint& pathPoint : sharkPath.m_points) {
@@ -215,7 +215,7 @@ void Scene::LoadMapData(const std::string& fileName) {
 
     // Load Shark Paths
     int j = 0;
-    SharkLogic::ClearSharkPaths();
+    SharkPathManager::ClearSharkPaths();
     //std::cout << "Shark path count: " << data["sharkPathPoints"].size() << "\n";
     for (const auto& jsonObject : data["sharkPathPoints"]) {
         std::vector<float> floatArray = jsonObject["points"];
@@ -228,7 +228,7 @@ void Scene::LoadMapData(const std::string& fileName) {
             sharkPathPoint.y = floatArray[i+1];
             sharkPathPoint.z = floatArray[i+2];
         }
-        SharkLogic::AddPath(vec3Array);
+        SharkPathManager::AddPath(vec3Array);
     }
 
     // Load Christmas lights
@@ -2336,6 +2336,13 @@ void Scene::ProcessBullets() {
                             BloodDecal* decal = &Scene::g_bloodDecals.back();
                         }
 
+
+                        //rayResult.hitFound&& rayResult.objectType == ObjectType::
+                        if (rayResult.hitPosition.y < 2.5f) {
+                            Shark& shark = Scene::GetShark();
+                            shark.m_health -= bullet.damage;
+                            shark.m_movementState = SharkMovementState::HUNT_PLAYER;
+                        }
 
 
                         // FIX THIS LATER

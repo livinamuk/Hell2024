@@ -1,5 +1,6 @@
 #include "Editor.h" 
 #include "../Game/Game.h"
+#include "../Game/Scene.h"
 #include "../Util.hpp"
 
 namespace Editor {
@@ -11,6 +12,6 @@ std::string& Editor::GetDebugText() {
 }
 
 void Editor::UpdateDebugText() {
-
-    g_debugText = "Map Editor Mode: " +  Util::EditorModeToString(Game::g_editorMode);
+    g_debugText = "Map Editor Mode: " +  Util::EditorModeToString(Game::g_editorMode) + "\n\n";
+    g_debugText += Scene::GetShark().GetDebugText();
 }

@@ -65,26 +65,26 @@ public:
     std::vector<uint32_t> m_skinnedBufferIndices;
 
 	void Update(float deltaTime);
-	void SetName(std::string name);
-	void SetSkinnedModel(std::string skinnedModelName);
+	void SetName(const std::string& name);
+	void SetSkinnedModel(const std::string& skinnedModelName);
 	void SetScale(float scale);
 	void SetPosition(glm::vec3 position);
 	void SetRotationX(float rotation);
 	void SetRotationY(float rotation);
 	void SetRotationZ(float rotation);
 	void ToggleAnimationPause();
-	void PlayAnimation(std::string animationName, float speed);
-	void PlayAndLoopAnimation(std::string animationName, float speed);
+	void PlayAnimation(const std::string& animationName, float speed);
+	void PlayAndLoopAnimation(const std::string& animationName, float speed);
     void PauseAnimation();
     void SetAnimationModeToBindPose();
-    void SetMeshMaterialByMeshName(std::string meshName, const char* materialName);
+    void SetMeshMaterialByMeshName(const std::string& meshName, const char* materialName);
     void SetMeshMaterialByMeshIndex(int meshIndex, const char* materialName);
-    void SetMeshToRenderAsGlassByMeshIndex(std::string materialName);
-    void SetMeshEmissiveColorTextureByMeshName(std::string meshName, std::string textureName);
+    void SetMeshToRenderAsGlassByMeshIndex(const std::string& materialName);
+    void SetMeshEmissiveColorTextureByMeshName(const std::string& meshName, const std::string& textureName);
 	void SetAllMeshMaterials(const char* materialName);
     void UpdateBoneTransformsFromBindPose();
     void UpdateBoneTransformsFromRagdoll();
-	glm::mat4 GetBoneWorldMatrixFromBoneName(std::string name);
+	glm::mat4 GetBoneWorldMatrixFromBoneName(const std::string& name);
 
 	std::string GetName();
 	const glm::mat4 GetModelMatrix();
@@ -107,8 +107,8 @@ public:
     void SetAnimatedModeToRagdoll();
     void DestroyRagdoll();
     void EnableDrawingForAllMesh();
-    void EnableDrawingForMeshByMeshName(std::string meshName);
-    void DisableDrawingForMeshByMeshName(std::string meshName);
+    void EnableDrawingForMeshByMeshName(const std::string& meshName);
+    void DisableDrawingForMeshByMeshName(const std::string& meshName);
     void PrintMeshNames();
     void EnableBlendingByMeshIndex(int index);
 

@@ -6,7 +6,7 @@
 #include "../Game/Game.h"
 #include "../Game/Scene.h"
 #include "../Game/Water.h"
-#include "../Enemies/Shark/SharkLogic.h"
+#include "../Enemies/Shark/SharkPathManager.h"
 #include "../Input/Input.h"
 #include "../Util.hpp"
 
@@ -57,7 +57,7 @@ void Editor::UpdateSharkPathEditor(float deltaTime) {
                 if (distanceToFirstPoint < 2.5f) {
                     Audio::PlayAudio(AUDIO_SELECT, 1.00f);
                     g_State = SharkPathEditorState::IDLE;
-                    SharkLogic::AddPath(g_sharkPath);
+                    SharkPathManager::AddPath(g_sharkPath);
                     g_sharkPath.clear();
 
                 }
