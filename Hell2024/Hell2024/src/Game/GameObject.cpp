@@ -896,38 +896,6 @@ void GameObject::LoadSavedState() {
     }
 }
 
-/*
-void GameObject::EnableRaycasting() {
-    PxFilterData filterData = m_raycastRigidStatic.shape->getQueryFilterData();
-    filterData.word0 = RAYCAST_ENABLED;
-    m_raycastRigidStatic.shape->setQueryFilterData(filterData);       // ray casts
-    m_raycastRigidStatic.shape->setSimulationFilterData(filterData);  // collisions
-}
-
-
-void GameObject::DisableRaycasting() {
-    PxFilterData filterData = m_raycastRigidStatic.shape->getQueryFilterData();
-    filterData.word0 = RAYCAST_DISABLED;
-    m_raycastRigidStatic.shape->setQueryFilterData(filterData);       // ray casts
-    m_raycastRigidStatic.shape->setSimulationFilterData(filterData);  // collisions
-}
-
-void GameObject::SetCollisionGroup(CollisionGroup collisionGroup) {
-    PxFilterData filterData = m_raycastRigidStatic.shape->getQueryFilterData();
-    filterData.word1 = collisionGroup;
-    m_raycastRigidStatic.shape->setQueryFilterData(filterData);       // ray casts
-    m_raycastRigidStatic.shape->setSimulationFilterData(filterData);  // collisions
-
-}
-
-void GameObject::SetCollidesWithGroup(PxU32 collisionGroup) {
-    PxFilterData filterData = m_raycastRigidStatic.shape->getQueryFilterData();
-    filterData.word1 = collisionGroup;
-    m_raycastRigidStatic.shape->setQueryFilterData(filterData);       // ray casts
-    m_raycastRigidStatic.shape->setSimulationFilterData(filterData);  // collisions
-}*/
-
-
 void GameObject::UpdateRenderItems() {
     m_renderItems.clear();
     m_renderItemsBlended.clear();

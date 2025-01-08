@@ -136,6 +136,25 @@ void Player::UpdateSwimmingMovement(float deltaTime) {
     float yVelocityCancelationInterpolationSpeed = 15;
     m_yVelocity = Util::FInterpTo(m_yVelocity, 0, deltaTime, yVelocityCancelationInterpolationSpeed);
 
+    float m_swimVerticalInterpolationSpeed = 15.0f;
+    float m_swimMaxVerticalAcceleration = 0.05f;
+
+    // Vertical movement
+    if (PressingCrouch()) {
+        m_swimVerticalAcceleration = Util::FInterpTo(m_swimVerticalAcceleration, -m_swimMaxVerticalAcceleration, deltaTime, m_swimVerticalInterpolationSpeed);
+        //m_swimVerticalAcceleration -= m_swimVerticalSpeed * deltaTime;
+    }
+    else if (PresingJump()) {
+       // m_swimVerticalAcceleration += m_swimVerticalSpeed * deltaTime;
+        m_swimVerticalAcceleration = Util::FInterpTo(m_swimVerticalAcceleration, m_swimMaxVerticalAcceleration, deltaTime, m_swimVerticalInterpolationSpeed);
+    }
+    else {
+        m_swimVerticalAcceleration = Util::FInterpTo(m_swimVerticalAcceleration, 0.0f, deltaTime, 20.0f);
+    }
+    m_displacement.y += m_swimVerticalAcceleration;
+
+   // std::cout << "m_swimVerticalAcceleration: " << m_swimVerticalAcceleration << "\n";
+
     MoveCharacterController(glm::vec3(m_displacement.x, m_displacement.y, m_displacement.z));
 }
 

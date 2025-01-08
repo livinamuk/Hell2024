@@ -668,7 +668,7 @@ void Scene::LoadDefaultScene() {
         CreateGameObject();
         GameObject* mermaid = GetGameObjectByIndex(GetGameObjectCount() - 1);
         mermaid->SetPosition(14.4f, 2.1f, -1.7);
-        mermaid->SetModel("Mermaid3");
+        mermaid->SetModel("Mermaid");
         mermaid->SetMeshMaterial("Gold");
         mermaid->SetMeshMaterialByMeshName("Rock", "Rock");
         mermaid->SetMeshMaterialByMeshName("BoobTube", "BoobTube");
@@ -682,9 +682,8 @@ void Scene::LoadDefaultScene() {
         mermaid->SetMeshMaterialByMeshName("EyeRight", "MermaidEye");
         mermaid->SetMeshMaterialByMeshName("Tail", "MermaidTail");
         mermaid->SetMeshMaterialByMeshName("TailFin", "MermaidTail");
-        mermaid->SetMeshMaterialByMeshName("EyelashUpper", "MermaidLashes");
-        mermaid->SetMeshMaterialByMeshName("EyelashLower", "MermaidLashes");
-        mermaid->SetMeshMaterialByMeshName("red", "ChristmasHat");
+        mermaid->SetMeshMaterialByMeshName("EyelashUpper_HP", "MermaidLashes");
+        mermaid->SetMeshMaterialByMeshName("EyelashLower_HP", "MermaidLashes");
         mermaid->SetMeshMaterialByMeshName("Nails", "Nails");
         mermaid->SetMeshBlendingMode("EyelashUpper", BlendingMode::BLENDED);
         mermaid->SetMeshBlendingMode("EyelashLower", BlendingMode::BLENDED);
@@ -1931,12 +1930,6 @@ void Scene::CreateGeometryRenderItems() {
         //}
     }
 
-
-
-
-
-    static int ceilingMaterialIndex = AssetManager::GetMaterialIndex("Ceiling");
-
     // Ceiling trims
     static int ceilingTrimMeshIndex = AssetManager::GetModelByName("TrimCeiling")->GetMeshIndices()[0];
     static int floorTrimMeshIndex = AssetManager::GetModelByName("TrimFloor")->GetMeshIndices()[0];
@@ -1980,9 +1973,9 @@ void Scene::CreateGeometryRenderItems() {
     g_geometryRenderItems.insert(std::end(g_geometryRenderItems), std::begin(treeRenderItems), std::end(treeRenderItems));
 
     // Staircase
-    static Model* model = AssetManager::GetModelByIndex(AssetManager::GetModelIndexByName("Staircase"));
-    static int materialIndex = AssetManager::GetMaterialIndex("Stairs01");
-    for (Staircase& staircase: Scene::g_staircases) {
+    for (Staircase& staircase : Scene::g_staircases) {
+        static Model* model = AssetManager::GetModelByIndex(AssetManager::GetModelIndexByName("Staircase"));
+        static int materialIndex = AssetManager::GetMaterialIndex("Stairs01");
         Transform segmentOffset;
         for (int i = 0; i < staircase.m_stepCount / 3; i++) {
             for (auto& meshIndex : model->GetMeshIndices()) {
@@ -2338,10 +2331,9 @@ void Scene::ProcessBullets() {
 
 
                         //rayResult.hitFound&& rayResult.objectType == ObjectType::
-                        if (rayResult.hitPosition.y < 2.5f) {
+                        if (rayResult.hitPosition.y < 2.0f) {
                             Shark& shark = Scene::GetShark();
-                            shark.m_health -= bullet.damage;
-                            shark.m_movementState = SharkMovementState::HUNT_PLAYER;
+                            shark.GiveDamage(bullet.parentPlayerIndex, bullet.damage);
                         }
 
 
@@ -2702,27 +2694,6 @@ void Scene::LoadLightSetup(int index) {
         g_lights.push_back(lightC);
     }
 }
-
-
-
-/*
-AnimatedGameObject* Scene::GetAnimatedGameObjectByName(std::string name) {
-    if (name == "undefined") {
-        return nullptr;
-    }
-    for (AnimatedGameObject& gameObject : _animatedGameObjects) {
-        if (gameObject.GetName() == name) {
-            return &gameObject;
-        }
-    }
-    std::cout << "Scene::GetAnimatedGameObjectByName() failed, no object with name \"" << name << "\"\n";
-    return nullptr;
-}*/
-
-/*
-std::vector<AnimatedGameObject>& Scene::GetAnimatedGameObjects() {
-    return _animatedGameObjects;
-}*/
 
 void Scene::UpdateRTInstanceData() {
 

@@ -374,6 +374,7 @@ void AnimatedGameObject::CalculateBoneTransforms() {
         // shark go here
         // shark go here
 
+        //std::cout << i << ": " << NodeName << "\n";
 
         if (_skinnedModel->_filename == "SharkSkinned") {
           //  std::cout << "hi!\n";
@@ -393,61 +394,74 @@ void AnimatedGameObject::CalculateBoneTransforms() {
             float rot9 = Util::YRotationBetweenTwoPoints(shark.m_spinePositions[2], shark.m_spinePositions[1]) + HELL_PI * 0.5f;
             float rot10 = Util::YRotationBetweenTwoPoints(shark.m_spinePositions[1], shark.m_spinePositions[0]) + HELL_PI * 0.5f;
 
-            // Apply local rotation for each spine node
-            if (Util::StrCmp(NodeName, "Spine_00")) {
-                glm::vec3 position = shark.m_spinePositions[3];
-                glm::mat4 rotationMatrix = glm::rotate(glm::mat4(1.0f), rot0, glm::vec3(0, 1, 0));
-                NodeTransformation = glm::translate(glm::mat4(1.0f), position) * rotationMatrix * NodeTransformation;
-            }
-            else if (Util::StrCmp(NodeName, "BN_Spine_01")) {
-                float relativeRot = rot1 - rot0;
-                glm::mat4 rotationMatrix = glm::rotate(glm::mat4(1.0f), relativeRot, glm::vec3(0, 1, 0));
-                NodeTransformation = rotationMatrix * NodeTransformation;
-            }
-            else if (Util::StrCmp(NodeName, "BN_Spine_02")) {
-                float relativeRot = rot2 - rot1;
-                glm::mat4 rotationMatrix = glm::rotate(glm::mat4(1.0f), relativeRot, glm::vec3(0, 1, 0));
-                NodeTransformation = rotationMatrix * NodeTransformation;
-            }
-            else if (Util::StrCmp(NodeName, "BN_Spine_03")) {
-                float relativeRot = rot3 - rot2;
-                glm::mat4 rotationMatrix = glm::rotate(glm::mat4(1.0f), relativeRot, glm::vec3(0, 1, 0));
-                NodeTransformation = rotationMatrix * NodeTransformation;
-            }
-            else if (Util::StrCmp(NodeName, "BN_Spine_04")) {
-                float relativeRot = rot4 - rot3;
-                glm::mat4 rotationMatrix = glm::rotate(glm::mat4(1.0f), relativeRot, glm::vec3(0, 1, 0));
-                NodeTransformation = rotationMatrix * NodeTransformation;
-            }
-            else if (Util::StrCmp(NodeName, "BN_Spine_05")) {
-                float relativeRot = rot5 - rot4;
-                glm::mat4 rotationMatrix = glm::rotate(glm::mat4(1.0f), relativeRot, glm::vec3(0, 1, 0));
-                NodeTransformation = rotationMatrix * NodeTransformation;
-            }
-            else if (Util::StrCmp(NodeName, "BN_Spine_06")) {
-                float relativeRot = rot6 - rot5;
-                glm::mat4 rotationMatrix = glm::rotate(glm::mat4(1.0f), relativeRot, glm::vec3(0, 1, 0));
-                NodeTransformation = rotationMatrix * NodeTransformation;
-            }
-            else if (Util::StrCmp(NodeName, "BN_Spine_07")) {
-                float relativeRot = rot7 - rot6;
-                glm::mat4 rotationMatrix = glm::rotate(glm::mat4(1.0f), relativeRot, glm::vec3(0, 1, 0));
-                NodeTransformation = rotationMatrix * NodeTransformation;
-            }
-            else if (Util::StrCmp(NodeName, "BN_Neck_00")) {
-                float relativeRot = rot8 - rot1;
-                glm::mat4 rotationMatrix = glm::rotate(glm::mat4(1.0f), relativeRot, glm::vec3(0, 1, 0));
-                NodeTransformation = rotationMatrix * NodeTransformation;
-            }
-            else if (Util::StrCmp(NodeName, "BN_Neck_01")) {
-                float relativeRot = rot9 - rot8;
-                glm::mat4 rotationMatrix = glm::rotate(glm::mat4(1.0f), relativeRot, glm::vec3(0, 1, 0));
-                NodeTransformation = rotationMatrix * NodeTransformation;
-            }
-            else if (Util::StrCmp(NodeName, "BN_Head_00")) {
-                float relativeRot = rot10 - rot9;
-                glm::mat4 rotationMatrix = glm::rotate(glm::mat4(1.0f), relativeRot, glm::vec3(0, 1, 0));
-                NodeTransformation = rotationMatrix * NodeTransformation;
+            //float rotation0 = Util::YRotationBetweenTwoPoints(shark.m_spinePositions[1], shark.m_spinePositions[0]) + HELL_PI * 0.5f;
+            //float rotation1 = Util::YRotationBetweenTwoPoints(shark.m_spinePositions[2], shark.m_spinePositions[1]) + HELL_PI * 0.5f;
+            //float rotation2 = Util::YRotationBetweenTwoPoints(shark.m_spinePositions[3], shark.m_spinePositions[2]) + HELL_PI * 0.5f;
+            //float rotation3 = Util::YRotationBetweenTwoPoints(shark.m_spinePositions[4], shark.m_spinePositions[3]) + HELL_PI * 0.5f;
+            //float rotation4 = Util::YRotationBetweenTwoPoints(shark.m_spinePositions[5], shark.m_spinePositions[4]) + HELL_PI * 0.5f;
+            //float rotation5 = Util::YRotationBetweenTwoPoints(shark.m_spinePositions[6], shark.m_spinePositions[5]) + HELL_PI * 0.5f;
+            //float rotation6 = Util::YRotationBetweenTwoPoints(shark.m_spinePositions[7], shark.m_spinePositions[6]) + HELL_PI * 0.5f;
+            //float rotation7 = Util::YRotationBetweenTwoPoints(shark.m_spinePositions[8], shark.m_spinePositions[7]) + HELL_PI * 0.5f;
+            //float rotation8 = Util::YRotationBetweenTwoPoints(shark.m_spinePositions[9], shark.m_spinePositions[8]) + HELL_PI * 0.5f;
+            //float rotation9 = Util::YRotationBetweenTwoPoints(shark.m_spinePositions[10], shark.m_spinePositions[9]) + HELL_PI * 0.5f;
+
+            if (true) {
+                // Apply local rotation for each spine node
+                if (Util::StrCmp(NodeName, "Spine_00")) {
+                    glm::vec3 position = shark.m_spinePositions[3];
+                    glm::mat4 rotationMatrix = glm::rotate(glm::mat4(1.0f), rot0, glm::vec3(0, 1, 0));
+                    NodeTransformation = glm::translate(glm::mat4(1.0f), position) * rotationMatrix * NodeTransformation;
+                }
+                if (Util::StrCmp(NodeName, "BN_Spine_01")) {
+                    float relativeRot = rot1 - rot0;
+                    glm::mat4 rotationMatrix = glm::rotate(glm::mat4(1.0f), relativeRot, glm::vec3(0, 1, 0));
+                    NodeTransformation = rotationMatrix * NodeTransformation;
+                }
+                else if (Util::StrCmp(NodeName, "BN_Spine_02")) {
+                    float relativeRot = rot2 - rot1;
+                    glm::mat4 rotationMatrix = glm::rotate(glm::mat4(1.0f), relativeRot, glm::vec3(0, 1, 0));
+                    NodeTransformation = rotationMatrix * NodeTransformation;
+                }
+                else if (Util::StrCmp(NodeName, "BN_Spine_03")) {
+                    float relativeRot = rot3 - rot2;
+                    glm::mat4 rotationMatrix = glm::rotate(glm::mat4(1.0f), relativeRot, glm::vec3(0, 1, 0));
+                    NodeTransformation = rotationMatrix * NodeTransformation;
+                }
+                else if (Util::StrCmp(NodeName, "BN_Spine_04")) {
+                    float relativeRot = rot4 - rot3;
+                    glm::mat4 rotationMatrix = glm::rotate(glm::mat4(1.0f), relativeRot, glm::vec3(0, 1, 0));
+                    NodeTransformation = rotationMatrix * NodeTransformation;
+                }
+                else if (Util::StrCmp(NodeName, "BN_Spine_05")) {
+                    float relativeRot = rot5 - rot4;
+                    glm::mat4 rotationMatrix = glm::rotate(glm::mat4(1.0f), relativeRot, glm::vec3(0, 1, 0));
+                    NodeTransformation = rotationMatrix * NodeTransformation;
+                }
+                else if (Util::StrCmp(NodeName, "BN_Spine_06")) {
+                    float relativeRot = rot6 - rot5;
+                    glm::mat4 rotationMatrix = glm::rotate(glm::mat4(1.0f), relativeRot, glm::vec3(0, 1, 0));
+                    NodeTransformation = rotationMatrix * NodeTransformation;
+                }
+                else if (Util::StrCmp(NodeName, "BN_Spine_07")) {
+                    float relativeRot = rot7 - rot6;
+                    glm::mat4 rotationMatrix = glm::rotate(glm::mat4(1.0f), relativeRot, glm::vec3(0, 1, 0));
+                    NodeTransformation = rotationMatrix * NodeTransformation;
+                }
+                else if (Util::StrCmp(NodeName, "BN_Neck_00")) {
+                    float relativeRot = rot8 - rot1;
+                    glm::mat4 rotationMatrix = glm::rotate(glm::mat4(1.0f), relativeRot, glm::vec3(0, 1, 0));
+                    NodeTransformation = rotationMatrix * NodeTransformation;
+                }
+                else if (Util::StrCmp(NodeName, "BN_Neck_01")) {
+                    float relativeRot = rot9 - rot8;
+                    glm::mat4 rotationMatrix = glm::rotate(glm::mat4(1.0f), relativeRot, glm::vec3(0, 1, 0));
+                    NodeTransformation = rotationMatrix * NodeTransformation;
+                }
+                else if (Util::StrCmp(NodeName, "BN_Head_00")) {
+                    float relativeRot = rot10 - rot9;
+                    glm::mat4 rotationMatrix = glm::rotate(glm::mat4(1.0f), relativeRot, glm::vec3(0, 1, 0));
+                    NodeTransformation = rotationMatrix * NodeTransformation;
+                }
             }
         }
 

@@ -151,10 +151,11 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <ClCompile Include="src\Editor\Edior_SharkPath.cpp" />
     <ClCompile Include="src\Editor\Editor.cpp" />
     <ClCompile Include="src\Editor\Editor_ChristmasLights.cpp" />
-    <ClCompile Include="src\Editor\Editor_DebugText.cpp" />
+    <ClCompile Include="src\Editor\Editor_Debug.cpp" />
     <ClCompile Include="src\Enemies\Shark\SharkPathManager.cpp" />
-    <ClCompile Include="src\Enemies\Shark\Shark_DebugKeys.cpp" />
+    <ClCompile Include="src\Enemies\Shark\Shark_Debug.cpp" />
     <ClCompile Include="src\Enemies\Shark\Shark_Update.cpp" />
+    <ClCompile Include="src\Enemies\Shark\Shark_Update_HuntingPlayer.cpp" />
     <ClCompile Include="src\Enemies\Shark\Shark_Util.cpp" />
     <ClCompile Include="src\File\AssimpImporter.cpp" />
     <ClCompile Include="src\File\File.cpp" />
@@ -271,7 +272,9 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="res\shaders\OpenGL\test.frag" />
+    <ClInclude Include="src\API\OpenGL\GL_util.hpp" />
     <ClInclude Include="src\API\OpenGL\Types\GL_Cubemap2.h" />
+    <ClInclude Include="src\API\OpenGL\Types\GL_pbo.hpp" />
     <ClInclude Include="src\API\OpenGL\Types\GL_shadowMapArray.h" />
     <ClInclude Include="src\API\OpenGL\Types\GL_cubemapTexture.h" />
     <ClInclude Include="src\API\OpenGL\Types\GL_detachedMesh.hpp" />

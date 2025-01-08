@@ -56,6 +56,10 @@ void Renderer::UpdateDebugPointsMesh() {
         }
     }
 
+    // Shark points
+    std::vector<Vertex> sharkVertices = shark.GetDebugPointVertices();
+    vertices.insert(std::end(vertices), std::begin(sharkVertices), std::end(sharkVertices));
+
 
     Player* player = Game::GetPlayerByIndex(0);
 
@@ -276,6 +280,9 @@ void Renderer::UpdateDebugLinesMesh() {
         }
     }
 
+    // Shark lines
+    std::vector<Vertex> sharkVertices = shark.GetDebugLineVertices();
+    vertices.insert(std::end(vertices), std::begin(sharkVertices), std::end(sharkVertices));
 
     std::vector<PxRigidActor*> ignoreList;
 

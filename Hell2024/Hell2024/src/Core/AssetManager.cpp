@@ -85,20 +85,18 @@ namespace AssetManager {
     int _quadMeshIndexQuadscreenBottomRight = 0;
     int _halfSizeQuadMeshIndex = 0;
     
-    bool g_loadedCustomFiles = false;
-
     // Async
     std::mutex _modelsMutex;
+    std::mutex g_meshMutex;
     std::mutex _skinnedModelsMutex;
     std::mutex _texturesMutex;
     std::mutex _consoleMutex;
-    std::vector<std::future<void>> _futures;
+    std::vector<std::future<void>> g_futures;
 
     std::vector<CMPTextureData> g_cmpTextureData;
 
     void GrabSkeleton(SkinnedModel& skinnedModel, const aiNode* pNode, int parentIndex);
     TextureData LoadTextureData(std::string filepath);
-
     void LoadCMPTextureData(CMPTextureData* cmpTextureData);
 }
 
@@ -123,6 +121,33 @@ TextureData AssetManager::LoadTextureData(std::string filepath) {
 
 void AssetManager::LoadCMPTextureData(CMPTextureData* cmpTextureData) {
     LoadDDSFile(cmpTextureData->m_compressedFilePath.c_str(), cmpTextureData->m_cmpTexture);
+    cmpTextureData->m_loadingState = LoadingState::LOADING_COMPLETE;
+}
+
+void AssetManager::ExportNewAndModifiedModels() {
+    // Scan for new obj and fbx files
+    std::vector<FileInfo> rawModelPaths = Util::IterateDirectory("res/assets_raw/models/", { "obj", "fbx" });
+    for (FileInfo& fileInfo : rawModelPaths) {
+        std::string assetPath = "res/assets/models/" + fileInfo.name + ".model";
+        bool exportFile = false;
+        if (Util::FileExists(assetPath)) {
+            uint64_t lastModified = File::GetLastModifiedTime(fileInfo.path);
+            ModelHeader modelHeader = File::ReadModelHeader(assetPath);
+            // If the file timestamps don't match, trigger a re-export
+            if (modelHeader.timestamp != lastModified) {
+                File::DeleteFile(assetPath);
+                exportFile = true;
+            }
+        }
+        else {
+            exportFile = true;
+        }
+        if (exportFile) {
+            ModelData modelData = AssimpImporter::ImportFbx(fileInfo.path);
+            File::ExportModel(modelData);
+            AddItemToLoadLog("Exported " + assetPath);
+        }
+    }
 }
 
 void AssetManager::FindAssetPaths() {
@@ -146,16 +171,10 @@ void AssetManager::FindAssetPaths() {
         }
     }
     // Models
-    auto modelPaths = std::filesystem::directory_iterator("res/models/");
-    for (const auto& entry : modelPaths) {
-        FileInfoOLD info = Util::GetFileInfo(entry);
-        if (info.filetype == "obj") {
-            if (info.fullpath == "") {
-                std::cout << "Empty path: " << entry << "\n";
-            }
-            g_models.emplace_back(info.fullpath);
-        }
+    for (FileInfo& fileInfo : Util::IterateDirectory("res/assets/models/")) {
+        g_models.emplace_back(fileInfo.name);
     }
+
     // Skinned models
     auto skinnedModelPaths = std::filesystem::directory_iterator("res/models/");
     for (const auto& entry : skinnedModelPaths) {
@@ -204,7 +223,6 @@ void AssetManager::FindAssetPaths() {
         // Do nothing
     }
 
-
     // Textures
     auto texturePaths = std::filesystem::directory_iterator("res/textures/");
     for (const auto& entry : texturePaths) {
@@ -231,7 +249,6 @@ void AssetManager::FindAssetPaths() {
     }
 }
 
-
 void AssetManager::AddItemToLoadLog(std::string item) {
     g_loadLog.push_back(item);
 }
@@ -241,25 +258,88 @@ std::vector<std::string>& AssetManager::GetLoadLog() {
     return g_loadLog;
 }
 
-
 bool AssetManager::LoadingComplete() {
     return g_completedLoadingTasks.g_all;
 }
 
-void CreateModelFromData(ModelData& modelData) {
-    Model& model = AssetManager::g_models.emplace_back();
-    model.SetName(modelData.name);
-    model.m_aabbMin = modelData.aabbMin;
-    model.m_aabbMax = modelData.aabbMax;
-    for (MeshData& meshData : modelData.meshes) {
-        model.AddMeshIndex(AssetManager::CreateMesh(meshData.name, meshData.vertices, meshData.indices, meshData.aabbMin, meshData.aabbMax));
+#include "API/OpenGL/Types/GL_pbo.hpp"
+#include "API/OpenGL/GL_util.hpp"
+
+
+void UploadCompressedTextureWithPBO(Texture* texture, CMPTextureData* cmpTextureData, PBO& pbo) {
+
+    if (!pbo.IsSyncComplete()) {
+        return;
+    }
+
+    CMP_Texture* cmpTexture = &cmpTextureData->m_cmpTexture;
+    OpenGLTexture& glTexture = texture->GetGLTexture();
+
+    // Get image format
+    uint32_t glFormat = OpenGLUtil::CMPFormatToGLInternalFromat(cmpTexture->format);
+    if (glFormat == 0xFFFFFFFF) {
+        std::cout << "Invalid format! Failed to load compressed texture: " << texture->GetFilename() << "\n";
+        return;
+    }
+
+    // Resize the PBO if necessary
+    pbo.Resize(cmpTexture->dwDataSize);
+
+    // Directly write to the persistently mapped pointer
+    void* buffer = pbo.GetMappedPointer(); // No need to map/unmap anymore
+    if (buffer) {
+        memcpy(buffer, cmpTexture->pData, cmpTexture->dwDataSize);
+    }
+    else {
+        std::cout << "Failed to access PBO mapped pointer for texture: " << texture->GetFilename() << "\n";
+        return;
+    }
+
+    // Bind the texture and use the PBO for upload
+    glGenTextures(1, &glTexture.GetHandleReference());
+    glBindTexture(GL_TEXTURE_2D, glTexture.GetHandleReference());
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+
+    pbo.Bind();
+    glCompressedTexImage2D(GL_TEXTURE_2D, 0, glFormat, cmpTexture->dwWidth, cmpTexture->dwHeight, 0, cmpTexture->dwDataSize, nullptr);
+    pbo.Unbind();
+
+    // Generate mipmaps if necessary
+    glGenerateMipmap(GL_TEXTURE_2D);
+
+    // Set a sync object for the upload
+    pbo.SetSync();
+
+    // Free the CMP texture data
+    free(cmpTexture->pData);
+
+    // Mark the texture as baked
+    cmpTextureData->m_bakingState = BakingState::BAKE_COMPLETE;
+
+    // Handle bindless textures if needed
+    glTexture.MakeBindlessTextureResident();
+}
+
+
+
+PBO g_pbo;
+
+void AssetManager::BakeNextItem() {
+    // CMP Textures
+
+    for (CMPTextureData& cmpTextureData : g_cmpTextureData) {
+        if (cmpTextureData.m_loadingState == LoadingState::LOADING_COMPLETE &&
+            cmpTextureData.m_bakingState == BakingState::AWAITING_BAKE) {
+            if (g_pbo.IsSyncComplete()) {
+                Texture* texture = GetTextureByName(cmpTextureData.m_textureName);
+                UploadCompressedTextureWithPBO(texture, &cmpTextureData, g_pbo);
+            }
+        }
     }
 }
 
 void AssetManager::LoadNextItem() {
-
-    
-
     // Hardcoded models
     if (!g_completedLoadingTasks.g_hardcodedModels) {
         CreateHardcodedModels();
@@ -267,21 +347,28 @@ void AssetManager::LoadNextItem() {
         g_completedLoadingTasks.g_hardcodedModels = true;
         return;
     }
+
+    if (g_pbo.GetHandle() == 0) {
+        g_pbo.Init(1024 * 1024);
+        std::cout << "initialized pbo\n";
+    }
+
     // CMP Textures
     for (CMPTextureData& cmpTextureData : g_cmpTextureData) {
         if (cmpTextureData.m_loadingState == LoadingState::AWAITING_LOADING_FROM_DISK) {
             cmpTextureData.m_loadingState = LoadingState::LOADING_FROM_DISK;
-            _futures.push_back(std::async(std::launch::async, LoadCMPTextureData, &cmpTextureData));
+            g_futures.push_back(std::async(std::launch::async, LoadCMPTextureData, &cmpTextureData));
             AddItemToLoadLog(cmpTextureData.m_compressedFilePath);
             return;
         }
     }
+
     // Cubemap Textures
     for (CubemapTexture& cubemapTexture : g_cubemapTextures) {
         if (cubemapTexture.m_awaitingLoadingFromDisk) {
             cubemapTexture.m_awaitingLoadingFromDisk = false;
             AddItemToLoadLog(cubemapTexture.m_fullPath);
-            _futures.push_back(std::async(std::launch::async, LoadCubemapTexture, &cubemapTexture));
+            g_futures.push_back(std::async(std::launch::async, LoadCubemapTexture, &cubemapTexture));
             return;
         }
     }
@@ -290,43 +377,28 @@ void AssetManager::LoadNextItem() {
         if (animation.m_awaitingLoadingFromDisk) {
             animation.m_awaitingLoadingFromDisk = false;
             AddItemToLoadLog(animation.m_fullPath);
-            _futures.push_back(std::async(std::launch::async, LoadAnimation, &animation));
+            g_futures.push_back(std::async(std::launch::async, LoadAnimation, &animation));
             return;
         }
     }
-  // for (Animation& animation : g_animations) {
-  //     if (!animation.m_loadedFromDisk) {
-  //         return;
-  //     }
-  // }
     // Skinned Models
     for (SkinnedModel& skinnedModel : g_skinnedModels) {
         if (skinnedModel.m_awaitingLoadingFromDisk) {
             skinnedModel.m_awaitingLoadingFromDisk = false;
             AddItemToLoadLog(skinnedModel.m_fullPath);
-            _futures.push_back(std::async(std::launch::async, LoadSkinnedModel, &skinnedModel));
+            g_futures.push_back(std::async(std::launch::async, LoadSkinnedModel, &skinnedModel));
             return;
         }
     }
-   // for (SkinnedModel& skinnedModel : g_skinnedModels) {
-   //     if (!skinnedModel.m_loadedFromDisk) {
-   //         return;
-   //     }
-   // }
     // Models
     for (Model& model : g_models) {
         if (model.m_awaitingLoadingFromDisk) {
             model.m_awaitingLoadingFromDisk = false;
-            AddItemToLoadLog(model.m_fullPath);
-            _futures.push_back(std::async(std::launch::async, LoadModel, &model));
+            AddItemToLoadLog("res/assets/models/" + model.GetName() + ".model");
+            g_futures.push_back(std::async(std::launch::async, LoadModel, &model));
             return;
         }
     }
-   //for (Model& model : g_models) {
-   //    if (!model.m_loadedFromDisk) {
-   //        return;
-   //    }
-   //}
     // Textures
     for (Texture& texture : g_textures) {
 
@@ -337,7 +409,7 @@ void AssetManager::LoadNextItem() {
         // Vulkan currently is WIP and takes these ones
         if (texture.GetLoadingState() == LoadingState::AWAITING_LOADING_FROM_DISK) {
             texture.SetLoadingState(LoadingState::LOADING_FROM_DISK);
-            _futures.push_back(std::async(std::launch::async, LoadTexture, &texture));
+            g_futures.push_back(std::async(std::launch::async, LoadTexture, &texture));
             AddItemToLoadLog(texture.m_fullPath);
             return;
         }
@@ -350,34 +422,38 @@ void AssetManager::LoadNextItem() {
     //}
 
     // This may not be necessary, but probably is 
-    bool allFuturesCompleted = std::all_of(_futures.begin(), _futures.end(), [](std::future<void>& f) {
+    bool allFuturesCompleted = std::all_of(g_futures.begin(), g_futures.end(), [](std::future<void>& f) {
         return f.wait_for(std::chrono::seconds(0)) == std::future_status::ready;
     });
     if (allFuturesCompleted) {
-        _futures.clear();
+        g_futures.clear();
     }
     else {
         return;
     }
 
-    // Bake CMPTextures
+    // If CMPTextures are all baked, then generate mips
     if (!g_completedLoadingTasks.g_cmpTexturesBaked) {
-        for (CMPTextureData& cmpTextureData: g_cmpTextureData) {
-            Texture* texture = GetTextureByName(cmpTextureData.m_textureName);
-            if (texture) {
-                texture->BakeCMPData(&cmpTextureData.m_cmpTexture);
-            }
-            else {
-                std::cout << cmpTextureData.m_textureName << " not found \n";
+        for (CMPTextureData& cmpTextureData : g_cmpTextureData) {
+            if (cmpTextureData.m_loadingState == LoadingState::LOADING_FROM_DISK &&
+                cmpTextureData.m_bakingState != BakingState::BAKE_COMPLETE) {
+                   return;
             }
         }
-        AddItemToLoadLog("Uploading CMPTextures to GPU");
+        std::cout << "Generating mips..\n";
+        for (CMPTextureData& cmpTextureData : g_cmpTextureData) {
+            Texture* texture = GetTextureByName(cmpTextureData.m_textureName);
+            texture->GetGLTexture().GenerateMipmaps();
+        }
         g_completedLoadingTasks.g_cmpTexturesBaked = true;
         return;
     }
     // Bake textures
     if (!g_completedLoadingTasks.g_texturesBaked) {
         for (Texture& texture : g_textures) {
+            if (BackEnd::GetAPI() == API::OPENGL && texture.m_compressed) {
+                continue;
+            }
             texture.Bake();
         }
         AddItemToLoadLog("Uploading textures to GPU");
@@ -396,28 +472,6 @@ void AssetManager::LoadNextItem() {
         return;
     }
     
-    // Load custom model files
-    if (!g_loadedCustomFiles) {
-
-        // Export any models that aren't converted to custom format yet
-        auto modelPaths = Util::IterateDirectory("res/models2/", { "obj", "fbx" });
-        for (FileInfo& fileInfo : modelPaths) {
-            std::string outputPath = MODEL_DIR + fileInfo.name + ".model";
-            if (!Util::FileExists(outputPath)) {
-                ModelData modelData = AssimpImporter::ImportFbx(fileInfo.path);
-                File::ExportModel(modelData);
-                std::cout << "Exported " << outputPath << "\n";
-            }
-        }
-        // Load CUSTOM Models
-        auto customModelPaths = Util::IterateDirectory(MODEL_DIR);
-        for (FileInfo& fileInfo : customModelPaths) {
-            ModelData modelData = File::ImportModel(fileInfo.GetFileNameWithExtension());
-            CreateModelFromData(modelData);
-        }
-        g_loadedCustomFiles = true;
-    }
-
     // Build index maps
     for (int i = 0; i < g_textures.size(); i++) {
         g_textureIndexMap[g_textures[i].GetFilename()] = i;
@@ -475,9 +529,6 @@ void AssetManager::LoadNextItem() {
     for (auto& text : g_loadLog) {
         //std::cout << text << "\n";
     }
-
-
-
 }
 
 
@@ -509,6 +560,7 @@ void AssetManager::LoadFont() {
 
     if (BackEnd::GetAPI() == API::OPENGL) {
         OpenGLRenderer::BindBindlessTextures();
+        AddItemToLoadLog("Bound bindless textures");
     }
     else if (BackEnd::GetAPI() == API::VULKAN) {
         VulkanRenderer::UpdateSamplerDescriptorSet();
@@ -518,7 +570,6 @@ void AssetManager::LoadFont() {
     }
 }
 
-
 void AssetManager::UploadVertexData() {
     if (BackEnd::GetAPI() == API::OPENGL) {
         OpenGLBackEnd::UploadVertexData(g_vertices, g_indices);
@@ -526,8 +577,8 @@ void AssetManager::UploadVertexData() {
     else if (BackEnd::GetAPI() == API::VULKAN) {
         VulkanBackEnd::UploadVertexData(g_vertices, g_indices);
     }
+    AddItemToLoadLog("Uploaded vertex data");
 }
-
 
 void AssetManager::UploadWeightedVertexData() {
     if (BackEnd::GetAPI() == API::OPENGL) {
@@ -536,16 +587,16 @@ void AssetManager::UploadWeightedVertexData() {
     else if (BackEnd::GetAPI() == API::VULKAN) {
         VulkanBackEnd::UploadWeightedVertexData(g_weightedVertices, g_weightedIndices);
     }
+    AddItemToLoadLog("Uploaded weighted vertex data");
 }
-
 
 void AssetManager::CreateMeshBLAS() {
     // TO DO: add code to delete any pre-existing BLAS
     for (Mesh& mesh : g_meshes) {
         mesh.accelerationStructure = VulkanBackEnd::CreateBottomLevelAccelerationStructure(mesh);
     }
+    AddItemToLoadLog("Created bottom level acceleration structures");
 }
-
 
 /*
 █▄ ▄█ █▀█ █▀▄ █▀▀ █
@@ -553,98 +604,28 @@ void AssetManager::CreateMeshBLAS() {
 ▀   ▀ ▀▀▀ ▀▀  ▀▀▀ ▀▀▀ */
 
 void AssetManager::LoadModel(Model* model) {
-
-    tinyobj::attrib_t attrib;
-    std::vector<tinyobj::shape_t> shapes;
-    std::vector<tinyobj::material_t> materials;
-    std::string warn;
-    std::string err;
-    glm::vec3 modelAabbMin = glm::vec3(std::numeric_limits<float>::max());
-    glm::vec3 modelAabbMax = glm::vec3(-std::numeric_limits<float>::max());
-
-    if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, model->m_fullPath.c_str())) {
-        std::cout << "LoadModel() failed to load: FAILED '" << model->m_fullPath << "'\n";
-        return;
-    }
-
-    std::unordered_map<Vertex, uint32_t> uniqueVertices = {};
-
-    for (const auto& shape : shapes) {
-
-        std::vector<Vertex> vertices;
-        std::vector<uint32_t> indices;
-        glm::vec3 aabbMin = glm::vec3(std::numeric_limits<float>::max());
-        glm::vec3 aabbMax = glm::vec3(-std::numeric_limits<float>::max());
-
-        for (int i = 0; i < shape.mesh.indices.size(); i++) {
-            Vertex vertex = {};
-            const auto& index = shape.mesh.indices[i];
-            vertex.position = {
-                attrib.vertices[3 * index.vertex_index + 0],
-                attrib.vertices[3 * index.vertex_index + 1],
-                attrib.vertices[3 * index.vertex_index + 2]
-            };
-            // Check if `normal_index` is zero or positive. negative = no normal data
-            if (index.normal_index >= 0) {
-                vertex.normal.x = attrib.normals[3 * size_t(index.normal_index) + 0];
-                vertex.normal.y = attrib.normals[3 * size_t(index.normal_index) + 1];
-                vertex.normal.z = attrib.normals[3 * size_t(index.normal_index) + 2];
-            }
-            if (attrib.texcoords.size() && index.texcoord_index != -1) { // should only be 1 or 2, there is some bug here where in debug where there were over 1000 on the sphere lines model...
-                vertex.uv = { attrib.texcoords[2 * index.texcoord_index + 0],	1.0f - attrib.texcoords[2 * index.texcoord_index + 1] };
-            }
-
-            if (uniqueVertices.count(vertex) == 0) {
-                uniqueVertices[vertex] = static_cast<uint32_t>(vertices.size());
-                vertices.push_back(vertex);
-            }
-
-            // store bounding box shit
-            aabbMin.x = std::min(aabbMin.x, vertex.position.x);
-            aabbMin.y = std::min(aabbMin.y, vertex.position.y);
-            aabbMin.z = std::min(aabbMin.z, vertex.position.z);
-            aabbMax.x = std::max(aabbMax.x, vertex.position.x);
-            aabbMax.y = std::max(aabbMax.y, vertex.position.y);
-            aabbMax.z = std::max(aabbMax.z, vertex.position.z);
-
-            indices.push_back(uniqueVertices[vertex]);
-        }
-
-        // Tangents
-        for (int i = 0; i < indices.size(); i += 3) {
-            Vertex* vert0 = &vertices[indices[i]];
-            Vertex* vert1 = &vertices[indices[i + 1]];
-            Vertex* vert2 = &vertices[indices[i + 2]];
-            glm::vec3 deltaPos1 = vert1->position - vert0->position;
-            glm::vec3 deltaPos2 = vert2->position - vert0->position;
-            glm::vec2 deltaUV1 = vert1->uv - vert0->uv;
-            glm::vec2 deltaUV2 = vert2->uv - vert0->uv;
-            float r = 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV1.y * deltaUV2.x);
-            glm::vec3 tangent = (deltaPos1 * deltaUV2.y - deltaPos2 * deltaUV1.y) * r;
-            glm::vec3 bitangent = (deltaPos2 * deltaUV1.x - deltaPos1 * deltaUV2.x) * r;
-            vert0->tangent = tangent;
-            vert1->tangent = tangent;
-            vert2->tangent = tangent;
-        }
-
-        modelAabbMin = Util::Vec3Min(modelAabbMin, aabbMin);
-        modelAabbMax = Util::Vec3Max(modelAabbMax, aabbMax);
-
-        std::lock_guard<std::mutex> lock(_modelsMutex);
-        model->AddMeshIndex(AssetManager::CreateMesh(shape.name, vertices, indices, aabbMin, aabbMax));
-    }
+    std::string filepath = "res/assets/models/" + model->GetName() + ".model";
+    ModelData modelData = File::ImportModel(filepath);
 
     // Build the bounding box
-    float width = std::abs(modelAabbMax.x - modelAabbMin.x);
-    float height = std::abs(modelAabbMax.y - modelAabbMin.y);
-    float depth = std::abs(modelAabbMax.z - modelAabbMin.z);
+    float width = std::abs(modelData.aabbMax.x - modelData.aabbMin.x);
+    float height = std::abs(modelData.aabbMax.y - modelData.aabbMin.y);
+    float depth = std::abs(modelData.aabbMax.z - modelData.aabbMin.z);
     BoundingBox boundingBox;
     boundingBox.size = glm::vec3(width, height, depth);
-    boundingBox.offsetFromModelOrigin = modelAabbMin;
+    boundingBox.offsetFromModelOrigin = modelData.aabbMin;
     model->SetBoundingBox(boundingBox);
-    model->m_aabbMin = modelAabbMin;
-    model->m_aabbMax = modelAabbMax;
+    model->m_aabbMin = modelData.aabbMin;
+    model->m_aabbMax = modelData.aabbMax;
 
+    // Store the mesh data
+    std::lock_guard<std::mutex> lock(g_meshMutex);
+    model->SetName(modelData.name);
+    model->m_aabbMin = modelData.aabbMin;
+    model->m_aabbMax = modelData.aabbMax;
+    for (MeshData& meshData : modelData.meshes) {
+        model->AddMeshIndex(AssetManager::CreateMesh(meshData.name, meshData.vertices, meshData.indices, meshData.aabbMin, meshData.aabbMax));
+    }
     // Done
     model->m_loadedFromDisk = true;
 }

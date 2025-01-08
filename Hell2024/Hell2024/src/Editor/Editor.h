@@ -39,7 +39,7 @@ namespace Editor {
     bool IsOpen();
     bool ObjectIsSelected();
     bool ObjectIsHoverered();
-    std::string& GetDebugText();
+    std::string GetDebugText();
     ObjectType& GetHoveredObjectType();
     ObjectType& GetSelectedObjectType();
     uint32_t GetSelectedObjectIndex();
@@ -62,9 +62,6 @@ namespace Editor {
     std::vector<RenderItem2D>& GetMenuRenderItems();
     std::vector<RenderItem2D>& GetEditorUIRenderItems();
     
-    void UpdateDebugText();
-
-
     inline int g_hoveredObjectIndex = 0;
     inline int g_selectedObjectIndex = 0;
     inline int g_hoveredVertexIndex = 0; // ranges from 0 to 3 for planes

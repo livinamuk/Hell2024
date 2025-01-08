@@ -23,10 +23,15 @@ struct OpenGLTexture {
     std::string& GetFilename();
     std::string& GetFiletype();
     void HotloadFromPath(const std::string filepath);
+    void MakeBindlessTextureResident();
+    void MakeBindlessTextureNonResident();
+
+    GLuint& GetHandleReference();
+    void GenerateMipmaps();
 
 private:
     GLuint ID;
-    GLuint64 bindlessID;
+    GLuint64 bindlessID = 0;
     std::string m_fullPath;
     std::string m_filename;
     std::string m_filetype;

@@ -133,6 +133,10 @@ private:
     int m_ladderOverlapIndexFeet = -1;
     int m_ladderOverlapIndexEyes = -1;
 
+    //float m_swimVerticalSpeed = 2.0f;
+    float m_swimVerticalAcceleration = 0.0f;
+    //float m_swimMaxVerticalAcceleration = 1.0f;
+
     glm::vec3 m_shopCameraPosition;
     glm::vec3 m_shopCameraRotation;
     glm::quat m_shopCameraRotationQ;
@@ -476,7 +480,7 @@ private:
 	float _currentViewHeight = m_viewHeightStanding;
     float m_walkingSpeed = 4.85f;
     float m_crouchingSpeed = 2.325f;
-    float m_swimmingSpeed = 3.5f;
+    float m_swimmingSpeed = 3.25f;
 	glm::mat4 _viewMatrix = glm::mat4(1);
 	glm::mat4 _inverseViewMatrix = glm::mat4(1);
 	glm::vec3 _viewPos = glm::vec3(0);

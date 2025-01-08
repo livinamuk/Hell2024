@@ -23,7 +23,6 @@
 
 namespace Util {
 
-
     inline glm::dvec3 Rot3D(glm::dvec3 v, glm::dvec2 rot) {
         glm::vec2 c = cos(rot);
         glm::vec2 s = sin(rot);
@@ -409,6 +408,10 @@ namespace Util {
 		return { quat.x, quat.y, quat.z, quat.w };
 	}
 
+    inline glm::quat PxQuatToGlmQuat(PxQuat quat) {
+        return { quat.x, quat.y, quat.z, quat.w };
+    }
+
     //inline long MapRange(long x, long in_min, long in_max, long out_min, long out_max) {
     //    return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
     //}
@@ -685,6 +688,21 @@ namespace Util {
         const float DeltaMove = Dist * glm::clamp(deltaTime * interpSpeed, 0.0f, 1.0f);
         return current + DeltaMove;
     }
+
+    inline glm::vec3 FInterpTo(const glm::vec3& current, const glm::vec3& target, float deltaTime, float interpSpeed) {
+        // If no interp speed, jump to target value
+        if (interpSpeed <= 0.f)
+            return target;
+        // Distance to reach
+        glm::vec3 Dist = target - current;
+        // If distance is too small, just set the desired location
+        if (glm::dot(Dist, Dist) < SMALL_NUMBER)
+            return target;
+        // Delta Move, Clamp so we do not overshoot
+        glm::vec3 DeltaMove = Dist * glm::clamp(deltaTime * interpSpeed, 0.0f, 1.0f);
+        return current + DeltaMove;
+    }
+
 
     inline bool AreNormalsAligned(const glm::vec3& normal1, const glm::vec3& normal2, float threshold = 0.999f) {
         float dotProduct = glm::dot(normal1, normal2);
@@ -1560,6 +1578,10 @@ namespace Util {
         std::vector<FileInfo> fileInfos;
         auto entries = std::filesystem::directory_iterator(directory);
         for (const auto& entry : entries) {
+            // Skip directories
+            if (!std::filesystem::is_regular_file(entry)) {
+                continue;
+            }
             FileInfo fileInfo;
             fileInfo.path = Util::GetFullPath(entry);
             fileInfo.name = Util::GetFileNameWithoutExtension(entry);

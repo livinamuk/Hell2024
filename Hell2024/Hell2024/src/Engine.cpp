@@ -4,9 +4,13 @@
 #include "Game/Game.h"
 #include "Renderer/Renderer.h"
 
+bool timerStarted = false;
+std::chrono::time_point<std::chrono::high_resolution_clock> startTime;
+
 void Engine::Run() {
 
     BackEnd::Init(API::OPENGL);
+
 
     while (BackEnd::WindowIsOpen()) {
 
@@ -15,11 +19,21 @@ void Engine::Run() {
 
         // Load files from disk
         if (!AssetManager::LoadingComplete()) {
+            if (!timerStarted) {
+                startTime = std::chrono::high_resolution_clock::now();
+                timerStarted = true;
+            }
             AssetManager::LoadNextItem();
+            AssetManager::BakeNextItem();
             Renderer::RenderLoadingScreen();
         }
         // Create game
         else if (!Game::IsLoaded()) {
+
+            auto stopTime = std::chrono::high_resolution_clock::now();
+            double elapsedTime = std::chrono::duration<double>(stopTime - startTime).count();
+            std::cout << "Loading took " << elapsedTime << " seconds.\n";
+
             Game::Create();
             AssetManager::UploadVertexData();
             AssetManager::UploadWeightedVertexData();

@@ -111,7 +111,7 @@ namespace Game {
 
         Audio::LoopAudioIfNotPlaying("Shark_SwimLoopAbove.wav", 0.5);
 
-        float distanceToPlayer = glm::distance(Scene::GetShark().GetHeadPosition(), Game::GetPlayerByIndex(0)->GetViewPos());
+        float distanceToPlayer = glm::distance(Scene::GetShark().GetHeadPosition2D(), Game::GetPlayerByIndex(0)->GetViewPos());
         float minDistance = 3.0f;
         float maxDistance = 40.0f;
         float volume = 0.0f;
@@ -169,7 +169,6 @@ namespace Game {
             else if (g_editorMode == EditorMode::SHARK_PATH) {
                 Editor::UpdateSharkPathEditor(deltaTime);
             }
-            Editor::UpdateDebugText();
         }
 
         if (Input::KeyPressed(HELL_KEY_PAGE_UP)) {
@@ -487,6 +486,8 @@ namespace Game {
             else {
                 RespawnAllPlayers();
                 Scene::ClearAllItemPickups();
+                Game::GetPlayerByIndex(0)->SetPosition(glm::vec3(2.77f, 2.0f, 9.24f));
+                Game::GetPlayerByIndex(0)->m_flashlightOn = true;
             }
         }
         if (Input::KeyPressed(HELL_KEY_GRAVE_ACCENT)) {

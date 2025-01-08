@@ -93,6 +93,7 @@ namespace BackEnd {
         glfwSetWindowFocusCallback(_window, window_focus_callback);
 
         if (GetAPI() == API::OPENGL) {
+            AssetManager::ExportNewAndModifiedModels();
             AssetManager::FindAssetPaths();
         }
 

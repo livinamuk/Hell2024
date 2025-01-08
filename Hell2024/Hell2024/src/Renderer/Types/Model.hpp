@@ -14,16 +14,14 @@ public:
     glm::vec3 m_aabbMax;
     bool m_awaitingLoadingFromDisk = true;
     bool m_loadedFromDisk = false;
-    std::string m_fullPath = "";
+    //std::string m_fullPath = "";
 
 public:
 
     Model() = default;
 
-    Model(std::string fullPath) {
-        m_fullPath = fullPath;
-        m_name = fullPath.substr(fullPath.rfind("/") + 1);
-        m_name = m_name.substr(0, m_name.length() - 4);
+    Model(const std::string name) {
+        m_name = name;
     }
 
     void AddMeshIndex(uint32_t index) {

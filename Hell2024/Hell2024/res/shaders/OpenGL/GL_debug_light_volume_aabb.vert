@@ -30,13 +30,13 @@ uniform int lightIndex;
 void main() {
 
 	Color = aNormal;
-	vec3 position = aPos;
-	position.x = min(position.x, lightVolumeData[lightIndex].aabbMaxX);
-	position.y = min(position.y, lightVolumeData[lightIndex].aabbMaxY);
-	position.z = min(position.z, lightVolumeData[lightIndex].aabbMaxZ);
-	position.x = max(position.x, lightVolumeData[lightIndex].aabbMinX);
-	position.y = max(position.y, lightVolumeData[lightIndex].aabbMinY);
-	position.z = max(position.z, lightVolumeData[lightIndex].aabbMinZ);
-	gl_Position = projection * view * model * vec4(position, 1.0);
+    vec3 position = aPos;
+    position.x = min(position.x, lightVolumeData[lightIndex].aabbMaxX);
+    position.y = min(position.y, lightVolumeData[lightIndex].aabbMaxY);
+    position.z = min(position.z, lightVolumeData[lightIndex].aabbMaxZ);
+    position.x = max(position.x, lightVolumeData[lightIndex].aabbMinX);
+    position.y = max(position.y, lightVolumeData[lightIndex].aabbMinY);
+    position.z = max(position.z, lightVolumeData[lightIndex].aabbMinZ);
+    gl_Position = projection * view * model * vec4(position, 1.0);
 
 }

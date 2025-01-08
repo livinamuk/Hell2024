@@ -14,7 +14,9 @@
 namespace AssetManager {
 
     // Asset Loading
+    void ExportNewAndModifiedModels();
     void FindAssetPaths();
+    void BakeNextItem();
     void LoadNextItem();
     void AddItemToLoadLog(std::string item);
     bool LoadingComplete();

@@ -7,34 +7,41 @@
 
 void Shark::Update(float deltaTime) {
     CheckDebugKeyPresses();
+ 
+    m_drawDebug = true;
 
-    glm::quat q = glm::quat(glm::vec3(0, m_rotation, 0));
-    glm::vec3 headDirection = GetSpinePosition(0) - GetSpinePosition(1);
-    m_forward = glm::normalize(q * glm::vec3(0.0f, 0.0f, 1.0f));
-    m_right = glm::cross(headDirection, glm::vec3(0, 1, 0));
+    m_right = glm::cross(m_forward, glm::vec3(0, 1, 0));
+    m_left = -m_right;
 
-    if (m_movementState == SharkMovementState::ARROW_KEYS) {
-        UpdateMovementArrowKeys(deltaTime);
-    }
-    if (m_movementState == SharkMovementState::HUNT_PLAYER) {
-        UpdateMovementHuntingPlayer(deltaTime);
-    }
-    if (m_movementState == SharkMovementState::FOLLOWING_PATH) {
-        UpdateMovementFollowingPath(deltaTime);
-    }
-    // Move the rest of the spine
-    for (int i = 1; i < SHARK_SPINE_SEGMENT_COUNT; ++i) {
-        glm::vec3 direction = m_spinePositions[i - 1] - m_spinePositions[i];
-        float currentDistance = glm::length(direction);
-        if (currentDistance > m_spineSegmentLengths[i - 1]) {
-            glm::vec3 correction = glm::normalize(direction) * (currentDistance - m_spineSegmentLengths[i - 1]);
-            m_spinePositions[i] += correction;
+
+    if (IsAlive()) {
+        if (m_movementState == SharkMovementState::ARROW_KEYS) {
+            if (Input::KeyDown(HELL_KEY_UP)) {
+                CalculateForwardVectorFromArrowKeys(deltaTime);
+                MoveShark(deltaTime);
+            }
+        }
+        if (m_movementState == SharkMovementState::HUNT_PLAYER) {
+
+            
+            if (m_huntingState == SharkHuntingState::CHARGE_PLAYER ||
+                m_huntingState == SharkHuntingState::BITING_PLAYER && GetAnimationFrameNumber() > 15 ||
+                m_huntingState == SharkHuntingState::BITING_PLAYER && GetAnimationFrameNumber() > 7 && !IsBehindEvadePoint(m_targetPosition)) {
+                CalculateTargetFromPlayer();
+                CalculateForwardVectorFromTarget(deltaTime);
+            }
+            UpdateHuntingLogic(deltaTime);
+            MoveShark(deltaTime);
+        }
+        if (m_movementState == SharkMovementState::FOLLOWING_PATH) {
+            CalculateForwardVectorFromTarget(deltaTime); 
+            CalculateTargetFromPath();
+            MoveShark(deltaTime);
         }
     }
-    // Force him to the height you want
-    m_spinePositions[0].y = 0.0f;
-    for (int i = 1; i < SHARK_SPINE_SEGMENT_COUNT; i++) {
-        m_spinePositions[i].y = m_spinePositions[0].y;
+    // Is it alive 
+    if (m_health > 0) {
+        m_isDead = false;
     }
     // Kill if health zero
     if (IsAlive() && m_health <= 0) {
@@ -48,49 +55,99 @@ void Shark::Update(float deltaTime) {
             //animatedGameObject->SetAnimatedModeToRagdoll();
         }
     }
+
 }
 
-void Shark::UpdateMovementArrowKeys(float deltaTime) {
-    AnimatedGameObject* animatedGameObject = Scene::GetAnimatedGameObjectByIndex(m_animatedGameObjectIndex);
-    if (m_movementState == SharkMovementState::ARROW_KEYS) {
-        m_movementDirection = SharkMovementDirection::STRAIGHT;
-        if (Input::KeyDown(HELL_KEY_UP)) {
-            if (Input::KeyDown(HELL_KEY_LEFT) && !Input::KeyDown(HELL_KEY_RIGHT)) {
-                m_movementDirection = SharkMovementDirection::LEFT;
-            }
-            if (Input::KeyDown(HELL_KEY_RIGHT) && !Input::KeyDown(HELL_KEY_LEFT)) {
-                m_movementDirection = SharkMovementDirection::RIGHT;
-            }
-            // Rotate
-            if (m_movementDirection == SharkMovementDirection::LEFT) {
-                m_rotation += m_rotationSpeed * deltaTime;
-            }
-            if (m_movementDirection == SharkMovementDirection::RIGHT) {
-                m_rotation -= m_rotationSpeed * deltaTime;
-            }
-            // Move head forward
-            m_spinePositions[0] += GetForwardVector() * m_swimSpeed * deltaTime;
-        }
+void Shark::MoveShark(float deltaTime) {
+    m_mouthPositionLastFrame = GetMouthPosition2D();
+    m_headPositionLastFrame = GetHeadPosition2D();
+    m_evadePointPositionLastFrame = GetEvadePoint2D();
+    // Move head
+    //m_spinePositions[0] += m_forward * m_swimSpeed * deltaTime;
+    // Move spine segments
+    for (int i = 1; i < SHARK_SPINE_SEGMENT_COUNT; ++i) {
+        glm::vec3 direction = glm::normalize(m_spinePositions[i - 1] - m_spinePositions[i]);
+        m_spinePositions[i] = m_spinePositions[i - 1] - direction * m_spineSegmentLengths[i - 1];
     }
 }
 
-void Shark::UpdateMovementFollowingPath(float deltaTime) {
+void Shark::CalculateTargetFromPath() {
     AnimatedGameObject* animatedGameObject = Scene::GetAnimatedGameObjectByIndex(m_animatedGameObjectIndex);
     SharkPath* path = SharkPathManager::GetSharkPathByIndex(0);
     if (m_nextPathPointIndex == path->m_points.size()) {
         m_nextPathPointIndex = 0;
     }
     glm::vec3 nextPathPoint = SharkPathManager::GetSharkPathByIndex(0)->m_points[m_nextPathPointIndex].position;
-
     // Are you actually at the next point?
     float nextPointThreshold = 1.0f;
-    if (GetDistanceToTarget() < nextPointThreshold) {
+    if (GetDistanceToTarget2D() < nextPointThreshold) {
         m_nextPathPointIndex++;
         nextPathPoint = SharkPathManager::GetSharkPathByIndex(0)->m_points[m_nextPathPointIndex].position;
     }
-    glm::vec3 dirToNextPathPoint = glm::normalize(GetHeadPosition() - nextPathPoint);
+    glm::vec3 dirToNextPathPoint = glm::normalize(GetHeadPosition2D() - nextPathPoint);
     m_targetPosition = nextPathPoint;
+}
 
+void Shark::CalculateTargetFromPlayer() {
+    if (m_huntedPlayerIndex != -1) {
+        Player* player = Game::GetPlayerByIndex(m_huntedPlayerIndex);
+        m_targetPosition = player->GetViewPos() - glm::vec3(0.0, 0.1f, 0.0f);
+        //std::cout << Util::Vec3ToString(m_targetPosition) << "\n";
+
+        static bool attackLeft = true;
+        if (GetDistanceToTarget2D() < 6.5f) {
+            if (attackLeft) {
+                m_targetPosition += m_left * 0.975f;
+                //std::cout << "attacking left\n";
+            }
+            else {
+                m_targetPosition += m_right * 0.975f;
+                //std::cout << "attacking right\n";
+            }
+        }
+        else {
+            attackLeft = !attackLeft;
+            //std::cout << "attack left: " << attackLeft << "\n";
+        }
+        m_lastKnownTargetPosition = m_targetPosition;
+    }
+}
+
+void Shark::CalculateForwardVectorFromArrowKeys(float deltaTime) {
+    float maxRotation = 5.0f;
+    if (Input::KeyDown(HELL_KEY_LEFT)) {
+        float blendFactor = glm::clamp(glm::abs(-maxRotation) / 90.0f, 0.0f, 1.0f);
+        m_forward = glm::normalize(glm::mix(m_forward, m_left, blendFactor));
+    }
+    if (Input::KeyDown(HELL_KEY_RIGHT)) {
+        float blendFactor = glm::clamp(glm::abs(maxRotation) / 90.0f, 0.0f, 1.0f);
+        m_forward = glm::normalize(glm::mix(m_forward, m_right, blendFactor));
+    }
+}
+
+void Shark::CalculateForwardVectorFromTarget(float deltaTime) {
+    // Calculate angular difference from forward to target
+    glm::vec3 directionToTarget = glm::normalize(GetTargetPosition2D() - GetHeadPosition2D());
+    float dotProduct = glm::clamp(glm::dot(m_forward, directionToTarget), -1.0f, 1.0f);
+    float angleDifference = glm::degrees(std::acos(dotProduct));
+    if (m_forward.x * directionToTarget.z - m_forward.z * directionToTarget.x < 0.0f) {
+        angleDifference = -angleDifference;
+    }
+    // Clamp it to a max of 4.5 degrees rotation
+    float maxRotation = 4.5f;
+    angleDifference = glm::clamp(angleDifference, -maxRotation, maxRotation);
+    // Calculate new forward vector based on that angle
+    if (TargetIsOnLeft(m_targetPosition)) {
+        float blendFactor = glm::clamp(glm::abs(-angleDifference) / 90.0f, 0.0f, 1.0f);
+        m_forward = glm::normalize(glm::mix(m_forward, m_left, blendFactor));
+    }
+    else {
+        float blendFactor = glm::clamp(glm::abs(angleDifference) / 90.0f, 0.0f, 1.0f);
+        m_forward = glm::normalize(glm::mix(m_forward, m_right, blendFactor));
+    }
+}
+
+void Shark::UpdateMovementFollowingPath(float deltaTime) {
     // Calculate direction
     if (TargetIsOnLeft(m_targetPosition)) {
         m_movementDirection = SharkMovementDirection::LEFT;
@@ -112,10 +169,9 @@ void Shark::UpdateMovementFollowingPath(float deltaTime) {
     PxU32 raycastFlags = RaycastGroup::RAYCAST_ENABLED;
     Player* player = Game::GetPlayerByIndex(0);
     glm::vec3 playerFace = Game::GetPlayerByIndex(0)->GetViewPos();
-    glm::vec3 rayDir = glm::vec3(normalize(playerFace - GetHeadPosition()));
-    glm::vec3 rayOrigin = GetHeadPosition();
+    glm::vec3 rayDir = glm::vec3(normalize(playerFace - GetHeadPosition2D()));
+    glm::vec3 rayOrigin = GetHeadPosition2D();
     PhysXRayResult rayResult = Util::CastPhysXRay(rayOrigin, rayDir, 100, raycastFlags);
-
     if (player->FeetBelowWater()) {
         if (!rayResult.hitFound) {
             m_movementState = SharkMovementState::HUNT_PLAYER;
@@ -123,55 +179,3 @@ void Shark::UpdateMovementFollowingPath(float deltaTime) {
     }
 }
 
-void Shark::UpdateMovementHuntingPlayer(float deltaTime) {
-    m_hunterPlayerIndex = 0;
-    AnimatedGameObject* animatedGameObject = Scene::GetAnimatedGameObjectByIndex(m_animatedGameObjectIndex);
-    if (m_huntState == HuntState::CHARGE_PLAYER) {
-        m_targetPosition = Game::GetPlayerByIndex(m_hunterPlayerIndex)->GetFeetPosition();
-        // Is it within biting range
-        float bitingRange = 2.0f;
-        if (GetDistanceToTarget() < bitingRange) {
-            m_huntState = HuntState::BITING_PLAYER;
-            animatedGameObject->PlayAnimation("Shark_Attack_Left_Quick", 1.0f);
-            Audio::PlayAudio("Shark_Bite_Overwater_Edited.wav", 1.0f);
-            m_hasBitPlayer = false;
-        }
-    }
-    // Set direction towards target if not biting
-    if (m_huntState != HuntState::BITING_PLAYER) {
-        if (TargetIsOnLeft(m_targetPosition)) {
-            m_movementDirection = SharkMovementDirection::LEFT;
-        }
-        else {
-            m_movementDirection = SharkMovementDirection::RIGHT;
-        }
-    }
-    // Issue bite to player in range (PLAYER 1 ONLY)
-    if (m_huntState == HuntState::BITING_PLAYER && !m_hasBitPlayer) {
-        float killRange = 2.0f;
-        if (animatedGameObject->GetAnimationFrameNumber() > 8 &&
-            animatedGameObject->GetAnimationFrameNumber() < 21 &&
-            GetDistanceToTarget() < killRange &&
-            m_targetPosition.y < Water::GetHeight()) {
-            m_hasBitPlayer = true;
-            Game::GetPlayerByIndex(0)->Kill();
-            m_movementState = SharkMovementState::FOLLOWING_PATH;
-        }
-    }
-    // Is bite is over?
-    if (m_huntState == HuntState::BITING_PLAYER) {
-        if (animatedGameObject->IsAnimationComplete()) {
-            m_huntState = HuntState::CHARGE_PLAYER;
-            PlayAndLoopAnimation("Shark_Swim", 1.0f);
-        }
-    }
-    // Rotate
-    if (m_movementDirection == SharkMovementDirection::LEFT) {
-        m_rotation += m_rotationSpeed * deltaTime;
-    }
-    if (m_movementDirection == SharkMovementDirection::RIGHT) {
-        m_rotation -= m_rotationSpeed * deltaTime;
-    }
-    // Move head forward
-    m_spinePositions[0] += GetForwardVector() * m_swimSpeed * deltaTime;
-}

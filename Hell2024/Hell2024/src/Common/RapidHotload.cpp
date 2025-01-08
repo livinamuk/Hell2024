@@ -13,7 +13,7 @@ void RapidHotload::Update() {
     //mermaid->SetMeshBlendingMode("HairInner", BlendingMode::ALPHA_DISCARDED);
 
     if (Input::KeyPressed(HELL_KEY_NUMPAD_8)) {
-        mermaid->SetModel("Mermaid3");
+        mermaid->SetModel("Mermaid");
         mermaid->SetMeshMaterial("Gold");
         mermaid->SetMeshMaterialByMeshName("Rock", "Rock");
         mermaid->SetMeshMaterialByMeshName("BoobTube", "BoobTube");
@@ -79,17 +79,17 @@ void RapidHotload::Update() {
 
     if (Input::KeyPressed(HELL_KEY_U)) {
         Texture* texture;
-        texture = AssetManager::GetTextureByName("BathroomFloor_NRM");
+        texture = AssetManager::GetTextureByName("BathroomFloor2_NRM");
         if (texture) {
-            texture->GetGLTexture().HotloadFromPath("res/textures/ui/BathroomFloor_NRM.png");
+            texture->GetGLTexture().HotloadFromPath("res/textures/ui/BathroomFloor2_NRM.png");
         }
-        texture = AssetManager::GetTextureByName("PresentSmallRed_ALB");
-        if (texture) {
-            texture->GetGLTexture().HotloadFromPath("res/textures/ui/PresentSmallRed_ALB.png");
-        }
-        texture = AssetManager::GetTextureByName("MermaidEye_RMA");
-        if (texture) {
-            texture->GetGLTexture().HotloadFromPath("res/textures/ui/MermaidEye_RMA.png");
-        }
+        //texture = AssetManager::GetTextureByName("PresentSmallRed_ALB");
+        //if (texture) {
+        //    texture->GetGLTexture().HotloadFromPath("res/textures/ui/PresentSmallRed_ALB.png");
+        //}
+        //texture = AssetManager::GetTextureByName("MermaidEye_RMA");
+        //if (texture) {
+        //    texture->GetGLTexture().HotloadFromPath("res/textures/ui/MermaidEye_RMA.png");
+        //}
     }
 }
