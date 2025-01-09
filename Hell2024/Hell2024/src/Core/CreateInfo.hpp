@@ -22,6 +22,11 @@ struct WindowCreateInfo {
     float rotation = 0;
 };
 
+struct CouchCreateInfo {
+    glm::vec3 position = glm::vec3(0);
+    float rotation = 0;
+};
+
 struct LightCreateInfo {
     glm::vec3 position;
     glm::vec3 color;

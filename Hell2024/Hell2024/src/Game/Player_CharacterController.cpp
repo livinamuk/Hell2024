@@ -13,11 +13,11 @@ void Player::CreateCharacterController(glm::vec3 position) {
     desc->radius = PLAYER_CAPSULE_RADIUS;
     desc->position = PxExtendedVec3(position.x, position.y + (height / 2) + (PLAYER_CAPSULE_RADIUS * 2), position.z);
     desc->material = material;
-    desc->stepOffset = 0.1f;
+    desc->stepOffset = 0.05f;
     desc->contactOffset = 0.001;
     desc->scaleCoeff = .99f;
     desc->reportCallback = &Physics::_cctHitCallback;
-    desc->slopeLimit = cosf(glm::radians(75.0f));
+    desc->slopeLimit = cosf(glm::radians(85.0f));
     _characterController = Physics::_characterControllerManager->createController(*desc);
 
     PxShape* shape;

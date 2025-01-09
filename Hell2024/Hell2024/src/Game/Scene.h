@@ -15,6 +15,7 @@
 #include "../Game/Dobermann.h"
 #include "../Renderer/Types/HeightMap.h"
 #include "../Types/Modular/ChristmasLights.h"
+#include "../Types/Modular/Couch.h"
 #include "../Types/Modular/Door.h"
 #include "../Types/Modular/Ladder.h"
 #include "../Types/Modular/Staircase.h"
@@ -181,6 +182,7 @@ namespace Scene {
 
     // Cuntainers
     inline std::vector<ChristmasLights> g_christmasLights;
+    inline std::vector<Couch> g_couches;
     inline std::vector<Ladder> g_ladders;
     inline std::vector<Light> g_lights;
     inline std::vector<SpawnPoint> g_spawnPoints;
@@ -209,6 +211,12 @@ namespace Scene {
     std::vector<Window>& GetWindows();
     //void SetWindowPosition(uint32_t windowIndex, glm::vec3 position);
     void CreateWindow(WindowCreateInfo createInfo);
+
+    // Couches
+    uint32_t GetCouchCount();
+    Window* GetCouchByIndex(int index);
+    std::vector<Couch>& GetCouches();
+    void CreateCouch(CouchCreateInfo createInfo);
 
     // Doors
     uint32_t GetDoorCount();
@@ -254,11 +262,6 @@ namespace Scene {
     std::vector<RenderItem3D>& GetGeometryRenderItemsBlended();
     std::vector<RenderItem3D>& GetGeometryRenderItemsAlphaDiscarded();
     std::vector<RenderItem3D> CreateDecalRenderItems();
-
-
-
-    void CreateCouch();
-
 
     // Old shit
 	void LoadMap(std::string mapPath);

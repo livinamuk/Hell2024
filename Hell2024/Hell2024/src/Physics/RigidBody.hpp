@@ -114,9 +114,13 @@ struct RigidBody {
 
     void Destroy() {
         Physics::Destroy(pxRigidBody);
-        for (auto* shape : collisionShapes) {
-            Physics::Destroy(shape);
+        pxRigidBody = nullptr;
+        for (PxShape* shape : collisionShapes) {
+            if (shape) {
+                Physics::Destroy(shape);
+            }
         }
+        collisionShapes.clear();
     }
 
 private:

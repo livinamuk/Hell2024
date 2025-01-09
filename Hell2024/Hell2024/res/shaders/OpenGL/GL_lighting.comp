@@ -26,6 +26,7 @@ uniform vec3 lightVolumePosition;
 uniform int fogAABBCount;
 uniform int rendererOverrideState;
 uniform int renderMode;
+uniform float waterHeight;
 
 const float PI = 3.14159265359;
 
@@ -202,8 +203,8 @@ vec3 microfacetBRDF(in vec3 L, in vec3 V, in vec3 N, in vec3 baseColor, in float
   return result;
 }
 
-vec3 GetDirectLighting(vec3 lightPos, vec3 lightColor, float radius, float strength, vec3 Normal, vec3 WorldPos, vec3 baseColor, float roughness, float metallic, vec3 viewPos) {
-	float fresnelReflect = 1.0; // 0.5 is what they used for box, 1.0 for demon
+vec3 GetDirectLighting(vec3 lightPos, vec3 lightColor, float radius, float strength, vec3 Normal, vec3 WorldPos, vec3 baseColor, float roughness, float metallic, vec3 viewPos, float fresnelReflect) {
+	
 	vec3 viewDir = normalize(viewPos - WorldPos);
 	float lightRadiance = strength * 1;// * 1.25;
 	vec3 lightDir = normalize(lightPos - WorldPos);
@@ -215,8 +216,7 @@ vec3 GetDirectLighting(vec3 lightPos, vec3 lightColor, float radius, float stren
 	return brdf * irradiance * clamp(lightColor, 0, 1);
 }
 
-vec3 GetOutdoorDirectLighting(vec3 WorldPos, vec3 Normal, vec3 baseColor, float roughness, float metallic, vec3 viewPos, vec3 lightDir, vec3 lightColor, float lightStrength) {
-	float fresnelReflect = 1.0; // 0.5 is what they used for box, 1.0 for demon
+vec3 GetOutdoorDirectLighting(vec3 WorldPos, vec3 Normal, vec3 baseColor, float roughness, float metallic, vec3 viewPos, vec3 lightDir, vec3 lightColor, float lightStrength, float fresnelReflect) {
 	vec3 viewDir = normalize(viewPos - WorldPos);
 	float irradiance = max(dot(lightDir, Normal), 0.0);
 	irradiance *= lightStrength;
@@ -478,7 +478,39 @@ vec3 GetSpotLighting(vec3 fragPos, vec3 normal, vec3 viewPos, vec3 spotLightDire
     return result;
 }
 
+vec3 GetUnderWaterLightingFactor(vec3 fragPos, vec3 normal, vec3 viewPos, vec3 spotLightDirection) {
+    vec3 position = viewPos;
+    vec3 direction = spotLightDirection;
+	float cutoff = cos(radians(10.5));
+    float outerCutoff = cos(radians(47.5));
+    float constant = 0.25;
+    float linear = 0.09;
+    float quadratic = 0.042;
+    vec3 ambient = vec3(0.1);
+    vec3 diffuse = vec3(0.5);
+    vec3 specular = vec3(0.0);
 
+    constant = 0.9;
+    linear = 0.05;
+    quadratic = 0.042;
+
+    vec3 ambientLight = ambient;
+    vec3 lightDir = normalize(position - fragPos);
+    float diff = max(dot(normal, lightDir), 0.0);
+    vec3 diffuseLight = diffuse * diff;
+    vec3 viewDir = normalize(viewPos - fragPos);
+    vec3 reflectDir = reflect(-lightDir, normal);
+    float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32); // Shininess factor
+    spec = 0;
+    vec3 specularLight = specular * spec;
+    float theta = dot(lightDir, -direction);
+    float epsilon = cutoff - outerCutoff;
+    float intensity = clamp((theta - outerCutoff) / epsilon, 0.0, 1.0);
+    float distance = length(position - fragPos);
+    float attenuation = 1.0 / (constant + linear * distance + quadratic * (distance * distance));
+    vec3 result = (ambientLight + intensity * (diffuseLight + specularLight)) * attenuation;
+    return result;
+}
 
 
 void main() {
@@ -508,6 +540,7 @@ void main() {
 	mat4 projection = cameraDataArray[playerIndex].projection;
 	mat4 view = cameraDataArray[playerIndex].view;
 	mat4 projectionView = projection * view;
+	vec3 cameraForward = -normalize(vec3(inverseView[2].xyz));
 	
 	float z = texture(depthTexture, uv).r;
     vec2 clipSpaceTexCoord = uv;
@@ -533,10 +566,10 @@ void main() {
 		if (lights[lightIndex].shadowMapIndex != -1) {
 			shadow = ShadowCalculation(lights[lightIndex].shadowMapIndex, lightPosition, lightRadius, worldSpacePosition.xyz, viewPos, normal);
 		}	
-		directLighting += GetDirectLighting(lightPosition, lightColor, lightRadius, strength, normal, worldSpacePosition.xyz, baseColor, roughness, metallic, viewPos) * shadow;
+        float fresnelReflect = 1.0;
+		directLighting += GetDirectLighting(lightPosition, lightColor, lightRadius, strength, normal, worldSpacePosition.xyz, baseColor, roughness, metallic, viewPos, fresnelReflect) * shadow;
 	}		
-	
-	
+
 	// Indirect lighting
 	vec3 baseColor2 = texture(baseColorTexture, uv).rgb;
 	vec3 WorldPos2 = worldSpacePosition.xyz + (normal * 0.01);
@@ -552,20 +585,105 @@ void main() {
 	vec3 finalIndirectLighting = adjustedIndirectLighting * 0.1;
 
 	
-    directLighting *= ao;
 	
 	vec3 finalLighting = directLighting;
 	finalLighting += finalIndirectLighting;
 
 
-	//finalLighting = indirectLighting;
+    
+    // Moonlight lighting
+    if (worldSpacePosition.y > waterHeight) {
 
-	
-	//finalLighting = worldSpacePosition.xyz;
+        // Direct Moonlight
+        vec3 moonLightDir = normalize(vec3(0.5, 1.0, -0.5));
+        vec3 defaultLightColor = vec3(1, 0.7799999713897705, 0.5289999842643738);
+        vec3 moonLightColor = mix(defaultLightColor, vec3(1.0, 1.0 ,1.0), 0.5);
+        float moonLightStrength = 0.25;
+        float fresnelReflect = 0.25;
+        vec3 directionalLight = GetOutdoorDirectLighting(worldSpacePosition.xyz, normal, baseColor, roughness, metallic, viewPos, moonLightDir, moonLightColor, moonLightStrength, fresnelReflect);
 
-	//finalLighting = mix(finalLighting + outsideLighting, finalLighting, insideOutsideScaleFactor);
+        // Ambient moonlight
+        vec3 ambientColor = vec3(1, 0.98, 0.94);
+        float ambientIntensity = 0.0025;
+        vec3 ambientLighting = baseColor.rgb * ambientColor * ambientIntensity;	
+        directionalLight += ambientLighting;
+
+	    // Moonlight fog
+        vec3 fogColor = vec3(0.32, 0.29, 0.25); 
+        float fogStrength = 0.0225;
+	    float fogStart = 1;
+	    float fogEnd = 30;	
+        float dist = length(worldSpacePosition.xyz - viewPos);
+        vec3 fogLighting = ApplyFog(finalLighting, dist , fogColor, fogStart, fogEnd);
+        directionalLight = mix(directionalLight, fogLighting, fogStrength);
+
+        // Moonlight darnkess falloff
+        float falloffStart = 2.0;    // Distance where falloff begins
+        float falloffEnd = 10.0;     // Distance where falloff reaches maximum effect
+        float maxDarkness = 0.6;     // Maximum darkness (0 = no change, 1 = fully dark)
+        vec3 falloffColor = vec3(0.0, 0.0, 0.0); // Color to blend towards (e.g., black)
+        float distance = length(worldSpacePosition.xyz - viewPos);
+        float falloffFactor = clamp((distance - falloffStart) / (falloffEnd - falloffStart), 0.0, 1.0);
+        falloffFactor *= maxDarkness;
+        directionalLight = mix(directionalLight, falloffColor, falloffFactor);
+            
+	    // Apply moonlighting
+        finalLighting += directionalLight;
+    }
+    
+    // Fragments beneath water
+    if (worldSpacePosition.y < waterHeight) {
+
+        vec3 underWaterLighting = vec3(0);
+
+        float viewDistance = length(worldSpacePosition.xyz - viewPos);
+        float mappedViewDistance = MapRange(viewDistance, -2, 10, 0, 1.0);
+                    
+        float near = 0.0025;
+        float far = 200.0;
+        float linearZ = (2.0 * near * far) / (far + near - z * (far - near));
+
+        linearZ *= 0.05;
+
+        vec3 fogColor = vec3(0.2,0.6, 1); 
+        vec3 waterColor = vec3(0.85, 1.0, 0.95);
+        fogColor = waterColor;
+
+        mappedViewDistance = clamp(mappedViewDistance, 0.0, 1.0);
+        vec3 fogResult = fogColor * mappedViewDistance * 0.01;
+        fogResult = clamp(fogResult, 0, 1);
+
+        vec3 firstPass = mix(finalLighting, fogResult, mappedViewDistance * 0.5); 
+                    
+        // Viewed from above water
+        if (viewPos.y > waterHeight) {
+            finalLighting = firstPass;
+        }
+        // Viewed from below water
+        else {                     
+            // Some spot lighting
+            vec3 spotLightColor = vec3(1, 0.8799999713897705, 0.6289999842643738);
+            float fresnelReflect = 1.0;
+            vec3 spotLighting = GetDirectLighting(viewPos, spotLightColor, 100, 1.0, normal, worldSpacePosition.xyz, baseColor, roughness, metallic, viewPos, 0.25);
+            
+            // Darnkess falloff
+            float falloffStart = 10.0;
+            float falloffEnd = 30.0; 
+            float maxDarkness = 1.0;
+            vec3 falloffColor = vec3(0.0075);
+            float falloffFactor = clamp((viewDistance - falloffStart) / (falloffEnd - falloffStart), 0.0, 1.0);
+            falloffFactor *= maxDarkness;
+            //vec3 secondPass = mix(firstPass, falloffColor, falloffFactor);
+            
+            // Composite
+            spotLighting = mix(spotLighting * 0.1, falloffColor, falloffFactor);            
+            finalLighting = mix(spotLighting, firstPass, 0.85) * 0.6;
+        }           
+    }
 
 
+
+        
 	
 	// Spotlights
 	for (int i = 0; i < 2; i++) {
@@ -574,7 +692,6 @@ void main() {
 		vec3 forward = -normalize(vec3(inverseViewMatrix[2].xyz));
 		vec3 camPos = cameraDataArray[i].viewInverse[3].xyz;
 				
-
 		vec3 spotLightPos = camPos;
 		if (playerIndex != i) {
 			spotLightPos += (forward * 0.125);
@@ -584,31 +701,34 @@ void main() {
 		vec3 dir = normalize(spotLightPos - (camPos - forward));
 
 		vec3 spotLightingFactor = GetSpotLighting(worldSpacePosition.xyz, normalize(normal), spotLightPos, dir);
-	
+	    
+    
 		vec3 spotLightColor = vec3(1, 0.8799999713897705, 0.6289999842643738);
-		vec3 spotLighting = GetDirectLighting(spotLightPos, spotLightColor, 100, 1.0, normal, worldSpacePosition.xyz, baseColor, roughness, metallic, camPos);
+        float fresnelReflect = 0.9;
+        float spotLightRadius = 20.0;
+        float spotLightStregth = 0.5;
+
+        if (worldSpacePosition.y < waterHeight) {
+            fresnelReflect = 1.2;
+            spotLightRadius = 30.0;
+            spotLightStregth = 0.8;
+        }
+
+		vec3 spotLighting = GetDirectLighting(spotLightPos, spotLightColor, spotLightRadius, spotLightStregth, normal, worldSpacePosition.xyz, baseColor, roughness, metallic, camPos, fresnelReflect);
 		spotLighting = max(spotLighting, vec3(0));
 		spotLighting *= spotLightingFactor;
 		//spotLighting += spotLightingFactor;
 	
-
 		if (playerData[i].flashlightOn == 1) {
 			finalLighting += spotLighting;
-		}
-		
+		}		
 	}
 	
-	// Fog
-	// Inside outside scale factor
-	float insideOutsideScaleFactor = MapRange(length(indirectLighting), 0, 0.01, 0, 1);
-	insideOutsideScaleFactor = clamp(insideOutsideScaleFactor, 0, 1);
-	vec3 fogColor = vec3(0.09, 0.09, 0.09) * vec3(0.075);	
-	float fogStart = 1;
-	float fogEnd = 50;	
-    float dist = length(worldSpacePosition.xyz - viewPos);
-	vec3 fogLighting = ApplyFog(finalLighting, dist , fogColor, fogStart, fogEnd);
-	finalLighting = mix(fogLighting, finalLighting, insideOutsideScaleFactor);
+    
+    finalLighting *= ao;
 
+
+    
     
     // Render modes 
     if (renderMode == 1) {
@@ -619,18 +739,6 @@ void main() {
     }
 	
 
-
-    //fogStart = 20;
-	//fogEnd = 30;	
-    //vec3 waterColor = vec3(0.8, 1.0, 0.9) * 0.025;
-	//fogLighting = ApplyFog(finalLighting, dist , waterColor, fogStart, fogEnd);
-	//finalLighting = mix(fogLighting, finalLighting, insideOutsideScaleFactor);
-
-	// Foreground fog
-	float fogIntensity = 0.1;
-	float fogFalloff = 0.05;
-	float fogStart2 = 0.5;
-    float fogFactor = clamp(1.0 - (dist - fogStart2) * fogFalloff, 0.0, 1.0);
 
 	// Tone mapping
 	finalLighting = mix(finalLighting, Tonemap_ACES(finalLighting), 1.0);

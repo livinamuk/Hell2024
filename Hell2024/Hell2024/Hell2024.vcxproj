@@ -192,6 +192,7 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <ClCompile Include="src\Tools\ImageTools.cpp" />
     <ClCompile Include="src\Types\Animation.cpp" />
     <ClCompile Include="src\Types\Modular\ChristmasLights.cpp" />
+    <ClCompile Include="src\Types\Modular\Couch.cpp" />
     <ClCompile Include="src\Types\Modular\Door.cpp" />
     <ClCompile Include="src\Renderer\Renderer.cpp" />
     <ClCompile Include="src\Core\Floorplan.cpp" />
@@ -354,6 +355,7 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <ClInclude Include="src\Renderer\Types\Texture3D.h" />
     <ClInclude Include="src\Types\Animation.h" />
     <ClInclude Include="src\Types\Modular\ChristmasLights.h" />
+    <ClInclude Include="src\Types\Modular\Couch.h" />
     <ClInclude Include="src\Types\Modular\Ladder.h" />
     <ClInclude Include="src\Types\Modular\Staircase.h" />
     <ClInclude Include="src\Types\SkinnedMesh.hpp" />

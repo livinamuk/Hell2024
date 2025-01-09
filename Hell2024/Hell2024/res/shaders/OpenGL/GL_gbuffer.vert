@@ -76,9 +76,9 @@ void main() {
 //	BiTangent = normalize(cross(Normal, Tangent));
     
     mat3 normalMatrix = transpose(mat3(renderItem.inverseModelMatrix));
-Normal = normalize(normalMatrix * vNormal);
-Tangent = normalize(normalMatrix * vTangent);
-BiTangent = normalize(cross(Normal, Tangent));
+    Normal = normalize(normalMatrix * vNormal);
+    Tangent = normalize(normalMatrix * vTangent);
+    BiTangent = normalize(cross(Normal, Tangent));
 
     // Compute the final position of the vertex in screen space
     gl_Position = projection * view * modelMatrix * vec4(vPos, 1.0);

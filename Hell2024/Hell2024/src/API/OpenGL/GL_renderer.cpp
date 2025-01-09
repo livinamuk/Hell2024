@@ -380,7 +380,7 @@ void OpenGLRenderer::RecreateBlurBuffers() {
 
 void OpenGLRenderer::InitMinimum() {
 
-    QueryAvaliability();
+    //QueryAvaliability();
     HotloadShaders();
 
     int desiredTotalLines = 40;
@@ -448,7 +448,7 @@ void OpenGLRenderer::InitMinimum() {
     int tileXCount = gBuffer.GetWidth() / 12;
     int tileYCount = gBuffer.GetHeight() / 12;
     int tileCount = tileXCount * tileYCount;
-    std::cout << "Tile count: " << tileCount << "\n";
+    //std::cout << "Tile count: " << tileCount << "\n";
     g_ssbos.tileData.PreAllocate(tileCount * sizeof(TileData));   
 
 }
@@ -1760,10 +1760,8 @@ void GeometryPass(RenderData& renderData) {
     glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    if (!Input::KeyDown(HELL_KEY_U)) {
-        glDepthMask(GL_FALSE);
-    }
     glDisable(GL_CULL_FACE);
+    glDepthMask(GL_FALSE);
     for (int i = 0; i < renderData.playerCount; i++) {
         ViewportInfo viewportInfo = RendererUtil::CreateViewportInfo(i, Game::GetSplitscreenMode(), gBuffer.GetWidth(), gBuffer.GetHeight());
         SetViewport(viewportInfo);
@@ -1777,9 +1775,6 @@ void GeometryPass(RenderData& renderData) {
     glEnable(GL_CULL_FACE);
     glDisable(GL_BLEND); 
     glDepthMask(GL_TRUE);
-
-
-    glFinish();
 
     // Render Christmas lights
     Shader& christmasLightsShader = OpenGLRenderer::g_shaders.christmasLightWireShader;
@@ -2129,8 +2124,8 @@ void LightingPass(RenderData& renderData) {
     computeShader.SetVec3("lightVolumePosition", lightVolume->GetPosition());
     computeShader.SetFloat("probeSpacing", PROBE_SPACING);
     computeShader.SetFloat("time", Game::GetTime());
-    computeShader.SetInt("fogAABBCount", Scene::g_fogAABB.size());
     computeShader.SetInt("rendererOverrideState", RendererData::GetRendererOverrideStateAsInt());
+    computeShader.SetFloat("waterHeight", Water::GetHeight());
     if (Renderer::GetRenderMode() == COMPOSITE || Renderer::GetRenderMode() == COMPOSITE_PLUS_POINT_CLOUD) {
         computeShader.SetInt("renderMode", 0);
     }
@@ -2859,6 +2854,7 @@ void PostProcessingPass(RenderData& renderData) {
     computeShader.SetFloat("viewportWidth", gBuffer.GetWidth());
     computeShader.SetFloat("viewportHeight", gBuffer.GetHeight());
     computeShader.SetFloat("time", Game::GetTime());
+    computeShader.SetFloat("waterHeight", Water::GetHeight());
     glBindImageTexture(0, gBuffer.GetColorAttachmentHandleByName("FinalLighting"), 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA8);
     glBindImageTexture(1, gBuffer.GetColorAttachmentHandleByName("Normal"), 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA16F);
     //glBindImageTexture(2, genericRenderTargets.GetColorAttachmentHandleByName("SSAOBlur"), 0, GL_FALSE, 0, GL_READ_WRITE, GL_R32F);

@@ -512,7 +512,6 @@ namespace Game {
                     }
                     else {
                         gameObject.SetPosition(14.4f, 2.1f, -1.7);
-                        gameObject.SetPosition(12.4f, 2.1f, -1.7);
                     }
                 }
             }

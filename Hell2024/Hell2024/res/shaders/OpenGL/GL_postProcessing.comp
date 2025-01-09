@@ -12,6 +12,7 @@ layout(rgba8, binding = 4) uniform image2D waterMaskTexture;
 uniform float time;
 uniform float viewportWidth;
 uniform float viewportHeight;
+uniform float waterHeight;
 
 struct CameraData {
     mat4 projection;
@@ -182,9 +183,21 @@ void main() {
 	float r = cameraDataArray[playerIndex].finalImageColorR;
 	float g = cameraDataArray[playerIndex].finalImageColorG;
 	float b = cameraDataArray[playerIndex].finalImageColorB;
+    
+   // r = 1.0;
+   /// g = 0;
+   // b = 0;
+
 	vec3 finalImageColorTint = vec3(r, g, b);
+
+    
 	float finalImageColorContrast = cameraDataArray[playerIndex].finalImageColorContrast;
+
+    
+
 	finalColor *= finalImageColorTint;
+
+    //finalImageColorContrast = 1.0;
 
 	// Contrast
     contrastAdjust(finalColor, finalImageColorContrast);
@@ -198,8 +211,8 @@ void main() {
     imageStore(tex, texCoord, vec4(finalColor, 1));
 
     
-	vec3 waterColorTextureColor = imageLoad(waterColorTexture, texCoord).rgb;
-	vec3 waterMaskColor = imageLoad(waterMaskTexture, texCoord).rgb;
+	//vec3 waterColorTextureColor = imageLoad(waterColorTexture, texCoord).rgb;
+	//vec3 waterMaskColor = imageLoad(waterMaskTexture, texCoord).rgb;
   //  imageStore(tex, texCoord, vec4(waterColorTextureColor, 1));
     //imageStore(tex, texCoord, vec4(waterMaskColor, 1));
 }

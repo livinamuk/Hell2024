@@ -345,7 +345,7 @@ void GameObject::Update(float deltaTime) {
     else {
         // Rewrite this to work per mesh
         _aabbPreviousFrame = _aabb;
-                std::vector<glm::vec3> modelCorners = {
+        std::vector<glm::vec3> modelCorners = {
             glm::vec3(model->m_aabbMin.x, model->m_aabbMin.y, model->m_aabbMin.z),
             glm::vec3(model->m_aabbMax.x, model->m_aabbMin.y, model->m_aabbMin.z),
             glm::vec3(model->m_aabbMin.x, model->m_aabbMax.y, model->m_aabbMin.z),

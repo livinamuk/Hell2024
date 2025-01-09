@@ -158,7 +158,7 @@ float Shark::GetDotMouthDirectionToTarget3D() {
 
 
 glm::vec3 Shark::GetEvadePoint3D() {
-    return GetSpinePosition(0) + (GetForwardVector() * glm::vec3(-0.2f));
+    return GetSpinePosition(0) + (GetForwardVector() * glm::vec3(-0.0f));
 }
 glm::vec3 Shark::GetEvadePoint2D() {
     return GetEvadePoint3D() * glm::vec3(1.0f, 0.0f, 1.0f);

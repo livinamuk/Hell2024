@@ -321,8 +321,6 @@ void UploadCompressedTextureWithPBO(Texture* texture, CMPTextureData* cmpTexture
     glTexture.MakeBindlessTextureResident();
 }
 
-
-
 PBO g_pbo;
 
 void AssetManager::BakeNextItem() {
@@ -359,7 +357,7 @@ void AssetManager::LoadNextItem() {
             cmpTextureData.m_loadingState = LoadingState::LOADING_FROM_DISK;
             g_futures.push_back(std::async(std::launch::async, LoadCMPTextureData, &cmpTextureData));
             AddItemToLoadLog(cmpTextureData.m_compressedFilePath);
-            return;
+            //return;
         }
     }
 
@@ -369,7 +367,7 @@ void AssetManager::LoadNextItem() {
             cubemapTexture.m_awaitingLoadingFromDisk = false;
             AddItemToLoadLog(cubemapTexture.m_fullPath);
             g_futures.push_back(std::async(std::launch::async, LoadCubemapTexture, &cubemapTexture));
-            return;
+            //return;
         }
     }
     // Animations
@@ -975,8 +973,6 @@ int AssetManager::CreateSkinnedMesh(std::string name, std::vector<WeightedVertex
 ▀   ▀ ▀ ▀  ▀  ▀▀▀ ▀ ▀ ▀▀▀ ▀ ▀ ▀▀▀ */
 
 void AssetManager::BuildMaterials() {
-
-    std::cout << "g_textureIndexMap.size(): " << g_textureIndexMap.size() << "\n";
 
     std::lock_guard<std::mutex> lock(_texturesMutex);
 

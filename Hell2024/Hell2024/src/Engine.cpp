@@ -32,7 +32,9 @@ void Engine::Run() {
 
             auto stopTime = std::chrono::high_resolution_clock::now();
             double elapsedTime = std::chrono::duration<double>(stopTime - startTime).count();
-            std::cout << "Loading took " << elapsedTime << " seconds.\n";
+            std::cout << "\n///////////////////////////////////////////////\n\n";
+            std::cout << "Asset Loading took " << elapsedTime << " seconds.\n";
+            std::cout << "\n///////////////////////////////////////////////\n\n";
 
             Game::Create();
             AssetManager::UploadVertexData();

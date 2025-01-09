@@ -2,6 +2,68 @@
 #include "../Core/AssetManager.h"
 #include "../Game/Scene.h"
 
+void ChristmasLights::Update(float deltaTime) {
+    // Define the patterns
+    std::vector<std::array<bool, 4>> patterns = {
+        {1, 1, 1, 1},
+        {0, 0, 0, 0},
+        {1, 1, 1, 1},
+        {0, 0, 0, 0},
+        {1, 1, 1, 1},
+        {0, 0, 0, 0},
+        {1, 1, 1, 1},
+        {0, 0, 0, 0},
+
+        {1, 0, 0, 0},
+        {0, 1, 0, 0},
+        {0, 0, 1, 0},
+        {0, 0, 0, 1},
+
+        {1, 0, 0, 0},
+        {0, 1, 0, 0},
+        {0, 0, 1, 0},
+        {0, 0, 0, 1},
+
+        {1, 0, 0, 0},
+        {0, 1, 0, 0},
+        {0, 0, 1, 0},
+        {0, 0, 0, 1},
+
+        {1, 0, 0, 0},
+        {0, 1, 0, 0},
+        {0, 0, 1, 0},
+        {0, 0, 0, 1},
+
+        {1, 0, 0, 0},
+        {0, 1, 0, 0},
+        {0, 0, 1, 0},
+        {0, 0, 0, 1},
+
+        {1, 0, 0, 0},
+        {0, 1, 0, 0},
+        {0, 0, 1, 0},
+        {0, 0, 0, 1},
+    };
+    glm::vec3 colors[] = {
+        /* red    */ glm::vec3(1.0f, 0.0f, 0.0f),
+        /* blue   */ glm::vec3(2.0 / 255.0, 100.0 / 255.0, 230.0 / 255.0),
+        /* yellow */ glm::vec3(247.0f / 255.0f, 216.0f / 255.0f, 12.0f / 255.0f),
+        /* green  */ glm::vec3(30.0f / 255.0f, 121.0f / 255.0f, 44.0f / 255.0f)
+    };
+    if (m_time == 0) {
+        m_time = Util::RandomFloat(0.0, 5.0f);
+    }
+    m_time += deltaTime;
+    float flashSpeed = 0.1f;
+    int currentPatternIndex = static_cast<int>(m_time / flashSpeed) % patterns.size();
+    const auto& currentPattern = patterns[currentPatternIndex];
+
+    for (size_t i = 0; i < m_renderItems.size() / 2; i++) {
+        int colorIndex = i % 4;
+        m_renderItems[i].emissiveColor = currentPattern[colorIndex] ? colors[colorIndex] : BLACK;
+    }
+}
+
 float ChristmasLerp(float start, float end, float t) {
     return start + t * (end - start);
 }
@@ -42,8 +104,6 @@ std::vector<glm::vec3> GenerateCirclePoints(const glm::vec3& center, const glm::
     return points;
 }
 
-
-
 // ShaderToy Simple Spiral
 // https://www.shadertoy.com/view/MslyWB 
 std::vector<glm::vec3> GenerateSpiralPoints(glm::vec3 spiralCenter, float radius, int numPoints, float numCycles, float spiralPower) {
@@ -62,7 +122,6 @@ std::vector<glm::vec3> GenerateSpiralPoints(glm::vec3 spiralCenter, float radius
     return points;
 }
 
-
 void ChristmasLights::Init(ChristmasLightsCreateInfo createInfo) {
     m_start = createInfo.start;
     m_end = createInfo.end;
@@ -77,11 +136,9 @@ void ChristmasLights::Init(ChristmasLightsCreateInfo createInfo) {
     float wireRadius = 0.001f;
     float wireCircleSegments = 5;
 
-
     if (!m_spiral) {
         m_wireSegmentPoints = GenerateSagPoints(m_start, m_end, numPoints, m_sag);
         m_lightSpawnPoints = GenerateSagPoints(m_start, m_end, numOfLights, m_sag);
-        //std::cout << " Creating straight Christmas lights: " <<  m_wireSegmentPoints.size() << "\n";
     } 
     else {
         // Draw spiral
@@ -90,13 +147,11 @@ void ChristmasLights::Init(ChristmasLightsCreateInfo createInfo) {
         numPoints = 600; 
         numOfLights = numPoints * 1.5f;
         float numCycles = 4.5f;
-        float spiralPower = 1.0f;
-    
-        std::vector truePoints = GenerateSpiralPoints(spiralCenter, radius, numOfLights, numCycles, spiralPower);
-    
-        for (int i = 0; i < truePoints.size() / 2; i++) {
-            m_wireSegmentPoints.push_back(truePoints[i * 2]);
-            m_lightSpawnPoints.push_back(truePoints[i * 2]);
+        float spiralPower = 1.0f;    
+        std::vector truePoints = GenerateSpiralPoints(spiralCenter, radius, numOfLights, numCycles, spiralPower);    
+        for (int i = 0; i < truePoints.size(); i+= 2) {
+            m_wireSegmentPoints.push_back(truePoints[i]);
+            m_lightSpawnPoints.push_back(truePoints[i]);
         }
     }
 
@@ -167,56 +222,29 @@ void ChristmasLights::Init(ChristmasLightsCreateInfo createInfo) {
             indices.push_back(idx1 + 2);
         }
     }
-    //std::cout << "vertices: " << vertices.size() << " indices: " << indices.size() << "\n";
     g_wireMesh.UpdateVertexBuffer(vertices, indices);
 
-    static Model* model = AssetManager::GetModelByName("ChristmasLight2");
+    static Model* model = AssetManager::GetModelByName("ChristmasLight");
     static int whiteMaterialIndex = AssetManager::GetMaterialIndex("ChristmasLightWhite");
     static int blackMaterialIndex = AssetManager::GetMaterialIndex("Black");
 
     int j = 0;
     m_renderItems.clear();
-    for (int i = 0; i < m_lightSpawnPoints.size(); i++) {
 
+    std::vector<glm::mat4> modelMatrices;
+    for (glm::vec3& position : m_lightSpawnPoints) {
         Transform transform;
-        transform.position = m_lightSpawnPoints[i];
+        transform.position = position;
         transform.rotation = glm::vec3(Util::RandomFloat(-1, 1), Util::RandomFloat(-1, 1), Util::RandomFloat(-1, 1));
+        transform.rotation.x += HELL_PI * -0.5f;
+        modelMatrices.push_back(transform.to_mat4());
+    }
 
-        // Plastic
-        RenderItem3D renderItem;
-        renderItem.meshIndex = model->GetMeshIndices()[0];;
-        renderItem.modelMatrix = transform.to_mat4();
-        renderItem.inverseModelMatrix = glm::inverse(renderItem.modelMatrix);
+    // Light
+    for (int i = 0; i < m_lightSpawnPoints.size(); i++) {
         Material* material = AssetManager::GetMaterialByIndex(blackMaterialIndex);
-        renderItem.baseColorTextureIndex = material->_basecolor;
-        renderItem.rmaTextureIndex = material->_rma;
-        renderItem.normalMapTextureIndex = material->_normal;
-        renderItem.castShadow = false;
-        m_renderItems.push_back(renderItem);
-
-
-        // Blue = 65.0 / 255.0, 152.065.0 / 255.0, 220.0 65.0 / 255.0
-        // 2555 224 27 yellow
-        // Blue = 65.0 / 255.0, 152.065.0 / 255.0, 220.0 65.0 / 255.0
-        static glm::vec3 yellow = glm::vec3(247.0 / 255.0, 216.0 / 255.0, 12.0 / 255.0);
-        static glm::vec3 blue = glm::vec3(22.0 / 255.0, 220.0 / 255.0, 230.0 / 255.0);
-        static glm::vec3 green = glm::vec3(30.0 / 255.0, 121.0 / 255.0, 44.0 / 255.0);
-
-        // 0.29, 0.49, 0.980.29, 0.49, 0.98
-
-        // Light color
-        glm::vec3 color = RED;
-        if (j == 1) {
-            color = blue;
-        }
-        else if (j == 2) {
-            color = yellow;
-        }
-        else if (j == 3) {
-            color = green;
-        }
-
-        // Light
+        RenderItem3D renderItem;
+        renderItem.modelMatrix = modelMatrices[i];
         renderItem.meshIndex = model->GetMeshIndices()[1];;
         material = AssetManager::GetMaterialByIndex(whiteMaterialIndex);
         renderItem.baseColorTextureIndex = material->_basecolor;
@@ -224,21 +252,24 @@ void ChristmasLights::Init(ChristmasLightsCreateInfo createInfo) {
         renderItem.normalMapTextureIndex = material->_normal;
         renderItem.useEmissiveMask = 1.0f;
         renderItem.castShadow = false;
-        renderItem.emissiveColor = color;// glm::vec3(Util::RandomFloat(0, 1), Util::RandomFloat(0, 1), Util::RandomFloat(0, 1));
+        renderItem.emissiveColor = BLACK;
         m_renderItems.push_back(renderItem);
-
-    //   LightCreateInfo lightCreateInfo;
-    //   lightCreateInfo.position = m_lightSpawnPoints[i];
-    //   lightCreateInfo.color = color;
-    //   lightCreateInfo.radius = 0.3f;
-    //   lightCreateInfo.strength = 1.0f;
-    //   lightCreateInfo.type = -1;
-    //   lightCreateInfo.shadowCasting = false;
-    //   Scene::CreateLight(lightCreateInfo);
-
-        j++;
-        if (j == 4) {
-            j = 0;
-        }
     }
+    // Plastic
+    for (int i = 0; i < m_lightSpawnPoints.size(); i++) {
+        Material* material = AssetManager::GetMaterialByIndex(blackMaterialIndex);
+        RenderItem3D renderItem;
+        renderItem.modelMatrix = modelMatrices[i];
+        renderItem.meshIndex = model->GetMeshIndices()[0];
+        renderItem.inverseModelMatrix = glm::inverse(renderItem.modelMatrix);
+        renderItem.baseColorTextureIndex = material->_basecolor;
+        renderItem.rmaTextureIndex = material->_rma;
+        renderItem.normalMapTextureIndex = material->_normal;
+        renderItem.castShadow = false;
+        m_renderItems.push_back(renderItem);
+    }
+}
+
+void ChristmasLights::CleanUp() {
+    // Nothing as of yet
 }

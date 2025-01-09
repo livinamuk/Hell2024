@@ -108,8 +108,9 @@ void InputMulti::Init() {
         std::cout << "Failed to register window class\n";
         return;
     }
-    else
-        std::cout << "Dual keyboard init successful\n";
+    else {
+        std::cout << "Multi mouse/keyboard support initialized\n";
+    }
     RegisterDeviceOfType(HID_USAGE_GENERIC_MOUSE, eventWindow);
     RegisterDeviceOfType(HID_USAGE_GENERIC_KEYBOARD, eventWindow);
 

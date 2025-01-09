@@ -7,18 +7,19 @@
 #define COLLISION_TEST_STEP_COUNT 40
 #define SHARK_HEALTH_MAX 1000
 
-enum class SharkMovementState { STOPPED, FOLLOWING_PATH, ARROW_KEYS, HUNT_PLAYER };
+enum class SharkMovementState { STOPPED, FOLLOWING_PATH, FOLLOWING_PATH_ANGRY, ARROW_KEYS, HUNT_PLAYER };
 enum class SharkMovementDirection { STRAIGHT, LEFT, RIGHT, NONE };
-enum class SharkHuntingState { CHARGE_PLAYER, BITING_PLAYER };
+enum class SharkHuntingState { CHARGE_PLAYER, BITING_PLAYER, UNDEFINED };
 
 struct Shark {
     void Init();
     void Update(float deltaTime);
     void UpdateHuntingLogic(float deltaTime);
+    void Reset();
 
     void MoveShark(float deltaTime);
 
-    void UpdateMovementFollowingPath(float deltaTime);
+    void UpdateMovementFollowingPath2(float deltaTime);
     void CalculateTargetFromPlayer();
     void CalculateTargetFromPath();
 
@@ -83,6 +84,8 @@ struct Shark {
 
     void SetPositionToBeginningOfPath();
 
+    void HuntClosestPlayerInLineOfSight();
+
     SharkMovementState m_movementState;
     SharkHuntingState m_huntingState;
 
@@ -99,6 +102,7 @@ struct Shark {
     glm::vec3 m_spinePositions[SHARK_SPINE_SEGMENT_COUNT];
     std::string m_spineBoneNames[SHARK_SPINE_SEGMENT_COUNT];
     float m_spineSegmentLengths[SHARK_SPINE_SEGMENT_COUNT - 1];
+    RigidComponent* m_rigidComponents[SHARK_SPINE_SEGMENT_COUNT];
 
     std::vector<PxShape*> m_collisionPxShapes;
     //std::vector<PxRigidDynamic*> m_collisionPxRigidStatics;
@@ -132,10 +136,13 @@ struct Shark {
 
     bool IsBehindEvadePoint(glm::vec3 position);
     glm::vec3 GetMouthPosition2D();
+    void StraightenSpine(float deltaTime, float straightSpeed);
 
     private:
         glm::vec3 m_headPositionLastFrame = glm::vec3(0);
         glm::vec3 m_mouthPositionLastFrame = glm::vec3(0);
         glm::vec3 m_evadePointPositionLastFrame = glm::vec3(0);
+
+        int m_logicSubStepCount = 8;
 
 };

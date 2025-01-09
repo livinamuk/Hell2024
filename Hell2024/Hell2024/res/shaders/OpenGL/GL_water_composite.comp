@@ -250,7 +250,13 @@ vec3 CalculateMoonSpecular(vec3 viewPos, vec3 viewDir, vec3 WaterWorldPos, vec3 
     vec3 lightColor = vec3(1, 0.98, 0.94);  
     float testRadius = 15;
     float fresnelReflect = 0.375;
-    float lightAttenuation = smoothstep(testRadius, 0, length(viewPos - WaterWorldPos.xyz));
+    float viewDistance = length(viewPos - WaterWorldPos.xyz);
+
+    viewDistance = clamp(viewDistance, 0.0, 15.0);
+
+    float lightAttenuation = smoothstep(testRadius, 0, viewDistance);
+
+
     float irradiance = max(dot(lightDir, normal), 0.0) * lightAttenuation;
     float roughness = 0.2;
     float metallic = 0.0;
@@ -436,5 +442,6 @@ void main() {
 
 
     imageStore(waterColorTexture, texCoord, vec4(finalColor, 1));
+   // imageStore(waterColorTexture, texCoord, vec4(finalLightingColor, 1));
 }
 

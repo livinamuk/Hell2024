@@ -111,8 +111,19 @@ void Shark::Init() {
     for (int i = 0; i < SHARK_SPINE_SEGMENT_COUNT - 1; i++) {
         m_spineSegmentLengths[i] = glm::distance(m_spinePositions[i], m_spinePositions[i+1]);
     }
-    // Store pointer to head pxRigidDynamic
+
+    // Store PxRigidBody pointers
     Ragdoll* ragdoll = GetRadoll();
+    for (int i = 0; i < SHARK_SPINE_SEGMENT_COUNT; i++) {
+        for (int j = 0; j < ragdoll->m_rigidComponents.size(); j++) {
+            RigidComponent& rigidComponent = ragdoll->m_rigidComponents[j];        
+            if (rigidComponent.correspondingJointName == m_spineBoneNames[i]) {
+                m_rigidComponents[i] = &rigidComponent;
+                //std::cout << i << ": " << m_spineBoneNames[i] << " " << rigidComponent.name << "\n";
+            }
+        }
+    }
+
     if (ragdoll) {
         for (RigidComponent& rigidComponent : ragdoll->m_rigidComponents) {
             if (rigidComponent.name == "rMarker_BN_Head_00") {
@@ -121,10 +132,7 @@ void Shark::Init() {
             }
         }
     }
-    SetPosition(initialPosition);
-
-    m_forward = glm::vec3(0, 0, 1);
-    //m_nextForward = glm::vec3(0, 0, 1);
+    Reset();
 }
 
 void Shark::SetPosition(glm::vec3 position) {
@@ -242,4 +250,15 @@ void Shark::SetPositionToBeginningOfPath() {
         SetPosition(position);
         m_nextPathPointIndex = 1;
     }
+}
+
+void Shark::Reset() {
+    SetPositionToBeginningOfPath();
+    m_movementState = SharkMovementState::FOLLOWING_PATH;
+    m_huntingState = SharkHuntingState::UNDEFINED;
+    m_health = SHARK_HEALTH_MAX;
+    m_forward = glm::vec3(0, 0, 1.0f);
+    m_huntedPlayerIndex = -1;
+    m_nextPathPointIndex = 1;
+    PlayAndLoopAnimation("Shark_Swim", 1.0f);
 }
