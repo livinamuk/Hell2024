@@ -474,6 +474,10 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <None Include="res\shaders\OpenGL\GL_debug_circle.comp" />
     <None Include="res\shaders\OpenGL\GL_decals_bullet.frag" />
     <None Include="res\shaders\OpenGL\GL_decals_bullet.vert" />
+    <None Include="res\shaders\OpenGL\GL_depth_peel_color.frag" />
+    <None Include="res\shaders\OpenGL\GL_depth_peel_color.vert" />
+    <None Include="res\shaders\OpenGL\GL_depth_peel_depth.frag" />
+    <None Include="res\shaders\OpenGL\GL_depth_peel_depth.vert" />
     <None Include="res\shaders\OpenGL\GL_emissiveComposite.comp" />
     <None Include="res\shaders\OpenGL\GL_flipBook.frag" />
     <None Include="res\shaders\OpenGL\GL_flipBook.vert" />

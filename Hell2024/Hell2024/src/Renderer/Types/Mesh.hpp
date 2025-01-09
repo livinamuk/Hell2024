@@ -7,6 +7,10 @@ struct Mesh {
 
     std::string name = "undefined";
 
+    int32_t GetIndexCount() {
+        return indexCount;
+    }
+
     int32_t baseVertex = 0;
     uint32_t baseIndex = 0;
     uint32_t vertexCount = 0;

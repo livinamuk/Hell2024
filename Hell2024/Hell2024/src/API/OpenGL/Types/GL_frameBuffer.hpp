@@ -102,6 +102,15 @@ public:
         glDrawBuffers(attachments.size(), &attachments[0]);
     }
 
+    void DrawBuffer(const char* attachmentName) {
+        for (int i = 0; i < colorAttachments.size(); i++) {
+            if (Util::StrCmp(attachmentName, colorAttachments[i].name)) {
+                glDrawBuffer(GL_COLOR_ATTACHMENT0 + i);
+                return;
+            }
+        }
+    }
+
     void SetViewport() {
         glViewport(0, 0, width, height);
     }
@@ -140,5 +149,21 @@ public:
         }
         std::cout << "GetColorAttachmentHandleByName() with name '" << name << "' failed. Name does not exist in FrameBuffer '" << this->name << "'\n";
         return GL_INVALID_VALUE;
+    }
+    
+    void ClearAttachment(const char* attachmentName, float r, float g, float b, float a) {
+        for (int i = 0; i < colorAttachments.size(); i++) {
+            if (Util::StrCmp(attachmentName, colorAttachments[i].name)) {
+                glDrawBuffer(GL_COLOR_ATTACHMENT0 + i);
+                glClearColor(r, g, b, a);
+                glClear(GL_COLOR_BUFFER_BIT);
+                glDrawBuffer(GL_NONE);
+                return;
+            }
+        }
+    }
+
+    void ClearDepthAttachment() {
+        glClear(GL_DEPTH_BUFFER_BIT);
     }
 };

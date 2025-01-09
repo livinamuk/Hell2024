@@ -12,7 +12,16 @@ enum class FacingDirection { LEFT, RIGHT, ALIGNED };
 enum class AABBLightVolumeMode { WORLDSPACE_CUBE_MAP, POSITION_RADIUS };
 enum class MenuType { NONE, FILE, INSERT, SELECTED_OBJECT, MISC };
 enum class RendererOverrideState { NONE, BASE_COLOR, NORMALS, RMA, WILD_COLORS, STATE_COUNT };
-enum class BlendingMode { NONE, BLENDED, ALPHA_DISCARDED, DO_NOT_RENDER };
+
+enum class BlendingMode {
+    NONE,
+    BLENDED,
+    ALPHA_DISCARDED,
+    HAIR_BOTTOM_LAYER,
+    HAIR_TOP_LAYER,
+    DO_NOT_RENDER
+};
+
 enum class EditorMode { MAP, CHRISTMAS, SHARK_PATH, MODE_COUNT };
 
 enum EngineMode { GAME = 0, FLOORPLAN, EDITOR };

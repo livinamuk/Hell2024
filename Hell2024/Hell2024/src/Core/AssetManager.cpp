@@ -628,9 +628,6 @@ void AssetManager::LoadModel(Model* model) {
     model->m_loadedFromDisk = true;
 }
 
-
-
-
 void AssetManager::CreateHardcodedModels() {
 
     /* Quad */ {

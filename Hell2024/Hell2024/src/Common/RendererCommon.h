@@ -108,6 +108,12 @@ struct RenderItem3D {
     }
 };
 
+struct HairRenderItem {
+    uint32_t meshIndex;
+    uint32_t materialIndex;
+    glm::mat4 modelMatrix;
+};
+
 /*
 struct RenderItem3D {
 struct RenderItem3D {

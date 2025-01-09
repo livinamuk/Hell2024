@@ -628,7 +628,7 @@ void main() {
         directionalLight = mix(directionalLight, falloffColor, falloffFactor);
             
 	    // Apply moonlighting
-        finalLighting += directionalLight;
+        //finalLighting += directionalLight;
     }
     
     // Fragments beneath water

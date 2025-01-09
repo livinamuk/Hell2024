@@ -698,8 +698,8 @@ void Scene::LoadDefaultScene() {
         mermaid->SetMeshBlendingMode("EyelashUpper_HP", BlendingMode::BLENDED);
         mermaid->SetMeshBlendingMode("EyelashLower_HP", BlendingMode::BLENDED);
         mermaid->SetMeshBlendingMode("HairScalp", BlendingMode::BLENDED);
-        mermaid->SetMeshBlendingMode("HairOutta", BlendingMode::ALPHA_DISCARDED);
-        mermaid->SetMeshBlendingMode("HairInner", BlendingMode::ALPHA_DISCARDED);
+        mermaid->SetMeshBlendingMode("HairOutta", BlendingMode::HAIR_TOP_LAYER);
+        mermaid->SetMeshBlendingMode("HairInner", BlendingMode::HAIR_BOTTOM_LAYER);
         mermaid->SetName("Mermaid");
         mermaid->SetKinematic(true);
         mermaid->AddCollisionShapeFromModelIndex(AssetManager::GetModelIndexByName("Rock_ConvexMesh"));
@@ -3135,4 +3135,38 @@ void Scene::CreateGameObject(GameObjectCreateInfo createInfo) {
     gameObject.SetName("GameObject");
     gameObject.SetModel(createInfo.modelName);
     gameObject.SetMeshMaterial(createInfo.materialName.c_str());
+}
+
+std::vector<HairRenderItem> Scene::GetHairTopLayerRenderItems() {
+    std::vector<HairRenderItem> renderItems;
+    for (GameObject& gameObject : g_gameObjects) {        
+        Model* model = gameObject.model;
+        for (int i = 0; i < model->GetMeshCount(); i++) {
+            BlendingMode& blendingMode = gameObject.m_meshBlendingModes[i];
+            if (blendingMode == BlendingMode::HAIR_TOP_LAYER) {
+                HairRenderItem& renderItem = renderItems.emplace_back();
+                renderItem.meshIndex = model->GetMeshIndices()[i];
+                renderItem.materialIndex = gameObject.m_meshMaterialIndices[i];
+                renderItem.modelMatrix = gameObject.GetGameWorldMatrix();
+            }
+        }
+    }
+    return renderItems;
+}
+
+std::vector<HairRenderItem> Scene::GetHairBottomLayerRenderItems() {
+    std::vector<HairRenderItem> renderItems;
+    for (GameObject& gameObject : g_gameObjects) {
+        Model* model = gameObject.model;
+        for (int i = 0; i < model->GetMeshCount(); i++) {
+            BlendingMode& blendingMode = gameObject.m_meshBlendingModes[i];
+            if (blendingMode == BlendingMode::HAIR_BOTTOM_LAYER) {
+                HairRenderItem& renderItem = renderItems.emplace_back();
+                renderItem.meshIndex = model->GetMeshIndices()[i];
+                renderItem.materialIndex = gameObject.m_meshMaterialIndices[i];
+                renderItem.modelMatrix = gameObject.GetGameWorldMatrix();
+            }
+        }
+    }
+    return renderItems;
 }

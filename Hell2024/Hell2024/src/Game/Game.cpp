@@ -486,8 +486,8 @@ namespace Game {
             else {
                 RespawnAllPlayers();
                 Scene::ClearAllItemPickups();
-                Game::GetPlayerByIndex(0)->SetPosition(glm::vec3(2.77f, 2.0f, 9.24f));
-                Game::GetPlayerByIndex(0)->m_flashlightOn = true;
+                //Game::GetPlayerByIndex(0)->SetPosition(glm::vec3(2.77f, 2.0f, 9.24f));
+                //Game::GetPlayerByIndex(0)->m_flashlightOn = true;
             }
         }
         if (Input::KeyPressed(HELL_KEY_GRAVE_ACCENT)) {

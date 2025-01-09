@@ -105,7 +105,6 @@ void Player::Update(float deltaTime) {
         //cameraTransform *= glm::mat4_cast(m_shopCameraRotationQ);
         //cameraTransform *= glm::mat4_cast(m_shopCameraRotationQ);
 
-
         _viewMatrix = glm::inverse(cameraTransform);
         _inverseViewMatrix = glm::inverse(_viewMatrix);
         _right = glm::vec3(_inverseViewMatrix[0]);
@@ -491,7 +490,7 @@ void Player::UpdateTimers(float deltaTime) {
         // Make it red
         if (_timeSinceDeath > 0) {
             if (CameraIsUnderwater()) {
-                finalImageColorTint.r = 3.5;
+                finalImageColorTint.r = 2.5;
                 finalImageColorTint.g *= 0.125f;
                 finalImageColorTint.b *= 0.125f;
                 finalImageContrast = 1.3f;

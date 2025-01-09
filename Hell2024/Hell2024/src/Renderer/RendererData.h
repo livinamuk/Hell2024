@@ -29,7 +29,6 @@ namespace RendererData {
     inline std::vector<RenderItem3D> g_shadowMapGeometryRenderItems;
 
 
-
     inline DrawInfo g_bulletDecalDrawInfo[4];
 
     inline DrawInfo g_shadowMapGeometryDrawInfo[MAX_SHADOW_CASTING_LIGHTS][6];

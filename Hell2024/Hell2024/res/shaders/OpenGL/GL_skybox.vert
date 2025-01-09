@@ -28,12 +28,13 @@ layout(std430, binding = 16) readonly buffer CameraDataArray {
 };
 
 out vec3 TexCoords;
+uniform mat4 projection;
+uniform mat4 view;
 
-void main()
-{
+void main() {
 
-	mat4 projection = cameraDataArray[playerIndex].projection;
-	mat4 view = cameraDataArray[playerIndex].view;
+	//mat4 projection = cameraDataArray[playerIndex].projection;
+	//mat4 view = cameraDataArray[playerIndex].view;
 
     TexCoords = aPos;
     gl_Position = projection * view * model * vec4(aPos, 1.0);

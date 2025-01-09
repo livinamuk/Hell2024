@@ -262,6 +262,8 @@ namespace Scene {
     std::vector<RenderItem3D>& GetGeometryRenderItemsBlended();
     std::vector<RenderItem3D>& GetGeometryRenderItemsAlphaDiscarded();
     std::vector<RenderItem3D> CreateDecalRenderItems();
+    std::vector<HairRenderItem> GetHairTopLayerRenderItems();
+    std::vector<HairRenderItem> GetHairBottomLayerRenderItems();
 
     // Old shit
 	void LoadMap(std::string mapPath);
