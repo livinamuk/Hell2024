@@ -1,0 +1,24 @@
+#version 430 core
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+layout(rgba8, binding = 0) uniform image2D hairColorTexture;
+layout(rgba8, binding = 1) uniform image2D compositeTexture;
+
+void main() {
+    ivec2 pixelCoords = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 outputImageSize = imageSize(compositeTexture);
+    vec2 uv_screenspace = vec2(pixelCoords) / vec2(outputImageSize);
+
+    // Don't process out of bounds pixels
+    if (pixelCoords.x >= outputImageSize.x || pixelCoords.y >= outputImageSize.y) {
+        return;
+    }    
+    // Inputs
+    vec4 compositeColor = imageLoad(compositeTexture, pixelCoords);
+    vec4 hairColor = imageLoad(hairColorTexture, pixelCoords);
+
+    // Composite
+    compositeColor.rgb = hairColor.rgb * (1.0 - compositeColor.a) + compositeColor.rgb;
+    compositeColor.a = hairColor.a * (1.0 - compositeColor.a) + compositeColor.a;
+
+    // Output
+    imageStore(compositeTexture, pixelCoords, compositeColor);}

@@ -229,11 +229,26 @@ namespace Game {
             g_dogDeaths = std::stoi(buffer.str());
         }
 
-        if (g_playerDeaths == -1) {
-            std::ifstream file("PlayerDeaths.txt");
+        if (g_dogKills == -1) {
+            std::ifstream file("DogKills.txt");
             std::stringstream buffer;
             buffer << file.rdbuf();
-            g_playerDeaths = std::stoi(buffer.str());
+            g_dogKills = std::stoi(buffer.str());
+        }
+
+
+        if (g_sharkDeaths == -1) {
+            std::ifstream file("SharkDeaths.txt");
+            std::stringstream buffer;
+            buffer << file.rdbuf();
+            g_sharkDeaths = std::stoi(buffer.str());
+        }
+
+        if (g_sharkKills == -1) {
+            std::ifstream file("SharkKills.txt");
+            std::stringstream buffer;
+            buffer << file.rdbuf();
+            g_sharkKills = std::stoi(buffer.str());
         }
 
         // Populate Player data
@@ -501,7 +516,7 @@ namespace Game {
         }
         // Move mermaid
         static bool mermaidOutside = false;
-        if (Input::KeyPressed(HELL_KEY_4)) {
+        if (Input::KeyPressed(HELL_KEY_0)) {
             Audio::PlayAudio(AUDIO_SELECT, 1.00f);
             mermaidOutside = !mermaidOutside;
             for (GameObject& gameObject : Scene::GetGamesObjects()) {
@@ -600,4 +615,16 @@ namespace Game {
     const GameSettings& GetSettings() {
         return g_gameSettings;
     }
+
+    int GetPlayerViewportCount() {
+        int playerCount = 1;
+        if (Game::GetSplitscreenMode() == SplitscreenMode::TWO_PLAYER) {
+            playerCount = std::min(2, Game::GetPlayerCount());
+        }
+        else if (Game::GetSplitscreenMode() == SplitscreenMode::FOUR_PLAYER) {
+            playerCount = std::min(4, Game::GetPlayerCount());
+        }
+        return playerCount;
+    }
+
 }

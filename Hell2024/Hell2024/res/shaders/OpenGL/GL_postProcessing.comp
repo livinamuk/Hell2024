@@ -6,8 +6,7 @@ layout(rgba8, binding = 0) uniform image2D tex;
 layout(rgba16f, binding = 1) uniform image2D normalTexture;
 layout(r32f, binding = 2) uniform image2D ssaoTexture;
 layout(rgba8, binding = 3) uniform image2D waterColorTexture;
-layout(rgba8, binding = 4) uniform image2D waterMaskTexture;
-
+layout(rgba8, binding = 4) uniform image2D hairCompositeColorTexutre;
 
 uniform float time;
 uniform float viewportWidth;
@@ -207,6 +206,17 @@ void main() {
     float ssao = imageLoad(ssaoTexture, texCoord).r;
 	ssao = 1;
 	finalColor = finalColor * ssao;	
+
+
+    
+    vec3 hairCompositeColor = imageLoad(hairCompositeColorTexutre, texCoord).rgb;    
+    
+
+    if (hairCompositeColor != vec3(0,0,0)) {
+        //finalColor = hairCompositeColor;
+    }
+//     finalColor = hairCompositeColor;
+   // finalColor = hairCompositeColor;
 
     imageStore(tex, texCoord, vec4(finalColor, 1));
 

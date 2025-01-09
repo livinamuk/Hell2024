@@ -19,6 +19,7 @@ namespace Game {
     void SetPlayerKeyboardAndMouseIndex(int playerIndex, int keyboardIndex, int mouseIndex);
     void SetPlayerGroundedStates();
     void GiveControlToPlayer1();
+    int GetPlayerViewportCount();
 
     inline int g_killLimit = 10;
     inline float g_globalFadeOut = 1.0f;
@@ -42,7 +43,9 @@ namespace Game {
     const GameSettings& GetSettings();
 
     inline int g_dogDeaths = -1;
-    inline int g_playerDeaths = -1;
+    inline int g_dogKills = -1;
+    inline int g_sharkDeaths = -1;
+    inline int g_sharkKills = -1;
     inline std::vector<glm::vec3> testPoints;
     inline std::vector<PlayerData> g_playerData;
     inline EditorMode g_editorMode = EditorMode::SHARK_PATH;

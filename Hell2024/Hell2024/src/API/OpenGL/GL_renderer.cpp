@@ -93,8 +93,13 @@ namespace OpenGLRenderer {
         Shader winston;
         Shader megaTextureBloodDecals;
         Shader christmasLightWireShader;
+        Shader flipbookNew;
+
+        // Hair
         Shader depthPeelDepth;
         Shader depthPeelColor;
+        ComputeShader hairLayerComposite;
+        ComputeShader hairFinalComposite;
 
         // water shaders
         Shader waterReflectionGeometry;
@@ -179,10 +184,9 @@ namespace OpenGLRenderer {
     void HeightMapPass(RenderData& renderData);
     void UploadSSBOsGPU(RenderData& renderData);
     void WaterPass(RenderData& renderData);
-    void RenderHair();
+    void FlipbookPass();
 }
 
-void RenderHairLayer(std::vector<HairRenderItem>& renderItems, int peelCount);
 void DrawRenderItem(RenderItem3D& renderItem);
 void MultiDrawIndirect(std::vector<DrawIndexedIndirectCommand>& commands, GLuint vertexArray);
 void MultiDrawIndirect(std::vector<RenderItem3D>& renderItems, GLuint vertexArray);
@@ -215,7 +219,6 @@ void LightCullingPass(RenderData& renderData);
 void DebugTileViewPass(RenderData& renderData);
 void SSAOPass();
 void WinstonPass(RenderData& renderData);
-
 
 void OpenGLRenderer::HotloadShaders() {
 
@@ -279,6 +282,9 @@ void OpenGLRenderer::HotloadShaders() {
     g_shaders.computeTest.Load("res/shaders/OpenGL/GL_compute_test.comp");
     g_shaders.depthPeelDepth.Load("GL_depth_peel_depth.vert", "GL_depth_peel_depth.frag");
     g_shaders.depthPeelColor.Load("GL_depth_peel_color.vert", "GL_depth_peel_color.frag");
+    g_shaders.hairLayerComposite.Load("res/shaders/OpenGL/GL_hair_layer_composite.comp");
+    g_shaders.hairFinalComposite.Load("res/shaders/OpenGL/GL_hair_final_composite.comp");
+    g_shaders.flipbookNew.Load("GL_flipbook_new.vert", "GL_flipbook_new.frag");  
 }
 
 void OpenGLRenderer::CreatePlayerRenderTargets(int presentWidth, int presentHeight) {
@@ -896,10 +902,9 @@ void OpenGLRenderer::RenderFrame(RenderData& renderData) {
     LightCullingPass(renderData);
     LightingPass(renderData);
 
-    RenderHair();
-
     SkyBoxPass(renderData);
     WaterPass(renderData);
+    HairPass();
 
     //SSAOPass();
     DebugTileViewPass(renderData);
@@ -907,6 +912,7 @@ void OpenGLRenderer::RenderFrame(RenderData& renderData) {
     // DebugPassProbePass(renderData);
     P90MagPass(renderData);
     MuzzleFlashPass(renderData);
+    FlipbookPass();
     GlassPass(renderData);
     EmissivePass(renderData);
     WinstonPass(renderData);
@@ -966,7 +972,7 @@ void OpenGLRenderer::WaterPass(RenderData& renderData) {
         skyboxShader->SetInt("playerIndex", i);
         skyboxShader->SetMat4("projection", Game::GetPlayerByIndex(i)->GetProjectionMatrix());
         skyboxShader->SetMat4("view", Game::GetPlayerByIndex(i)->GetWaterReflectionViewMatrix());
-        skyboxShader->SetVec3("skyboxTint", Game::GameSettings().skyBoxTint * glm::vec3(0.5f));
+        skyboxShader->SetVec3("skyboxTint", Game::GameSettings().skyBoxTint * glm::vec3(0.35f));
         skyboxShader->SetMat4("model", skyBoxTransform.to_mat4());
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTexture->GetGLTexture().GetID());
@@ -1005,6 +1011,22 @@ void OpenGLRenderer::WaterPass(RenderData& renderData) {
                 glDrawElementsInstancedBaseVertex(GL_TRIANGLES, mesh->indexCount, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int) * mesh->baseIndex), 1, mesh->baseVertex);
             }
         }
+        std::vector<HairRenderItem> hairTopLayerRenderItems = Scene::GetHairTopLayerRenderItems();
+        std::vector<HairRenderItem> hairBottomLayerRenderItems = Scene::GetHairBottomLayerRenderItems();
+        std::vector<HairRenderItem> hairRenderItems;
+        hairRenderItems.insert(std::end(hairRenderItems), std::begin(hairTopLayerRenderItems), std::end(hairTopLayerRenderItems));
+        hairRenderItems.insert(std::end(hairRenderItems), std::begin(hairBottomLayerRenderItems), std::end(hairBottomLayerRenderItems));
+        for (HairRenderItem& hairRenderItem : hairRenderItems) {
+            Mesh* mesh = AssetManager::GetMeshByIndex(hairRenderItem.meshIndex);
+            Material* material = AssetManager::GetMaterialByIndex(hairRenderItem.materialIndex);
+            reflectionGeometryShader.SetMat4("model", hairRenderItem.modelMatrix);
+            reflectionGeometryShader.SetMat4("inverseModel", glm::inverse(hairRenderItem.modelMatrix));
+            reflectionGeometryShader.SetInt("baseColorIndex", material->_basecolor);
+            reflectionGeometryShader.SetInt("normalMapIndex", material->_normal);
+            reflectionGeometryShader.SetInt("rmaIndex", material->_rma);
+            glDrawElementsInstancedBaseVertex(GL_TRIANGLES, mesh->indexCount, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int) * mesh->baseIndex), 1, mesh->baseVertex);
+        }
+
         // Constructive Solid Geometry
         reflectionGeometryShader.SetMat4("model", glm::mat4(1));
         reflectionGeometryShader.SetMat4("inverseModel", glm::inverse(glm::mat4(1)));
@@ -1520,13 +1542,13 @@ void DebugPass(RenderData& renderData) {
         static Model* model = AssetManager::GetModelByIndex(AssetManager::GetModelIndexByName("Sphere"));
         static Mesh* sphereMesh = AssetManager::GetMeshByIndex(model->GetMeshIndices()[0]);
         static Transform sphereTransform(glm::vec3(0,-10,0));
-        if (Input::KeyPressed(HELL_KEY_3)) {
-            WaterRayIntersectionResult rayResult = Water::GetMouseRayIntersection(renderData.cameraData[i].projection, renderData.cameraData[i].view);
-            if (rayResult.hitFound) {
-                sphereTransform.position = rayResult.hitPosition;
-            }
-        }
-
+        //if (Input::KeyPressed(HELL_KEY_3)) {
+        //    WaterRayIntersectionResult rayResult = Water::GetMouseRayIntersection(renderData.cameraData[i].projection, renderData.cameraData[i].view);
+        //    if (rayResult.hitFound) {
+        //        sphereTransform.position = rayResult.hitPosition;
+        //    }
+        //}
+        //
 
 
     //   // Draw Christmas lights
@@ -1801,6 +1823,13 @@ void GeometryPass(RenderData& renderData) {
                 }
                 csgShader.SetInt("materialIndex", cube.m_materialIndex);
                 glDrawElementsInstancedBaseVertexBaseInstance(GL_TRIANGLES, cube.m_vertexCount, GL_UNSIGNED_INT, (void*)(sizeof(uint32_t) * cube.m_baseIndex), 1, cube.m_baseVertex, j);
+
+                // cube.m_vertexCount is almost certainly wrong above, check
+                // cube.m_vertexCount is almost certainly wrong above, check
+                // cube.m_vertexCount is almost certainly wrong above, check
+                // cube.m_vertexCount is almost certainly wrong above, check
+                // cube.m_vertexCount is almost certainly wrong above, check
+
             }
         }
     }
@@ -2928,6 +2957,7 @@ void OpenGLRenderer::RaytracingTestPass(RenderData& renderData) {
 void PostProcessingPass(RenderData& renderData) {
     GLFrameBuffer& gBuffer = OpenGLRenderer::g_frameBuffers.gBuffer;
     GLFrameBuffer& waterFrameBuffer = OpenGLRenderer::g_frameBuffers.water;
+    GLFrameBuffer& hairFrameBuffer = OpenGLRenderer::g_frameBuffers.hair;
     GLFrameBuffer& genericRenderTargets = OpenGLRenderer::g_frameBuffers.genericRenderTargets;
     ComputeShader& computeShader = OpenGLRenderer::g_shaders.postProcessing;
     computeShader.Use();
@@ -2937,9 +2967,10 @@ void PostProcessingPass(RenderData& renderData) {
     computeShader.SetFloat("waterHeight", Water::GetHeight());
     glBindImageTexture(0, gBuffer.GetColorAttachmentHandleByName("FinalLighting"), 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA8);
     glBindImageTexture(1, gBuffer.GetColorAttachmentHandleByName("Normal"), 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA16F);
-    //glBindImageTexture(2, genericRenderTargets.GetColorAttachmentHandleByName("SSAOBlur"), 0, GL_FALSE, 0, GL_READ_WRITE, GL_R32F);
     glBindImageTexture(3, waterFrameBuffer.GetColorAttachmentHandleByName("Color"), 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA8);
-    //glBindImageTexture(4, waterFrameBuffer.GetColorAttachmentHandleByName("Mask"), 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA8);
+    glBindImageTexture(4, hairFrameBuffer.GetColorAttachmentHandleByName("Composite"), 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA8);
+
+
     glDispatchCompute(gBuffer.GetWidth() / 16, gBuffer.GetHeight() / 4, 1);
     //glFinish();
 }
@@ -3356,7 +3387,7 @@ void WinstonPass(RenderData& renderData) {
     }
 }
 
-void CopyDepthBuffer(GLFrameBuffer& srcFrameBuffer, GLFrameBuffer& dstFrameBuffer) {
+void OpenGLRenderer::CopyDepthBuffer(GLFrameBuffer & srcFrameBuffer, GLFrameBuffer & dstFrameBuffer) {
     glBindFramebuffer(GL_READ_FRAMEBUFFER, srcFrameBuffer.GetHandle());
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, dstFrameBuffer.GetHandle());
     glBlitFramebuffer(0, 0, srcFrameBuffer.GetWidth(), srcFrameBuffer.GetHeight(), 0, 0, dstFrameBuffer.GetWidth(), dstFrameBuffer.GetHeight(), GL_DEPTH_BUFFER_BIT, GL_NEAREST);
@@ -3364,7 +3395,7 @@ void CopyDepthBuffer(GLFrameBuffer& srcFrameBuffer, GLFrameBuffer& dstFrameBuffe
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 }
 
-void CopyColorBuffer(GLFrameBuffer& srcFrameBuffer, GLFrameBuffer& dstFrameBuffer, const char* srcAttachmentName, const char* dstAttachmentName) {
+void OpenGLRenderer::CopyColorBuffer(GLFrameBuffer& srcFrameBuffer, GLFrameBuffer& dstFrameBuffer, const char* srcAttachmentName, const char* dstAttachmentName) {
     GLenum srcAttachmentSlot = srcFrameBuffer.GetColorAttachmentSlotByName(srcAttachmentName);
     GLenum dstAttachmentSlot = dstFrameBuffer.GetColorAttachmentSlotByName(dstAttachmentName);
     glBindFramebuffer(GL_READ_FRAMEBUFFER, srcFrameBuffer.GetHandle());
@@ -3376,107 +3407,92 @@ void CopyColorBuffer(GLFrameBuffer& srcFrameBuffer, GLFrameBuffer& dstFrameBuffe
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 }
 
-void RenderHairLayer(std::vector<HairRenderItem>& renderItems, int peelCount) {
-
-    GLFrameBuffer& hairFramebuffer = OpenGLRenderer::g_frameBuffers.hair;
-    GLFrameBuffer& gBuffer = OpenGLRenderer::g_frameBuffers.gBuffer;
-    Shader& depthShader = OpenGLRenderer::g_shaders.depthPeelDepth;
-    Shader& colorShader = OpenGLRenderer::g_shaders.depthPeelColor;
-
-    hairFramebuffer.Bind();
-    hairFramebuffer.ClearAttachment("ViewspaceDepthPrevious", 1, 1, 1, 1);
-
-    Player * player = Game::GetPlayerByIndex(0);
-
-    for (int i = 0; i < peelCount; i++) {
-        // Viewspace depth pass
-        CopyDepthBuffer(gBuffer, hairFramebuffer);
-        hairFramebuffer.Bind();
-        hairFramebuffer.ClearAttachment("ViewspaceDepth", 0, 0, 0, 0);
-        hairFramebuffer.DrawBuffer("ViewspaceDepth");
-        glDepthFunc(GL_LESS);
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, hairFramebuffer.GetColorAttachmentHandleByName("ViewspaceDepthPrevious"));
-        depthShader.Use();
-        depthShader.SetMat4("projectionView", player->GetProjectionMatrix() * player->GetViewMatrix());
-        depthShader.SetFloat("nearPlane", NEAR_PLANE);
-        depthShader.SetFloat("farPlane", FAR_PLANE);
-        depthShader.SetFloat("viewportWidth", hairFramebuffer.GetWidth());
-        depthShader.SetFloat("viewportHeight", hairFramebuffer.GetHeight());
-        for (HairRenderItem& renderItem : renderItems) {
-            depthShader.SetMat4("model", renderItem.modelMatrix);
-            Mesh* mesh = AssetManager::GetMeshByIndex(renderItem.meshIndex);
-            if (mesh) {
-                glDrawElements(GL_TRIANGLES, mesh->GetIndexCount(), GL_UNSIGNED_INT, 0);
-            }
-        }
-        // // Color pass
-        // glDepthFunc(GL_EQUAL);
-        // hairFramebuffer.Bind();
-        // hairFramebuffer.ClearAttachment("Color", 0, 0, 0, 0);
-        // hairFramebuffer.DrawBuffer("Color");
-        // colorShader.Use();
-        // colorShader.SetMat4("projectionView", player->GetProjectionMatrix() * player->GetViewMatrix());
-        // for (HairRenderItem& renderItem : renderItems) {
-        //     colorShader.SetMat4("model", renderItem.modelMatrix);
-        //     Material* material = AssetManager::GetMaterialByIndex(renderItem.materialIndex);
-        //     glActiveTexture(GL_TEXTURE0);
-        //     glBindTexture(GL_TEXTURE_2D, material->_basecolor);
-        //     glActiveTexture(GL_TEXTURE1);
-        //     glBindTexture(GL_TEXTURE_2D, material->_normal);
-        //     glActiveTexture(GL_TEXTURE2);
-        //     glBindTexture(GL_TEXTURE_2D, material->_rma);
-        //     Mesh* mesh = AssetManager::GetMeshByIndex(renderItem.meshIndex);
-        //     if (mesh) {
-        //         glDrawElements(GL_TRIANGLES, mesh->GetIndexCount(), GL_UNSIGNED_INT, 0);
-        //     }
-        // }
-        // // TODO!: when you port this you can output previous viewspace depth in the pass above
-        // // TODO!: when you port this you can output previous viewspace depth in the pass above
-        // // TODO!: when you port this you can output previous viewspace depth in the pass above
-        // // TODO!: when you port this you can output previous viewspace depth in the pass above
-        // // TODO!: when you port this you can output previous viewspace depth in the pass above
-        // CopyColorBuffer(hairFramebuffer, gBuffer, "ViewspaceDepth", "ViewspaceDepthPrevious");
-        // 
-        // // Composite
-        // //g_shaders.hairLayerComposite.Use();
-        // //glBindImageTexture(0, g_frameBuffers.hair.GetColorAttachmentHandleByName("Color"), 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA8);
-        // //glBindImageTexture(1, g_frameBuffers.hair.GetColorAttachmentHandleByName("Composite"), 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA8);
-        // //glDispatchCompute((g_frameBuffers.hair.GetWidth() + 7) / 8, (g_frameBuffers.hair.GetHeight() + 7) / 8, 1);
-    }
+GLFrameBuffer& OpenGLRenderer::GetHairFrameBuffer() {
+    return OpenGLRenderer::g_frameBuffers.hair;
 }
 
-void OpenGLRenderer::RenderHair() {
+GLFrameBuffer& OpenGLRenderer::GetGBuffer() {
+    return OpenGLRenderer::g_frameBuffers.gBuffer;
+}
 
-    static int peelCount = 3;
-    if (Input::KeyPressed(HELL_KEY_E) && peelCount < 7) {
-        Audio::PlayAudio("UI_Select.wav", 1.0f);
-        peelCount++;
-        std::cout << "Depth peel layer count: " << peelCount << "\n";
-    }
-    if (Input::KeyPressed(HELL_KEY_Q) && peelCount > 0) {
-        Audio::PlayAudio("UI_Select.wav", 1.0f);
-        peelCount--;
-        std::cout << "Depth peel layer count: " << peelCount << "\n";
-    }
+Shader& OpenGLRenderer::GetDepthPeelDepthShader() {
+    return OpenGLRenderer::g_shaders.depthPeelDepth;
+}
 
-    // Setup state
-    GLFrameBuffer& hairFramebuffer = OpenGLRenderer::g_frameBuffers.hair;
-    hairFramebuffer.Bind();
-    hairFramebuffer.ClearAttachment("Composite", 0, 0, 0, 0);
-    hairFramebuffer.SetViewport();
-    
-    glEnable(GL_CULL_FACE);
-    glDisable(GL_BLEND);
+Shader& OpenGLRenderer::GetDepthPeelColorShader() {
+    return OpenGLRenderer::g_shaders.depthPeelColor;
+}
+
+Shader& OpenGLRenderer::GetSolidColorShader() {
+    return OpenGLRenderer::g_shaders.debugSolidColor;
+}
+
+ComputeShader& OpenGLRenderer::GetHairFinalCompositeShader() {
+    return OpenGLRenderer::g_shaders.hairFinalComposite;
+}
+
+ComputeShader& OpenGLRenderer::GetHairLayerCompositeShader() {
+    return OpenGLRenderer::g_shaders.hairLayerComposite;
+}
+
+void OpenGLRenderer::FlipbookPass() {
+
+    Player* player = Game::GetPlayerByIndex(0);
+
+    GLFrameBuffer frameBuffer = g_frameBuffers.gBuffer;
+    frameBuffer.Bind();
+    frameBuffer.SetViewport();
+    frameBuffer.DrawBuffers({ "FinalLighting" });
+
+    Shader& shader = g_shaders.flipbookNew;
+    shader.Use();
+    shader.SetMat4("projection", player->GetProjectionMatrix());
+    shader.SetMat4("view", player->GetViewMatrix());
+
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glDepthMask(GL_FALSE);
+    glDisable(GL_CULL_FACE);
     glBindVertexArray(OpenGLBackEnd::GetVertexDataVAO());
 
-    std::vector<HairRenderItem> hairTopLayerRenderItems = Scene::GetHairTopLayerRenderItems();
-    std::vector<HairRenderItem> hairBottomLayerRenderItems = Scene::GetHairBottomLayerRenderItems();
+    for (FlipbookObject& flipbookObject : Scene::g_flipbookObjects) {
 
-    RenderHairLayer(hairTopLayerRenderItems, peelCount);
-   // RenderHairLayer(hairBottomLayerRenderItems, peelCount);
+        if (!flipbookObject.IsBillboard()) {
+            shader.SetMat4("model", flipbookObject.GetModelMatrix());
+        }
+        else {
+            shader.SetMat4("model", flipbookObject.GetBillboardModelMatrix(-player->GetCameraForward(), player->GetCameraRight(), player->GetCameraUp()));
+        }
+        shader.SetFloat("mixFactor", flipbookObject.GetMixFactor());
+        shader.SetInt("index", flipbookObject.GetFrameIndex());
+        shader.SetInt("indexNext", flipbookObject.GetNextFrameIndex());
+        FlipbookTexture* flipbookTexture = AssetManager::GetFlipbookByName(flipbookObject.GetTextureName());
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D_ARRAY, flipbookTexture->m_arrayHandle);
+
+
+      // Model* model = AssetManager::GetModelByName("Quads");
+      //
+      // std::cout << "model.GetMeshCount()" << model->GetMeshCount() << "\n";
+      // for (int i = 0; i < model->GetMeshIndices().size(); i++) {
+      //     int meshIndex = model->GetMeshIndices()[i];
+      //     Mesh* mesh = AssetManager::GetMeshByIndex(meshIndex);
+      //     std::cout << " " << i << "; " << mesh->name << "\n";
+      // }
+      // std::cout << "\n";
+
+        Mesh* mesh = AssetManager::GetMeshByModelNameAndMeshName("Quads", "FlipBookQuadBottomAligned");
+        
+        if (mesh) {
+            glDrawElementsInstancedBaseVertex(GL_TRIANGLES, mesh->indexCount, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int) * mesh->baseIndex), 1, mesh->baseVertex);
+        }
+
+        glFinish();
+    }
 
     // Cleanup
-    glDepthFunc(GL_LESS);
+    glDisable(GL_BLEND);
+    glDepthMask(GL_TRUE);
+    glEnable(GL_CULL_FACE);
 }
 

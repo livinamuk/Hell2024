@@ -6,7 +6,7 @@
 void RapidHotload::Update() {
 
     GameObject* mermaid = Scene::GetGameObjectByName("Mermaid");
-    //mermaid->SetMeshBlendingMode("HairInner", BlendingMode::DO_NOT_RENDER);
+    mermaid->SetMeshBlendingMode("BoobTube", BlendingMode::NONE);
     //mermaid->SetMeshBlendingMode("EyelashUpper", BlendingMode::BLENDED);
     //mermaid->SetMeshBlendingMode("EyelashLower", BlendingMode::BLENDED);
     //mermaid->SetMeshBlendingMode("HairScalp", BlendingMode::BLENDED);

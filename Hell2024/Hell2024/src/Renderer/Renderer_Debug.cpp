@@ -789,7 +789,9 @@ std::string& Renderer::GetDebugText() {
     g_debugText += "Cam pos: " + Util::Vec3ToString(Game::GetPlayerByIndex(0)->GetViewPos()) + "\n";
     g_debugText += "\n";
     g_debugText += "Dog deaths: " + std::to_string(Game::g_dogDeaths) + "\n";
-    g_debugText += "Dog kills: " + std::to_string(Game::g_playerDeaths) + "\n";
+    g_debugText += "Dog kills: " + std::to_string(Game::g_dogKills) + "\n";
+    g_debugText += "Shark deaths: " + std::to_string(Game::g_sharkDeaths) + "\n";
+    g_debugText += "Shark kills: " + std::to_string(Game::g_sharkKills) + "\n";
     g_debugText += "\n";
 
     g_debugText += Scene::GetShark().GetDebugText();

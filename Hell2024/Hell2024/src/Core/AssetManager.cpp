@@ -59,6 +59,7 @@ namespace AssetManager {
     std::vector<Material> g_materials;
     std::vector<CubemapTexture> g_cubemapTextures;
     std::vector<GPUMaterial> g_gpuMaterials;
+    std::vector<FlipbookTexture> g_flipbookTextures;
 
     std::unordered_map<std::string, int> g_materialIndexMap;
     std::unordered_map<std::string, int> g_modelIndexMap;
@@ -98,6 +99,7 @@ namespace AssetManager {
     void GrabSkeleton(SkinnedModel& skinnedModel, const aiNode* pNode, int parentIndex);
     TextureData LoadTextureData(std::string filepath);
     void LoadCMPTextureData(CMPTextureData* cmpTextureData);
+    void LoadFlipbookTextures();
 }
 
 
@@ -521,6 +523,9 @@ void AssetManager::LoadNextItem() {
         // TODO
     }
 
+    // Put somewhere better! And load async
+    LoadFlipbookTextures();
+
     // We're done
     g_completedLoadingTasks.g_all = true;
 
@@ -629,6 +634,37 @@ void AssetManager::LoadModel(Model* model) {
 }
 
 void AssetManager::CreateHardcodedModels() {
+
+
+    // Quads
+    {
+        Model& model = g_models.emplace_back();
+        model.SetName("Quads");
+        model.m_awaitingLoadingFromDisk = false;
+        model.m_loadedFromDisk = true;
+        std::vector<Vertex> vertices; 
+        std::vector<uint32_t> indices;
+        AABB aabb;
+
+        vertices.clear();
+        vertices.push_back(Vertex(glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec2(0.0f, 1.0f)));
+        vertices.push_back(Vertex(glm::vec3(-1.0f, 2.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec2(0.0f, 0.0f)));
+        vertices.push_back(Vertex(glm::vec3(1.0f, 2.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec2(1.0f, 0.0f)));
+        vertices.push_back(Vertex(glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec2(1.0f, 1.0f)));
+        indices = { 2, 1, 0, 3, 2, 0 }; 
+        aabb = Util::GetAABBFromVertices(vertices);
+        model.AddMeshIndex(AssetManager::CreateMesh("FlipBookQuadBottomAligned", vertices, indices, aabb.boundsMin, aabb.boundsMax));
+
+        vertices.clear();
+        vertices.push_back(Vertex(glm::vec3(-1.0f, -1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec2(0.0f, 1.0f)));
+        vertices.push_back(Vertex(glm::vec3(-1.0f, 1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec2(0.0f, 0.0f)));
+        vertices.push_back(Vertex(glm::vec3(1.0f, 1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec2(1.0f, 0.0f)));
+        vertices.push_back(Vertex(glm::vec3(1.0f, -1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec2(1.0f, 1.0f)));
+        indices = { 2, 1, 0, 3, 2, 0 };
+        aabb = Util::GetAABBFromVertices(vertices);
+        model.AddMeshIndex(AssetManager::CreateMesh("FlipBookQuadCentered", vertices, indices, aabb.boundsMin, aabb.boundsMax));
+
+    }
 
     /* Quad */ {
         Vertex vertA, vertB, vertC, vertD;
@@ -775,6 +811,24 @@ int AssetManager::CreateMesh(std::string name, std::vector<Vertex>& vertices, st
     return g_meshes.size() - 1;
 }
 
+Mesh* AssetManager::GetMeshByModelNameAndMeshName(const std::string& modelName, const std::string& meshNname) {
+
+    Model* model = GetModelByName(modelName);
+    if (!model) {
+        std::cout << "AssetManager::GetMeshByModelNameAndMeshName() failed, model name '" << modelName << "' was not in g_models\n";
+        return nullptr;
+    }
+    for (uint32_t& meshIndex : model->GetMeshIndices()) {
+        Mesh* mesh = AssetManager::GetMeshByIndex(meshIndex);
+        if (!mesh) {
+            std::cout << "AssetManager::GetMeshByModelNameAndMeshName() failed, mesh name '" << mesh << "' was not in g_meshes\n";
+            return nullptr;
+        }
+        else {
+            return mesh;
+        }
+    }
+}
 
 /*
 █▀▀ █ █ ▀█▀ █▀█ █▀█ █▀▀ █▀▄   █▄ ▄█ █▀█ █▀▄ █▀▀ █
@@ -1105,6 +1159,12 @@ int AssetManager::GetModelIndexByName(const std::string& name) {
     }
     std::cout << "AssetManager::GetModelIndexByName() failed because name '" << name << "' was not found in _models!\n";
 
+
+    for (auto& it : g_modelIndexMap) {
+        // Do stuff
+        std::cout << it.first << " " << it.second << "\n";
+    }
+
     for (auto& model : g_models) {
         //std::cout << model.GetName() << "\n";
     }
@@ -1391,4 +1451,35 @@ void AssetManager::DebugTest() {
     for (const auto& pair : g_materialIndexMap) {
         std::cout << "Material Name: " << pair.first << ", Index: " << pair.second << std::endl;
     }
+}
+
+void AssetManager::LoadFlipbookTextures() {
+    FlipbookTexture& flipbookTexture0 = g_flipbookTextures.emplace_back();
+    flipbookTexture0.Load("res/textures/flipbook/WaterSplash0_Color_4x4.tga");
+
+    FlipbookTexture& flipbookTexture1 = g_flipbookTextures.emplace_back();
+    flipbookTexture1.Load("res/textures/flipbook/WaterSplash1_Color_4x4.tga");
+
+    FlipbookTexture& flipbookTexture2 = g_flipbookTextures.emplace_back();
+    flipbookTexture2.Load("res/textures/flipbook/WaterSplash2_Color_4x4.tga");
+}
+
+FlipbookTexture* AssetManager::GetFlipbookTextureByIndex(int index) {
+    if (index >= 0 && index < g_flipbookTextures.size()) {
+        return &g_flipbookTextures[index];
+    }
+    else {
+        std::cout << "AssetManager::GetFlipbookTextureByIndex() failed because '" << index << "' was out of range of size not g_flipbookTextures.size()\n";
+        return nullptr;
+    }
+}
+
+FlipbookTexture* AssetManager::GetFlipbookByName(const std::string& name) {
+    for (FlipbookTexture& flipbookTexture : g_flipbookTextures) {
+        if (flipbookTexture.m_name == name) {
+            return &flipbookTexture;
+        }
+    }
+    std::cout << "AssetManager::GetFlipbookByName() failed because '" << name << "' was not found\n";
+    return nullptr;
 }

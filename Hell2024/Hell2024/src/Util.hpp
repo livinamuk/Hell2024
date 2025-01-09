@@ -1601,5 +1601,31 @@ namespace Util {
         }
         return fileInfos;
     }
+
+    inline FileInfo GetFileInfoFromPath(const std::string& filepath) {
+        FileInfo fileInfo;
+        std::filesystem::path path(filepath);
+        if (!std::filesystem::exists(path) || !std::filesystem::is_regular_file(path)) {
+            throw std::runtime_error("Invalid file path or not a regular file: " + filepath);
+        }
+        fileInfo.path = path.string();
+        fileInfo.name = path.stem().string();
+        fileInfo.ext = path.has_extension() ? path.extension().string().substr(1) : "";
+        fileInfo.dir = path.parent_path().string();
+
+        return fileInfo;
+    }
+
+    inline AABB GetAABBFromVertices(std::vector<Vertex>& vertices) {
+        glm::vec3 aabbMin = glm::vec3(std::numeric_limits<float>::max());
+        glm::vec3 aabbMax = glm::vec3(-std::numeric_limits<float>::max());
+        for (Vertex& vertex : vertices) {
+            aabbMin = Util::Vec3Min(vertex.position, aabbMin);
+            aabbMax = Util::Vec3Max(vertex.position, aabbMax);
+        }
+        return AABB(aabbMin, aabbMax);
+    }
+
+
 }
 

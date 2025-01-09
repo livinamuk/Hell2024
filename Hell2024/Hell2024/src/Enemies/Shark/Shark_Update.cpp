@@ -62,7 +62,12 @@ void Shark::Update(float deltaTime) {
     // Kill if health zero
     if (IsAlive() && m_health <= 0) {
         Kill();
+        Game::g_sharkDeaths++;
+        std::ofstream out("SharkDeaths.txt");
+        out << Game::g_sharkDeaths;
+        out.close();
     }
+    m_health = std::max(m_health, 0);
 
     AnimatedGameObject* animatedGameObject = Scene::GetAnimatedGameObjectByIndex(m_animatedGameObjectIndex);
     Ragdoll& ragdoll = animatedGameObject->m_ragdoll;

@@ -160,7 +160,7 @@ bool OpenGLTexture::Bake() {
 
     if (m_compressed) {
 
-        std::cout << m_filename << ": " << OpenGLUtil::GetGLFormatString(m_compressedTextureData.format) << "\n";
+        std::cout << m_filename << ": " << OpenGLUtil::GetGLFormatAsString(m_compressedTextureData.format) << "\n";
         std::cout << " -width: " << std::to_string(m_compressedTextureData.width) << "\n";
         std::cout << " -height: " << std::to_string(m_compressedTextureData.height) << "\n";
         std::cout << " -size: " << std::to_string(m_compressedTextureData.size) << "\n";

@@ -260,6 +260,6 @@ namespace RendererUtil {
         renderItem.colorTintG = colorTint.g;
         renderItem.colorTintB = colorTint.b;
         return renderItem;
-
     }
+
 }

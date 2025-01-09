@@ -135,6 +135,7 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="res\shaders\OpenGL\test.cpp" />
+    <ClCompile Include="src\API\OpenGL\GL_renderer_hair_pass.cpp" />
     <ClCompile Include="src\API\OpenGL\Types\GL_CubeMap2.cpp" />
     <ClCompile Include="src\API\OpenGL\Types\GL_shadowMapArray.cpp" />
     <ClCompile Include="src\API\OpenGL\Types\GL_cubemapTexutre.cpp" />
@@ -152,6 +153,7 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <ClCompile Include="src\Editor\Editor.cpp" />
     <ClCompile Include="src\Editor\Editor_ChristmasLights.cpp" />
     <ClCompile Include="src\Editor\Editor_Debug.cpp" />
+    <ClCompile Include="src\Effects\FlipbookObject.cpp" />
     <ClCompile Include="src\Enemies\Shark\SharkPathManager.cpp" />
     <ClCompile Include="src\Enemies\Shark\Shark_Debug.cpp" />
     <ClCompile Include="src\Enemies\Shark\Shark_Update.cpp" />
@@ -174,6 +176,7 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <ClCompile Include="src\Game\Player_WeaponLogic.cpp" />
     <ClCompile Include="src\Game\WeaponManager.cpp" />
     <ClCompile Include="src\Pathfinding\NavMesh.cpp" />
+    <ClCompile Include="src\Renderer\Types\FlipbookTexture.cpp" />
     <ClCompile Include="src\Renderer\Raytracing\Raytracing.cpp" />
     <ClCompile Include="src\Renderer\RendererStorage.cpp" />
     <ClCompile Include="src\Renderer\Renderer_Debug.cpp" />
@@ -307,6 +310,7 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <ClInclude Include="src\Editor\CSGShape.h" />
     <ClInclude Include="src\Editor\Editor.h" />
     <ClInclude Include="src\Common\HellCommon.h" />
+    <ClInclude Include="src\Effects\FlipbookObject.h" />
     <ClInclude Include="src\Enemies\Shark\SharkPathManager.h" />
     <ClInclude Include="src\File\AssimpImporter.h" />
     <ClInclude Include="src\File\File.h" />
@@ -315,6 +319,7 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <ClInclude Include="src\Game\Water.h" />
     <ClInclude Include="src\Math\Frustum.h" />
     <ClInclude Include="src\Math\LineMath.hpp" />
+    <ClInclude Include="src\Renderer\Types\FlipbookTexture.h" />
     <ClInclude Include="src\Renderer\RendererData.h" />
     <ClInclude Include="src\Renderer\SSAO.hpp" />
     <ClInclude Include="src\Renderer\Types\HeightMap.h" />
@@ -483,10 +488,14 @@ copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.d
     <None Include="res\shaders\OpenGL\GL_flipBook.vert" />
     <None Include="res\shaders\OpenGL\GL_debug.frag" />
     <None Include="res\shaders\OpenGL\GL_debug.vert" />
+    <None Include="res\shaders\OpenGL\gl_flipbook_new.frag" />
+    <None Include="res\shaders\OpenGL\gl_flipbook_new.vert" />
     <None Include="res\shaders\OpenGL\GL_gbuffer_alpha_discarded.frag" />
     <None Include="res\shaders\OpenGL\GL_glass.frag" />
     <None Include="res\shaders\OpenGL\GL_glass.vert" />
     <None Include="res\shaders\OpenGL\GL_glassComposite.comp" />
+    <None Include="res\shaders\OpenGL\GL_hair_final_composite.comp" />
+    <None Include="res\shaders\OpenGL\GL_hair_layer_composite.comp" />
     <None Include="res\shaders\OpenGL\GL_heightmap.frag" />
     <None Include="res\shaders\OpenGL\GL_heightmap.vert" />
     <None Include="res\shaders\OpenGL\GL_lighting.comp" />

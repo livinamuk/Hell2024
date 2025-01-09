@@ -10,6 +10,7 @@
 #include "../Editor/CSG.h"
 #include "../Enemies/Shark/SharkPathManager.h"
 #include "../Game/Game.h"
+#include "../Game/Water.h"
 #include "../Input/Input.h"
 #include "../Renderer/GlobalIllumination.h"
 #include "../Renderer/TextBlitter.h"
@@ -626,7 +627,6 @@ void Scene::LoadDefaultScene() {
             light.m_shadowCasting = false;
         }
     }
-
 
     std::cout << "Light Count: " << g_lights.size() << "\n";
 
@@ -1348,11 +1348,18 @@ void Scene::Update(float deltaTime) {
         if (Input::KeyDown(HELL_KEY_NUMPAD_2)) {
             dobermann.m_currentPosition.x -= 0.05f;
         }
-
         animatedGameObject->_transform.rotation.z = 0.00f;
         animatedGameObject->_transform.rotation.x = 0.00f;
         animatedGameObject->SetPosition(dobermann.m_currentPosition);
+    }
 
+    // Flipbook objects
+    for (int i = 0; i < g_flipbookObjects.size(); i++) {
+        g_flipbookObjects[i].Update(deltaTime);
+        if (g_flipbookObjects[i].IsComplete()) {
+           g_flipbookObjects.erase(g_flipbookObjects.begin() + i);
+           i++;
+        }
     }
 
     /*
@@ -2288,8 +2295,25 @@ void Scene::ProcessBullets() {
     bool fleshWasHit = false;
     bool glassWasHit = false;
 	for (int i = 0; i < Scene::_bullets.size(); i++) {
+
 		Bullet& bullet = Scene::_bullets[i];
         PxU32 raycastFlags = bullet.raycastFlags;// RaycastGroup::RAYCAST_ENABLED;
+
+
+
+
+
+        // Check if you shot water
+        glm::vec3 rayOrigin = bullet.spawnPosition;
+        glm::vec3 rayDirection = bullet.direction;
+        WaterRayIntersectionResult waterRayIntersectionResult = Water::GetRayIntersection(rayOrigin, rayDirection);
+        if (waterRayIntersectionResult.hitFound) {
+            SpawnSplash(waterRayIntersectionResult.hitPosition);
+        }
+
+
+
+
 
 		PhysXRayResult rayResult = Util::CastPhysXRay(bullet.spawnPosition, bullet.direction, 1000, raycastFlags);
 		if (rayResult.hitFound) {
@@ -2662,7 +2686,33 @@ void Scene::CreateLadder(LadderCreateInfo createInfo) {
 void Scene::CreateChristmasLights(ChristmasLightsCreateInfo createInfo) {
     ChristmasLights& christmasLights = g_christmasLights.emplace_back();
     christmasLights.Init(createInfo);
+}
 
+void Scene::SpawnSplash(glm::vec3 position) {
+    return;
+    static std::string textureNames[3] = {
+        "WaterSplash0_Color_4x4",
+        "WaterSplash1_Color_4x4",
+        "WaterSplash2_Color_4x4"
+    };
+    int rand = Util::RandomInt(0, 2);
+    FlipbookObjectCreateInfo createInfo;
+    createInfo.position = position;
+    createInfo.position.y -= 0.05f;
+    createInfo.scale = glm::vec3(0.45f);
+    createInfo.textureName = textureNames[rand];
+    createInfo.animationSpeed = 60.0f;
+    createInfo.billboard = true;
+    createInfo.loop = true;
+    g_flipbookObjects.emplace_back(createInfo);
+    // Play Audio
+    const std::vector<const char*> audioFiles = {
+        "Water_BulletImpact0.wav",
+        "Water_BulletImpact1.wav",
+        "Water_BulletImpact2.wav"
+    };
+    int random = Util::RandomInt(0, audioFiles.size() - 1);
+    Audio::PlayAudio(audioFiles[random], 1.0f);
 }
 
 void Scene::AddLight(Light& light) {

@@ -11,6 +11,7 @@
 #include "../Effects/BulletHoleDecal.hpp"
 #include "../Core/VolumetricBloodSplatter.h"
 #include "../Editor/CSG.h"
+#include "../Effects/FlipbookObject.h"
 #include "../Game/Player.h"
 #include "../Game/Dobermann.h"
 #include "../Renderer/Types/HeightMap.h"
@@ -181,6 +182,7 @@ namespace Scene {
     const size_t GetCubeVolumeAdditiveCount();
 
     // Cuntainers
+    inline std::vector<FlipbookObject> g_flipbookObjects;
     inline std::vector<ChristmasLights> g_christmasLights;
     inline std::vector<Couch> g_couches;
     inline std::vector<Ladder> g_ladders;
@@ -230,6 +232,9 @@ namespace Scene {
 
     // Ladders
     void CreateLadder(LadderCreateInfo createInfo);
+
+    // Flipbook objects
+    void SpawnSplash(glm::vec3 position);
 
     // Christmas Lights
 

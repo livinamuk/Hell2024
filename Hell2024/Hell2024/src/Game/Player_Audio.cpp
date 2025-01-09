@@ -48,19 +48,17 @@ void Player::UpdateAudio(float deltaTime) {
     if (!PressingWalkForward()) {
         m_ladderFootstepAudioTimer = 0;
     }
-    if (m_ladderFootstepAudioTimer > 0.35f) { //m_ladderFootstepAudioLoopLength
+    if (m_ladderFootstepAudioTimer > 0.35f) {
         m_ladderFootstepAudioTimer = 0;
     }
     if (m_ladderFootstepAudioTimer == 0) {
         if (IsOverlappingLadder() && PressingWalkForward()) {
             int random = rand() % ladderFootstepFilenames.size();
-            //if (IsOverlappingLadder() && GetViewPos().y < m_overlappedLadderHeight) {
             Audio::PlayAudio(ladderFootstepFilenames[random], 1.0f);
-            // }
         }
     }
     m_ladderFootstepAudioTimer += deltaTime;
-
+    
     // Footstep audio
     if (HasControl()) {
         if (!IsMoving()) {
@@ -70,7 +68,7 @@ void Player::UpdateAudio(float deltaTime) {
             // Footsteps
             if (_footstepAudioTimer == 0) {
                 int random = rand() % 4;
-                if (m_ladderOverlapIndexEyes != -1 && !IsWading() && !IsSwimming()) {
+                if (m_ladderOverlapIndexEyes -= -1 && !IsWading() && !IsSwimming()) {
                     if (m_isOutside) {
                         Audio::PlayAudio(outdoorFootstepFilenames[random], 0.125f);
                     }

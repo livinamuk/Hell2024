@@ -203,6 +203,11 @@ struct Vertex {
         position = pos;
         normal = norm;
     }
+    Vertex(glm::vec3 _pos, glm::vec3 _norm, glm::vec2 _uv) {
+        position = _pos;
+        normal = _norm;
+        uv = _uv;
+    }
     Vertex(glm::vec3 _position, glm::vec3 _normal, glm::vec2 _uv, glm::vec3 _tangent) {
         position = _position;
         normal = _normal;

@@ -3,6 +3,7 @@
 #include "../Math/Types.h"
 #include "../Renderer/Types/CubemapTexture.h"
 #include "../Renderer/Types/ExrTexture.h"
+#include "../Renderer/Types/FlipbookTexture.h"
 #include "../Renderer/Types/HeightMap.h"
 #include "../Renderer/Types/TreeMap.h"
 #include "../Renderer/Types/Mesh.hpp"
@@ -37,6 +38,7 @@ namespace AssetManager {
     Mesh* GetQuadMesh();
     int GetMeshIndexByName(const std::string& name);
     int CreateMesh(std::string name, std::vector<Vertex>& vertices, std::vector<uint32_t>& indices, glm::vec3 aabbMin, glm::vec3 aabbMax);
+    Mesh* GetMeshByModelNameAndMeshName(const std::string& modelName, const std::string& meshNname);
 
     // Models
     Model* GetModelByName(const std::string& name);
@@ -89,6 +91,10 @@ namespace AssetManager {
     // Heightmap 
     inline HeightMap g_heightMap;
     inline TreeMap g_treeMap;
+
+    // Flipbook
+    FlipbookTexture* GetFlipbookTextureByIndex(int index);
+    FlipbookTexture* GetFlipbookByName(const std::string& name);
 
     // Raytracing
     void CreateMeshBLAS();

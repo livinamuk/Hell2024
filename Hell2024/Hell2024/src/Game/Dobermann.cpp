@@ -210,9 +210,9 @@ void Dobermann::UpdateMovement(float deltaTime) {
                 }
                 // Save death stat to file
                 if (targetPlayer->_health <= 0) {
-                    Game::g_playerDeaths++;
-                    std::ofstream out("PlayerDeaths.txt");
-                    out << Game::g_playerDeaths;
+                    Game::g_dogKills++;
+                    std::ofstream out("DogKills.txt");
+                    out << Game::g_dogKills;
                     out.close();
 
                     if (targetPlayer->IsAlive()) {

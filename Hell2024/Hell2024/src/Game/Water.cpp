@@ -48,3 +48,12 @@ WaterRayIntersectionResult Water::GetMouseRayIntersection(glm::mat4 projectionMa
     result.hitPosition = rayOrigin + result.distanceToHit * rayDirection;
     return result;
 }
+
+WaterRayIntersectionResult Water::GetRayIntersection(glm::vec3 rayOrigin, glm::vec3 rayDirection) {   
+    glm::vec3 planeOrigin = glm::vec3(0, g_height, 0);
+    glm::vec3 planeNormal = glm::vec3(0.0f, 1.0f, 0.0f);
+    WaterRayIntersectionResult result;
+    result.hitFound = glm::intersectRayPlane(rayOrigin, rayDirection, planeOrigin, planeNormal, result.distanceToHit);
+    result.hitPosition = rayOrigin + result.distanceToHit * rayDirection;
+    return result;
+}

@@ -12,4 +12,5 @@ namespace Water {
     float GetHeight();
     glm::mat4 GetModelMatrix();
     WaterRayIntersectionResult GetMouseRayIntersection(glm::mat4 projectionMatrix, glm::mat4 viewMatrix);
+    WaterRayIntersectionResult GetRayIntersection(glm::vec3 rayOrigin, glm::vec3 rayDirection);
 }

@@ -131,6 +131,10 @@ void Shark::UpdateHuntingLogic(float deltaTime) {
              
                 m_hasBitPlayer = true;
                 player->Kill();
+                Game::g_sharkKills++; 
+                std::ofstream out("SharkKills.txt");
+                out << Game::g_sharkKills;
+                out.close();
                 m_huntedPlayerIndex = -1;
                 m_movementState = SharkMovementState::FOLLOWING_PATH_ANGRY;
             }

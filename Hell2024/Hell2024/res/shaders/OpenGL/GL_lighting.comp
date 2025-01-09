@@ -528,7 +528,8 @@ void main() {
 	vec3 rma = texture(rmaTexture, uv).rgb;
 	float roughness = rma.r;
 	float metallic = rma.g;
-	float ao = rma.b;
+	float ao = rma.b;    
+	float alpha = texture(baseColorTexture, uv).a;	
 
 	mat4 inverseProjection = cameraDataArray[playerIndex].projectionInverse;
 	mat4 inverseView = cameraDataArray[playerIndex].viewInverse;
@@ -628,7 +629,7 @@ void main() {
         directionalLight = mix(directionalLight, falloffColor, falloffFactor);
             
 	    // Apply moonlighting
-        //finalLighting += directionalLight;
+        finalLighting += directionalLight;
     }
     
     // Fragments beneath water
@@ -819,6 +820,12 @@ void main() {
   //          break;
   //  }
 
+
+    // Premultply Alpha
+   //float finalAlpha = baseColor.a;
+   finalLighting.rgb = finalLighting.rgb * alpha;
+   //FragOut = vec4(finalColor, finalAlpha);
+
     // Write the final color
-	imageStore(lightingTexture, pixelCoords, vec4(finalLighting, 1));
+	imageStore(lightingTexture, pixelCoords, vec4(finalLighting, alpha));
 }

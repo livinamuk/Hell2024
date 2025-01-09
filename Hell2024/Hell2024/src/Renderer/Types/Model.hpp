@@ -36,7 +36,7 @@ public:
         return m_meshIndices;
     }
 
-    void SetName(std::string modelName) {
+    void SetName(const std::string& modelName) {
         this->m_name = modelName;
     }
 
