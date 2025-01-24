@@ -629,7 +629,7 @@ void main() {
         directionalLight = mix(directionalLight, falloffColor, falloffFactor);
             
 	    // Apply moonlighting
-        finalLighting += directionalLight;
+        //finalLighting += directionalLight;
     }
     
     // Fragments beneath water
@@ -678,8 +678,9 @@ void main() {
             
             // Composite
             spotLighting = mix(spotLighting * 0.1, falloffColor, falloffFactor);            
-            finalLighting = mix(spotLighting, firstPass, 0.85) * 0.6;
+            finalLighting = mix(spotLighting, firstPass, 0.85) * 0.75;
         }           
+        
     }
 
 
@@ -726,6 +727,7 @@ void main() {
 	}
 	
     
+
     finalLighting *= ao;
 
 

@@ -365,7 +365,11 @@ void main() {
     //float fadeFactor = smoothstep(fadeEnd, fadeStart, distanceToCamera);   
 
     // Final color
-    vec3 finalColor = mix(reflectionColor, refractionColor, relfractiveFactor);
+    //vec3 finalColor = mix(reflectionColor, refractionColor, relfractiveFactor);
+    
+    //relfractiveFactor = min(1.0, relfractiveFactor * 3.0); // HACK!!!! this should be deleted but your water went dark
+    
+    vec3 finalColor = mix(reflectionColor, refractionColor, relfractiveFactor); 
     finalColor *= waterColor;
     finalColor += specular;
 
@@ -439,10 +443,11 @@ void main() {
 
 //    finalColor = texture(waterReflectionTexture, uv_screenspace).rgb;
 
-
+//    finalColor = reflectionColor;
 
 //finalColor = texture(waterReflectionTexture, vec2(1 - uv_screenspace.x, uv_screenspace.y)).rgb; // undistorted
 
+    //finalColor = finalLightingColor;
     imageStore(waterColorTexture, texCoord, vec4(finalColor, 1));
    // imageStore(waterColorTexture, texCoord, vec4(finalLightingColor, 1));
 }

@@ -158,6 +158,8 @@ void Player::UpdateViewWeaponLogic(float deltaTime) {
         if (PressingADS() && CanEnterADS()) {
             _weaponAction = ADS_IN;
             viewWeapon->PlayAnimation(weaponInfo->animationNames.adsIn, adsInOutSpeed);
+
+            std::cout << "ENTERING ADS!\n";
         }
         // ADS in complete
         if (_weaponAction == ADS_IN && viewWeapon->IsAnimationComplete()) {
@@ -691,8 +693,8 @@ bool Player::CanEnterADS() {
     if (weaponInfo->name == "Tokarev") {
         return false;
     }
-    if (weaponInfo->name == "AKS74U") {
-        return false;
+    if (weaponInfo->name == "AKS74U" && !InADS()) {
+        return true;
     }
 
     if (weaponInfo->name != "P90" && weaponState && !weaponState->hasScope) {

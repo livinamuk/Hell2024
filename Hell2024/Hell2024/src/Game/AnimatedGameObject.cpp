@@ -61,6 +61,21 @@ glm::mat4 AnimatedGameObject::GetAnimatedTransformByBoneName(const char* name) {
     return glm::mat4(1);
 }
 
+glm::mat4 AnimatedGameObject::GetInverseBindPoseByBoneName(const char* name) {
+    //for (int i = 0; i < _skinnedModel->m_joints.size(); i++) {
+    //    const char* jointName = _skinnedModel->m_joints[i].m_name;
+    //    if (Util::StrCmp(jointName, name)) {
+    //        std::cout << "\n\n\nInvereseBindPose:\n" << Util::Mat4ToString(_skinnedModel->m_joints[i].m_inverseBindTransform) << "\n";
+    //        std::cout << "\BoneOffset:\n" << Util::Mat4ToString(m_boneMapping[name]) << "\n";
+    //        return _skinnedModel->m_joints[i].m_inverseBindTransform;
+    //    }
+    //}
+
+    // BROKEN
+
+    return glm::mat4(1);
+}
+
 std::vector<SkinnedRenderItem>& AnimatedGameObject::GetSkinnedMeshRenderItems() {
     return m_skinnedMeshRenderItems;
 }

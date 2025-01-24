@@ -131,6 +131,7 @@ public:
     std::unordered_map<std::string, unsigned int> m_boneMapping;
 
     glm::mat4 GetAnimatedTransformByBoneName(const char* name);
+    glm::mat4 GetInverseBindPoseByBoneName(const char* name);
 
     glm::vec3 FindClosestParentAnimatedNode(std::vector<JointWorldMatrix>& worldMatrices, int parentIndex);
 

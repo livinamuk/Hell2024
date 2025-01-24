@@ -79,6 +79,7 @@ namespace BackEnd {
         glfwWindowHint(GLFW_GREEN_BITS, _mode->greenBits);
         glfwWindowHint(GLFW_BLUE_BITS, _mode->blueBits);
         glfwWindowHint(GLFW_REFRESH_RATE, _mode->refreshRate);
+        glfwWindowHint(GLFW_DECORATED, GLFW_FALSE);
         _fullscreenWidth = _mode->width;
         _fullscreenHeight = _mode->height;
         _windowedWidth = width;
@@ -197,10 +198,16 @@ namespace BackEnd {
             glfwSetWindowMonitor(_window, nullptr, 0, 0, _windowedWidth, _windowedHeight, _mode->refreshRate);
             glfwSetWindowPos(_window, 0, 0);
         }
+        //else if (windowedMode == WindowedMode::FULLSCREEN) {
+        //    _currentWindowWidth = _fullscreenWidth;
+        //    _currentWindowHeight = _fullscreenHeight;
+        //    glfwSetWindowMonitor(_window, _monitor, 0, 0, _fullscreenWidth, _fullscreenHeight, _mode->refreshRate);
+        //}
         else if (windowedMode == WindowedMode::FULLSCREEN) {
             _currentWindowWidth = _fullscreenWidth;
             _currentWindowHeight = _fullscreenHeight;
-            glfwSetWindowMonitor(_window, _monitor, 0, 0, _fullscreenWidth, _fullscreenHeight, _mode->refreshRate);
+            glfwSetWindowMonitor(_window, nullptr, 0, 0, _fullscreenWidth-1, _fullscreenHeight-1, _mode->refreshRate);
+            glfwSetWindowPos(_window, 0, 0);
         }
         _windowedMode = windowedMode;
     }

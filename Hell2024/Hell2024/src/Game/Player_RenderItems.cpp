@@ -338,6 +338,35 @@ void Player::UpdateAttachmentRenderItems() {
         renderItem.normalMapTextureIndex = material->_normal;
     }
 
+
+    // AKS74U Scope
+    if (weaponInfo && weaponState && weaponInfo->name == "AKS74U" && false) {
+        glm::mat4 modelMatrix = viewWeaponAnimatedGameObject->GetModelMatrix() * m_weaponSwayMatrix * viewWeaponAnimatedGameObject->GetAnimatedTransformByBoneName("Weapon");
+        static int materialIndex = AssetManager::GetMaterialIndex("Gold");
+        uint32_t modelIndex = AssetManager::GetModelIndexByName("AKS74U_Scope");
+        Model* model = AssetManager::GetModelByIndex(modelIndex);
+        for (uint32_t& meshIndex : model->GetMeshIndices()) {
+            Mesh* mesh = AssetManager::GetMeshByIndex(meshIndex);
+            RenderItem3D& renderItem = m_attachmentRenderItems.emplace_back();
+            renderItem.vertexOffset = mesh->baseVertex;
+            renderItem.indexOffset = mesh->baseIndex;
+            renderItem.modelMatrix = modelMatrix;
+            renderItem.inverseModelMatrix = inverse(renderItem.modelMatrix);
+            renderItem.meshIndex = meshIndex;
+            renderItem.castShadow = false;
+            Material* material = AssetManager::GetMaterialByIndex(materialIndex);
+            if (viewWeaponAnimatedGameObject->IsGold()) {
+                renderItem.baseColorTextureIndex = AssetManager::GetGoldBaseColorTextureIndex();
+                renderItem.rmaTextureIndex = AssetManager::GetGoldRMATextureIndex();
+            }
+            else {
+                renderItem.baseColorTextureIndex = material->_basecolor;
+                renderItem.rmaTextureIndex = material->_rma;
+            }
+            renderItem.normalMapTextureIndex = material->_normal;
+        }
+    }
+
     // Silencer
     if (weaponInfo && weaponState && weaponInfo->type == WeaponType::PISTOL && weaponState->hasSilencer) {
         glm::mat4 modelMatrix = viewWeaponAnimatedGameObject->GetModelMatrix() * m_weaponSwayMatrix * viewWeaponAnimatedGameObject->GetAnimatedTransformByBoneName("Muzzle");

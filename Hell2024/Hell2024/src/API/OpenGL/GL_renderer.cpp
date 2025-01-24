@@ -972,7 +972,7 @@ void OpenGLRenderer::WaterPass(RenderData& renderData) {
         skyboxShader->SetInt("playerIndex", i);
         skyboxShader->SetMat4("projection", Game::GetPlayerByIndex(i)->GetProjectionMatrix());
         skyboxShader->SetMat4("view", Game::GetPlayerByIndex(i)->GetWaterReflectionViewMatrix());
-        skyboxShader->SetVec3("skyboxTint", Game::GameSettings().skyBoxTint * glm::vec3(0.35f));
+        skyboxShader->SetVec3("skyboxTint", Game::GameSettings().skyBoxTint * glm::vec3(0.45f));
         skyboxShader->SetMat4("model", skyBoxTransform.to_mat4());
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTexture->GetGLTexture().GetID());
@@ -1038,10 +1038,12 @@ void OpenGLRenderer::WaterPass(RenderData& renderData) {
                 continue;
             }
             Material* material = AssetManager::GetMaterialByIndex(cube.m_materialIndex);
-            reflectionGeometryShader.SetInt("baseColorIndex", material->_basecolor);
-            reflectionGeometryShader.SetInt("normalMapIndex", material->_normal);
-            reflectionGeometryShader.SetInt("rmaIndex", material->_rma);
-            glDrawElementsInstancedBaseVertexBaseInstance(GL_TRIANGLES, cube.m_vertexCount, GL_UNSIGNED_INT, (void*)(sizeof(uint32_t) * cube.m_baseIndex), 1, cube.m_baseVertex, j);
+            if (material) {
+                reflectionGeometryShader.SetInt("baseColorIndex", material->_basecolor);
+                reflectionGeometryShader.SetInt("normalMapIndex", material->_normal);
+                reflectionGeometryShader.SetInt("rmaIndex", material->_rma);
+                glDrawElementsInstancedBaseVertexBaseInstance(GL_TRIANGLES, cube.m_vertexCount, GL_UNSIGNED_INT, (void*)(sizeof(uint32_t) * cube.m_baseIndex), 1, cube.m_baseVertex, j);
+            }
         }
     }
     glDisable(GL_BLEND);

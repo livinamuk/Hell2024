@@ -1,0 +1,629 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>16.0</VCProjectVersion>
+    <Keyword>Win32Proj</Keyword>
+    <ProjectGuid>{3b38f3dc-1fc6-48cf-a461-604d003618c2}</ProjectGuid>
+    <RootNamespace>Hell2025</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <ProjectName>Hell2025</ProjectName>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <OutDir>$(SolutionDir)\$(ProjectName)\Build\Debug\</OutDir>
+    <IntDir>$(SolutionDir)\$(ProjectName)\Build\Intermediate\Debug\</IntDir>
+    <CopyLocalDeploymentContent>false</CopyLocalDeploymentContent>
+    <TargetName>Unloved</TargetName>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <OutDir>$(SolutionDir)\$(ProjectName)\Build\Release\</OutDir>
+    <IntDir>$(SolutionDir)\$(ProjectName)\Build\Intermediate\Release\</IntDir>
+    <CopyLocalDeploymentContent>false</CopyLocalDeploymentContent>
+    <TargetName>Hell2025</TargetName>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <WarningLevel>TurnOffAllWarnings</WarningLevel>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>vendor\recast\include;vendor\gli\include;src\;src\Common;vendor\bvh\include;vendor\nlohmann_json\include;vendor\lz4\include;vendor\VulkanMemoryAllocator\include;vendor\Vulkan\include;vendor\tinyexr;vendor\compressonator\include;vendor\tinycsg\include;vendor\tracy\public;vendor\tinyobj;vendor\GLFW\include;vendor\glm;vendor\glad\include;vendor\stb_image;vendor\fmod\include;vendor\assimp\include;vendor\rapidjson\include;vendor\physx\include;vendor\thread_pool\include;vendor\VkBootstrap</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <LanguageStandard_C>stdc17</LanguageStandard_C>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>vendor\GLFW\lib\Release;vendor\fmod\lib;vendor\physx\lib\Debug;vendor\assimp\lib;vendor\compressonator\lib;vendor\DDS;vendor\Vulkan;vendor\lz4\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>glfw3.lib;fmod_vc.lib;assimp-vc143-mt.lib;Compressonator_MD_DLL.lib;PhysX_64.lib;PhysXCommon_64.lib;PhysXCooking_64.lib;PhysXExtensions_static_64.lib;PhysXFoundation_64.lib;PhysXTask_static_64.lib;PhysXPvdSDK_static_64.lib;PVDRuntime_64.lib;PhysXCharacterKinematic_static_64.lib;vulkan-1.lib;shaderc_combinedd.lib;liblz4_static.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <TreatLinkerWarningAsErrors>false</TreatLinkerWarningAsErrors>
+    </Link>
+    <PostBuildEvent>
+      <Command>copy /Y "$(ProjectDir)vendor\dll\fmod.dll" "$(TargetDir)fmod.dll"
+copy /Y "$(ProjectDir)vendor\dll\assimp-vc143-mt.dll" "$(TargetDir)assimp-vc143-mt.dll"
+copy /Y "$(ProjectDir)vendor\dll\fmod.dll" "$(TargetDir)fmod.dll"
+copy /Y "$(ProjectDir)vendor\dll\Compressonator_MD_DLL.dll" "$(TargetDir)Compressonator_MD_DLL.dll"
+xcopy "$(ProjectDir)res\shaders" "$(TargetDir)res\shaders" /e /y /i /r
+
+copy /Y "$(ProjectDir)vendor\dll_debug\PhysX_64.dll" "$(TargetDir)PhysX_64.dll"
+copy /Y "$(ProjectDir)vendor\dll_debug\PhysXCommon_64.dll" "$(TargetDir)PhysXCommon_64.dll"
+copy /Y "$(ProjectDir)vendor\dll_debug\PhysXCooking_64.dll" "$(TargetDir)PhysXCooking_64.dll"
+copy /Y "$(ProjectDir)vendor\dll_debug\PhysXFoundation_64.dll" "$(TargetDir)PhysXFoundation_64.dll"
+copy /Y "$(ProjectDir)vendor\dll_debug\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.dll"
+</Command>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <WarningLevel>Level4</WarningLevel>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>NDEBUG;_CONSOLE;TRACY_ENABLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>vendor\gli\include;src\;src\Common;vendor\bvh\include;vendor\recast\include;vendor\nlohmann_json\include;vendor\lz4\include;vendor\VkBootstrap;vendor\VulkanMemoryAllocator\include;vendor\Vulkan\include;vendor\tinyexr;vendor\compressonator\include;vendor\tracy\public;vendor\tinyobj;vendor\GLFW\include;vendor\glm;vendor\glad\include;vendor\stb_image;vendor\fmod\include;vendor\assimp\include;vendor\rapidjson\include;vendor\physx\include;vendor\thread_pool\include;vendor\tinycsg\include</AdditionalIncludeDirectories>
+      <LanguageStandard_C>stdc17</LanguageStandard_C>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
+      <Optimization>MaxSpeed</Optimization>
+      <WholeProgramOptimization>false</WholeProgramOptimization>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <TreatWarningAsError>false</TreatWarningAsError>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <EnableCOMDATFolding>false</EnableCOMDATFolding>
+      <OptimizeReferences>false</OptimizeReferences>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>vendor\compressonator\lib;vendor\GLFW\lib\Release;vendor\fmod\lib;vendor\assimp\lib;vendor\physx\lib\Release;vendor\Vulkan;vendor\DDS;vendor\lz4\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>glfw3.lib;fmod_vc.lib;assimp-vc143-mt.lib;Compressonator_MD_DLL.lib;PhysX_64.lib;PhysXCommon_64.lib;PhysXCooking_64.lib;PhysXFoundation_64.lib;PhysXTask_static_64.lib;PhysXPvdSDK_static_64.lib;PVDRuntime_64.lib;PhysXExtensions_static_64.lib;PhysXCharacterKinematic_static_64.lib;vulkan-1.lib;shaderc_combined.lib;liblz4_static.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <TreatLinkerWarningAsErrors>false</TreatLinkerWarningAsErrors>
+      <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
+    </Link>
+    <PostBuildEvent>
+      <Command>copy /Y "$(ProjectDir)vendor\dll\fmod.dll" "$(TargetDir)fmod.dll"
+copy /Y "$(ProjectDir)vendor\dll\assimp-vc143-mt.dll" "$(TargetDir)assimp-vc143-mt.dll"
+copy /Y "$(ProjectDir)vendor\dll\fmod.dll" "$(TargetDir)fmod.dll"
+copy /Y "$(ProjectDir)vendor\dll\Compressonator_MD_DLL.dll" "$(TargetDir)Compressonator_MD_DLL.dll"
+xcopy "$(ProjectDir)res\shaders" "$(TargetDir)res\shaders" /e /y /i /r
+
+copy /Y "$(ProjectDir)vendor\dll\PhysX_64.dll" "$(TargetDir)PhysX_64.dll"
+copy /Y "$(ProjectDir)vendor\dll\PhysXCommon_64.dll" "$(TargetDir)PhysXCommon_64.dll"
+copy /Y "$(ProjectDir)vendor\dll\PhysXCooking_64.dll" "$(TargetDir)PhysXCooking_64.dll"
+copy /Y "$(ProjectDir)vendor\dll\PhysXFoundation_64.dll" "$(TargetDir)PhysXFoundation_64.dll"
+copy /Y "$(ProjectDir)vendor\dll\PVDRuntime_64.dll" "$(TargetDir)PVDRuntime_64.dll"
+</Command>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="res\shaders\OpenGL\test.cpp" />
+    <ClCompile Include="src\API\OpenGL\GL_renderer_hair_pass.cpp" />
+    <ClCompile Include="src\API\OpenGL\Types\GL_CubeMap2.cpp" />
+    <ClCompile Include="src\API\OpenGL\Types\GL_shadowMapArray.cpp" />
+    <ClCompile Include="src\API\OpenGL\Types\GL_cubemapTexutre.cpp" />
+    <ClCompile Include="src\API\OpenGL\Types\GL_texture.cpp" />
+    <ClCompile Include="src\API\Vulkan\Types\VK_texture.cpp" />
+    <ClCompile Include="src\API\Vulkan\Types\VK_texture3D.cpp" />
+    <ClCompile Include="src\Common\RapidHotload.cpp" />
+    <ClCompile Include="src\Core\AssetManager.cpp" />
+    <ClCompile Include="src\Core\Audio.cpp" />
+    <ClCompile Include="src\Core\DebugMenu.cpp" />
+    <ClCompile Include="src\Editor\Brush.cpp" />
+    <ClCompile Include="src\Editor\CSGCommon.h" />
+    <ClCompile Include="src\Editor\CSGShape.cpp" />
+    <ClCompile Include="src\Editor\Edior_SharkPath.cpp" />
+    <ClCompile Include="src\Editor\Editor.cpp" />
+    <ClCompile Include="src\Editor\Editor_ChristmasLights.cpp" />
+    <ClCompile Include="src\Editor\Editor_Debug.cpp" />
+    <ClCompile Include="src\Effects\FlipbookObject.cpp" />
+    <ClCompile Include="src\Enemies\Shark\SharkPathManager.cpp" />
+    <ClCompile Include="src\Enemies\Shark\Shark_Debug.cpp" />
+    <ClCompile Include="src\Enemies\Shark\Shark_Update.cpp" />
+    <ClCompile Include="src\Enemies\Shark\Shark_Update_HuntingPlayer.cpp" />
+    <ClCompile Include="src\Enemies\Shark\Shark_Util.cpp" />
+    <ClCompile Include="src\File\AssimpImporter.cpp" />
+    <ClCompile Include="src\File\File.cpp" />
+    <ClCompile Include="src\Game\Dobermann.cpp" />
+    <ClCompile Include="src\Game\Player_Audio.cpp" />
+    <ClCompile Include="src\Game\Player_CharacterController.cpp" />
+    <ClCompile Include="src\Game\Player_GamePlayLogic.cpp" />
+    <ClCompile Include="src\Game\Player_Movement.cpp" />
+    <ClCompile Include="src\Enemies\Shark\Shark.cpp" />
+    <ClCompile Include="src\Game\Water.cpp" />
+    <ClCompile Include="src\Math\BVH.cpp" />
+    <ClCompile Include="src\Math\Frustum.cpp" />
+    <ClCompile Include="src\Pathfinding\Pathfinding2.cpp" />
+    <ClCompile Include="src\Game\Player_CharacterModelLogic.cpp" />
+    <ClCompile Include="src\Game\Player_RenderItems.cpp" />
+    <ClCompile Include="src\Game\Player_WeaponLogic.cpp" />
+    <ClCompile Include="src\Game\WeaponManager.cpp" />
+    <ClCompile Include="src\Pathfinding\NavMesh.cpp" />
+    <ClCompile Include="src\Renderer\Types\FlipbookTexture.cpp" />
+    <ClCompile Include="src\Renderer\Raytracing\Raytracing.cpp" />
+    <ClCompile Include="src\Renderer\RendererStorage.cpp" />
+    <ClCompile Include="src\Renderer\Renderer_Debug.cpp" />
+    <ClCompile Include="src\Renderer\RendererData.cpp" />
+    <ClCompile Include="src\Renderer\Types\HeightMap.cpp" />
+    <ClCompile Include="src\Renderer\Types\TreeMap.cpp" />
+    <ClCompile Include="src\Renderer\Types\VertexBuffer.cpp" />
+    <ClCompile Include="src\Renderer\GlobalIllumination.cpp" />
+    <ClCompile Include="src\Renderer\Types\CubemapTexutre.cpp" />
+    <ClCompile Include="src\Renderer\Types\ExrTexture.cpp" />
+    <ClCompile Include="src\Renderer\Types\LighjVolume.cpp" />
+    <ClCompile Include="src\Renderer\Types\SkinnedModel.cpp" />
+    <ClCompile Include="src\Renderer\Types\Texture.cpp" />
+    <ClCompile Include="src\Renderer\Types\Texture3D.cpp" />
+    <ClCompile Include="src\Tools\DDSHelpers.cpp" />
+    <ClCompile Include="src\Tools\ImageTools.cpp" />
+    <ClCompile Include="src\Types\Animation.cpp" />
+    <ClCompile Include="src\Types\Modular\ChristmasLights.cpp" />
+    <ClCompile Include="src\Types\Modular\Couch.cpp" />
+    <ClCompile Include="src\Types\Modular\Door.cpp" />
+    <ClCompile Include="src\Renderer\Renderer.cpp" />
+    <ClCompile Include="src\Core\Floorplan.cpp" />
+    <ClCompile Include="src\Game\AnimatedGameObject.cpp" />
+    <ClCompile Include="src\Core\FbxImporter.cpp" />
+    <ClCompile Include="src\Game\Game.cpp" />
+    <ClCompile Include="src\Game\GameObject.cpp" />
+    <ClCompile Include="src\Game\Game.h" />
+    <ClCompile Include="src\Types\Modular\Ladder.cpp" />
+    <ClCompile Include="src\Types\Modular\Staircase.cpp" />
+    <ClCompile Include="src\Types\Modular\Toilet.cpp" />
+    <ClCompile Include="src\BackEnd\BackEnd.cpp" />
+    <ClCompile Include="src\API\OpenGL\GL_backEnd.cpp" />
+    <ClCompile Include="src\Input\Input.cpp" />
+    <ClCompile Include="src\Input\InputMulti.cpp" />
+    <ClCompile Include="src\Game\Light.cpp" />
+    <ClCompile Include="src\Physics\Physics.cpp" />
+    <ClCompile Include="src\Game\Player.cpp" />
+    <ClCompile Include="src\Physics\Ragdoll.cpp" />
+    <ClCompile Include="src\Game\Scene.cpp" />
+    <ClCompile Include="src\Renderer\TextBlitting.cpp" />
+    <ClCompile Include="src\Core\VolumetricBloodSplatter.cpp" />
+    <ClCompile Include="src\Types\Modular\Window.cpp" />
+    <ClCompile Include="src\Effects\BulletCasing.cpp" />
+    <ClCompile Include="src\Effects\MuzzleFlash.cpp" />
+    <ClCompile Include="src\Engine.cpp" />
+    <ClCompile Include="src\Main.cpp" />
+    <ClCompile Include="src\API\OpenGL\Types\GL_gBuffer.cpp" />
+    <ClCompile Include="src\Renderer\NumberBlitter.cpp" />
+    <ClCompile Include="src\API\OpenGL\GL_renderer.cpp" />
+    <ClCompile Include="src\API\OpenGL\Types\GL_presentBuffer.cpp" />
+    <ClCompile Include="src\API\OpenGL\Types\GL_shader.cpp" />
+    <ClCompile Include="src\API\OpenGL\Types\GL_shadowMap.cpp" />
+    <ClCompile Include="src\API\OpenGL\Types\GL_texture3D.cpp" />
+    <ClCompile Include="src\API\Vulkan\VK_assetManager.cpp" />
+    <ClCompile Include="src\API\Vulkan\VK_renderer.cpp" />
+    <ClCompile Include="src\API\Vulkan\Types\VK_shader.hpp" />
+    <ClCompile Include="src\Editor\CSG.cpp" />
+    <ClCompile Include="vendor\glad\src\glad.c" />
+    <ClCompile Include="vendor\im3d\im3d.cpp" />
+    <ClCompile Include="vendor\lz4\include\lz4.c" />
+    <ClCompile Include="vendor\lz4\include\lz4file.c" />
+    <ClCompile Include="vendor\lz4\include\lz4frame.c" />
+    <ClCompile Include="vendor\lz4\include\lz4hc.c" />
+    <ClCompile Include="vendor\lz4\include\xxhash.c" />
+    <ClCompile Include="vendor\recast\include\detour\DetourAlloc.cpp" />
+    <ClCompile Include="vendor\recast\include\detour\DetourAssert.cpp" />
+    <ClCompile Include="vendor\recast\include\detour\DetourCommon.cpp" />
+    <ClCompile Include="vendor\recast\include\detour\DetourNavMesh.cpp" />
+    <ClCompile Include="vendor\recast\include\detour\DetourNavMeshBuilder.cpp" />
+    <ClCompile Include="vendor\recast\include\detour\DetourNavMeshQuery.cpp" />
+    <ClCompile Include="vendor\recast\include\detour\DetourNode.cpp" />
+    <ClCompile Include="vendor\recast\include\detour\DetourTileCache.cpp" />
+    <ClCompile Include="vendor\recast\include\detour\DetourTileCacheBuilder.cpp" />
+    <ClCompile Include="vendor\recast\include\detour\fastlz.c" />
+    <ClCompile Include="vendor\recast\include\recast\DebugDraw.cpp" />
+    <ClCompile Include="vendor\recast\include\recast\Recast.cpp" />
+    <ClCompile Include="vendor\recast\include\recast\RecastAlloc.cpp" />
+    <ClCompile Include="vendor\recast\include\recast\RecastArea.cpp" />
+    <ClCompile Include="vendor\recast\include\recast\RecastAssert.cpp" />
+    <ClCompile Include="vendor\recast\include\recast\RecastContour.cpp" />
+    <ClCompile Include="vendor\recast\include\recast\RecastDebugDraw.cpp" />
+    <ClCompile Include="vendor\recast\include\recast\RecastFilter.cpp" />
+    <ClCompile Include="vendor\recast\include\recast\RecastLayers.cpp" />
+    <ClCompile Include="vendor\recast\include\recast\RecastMesh.cpp" />
+    <ClCompile Include="vendor\recast\include\recast\RecastMeshDetail.cpp" />
+    <ClCompile Include="vendor\recast\include\recast\RecastRasterization.cpp" />
+    <ClCompile Include="vendor\recast\include\recast\RecastRegion.cpp" />
+    <ClCompile Include="vendor\tinycsg\include\tinycsg\query_box.cpp" />
+    <ClCompile Include="vendor\tinycsg\include\tinycsg\query_frustum.cpp" />
+    <ClCompile Include="vendor\tinycsg\include\tinycsg\query_point.cpp" />
+    <ClCompile Include="vendor\tinycsg\include\tinycsg\query_ray.cpp" />
+    <ClCompile Include="vendor\tinycsg\include\tinycsg\rebuild.cpp" />
+    <ClCompile Include="vendor\tinycsg\include\tinycsg\tinycsg.cpp" />
+    <ClCompile Include="vendor\tracy\public\TracyClient.cpp" />
+    <ClCompile Include="src\API\Vulkan\VK_backEnd.cpp" />
+    <ClCompile Include="vendor\VkBootstrap\VkBootstrap.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="res\shaders\OpenGL\test.frag" />
+    <ClInclude Include="src\API\OpenGL\GL_util.hpp" />
+    <ClInclude Include="src\API\OpenGL\Types\GL_Cubemap2.h" />
+    <ClInclude Include="src\API\OpenGL\Types\GL_pbo.hpp" />
+    <ClInclude Include="src\API\OpenGL\Types\GL_shadowMapArray.h" />
+    <ClInclude Include="src\API\OpenGL\Types\GL_cubemapTexture.h" />
+    <ClInclude Include="src\API\OpenGL\Types\GL_detachedMesh.hpp" />
+    <ClInclude Include="src\API\OpenGL\Types\GL_ssbo.hpp" />
+    <ClInclude Include="src\API\OpenGL\Types\GL_texture.h" />
+    <ClInclude Include="src\API\OpenGL\Types\GL_vertexBuffer.hpp" />
+    <ClInclude Include="src\API\Vulkan\Types\vk_allocation.hpp" />
+    <ClInclude Include="src\API\Vulkan\Types\VK_buffer.h" />
+    <ClInclude Include="src\API\Vulkan\Types\VK_computePipeline.hpp" />
+    <ClInclude Include="src\API\Vulkan\Types\VK_frameData.hpp" />
+    <ClInclude Include="src\API\Vulkan\Types\VK_detachedMesh.hpp" />
+    <ClInclude Include="src\API\Vulkan\Types\VK_raytracing.hpp" />
+    <ClInclude Include="src\API\Vulkan\Types\VK_depthTarget.hpp" />
+    <ClInclude Include="src\API\Vulkan\Types\VK_descriptorSet.hpp" />
+    <ClInclude Include="src\API\Vulkan\Types\VK_renderTarget.hpp" />
+    <ClInclude Include="src\API\Vulkan\Types\VK_texture.h" />
+    <ClInclude Include="src\API\Vulkan\Types\VK_texture3D.h" />
+    <ClInclude Include="src\API\Vulkan\Types\VK_vertexBuffer.hpp" />
+    <ClInclude Include="src\API\Vulkan\VK_common.h" />
+    <ClInclude Include="src\API\Vulkan\Vk_util.hpp" />
+    <ClInclude Include="src\Common\Defines.h" />
+    <ClInclude Include="src\Common\Enums.h" />
+    <ClInclude Include="src\Common\RapidHotload.h" />
+    <ClInclude Include="src\Common\Types.h" />
+    <ClInclude Include="src\Core\JSON.hpp" />
+    <ClInclude Include="src\Core\CreateInfo.hpp" />
+    <ClInclude Include="src\Editor\Brush.h" />
+    <ClInclude Include="src\Editor\CSGPlane.hpp" />
+    <ClInclude Include="src\Editor\CSGShape.h" />
+    <ClInclude Include="src\Editor\Editor.h" />
+    <ClInclude Include="src\Common\HellCommon.h" />
+    <ClInclude Include="src\Effects\FlipbookObject.h" />
+    <ClInclude Include="src\Enemies\Shark\SharkPathManager.h" />
+    <ClInclude Include="src\File\AssimpImporter.h" />
+    <ClInclude Include="src\File\File.h" />
+    <ClInclude Include="src\File\FileFormats.h" />
+    <ClInclude Include="src\Enemies\Shark\Shark.h" />
+    <ClInclude Include="src\Game\Water.h" />
+    <ClInclude Include="src\Math\Frustum.h" />
+    <ClInclude Include="src\Math\LineMath.hpp" />
+    <ClInclude Include="src\Renderer\Types\FlipbookTexture.h" />
+    <ClInclude Include="src\Renderer\RendererData.h" />
+    <ClInclude Include="src\Renderer\SSAO.hpp" />
+    <ClInclude Include="src\Renderer\Types\HeightMap.h" />
+    <ClInclude Include="src\Renderer\Types\TreeMap.h" />
+    <ClInclude Include="src\Tools\DDSHelpers.h" />
+    <ClInclude Include="src\Tools\ImageTools.h" />
+    <ClInclude Include="src\Types\Enums.h" />
+    <ClInclude Include="src\Game\Dobermann.h" />
+    <ClInclude Include="src\Pathfinding\Pathfinding2.h" />
+    <ClInclude Include="src\Game\WeaponManager.h" />
+    <ClInclude Include="src\Effects\BloodDecal.hpp" />
+    <ClInclude Include="src\Math\Raycasting.hpp" />
+    <ClInclude Include="src\Pathfinding\NavMesh.h" />
+    <ClInclude Include="src\Math\BVH.h" />
+    <ClInclude Include="src\Renderer\Raytracing\BLAS.hpp" />
+    <ClInclude Include="src\Renderer\Raytracing\Raytracing.h" />
+    <ClInclude Include="src\Renderer\Raytracing\TLAS.hpp" />
+    <ClInclude Include="src\Renderer\Render.h" />
+    <ClInclude Include="src\Renderer\RendererStorage.h" />
+    <ClInclude Include="src\Renderer\Types\VertexBuffer.h" />
+    <ClInclude Include="src\ErrorChecking.h" />
+    <ClInclude Include="src\Core\AssetManager.h" />
+    <ClInclude Include="src\Config.hpp" />
+    <ClInclude Include="src\Core\DebugMenu.h" />
+    <ClInclude Include="src\Renderer\GlobalIllumination.h" />
+    <ClInclude Include="src\Renderer\PointCloud.h" />
+    <ClInclude Include="src\Renderer\RenderData.h" />
+    <ClInclude Include="src\Renderer\RendererUtil.hpp" />
+    <ClInclude Include="src\Renderer\Types\CubemapTexture.h" />
+    <ClInclude Include="src\Renderer\Types\DetachedMesh.hpp" />
+    <ClInclude Include="src\Renderer\Types\ExrTexture.h" />
+    <ClInclude Include="src\Renderer\Types\LightVolume.h" />
+    <ClInclude Include="src\Renderer\Types\Mesh.hpp" />
+    <ClInclude Include="src\Renderer\Types\Model.hpp" />
+    <ClInclude Include="src\Renderer\Types\SkinnedMesh.hpp" />
+    <ClInclude Include="src\Renderer\Types\SkinnedModel.h" />
+    <ClInclude Include="src\Renderer\Types\Texture.h" />
+    <ClInclude Include="src\Renderer\Types\Texture3D.h" />
+    <ClInclude Include="src\Types\Animation.h" />
+    <ClInclude Include="src\Types\Modular\ChristmasLights.h" />
+    <ClInclude Include="src\Types\Modular\Couch.h" />
+    <ClInclude Include="src\Types\Modular\Ladder.h" />
+    <ClInclude Include="src\Types\Modular\Staircase.h" />
+    <ClInclude Include="src\Types\SkinnedMesh.hpp" />
+    <ClInclude Include="src\API\OpenGL\GL_assetManager.h" />
+    <ClInclude Include="src\Core\Audio.h" />
+    <ClInclude Include="src\Types\Modular\Door.h" />
+    <ClInclude Include="src\Types\ExrTexture.h" />
+    <ClInclude Include="src\Renderer\Renderer.h" />
+    <ClInclude Include="src\Types\Modular\Class.h" />
+    <ClInclude Include="src\Core\Floorplan.h" />
+    <ClInclude Include="src\Game\AnimatedGameObject.h" />
+    <ClInclude Include="src\Core\FbxImporter.h" />
+    <ClInclude Include="src\Game\GameObject.h" />
+    <ClInclude Include="src\Editor\Gizmo.hpp" />
+    <ClInclude Include="src\Input\InputMulti.h" />
+    <ClInclude Include="src\Game\Light.h" />
+    <ClInclude Include="src\Types\Modular\ModularCommon.h" />
+    <ClInclude Include="src\Types\Modular\Toilet.h" />
+    <ClInclude Include="src\Physics\Ragdoll.h" />
+    <ClInclude Include="src\Core\VolumetricBloodSplatter.h" />
+    <ClInclude Include="src\API\OpenGL\GL_backEnd.h" />
+    <ClInclude Include="src\Input\Input.h" />
+    <ClInclude Include="src\Input\keycodes.h" />
+    <ClInclude Include="src\Physics\Physics.h" />
+    <ClInclude Include="src\Game\Player.h" />
+    <ClInclude Include="src\Game\Scene.h" />
+    <ClInclude Include="src\Renderer\TextBlitter.h" />
+    <ClInclude Include="src\Types\Modular\Window.h" />
+    <ClInclude Include="src\Effects\BulletCasing.h" />
+    <ClInclude Include="src\Effects\BulletHoleDecal.hpp" />
+    <ClInclude Include="src\Effects\MuzzleFlash.h" />
+    <ClInclude Include="src\Engine.h" />
+    <ClInclude Include="src\Math\Types.h" />
+    <ClInclude Include="src\Physics\RigidBody.hpp" />
+    <ClInclude Include="src\Physics\RigidStatic.hpp" />
+    <ClInclude Include="src\API\OpenGL\Types\GL_gBuffer.h" />
+    <ClInclude Include="src\Renderer\NumberBlitter.h" />
+    <ClInclude Include="src\API\OpenGL\GL_renderer.h" />
+    <ClInclude Include="src\API\OpenGL\Types\GL_frameBuffer.hpp" />
+    <ClInclude Include="src\API\OpenGL\Types\GL_presentBuffer.h" />
+    <ClInclude Include="src\BackEnd\BackEnd.h" />
+    <ClInclude Include="src\Common\RendererCommon.h" />
+    <ClInclude Include="src\API\OpenGL\Types\GL_shader.h" />
+    <ClInclude Include="src\API\OpenGL\Types\GL_shadowMap.h" />
+    <ClInclude Include="src\Types\Texture.h" />
+    <ClInclude Include="src\API\OpenGL\Types\GL_texture3D.h" />
+    <ClInclude Include="src\API\Vulkan\VK_assetManager.h" />
+    <ClInclude Include="src\API\Vulkan\Types\VK_pipeline.hpp" />
+    <ClInclude Include="src\API\Vulkan\VK_renderer.h" />
+    <ClInclude Include="src\Threading.h" />
+    <ClInclude Include="src\Timer.hpp" />
+    <ClInclude Include="src\Types\Mesh.hpp" />
+    <ClInclude Include="src\Types\Model.hpp" />
+    <ClInclude Include="src\Util.hpp" />
+    <ClInclude Include="src\Editor\CSG.h" />
+    <ClInclude Include="vendor\lz4\include\lz4.h" />
+    <ClInclude Include="vendor\lz4\include\lz4file.h" />
+    <ClInclude Include="vendor\lz4\include\lz4frame.h" />
+    <ClInclude Include="vendor\lz4\include\lz4frame_static.h" />
+    <ClInclude Include="vendor\lz4\include\lz4hc.h" />
+    <ClInclude Include="vendor\lz4\include\xxhash.h" />
+    <ClInclude Include="vendor\recast\DetourAlloc.h" />
+    <ClInclude Include="vendor\recast\DetourAssert.h" />
+    <ClInclude Include="vendor\recast\DetourCommon.h" />
+    <ClInclude Include="vendor\recast\DetourMath.h" />
+    <ClInclude Include="vendor\recast\DetourNavMesh.h" />
+    <ClInclude Include="vendor\recast\DetourNavMeshBuilder.h" />
+    <ClInclude Include="vendor\recast\DetourNavMeshQuery.h" />
+    <ClInclude Include="vendor\recast\DetourNode.h" />
+    <ClInclude Include="vendor\recast\DetourStatus.h" />
+    <ClInclude Include="vendor\recast\include\detour\DetourAlloc.h" />
+    <ClInclude Include="vendor\recast\include\detour\DetourAssert.h" />
+    <ClInclude Include="vendor\recast\include\detour\DetourCommon.h" />
+    <ClInclude Include="vendor\recast\include\detour\DetourMath.h" />
+    <ClInclude Include="vendor\recast\include\detour\DetourNavMesh.h" />
+    <ClInclude Include="vendor\recast\include\detour\DetourNavMeshBuilder.h" />
+    <ClInclude Include="vendor\recast\include\detour\DetourNavMeshQuery.h" />
+    <ClInclude Include="vendor\recast\include\detour\DetourNode.h" />
+    <ClInclude Include="vendor\recast\include\detour\DetourStatus.h" />
+    <ClInclude Include="vendor\recast\include\detour\DetourTileCache.h" />
+    <ClInclude Include="vendor\recast\include\detour\DetourTileCacheBuilder.h" />
+    <ClInclude Include="vendor\recast\include\detour\fastlz.h" />
+    <ClInclude Include="vendor\recast\include\recast\DebugDraw.h" />
+    <ClInclude Include="vendor\recast\include\recast\Recast.h" />
+    <ClInclude Include="vendor\recast\include\recast\RecastAlloc.h" />
+    <ClInclude Include="vendor\recast\include\recast\RecastAssert.h" />
+    <ClInclude Include="vendor\recast\include\recast\RecastDebugDraw.h" />
+    <ClInclude Include="vendor\recast\Recast.h" />
+    <ClInclude Include="vendor\recast\RecastAlloc.h" />
+    <ClInclude Include="vendor\recast\RecastAssert.h" />
+    <ClInclude Include="vendor\tinycsg\include\tinycsg\tinycsg.hpp" />
+    <ClInclude Include="vendor\tinyexr\tinyexr.h" />
+    <ClInclude Include="src\API\Vulkan\VK_backEnd.h" />
+    <ClInclude Include="vendor\VkBootstrap\VkBootstrap.h" />
+    <ClInclude Include="vendor\VkBootstrap\VkBootstrapDispatch.h" />
+    <ClInclude Include="vendor\VulkanMemoryAllocator\include\vk_mem_alloc.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\..\Users\livinamuk\Desktop\Unloved\Sandbox Repos\AnimPlayground\AnimPlayground\AnimPlayground\res\shaders\OpenGL\GL_gbuffer_alpha_discard.frag" />
+    <None Include="res\shaders\OpenGL\GL_compute_test.comp" />
+    <None Include="res\shaders\OpenGL\GL_debug_light_volume_aabb.frag" />
+    <None Include="res\shaders\OpenGL\GL_debug_light_volume_aabb.vert" />
+    <None Include="res\shaders\OpenGL\GL_debug_tile_view.comp" />
+    <None Include="res\shaders\OpenGL\GL_decals_blood.frag" />
+    <None Include="res\shaders\OpenGL\GL_decals_blood.vert" />
+    <None Include="res\shaders\OpenGL\GL_bloodVAT.frag" />
+    <None Include="res\shaders\OpenGL\GL_bloodVAT.vert" />
+    <None Include="res\shaders\OpenGL\GL_bloom.comp" />
+    <None Include="res\shaders\OpenGL\GL_blur.frag" />
+    <None Include="res\shaders\OpenGL\GL_blurHorizontal.vert" />
+    <None Include="res\shaders\OpenGL\GL_blurVertical.vert" />
+    <None Include="res\shaders\OpenGL\GL_csg_subtractive.frag" />
+    <None Include="res\shaders\OpenGL\GL_csg_subtractive.vert" />
+    <None Include="res\shaders\OpenGL\GL_csg_test.frag" />
+    <None Include="res\shaders\OpenGL\GL_csg_test.vert" />
+    <None Include="res\shaders\OpenGL\GL_debug_circle.comp" />
+    <None Include="res\shaders\OpenGL\GL_decals_bullet.frag" />
+    <None Include="res\shaders\OpenGL\GL_decals_bullet.vert" />
+    <None Include="res\shaders\OpenGL\GL_depth_peel_color.frag" />
+    <None Include="res\shaders\OpenGL\GL_depth_peel_color.vert" />
+    <None Include="res\shaders\OpenGL\GL_depth_peel_depth.frag" />
+    <None Include="res\shaders\OpenGL\GL_depth_peel_depth.vert" />
+    <None Include="res\shaders\OpenGL\GL_emissiveComposite.comp" />
+    <None Include="res\shaders\OpenGL\GL_flipBook.frag" />
+    <None Include="res\shaders\OpenGL\GL_flipBook.vert" />
+    <None Include="res\shaders\OpenGL\GL_debug.frag" />
+    <None Include="res\shaders\OpenGL\GL_debug.vert" />
+    <None Include="res\shaders\OpenGL\gl_flipbook_new.frag" />
+    <None Include="res\shaders\OpenGL\gl_flipbook_new.vert" />
+    <None Include="res\shaders\OpenGL\GL_gbuffer_alpha_discarded.frag" />
+    <None Include="res\shaders\OpenGL\GL_glass.frag" />
+    <None Include="res\shaders\OpenGL\GL_glass.vert" />
+    <None Include="res\shaders\OpenGL\GL_glassComposite.comp" />
+    <None Include="res\shaders\OpenGL\GL_hair_final_composite.comp" />
+    <None Include="res\shaders\OpenGL\GL_hair_layer_composite.comp" />
+    <None Include="res\shaders\OpenGL\GL_heightmap.frag" />
+    <None Include="res\shaders\OpenGL\GL_heightmap.vert" />
+    <None Include="res\shaders\OpenGL\GL_lighting.comp" />
+    <None Include="res\shaders\OpenGL\GL_lightvolume_aabb_from_pos_radius.comp" />
+    <None Include="res\shaders\OpenGL\GL_lightvolume_prepass.frag" />
+    <None Include="res\shaders\OpenGL\GL_lightvolume_prepass.geom" />
+    <None Include="res\shaders\OpenGL\GL_lightvolume_prepass.vert" />
+    <None Include="res\shaders\OpenGL\GL_lightvolume_aabb_from_cubemap.comp" />
+    <None Include="res\shaders\OpenGL\GL_light_culling.comp" />
+    <None Include="res\shaders\OpenGL\GL_light_volume_clear.comp" />
+    <None Include="res\shaders\OpenGL\GL_mega_texture_blood_decals.frag" />
+    <None Include="res\shaders\OpenGL\GL_mega_texture_blood_decals.vert" />
+    <None Include="res\shaders\OpenGL\GL_outline.frag" />
+    <None Include="res\shaders\OpenGL\GL_outline.vert" />
+    <None Include="res\shaders\OpenGL\GL_p90_mag_backface_composite.comp" />
+    <None Include="res\shaders\OpenGL\GL_p90_mag_backface_lighting.frag" />
+    <None Include="res\shaders\OpenGL\GL_p90_mag_backface_lighting.vert" />
+    <None Include="res\shaders\OpenGL\GL_p90_mag_frontface_composite.comp" />
+    <None Include="res\shaders\OpenGL\GL_p90_mag_frontface_lighting.frag" />
+    <None Include="res\shaders\OpenGL\GL_p90_mag_frontface_lighting.vert" />
+    <None Include="res\shaders\OpenGL\GL_postProcessing.comp" />
+    <None Include="res\shaders\OpenGL\GL_probe_lighting.comp" />
+    <None Include="res\shaders\OpenGL\GL_raytracing_test.comp" />
+    <None Include="res\shaders\OpenGL\GL_sandbox.comp" />
+    <None Include="res\shaders\OpenGL\GL_shadowMap.frag" />
+    <None Include="res\shaders\OpenGL\GL_shadowMap.vert" />
+    <None Include="res\shaders\OpenGL\GL_shadowMap_csg.frag" />
+    <None Include="res\shaders\OpenGL\GL_shadowMap_csg.vert" />
+    <None Include="res\shaders\OpenGL\GL_debug_solid_color_2D.frag" />
+    <None Include="res\shaders\OpenGL\GL_debug_solid_color_2D.vert" />
+    <None Include="res\shaders\OpenGL\GL_ssao.comp" />
+    <None Include="res\shaders\OpenGL\GL_triangles_3D.frag" />
+    <None Include="res\shaders\OpenGL\GL_triangles_3D.vert" />
+    <None Include="res\shaders\OpenGL\GL_water_composite.comp" />
+    <None Include="res\shaders\OpenGL\GL_water_mask.frag" />
+    <None Include="res\shaders\OpenGL\GL_water_mask.vert" />
+    <None Include="res\shaders\OpenGL\GL_water_reflection_geometry.frag" />
+    <None Include="res\shaders\OpenGL\GL_water_reflection_geometry.vert" />
+    <None Include="res\shaders\OpenGL\GL_winston.frag" />
+    <None Include="res\shaders\OpenGL\GL_winston.vert" />
+    <None Include="res\shaders\OpenGL_OLD\animated_quad.frag" />
+    <None Include="res\shaders\OpenGL_OLD\animated_quad.vert" />
+    <None Include="res\shaders\OpenGL_OLD\blood_decals.frag" />
+    <None Include="res\shaders\OpenGL_OLD\blood_decals.vert" />
+    <None Include="res\shaders\OpenGL_OLD\blood_volumetric.frag" />
+    <None Include="res\shaders\blood_volumetric.geom" />
+    <None Include="res\shaders\OpenGL_OLD\blood_volumetric.vert" />
+    <None Include="res\shaders\OpenGL_OLD\blur.frag" />
+    <None Include="res\shaders\OpenGL_OLD\blurHorizontal.vert" />
+    <None Include="res\shaders\OpenGL_OLD\blurVertical.vert" />
+    <None Include="res\shaders\OpenGL_OLD\bullet_decals.frag" />
+    <None Include="res\shaders\OpenGL_OLD\bullet_decals.vert" />
+    <None Include="res\shaders\OpenGL_OLD\calculate_inidrect_dispatch_size.comp" />
+    <None Include="res\shaders\OpenGL_OLD\debug_view_point_cloud.frag" />
+    <None Include="res\shaders\OpenGL_OLD\debug_view_point_cloud.vert" />
+    <None Include="res\shaders\OpenGL_OLD\debug_view_propogation_grid.frag" />
+    <None Include="res\shaders\OpenGL_OLD\debug_view_propogation_grid.vert" />
+    <None Include="res\shaders\OpenGL_OLD\editor_solid_color.frag" />
+    <None Include="res\shaders\OpenGL_OLD\editor_solid_color.vert" />
+    <None Include="res\shaders\OpenGL_OLD\editor_textured.frag" />
+    <None Include="res\shaders\OpenGL_OLD\editor_textured.vert" />
+    <None Include="res\shaders\OpenGL_OLD\envMap.frag" />
+    <None Include="res\shaders\OpenGL_OLD\envMap.geom" />
+    <None Include="res\shaders\OpenGL_OLD\envMap.vert" />
+    <None Include="res\shaders\OpenGL_OLD\geometry.frag" />
+    <None Include="res\shaders\OpenGL_OLD\geometry.vert" />
+    <None Include="res\shaders\OpenGL_OLD\geometry_instanced.frag" />
+    <None Include="res\shaders\OpenGL_OLD\geometry_instanced.vert" />
+    <None Include="res\shaders\OpenGL_OLD\glass.frag" />
+    <None Include="res\shaders\OpenGL_OLD\glass.vert" />
+    <None Include="res\shaders\OpenGL\GL_gbuffer.frag" />
+    <None Include="res\shaders\OpenGL\GL_gbuffer.vert" />
+    <None Include="res\shaders\OpenGL_OLD\outline.frag" />
+    <None Include="res\shaders\OpenGL_OLD\outline.vert" />
+    <None Include="res\shaders\OpenGL_OLD\skin.comp" />
+    <None Include="res\shaders\OpenGL_OLD\skybox.frag" />
+    <None Include="res\shaders\OpenGL_OLD\skybox.vert" />
+    <None Include="res\shaders\OpenGL_OLD\test.comp" />
+    <None Include="res\shaders\OpenGL_OLD\glass_composite.frag" />
+    <None Include="res\shaders\OpenGL_OLD\glass_composite.vert" />
+    <None Include="res\shaders\OpenGL_OLD\lighting.frag" />
+    <None Include="res\shaders\OpenGL_OLD\lighting.vert" />
+    <None Include="res\shaders\OpenGL_OLD\propogation_list.comp" />
+    <None Include="res\shaders\OpenGL_OLD\shadowmap.frag" />
+    <None Include="res\shaders\OpenGL_OLD\shadowmap.geom" />
+    <None Include="res\shaders\OpenGL_OLD\shadowmap.vert" />
+    <None Include="res\shaders\OpenGL_OLD\solid_color.frag" />
+    <None Include="res\shaders\OpenGL_OLD\solid_color.vert" />
+    <None Include="res\shaders\OpenGL_OLD\test.frag" />
+    <None Include="res\shaders\OpenGL_OLD\test.vert" />
+    <None Include="res\shaders\OpenGL_OLD\toilet_water.frag" />
+    <None Include="res\shaders\OpenGL_OLD\toilet_water.vert" />
+    <None Include="res\shaders\OpenGL_OLD\tri.frag" />
+    <None Include="res\shaders\OpenGL_OLD\tri.vert" />
+    <None Include="res\shaders\OpenGL_OLD\ui.frag" />
+    <None Include="res\shaders\OpenGL_OLD\ui.vert" />
+    <None Include="res\shaders\OpenGL\GL_ui.frag" />
+    <None Include="res\shaders\OpenGL\GL_ui.vert" />
+    <None Include="res\shaders\OpenGL_OLD\voxelize.frag" />
+    <None Include="res\shaders\OpenGL_OLD\voxelize.vert" />
+    <None Include="res\shaders\Vulkan\VK_blur.frag" />
+    <None Include="res\shaders\Vulkan\VK_blurHorizontal.vert" />
+    <None Include="res\shaders\Vulkan\VK_blurVertical.vert" />
+    <None Include="res\shaders\Vulkan\VK_compute_skin.comp" />
+    <None Include="res\shaders\Vulkan\VK_debug.frag" />
+    <None Include="res\shaders\Vulkan\VK_debug.vert" />
+    <None Include="res\shaders\Vulkan\VK_emissive_composite.comp" />
+    <None Include="res\shaders\Vulkan\VK_flipbook.frag" />
+    <None Include="res\shaders\Vulkan\VK_flipbook.vert" />
+    <None Include="res\shaders\Vulkan\VK_gbufferSkinned.frag" />
+    <None Include="res\shaders\Vulkan\VK_gbufferSkinned.vert" />
+    <None Include="res\shaders\Vulkan\VK_glass.frag" />
+    <None Include="res\shaders\Vulkan\VK_glass.vert" />
+    <None Include="res\vulkan_shaders\closesthit.rchit" />
+    <None Include="res\shaders\Vulkan\VK_lighting.frag" />
+    <None Include="res\shaders\Vulkan\VK_lighting.vert" />
+    <None Include="res\vulkan_shaders\miss.rmiss" />
+    <None Include="res\shaders\Vulkan\path_closesthit.rchit" />
+    <None Include="res\shaders\Vulkan\path_miss.rmiss" />
+    <None Include="res\shaders\Vulkan\path_raygen.rgen" />
+    <None Include="res\shaders\Vulkan\path_shadow.rmiss" />
+    <None Include="res\vulkan_shaders\raygen.rgen" />
+    <None Include="res\vulkan_shaders\shadow.rmiss" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="res\maps\mappp.txt" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

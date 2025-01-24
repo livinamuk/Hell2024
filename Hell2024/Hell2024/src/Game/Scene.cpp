@@ -652,6 +652,34 @@ void Scene::LoadDefaultScene() {
         AddDobermann(createInfo);
     }
 
+     //CreateGameObject();
+     //GameObject* scope = GetGameObjectByIndex(GetGameObjectCount() - 1);
+     //scope->SetPosition(8.3f, 2.7f, 1.1f);
+     //scope->SetPosition(10.3f, 4.5f, 0.0f);
+     //scope->SetScale(0.01);
+     //scope->SetModel("AKS74U_Scope");
+     //scope->SetName("AKS74U_Scope");
+     //scope->SetMeshMaterial("Tree");
+
+    //CreateAnimatedGameObject();
+    //AnimatedGameObject* scope2 = GetAnimatedGameObjectByIndex(g_animatedGameObjects.size() - 1);
+    //scope2->SetPosition(glm::vec3(10.3f, 3.5f, 1.0f));
+    //scope2->SetScale(0.01);
+    //scope2->SetSkinnedModel("AKS74U");
+    //scope2->SetName("AKS74U_Scope");
+    //scope2->SetAllMeshMaterials("Gold");
+    //scope2->SetAnimationModeToBindPose();
+    //scope2->PrintMeshNames();
+    //
+    //CreateAnimatedGameObject();
+    //AnimatedGameObject* scope3 = GetAnimatedGameObjectByIndex(g_animatedGameObjects.size() - 1);
+    //scope3->SetPosition(glm::vec3(10.3f, 3.5f, 0.0f));
+    //scope3->SetScale(0.01);
+    //scope3->SetSkinnedModel("AKS74U");
+    //scope3->SetName("AKS74U_Scope");
+    //scope3->SetAllMeshMaterials("Gold");
+    //scope3->PlayAndLoopAnimation("AKS74U_Walk", 1.0f);
+
     CreateGameObject();
     GameObject* tree = GetGameObjectByIndex(GetGameObjectCount() - 1);
     tree->SetPosition(8.3f, 2.7f, 1.1f);
@@ -2640,6 +2668,7 @@ void Scene::CleanUp() {
 	g_doors.clear();
     g_windows.clear();
     g_gameObjects.clear();
+    g_couches.clear();
     g_dobermann.clear();
     g_staircases.clear();
     _pickUps.clear();

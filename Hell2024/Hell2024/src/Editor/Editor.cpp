@@ -1105,7 +1105,7 @@ namespace Editor {
                 plane.m_veritces[TL] += Game::GetPlayerByIndex(0)->GetCameraRight() * -0.5f;
                 plane.m_veritces[BL] += Game::GetPlayerByIndex(0)->GetCameraRight() * -0.5f;
                 plane.textureScale = 1.0f;
-                plane.materialIndex = AssetManager::GetMaterialIndex("GlockAmmoBox");
+                plane.materialIndex = AssetManager::GetMaterialIndex("WallPaper");
                 g_selectedObjectIndex = Scene::g_csgAdditiveWallPlanes.size() - 1;
                 g_selectedObjectType = ObjectType::CSG_OBJECT_ADDITIVE_WALL_PLANE;
                 SetCurrentMenuType(MenuType::SELECTED_OBJECT);
@@ -1299,7 +1299,13 @@ namespace Editor {
                     }
                     if (type == MenuItem::Type::VALUE_INT) {
                         if (name == "Material") {
-                            valueText = AssetManager::GetMaterialByIndex(*static_cast<int*>(ptr))->_name;
+                            Material* material = AssetManager::GetMaterialByIndex(*static_cast<int*>(ptr));
+                            if (material) {
+                                valueText = AssetManager::GetMaterialByIndex(*static_cast<int*>(ptr))->_name;
+                            }
+                            else {
+                                valueText = "UNKNOWN MATERIAL";
+                            }
                         }
                         else {
                             valueText = std::to_string(*static_cast<int*>(ptr));

@@ -6,6 +6,7 @@
 #include "../../Game/Game.h"
 #include "../../Game/Scene.h"
 #include "../../Renderer/RendererUtil.hpp"
+#include "../../Timer.hpp"
 
 void SetViewportDIIIRTY(ViewportInfo viewportInfo) {
     glViewport(viewportInfo.xOffset, viewportInfo.yOffset, viewportInfo.width, viewportInfo.height);
@@ -27,7 +28,7 @@ void OpenGLRenderer::HairPass() {
 
     // Setup state
     GLFrameBuffer& hairFramebuffer = GetHairFrameBuffer();
-    GLFrameBuffer& gBuffer = GetGBuffer();// OpenGLRenderer::g_frameBuffers.hair;
+    GLFrameBuffer& gBuffer = GetGBuffer();
     hairFramebuffer.Bind();
     hairFramebuffer.ClearAttachment("Composite", 0, 0, 0, 0);
     hairFramebuffer.SetViewport();
@@ -38,8 +39,6 @@ void OpenGLRenderer::HairPass() {
 
     std::vector<HairRenderItem> hairTopLayerRenderItems = Scene::GetHairTopLayerRenderItems();
     std::vector<HairRenderItem> hairBottomLayerRenderItems = Scene::GetHairBottomLayerRenderItems();
-
-    glFinish();
 
     OpenGLRenderer::RenderHairLayer(hairTopLayerRenderItems, peelCount);
     OpenGLRenderer::RenderHairLayer(hairBottomLayerRenderItems, peelCount);
@@ -55,9 +54,7 @@ void OpenGLRenderer::HairPass() {
     
     glDispatchCompute((gBuffer.GetWidth() + 7) / 8, (gBuffer.GetHeight() + 7) / 8, 1);
 
-
-
-     // Cleanup
+    // Cleanup
     glDepthFunc(GL_LESS);
 }
 
