@@ -1,5 +1,15 @@
 # HELL ENGINE: rewrite one billion++
 
+#### August 20 2026
+
+![Image](http://www.principiaprogrammatica.com/images/PianoRoom.png)
+
+I know I haven't updated this readme in  2 years. I'll get to it, I've just been busy. See https://www.youtube.com/@tokyospliff for the latest.
+
+**************************
+
+#### June 26 2024
+
 <!-- December 27 2023 -->
 This codebase began as a CPU raycaster to explore the viability of a voxel based idea I had for global illumination. The voxel idea didn't work out in the end, the voxel grid caused lighting artefacts, but rewriting it to use a pointcloud did and here we are. This is now the new Hell Engine, the engine I'm writing to house a splitscreen roguelike/deathmatch survival horror game.
 
